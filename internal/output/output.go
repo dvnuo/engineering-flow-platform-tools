@@ -12,6 +12,7 @@ type ErrorDetail struct {
 	Code    string `json:"code" yaml:"code"`
 	Message string `json:"message" yaml:"message"`
 	Hint    string `json:"hint,omitempty" yaml:"hint,omitempty"`
+	Status  int    `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 type Envelope struct {
@@ -24,11 +25,9 @@ type Envelope struct {
 func Success(instance string, data interface{}) Envelope {
 	return Envelope{OK: true, Instance: instance, Data: data}
 }
-
-func Failure(code, message, hint string) Envelope {
-	return Envelope{OK: false, Error: &ErrorDetail{Code: code, Message: message, Hint: hint}}
+func Failure(code, message, hint string, status int) Envelope {
+	return Envelope{OK: false, Error: &ErrorDetail{Code: code, Message: message, Hint: hint, Status: status}}
 }
-
 func Print(w io.Writer, format string, env Envelope) error {
 	switch format {
 	case "json":
@@ -43,11 +42,7 @@ func Print(w io.Writer, format string, env Envelope) error {
 		_, err = fmt.Fprintln(w, string(b))
 		return err
 	case "table":
-		if env.OK {
-			_, err := fmt.Fprintf(w, "ok=true instance=%s\n", env.Instance)
-			return err
-		}
-		_, err := fmt.Fprintf(w, "ok=false code=%s message=%s\n", env.Error.Code, env.Error.Message)
+		_, err := fmt.Fprintln(w, RenderTable(env))
 		return err
 	default:
 		return fmt.Errorf("unknown_output_format")

@@ -70,3 +70,8 @@ This phase focuses on scaffolding:
 - docs and CI baseline
 
 Real Jira/Confluence API execution is intentionally deferred to future prompts.
+
+
+## TLS note
+
+When `verify_ssl=false`, TLS verification is disabled and should only be used in internal test environments.

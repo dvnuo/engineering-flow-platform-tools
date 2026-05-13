@@ -1,76 +1,67 @@
 package config
 
-import (
-	"encoding/json"
-	"os"
-	"path/filepath"
-)
+import "strings"
 
-type Auth struct {
-	Type     string `json:"type"`
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
-	APIKey   string `json:"api_key,omitempty"`
-	Token    string `json:"token,omitempty"`
+type RootConfig struct {
+	Version    int           `json:"version" yaml:"version"`
+	Jira       ProductConfig `json:"jira" yaml:"jira"`
+	Confluence ProductConfig `json:"confluence" yaml:"confluence"`
 }
 
-type JiraInstance struct {
-	Name           string `json:"name"`
-	BaseURL        string `json:"base_url"`
-	APIVersion     string `json:"api_version"`
-	RestPath       string `json:"rest_path"`
-	Auth           Auth   `json:"auth"`
-	DefaultProject string `json:"default_project,omitempty"`
-	VerifySSL      bool   `json:"verify_ssl"`
-	CACert         string `json:"ca_cert,omitempty"`
+type ProductConfig struct {
+	DefaultInstance string           `json:"default_instance" yaml:"default_instance"`
+	Instances       []InstanceConfig `json:"instances" yaml:"instances"`
 }
 
-type ConfluenceInstance struct {
-	Name         string `json:"name"`
-	BaseURL      string `json:"base_url"`
-	RestPath     string `json:"rest_path"`
-	Auth         Auth   `json:"auth"`
-	DefaultSpace string `json:"default_space,omitempty"`
-	VerifySSL    bool   `json:"verify_ssl"`
-	CACert       string `json:"ca_cert,omitempty"`
+type InstanceConfig struct {
+	Name           string     `json:"name" yaml:"name"`
+	BaseURL        string     `json:"base_url" yaml:"base_url"`
+	APIVersion     string     `json:"api_version,omitempty" yaml:"api_version,omitempty"`
+	RESTPath       string     `json:"rest_path" yaml:"rest_path"`
+	Auth           AuthConfig `json:"auth" yaml:"auth"`
+	DefaultProject string     `json:"default_project,omitempty" yaml:"default_project,omitempty"`
+	DefaultSpace   string     `json:"default_space,omitempty" yaml:"default_space,omitempty"`
+	VerifySSL      *bool      `json:"verify_ssl,omitempty" yaml:"verify_ssl,omitempty"`
+	CACert         string     `json:"ca_cert,omitempty" yaml:"ca_cert,omitempty"`
 }
 
-type JiraSection struct {
-	DefaultInstance string         `json:"default_instance"`
-	Instances       []JiraInstance `json:"instances"`
+type AuthConfig struct {
+	Type     string `json:"type" yaml:"type"`
+	Username string `json:"username,omitempty" yaml:"username,omitempty"`
+	Password string `json:"password,omitempty" yaml:"password,omitempty"`
+	APIKey   string `json:"api_key,omitempty" yaml:"api_key,omitempty"`
+	Token    string `json:"token,omitempty" yaml:"token,omitempty"`
 }
 
-type ConfluenceSection struct {
-	DefaultInstance string               `json:"default_instance"`
-	Instances       []ConfluenceInstance `json:"instances"`
-}
-
-type Config struct {
-	Version    int               `json:"version"`
-	Jira       JiraSection       `json:"jira"`
-	Confluence ConfluenceSection `json:"confluence"`
-}
-
-func Load(path string) (Config, error) {
-	var c Config
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return c, err
+func (c *RootConfig) Normalize() {
+	norm := func(p *ProductConfig) {
+		for i := range p.Instances {
+			p.Instances[i].Auth.NormalizeType()
+		}
 	}
-	err = json.Unmarshal(b, &c)
-	return c, err
+	norm(&c.Jira)
+	norm(&c.Confluence)
 }
 
-func Save(path string, c Config) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return err
+func (a *AuthConfig) NormalizeType() {
+	if a.Type != "" {
+		return
 	}
-	b, err := json.MarshalIndent(c, "", "  ")
-	if err != nil {
-		return err
+	hasUser := a.Username != ""
+	hasPwd := a.Password != ""
+	hasKey := a.APIKey != ""
+	hasToken := a.Token != ""
+	switch {
+	case hasUser && hasPwd:
+		a.Type = "basic_password"
+	case hasUser && hasKey:
+		a.Type = "basic_api_key"
+	case hasUser && hasToken:
+		a.Type = "basic_api_key"
+		a.APIKey = a.Token
+		a.Token = ""
+	case hasToken:
+		a.Type = "bearer_token"
 	}
-	if err := os.WriteFile(path, b, 0o600); err != nil {
-		return err
-	}
-	return nil
+	a.Type = strings.TrimSpace(a.Type)
 }

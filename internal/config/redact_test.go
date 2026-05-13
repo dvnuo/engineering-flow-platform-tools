@@ -2,13 +2,11 @@ package config
 
 import "testing"
 
-func TestRedactAuth(t *testing.T) {
-	a := Auth{Username: "u", Password: "p", APIKey: "k", Token: "t"}
-	r := RedactAuth(a)
-	if r.Password != "***REDACTED***" || r.APIKey != "***REDACTED***" || r.Token != "***REDACTED***" {
-		t.Fatalf("expected secrets to be redacted")
-	}
-	if r.Username != "u" {
-		t.Fatalf("username should remain unchanged")
+func TestRedactRootMasksSecrets(t *testing.T) {
+	cfg := RootConfig{Jira: ProductConfig{Instances: []InstanceConfig{{Auth: AuthConfig{Password: "p", APIKey: "k", Token: "t"}}}}}
+	r := RedactRoot(cfg)
+	a := r.Jira.Instances[0].Auth
+	if a.Password != "***REDACTED***" || a.APIKey != "***REDACTED***" || a.Token != "***REDACTED***" {
+		t.Fatal("expected redaction")
 	}
 }

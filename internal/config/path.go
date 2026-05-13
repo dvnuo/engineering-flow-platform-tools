@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -9,16 +8,21 @@ import (
 
 const EnvConfigPath = "ATLASSIAN_CONFIG"
 
-func DefaultPath() (string, error) {
+func ResolvePath(flagPath string) (string, error) {
+	if flagPath != "" {
+		return flagPath, nil
+	}
 	if p := os.Getenv(EnvConfigPath); p != "" {
 		return p, nil
 	}
+	return DefaultPath()
+}
+
+func DefaultPath() (string, error) {
 	if runtime.GOOS == "windows" {
-		appdata := os.Getenv("APPDATA")
-		if appdata == "" {
-			return "", errors.New("missing_appdata")
+		if app := os.Getenv("APPDATA"); app != "" {
+			return filepath.Join(app, "atlassian", "config.json"), nil
 		}
-		return filepath.Join(appdata, "atlassian", "config.json"), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {

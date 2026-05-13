@@ -47,3 +47,9 @@ Default config path:
 - `default_space`
 - `verify_ssl`
 - `ca_cert`
+
+
+## TLS and CA behavior
+
+- `verify_ssl=false` disables certificate verification and is intended only for internal testing.
+- `ca_cert` can embed PEM text for private CA trust.

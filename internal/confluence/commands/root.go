@@ -18,12 +18,13 @@ import (
 	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/instance"
 	"engineering-flow-platform-tools/internal/output"
+	"engineering-flow-platform-tools/internal/version"
 	"github.com/spf13/cobra"
 )
 
 type Opts struct {
-	Instance, Config  string
-	JSON, DryRun, Yes bool
+	Instance, Config, Format   string
+	JSON, Verbose, DryRun, Yes bool
 }
 
 type ctx struct {
@@ -39,15 +40,19 @@ func NewRoot() *cobra.Command {
 	c.PersistentFlags().StringVar(&o.Instance, "instance", "", "")
 	c.PersistentFlags().StringVar(&o.Config, "config", "", "")
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
+	c.PersistentFlags().StringVar(&o.Format, "format", "table", "")
+	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "")
 	c.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "")
 	c.PersistentFlags().BoolVar(&o.Yes, "yes", false, "")
-	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), cqlCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), labelCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), hiddenCmd(restrictionCmd(o)), apiCmd(o))
+	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), cliVersionCmd(o), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), cqlCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), labelCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), hiddenCmd(restrictionCmd(o)), apiCmd(o))
 	return c
 }
 func print(cmd *cobra.Command, o *Opts, e output.Envelope) error {
 	f := "table"
 	if o.JSON {
 		f = "json"
+	} else if o.Format != "" {
+		f = o.Format
 	}
 	return output.Print(cmd.OutOrStdout(), f, e)
 }
@@ -103,6 +108,11 @@ func addAuthFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("password-stdin", false, "")
 	cmd.Flags().Bool("api-key-stdin", false, "")
 	cmd.Flags().Bool("token-stdin", false, "")
+}
+func cliVersionCmd(o *Opts) *cobra.Command {
+	return &cobra.Command{Use: "version", RunE: func(cmd *cobra.Command, args []string) error {
+		return print(cmd, o, output.Success("", map[string]any{"version": version.Version, "commit": version.Commit, "date": version.Date}))
+	}}
 }
 func loadCtx(o *Opts, entity string) (*ctx, error) {
 	p, _ := config.ResolvePath(o.Config)

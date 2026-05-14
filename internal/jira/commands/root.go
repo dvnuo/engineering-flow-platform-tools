@@ -16,12 +16,13 @@ import (
 	"engineering-flow-platform-tools/internal/instance"
 	"engineering-flow-platform-tools/internal/jira"
 	"engineering-flow-platform-tools/internal/output"
+	"engineering-flow-platform-tools/internal/version"
 	"github.com/spf13/cobra"
 )
 
 type Opts struct {
-	Instance, Config  string
-	JSON, DryRun, Yes bool
+	Instance, Config, Format   string
+	JSON, Verbose, DryRun, Yes bool
 }
 
 func NewRoot() *cobra.Command {
@@ -30,6 +31,8 @@ func NewRoot() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&o.Instance, "instance", "", "")
 	cmd.PersistentFlags().StringVar(&o.Config, "config", "", "")
 	cmd.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
+	cmd.PersistentFlags().StringVar(&o.Format, "format", "table", "")
+	cmd.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "")
 	cmd.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "")
 	cmd.PersistentFlags().BoolVar(&o.Yes, "yes", false, "")
 	cmd.AddCommand(instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), commandsCmd(), schemaCmd(), helpLLMCmd(), issueCmd(o), attachmentCmd(o), rawAPICmd(o), projectCmd(o), userGroupCmd(o), groupCmd(o), filterDashboardCmd(o), dashboardCmd(o), componentCmd(o), versionCmd(o))
@@ -41,6 +44,9 @@ func NewRoot() *cobra.Command {
 func fmtOut(o *Opts) string {
 	if o.JSON {
 		return "json"
+	}
+	if o.Format != "" {
+		return o.Format
 	}
 	return "table"
 }
@@ -341,6 +347,11 @@ func resolveCmd(o *Opts) *cobra.Command {
 func commandsCmd() *cobra.Command {
 	return &cobra.Command{Use: "commands", RunE: func(cmd *cobra.Command, args []string) error {
 		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]interface{}{"commands": catalog.Commands("jira")}))
+	}}
+}
+func cliVersionCmd(o *Opts) *cobra.Command {
+	return &cobra.Command{Use: "version", RunE: func(cmd *cobra.Command, args []string) error {
+		return print(cmd, o, output.Success("", map[string]any{"version": version.Version, "commit": version.Commit, "date": version.Date}))
 	}}
 }
 func schemaCmd() *cobra.Command {
@@ -1180,7 +1191,7 @@ func componentCmd(o *Opts) *cobra.Command {
 }
 
 func versionCmd(o *Opts) *cobra.Command {
-	v := &cobra.Command{Use: "version"}
+	v := cliVersionCmd(o)
 	v.AddCommand(&cobra.Command{Use: "get <version-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "version/"+args[0]) }})
 	v.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
 		project := mustS(cmd, "project")

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"engineering-flow-platform-tools/internal/app"
 	"engineering-flow-platform-tools/internal/config"
 	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/instance"
@@ -39,7 +40,7 @@ func NewRoot() *cobra.Command {
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
 	c.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "")
 	c.PersistentFlags().BoolVar(&o.Yes, "yes", false, "")
-	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), authCmd(o), searchCmd(o), pageCmd(o), apiCmd(o))
+	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), authCmd(o), searchCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), userGroupCmd(o), webhookCmd(o), longtaskCmd(o), apiCmd(o))
 	return c
 }
 func print(cmd *cobra.Command, o *Opts, e output.Envelope) error {
@@ -86,16 +87,14 @@ func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body
 
 func commandsCmd() *cobra.Command {
 	return &cobra.Command{Use: "commands", RunE: func(cmd *cobra.Command, args []string) error {
-		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"commands": commandList()}))
+		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"commands": app.ConfluenceCommandList()}))
 	}}
 }
 func schemaCmd() *cobra.Command {
 	return &cobra.Command{Use: "schema <command>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		r := []string{}
-		if args[0] == "page.create" {
-			r = []string{"space", "title", "body"}
-		}
-		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"command": args[0], "required": r}))
+		required := map[string][]string{"page.create": {"space", "title", "body"}, "page.update": {"id|url"}, "content.create": {"type", "title", "body"}, "content.update": {"content-id"}, "blog.create": {"space", "title", "body"}, "blog.update": {"blog-id-or-url"}}
+		r := required[args[0]]
+		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"command": args[0], "required": r, "available": app.ConfluenceCommandList()}))
 	}}
 }
 func helpLLMCmd() *cobra.Command {
@@ -344,6 +343,88 @@ func multipartData(path string) (*bytes.Buffer, string, error) {
 	return b, w.FormDataContentType(), nil
 }
 
-func commandList() []string {
-	return []string{"confluence auth test", "confluence search", "confluence search content", "confluence page get", "confluence page get-by-title", "confluence page create", "confluence page update", "confluence page delete", "confluence page export-markdown", "confluence api get <path>", "confluence api post <path>", "confluence api put <path>", "confluence api delete <path>", "confluence schema <command>", "confluence commands", "confluence help llm"}
+func spaceCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "space"}
+	c.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "space", nil, nil) }})
+	c.AddCommand(&cobra.Command{Use: "get <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "space/"+args[0], nil, nil) }})
+	c.AddCommand(&cobra.Command{Use: "content <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		return do(o, cmd, "GET", "space/"+args[0]+"/content", nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "pages <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		return do(o, cmd, "GET", "space/"+args[0]+"/content/page", nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "blogs <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		return do(o, cmd, "GET", "space/"+args[0]+"/content/blog", nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "labels <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		return do(o, cmd, "GET", "space/"+args[0]+"/label", nil, nil)
+	}})
+	return c
+}
+func contentCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "content"}
+	c.AddCommand(&cobra.Command{Use: "get <content-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "content/"+args[0], nil, nil) }})
+	c.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		q := map[string]string{}
+		for _, k := range []string{"space", "type", "limit", "start", "expand"} {
+			v, _ := cmd.Flags().GetString(k)
+			if v != "" {
+				if k == "space" {
+					q["spaceKey"] = v
+				} else {
+					q[k] = v
+				}
+			}
+		}
+		return do(o, cmd, "GET", "content", q, nil)
+	}})
+	cl := c.Commands()[1]
+	for _, k := range []string{"space", "type", "limit", "start", "expand"} {
+		cl.Flags().String(k, "", "")
+	}
+	return c
+}
+func blogCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "blog"}
+	c.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		sp, _ := cmd.Flags().GetString("space")
+		return do(o, cmd, "GET", "content", map[string]string{"type": "blogpost", "spaceKey": sp}, nil)
+	}})
+	c.Commands()[0].Flags().String("space", "", "")
+	return c
+}
+func userGroupCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "user"}
+	c.AddCommand(&cobra.Command{Use: "get", RunE: func(cmd *cobra.Command, args []string) error {
+		q := map[string]string{}
+		u, _ := cmd.Flags().GetString("username")
+		k, _ := cmd.Flags().GetString("user-key")
+		if u != "" {
+			q["username"] = u
+		}
+		if k != "" {
+			q["key"] = k
+		}
+		return do(o, cmd, "GET", "user", q, nil)
+	}})
+	c.Commands()[0].Flags().String("username", "", "")
+	c.Commands()[0].Flags().String("user-key", "", "")
+	c.AddCommand(&cobra.Command{Use: "search", RunE: func(cmd *cobra.Command, args []string) error {
+		q, _ := cmd.Flags().GetString("query")
+		return do(o, cmd, "GET", "user/search", map[string]string{"query": q}, nil)
+	}})
+	c.Commands()[1].Flags().String("query", "", "")
+	return c
+}
+func webhookCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "webhook"}
+	c.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "webhooks", nil, nil) }})
+	c.AddCommand(&cobra.Command{Use: "get <webhook-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "webhooks/"+args[0], nil, nil) }})
+	return c
+}
+func longtaskCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "longtask"}
+	c.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "longtask", nil, nil) }})
+	c.AddCommand(&cobra.Command{Use: "get <task-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "longtask/"+args[0], nil, nil) }})
+	return c
 }

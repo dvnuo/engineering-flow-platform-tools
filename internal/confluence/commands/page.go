@@ -21,18 +21,31 @@ func pageCmd(o *Opts) *cobra.Command {
 			}
 			return print(cmd, o, output.Failure("invalid_args", "exactly one of --id/--url", "", 400))
 		}
-		return do(o, cmd, "GET", "content/"+id, nil, nil)
+		q := map[string]string{}
+		if expand, _ := cmd.Flags().GetString("expand"); expand != "" {
+			q["expand"] = expand
+		}
+		return do(o, cmd, "GET", "content/"+id, q, nil)
 	}}
 	get.Flags().String("id", "", "")
 	get.Flags().String("url", "", "")
+	get.Flags().String("expand", "", "")
 	c.AddCommand(get)
 	gbt := &cobra.Command{Use: "get-by-title", RunE: func(cmd *cobra.Command, args []string) error {
 		sp, _ := cmd.Flags().GetString("space")
 		ti, _ := cmd.Flags().GetString("title")
-		return do(o, cmd, "GET", "content", map[string]string{"spaceKey": sp, "title": ti, "type": "page"}, nil)
+		q := map[string]string{"spaceKey": sp, "title": ti, "type": "page"}
+		for _, k := range []string{"expand", "limit"} {
+			if v, _ := cmd.Flags().GetString(k); v != "" {
+				q[k] = v
+			}
+		}
+		return do(o, cmd, "GET", "content", q, nil)
 	}}
 	gbt.Flags().String("space", "", "")
 	gbt.Flags().String("title", "", "")
+	gbt.Flags().String("expand", "", "")
+	gbt.Flags().String("limit", "", "")
 	c.AddCommand(gbt)
 	cr := &cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
 		sp, _ := cmd.Flags().GetString("space")
@@ -42,10 +55,14 @@ func pageCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Failure("invalid_args", "missing required args", "", 400))
 		}
 		payload := map[string]any{"type": "page", "title": ti, "space": map[string]string{"key": sp}, "body": confluenceBody(cmd, b)}
+		if parentID, _ := cmd.Flags().GetString("parent-id"); parentID != "" {
+			payload["ancestors"] = []map[string]string{{"id": parentID}}
+		}
 		return do(o, cmd, "POST", "content", nil, payload)
 	}}
 	cr.Flags().String("space", "", "")
 	cr.Flags().String("title", "", "")
+	cr.Flags().String("parent-id", "", "")
 	cr.Flags().String("body", "", "")
 	cr.Flags().String("body-file", "", "")
 	cr.Flags().Bool("body-stdin", false, "")
@@ -66,9 +83,20 @@ func pageCmd(o *Opts) *cobra.Command {
 			defer r.Body.Close()
 			var m map[string]any
 			_ = json.NewDecoder(r.Body).Decode(&m)
-			v = int(m["version"].(map[string]any)["number"].(float64)) + 1
+			vm, ok := m["version"].(map[string]any)
+			if !ok {
+				return print(cmd, o, output.Failure("server_error", "version.number missing", "Retry with --version.", 500))
+			}
+			num, ok := vm["number"].(float64)
+			if !ok {
+				return print(cmd, o, output.Failure("server_error", "version.number missing", "Retry with --version.", 500))
+			}
+			v = int(num) + 1
 		}
 		payload := map[string]any{"version": map[string]any{"number": v}}
+		if minor, _ := cmd.Flags().GetBool("minor-edit"); minor {
+			payload["version"].(map[string]any)["minorEdit"] = true
+		}
 		if t, _ := cmd.Flags().GetString("title"); t != "" {
 			payload["title"] = t
 		}
@@ -81,6 +109,7 @@ func pageCmd(o *Opts) *cobra.Command {
 	upd.Flags().String("url", "", "")
 	upd.Flags().Int("version", 0, "")
 	upd.Flags().String("title", "", "")
+	upd.Flags().Bool("minor-edit", false, "")
 	upd.Flags().String("body", "", "")
 	upd.Flags().String("body-file", "", "")
 	upd.Flags().Bool("body-stdin", false, "")

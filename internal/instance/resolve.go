@@ -38,6 +38,7 @@ func Resolve(product config.ProductConfig, explicit, rawURL, productName string)
 		if len(matches) == 1 {
 			return Result{Instance: matches[0], Entity: parseEntity(rawURL, productName)}, nil
 		}
+		return Result{}, errors.New("instance_required")
 	}
 	if product.DefaultInstance != "" {
 		for _, in := range product.Instances {

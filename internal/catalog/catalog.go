@@ -7,6 +7,21 @@ import (
 	"engineering-flow-platform-tools/internal/llm"
 )
 
+type FlagSpec struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Required    bool   `json:"required"`
+	Description string `json:"description"`
+}
+
+type explicitMeta struct {
+	Description string
+	Flags       []string
+	Required    []string
+	Risk        string
+	Example     string
+}
+
 var jiraCommands = []string{
 	"jira instance list", "jira instance get <name>", "jira instance add <name>", "jira instance update <name>", "jira instance remove <name>", "jira instance default [name]", "jira auth login", "jira auth logout", "jira auth test", "jira myself", "jira server-info", "jira resolve-url <url>", "jira commands", "jira schema <command>", "jira help llm", "jira version",
 	"jira issue get <issue-or-url>", "jira issue search", "jira issue create", "jira issue update <issue-or-url>", "jira issue edit <issue-or-url>", "jira issue delete <issue-or-url>", "jira issue assign <issue-or-url>", "jira issue transitions <issue-or-url>", "jira issue transition <issue-or-url>", "jira issue changelog <issue-or-url>", "jira issue fields <issue-or-url>", "jira issue createmeta", "jira issue editmeta <issue-or-url>", "jira issue watchers <issue-or-url>", "jira issue watch <issue-or-url>", "jira issue unwatch <issue-or-url>", "jira issue votes <issue-or-url>", "jira issue vote <issue-or-url>", "jira issue unvote <issue-or-url>", "jira issue notify <issue-or-url>",
@@ -83,21 +98,50 @@ func Schema(product, name string) map[string]any {
 		"usage":     item.Usage,
 		"risk":      item.Risk,
 		"arguments": arguments(item.Usage),
-		"flags":     item.Flags,
+		"flags":     flagSpecs(item.Name, item.Flags, item.Required),
 		"examples":  item.Examples,
-		"required":  required(name),
+		"required":  item.Required,
 	}
 }
 
 func meta(product, usage string) llm.CommandMeta {
+	name := dotted(usage)
+	ex := explicit[name]
+	flags := ex.Flags
+	if len(flags) == 0 {
+		flags = []string{"instance", "config", "json", "format", "verbose", "dry-run", "yes"}
+	}
+	desc := ex.Description
+	if desc == "" {
+		desc = description(usage)
+	}
+	r := risk(usage)
+	if ex.Risk != "" {
+		r = ex.Risk
+	}
+	example := ex.Example
+	if example == "" {
+		example = usage + " --json"
+	}
+	if product == "confluence" && strings.HasPrefix(example, "jira ") {
+		example = strings.Replace(example, "jira ", "confluence ", 1)
+	}
+	if product == "confluence" && strings.HasPrefix(name, "api.") {
+		example = strings.ReplaceAll(example, "/rest/api/2", "/rest/api")
+	}
+	req := ex.Required
+	if len(req) == 0 {
+		req = required(name)
+	}
 	return llm.CommandMeta{
-		Name:        usage,
+		Name:        name,
 		Usage:       usage,
 		Product:     product,
-		Risk:        risk(usage),
-		Description: description(usage),
-		Examples:    []string{usage + " --json"},
-		Flags:       []string{},
+		Risk:        r,
+		Description: desc,
+		Examples:    []string{example},
+		Flags:       flags,
+		Required:    req,
 	}
 }
 
@@ -119,7 +163,7 @@ func description(usage string) string {
 	if len(parts) <= 1 {
 		return usage
 	}
-	return "Run " + strings.Join(parts, " ")
+	return "Execute " + strings.Join(parts[1:], " ") + " for " + parts[0] + "."
 }
 
 func dotted(usage string) string {
@@ -149,9 +193,9 @@ func arguments(usage string) []string {
 
 func required(name string) []string {
 	switch name {
-	case "issue.create", "jira.issue.create":
+	case "issue.create":
 		return []string{"project", "type", "summary"}
-	case "page.create", "confluence.page.create":
+	case "page.create":
 		return []string{"space", "title", "body"}
 	case "filter.create":
 		return []string{"name", "jql"}
@@ -167,6 +211,99 @@ func required(name string) []string {
 		return []string{"time-spent|started|comment"}
 	}
 	return []string{}
+}
+
+func flagSpecs(command string, flags, required []string) []FlagSpec {
+	req := map[string]bool{}
+	for _, r := range required {
+		for _, part := range strings.Split(r, "|") {
+			req[strings.TrimSpace(part)] = true
+		}
+	}
+	out := make([]FlagSpec, 0, len(flags))
+	for _, f := range flags {
+		out = append(out, FlagSpec{Name: f, Type: flagType(f), Required: req[f], Description: flagDescription(command, f)})
+	}
+	return out
+}
+
+func flagType(name string) string {
+	switch name {
+	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit":
+		return "bool"
+	case "field", "fields", "query":
+		return "string[]"
+	default:
+		return "string"
+	}
+}
+
+func flagDescription(command, name string) string {
+	switch name {
+	case "instance":
+		return "Configured instance name."
+	case "config":
+		return "Path to config file."
+	case "json":
+		return "Print JSON envelope."
+	case "format":
+		return "Output format: table, json, or yaml."
+	case "dry-run":
+		return "Preview write request without sending it."
+	case "yes":
+		return "Confirm destructive operations."
+	case "project":
+		return "Jira project key."
+	case "type":
+		return "Issue type name."
+	case "summary":
+		return "Issue summary."
+	case "space":
+		return "Confluence space key."
+	case "title":
+		return "Page title."
+	case "body", "body-file", "body-stdin":
+		return "Request body source."
+	case "cql":
+		return "Confluence CQL query."
+	case "transition-id":
+		return "Jira transition id."
+	case "to":
+		return "Jira transition name."
+	default:
+		return "Command option."
+	}
+}
+
+var explicit = map[string]explicitMeta{
+	"auth.test":                 {Description: "Verify configured credentials against the current user endpoint.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira auth test --json"},
+	"server-info":               {Description: "Read server metadata from the selected instance.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira server-info --json"},
+	"issue.get":                 {Description: "Fetch a Jira issue by key or full issue URL.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue get EFP-123 --json"},
+	"issue.search":              {Description: "Search Jira issues with JQL.", Flags: []string{"jql", "limit", "start", "fields", "instance", "config", "json", "format", "verbose"}, Required: []string{"jql"}, Risk: "read", Example: "jira issue search --jql \"project = EFP\" --json"},
+	"issue.create":              {Description: "Create a Jira issue.", Flags: []string{"project", "type", "summary", "description", "field", "json-body", "json-body-file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"project", "type", "summary"}, Risk: "write", Example: "jira issue create --project EFP --type Task --summary Test --json"},
+	"issue.update":              {Description: "Update fields on a Jira issue.", Flags: []string{"summary", "description", "field", "json-body", "json-body-file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"summary|description|field|json-body|json-body-file"}, Risk: "write", Example: "jira issue update EFP-123 --summary Done --json"},
+	"issue.delete":              {Description: "Delete a Jira issue after explicit confirmation.", Flags: []string{"yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "yes"}, Risk: "delete", Example: "jira issue delete EFP-123 --yes --json"},
+	"issue.transition":          {Description: "Transition a Jira issue by transition id or transition name.", Flags: []string{"transition-id", "to", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"transition-id|to"}, Risk: "write", Example: "jira issue transition EFP-123 --to Done --json"},
+	"issue.comment.add":         {Description: "Add a comment to a Jira issue.", Flags: []string{"body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"body|body-file|body-stdin"}, Risk: "write", Example: "jira issue comment add EFP-123 --body ok --json"},
+	"issue.attachment.download": {Description: "Download or inspect a Jira issue attachment.", Flags: []string{"output", "instance", "config", "json", "format", "verbose", "dry-run"}, Risk: "read", Example: "jira attachment download 10000 --json"},
+	"project.list":              {Description: "List Jira projects.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira project list --json"},
+	"project.get":               {Description: "Fetch a Jira project by key.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"project-key"}, Risk: "read", Example: "jira project get EFP --json"},
+	"field.list":                {Description: "List Jira fields.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira field list --json"},
+	"api.get":                   {Description: "Call a raw REST GET path on the selected instance.", Flags: []string{"query", "instance", "config", "json", "format", "verbose"}, Required: []string{"path"}, Risk: "read", Example: "jira api get /rest/api/2/myself --json"},
+	"api.post":                  {Description: "Call a raw REST POST path on the selected instance.", Flags: []string{"query", "body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"path"}, Risk: "write", Example: "jira api post /rest/api/2/issue --body '{}' --json"},
+	"api.put":                   {Description: "Call a raw REST PUT path on the selected instance.", Flags: []string{"query", "body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"path"}, Risk: "write", Example: "jira api put /rest/api/2/issue/EFP-123 --body '{}' --json"},
+	"api.delete":                {Description: "Call a raw REST DELETE path after explicit confirmation.", Flags: []string{"query", "yes", "instance", "config", "json", "format", "verbose"}, Required: []string{"path", "yes"}, Risk: "delete", Example: "jira api delete /rest/api/2/issue/EFP-123 --yes --json"},
+	"search":                    {Description: "Search Confluence content with CQL.", Flags: []string{"cql", "limit", "start", "expand", "instance", "config", "json", "format", "verbose"}, Required: []string{"cql"}, Risk: "read", Example: "confluence search --cql \"space = ENG\" --json"},
+	"cql":                       {Description: "Search Confluence content with a CQL query alias.", Flags: []string{"query", "limit", "start", "expand", "instance", "config", "json", "format", "verbose"}, Required: []string{"query"}, Risk: "read", Example: "confluence cql --query \"space = ENG\" --json"},
+	"page.get":                  {Description: "Fetch a Confluence page by id or full URL.", Flags: []string{"id", "url", "expand", "instance", "config", "json", "format", "verbose"}, Required: []string{"id|url"}, Risk: "read", Example: "confluence page get --id 123 --json"},
+	"page.get-by-title":         {Description: "Fetch a Confluence page by space and title.", Flags: []string{"space", "title", "expand", "limit", "instance", "config", "json", "format", "verbose"}, Required: []string{"space", "title"}, Risk: "read", Example: "confluence page get-by-title --space ENG --title Home --json"},
+	"page.create":               {Description: "Create a Confluence page.", Flags: []string{"space", "title", "parent-id", "body", "body-file", "body-stdin", "body-format", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"space", "title", "body|body-file|body-stdin"}, Risk: "write", Example: "confluence page create --space ENG --title Home --body '<p>Hello</p>' --json"},
+	"page.update":               {Description: "Update a Confluence page.", Flags: []string{"id", "url", "title", "version", "minor-edit", "body", "body-file", "body-stdin", "body-format", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"id|url"}, Risk: "write", Example: "confluence page update --id 123 --title Home --json"},
+	"page.delete":               {Description: "Delete a Confluence page after explicit confirmation.", Flags: []string{"id", "url", "yes", "instance", "config", "json", "format", "verbose"}, Required: []string{"id|url", "yes"}, Risk: "delete", Example: "confluence page delete --id 123 --yes --json"},
+	"page.export-markdown":      {Description: "Export a Confluence page body as Markdown.", Flags: []string{"id", "url", "output", "instance", "config", "json", "format", "verbose"}, Required: []string{"id|url"}, Risk: "read", Example: "confluence page export-markdown --id 123 --json"},
+	"page.attachment.download":  {Description: "Download or inspect a Confluence page attachment.", Flags: []string{"output", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "confluence attachment download 10000 --json"},
+	"page.comment.add":          {Description: "Add a comment to a Confluence page.", Flags: []string{"id", "url", "body", "body-file", "body-stdin", "body-format", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"id|url", "body|body-file|body-stdin"}, Risk: "write", Example: "confluence page comment add --id 123 --body ok --json"},
+	"page.label.add":            {Description: "Add labels to a Confluence page.", Flags: []string{"id", "url", "label", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"id|url", "label"}, Risk: "write", Example: "confluence page label add --id 123 --label runbook --json"},
 }
 
 func SortedUsages(product string) []string {

@@ -8,6 +8,7 @@ type CommandMeta struct {
 	Description string   `json:"description"`
 	Examples    []string `json:"examples"`
 	Flags       []string `json:"flags"`
+	Required    []string `json:"required"`
 }
 
 type Registry struct{ items map[string]CommandMeta }

@@ -55,8 +55,8 @@ func TestAuthHeaderAndIssuePaths(t *testing.T) {
 	if !run(t, cfg, "issue", "get", "EFP-123")["ok"].(bool) {
 		t.Fatal()
 	}
-	if !run(t, cfg, "issue", "get", "http://x/browse/EFP-123")["ok"].(bool) {
-		t.Fatal()
+	if run(t, cfg, "issue", "get", "http://x/browse/EFP-123")["ok"].(bool) {
+		t.Fatal("unmatched issue URL should fail")
 	}
 }
 func TestSearchCreateTransitionDryDeleteRaw(t *testing.T) {

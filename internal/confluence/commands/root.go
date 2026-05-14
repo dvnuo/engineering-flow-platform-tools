@@ -24,6 +24,7 @@ import (
 
 type Opts struct {
 	Instance, Config, Format   string
+	Entity                     string
 	JSON, Verbose, DryRun, Yes bool
 }
 
@@ -131,7 +132,11 @@ func loadCtx(o *Opts, entity string) (*ctx, error) {
 	return &ctx{cfg: cfg, inst: res.Instance, client: cl}, nil
 }
 func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body any) error {
-	cx, err := loadCtx(o, p)
+	entity := p
+	if o.Entity != "" {
+		entity = o.Entity
+	}
+	cx, err := loadCtx(o, entity)
 	if err != nil {
 		return print(cmd, o, output.Failure("config_error", err.Error(), "", 400))
 	}
@@ -151,7 +156,15 @@ func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body
 
 func helpLLMCmd() *cobra.Command {
 	return &cobra.Command{Use: "help llm", RunE: func(cmd *cobra.Command, args []string) error {
-		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"tips": []string{"use commands --json", "use schema <command> --json"}, "commands": catalog.Commands("confluence")}))
+		tips := []string{
+			"Always use --json for machine-readable output.",
+			"Use --instance when multiple instances are configured.",
+			"Full Jira/Confluence URLs can auto-select the instance.",
+			"Use --dry-run before write operations.",
+			"Use --yes for destructive operations.",
+			"Inspect error.code and error.hint before retrying.",
+		}
+		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"tips": tips, "commands": catalog.Commands("confluence")}))
 	}}
 }
 
@@ -190,8 +203,10 @@ func pageID(cmd *cobra.Command, o *Opts) (string, error) {
 		return "", fmt.Errorf("invalid_args")
 	}
 	if id != "" {
+		o.Entity = ""
 		return id, nil
 	}
+	o.Entity = u
 	pu, err := url.Parse(u)
 	if err != nil {
 		return "", err

@@ -103,7 +103,7 @@ jira schema issue.create --json
 confluence schema page.create --json
 ```
 
-Always use `--json`, inspect `error.code` and `error.hint`, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+Always use `--json`, inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
 
 ## Security Model
 

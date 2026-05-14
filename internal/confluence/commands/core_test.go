@@ -15,6 +15,9 @@ func TestCoreAndSafety(t *testing.T) {
 		if r.URL.Path == "/rest/api/search" && r.URL.Query().Get("cql") == "" {
 			t.Fatal("missing cql")
 		}
+		if r.URL.Path == "/rest/api/content" && r.Method == "GET" && r.URL.Query().Get("expand") == "" {
+			t.Fatal("missing api query")
+		}
 		if r.Method == "GET" && r.URL.Path == "/rest/api/content/123" {
 			_, _ = w.Write([]byte(`{"version":{"number":2}}`))
 			return
@@ -42,5 +45,8 @@ func TestCoreAndSafety(t *testing.T) {
 	}
 	if run(t, p, "api", "get", "https://evil.example/rest/api/content/1")["ok"].(bool) {
 		t.Fatal("off instance should fail")
+	}
+	if !run(t, p, "api", "get", "content", "--query", "expand=version")["ok"].(bool) {
+		t.Fatal("api query")
 	}
 }

@@ -169,18 +169,31 @@ func apiCmd(o *Opts) *cobra.Command {
 				p = strings.TrimPrefix(p, cx.inst.BaseURL)
 			}
 			b := readBody(cmd)
+			q := map[string]string{}
+			for _, kv := range mustStringSlice(cmd, "query") {
+				parts := strings.SplitN(kv, "=", 2)
+				if len(parts) == 2 && strings.TrimSpace(parts[0]) != "" {
+					q[strings.TrimSpace(parts[0])] = parts[1]
+				}
+			}
 			var bj any
 			if b != "" {
 				_ = json.Unmarshal([]byte(b), &bj)
 			}
-			return do(o, cmd, method, p, nil, bj)
+			return do(o, cmd, method, p, q, bj)
 		}}
+		cmd.Flags().StringSlice("query", nil, "")
 		cmd.Flags().String("body", "", "")
 		cmd.Flags().String("body-file", "", "")
 		cmd.Flags().Bool("body-stdin", false, "")
 		c.AddCommand(cmd)
 	}
 	return c
+}
+
+func mustStringSlice(cmd *cobra.Command, name string) []string {
+	v, _ := cmd.Flags().GetStringSlice(name)
+	return v
 }
 
 // helper for multipart tests

@@ -376,6 +376,96 @@ func pageCmd(o *Opts) *cobra.Command {
 	ex.Flags().String("url", "", "")
 	ex.Flags().String("output", "", "")
 	c.AddCommand(ex)
+	exh := &cobra.Command{Use: "export-html", RunE: func(cmd *cobra.Command, args []string) error {
+		id, err := pageID(cmd, o)
+		if err != nil {
+			return err
+		}
+		cx, _ := loadCtx(o, "")
+		r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + id, Query: map[string]string{"expand": "body.export_view"}})
+		if e != nil {
+			return print(cmd, o, output.Failure("server_error", e.Error(), "", 500))
+		}
+		defer r.Body.Close()
+		var m map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&m)
+		html := m["body"].(map[string]any)["export_view"].(map[string]any)["value"].(string)
+		out, _ := cmd.Flags().GetString("output")
+		if out != "" {
+			_ = os.WriteFile(out, []byte(html), 0644)
+			return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"output": filepath.Clean(out)}))
+		}
+		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"html": html}))
+	}}
+	exh.Flags().String("id", "", "")
+	exh.Flags().String("url", "", "")
+	exh.Flags().String("output", "", "")
+	c.AddCommand(exh)
+	c.AddCommand(&cobra.Command{Use: "body-storage", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "body.storage"}, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "body-view", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "body.view"}, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "label-list", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "GET", "content/"+id+"/label", nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "label-add", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		labels, _ := cmd.Flags().GetStringSlice("label")
+		arr := []map[string]string{}
+		for _, l := range labels {
+			arr = append(arr, map[string]string{"prefix": "global", "name": l})
+		}
+		return do(o, cmd, "POST", "content/"+id+"/label", nil, arr)
+	}})
+	c.Commands()[len(c.Commands())-1].Flags().StringSlice("label", nil, "")
+	c.AddCommand(&cobra.Command{Use: "label-delete", RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
+		}
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		n, _ := cmd.Flags().GetString("label")
+		return do(o, cmd, "DELETE", "content/"+id+"/label", map[string]string{"name": n}, nil)
+	}})
+	c.Commands()[len(c.Commands())-1].Flags().String("label", "", "")
+	c.AddCommand(&cobra.Command{Use: "comment-list", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "GET", "content/"+id+"/child/comment", nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "comment-add", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		b := readBody(cmd)
+		return do(o, cmd, "POST", "content/"+id+"/child/comment", nil, map[string]any{"type": "comment", "body": confluenceBody(cmd, b)})
+	}})
+	c.Commands()[len(c.Commands())-1].Flags().String("body", "", "")
+	c.Commands()[len(c.Commands())-1].Flags().String("body-file", "", "")
+	c.Commands()[len(c.Commands())-1].Flags().Bool("body-stdin", false, "")
+	c.Commands()[len(c.Commands())-1].Flags().String("body-format", "storage", "")
 	prop := &cobra.Command{Use: "property"}
 	prop.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
 		id, err := pageID(cmd, o)
@@ -833,6 +923,20 @@ func instanceCmd(o *Opts) *cobra.Command {
 		}
 		return print(cmd, o, output.Success("", map[string]any{"instances": cfg.Confluence.Instances, "default_instance": cfg.Confluence.DefaultInstance}))
 	}})
+	c.AddCommand(&cobra.Command{Use: "get <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		p, _ := config.ResolvePath(o.Config)
+		cfg, err := config.Load(p)
+		if err != nil {
+			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
+		}
+		for _, in := range cfg.Confluence.Instances {
+			if in.Name == args[0] {
+				in.Auth = config.RedactAuth(in.Auth)
+				return print(cmd, o, output.Success(in.Name, in))
+			}
+		}
+		return print(cmd, o, output.Failure("not_found", "instance not found", "", 404))
+	}})
 	c.AddCommand(&cobra.Command{Use: "add <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		p, _ := config.ResolvePath(o.Config)
 		cfg, _ := config.Load(p)
@@ -858,6 +962,29 @@ func instanceCmd(o *Opts) *cobra.Command {
 	c.Commands()[1].Flags().String("username", "", "")
 	c.Commands()[1].Flags().String("auth-type", "", "")
 	c.Commands()[1].Flags().Bool("default", false, "")
+	c.AddCommand(&cobra.Command{Use: "update <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		p, _ := config.ResolvePath(o.Config)
+		cfg, err := config.Load(p)
+		if err != nil {
+			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
+		}
+		base, _ := cmd.Flags().GetString("base-url")
+		rest, _ := cmd.Flags().GetString("rest-path")
+		for i := range cfg.Confluence.Instances {
+			if cfg.Confluence.Instances[i].Name == args[0] {
+				if base != "" {
+					cfg.Confluence.Instances[i].BaseURL = base
+				}
+				if rest != "" {
+					cfg.Confluence.Instances[i].RESTPath = rest
+				}
+			}
+		}
+		_ = config.Save(p, cfg)
+		return print(cmd, o, output.Success(args[0], map[string]any{"updated": true}))
+	}})
+	c.Commands()[3].Flags().String("base-url", "", "")
+	c.Commands()[3].Flags().String("rest-path", "", "")
 	c.AddCommand(&cobra.Command{Use: "remove <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))

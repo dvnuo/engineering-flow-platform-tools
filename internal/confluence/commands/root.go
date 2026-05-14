@@ -40,7 +40,7 @@ func NewRoot() *cobra.Command {
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
 	c.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "")
 	c.PersistentFlags().BoolVar(&o.Yes, "yes", false, "")
-	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), restrictionCmd(o), apiCmd(o))
+	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), cqlCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), restrictionCmd(o), apiCmd(o))
 	return c
 }
 func print(cmd *cobra.Command, o *Opts, e output.Envelope) error {
@@ -186,6 +186,23 @@ func searchCmd(o *Opts) *cobra.Command {
 	cc.Flags().String("text", "", "")
 	cc.Flags().String("space", "", "")
 	cc.Flags().String("type", "", "")
+	c.AddCommand(&cobra.Command{Use: "user", RunE: func(cmd *cobra.Command, args []string) error {
+		q, _ := cmd.Flags().GetString("query")
+		return do(o, cmd, "GET", "user/search", map[string]string{"query": q}, nil)
+	}})
+	c.Commands()[1].Flags().String("query", "", "")
+	return c
+}
+
+func cqlCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "cql", RunE: func(cmd *cobra.Command, args []string) error {
+		q, _ := cmd.Flags().GetString("query")
+		if q == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--query required", "", 400))
+		}
+		return do(o, cmd, "GET", "search", map[string]string{"cql": q}, nil)
+	}}
+	c.Flags().String("query", "", "")
 	return c
 }
 func readBody(cmd *cobra.Command) string {

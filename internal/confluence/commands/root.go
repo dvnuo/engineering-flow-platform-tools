@@ -223,6 +223,17 @@ func readBody(cmd *cobra.Command) string {
 	}
 	return ""
 }
+func bodyFormat(cmd *cobra.Command) string {
+	f, _ := cmd.Flags().GetString("body-format")
+	if f == "" {
+		return "storage"
+	}
+	return f
+}
+func confluenceBody(cmd *cobra.Command, v string) map[string]any {
+	f := bodyFormat(cmd)
+	return map[string]any{f: map[string]string{"value": v, "representation": f}}
+}
 func pageID(cmd *cobra.Command, o *Opts) (string, error) {
 	id, _ := cmd.Flags().GetString("id")
 	u, _ := cmd.Flags().GetString("url")
@@ -235,6 +246,12 @@ func pageID(cmd *cobra.Command, o *Opts) (string, error) {
 	pu, err := url.Parse(u)
 	if err != nil {
 		return "", err
+	}
+	if pu.IsAbs() && o.Instance != "" {
+		cx, e := loadCtx(o, "")
+		if e == nil && !strings.HasPrefix(strings.TrimRight(u, "/"), strings.TrimRight(cx.inst.BaseURL, "/")) {
+			return "", fmt.Errorf("instance_url_mismatch")
+		}
 	}
 	pid := pu.Query().Get("pageId")
 	if pid != "" {
@@ -275,7 +292,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		if sp == "" || ti == "" || b == "" {
 			return print(cmd, o, output.Failure("invalid_args", "missing required args", "", 400))
 		}
-		payload := map[string]any{"type": "page", "title": ti, "space": map[string]string{"key": sp}, "body": map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}}
+		payload := map[string]any{"type": "page", "title": ti, "space": map[string]string{"key": sp}, "body": confluenceBody(cmd, b)}
 		return do(o, cmd, "POST", "content", nil, payload)
 	}}
 	cr.Flags().String("space", "", "")
@@ -283,6 +300,7 @@ func pageCmd(o *Opts) *cobra.Command {
 	cr.Flags().String("body", "", "")
 	cr.Flags().String("body-file", "", "")
 	cr.Flags().Bool("body-stdin", false, "")
+	cr.Flags().String("body-format", "storage", "")
 	c.AddCommand(cr)
 	upd := &cobra.Command{Use: "update", RunE: func(cmd *cobra.Command, args []string) error {
 		id, err := pageID(cmd, o)
@@ -306,7 +324,7 @@ func pageCmd(o *Opts) *cobra.Command {
 			payload["title"] = t
 		}
 		if b := readBody(cmd); b != "" {
-			payload["body"] = map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}
+			payload["body"] = confluenceBody(cmd, b)
 		}
 		return do(o, cmd, "PUT", "content/"+id, nil, payload)
 	}}
@@ -317,6 +335,7 @@ func pageCmd(o *Opts) *cobra.Command {
 	upd.Flags().String("body", "", "")
 	upd.Flags().String("body-file", "", "")
 	upd.Flags().Bool("body-stdin", false, "")
+	upd.Flags().String("body-format", "storage", "")
 	c.AddCommand(upd)
 	del := &cobra.Command{Use: "delete", RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
@@ -628,7 +647,7 @@ func contentCmd(o *Opts) *cobra.Command {
 		sp, _ := cmd.Flags().GetString("space")
 		ti, _ := cmd.Flags().GetString("title")
 		b := readBody(cmd)
-		return do(o, cmd, "POST", "content", nil, map[string]any{"type": t, "title": ti, "space": map[string]string{"key": sp}, "body": map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}})
+		return do(o, cmd, "POST", "content", nil, map[string]any{"type": t, "title": ti, "space": map[string]string{"key": sp}, "body": confluenceBody(cmd, b)})
 	}})
 	c.Commands()[2].Flags().String("type", "page", "")
 	c.Commands()[2].Flags().String("space", "", "")
@@ -636,6 +655,7 @@ func contentCmd(o *Opts) *cobra.Command {
 	c.Commands()[2].Flags().String("body", "", "")
 	c.Commands()[2].Flags().String("body-file", "", "")
 	c.Commands()[2].Flags().Bool("body-stdin", false, "")
+	c.Commands()[2].Flags().String("body-format", "storage", "")
 	c.AddCommand(&cobra.Command{Use: "update <content-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		cx, _ := loadCtx(o, "")
 		v, _ := cmd.Flags().GetInt("version")
@@ -651,13 +671,14 @@ func contentCmd(o *Opts) *cobra.Command {
 		}
 		ti, _ := cmd.Flags().GetString("title")
 		b := readBody(cmd)
-		return do(o, cmd, "PUT", "content/"+args[0], nil, map[string]any{"title": ti, "version": map[string]any{"number": v}, "body": map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}})
+		return do(o, cmd, "PUT", "content/"+args[0], nil, map[string]any{"title": ti, "version": map[string]any{"number": v}, "body": confluenceBody(cmd, b)})
 	}})
 	c.Commands()[3].Flags().Int("version", 0, "")
 	c.Commands()[3].Flags().String("title", "", "")
 	c.Commands()[3].Flags().String("body", "", "")
 	c.Commands()[3].Flags().String("body-file", "", "")
 	c.Commands()[3].Flags().Bool("body-stdin", false, "")
+	c.Commands()[3].Flags().String("body-format", "storage", "")
 	c.AddCommand(&cobra.Command{Use: "delete <content-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
@@ -678,13 +699,14 @@ func blogCmd(o *Opts) *cobra.Command {
 		sp, _ := cmd.Flags().GetString("space")
 		ti, _ := cmd.Flags().GetString("title")
 		b := readBody(cmd)
-		return do(o, cmd, "POST", "content", nil, map[string]any{"type": "blogpost", "title": ti, "space": map[string]string{"key": sp}, "body": map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}})
+		return do(o, cmd, "POST", "content", nil, map[string]any{"type": "blogpost", "title": ti, "space": map[string]string{"key": sp}, "body": confluenceBody(cmd, b)})
 	}})
 	c.Commands()[2].Flags().String("space", "", "")
 	c.Commands()[2].Flags().String("title", "", "")
 	c.Commands()[2].Flags().String("body", "", "")
 	c.Commands()[2].Flags().String("body-file", "", "")
 	c.Commands()[2].Flags().Bool("body-stdin", false, "")
+	c.Commands()[2].Flags().String("body-format", "storage", "")
 	c.AddCommand(&cobra.Command{Use: "update <blog-id-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		cx, _ := loadCtx(o, "")
 		v, _ := cmd.Flags().GetInt("version")
@@ -700,13 +722,14 @@ func blogCmd(o *Opts) *cobra.Command {
 		}
 		ti, _ := cmd.Flags().GetString("title")
 		b := readBody(cmd)
-		return do(o, cmd, "PUT", "content/"+args[0], nil, map[string]any{"title": ti, "version": map[string]any{"number": v}, "body": map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}})
+		return do(o, cmd, "PUT", "content/"+args[0], nil, map[string]any{"title": ti, "version": map[string]any{"number": v}, "body": confluenceBody(cmd, b)})
 	}})
 	c.Commands()[3].Flags().Int("version", 0, "")
 	c.Commands()[3].Flags().String("title", "", "")
 	c.Commands()[3].Flags().String("body", "", "")
 	c.Commands()[3].Flags().String("body-file", "", "")
 	c.Commands()[3].Flags().Bool("body-stdin", false, "")
+	c.Commands()[3].Flags().String("body-format", "storage", "")
 	c.AddCommand(&cobra.Command{Use: "delete <blog-id-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
@@ -973,12 +996,13 @@ func commentCmd(o *Opts) *cobra.Command {
 			_ = json.NewDecoder(r.Body).Decode(&m)
 			v = int(m["version"].(map[string]any)["number"].(float64)) + 1
 		}
-		payload := map[string]any{"version": map[string]any{"number": v}, "type": "comment", "body": map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}}
+		payload := map[string]any{"version": map[string]any{"number": v}, "type": "comment", "body": confluenceBody(cmd, b)}
 		return do(o, cmd, "PUT", "content/"+args[0], nil, payload)
 	}})
 	c.Commands()[1].Flags().String("body", "", "")
 	c.Commands()[1].Flags().String("body-file", "", "")
 	c.Commands()[1].Flags().Bool("body-stdin", false, "")
+	c.Commands()[1].Flags().String("body-format", "storage", "")
 	c.Commands()[1].Flags().Int("version", 0, "")
 	c.AddCommand(&cobra.Command{Use: "delete <comment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {

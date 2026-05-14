@@ -16,11 +16,11 @@ func TestJSONContractSmoke(t *testing.T) {
 		args []string
 	}{
 		{"jira", []string{"commands", "--json"}},
+		{"jira", []string{"help", "llm", "--json"}},
 		{"jira", []string{"schema", "issue.create", "--json"}},
-		{"jira", []string{"resolve-url", "https://example.atlassian.net/browse/EFP-1", "--json"}},
 		{"confluence", []string{"commands", "--json"}},
+		{"confluence", []string{"help", "llm", "--json"}},
 		{"confluence", []string{"schema", "page.create", "--json"}},
-		{"confluence", []string{"resolve-url", "https://example.atlassian.net/wiki/spaces/ENG/pages/1", "--json"}},
 	}
 	for _, c := range checks {
 		var b bytes.Buffer

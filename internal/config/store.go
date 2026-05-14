@@ -5,6 +5,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
 func Load(path string) (RootConfig, error) {
@@ -14,7 +16,9 @@ func Load(path string) (RootConfig, error) {
 		return c, err
 	}
 	if err := json.Unmarshal(b, &c); err != nil {
-		return c, err
+		if yerr := yaml.Unmarshal(b, &c); yerr != nil {
+			return c, err
+		}
 	}
 	c.Normalize()
 	return c, nil

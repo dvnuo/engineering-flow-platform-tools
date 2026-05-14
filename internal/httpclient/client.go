@@ -93,6 +93,11 @@ func (c *Client) resolveURL(path string) (string, error) {
 		}
 		return path, nil
 	}
+	if strings.HasPrefix(path, "/") {
+		u := strings.TrimRight(c.instance.BaseURL, "/") + path
+		_, err := url.Parse(u)
+		return u, err
+	}
 	base := strings.TrimRight(c.instance.BaseURL, "/") + "/" + strings.Trim(c.instance.RESTPath, "/") + "/" + strings.TrimLeft(path, "/")
 	_, err := url.Parse(base)
 	return base, err

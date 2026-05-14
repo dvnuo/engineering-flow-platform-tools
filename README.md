@@ -60,32 +60,14 @@ bash scripts/build.sh
 
 Build outputs include `jira` and `confluence` for linux, darwin, and windows targets under `dist/`.
 
-## Phase-1 status
-
-This phase focuses on scaffolding:
-
-- root command framework
-- command registry output via `commands --json`
-- static schema placeholder via `schema <command>`
-- docs and CI baseline
-
-Real Jira/Confluence API execution is intentionally deferred to future prompts.
-
-
 ## TLS note
 
 When `verify_ssl=false`, TLS verification is disabled and should only be used in internal test environments.
 
 
-## Jira implementation status (ongoing)
+## Command coverage
 
-Implementation is partially complete (base + high-frequency issue + raw API + local instance/auth flows).
-Additional command areas are being incrementally added with shared request helpers and dry-run support.
-
-
-## Implementation progress
-
-Implemented command groups now include metadata/workflow/admin-read, project details, user/group lookup, filter/dashboard retrieval, component/version CRUD subset, and agile board/sprint/backlog paths.
+`docs/COMMAND_SPEC.md` is the source of the user-visible command contract. The Cobra command trees, `commands --json`, and `schema <command> --json` are tested against that contract.
 
 
 ## Confluence examples

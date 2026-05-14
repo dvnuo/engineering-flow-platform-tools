@@ -41,7 +41,7 @@ func restrictionCmd(o *Opts) *cobra.Command {
 			if strings.Contains(err.Error(), "not_found") {
 				return print(cmd, o, output.Failure("not_supported", "watcher endpoint not supported", "", 404))
 			}
-			return print(cmd, o, output.Failure("server_error", err.Error(), "", 500))
+			return print(cmd, o, envelopeError(err, "server_error"))
 		}
 		defer resp.Body.Close()
 		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"ok": true}))

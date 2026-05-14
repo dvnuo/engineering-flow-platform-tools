@@ -3,6 +3,7 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -12,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"engineering-flow-platform-tools/internal/catalog"
 	"engineering-flow-platform-tools/internal/config"
 	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/instance"
@@ -39,7 +41,7 @@ func NewRoot() *cobra.Command {
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
 	c.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "")
 	c.PersistentFlags().BoolVar(&o.Yes, "yes", false, "")
-	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), cqlCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), labelCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), restrictionCmd(o), apiCmd(o))
+	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), cqlCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), labelCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), hiddenCmd(restrictionCmd(o)), apiCmd(o))
 	return c
 }
 func print(cmd *cobra.Command, o *Opts, e output.Envelope) error {
@@ -48,6 +50,59 @@ func print(cmd *cobra.Command, o *Opts, e output.Envelope) error {
 		f = "json"
 	}
 	return output.Print(cmd.OutOrStdout(), f, e)
+}
+
+func envelopeError(err error, fallbackCode string) output.Envelope {
+	var httpErr *httpclient.HTTPError
+	if errors.As(err, &httpErr) {
+		return output.Failure(httpErr.Code, httpErr.Message, httpErr.Hint, httpErr.Status)
+	}
+	if fallbackCode == "" {
+		fallbackCode = "server_error"
+	}
+	return output.Failure(fallbackCode, err.Error(), "", 500)
+}
+
+func authFromFlags(cmd *cobra.Command) (config.AuthConfig, error) {
+	username, _ := cmd.Flags().GetString("username")
+	authType, _ := cmd.Flags().GetString("auth-type")
+	auth := config.AuthConfig{Type: authType, Username: username}
+	if mustB(cmd, "password-stdin") {
+		secret, _ := io.ReadAll(cmd.InOrStdin())
+		auth.Password = strings.TrimRight(string(secret), "\r\n")
+	}
+	if mustB(cmd, "api-key-stdin") {
+		secret, _ := io.ReadAll(cmd.InOrStdin())
+		auth.APIKey = strings.TrimRight(string(secret), "\r\n")
+	}
+	if mustB(cmd, "token-stdin") {
+		secret, _ := io.ReadAll(cmd.InOrStdin())
+		auth.Token = strings.TrimRight(string(secret), "\r\n")
+	}
+	auth.NormalizeType()
+	switch auth.Type {
+	case "basic_password":
+		if auth.Username == "" || auth.Password == "" {
+			return auth, fmt.Errorf("invalid_args")
+		}
+	case "basic_api_key":
+		if auth.Username == "" || auth.APIKey == "" {
+			return auth, fmt.Errorf("invalid_args")
+		}
+	case "bearer_token":
+		if auth.Token == "" {
+			return auth, fmt.Errorf("invalid_args")
+		}
+	}
+	return auth, nil
+}
+
+func addAuthFlags(cmd *cobra.Command) {
+	cmd.Flags().String("username", "", "")
+	cmd.Flags().String("auth-type", "", "")
+	cmd.Flags().Bool("password-stdin", false, "")
+	cmd.Flags().Bool("api-key-stdin", false, "")
+	cmd.Flags().Bool("token-stdin", false, "")
 }
 func loadCtx(o *Opts, entity string) (*ctx, error) {
 	p, _ := config.ResolvePath(o.Config)
@@ -75,7 +130,7 @@ func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body
 	}
 	resp, err := cx.client.Do(httpclient.Request{Method: method, Path: p, Query: q, JSONBody: body})
 	if err != nil {
-		return print(cmd, o, output.Failure("server_error", err.Error(), "", 500))
+		return print(cmd, o, envelopeError(err, "server_error"))
 	}
 	defer resp.Body.Close()
 	d, _ := io.ReadAll(resp.Body)
@@ -86,8 +141,7 @@ func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body
 
 func helpLLMCmd() *cobra.Command {
 	return &cobra.Command{Use: "help llm", RunE: func(cmd *cobra.Command, args []string) error {
-		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Confluence LLM help: use commands/schema for structured usage.")
-		return nil
+		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"tips": []string{"use commands --json", "use schema <command> --json"}, "commands": catalog.Commands("confluence")}))
 	}}
 }
 
@@ -194,6 +248,27 @@ func apiCmd(o *Opts) *cobra.Command {
 func mustStringSlice(cmd *cobra.Command, name string) []string {
 	v, _ := cmd.Flags().GetStringSlice(name)
 	return v
+}
+
+func mustS(cmd *cobra.Command, name string) string {
+	v, _ := cmd.Flags().GetString(name)
+	return v
+}
+
+func mustB(cmd *cobra.Command, name string) bool {
+	v, _ := cmd.Flags().GetBool(name)
+	return v
+}
+
+func hiddenAlias(use string, target *cobra.Command) *cobra.Command {
+	return &cobra.Command{Use: use, Hidden: true, RunE: func(cmd *cobra.Command, args []string) error {
+		return target.RunE(cmd, args)
+	}}
+}
+
+func hiddenCmd(cmd *cobra.Command) *cobra.Command {
+	cmd.Hidden = true
+	return cmd
 }
 
 // helper for multipart tests

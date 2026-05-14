@@ -42,9 +42,11 @@ func instanceCmd(o *Opts) *cobra.Command {
 		if rest == "" {
 			rest = "/rest/api"
 		}
-		user, _ := cmd.Flags().GetString("username")
-		typ, _ := cmd.Flags().GetString("auth-type")
-		cfg.Confluence.Instances = append(cfg.Confluence.Instances, config.InstanceConfig{Name: args[0], BaseURL: base, RESTPath: rest, VerifySSL: &v, Auth: config.AuthConfig{Type: typ, Username: user}})
+		auth, authErr := authFromFlags(cmd)
+		if authErr != nil {
+			return print(cmd, o, output.Failure("invalid_args", "missing required auth secret", "", 400))
+		}
+		cfg.Confluence.Instances = append(cfg.Confluence.Instances, config.InstanceConfig{Name: args[0], BaseURL: base, RESTPath: rest, VerifySSL: &v, Auth: auth})
 		if d, _ := cmd.Flags().GetBool("default"); d {
 			cfg.Confluence.DefaultInstance = args[0]
 		}
@@ -53,11 +55,10 @@ func instanceCmd(o *Opts) *cobra.Command {
 		}
 		return print(cmd, o, output.Success(args[0], map[string]any{"added": true}))
 	}})
-	c.Commands()[1].Flags().String("base-url", "", "")
-	c.Commands()[1].Flags().String("rest-path", "/rest/api", "")
-	c.Commands()[1].Flags().String("username", "", "")
-	c.Commands()[1].Flags().String("auth-type", "", "")
-	c.Commands()[1].Flags().Bool("default", false, "")
+	c.Commands()[2].Flags().String("base-url", "", "")
+	c.Commands()[2].Flags().String("rest-path", "/rest/api", "")
+	addAuthFlags(c.Commands()[2])
+	c.Commands()[2].Flags().Bool("default", false, "")
 	c.AddCommand(&cobra.Command{Use: "update <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		p, _ := config.ResolvePath(o.Config)
 		cfg, err := config.Load(p)

@@ -6,8 +6,8 @@ type CommandMeta struct {
 	Product     string   `json:"product"`
 	Risk        string   `json:"risk"`
 	Description string   `json:"description"`
-	Examples    []string `json:"examples,omitempty"`
-	Flags       []string `json:"flags,omitempty"`
+	Examples    []string `json:"examples"`
+	Flags       []string `json:"flags"`
 }
 
 type Registry struct{ items map[string]CommandMeta }

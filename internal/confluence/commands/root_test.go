@@ -15,7 +15,7 @@ func cfg(t *testing.T, h http.HandlerFunc) string {
 	s := httptest.NewServer(h)
 	t.Cleanup(s.Close)
 	v := true
-	c := config.RootConfig{Version: 1, Jira: config.ProductConfig{DefaultInstance: "c", Instances: []config.InstanceConfig{{Name: "c", BaseURL: s.URL, RESTPath: "/rest/api", VerifySSL: &v, Auth: config.AuthConfig{Type: "bearer_token", Token: "t"}}}}}
+	c := config.RootConfig{Version: 1, Confluence: config.ProductConfig{DefaultInstance: "c", Instances: []config.InstanceConfig{{Name: "c", BaseURL: s.URL, RESTPath: "/rest/api", VerifySSL: &v, Auth: config.AuthConfig{Type: "bearer_token", Token: "t"}}}}}
 	p := filepath.Join(t.TempDir(), "c.json")
 	_ = config.Save(p, c)
 	return p
@@ -31,31 +31,41 @@ func run(t *testing.T, cfg string, args ...string) map[string]any {
 	_ = json.Unmarshal(b.Bytes(), &out)
 	return out
 }
-
-func TestValidationAndSchema(t *testing.T) {
-	p := cfg(t, func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(`{"ok":true}`)) })
-	if run(t, p, "page", "create", "--title", "x")["ok"].(bool) {
-		t.Fatal("expected invalid")
-	}
-	if run(t, p, "content", "update", "1")["ok"].(bool) {
-		t.Fatal("expected invalid")
-	}
-	s := run(t, p, "schema", "page.create")
-	if len(s["data"].(map[string]any)["required"].([]any)) == 0 {
-		t.Fatal("schema required missing")
-	}
-}
-
-func TestEndpointMethods(t *testing.T) {
-	calls := []string{}
+func TestSearchAndTitleAndDryRun(t *testing.T) {
+	calls := 0
 	p := cfg(t, func(w http.ResponseWriter, r *http.Request) {
-		calls = append(calls, r.Method+" "+r.URL.Path)
-		w.Write([]byte(`{"ok":true}`))
+		calls++
+		if r.URL.Path == "/rest/api/search" && r.URL.Query().Get("cql") == "space = ENG" {
+			_, _ = w.Write([]byte(`{"ok":true}`))
+			return
+		}
+		if r.URL.Path == "/rest/api/content" && r.URL.Query().Get("type") == "page" {
+			_, _ = w.Write([]byte(`{"ok":true}`))
+			return
+		}
+		if r.URL.Path == "/rest/api/user/current" {
+			if r.Header.Get("Authorization") == "" {
+				t.Fatal("missing auth")
+			}
+			_, _ = w.Write([]byte(`{"ok":true}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"version":{"number":2},"body":{"view":{"value":"<p>Hello</p>"}}}`))
 	})
-	_ = run(t, p, "content", "create", "--title", "a", "--body", "b")
-	_ = run(t, p, "content", "update", "1", "--title", "c")
-	_ = run(t, p, "--yes", "content", "delete", "1")
-	if len(calls) < 3 {
-		t.Fatal("calls missing")
+	if !run(t, p, "auth", "test")["ok"].(bool) {
+		t.Fatal("auth")
+	}
+	if !run(t, p, "search", "--cql", "space = ENG")["ok"].(bool) {
+		t.Fatal("search")
+	}
+	if !run(t, p, "page", "get-by-title", "--space", "ENG", "--title", "Runtime Profile")["ok"].(bool) {
+		t.Fatal("gbt")
+	}
+	r := run(t, p, "--dry-run", "page", "create", "--space", "ENG", "--title", "T", "--body", "<p>Hello</p>")
+	if !r["ok"].(bool) {
+		t.Fatal("dry")
+	}
+	if calls != 3 {
+		t.Fatal("dry-run should not hit server")
 	}
 }

@@ -35,7 +35,7 @@ func TestDisallowOtherDomain(t *testing.T) {
 	v := true
 	c, _ := New(config.InstanceConfig{BaseURL: "https://a.example.com", RESTPath: "/rest/api/2", VerifySSL: &v, Auth: config.AuthConfig{Type: "bearer_token", Token: "t"}})
 	_, err := c.Do(Request{Method: "GET", Path: "https://evil.example.com/steal"})
-	if err == nil || !strings.Contains(err.Error(), "invalid_args") {
+	if err == nil || !strings.Contains(err.Error(), "instance_url_mismatch") {
 		t.Fatal("should fail")
 	}
 }

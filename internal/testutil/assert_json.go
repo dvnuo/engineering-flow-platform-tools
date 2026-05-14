@@ -33,3 +33,25 @@ func AssertJSONEnvelope(t *testing.T, b []byte) map[string]any {
 	}
 	return v
 }
+
+func AssertOKEnvelope(t *testing.T, b []byte) map[string]any {
+	t.Helper()
+	v := AssertJSONEnvelope(t, b)
+	if ok, _ := v["ok"].(bool); !ok {
+		t.Fatalf("expected ok=true: %s", string(b))
+	}
+	return v
+}
+
+func AssertErrorCode(t *testing.T, b []byte, code string) map[string]any {
+	t.Helper()
+	v := AssertJSONEnvelope(t, b)
+	if ok, _ := v["ok"].(bool); ok {
+		t.Fatalf("expected ok=false code=%s: %s", code, string(b))
+	}
+	errObj, _ := v["error"].(map[string]any)
+	if got, _ := errObj["code"].(string); got != code {
+		t.Fatalf("expected error.code=%s got %s: %s", code, got, string(b))
+	}
+	return v
+}

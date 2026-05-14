@@ -89,7 +89,7 @@ func (c *Client) Do(r Request) (*http.Response, error) {
 func (c *Client) resolveURL(path string) (string, error) {
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
 		if !strings.HasPrefix(strings.TrimRight(path, "/"), strings.TrimRight(c.instance.BaseURL, "/")) {
-			return "", errors.New("invalid_args")
+			return "", &HTTPError{Code: "instance_url_mismatch", Message: "off-instance url", Hint: "Use a URL that belongs to the selected instance.", Status: 400}
 		}
 		return path, nil
 	}

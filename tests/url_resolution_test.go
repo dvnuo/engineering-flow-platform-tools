@@ -83,3 +83,27 @@ func TestExplicitInstanceURLMismatch(t *testing.T) {
 		}
 	}
 }
+
+func TestRawAPIOffInstanceURLMismatch(t *testing.T) {
+	s := testutil.NewMockJira()
+	defer s.Close()
+	cfg, _ := testutil.WriteConfig(testutil.JiraConfig(s.URL))
+	{
+		var b bytes.Buffer
+		c := jcmd.NewRoot()
+		c.SetOut(&b)
+		c.SetErr(&b)
+		c.SetArgs([]string{"--config", cfg, "api", "get", "https://evil.example/x", "--json"})
+		_ = c.Execute()
+		testutil.AssertErrorCode(t, b.Bytes(), "instance_url_mismatch")
+	}
+	{
+		var b bytes.Buffer
+		c := ccmd.NewRoot()
+		c.SetOut(&b)
+		c.SetErr(&b)
+		c.SetArgs([]string{"--config", cfg, "api", "get", "https://evil.example/x", "--json"})
+		_ = c.Execute()
+		testutil.AssertErrorCode(t, b.Bytes(), "instance_url_mismatch")
+	}
+}

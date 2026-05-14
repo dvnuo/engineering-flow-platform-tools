@@ -86,3 +86,12 @@ Additional command areas are being incrementally added with shared request helpe
 ## Implementation progress
 
 Implemented command groups now include metadata/workflow/admin-read, project details, user/group lookup, filter/dashboard retrieval, component/version CRUD subset, and agile board/sprint/backlog paths.
+
+
+## Confluence examples
+
+```bash
+confluence auth test --instance demo --json
+confluence search --cql 'space = ENG' --instance demo --json
+confluence page create --instance demo --space ENG --title "Test Page" --body "<p>Hello</p>" --dry-run --json
+```

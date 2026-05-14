@@ -267,7 +267,7 @@
 ## Implementation Status
 
 - Jira: partially implemented (core command coverage in progress; partial advanced command coverage added).
-- Confluence: command spec only, implementation pending.
+- Confluence: partially implemented (core auth/search/page/raw API + dry-run/json envelope, remaining commands in progress).
 
 
 ## Implementation Status Details

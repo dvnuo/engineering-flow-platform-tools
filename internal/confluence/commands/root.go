@@ -1,9 +1,20 @@
 package commands
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
 	"engineering-flow-platform-tools/internal/config"
 	"engineering-flow-platform-tools/internal/httpclient"
-	"engineering-flow-platform-tools/internal/jira"
+	"engineering-flow-platform-tools/internal/instance"
 	"engineering-flow-platform-tools/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -13,7 +24,14 @@ type Opts struct {
 	JSON, DryRun, Yes bool
 }
 
+type ctx struct {
+	cfg    config.RootConfig
+	inst   config.InstanceConfig
+	client *httpclient.Client
+}
+
 func NewRoot() *cobra.Command {
+	cobra.EnableCommandSorting = false
 	o := &Opts{}
 	c := &cobra.Command{Use: "confluence", SilenceErrors: true, SilenceUsage: true}
 	c.PersistentFlags().StringVar(&o.Instance, "instance", "", "")
@@ -21,174 +39,177 @@ func NewRoot() *cobra.Command {
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
 	c.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "")
 	c.PersistentFlags().BoolVar(&o.Yes, "yes", false, "")
-	c.AddCommand(schemaCmd(), pageCmd(o), contentCmd(o), blogCmd(o), apiCmd(o))
+	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), cqlCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), labelCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), restrictionCmd(o), apiCmd(o))
 	return c
 }
-func fmtOut(o *Opts) string {
+func print(cmd *cobra.Command, o *Opts, e output.Envelope) error {
+	f := "table"
 	if o.JSON {
-		return "json"
+		f = "json"
 	}
-	return "table"
+	return output.Print(cmd.OutOrStdout(), f, e)
 }
-func print(cmd *cobra.Command, o *Opts, env output.Envelope) error {
-	return output.Print(cmd.OutOrStdout(), fmtOut(o), env)
-}
-func loadCfg(o *Opts) (config.RootConfig, error) {
+func loadCtx(o *Opts, entity string) (*ctx, error) {
 	p, _ := config.ResolvePath(o.Config)
-	return config.Load(p)
+	cfg, err := config.Load(p)
+	if err != nil {
+		return nil, err
+	}
+	res, err := instance.Resolve(cfg.Confluence, o.Instance, entity, "confluence")
+	if err != nil {
+		return nil, err
+	}
+	cl, err := httpclient.New(res.Instance)
+	if err != nil {
+		return nil, err
+	}
+	return &ctx{cfg: cfg, inst: res.Instance, client: cl}, nil
+}
+func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body any) error {
+	cx, err := loadCtx(o, p)
+	if err != nil {
+		return print(cmd, o, output.Failure("config_error", err.Error(), "", 400))
+	}
+	if o.DryRun {
+		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"dry_run": true, "method": method, "path": p, "query": q, "body": body}))
+	}
+	resp, err := cx.client.Do(httpclient.Request{Method: method, Path: p, Query: q, JSONBody: body})
+	if err != nil {
+		return print(cmd, o, output.Failure("server_error", err.Error(), "", 500))
+	}
+	defer resp.Body.Close()
+	d, _ := io.ReadAll(resp.Body)
+	out := map[string]any{"ok": true}
+	_ = json.Unmarshal(d, &out)
+	return print(cmd, o, output.Success(cx.inst.Name, out))
 }
 
-func schemaCmd() *cobra.Command {
-	return &cobra.Command{Use: "schema <command>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		req := []string{}
-		switch args[0] {
-		case "page.create", "content.create", "blog.create":
-			req = []string{"space", "title", "body"}
-		case "page.update", "content.update", "blog.update":
-			req = []string{"title|body"}
-		}
-		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"command": args[0], "required": req}))
+func helpLLMCmd() *cobra.Command {
+	return &cobra.Command{Use: "help llm", RunE: func(cmd *cobra.Command, args []string) error {
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Confluence LLM help: use commands/schema for structured usage.")
+		return nil
 	}}
 }
 
-func pageCmd(o *Opts) *cobra.Command {
-	c := &cobra.Command{Use: "page"}
-	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
-		space := mustS(cmd, "space")
-		title := mustS(cmd, "title")
-		body := mustS(cmd, "body")
-		if space == "" || title == "" || body == "" {
-			return print(cmd, o, output.Failure("invalid_args", "--space --title --body required", "", 400))
-		}
-		return confluencePost(o, cmd, "content", map[string]any{"type": "page", "title": title, "space": map[string]string{"key": space}, "body": body})
-	}})
-	c.Commands()[0].Flags().String("space", "", "")
-	c.Commands()[0].Flags().String("title", "", "")
-	c.Commands()[0].Flags().String("body", "", "")
-	c.AddCommand(&cobra.Command{Use: "update <id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		title := mustS(cmd, "title")
-		body := mustS(cmd, "body")
-		if title == "" && body == "" {
-			return print(cmd, o, output.Failure("invalid_args", "at least one field required", "", 400))
-		}
-		return confluencePut(o, cmd, "content/"+args[0], map[string]any{"title": title, "body": body})
-	}})
-	c.Commands()[1].Flags().String("title", "", "")
-	c.Commands()[1].Flags().String("body", "", "")
-	c.AddCommand(&cobra.Command{Use: "delete <id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		if !o.Yes {
-			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
-		}
-		return confluenceDelete(o, cmd, "content/"+args[0])
-	}})
-	return c
+func readBody(cmd *cobra.Command) string {
+	b, _ := cmd.Flags().GetString("body")
+	if b != "" {
+		return b
+	}
+	f, _ := cmd.Flags().GetString("body-file")
+	if f != "" {
+		d, _ := os.ReadFile(f)
+		return string(d)
+	}
+	s, _ := cmd.Flags().GetBool("body-stdin")
+	if s {
+		d, _ := io.ReadAll(cmd.InOrStdin())
+		return string(d)
+	}
+	return ""
 }
-
-func contentCmd(o *Opts) *cobra.Command {
-	c := &cobra.Command{Use: "content"}
-	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
-		title := mustS(cmd, "title")
-		body := mustS(cmd, "body")
-		if title == "" || body == "" {
-			return print(cmd, o, output.Failure("invalid_args", "--title --body required", "", 400))
-		}
-		return confluencePost(o, cmd, "content", map[string]any{"title": title, "body": body})
-	}})
-	c.Commands()[0].Flags().String("title", "", "")
-	c.Commands()[0].Flags().String("body", "", "")
-	c.AddCommand(&cobra.Command{Use: "update <id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		title := mustS(cmd, "title")
-		body := mustS(cmd, "body")
-		if title == "" && body == "" {
-			return print(cmd, o, output.Failure("invalid_args", "at least one field required", "", 400))
-		}
-		return confluencePut(o, cmd, "content/"+args[0], map[string]any{"title": title, "body": body})
-	}})
-	c.Commands()[1].Flags().String("title", "", "")
-	c.Commands()[1].Flags().String("body", "", "")
-	c.AddCommand(&cobra.Command{Use: "delete <id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		if !o.Yes {
-			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
-		}
-		return confluenceDelete(o, cmd, "content/"+args[0])
-	}})
-	return c
+func bodyFormat(cmd *cobra.Command) string {
+	f, _ := cmd.Flags().GetString("body-format")
+	if f == "" {
+		return "storage"
+	}
+	return f
 }
-
-func blogCmd(o *Opts) *cobra.Command {
-	c := &cobra.Command{Use: "blog"}
-	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
-		space := mustS(cmd, "space")
-		title := mustS(cmd, "title")
-		body := mustS(cmd, "body")
-		if space == "" || title == "" || body == "" {
-			return print(cmd, o, output.Failure("invalid_args", "--space --title --body required", "", 400))
+func confluenceBody(cmd *cobra.Command, v string) map[string]any {
+	f := bodyFormat(cmd)
+	return map[string]any{f: map[string]string{"value": v, "representation": f}}
+}
+func pageID(cmd *cobra.Command, o *Opts) (string, error) {
+	id, _ := cmd.Flags().GetString("id")
+	u, _ := cmd.Flags().GetString("url")
+	if (id == "") == (u == "") {
+		return "", fmt.Errorf("invalid_args")
+	}
+	if id != "" {
+		return id, nil
+	}
+	pu, err := url.Parse(u)
+	if err != nil {
+		return "", err
+	}
+	if pu.IsAbs() && o.Instance != "" {
+		cx, e := loadCtx(o, "")
+		if e == nil && !strings.HasPrefix(strings.TrimRight(u, "/"), strings.TrimRight(cx.inst.BaseURL, "/")) {
+			return "", fmt.Errorf("instance_url_mismatch")
 		}
-		return confluencePost(o, cmd, "content", map[string]any{"type": "blogpost", "title": title, "space": map[string]string{"key": space}, "body": body})
-	}})
-	c.Commands()[0].Flags().String("space", "", "")
-	c.Commands()[0].Flags().String("title", "", "")
-	c.Commands()[0].Flags().String("body", "", "")
-	c.AddCommand(&cobra.Command{Use: "update <id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		title := mustS(cmd, "title")
-		body := mustS(cmd, "body")
-		if title == "" && body == "" {
-			return print(cmd, o, output.Failure("invalid_args", "at least one field required", "", 400))
+	}
+	pid := pu.Query().Get("pageId")
+	if pid != "" {
+		return pid, nil
+	}
+	seg := strings.Split(strings.Trim(pu.Path, "/"), "/")
+	for i := len(seg) - 1; i >= 0; i-- {
+		if _, e := strconv.Atoi(seg[i]); e == nil {
+			return seg[i], nil
 		}
-		return confluencePut(o, cmd, "content/"+args[0], map[string]any{"title": title, "body": body})
-	}})
-	c.Commands()[1].Flags().String("title", "", "")
-	c.Commands()[1].Flags().String("body", "", "")
-	c.AddCommand(&cobra.Command{Use: "delete <id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		if !o.Yes {
-			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
-		}
-		return confluenceDelete(o, cmd, "content/"+args[0])
-	}})
-	return c
+	}
+	return "", fmt.Errorf("invalid_args")
 }
 
 func apiCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "api"}
 	for _, m := range []string{"get", "post", "put", "delete"} {
 		mm := m
-		method := map[string]string{"get": "GET", "post": "POST", "put": "PUT", "delete": "DELETE"}[m]
-		c.AddCommand(&cobra.Command{Use: mm + " <path>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		method := strings.ToUpper(m)
+		cmd := &cobra.Command{Use: mm + " <path>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 			if method == "DELETE" && !o.Yes {
 				return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
 			}
-			return confluenceReq(o, cmd, method, args[0], nil)
-		}})
+			p := args[0]
+			if strings.HasPrefix(p, "http") {
+				cx, _ := loadCtx(o, "")
+				if !strings.HasPrefix(strings.TrimRight(p, "/"), strings.TrimRight(cx.inst.BaseURL, "/")) {
+					return print(cmd, o, output.Failure("instance_url_mismatch", "off-instance url", "", 400))
+				}
+				p = strings.TrimPrefix(p, cx.inst.BaseURL)
+			}
+			b := readBody(cmd)
+			q := map[string]string{}
+			for _, kv := range mustStringSlice(cmd, "query") {
+				parts := strings.SplitN(kv, "=", 2)
+				if len(parts) == 2 && strings.TrimSpace(parts[0]) != "" {
+					q[strings.TrimSpace(parts[0])] = parts[1]
+				}
+			}
+			var bj any
+			if b != "" {
+				_ = json.Unmarshal([]byte(b), &bj)
+			}
+			return do(o, cmd, method, p, q, bj)
+		}}
+		cmd.Flags().StringSlice("query", nil, "")
+		cmd.Flags().String("body", "", "")
+		cmd.Flags().String("body-file", "", "")
+		cmd.Flags().Bool("body-stdin", false, "")
+		c.AddCommand(cmd)
 	}
 	return c
 }
 
-func confluenceReq(o *Opts, cmd *cobra.Command, method, path string, body interface{}) error {
-	cfg, err := loadCfg(o)
+func mustStringSlice(cmd *cobra.Command, name string) []string {
+	v, _ := cmd.Flags().GetStringSlice(name)
+	return v
+}
+
+// helper for multipart tests
+func multipartData(path string) (*bytes.Buffer, string, error) {
+	b := &bytes.Buffer{}
+	w := multipart.NewWriter(b)
+	f, err := w.CreateFormFile("file", filepath.Base(path))
 	if err != nil {
-		return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
+		return nil, "", err
 	}
-	ctx, err := jira.NewContext(cfg, o.Instance, "", o.DryRun)
+	in, err := os.Open(path)
 	if err != nil {
-		return print(cmd, o, output.Failure(err.Error(), err.Error(), "", 400))
+		return nil, "", err
 	}
-	reqPath := path
-	if o.DryRun {
-		return print(cmd, o, output.Success(ctx.Instance, map[string]any{"dry_run": true, "method": method, "path": reqPath, "body": body}))
-	}
-	_, err = ctx.Client.Do(httpclient.Request{Method: method, Path: reqPath, JSONBody: body})
-	if err != nil {
-		return print(cmd, o, output.Failure("server_error", err.Error(), "", 500))
-	}
-	return print(cmd, o, output.Success(ctx.Instance, map[string]any{"ok": true}))
+	defer in.Close()
+	_, _ = io.Copy(f, in)
+	_ = w.Close()
+	return b, w.FormDataContentType(), nil
 }
-func confluencePost(o *Opts, cmd *cobra.Command, path string, body interface{}) error {
-	return confluenceReq(o, cmd, "POST", path, body)
-}
-func confluencePut(o *Opts, cmd *cobra.Command, path string, body interface{}) error {
-	return confluenceReq(o, cmd, "PUT", path, body)
-}
-func confluenceDelete(o *Opts, cmd *cobra.Command, path string) error {
-	return confluenceReq(o, cmd, "DELETE", path, nil)
-}
-func mustS(cmd *cobra.Command, n string) string { v, _ := cmd.Flags().GetString(n); return v }

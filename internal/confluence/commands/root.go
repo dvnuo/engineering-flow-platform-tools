@@ -33,6 +33,7 @@ type ctx struct {
 }
 
 func NewRoot() *cobra.Command {
+	cobra.EnableCommandSorting = false
 	o := &Opts{}
 	c := &cobra.Command{Use: "confluence", SilenceErrors: true, SilenceUsage: true}
 	c.PersistentFlags().StringVar(&o.Instance, "instance", "", "")
@@ -40,7 +41,7 @@ func NewRoot() *cobra.Command {
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
 	c.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "")
 	c.PersistentFlags().BoolVar(&o.Yes, "yes", false, "")
-	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), cqlCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), restrictionCmd(o), apiCmd(o))
+	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), cqlCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), labelCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), restrictionCmd(o), apiCmd(o))
 	return c
 }
 func print(cmd *cobra.Command, o *Opts, e output.Envelope) error {
@@ -396,6 +397,95 @@ func pageCmd(o *Opts) *cobra.Command {
 		pc.Flags().String("url", "", "")
 	}
 	c.AddCommand(prop)
+	c.AddCommand(&cobra.Command{Use: "children", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "GET", "content/"+id+"/child", nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "descendants", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "GET", "content/"+id+"/descendant", nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "ancestors", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "ancestors"}, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "body", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		f, _ := cmd.Flags().GetString("format")
+		if f == "" {
+			f = "storage"
+		}
+		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "body." + f}, nil)
+	}})
+	c.Commands()[len(c.Commands())-1].Flags().String("format", "storage", "")
+	c.AddCommand(&cobra.Command{Use: "history", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "GET", "content/"+id+"/version", nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "version", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "GET", "content/"+id+"/version/latest", nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "restore", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		v, _ := cmd.Flags().GetInt("version")
+		return do(o, cmd, "POST", "content/"+id+"/version", nil, map[string]any{"operationKey": "restore", "params": map[string]any{"versionNumber": v}})
+	}})
+	c.Commands()[len(c.Commands())-1].Flags().Int("version", 0, "")
+	c.AddCommand(&cobra.Command{Use: "move", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		pid, _ := cmd.Flags().GetString("parent-id")
+		pos, _ := cmd.Flags().GetString("position")
+		return do(o, cmd, "PUT", "content/"+id+"/move/"+pos+"/"+pid, nil, nil)
+	}})
+	c.Commands()[len(c.Commands())-1].Flags().String("parent-id", "", "")
+	c.Commands()[len(c.Commands())-1].Flags().String("position", "append", "")
+	c.AddCommand(&cobra.Command{Use: "watch", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "POST", "user/watch/content/"+id, nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "unwatch", RunE: func(cmd *cobra.Command, args []string) error {
+		id, e := pageID(cmd, o)
+		if e != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "DELETE", "user/watch/content/"+id, nil, nil)
+	}})
+	for _, pc := range []*cobra.Command{c.Commands()[len(c.Commands())-11], c.Commands()[len(c.Commands())-10], c.Commands()[len(c.Commands())-9], c.Commands()[len(c.Commands())-8], c.Commands()[len(c.Commands())-7], c.Commands()[len(c.Commands())-6], c.Commands()[len(c.Commands())-5], c.Commands()[len(c.Commands())-4], c.Commands()[len(c.Commands())-3], c.Commands()[len(c.Commands())-2], c.Commands()[len(c.Commands())-1]} {
+		if pc.Flags().Lookup("id") == nil {
+			pc.Flags().String("id", "", "")
+		}
+		if pc.Flags().Lookup("url") == nil {
+			pc.Flags().String("url", "", "")
+		}
+	}
 	return c
 }
 func apiCmd(o *Opts) *cobra.Command {
@@ -464,6 +554,32 @@ func spaceCmd(o *Opts) *cobra.Command {
 	c.AddCommand(&cobra.Command{Use: "labels <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		return do(o, cmd, "GET", "space/"+args[0]+"/label", nil, nil)
 	}})
+	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
+		k, _ := cmd.Flags().GetString("key")
+		n, _ := cmd.Flags().GetString("name")
+		d, _ := cmd.Flags().GetString("description")
+		return do(o, cmd, "POST", "space", nil, map[string]any{"key": k, "name": n, "description": map[string]any{"plain": map[string]any{"value": d}}})
+	}})
+	c.Commands()[len(c.Commands())-1].Flags().String("key", "", "")
+	c.Commands()[len(c.Commands())-1].Flags().String("name", "", "")
+	c.Commands()[len(c.Commands())-1].Flags().String("description", "", "")
+	c.AddCommand(&cobra.Command{Use: "update <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		n, _ := cmd.Flags().GetString("name")
+		return do(o, cmd, "PUT", "space/"+args[0], nil, map[string]any{"name": n})
+	}})
+	c.Commands()[len(c.Commands())-1].Flags().String("name", "", "")
+	c.AddCommand(&cobra.Command{Use: "delete <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
+		}
+		return do(o, cmd, "DELETE", "space/"+args[0], nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "watchers <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		return do(o, cmd, "GET", "space/"+args[0]+"/watch", nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "permission list <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		return do(o, cmd, "GET", "space/"+args[0]+"/permission", nil, nil)
+	}})
 	sp := &cobra.Command{Use: "property"}
 	sp.AddCommand(&cobra.Command{Use: "list <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		return do(o, cmd, "GET", "space/"+args[0]+"/property", nil, nil)
@@ -507,6 +623,47 @@ func contentCmd(o *Opts) *cobra.Command {
 	for _, k := range []string{"space", "type", "limit", "start", "expand"} {
 		cl.Flags().String(k, "", "")
 	}
+	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
+		t, _ := cmd.Flags().GetString("type")
+		sp, _ := cmd.Flags().GetString("space")
+		ti, _ := cmd.Flags().GetString("title")
+		b := readBody(cmd)
+		return do(o, cmd, "POST", "content", nil, map[string]any{"type": t, "title": ti, "space": map[string]string{"key": sp}, "body": map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}})
+	}})
+	c.Commands()[2].Flags().String("type", "page", "")
+	c.Commands()[2].Flags().String("space", "", "")
+	c.Commands()[2].Flags().String("title", "", "")
+	c.Commands()[2].Flags().String("body", "", "")
+	c.Commands()[2].Flags().String("body-file", "", "")
+	c.Commands()[2].Flags().Bool("body-stdin", false, "")
+	c.AddCommand(&cobra.Command{Use: "update <content-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		cx, _ := loadCtx(o, "")
+		v, _ := cmd.Flags().GetInt("version")
+		if v == 0 && !o.DryRun {
+			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + args[0]})
+			if e != nil {
+				return print(cmd, o, output.Failure("server_error", "version fetch failed", "", 500))
+			}
+			defer r.Body.Close()
+			var m map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&m)
+			v = int(m["version"].(map[string]any)["number"].(float64)) + 1
+		}
+		ti, _ := cmd.Flags().GetString("title")
+		b := readBody(cmd)
+		return do(o, cmd, "PUT", "content/"+args[0], nil, map[string]any{"title": ti, "version": map[string]any{"number": v}, "body": map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}})
+	}})
+	c.Commands()[3].Flags().Int("version", 0, "")
+	c.Commands()[3].Flags().String("title", "", "")
+	c.Commands()[3].Flags().String("body", "", "")
+	c.Commands()[3].Flags().String("body-file", "", "")
+	c.Commands()[3].Flags().Bool("body-stdin", false, "")
+	c.AddCommand(&cobra.Command{Use: "delete <content-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
+		}
+		return do(o, cmd, "DELETE", "content/"+args[0], nil, nil)
+	}})
 	return c
 }
 func blogCmd(o *Opts) *cobra.Command {
@@ -516,6 +673,60 @@ func blogCmd(o *Opts) *cobra.Command {
 		return do(o, cmd, "GET", "content", map[string]string{"type": "blogpost", "spaceKey": sp}, nil)
 	}})
 	c.Commands()[0].Flags().String("space", "", "")
+	c.AddCommand(&cobra.Command{Use: "get <blog-id-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "content/"+args[0], nil, nil) }})
+	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
+		sp, _ := cmd.Flags().GetString("space")
+		ti, _ := cmd.Flags().GetString("title")
+		b := readBody(cmd)
+		return do(o, cmd, "POST", "content", nil, map[string]any{"type": "blogpost", "title": ti, "space": map[string]string{"key": sp}, "body": map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}})
+	}})
+	c.Commands()[2].Flags().String("space", "", "")
+	c.Commands()[2].Flags().String("title", "", "")
+	c.Commands()[2].Flags().String("body", "", "")
+	c.Commands()[2].Flags().String("body-file", "", "")
+	c.Commands()[2].Flags().Bool("body-stdin", false, "")
+	c.AddCommand(&cobra.Command{Use: "update <blog-id-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		cx, _ := loadCtx(o, "")
+		v, _ := cmd.Flags().GetInt("version")
+		if v == 0 && !o.DryRun {
+			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + args[0]})
+			if e != nil {
+				return print(cmd, o, output.Failure("server_error", "version fetch failed", "", 500))
+			}
+			defer r.Body.Close()
+			var m map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&m)
+			v = int(m["version"].(map[string]any)["number"].(float64)) + 1
+		}
+		ti, _ := cmd.Flags().GetString("title")
+		b := readBody(cmd)
+		return do(o, cmd, "PUT", "content/"+args[0], nil, map[string]any{"title": ti, "version": map[string]any{"number": v}, "body": map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}})
+	}})
+	c.Commands()[3].Flags().Int("version", 0, "")
+	c.Commands()[3].Flags().String("title", "", "")
+	c.Commands()[3].Flags().String("body", "", "")
+	c.Commands()[3].Flags().String("body-file", "", "")
+	c.Commands()[3].Flags().Bool("body-stdin", false, "")
+	c.AddCommand(&cobra.Command{Use: "delete <blog-id-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
+		}
+		return do(o, cmd, "DELETE", "content/"+args[0], nil, nil)
+	}})
+	return c
+}
+
+func labelCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "label"}
+	c.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		p, _ := cmd.Flags().GetString("prefix")
+		q := map[string]string{}
+		if p != "" {
+			q["prefix"] = p
+		}
+		return do(o, cmd, "GET", "label", q, nil)
+	}})
+	c.Commands()[0].Flags().String("prefix", "", "")
 	return c
 }
 func userGroupCmd(o *Opts) *cobra.Command {
@@ -545,6 +756,21 @@ func webhookCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "webhook"}
 	c.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "webhooks", nil, nil) }})
 	c.AddCommand(&cobra.Command{Use: "get <webhook-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "webhooks/"+args[0], nil, nil) }})
+	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
+		n, _ := cmd.Flags().GetString("name")
+		u, _ := cmd.Flags().GetString("url")
+		e, _ := cmd.Flags().GetStringSlice("event")
+		return do(o, cmd, "POST", "webhooks", nil, map[string]any{"name": n, "url": u, "events": e})
+	}})
+	c.Commands()[2].Flags().String("name", "", "")
+	c.Commands()[2].Flags().String("url", "", "")
+	c.Commands()[2].Flags().StringSlice("event", nil, "")
+	c.AddCommand(&cobra.Command{Use: "delete <webhook-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
+		}
+		return do(o, cmd, "DELETE", "webhooks/"+args[0], nil, nil)
+	}})
 	return c
 }
 func longtaskCmd(o *Opts) *cobra.Command {
@@ -764,6 +990,27 @@ func commentCmd(o *Opts) *cobra.Command {
 }
 func restrictionCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "restriction"}
+	c.AddCommand(&cobra.Command{Use: "list <id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		return do(o, cmd, "GET", "content/"+args[0]+"/restriction", nil, nil)
+	}})
+	c.AddCommand(&cobra.Command{Use: "add <id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		op, _ := cmd.Flags().GetString("operation")
+		users, _ := cmd.Flags().GetStringSlice("user")
+		groups, _ := cmd.Flags().GetStringSlice("group")
+		body := map[string]any{"restrictions": map[string]any{"user": users, "group": groups}}
+		return do(o, cmd, "POST", "content/"+args[0]+"/restriction/byOperation/"+op, nil, body)
+	}})
+	c.Commands()[1].Flags().String("operation", "read", "")
+	c.Commands()[1].Flags().StringSlice("user", nil, "")
+	c.Commands()[1].Flags().StringSlice("group", nil, "")
+	c.AddCommand(&cobra.Command{Use: "delete <id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
+		}
+		op, _ := cmd.Flags().GetString("operation")
+		return do(o, cmd, "DELETE", "content/"+args[0]+"/restriction/byOperation/"+op, nil, nil)
+	}})
+	c.Commands()[2].Flags().String("operation", "read", "")
 	c.AddCommand(&cobra.Command{Use: "watcher-list <id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if o.DryRun {
 			return do(o, cmd, "GET", "content/"+args[0]+"/notification/child-created", nil, nil)

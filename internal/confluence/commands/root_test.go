@@ -15,7 +15,7 @@ func cfg(t *testing.T, h http.HandlerFunc) string {
 	s := httptest.NewServer(h)
 	t.Cleanup(s.Close)
 	v := true
-	c := config.RootConfig{Version: 1, Jira: config.ProductConfig{DefaultInstance: "c", Instances: []config.InstanceConfig{{Name: "c", BaseURL: s.URL, RESTPath: "/rest/api", VerifySSL: &v, Auth: config.AuthConfig{Type: "bearer_token", Token: "t"}}}}}
+	c := config.RootConfig{Version: 1, Confluence: config.ProductConfig{DefaultInstance: "c", Instances: []config.InstanceConfig{{Name: "c", BaseURL: s.URL, RESTPath: "/rest/api", VerifySSL: &v, Auth: config.AuthConfig{Type: "bearer_token", Token: "t"}}}}}
 	p := filepath.Join(t.TempDir(), "c.json")
 	_ = config.Save(p, c)
 	return p
@@ -32,30 +32,42 @@ func run(t *testing.T, cfg string, args ...string) map[string]any {
 	return out
 }
 
-func TestValidationAndSchema(t *testing.T) {
-	p := cfg(t, func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(`{"ok":true}`)) })
-	if run(t, p, "page", "create", "--title", "x")["ok"].(bool) {
-		t.Fatal("expected invalid")
-	}
-	if run(t, p, "content", "update", "1")["ok"].(bool) {
-		t.Fatal("expected invalid")
-	}
-	s := run(t, p, "schema", "page.create")
-	if len(s["data"].(map[string]any)["required"].([]any)) == 0 {
-		t.Fatal("schema required missing")
-	}
-}
-
-func TestEndpointMethods(t *testing.T) {
-	calls := []string{}
+func TestCoreAndSafety(t *testing.T) {
+	calls := 0
 	p := cfg(t, func(w http.ResponseWriter, r *http.Request) {
-		calls = append(calls, r.Method+" "+r.URL.Path)
-		w.Write([]byte(`{"ok":true}`))
+		calls++
+		if r.URL.Path == "/rest/api/user/current" && r.Header.Get("Authorization") == "" {
+			t.Fatal("missing auth")
+		}
+		if r.URL.Path == "/rest/api/search" && r.URL.Query().Get("cql") == "" {
+			t.Fatal("missing cql")
+		}
+		if r.Method == "GET" && r.URL.Path == "/rest/api/content/123" {
+			_, _ = w.Write([]byte(`{"version":{"number":2}}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"ok":true,"body":{"view":{"value":"<p>Hello</p>"}}}`))
 	})
-	_ = run(t, p, "content", "create", "--title", "a", "--body", "b")
-	_ = run(t, p, "content", "update", "1", "--title", "c")
-	_ = run(t, p, "--yes", "content", "delete", "1")
-	if len(calls) < 3 {
-		t.Fatal("calls missing")
+	if !run(t, p, "auth", "test")["ok"].(bool) {
+		t.Fatal("auth")
+	}
+	if !run(t, p, "search", "--cql", "space = ENG")["ok"].(bool) {
+		t.Fatal("search")
+	}
+	if run(t, p, "page", "delete", "--id", "1")["ok"].(bool) {
+		t.Fatal("delete should require yes")
+	}
+	before := calls
+	if !run(t, p, "--dry-run", "page", "create", "--space", "ENG", "--title", "T", "--body", "<p>x</p>")["ok"].(bool) {
+		t.Fatal("dry")
+	}
+	if calls != before {
+		t.Fatal("dry-run hit server")
+	}
+	if !run(t, p, "page", "update", "--id", "123", "--title", "N")["ok"].(bool) {
+		t.Fatal("update")
+	}
+	if run(t, p, "api", "get", "https://evil.example/rest/api/content/1")["ok"].(bool) {
+		t.Fatal("off instance should fail")
 	}
 }

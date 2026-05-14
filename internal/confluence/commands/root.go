@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	"engineering-flow-platform-tools/internal/app"
 	"engineering-flow-platform-tools/internal/config"
 	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/instance"
@@ -86,22 +85,6 @@ func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body
 	return print(cmd, o, output.Success(cx.inst.Name, out))
 }
 
-func commandsCmd() *cobra.Command {
-	return &cobra.Command{Use: "commands", RunE: func(cmd *cobra.Command, args []string) error {
-		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"commands": app.ConfluenceCommandList()}))
-	}}
-}
-func schemaCmd() *cobra.Command {
-	return &cobra.Command{Use: "schema <command>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		required := map[string][]string{"page.create": {"space", "title", "body"}, "page.update": {"id|url"}, "content.create": {"type", "title", "body"}, "content.update": {"content-id"}, "blog.create": {"space", "title", "body"}, "blog.update": {"blog-id-or-url"}}
-		meta := map[string]any{"usage": args[0], "risk": "read", "examples": []string{args[0] + " --json"}}
-		if strings.Contains(args[0], "delete") || strings.Contains(args[0], "update") || strings.Contains(args[0], "create") {
-			meta["risk"] = "write"
-		}
-		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"command": args[0], "required": required[args[0]], "available": app.ConfluenceCommandList(), "metadata": meta}))
-	}}
-}
-
 func helpLLMCmd() *cobra.Command {
 	return &cobra.Command{Use: "help llm", RunE: func(cmd *cobra.Command, args []string) error {
 		_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Confluence LLM help: use commands/schema for structured usage.")
@@ -158,54 +141,7 @@ func authCmd(o *Opts) *cobra.Command {
 	c.AddCommand(&cobra.Command{Use: "test", RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "user/current", nil, nil) }})
 	return c
 }
-func searchCmd(o *Opts) *cobra.Command {
-	c := &cobra.Command{Use: "search", RunE: func(cmd *cobra.Command, args []string) error {
-		cql, _ := cmd.Flags().GetString("cql")
-		if cql == "" {
-			return print(cmd, o, output.Failure("invalid_args", "--cql required", "", 400))
-		}
-		return do(o, cmd, "GET", "search", map[string]string{"cql": cql}, nil)
-	}}
-	c.Flags().String("cql", "", "")
-	c.AddCommand(&cobra.Command{Use: "content", RunE: func(cmd *cobra.Command, args []string) error {
-		t, _ := cmd.Flags().GetString("text")
-		s, _ := cmd.Flags().GetString("space")
-		ty, _ := cmd.Flags().GetString("type")
-		parts := []string{}
-		if t != "" {
-			parts = append(parts, "text ~ \""+t+"\"")
-		}
-		if s != "" {
-			parts = append(parts, "space = \""+s+"\"")
-		}
-		if ty != "" {
-			parts = append(parts, "type = \""+ty+"\"")
-		}
-		return do(o, cmd, "GET", "search", map[string]string{"cql": strings.Join(parts, " AND ")}, nil)
-	}})
-	cc := c.Commands()[0]
-	cc.Flags().String("text", "", "")
-	cc.Flags().String("space", "", "")
-	cc.Flags().String("type", "", "")
-	c.AddCommand(&cobra.Command{Use: "user", RunE: func(cmd *cobra.Command, args []string) error {
-		q, _ := cmd.Flags().GetString("query")
-		return do(o, cmd, "GET", "user/search", map[string]string{"query": q}, nil)
-	}})
-	c.Commands()[1].Flags().String("query", "", "")
-	return c
-}
 
-func cqlCmd(o *Opts) *cobra.Command {
-	c := &cobra.Command{Use: "cql", RunE: func(cmd *cobra.Command, args []string) error {
-		q, _ := cmd.Flags().GetString("query")
-		if q == "" {
-			return print(cmd, o, output.Failure("invalid_args", "--query required", "", 400))
-		}
-		return do(o, cmd, "GET", "search", map[string]string{"cql": q}, nil)
-	}}
-	c.Flags().String("query", "", "")
-	return c
-}
 func readBody(cmd *cobra.Command) string {
 	b, _ := cmd.Flags().GetString("body")
 	if b != "" {

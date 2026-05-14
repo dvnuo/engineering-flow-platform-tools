@@ -641,6 +641,40 @@ func groupCmd(o *Opts) *cobra.Command {
 func attachmentCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "attachment"}
 	c.AddCommand(&cobra.Command{Use: "get <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "content/"+args[0], nil, nil) }})
+	c.AddCommand(&cobra.Command{Use: "upload <page-id> <file>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		if o.DryRun {
+			return print(cmd, o, output.Success("", map[string]any{"dry_run": true, "method": "POST", "path": "content/" + args[0] + "/child/attachment"}))
+		}
+		cx, _ := loadCtx(o, "")
+		f, err := os.Open(args[1])
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
+		}
+		defer f.Close()
+		resp, err := cx.client.Do(httpclient.Request{Method: "POST", Path: "content/" + args[0] + "/child/attachment", Multipart: f, MultipartField: "file", MultipartName: filepath.Base(args[1]), Headers: map[string]string{"X-Atlassian-Token": "no-check"}})
+		if err != nil {
+			return print(cmd, o, output.Failure("server_error", err.Error(), "", 500))
+		}
+		defer resp.Body.Close()
+		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"uploaded": true}))
+	}})
+	c.AddCommand(&cobra.Command{Use: "update <page-id> <attachment-id> <file>", Args: cobra.ExactArgs(3), RunE: func(cmd *cobra.Command, args []string) error {
+		if o.DryRun {
+			return print(cmd, o, output.Success("", map[string]any{"dry_run": true, "method": "POST", "path": "content/" + args[0] + "/child/attachment/" + args[1] + "/data"}))
+		}
+		cx, _ := loadCtx(o, "")
+		f, err := os.Open(args[2])
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
+		}
+		defer f.Close()
+		resp, err := cx.client.Do(httpclient.Request{Method: "POST", Path: "content/" + args[0] + "/child/attachment/" + args[1] + "/data", Multipart: f, MultipartField: "file", MultipartName: filepath.Base(args[2]), Headers: map[string]string{"X-Atlassian-Token": "no-check"}})
+		if err != nil {
+			return print(cmd, o, output.Failure("server_error", err.Error(), "", 500))
+		}
+		defer resp.Body.Close()
+		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"updated": true}))
+	}})
 	c.AddCommand(&cobra.Command{Use: "download <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		cx, _ := loadCtx(o, "")
 		if o.DryRun {

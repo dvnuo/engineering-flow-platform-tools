@@ -95,3 +95,13 @@ confluence auth test --instance demo --json
 confluence search --cql 'space = ENG' --instance demo --json
 confluence page create --instance demo --space ENG --title "Test Page" --body "<p>Hello</p>" --dry-run --json
 ```
+
+
+## For LLM/agent usage
+
+- Always pass `--json` for machine-readable output.
+- Use `--instance` when multiple instances are configured.
+- Full Jira/Confluence URLs can auto-select an instance.
+- Use `--dry-run` before write operations.
+- Use `--yes` for destructive operations.
+- Prefer `commands --json` and `schema <command> --json` to plan tool calls.

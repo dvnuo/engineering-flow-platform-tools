@@ -339,6 +339,46 @@ func pageCmd(o *Opts) *cobra.Command {
 	ex.Flags().String("url", "", "")
 	ex.Flags().String("output", "", "")
 	c.AddCommand(ex)
+	prop := &cobra.Command{Use: "property"}
+	prop.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		id, err := pageID(cmd, o)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "GET", "content/"+id+"/property", nil, nil)
+	}})
+	prop.AddCommand(&cobra.Command{Use: "get <key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		id, err := pageID(cmd, o)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "GET", "content/"+id+"/property/"+args[0], nil, nil)
+	}})
+	prop.AddCommand(&cobra.Command{Use: "set <key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		id, err := pageID(cmd, o)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "PUT", "content/"+id+"/property/"+args[0], nil, map[string]any{"key": args[0], "value": readBody(cmd)})
+	}})
+	prop.Commands()[2].Flags().String("body", "", "")
+	prop.Commands()[2].Flags().String("body-file", "", "")
+	prop.Commands()[2].Flags().Bool("body-stdin", false, "")
+	prop.AddCommand(&cobra.Command{Use: "delete <key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
+		}
+		id, err := pageID(cmd, o)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
+		}
+		return do(o, cmd, "DELETE", "content/"+id+"/property/"+args[0], nil, nil)
+	}})
+	for _, pc := range prop.Commands() {
+		pc.Flags().String("id", "", "")
+		pc.Flags().String("url", "", "")
+	}
+	c.AddCommand(prop)
 	return c
 }
 func apiCmd(o *Opts) *cobra.Command {
@@ -407,6 +447,26 @@ func spaceCmd(o *Opts) *cobra.Command {
 	c.AddCommand(&cobra.Command{Use: "labels <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		return do(o, cmd, "GET", "space/"+args[0]+"/label", nil, nil)
 	}})
+	sp := &cobra.Command{Use: "property"}
+	sp.AddCommand(&cobra.Command{Use: "list <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		return do(o, cmd, "GET", "space/"+args[0]+"/property", nil, nil)
+	}})
+	sp.AddCommand(&cobra.Command{Use: "get <space-key> <key>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		return do(o, cmd, "GET", "space/"+args[0]+"/property/"+args[1], nil, nil)
+	}})
+	sp.AddCommand(&cobra.Command{Use: "set <space-key> <key>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		return do(o, cmd, "PUT", "space/"+args[0]+"/property/"+args[1], nil, map[string]any{"key": args[1], "value": readBody(cmd)})
+	}})
+	sp.Commands()[2].Flags().String("body", "", "")
+	sp.Commands()[2].Flags().String("body-file", "", "")
+	sp.Commands()[2].Flags().Bool("body-stdin", false, "")
+	sp.AddCommand(&cobra.Command{Use: "delete <space-key> <key>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
+		}
+		return do(o, cmd, "DELETE", "space/"+args[0]+"/property/"+args[1], nil, nil)
+	}})
+	c.AddCommand(sp)
 	return c
 }
 func contentCmd(o *Opts) *cobra.Command {
@@ -581,6 +641,36 @@ func groupCmd(o *Opts) *cobra.Command {
 func attachmentCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "attachment"}
 	c.AddCommand(&cobra.Command{Use: "get <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "content/"+args[0], nil, nil) }})
+	c.AddCommand(&cobra.Command{Use: "download <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		cx, _ := loadCtx(o, "")
+		if o.DryRun {
+			return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"dry_run": true}))
+		}
+		r, err := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + args[0], Query: map[string]string{"expand": "_links"}})
+		if err != nil {
+			return print(cmd, o, output.Failure("server_error", err.Error(), "", 500))
+		}
+		defer r.Body.Close()
+		var m map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&m)
+		dl := m["_links"].(map[string]any)["download"].(string)
+		if strings.HasPrefix(dl, "http") && !strings.HasPrefix(strings.TrimRight(dl, "/"), strings.TrimRight(cx.inst.BaseURL, "/")) {
+			return print(cmd, o, output.Failure("instance_url_mismatch", "off-instance download url", "", 400))
+		}
+		out, _ := cmd.Flags().GetString("output")
+		if out == "" {
+			return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"metadata": m}))
+		}
+		rr, err := cx.client.Do(httpclient.Request{Method: "GET", Path: dl})
+		if err != nil {
+			return print(cmd, o, output.Failure("server_error", err.Error(), "", 500))
+		}
+		defer rr.Body.Close()
+		b, _ := io.ReadAll(rr.Body)
+		_ = os.WriteFile(out, b, 0644)
+		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"output": out}))
+	}})
+	c.Commands()[1].Flags().String("output", "", "")
 	c.AddCommand(&cobra.Command{Use: "delete <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
@@ -592,6 +682,27 @@ func attachmentCmd(o *Opts) *cobra.Command {
 func commentCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "comment"}
 	c.AddCommand(&cobra.Command{Use: "get <comment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "content/"+args[0], nil, nil) }})
+	c.AddCommand(&cobra.Command{Use: "update <comment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		b := readBody(cmd)
+		cx, _ := loadCtx(o, "")
+		v, _ := cmd.Flags().GetInt("version")
+		if v == 0 && !o.DryRun {
+			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + args[0]})
+			if e != nil {
+				return print(cmd, o, output.Failure("server_error", "version fetch failed", "", 500))
+			}
+			defer r.Body.Close()
+			var m map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&m)
+			v = int(m["version"].(map[string]any)["number"].(float64)) + 1
+		}
+		payload := map[string]any{"version": map[string]any{"number": v}, "type": "comment", "body": map[string]any{"storage": map[string]string{"value": b, "representation": "storage"}}}
+		return do(o, cmd, "PUT", "content/"+args[0], nil, payload)
+	}})
+	c.Commands()[1].Flags().String("body", "", "")
+	c.Commands()[1].Flags().String("body-file", "", "")
+	c.Commands()[1].Flags().Bool("body-stdin", false, "")
+	c.Commands()[1].Flags().Int("version", 0, "")
 	c.AddCommand(&cobra.Command{Use: "delete <comment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))

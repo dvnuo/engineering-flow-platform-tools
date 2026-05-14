@@ -12,7 +12,9 @@ func run(rootCmd func() interface {
 	Execute() error
 	SetArgs([]string)
 	SetOut(*bytes.Buffer)
-}, args ...string) []byte { return nil }
+}, args ...string) []byte {
+	return nil
+}
 
 func TestJSONContractSmoke(t *testing.T) {
 	checks := []struct {

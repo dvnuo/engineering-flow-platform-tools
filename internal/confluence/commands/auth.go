@@ -14,23 +14,23 @@ func authCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
 		}
-		u, _ := cmd.Flags().GetString("username")
-		t, _ := cmd.Flags().GetString("auth-type")
+		auth, authErr := authFromFlags(cmd)
+		if authErr != nil {
+			return print(cmd, o, output.Failure("invalid_args", "missing required auth secret", "", 400))
+		}
 		target := cfg.Confluence.DefaultInstance
 		if o.Instance != "" {
 			target = o.Instance
 		}
 		for i := range cfg.Confluence.Instances {
 			if cfg.Confluence.Instances[i].Name == target {
-				cfg.Confluence.Instances[i].Auth.Username = u
-				cfg.Confluence.Instances[i].Auth.Type = t
+				cfg.Confluence.Instances[i].Auth = auth
 			}
 		}
 		_ = config.Save(p, cfg)
 		return print(cmd, o, output.Success(target, map[string]any{"logged_in": true}))
 	}})
-	c.Commands()[0].Flags().String("username", "", "")
-	c.Commands()[0].Flags().String("auth-type", "", "")
+	addAuthFlags(c.Commands()[0])
 	c.AddCommand(&cobra.Command{Use: "logout", RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))

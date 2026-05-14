@@ -264,14 +264,9 @@
 - confluence api delete <path>
 
 
-## Implementation Status
+## Contract Notes
 
-- Jira: partially implemented (core command coverage in progress; partial advanced command coverage added).
-- Confluence: partially implemented (core auth/search/page/raw API + dry-run/json envelope, remaining commands in progress).
-
-
-## Implementation Status Details
-
-- Base set: implemented major auth/instance/raw API + high-frequency issue flows.
-- Issue extensions: implemented watchers/votes/notify + issue comment/worklog + attachment download safety guard.
-- Extended domains: implemented metadata/workflow/admin-read, project detail reads, user/group reads, filter/dashboard read + partial write operations, component/version partial CRUD, agile board/sprint/backlog paths.
+- `commands --json` returns command metadata objects.
+- `schema <command> --json` returns usage, risk, arguments, flags, examples, and required fields.
+- Destructive commands require `--yes`.
+- Write commands support `--dry-run`.

@@ -17,12 +17,15 @@ func Resolve(product config.ProductConfig, explicit, rawURL, productName string)
 	if explicit != "" {
 		for _, in := range product.Instances {
 			if in.Name == explicit {
+				if isHTTP(rawURL) && !basePrefixMatch(rawURL, in.BaseURL) {
+					return Result{}, errors.New("instance_url_mismatch")
+				}
 				return Result{Instance: in, Entity: parseEntity(rawURL, productName)}, nil
 			}
 		}
 		return Result{}, errors.New("instance_required")
 	}
-	if rawURL != "" && strings.HasPrefix(rawURL, "http") {
+	if rawURL != "" && isHTTP(rawURL) {
 		matches := matchByURL(product.Instances, rawURL)
 		if len(matches) > 1 {
 			cand := make([]string, 0, len(matches))
@@ -72,6 +75,19 @@ func matchByURL(instances []config.InstanceConfig, raw string) []config.Instance
 }
 
 func normalize(s string) string { return strings.TrimRight(strings.ToLower(s), "/") }
+
+func isHTTP(raw string) bool {
+	u, err := url.Parse(raw)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https")
+}
+
+func basePrefixMatch(raw, base string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	return strings.HasPrefix(normalize(u.Scheme+"://"+u.Host+u.Path), normalize(base))
+}
 
 func parseEntity(raw, product string) ResolvedEntity {
 	e := ResolvedEntity{Type: "unknown", Attrs: map[string]string{}}

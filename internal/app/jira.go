@@ -1,6 +1,7 @@
 package app
 
 import (
+	"engineering-flow-platform-tools/internal/catalog"
 	"engineering-flow-platform-tools/internal/cli"
 	"engineering-flow-platform-tools/internal/llm"
 	"github.com/spf13/cobra"
@@ -8,8 +9,8 @@ import (
 
 func NewJiraRootCommand(commands []string) *cobra.Command {
 	r := llm.NewRegistry()
-	for _, c := range commands {
-		r.Register(llm.CommandMeta{Name: c, Usage: c, Product: "jira", Risk: "read", Description: "spec placeholder"})
+	for _, c := range catalog.Commands("jira") {
+		r.Register(c)
 	}
 	return cli.NewRootCommand(cli.BuilderInput{Use: "jira", Short: "Atlassian Jira CLI", Long: "Jira command line interface for Atlassian.", Registry: r})
 }

@@ -74,6 +74,9 @@ func (c *Client) Do(r Request) (*http.Response, error) {
 	for k, v := range c.headers {
 		req.Header.Set(k, v)
 	}
+	for k, v := range r.Headers {
+		req.Header.Set(k, v)
+	}
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, &HTTPError{Code: "network_error", Message: "request failed", Hint: err.Error()}

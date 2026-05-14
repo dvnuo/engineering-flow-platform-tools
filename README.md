@@ -1,1 +1,88 @@
-# engineering-flow-platform-tools
+# Atlassian CLI Tools
+
+This repository provides a generic Atlassian CLI toolkit with two user-facing commands:
+
+- `jira`
+- `confluence`
+
+## Purpose
+
+- Build a cross-platform CLI foundation for Jira and Confluence automation.
+- Keep output stable for shell, LLM, and agent integrations.
+- Support multi-instance profiles with a single config file.
+
+This CLI is not bound to any specific agent platform.
+
+## Config
+
+- Environment variable: `ATLASSIAN_CONFIG`
+- Default path (Linux/macOS): `~/.config/atlassian/config.json`
+- Default path (Windows): `%APPDATA%\\atlassian\\config.json`
+
+Supported auth modes:
+
+- username/password
+- username/api key
+- PAT/bearer token
+
+## Output contract
+
+Use `--json` for machine-friendly output. Top-level JSON is always an envelope:
+
+- Success: `{"ok": true, "instance": "...", "data": {...}}`
+- Error: `{"ok": false, "error": {"code": "...", "message": "...", "hint": "..."}}`
+
+## Instance routing
+
+- Multi-instance profiles are supported.
+- Prefer `--instance` when multiple profiles exist.
+- URL-based instance resolution is specified and will be implemented in business commands.
+
+## Security principles
+
+- Never print `password`, `api_key`, or `token`.
+- Never log secrets.
+- Config file write mode uses `0600`.
+
+## Build
+
+### Linux/macOS
+
+```bash
+bash scripts/build.sh
+```
+
+### Windows PowerShell
+
+```powershell
+./scripts/build.ps1
+```
+
+Build outputs include `jira` and `confluence` for linux, darwin, and windows targets under `dist/`.
+
+## Phase-1 status
+
+This phase focuses on scaffolding:
+
+- root command framework
+- command registry output via `commands --json`
+- static schema placeholder via `schema <command>`
+- docs and CI baseline
+
+Real Jira/Confluence API execution is intentionally deferred to future prompts.
+
+
+## TLS note
+
+When `verify_ssl=false`, TLS verification is disabled and should only be used in internal test environments.
+
+
+## Jira implementation status (ongoing)
+
+Implementation is partially complete (base + high-frequency issue + raw API + local instance/auth flows).
+Additional command areas are being incrementally added with shared request helpers and dry-run support.
+
+
+## Implementation progress
+
+Implemented command groups now include metadata/workflow/admin-read, project details, user/group lookup, filter/dashboard retrieval, component/version CRUD subset, and agile board/sprint/backlog paths.

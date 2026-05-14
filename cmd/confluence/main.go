@@ -1,14 +1,12 @@
 package main
 
 import (
+	"engineering-flow-platform-tools/internal/confluence/commands"
 	"os"
-
-	"engineering-flow-platform-tools/internal/app"
 )
 
 func main() {
-	cmd := app.NewConfluenceRootCommand(app.ConfluenceCommandList())
-	if err := cmd.Execute(); err != nil {
+	if err := commands.NewRoot().Execute(); err != nil {
 		os.Exit(1)
 	}
 }

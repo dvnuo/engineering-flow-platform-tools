@@ -204,3 +204,28 @@ func TestBatchCValidationAndSchema(t *testing.T) {
 		t.Fatal("schema not updated")
 	}
 }
+
+func TestWriteValidationConsistency(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"ok":true}`))
+	})
+	cases := [][]string{{"issue", "update", "EFP-1"}, {"issue", "comment", "add", "EFP-1"}, {"issue", "comment", "update", "EFP-1", "1"}, {"issue", "worklog", "add", "EFP-1"}, {"issue", "worklog", "update", "EFP-1", "1"}}
+	for _, c := range cases {
+		out := run(t, cfg, c...)
+		if out["ok"].(bool) {
+			t.Fatalf("expected invalid_args for %v", c)
+		}
+	}
+}
+
+func TestSchemaConsistencyForExtendedWrites(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(`{}`)) })
+	for _, name := range []string{"issue.comment.add", "issue.comment.update", "issue.worklog.add", "issue.worklog.update", "issue.update"} {
+		out := run(t, cfg, "schema", name)
+		req := out["data"].(map[string]interface{})["required"].([]interface{})
+		if len(req) == 0 {
+			t.Fatalf("schema required missing for %s", name)
+		}
+	}
+}

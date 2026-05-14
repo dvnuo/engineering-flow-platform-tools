@@ -79,10 +79,10 @@ When `verify_ssl=false`, TLS verification is disabled and should only be used in
 
 ## Jira implementation status (ongoing)
 
-Batch A is partially implemented (base + high-frequency issue + raw API + local instance/auth flows).
-Batch B/C command areas are being incrementally added with shared request helpers and dry-run support.
+Implementation is partially complete (base + high-frequency issue + raw API + local instance/auth flows).
+Additional command areas are being incrementally added with shared request helpers and dry-run support.
 
 
-## Batch C progress
+## Implementation progress
 
 Implemented command groups now include metadata/workflow/admin-read, project details, user/group lookup, filter/dashboard retrieval, component/version CRUD subset, and agile board/sprint/backlog paths.

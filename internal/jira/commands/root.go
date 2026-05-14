@@ -275,6 +275,16 @@ func schemaCmd() *cobra.Command {
 			req = []string{"project", "name"}
 		case "version.create":
 			req = []string{"project", "name"}
+		case "issue.update":
+			req = []string{"summary|description|field"}
+		case "issue.comment.add":
+			req = []string{"body"}
+		case "issue.comment.update":
+			req = []string{"body"}
+		case "issue.worklog.add":
+			req = []string{"time-spent"}
+		case "issue.worklog.update":
+			req = []string{"time-spent|started|comment"}
 		}
 		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]interface{}{"command": args[0], "required": req}))
 	}}
@@ -444,6 +454,9 @@ func issueCmd(o *Opts) *cobra.Command {
 		summary, _ := cmd.Flags().GetString("summary")
 		desc, _ := cmd.Flags().GetString("description")
 		body := map[string]interface{}{"fields": map[string]interface{}{}}
+		if summary == "" && desc == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--summary or --description required", "", 400))
+		}
 		if summary != "" {
 			body["fields"].(map[string]interface{})["summary"] = summary
 		}
@@ -695,6 +708,9 @@ func issueCommentCmd(o *Opts) *cobra.Command {
 	}})
 	c.AddCommand(&cobra.Command{Use: "add <issue>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		b, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+		if b == "" {
+			return print(cmd, o, output.Failure("invalid_args", "comment body required", "", 400))
+		}
 		return issueSubPost(o, cmd, "issue/"+jira.IssueKey(args[0])+"/comment", map[string]string{"body": b})
 	}})
 	c.Commands()[2].Flags().String("body", "", "")
@@ -702,6 +718,9 @@ func issueCommentCmd(o *Opts) *cobra.Command {
 	c.Commands()[2].Flags().Bool("body-stdin", false, "")
 	c.AddCommand(&cobra.Command{Use: "update <issue> <id>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
 		b, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+		if b == "" {
+			return print(cmd, o, output.Failure("invalid_args", "comment body required", "", 400))
+		}
 		return issueSubPut(o, cmd, "issue/"+jira.IssueKey(args[0])+"/comment/"+args[1], map[string]string{"body": b})
 	}})
 	c.Commands()[3].Flags().String("body", "", "")
@@ -734,14 +753,24 @@ func issueWorklogCmd(o *Opts) *cobra.Command {
 		return issueSubGet(o, cmd, "issue/"+jira.IssueKey(args[0])+"/worklog/"+args[1])
 	}})
 	c.AddCommand(&cobra.Command{Use: "add <issue>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		b := map[string]string{"timeSpent": mustS(cmd, "time-spent"), "started": mustS(cmd, "started"), "comment": mustS(cmd, "comment")}
+		ts := mustS(cmd, "time-spent")
+		if ts == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--time-spent required", "", 400))
+		}
+		b := map[string]string{"timeSpent": ts, "started": mustS(cmd, "started"), "comment": mustS(cmd, "comment")}
 		return issueSubPost(o, cmd, "issue/"+jira.IssueKey(args[0])+"/worklog", b)
 	}})
 	c.Commands()[2].Flags().String("time-spent", "", "")
 	c.Commands()[2].Flags().String("started", "", "")
 	c.Commands()[2].Flags().String("comment", "", "")
 	c.AddCommand(&cobra.Command{Use: "update <issue> <id>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
-		b := map[string]string{"timeSpent": mustS(cmd, "time-spent"), "started": mustS(cmd, "started"), "comment": mustS(cmd, "comment")}
+		ts := mustS(cmd, "time-spent")
+		st := mustS(cmd, "started")
+		cm := mustS(cmd, "comment")
+		if ts == "" && st == "" && cm == "" {
+			return print(cmd, o, output.Failure("invalid_args", "at least one field required", "", 400))
+		}
+		b := map[string]string{"timeSpent": ts, "started": st, "comment": cm}
 		return issueSubPut(o, cmd, "issue/"+jira.IssueKey(args[0])+"/worklog/"+args[1], b)
 	}})
 	c.Commands()[3].Flags().String("time-spent", "", "")
@@ -763,6 +792,9 @@ func commentCmd(o *Opts) *cobra.Command {
 	}})
 	c.AddCommand(&cobra.Command{Use: "add <issue>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		b, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+		if b == "" {
+			return print(cmd, o, output.Failure("invalid_args", "comment body required", "", 400))
+		}
 		return issueSubPost(o, cmd, "issue/"+jira.IssueKey(args[0])+"/comment", map[string]string{"body": b})
 	}})
 	c.Commands()[1].Flags().String("body", "", "")

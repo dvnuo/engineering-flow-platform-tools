@@ -266,12 +266,12 @@
 
 ## Implementation Status
 
-- Jira: partially implemented (Batch A mostly in progress; Batch B/C partial command coverage added).
+- Jira: partially implemented (core command coverage in progress; partial advanced command coverage added).
 - Confluence: command spec only, implementation pending.
 
 
 ## Implementation Status Details
 
-- Batch A: implemented major base/auth/instance/raw API + high-frequency issue flows.
-- Batch B: implemented watchers/votes/notify + issue comment/worklog + attachment download safety guard.
-- Batch C: implemented metadata/workflow/admin-read, project detail reads, user/group reads, filter/dashboard read + partial write operations, component/version partial CRUD, agile board/sprint/backlog paths.
+- Base set: implemented major auth/instance/raw API + high-frequency issue flows.
+- Issue extensions: implemented watchers/votes/notify + issue comment/worklog + attachment download safety guard.
+- Extended domains: implemented metadata/workflow/admin-read, project detail reads, user/group reads, filter/dashboard read + partial write operations, component/version partial CRUD, agile board/sprint/backlog paths.

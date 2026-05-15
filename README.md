@@ -1,89 +1,150 @@
 # Atlassian CLI Tools
 
-This repository provides a generic Atlassian CLI toolkit with two user-facing commands:
+Atlassian CLI Tools provides two cross-platform command line binaries for Jira and Confluence automation:
 
 - `jira`
 - `confluence`
 
-## Purpose
+The project is designed for humans, shell scripts, and LLM/agent workflows that need stable machine-readable output.
 
-- Build a cross-platform CLI foundation for Jira and Confluence automation.
-- Keep output stable for shell, LLM, and agent integrations.
-- Support multi-instance profiles with a single config file.
+## Design Goals
 
-This CLI is not bound to any specific agent platform.
+- Keep user-visible commands predictable across platforms.
+- Return stable JSON envelopes with `ok`, `data`, and `error`.
+- Support multiple Jira and Confluence instances from one config file.
+- Avoid printing credentials in normal, error, dry-run, or verbose output.
+- Provide command metadata through `commands --json` and `schema <command> --json`.
 
-## Config
+## Quick Install
 
-- Environment variable: `ATLASSIAN_CONFIG`
-- Default path (Linux/macOS): `~/.config/atlassian/config.json`
-- Default path (Windows): `%APPDATA%\\atlassian\\config.json`
+Download a release artifact for your platform, place `jira` and `confluence` on your `PATH`, then run:
 
-Supported auth modes:
+```bash
+jira version --json
+confluence version --json
+```
+
+## Config File
+
+- Environment override: `ATLASSIAN_CONFIG`
+- Linux/macOS default: `~/.config/atlassian/config.json`
+- Windows default: `%APPDATA%\atlassian\config.json`
+
+Example multi-instance config:
+
+```json
+{
+  "jira": {
+    "default_instance": "local",
+    "instances": [
+      {
+        "name": "local",
+        "base_url": "https://jira.example.test",
+        "rest_path": "/rest/api/2",
+        "auth": {"type": "basic_api_key", "username": "user@example.test", "api_key": "redacted"}
+      }
+    ]
+  },
+  "confluence": {
+    "default_instance": "docs",
+    "instances": [
+      {
+        "name": "docs",
+        "base_url": "https://confluence.example.test",
+        "rest_path": "/rest/api",
+        "auth": {"type": "bearer_token", "token": "redacted"}
+      }
+    ]
+  }
+}
+```
+
+Supported authentication modes:
 
 - username/password
-- username/api key
-- PAT/bearer token
+- username/API key
+- bearer token/PAT
 
-## Output contract
+## Jira Examples
 
-Use `--json` for machine-friendly output. Top-level JSON is always an envelope:
+```bash
+jira auth test --instance local --json
+jira issue get PROJ-123 --instance local --json
+jira issue search --jql 'project = PROJ' --limit 10 --json
+jira version --json
+```
 
-- Success: `{"ok": true, "instance": "...", "data": {...}}`
-- Error: `{"ok": false, "error": {"code": "...", "message": "...", "hint": "..."}}`
+## Confluence Examples
 
-## Instance routing
+```bash
+confluence auth test --instance docs --json
+confluence search --cql 'space = ENG' --instance docs --json
+confluence page create --instance docs --space ENG --title "Test Page" --body "<p>Hello</p>" --dry-run --json
+confluence version --json
+```
 
-- Multi-instance profiles are supported.
-- Prefer `--instance` when multiple profiles exist.
-- URL-based instance resolution is specified and will be implemented in business commands.
+## URL Instance Routing
 
-## Security principles
+Commands that accept Jira issue URLs or Confluence page URLs can select the matching configured instance automatically. Use `--instance` when multiple configured instances could match the same URL.
 
-- Never print `password`, `api_key`, or `token`.
-- Never log secrets.
-- Config file write mode uses `0600`.
+## LLM/Agent Usage
 
-## Build
+Agents should first inspect available commands:
 
-### Linux/macOS
+```bash
+jira commands --json
+confluence commands --json
+```
+
+Then inspect the exact schema before calling a command:
+
+```bash
+jira schema issue.create --json
+confluence schema page.create --json
+```
+
+Always use `--json`, inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+
+## Security Model
+
+- Secrets are redacted from config display and command output.
+- Config files are written with `0600` permissions where supported.
+- Bearer tokens and basic auth credentials are only sent in Authorization headers.
+- Absolute URLs outside the selected instance are blocked.
+- `--verbose` is reserved for diagnostics and must not print credentials.
+- Tests must not contain real credentials.
+
+## Cross-Platform Build
 
 ```bash
 bash scripts/build.sh
+bash scripts/build.sh --snapshot
 ```
-
-### Windows PowerShell
 
 ```powershell
 ./scripts/build.ps1
+./scripts/build.ps1 --snapshot
 ```
 
-Build outputs include `jira` and `confluence` for linux, darwin, and windows targets under `dist/`.
+Build outputs are placed under `dist/<os>-<arch>/` for linux, darwin, and windows on amd64 and arm64.
 
-## TLS note
-
-When `verify_ssl=false`, TLS verification is disabled and should only be used in internal test environments.
-
-
-## Command coverage
-
-`docs/COMMAND_SPEC.md` is the source of the user-visible command contract. The Cobra command trees, `commands --json`, and `schema <command> --json` are tested against that contract.
-
-
-## Confluence examples
+## Development And Testing
 
 ```bash
-confluence auth test --instance demo --json
-confluence search --cql 'space = ENG' --instance demo --json
-confluence page create --instance demo --space ENG --title "Test Page" --body "<p>Hello</p>" --dry-run --json
+go mod tidy
+go test ./...
+go vet ./...
+bash scripts/smoke.sh
 ```
 
+On Windows:
 
-## For LLM/agent usage
+```powershell
+go test ./...
+go vet ./...
+./scripts/smoke.ps1
+```
 
-- Always pass `--json` for machine-readable output.
-- Use `--instance` when multiple instances are configured.
-- Full Jira/Confluence URLs can auto-select an instance.
-- Use `--dry-run` before write operations.
-- Use `--yes` for destructive operations.
-- Prefer `commands --json` and `schema <command> --json` to plan tool calls.
+## Release
+
+Tags matching `v*` trigger the release workflow. Release archives include the binaries plus README and install/config/LLM usage docs.

@@ -1,11 +1,11 @@
 # LLM/Agent Usage
 
-- Always use `--json` for machine-readable output.
-- Use `--instance` when multiple instances are configured.
+- Always use --json for machine-readable output.
+- Use --instance when multiple instances are configured.
 - Full Jira/Confluence URLs can auto-select the instance.
-- Use `--dry-run` before write operations.
-- Use `--yes` for destructive operations.
-- On errors, inspect `error.code`, `error.message`, and `error.hint`.
+- Use --dry-run before write operations.
+- Use --yes for destructive operations.
+- Inspect error.code and error.hint before retrying.
 
 ## Common errors
 

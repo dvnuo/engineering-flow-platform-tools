@@ -88,8 +88,8 @@ func (c *Client) Do(r Request) (*http.Response, error) {
 }
 func (c *Client) resolveURL(path string) (string, error) {
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
-		if !strings.HasPrefix(strings.TrimRight(path, "/"), strings.TrimRight(c.instance.BaseURL, "/")) {
-			return "", errors.New("invalid_args")
+		if !urlBelongsToBase(path, c.instance.BaseURL) {
+			return "", &HTTPError{Code: "instance_url_mismatch", Message: "off-instance url", Hint: "Use a URL that belongs to the selected instance.", Status: 400}
 		}
 		return path, nil
 	}
@@ -101,4 +101,24 @@ func (c *Client) resolveURL(path string) (string, error) {
 	base := strings.TrimRight(c.instance.BaseURL, "/") + "/" + strings.Trim(c.instance.RESTPath, "/") + "/" + strings.TrimLeft(path, "/")
 	_, err := url.Parse(base)
 	return base, err
+}
+
+func urlBelongsToBase(raw, base string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	b, err := url.Parse(base)
+	if err != nil {
+		return false
+	}
+	if !strings.EqualFold(u.Scheme, b.Scheme) || !strings.EqualFold(u.Host, b.Host) {
+		return false
+	}
+	basePath := "/" + strings.Trim(strings.ToLower(b.Path), "/")
+	rawPath := "/" + strings.Trim(strings.ToLower(u.Path), "/")
+	if basePath == "/" {
+		return true
+	}
+	return rawPath == basePath || strings.HasPrefix(rawPath, strings.TrimRight(basePath, "/")+"/")
 }

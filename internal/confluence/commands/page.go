@@ -2,12 +2,14 @@ package commands
 
 import (
 	"encoding/json"
+	"html"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/output"
-	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -21,18 +23,31 @@ func pageCmd(o *Opts) *cobra.Command {
 			}
 			return print(cmd, o, output.Failure("invalid_args", "exactly one of --id/--url", "", 400))
 		}
-		return do(o, cmd, "GET", "content/"+id, nil, nil)
+		q := map[string]string{}
+		if expand, _ := cmd.Flags().GetString("expand"); expand != "" {
+			q["expand"] = expand
+		}
+		return do(o, cmd, "GET", "content/"+id, q, nil)
 	}}
 	get.Flags().String("id", "", "")
 	get.Flags().String("url", "", "")
+	get.Flags().String("expand", "", "")
 	c.AddCommand(get)
 	gbt := &cobra.Command{Use: "get-by-title", RunE: func(cmd *cobra.Command, args []string) error {
 		sp, _ := cmd.Flags().GetString("space")
 		ti, _ := cmd.Flags().GetString("title")
-		return do(o, cmd, "GET", "content", map[string]string{"spaceKey": sp, "title": ti, "type": "page"}, nil)
+		q := map[string]string{"spaceKey": sp, "title": ti, "type": "page"}
+		for _, k := range []string{"expand", "limit"} {
+			if v, _ := cmd.Flags().GetString(k); v != "" {
+				q[k] = v
+			}
+		}
+		return do(o, cmd, "GET", "content", q, nil)
 	}}
 	gbt.Flags().String("space", "", "")
 	gbt.Flags().String("title", "", "")
+	gbt.Flags().String("expand", "", "")
+	gbt.Flags().String("limit", "", "")
 	c.AddCommand(gbt)
 	cr := &cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
 		sp, _ := cmd.Flags().GetString("space")
@@ -42,10 +57,14 @@ func pageCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Failure("invalid_args", "missing required args", "", 400))
 		}
 		payload := map[string]any{"type": "page", "title": ti, "space": map[string]string{"key": sp}, "body": confluenceBody(cmd, b)}
+		if parentID, _ := cmd.Flags().GetString("parent-id"); parentID != "" {
+			payload["ancestors"] = []map[string]string{{"id": parentID}}
+		}
 		return do(o, cmd, "POST", "content", nil, payload)
 	}}
 	cr.Flags().String("space", "", "")
 	cr.Flags().String("title", "", "")
+	cr.Flags().String("parent-id", "", "")
 	cr.Flags().String("body", "", "")
 	cr.Flags().String("body-file", "", "")
 	cr.Flags().Bool("body-stdin", false, "")
@@ -59,16 +78,27 @@ func pageCmd(o *Opts) *cobra.Command {
 		v, _ := cmd.Flags().GetInt("version")
 		cx, _ := loadCtx(o, "")
 		if v == 0 && !o.DryRun {
-			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + id})
+			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + id, Query: map[string]string{"expand": "version"}})
 			if e != nil {
 				return print(cmd, o, output.Failure("server_error", "version fetch failed", "", 500))
 			}
 			defer r.Body.Close()
 			var m map[string]any
 			_ = json.NewDecoder(r.Body).Decode(&m)
-			v = int(m["version"].(map[string]any)["number"].(float64)) + 1
+			vm, ok := m["version"].(map[string]any)
+			if !ok {
+				return print(cmd, o, output.Failure("server_error", "version.number missing", "Retry with --version.", 500))
+			}
+			num, ok := vm["number"].(float64)
+			if !ok {
+				return print(cmd, o, output.Failure("server_error", "version.number missing", "Retry with --version.", 500))
+			}
+			v = int(num) + 1
 		}
 		payload := map[string]any{"version": map[string]any{"number": v}}
+		if minor, _ := cmd.Flags().GetBool("minor-edit"); minor {
+			payload["version"].(map[string]any)["minorEdit"] = true
+		}
 		if t, _ := cmd.Flags().GetString("title"); t != "" {
 			payload["title"] = t
 		}
@@ -81,6 +111,7 @@ func pageCmd(o *Opts) *cobra.Command {
 	upd.Flags().String("url", "", "")
 	upd.Flags().Int("version", 0, "")
 	upd.Flags().String("title", "", "")
+	upd.Flags().Bool("minor-edit", false, "")
 	upd.Flags().String("body", "", "")
 	upd.Flags().String("body-file", "", "")
 	upd.Flags().Bool("body-stdin", false, "")
@@ -112,8 +143,11 @@ func pageCmd(o *Opts) *cobra.Command {
 		defer r.Body.Close()
 		var m map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&m)
-		html := m["body"].(map[string]any)["view"].(map[string]any)["value"].(string)
-		md, _ := htmltomarkdown.ConvertString(html)
+		html, ok := nestedString(m, "body", "view", "value")
+		if !ok {
+			return print(cmd, o, output.Failure("not_found", "page view body missing", "Retry with a page that has body.view available.", 404))
+		}
+		md := htmlToMarkdown(html)
 		out, _ := cmd.Flags().GetString("output")
 		if out != "" {
 			_ = os.WriteFile(out, []byte(md), 0644)
@@ -138,7 +172,10 @@ func pageCmd(o *Opts) *cobra.Command {
 		defer r.Body.Close()
 		var m map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&m)
-		html := m["body"].(map[string]any)["export_view"].(map[string]any)["value"].(string)
+		html, ok := nestedString(m, "body", "export_view", "value")
+		if !ok {
+			return print(cmd, o, output.Failure("not_found", "page export body missing", "Retry with a page that has body.export_view available.", 404))
+		}
 		out, _ := cmd.Flags().GetString("output")
 		if out != "" {
 			_ = os.WriteFile(out, []byte(html), 0644)
@@ -415,4 +452,48 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 	}
 	return c
+}
+
+func htmlToMarkdown(src string) string {
+	replacements := []struct {
+		re   *regexp.Regexp
+		with string
+	}{
+		{regexp.MustCompile(`(?i)<br\s*/?>`), "\n"},
+		{regexp.MustCompile(`(?i)</p\s*>`), "\n\n"},
+		{regexp.MustCompile(`(?i)</h[1-6]\s*>`), "\n\n"},
+		{regexp.MustCompile(`(?i)<li[^>]*>`), "- "},
+		{regexp.MustCompile(`(?i)</li\s*>`), "\n"},
+	}
+	out := src
+	for _, r := range replacements {
+		out = r.re.ReplaceAllString(out, r.with)
+	}
+	out = regexp.MustCompile(`<[^>]+>`).ReplaceAllString(out, "")
+	out = html.UnescapeString(out)
+	lines := strings.Split(out, "\n")
+	for i := range lines {
+		lines[i] = strings.TrimSpace(lines[i])
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
+
+func nestedString(m map[string]any, keys ...string) (string, bool) {
+	var cur any = m
+	for i, k := range keys {
+		obj, ok := cur.(map[string]any)
+		if !ok {
+			return "", false
+		}
+		next, ok := obj[k]
+		if !ok {
+			return "", false
+		}
+		if i == len(keys)-1 {
+			s, ok := next.(string)
+			return s, ok
+		}
+		cur = next
+	}
+	return "", false
 }

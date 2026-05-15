@@ -29,6 +29,6 @@ func TestConfluenceE2ESmoke(t *testing.T) {
 		c.SetErr(&b)
 		c.SetArgs(args)
 		_ = c.Execute()
-		testutil.AssertJSONEnvelope(t, b.Bytes())
+		testutil.AssertOKEnvelope(t, b.Bytes())
 	}
 }

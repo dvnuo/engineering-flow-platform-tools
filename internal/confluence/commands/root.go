@@ -18,12 +18,14 @@ import (
 	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/instance"
 	"engineering-flow-platform-tools/internal/output"
+	"engineering-flow-platform-tools/internal/version"
 	"github.com/spf13/cobra"
 )
 
 type Opts struct {
-	Instance, Config  string
-	JSON, DryRun, Yes bool
+	Instance, Config, Format   string
+	Entity                     string
+	JSON, Verbose, DryRun, Yes bool
 }
 
 type ctx struct {
@@ -39,15 +41,19 @@ func NewRoot() *cobra.Command {
 	c.PersistentFlags().StringVar(&o.Instance, "instance", "", "")
 	c.PersistentFlags().StringVar(&o.Config, "config", "", "")
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
+	c.PersistentFlags().StringVar(&o.Format, "format", "table", "")
+	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "")
 	c.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "")
 	c.PersistentFlags().BoolVar(&o.Yes, "yes", false, "")
-	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), cqlCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), labelCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), hiddenCmd(restrictionCmd(o)), apiCmd(o))
+	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), cliVersionCmd(o), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), cqlCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), labelCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), hiddenCmd(restrictionCmd(o)), apiCmd(o))
 	return c
 }
 func print(cmd *cobra.Command, o *Opts, e output.Envelope) error {
 	f := "table"
 	if o.JSON {
 		f = "json"
+	} else if o.Format != "" {
+		f = o.Format
 	}
 	return output.Print(cmd.OutOrStdout(), f, e)
 }
@@ -104,6 +110,11 @@ func addAuthFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("api-key-stdin", false, "")
 	cmd.Flags().Bool("token-stdin", false, "")
 }
+func cliVersionCmd(o *Opts) *cobra.Command {
+	return &cobra.Command{Use: "version", RunE: func(cmd *cobra.Command, args []string) error {
+		return print(cmd, o, output.Success("", map[string]any{"version": version.Version, "commit": version.Commit, "date": version.Date}))
+	}}
+}
 func loadCtx(o *Opts, entity string) (*ctx, error) {
 	p, _ := config.ResolvePath(o.Config)
 	cfg, err := config.Load(p)
@@ -121,12 +132,16 @@ func loadCtx(o *Opts, entity string) (*ctx, error) {
 	return &ctx{cfg: cfg, inst: res.Instance, client: cl}, nil
 }
 func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body any) error {
-	cx, err := loadCtx(o, p)
+	entity := p
+	if o.Entity != "" {
+		entity = o.Entity
+	}
+	cx, err := loadCtx(o, entity)
 	if err != nil {
 		return print(cmd, o, output.Failure("config_error", err.Error(), "", 400))
 	}
 	if o.DryRun {
-		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"dry_run": true, "method": method, "path": p, "query": q, "body": body}))
+		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"dry_run": true, "method": method, "path": p, "query": q, "body": redactDryRunBody(body)}))
 	}
 	resp, err := cx.client.Do(httpclient.Request{Method: method, Path: p, Query: q, JSONBody: body})
 	if err != nil {
@@ -139,9 +154,55 @@ func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body
 	return print(cmd, o, output.Success(cx.inst.Name, out))
 }
 
+func redactDryRunBody(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		out := map[string]any{}
+		for k, v := range x {
+			if isSecretKey(k) {
+				out[k] = "***REDACTED***"
+				continue
+			}
+			out[k] = redactDryRunBody(v)
+		}
+		return out
+	case map[string]string:
+		out := map[string]string{}
+		for k, v := range x {
+			if isSecretKey(k) {
+				out[k] = "***REDACTED***"
+				continue
+			}
+			out[k] = v
+		}
+		return out
+	case []any:
+		out := make([]any, len(x))
+		for i, v := range x {
+			out[i] = redactDryRunBody(v)
+		}
+		return out
+	default:
+		return v
+	}
+}
+
+func isSecretKey(k string) bool {
+	k = strings.ToLower(k)
+	return strings.Contains(k, "password") || strings.Contains(k, "api_key") || strings.Contains(k, "apikey") || strings.Contains(k, "token") || k == "authorization"
+}
+
 func helpLLMCmd() *cobra.Command {
 	return &cobra.Command{Use: "help llm", RunE: func(cmd *cobra.Command, args []string) error {
-		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"tips": []string{"use commands --json", "use schema <command> --json"}, "commands": catalog.Commands("confluence")}))
+		tips := []string{
+			"Always use --json for machine-readable output.",
+			"Use --instance when multiple instances are configured.",
+			"Full Jira/Confluence URLs can auto-select the instance.",
+			"Use --dry-run before write operations.",
+			"Use --yes for destructive operations.",
+			"Inspect error.code and error.hint before retrying.",
+		}
+		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"tips": tips, "commands": catalog.Commands("confluence")}))
 	}}
 }
 
@@ -180,15 +241,17 @@ func pageID(cmd *cobra.Command, o *Opts) (string, error) {
 		return "", fmt.Errorf("invalid_args")
 	}
 	if id != "" {
+		o.Entity = ""
 		return id, nil
 	}
+	o.Entity = u
 	pu, err := url.Parse(u)
 	if err != nil {
 		return "", err
 	}
 	if pu.IsAbs() && o.Instance != "" {
 		cx, e := loadCtx(o, "")
-		if e == nil && !strings.HasPrefix(strings.TrimRight(u, "/"), strings.TrimRight(cx.inst.BaseURL, "/")) {
+		if e == nil && !urlBelongsToBase(u, cx.inst.BaseURL) {
 			return "", fmt.Errorf("instance_url_mismatch")
 		}
 	}
@@ -203,6 +266,26 @@ func pageID(cmd *cobra.Command, o *Opts) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("invalid_args")
+}
+
+func urlBelongsToBase(raw, base string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	b, err := url.Parse(base)
+	if err != nil {
+		return false
+	}
+	if !strings.EqualFold(u.Scheme, b.Scheme) || !strings.EqualFold(u.Host, b.Host) {
+		return false
+	}
+	basePath := "/" + strings.Trim(strings.ToLower(b.Path), "/")
+	rawPath := "/" + strings.Trim(strings.ToLower(u.Path), "/")
+	if basePath == "/" {
+		return true
+	}
+	return rawPath == basePath || strings.HasPrefix(rawPath, strings.TrimRight(basePath, "/")+"/")
 }
 
 func apiCmd(o *Opts) *cobra.Command {

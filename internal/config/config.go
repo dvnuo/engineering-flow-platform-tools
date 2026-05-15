@@ -44,8 +44,27 @@ func (c *RootConfig) Normalize() {
 }
 
 func (a *AuthConfig) NormalizeType() {
-	if a.Type != "" {
-		return
+	a.Type = NormalizeAuthType(*a)
+	if a.Type == "basic_api_key" && a.APIKey == "" && a.Token != "" {
+		a.APIKey = a.Token
+		if a.Username != "" {
+			a.Token = ""
+		}
+	}
+}
+
+func NormalizeAuthType(a AuthConfig) string {
+	t := strings.TrimSpace(strings.ToLower(a.Type))
+	switch t {
+	case "pat", "bearer", "token":
+		return "bearer_token"
+	case "basic_token", "api_key":
+		return "basic_api_key"
+	case "basic_password", "basic_api_key", "bearer_token":
+		return t
+	case "":
+	default:
+		return t
 	}
 	hasUser := a.Username != ""
 	hasPwd := a.Password != ""
@@ -53,15 +72,13 @@ func (a *AuthConfig) NormalizeType() {
 	hasToken := a.Token != ""
 	switch {
 	case hasUser && hasPwd:
-		a.Type = "basic_password"
+		return "basic_password"
 	case hasUser && hasKey:
-		a.Type = "basic_api_key"
+		return "basic_api_key"
 	case hasUser && hasToken:
-		a.Type = "basic_api_key"
-		a.APIKey = a.Token
-		a.Token = ""
+		return "basic_api_key"
 	case hasToken:
-		a.Type = "bearer_token"
+		return "bearer_token"
 	}
-	a.Type = strings.TrimSpace(a.Type)
+	return ""
 }

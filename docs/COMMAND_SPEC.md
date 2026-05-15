@@ -18,6 +18,7 @@
 - jira commands
 - jira schema <command>
 - jira help llm
+- jira version
 
 ### Issue
 - jira issue get <issue-or-url>
@@ -154,6 +155,7 @@
 - confluence commands
 - confluence schema <command>
 - confluence help llm
+- confluence version
 
 ### Search / CQL
 - confluence search

@@ -30,3 +30,17 @@ func TestPropertyAttachmentCommentFlows(t *testing.T) {
 		t.Fatal("comment update")
 	}
 }
+
+func TestAttachmentDownloadMissingLinkDoesNotPanic(t *testing.T) {
+	p := cfg(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"_links":{}}`))
+	})
+	r := run(t, p, "attachment", "download", "9", "--output", "/tmp/a.bin")
+	if ok, _ := r["ok"].(bool); ok {
+		t.Fatal("missing download link should fail")
+	}
+	errObj, _ := r["error"].(map[string]any)
+	if errObj["code"] != "not_found" {
+		t.Fatalf("code=%v", errObj["code"])
+	}
+}

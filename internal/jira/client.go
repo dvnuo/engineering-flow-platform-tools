@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
+	"regexp"
 	"strings"
 
 	"engineering-flow-platform-tools/internal/config"
@@ -41,15 +43,68 @@ func ReadJSON(resp io.Reader) (map[string]interface{}, error) {
 }
 
 func IssueKey(input string) string {
-	if strings.HasPrefix(input, "http") {
-		parts := strings.Split(strings.TrimRight(input, "/"), "/")
+	if strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://") {
+		u, err := url.Parse(input)
+		if err != nil {
+			return input
+		}
+		for _, pattern := range []string{`/browse/([A-Z][A-Z0-9]+-\d+)`, `/rest/api/\d+/issue/([A-Z][A-Z0-9]+-\d+)`} {
+			re := regexp.MustCompile(pattern)
+			if m := re.FindStringSubmatch(u.Path); len(m) == 2 {
+				return m[1]
+			}
+		}
+		parts := strings.Split(strings.TrimRight(u.Path, "/"), "/")
 		return parts[len(parts)-1]
 	}
 	return input
 }
 
 func DryRunData(method, path string, q map[string]string, body interface{}) map[string]interface{} {
-	return map[string]interface{}{"dry_run": true, "method": method, "path": path, "query": q, "body": body}
+	return map[string]interface{}{"dry_run": true, "method": method, "path": path, "query": q, "body": redactBody(body)}
 }
 
-func RequireYes(yes bool) error { if !yes { return fmt.Errorf("invalid_args") }; return nil }
+func redactBody(v interface{}) interface{} {
+	switch x := v.(type) {
+	case map[string]interface{}:
+		out := map[string]interface{}{}
+		for k, v := range x {
+			if isSecretKey(k) {
+				out[k] = "***REDACTED***"
+				continue
+			}
+			out[k] = redactBody(v)
+		}
+		return out
+	case map[string]string:
+		out := map[string]string{}
+		for k, v := range x {
+			if isSecretKey(k) {
+				out[k] = "***REDACTED***"
+				continue
+			}
+			out[k] = v
+		}
+		return out
+	case []interface{}:
+		out := make([]interface{}, len(x))
+		for i, v := range x {
+			out[i] = redactBody(v)
+		}
+		return out
+	default:
+		return v
+	}
+}
+
+func isSecretKey(k string) bool {
+	k = strings.ToLower(k)
+	return strings.Contains(k, "password") || strings.Contains(k, "api_key") || strings.Contains(k, "apikey") || strings.Contains(k, "token") || k == "authorization"
+}
+
+func RequireYes(yes bool) error {
+	if !yes {
+		return fmt.Errorf("invalid_args")
+	}
+	return nil
+}

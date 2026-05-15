@@ -29,8 +29,19 @@ func TestConfluencePageID(t *testing.T) {
 }
 func TestAmbiguous(t *testing.T) {
 	p := config.ProductConfig{Instances: []config.InstanceConfig{{Name: "a", BaseURL: "https://x.example.com/a"}, {Name: "b", BaseURL: "https://x.example.com/a"}}}
-	_, err := Resolve(p, "", "https://x.example.com/a/browse/EFP-1", "jira")
+	r, err := Resolve(p, "", "https://x.example.com/a/browse/EFP-1", "jira")
 	if err == nil || err.Error() != "ambiguous_instance" {
 		t.Fatal("expected ambiguous")
+	}
+	if len(r.Candidates) != 2 || r.Candidates[0] != "a" || r.Candidates[1] != "b" {
+		t.Fatalf("candidates=%v", r.Candidates)
+	}
+}
+
+func TestBaseURLPathBoundary(t *testing.T) {
+	p := config.ProductConfig{Instances: []config.InstanceConfig{{Name: "ctx", BaseURL: "https://x.example.com/jira"}}}
+	_, err := Resolve(p, "", "https://x.example.com/jiraevil/browse/EFP-1", "jira")
+	if err == nil || err.Error() != "instance_required" {
+		t.Fatalf("expected no path-boundary match, got %v", err)
 	}
 }

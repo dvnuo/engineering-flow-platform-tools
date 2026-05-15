@@ -32,7 +32,9 @@ func attachmentCmd(o *Opts) *cobra.Command {
 		}
 		defer r.Body.Close()
 		var m map[string]any
-		_ = json.NewDecoder(r.Body).Decode(&m)
+		if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+			return print(cmd, o, output.Failure("server_error", "failed to decode attachment metadata", "", 500))
+		}
 		dl, err := attachmentDownloadURL(m)
 		if err != nil {
 			return print(cmd, o, output.Failure("not_found", "attachment download link missing", "Request metadata-only output or verify the attachment id.", 404))
@@ -49,8 +51,13 @@ func attachmentCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, envelopeError(err, "server_error"))
 		}
 		defer rr.Body.Close()
-		b, _ := io.ReadAll(rr.Body)
-		_ = os.WriteFile(out, b, 0644)
+		b, err := io.ReadAll(rr.Body)
+		if err != nil {
+			return print(cmd, o, output.Failure("server_error", "failed to read attachment response", "", 500))
+		}
+		if err := os.WriteFile(out, b, 0644); err != nil {
+			return print(cmd, o, output.Failure("invalid_args", "failed to write --output: "+err.Error(), "Choose a writable output path.", 400))
+		}
 		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"output": out}))
 	}}
 	download.Flags().String("output", "", "")

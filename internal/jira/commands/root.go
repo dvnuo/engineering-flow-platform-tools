@@ -1155,6 +1155,9 @@ func attachmentCmd(o *Opts) *cobra.Command {
 		defer resp.Body.Close()
 		d, _ := jira.ReadJSON(resp.Body)
 		u, _ := d["content"].(string)
+		if u == "" {
+			return print(cmd, o, output.Failure("not_found", "attachment content URL missing", "Verify the attachment id or request metadata-only output.", 404))
+		}
 		if !jiraURLBelongsToBase(u, ctx.Inst.BaseURL) {
 			return print(cmd, o, output.Failure("instance_url_mismatch", "off-instance content URL", "", 400))
 		}
@@ -1163,9 +1166,14 @@ func attachmentCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, envelopeError(err, "server_error"))
 		}
 		defer r2.Body.Close()
-		b, _ := io.ReadAll(r2.Body)
-		_ = os.WriteFile(out, b, 0o600)
-		return print(cmd, o, output.Success(ctx.Instance, map[string]any{"saved": out}))
+		b, err := io.ReadAll(r2.Body)
+		if err != nil {
+			return print(cmd, o, output.Failure("server_error", "failed to read attachment response", "", 500))
+		}
+		if err := os.WriteFile(out, b, 0o600); err != nil {
+			return print(cmd, o, output.Failure("invalid_args", "failed to write --output: "+err.Error(), "Choose a writable output path.", 400))
+		}
+		return print(cmd, o, output.Success(ctx.Instance, map[string]any{"output": out, "saved": out}))
 	}}
 	download.Flags().String("output", "", "")
 	download.Flags().Bool("metadata-only", false, "")

@@ -78,7 +78,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		v, _ := cmd.Flags().GetInt("version")
 		cx, _ := loadCtx(o, "")
 		if v == 0 && !o.DryRun {
-			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + id})
+			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + id, Query: map[string]string{"expand": "version"}})
 			if e != nil {
 				return print(cmd, o, output.Failure("server_error", "version fetch failed", "", 500))
 			}
@@ -143,7 +143,10 @@ func pageCmd(o *Opts) *cobra.Command {
 		defer r.Body.Close()
 		var m map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&m)
-		html := m["body"].(map[string]any)["view"].(map[string]any)["value"].(string)
+		html, ok := nestedString(m, "body", "view", "value")
+		if !ok {
+			return print(cmd, o, output.Failure("not_found", "page view body missing", "Retry with a page that has body.view available.", 404))
+		}
 		md := htmlToMarkdown(html)
 		out, _ := cmd.Flags().GetString("output")
 		if out != "" {
@@ -169,7 +172,10 @@ func pageCmd(o *Opts) *cobra.Command {
 		defer r.Body.Close()
 		var m map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&m)
-		html := m["body"].(map[string]any)["export_view"].(map[string]any)["value"].(string)
+		html, ok := nestedString(m, "body", "export_view", "value")
+		if !ok {
+			return print(cmd, o, output.Failure("not_found", "page export body missing", "Retry with a page that has body.export_view available.", 404))
+		}
 		out, _ := cmd.Flags().GetString("output")
 		if out != "" {
 			_ = os.WriteFile(out, []byte(html), 0644)
@@ -470,4 +476,24 @@ func htmlToMarkdown(src string) string {
 		lines[i] = strings.TrimSpace(lines[i])
 	}
 	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
+
+func nestedString(m map[string]any, keys ...string) (string, bool) {
+	var cur any = m
+	for i, k := range keys {
+		obj, ok := cur.(map[string]any)
+		if !ok {
+			return "", false
+		}
+		next, ok := obj[k]
+		if !ok {
+			return "", false
+		}
+		if i == len(keys)-1 {
+			s, ok := next.(string)
+			return s, ok
+		}
+		cur = next
+	}
+	return "", false
 }

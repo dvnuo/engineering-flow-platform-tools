@@ -15,7 +15,13 @@ func readTextFile(t *testing.T, path string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return string(b)
+	return normalizeLineEndings(string(b))
+}
+
+func normalizeLineEndings(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+	return s
 }
 
 func requireLineCount(t *testing.T, path string, min int) {
@@ -28,7 +34,7 @@ func requireLineCount(t *testing.T, path string, min int) {
 
 func TestTextFormatContracts(t *testing.T) {
 	goMod := readTextFile(t, "../go.mod")
-	if !strings.Contains(goMod, "\nmodule engineering-flow-platform-tools\n") && !strings.HasPrefix(goMod, "module engineering-flow-platform-tools\n") {
+	if !strings.HasPrefix(goMod, "module engineering-flow-platform-tools\n") {
 		t.Fatal("go.mod missing standalone module line")
 	}
 	if !strings.Contains(goMod, "\ngo 1.22\n") {
@@ -52,6 +58,18 @@ func TestTextFormatContracts(t *testing.T) {
 		var doc any
 		if err := yaml.NewDecoder(bytes.NewReader([]byte(readTextFile(t, path)))).Decode(&doc); err != nil {
 			t.Fatalf("%s is not parseable YAML: %v", path, err)
+		}
+	}
+
+	attrs := readTextFile(t, "../.gitattributes")
+	for _, literal := range []string{
+		"go.mod text eol=lf",
+		"*.sh text eol=lf",
+		"*.yml text eol=lf",
+		"*.md text eol=lf",
+	} {
+		if !strings.Contains(attrs, literal) {
+			t.Fatalf(".gitattributes missing literal %q", literal)
 		}
 	}
 
@@ -82,5 +100,22 @@ func TestTextFormatContracts(t *testing.T) {
 		if strings.Contains(allDocs, forbidden) {
 			t.Fatalf("forbidden user-visible token found: %s", forbidden)
 		}
+	}
+}
+
+func TestNormalizeLineEndings(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   string
+		want string
+	}{
+		{name: "crlf", in: "a\r\nb\r\n", want: "a\nb\n"},
+		{name: "cr", in: "a\rb\r", want: "a\nb\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := normalizeLineEndings(tc.in); got != tc.want {
+				t.Fatalf("normalizeLineEndings(%q)=%q, want %q", tc.in, got, tc.want)
+			}
+		})
 	}
 }

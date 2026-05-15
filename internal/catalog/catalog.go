@@ -107,21 +107,21 @@ func Schema(product, name string) map[string]any {
 func meta(product, usage string) llm.CommandMeta {
 	name := dotted(usage)
 	ex := explicit[name]
+	r := risk(usage)
+	if ex.Risk != "" {
+		r = ex.Risk
+	}
 	flags := ex.Flags
 	if len(flags) == 0 {
-		flags = []string{"instance", "config", "json", "format", "verbose", "dry-run", "yes"}
+		flags = defaultFlags(r)
 	}
 	desc := ex.Description
 	if desc == "" {
 		desc = description(usage)
 	}
-	r := risk(usage)
-	if ex.Risk != "" {
-		r = ex.Risk
-	}
 	example := ex.Example
 	if example == "" {
-		example = usage + " --json"
+		example = exampleFor(usage, r)
 	}
 	if product == "confluence" && strings.HasPrefix(example, "jira ") {
 		example = strings.Replace(example, "jira ", "confluence ", 1)
@@ -163,7 +163,154 @@ func description(usage string) string {
 	if len(parts) <= 1 {
 		return usage
 	}
-	return "Execute " + strings.Join(parts[1:], " ") + " for " + parts[0] + "."
+	product := productName(parts[0])
+	cmd := cleanParts(parts[1:])
+	if len(cmd) == 0 {
+		return "Show " + product + " command information."
+	}
+	actionIdx := actionIndex(cmd)
+	action := cmd[actionIdx]
+	resourceParts := append([]string{}, cmd[:actionIdx]...)
+	resourceParts = append(resourceParts, cmd[actionIdx+1:]...)
+	resource := resourceName(product, resourceParts)
+	switch action {
+	case "list":
+		return "List " + resource + "."
+	case "get":
+		return "Fetch " + singular(resource) + "."
+	case "search", "cql":
+		return "Search " + resource + "."
+	case "create", "add", "upload", "login":
+		return strings.Title(action) + " " + singular(resource) + "."
+	case "update", "set", "edit", "assign", "transition", "move", "restore", "watch", "unwatch", "vote", "unvote", "default":
+		return strings.Title(action) + " " + singular(resource) + "."
+	case "delete", "remove", "logout":
+		return strings.Title(action) + " " + singular(resource) + " after explicit confirmation."
+	case "download", "export-html", "export-markdown":
+		return strings.Title(strings.ReplaceAll(action, "-", " ")) + " for " + singular(resource) + "."
+	case "commands":
+		return "List available " + product + " commands with metadata."
+	case "schema":
+		return "Show argument and flag schema for a " + product + " command."
+	case "llm":
+		return "Show " + product + " usage guidance for LLM agents."
+	case "version":
+		return "Print CLI version, commit, and build date."
+	default:
+		return strings.Title(action) + " " + resource + "."
+	}
+}
+
+func defaultFlags(r string) []string {
+	flags := []string{"instance", "config", "json", "format", "verbose"}
+	switch r {
+	case "write":
+		flags = append(flags, "dry-run")
+	case "delete":
+		flags = append([]string{"yes"}, flags...)
+	}
+	return flags
+}
+
+func cleanParts(parts []string) []string {
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if strings.HasPrefix(p, "<") || strings.HasPrefix(p, "[") {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
+func actionIndex(parts []string) int {
+	actions := map[string]bool{
+		"list": true, "get": true, "search": true, "cql": true, "create": true, "add": true,
+		"upload": true, "login": true, "update": true, "set": true, "edit": true, "assign": true,
+		"transition": true, "move": true, "restore": true, "watch": true, "unwatch": true,
+		"vote": true, "unvote": true, "default": true, "delete": true, "remove": true, "logout": true,
+		"download": true, "export-html": true, "export-markdown": true, "commands": true, "schema": true,
+		"llm": true, "version": true, "content": true, "pages": true, "blogs": true, "labels": true,
+		"watchers": true, "members": true, "statuses": true, "roles": true, "components": true,
+		"versions": true, "transitions": true, "changelog": true, "fields": true, "createmeta": true,
+		"editmeta": true, "votes": true, "notify": true, "myself": true, "server-info": true,
+		"resolve-url": true, "body": true, "body-storage": true, "body-view": true, "children": true,
+		"descendants": true, "ancestors": true, "history": true, "permission": true, "settings": true,
+		"config": true, "assignable": true, "issues": true,
+	}
+	for i := len(parts) - 1; i >= 0; i-- {
+		if actions[parts[i]] {
+			return i
+		}
+	}
+	return len(parts) - 1
+}
+
+func productName(product string) string {
+	switch product {
+	case "jira":
+		return "Jira"
+	case "confluence":
+		return "Confluence"
+	default:
+		return product
+	}
+}
+
+func resourceName(product string, parts []string) string {
+	if len(parts) == 0 {
+		return product + " resources"
+	}
+	words := append([]string{product}, parts...)
+	return strings.ReplaceAll(strings.Join(words, " "), "-", " ")
+}
+
+func singular(s string) string {
+	for _, suffix := range []string{" resources", " issues", " pages", " blogs", " labels", " watchers", " members", " statuses", " roles", " components", " versions", " transitions", " votes"} {
+		if strings.HasSuffix(s, suffix) {
+			return strings.TrimSuffix(s, "s")
+		}
+	}
+	return s
+}
+
+func exampleFor(usage, r string) string {
+	example := usage
+	replacements := map[string]string{
+		"<issue-or-url>":    "PROJ-123",
+		"<comment-id>":      "10000",
+		"<attachment-id>":   "10000",
+		"<worklog-id>":      "10000",
+		"<link-id>":         "10000",
+		"<project-key>":     "PROJ",
+		"<component-id>":    "10000",
+		"<version-id>":      "10000",
+		"<group-name>":      "team",
+		"<filter-id>":       "10000",
+		"<dashboard-id>":    "10000",
+		"<board-id>":        "1",
+		"<sprint-id>":       "1",
+		"<space-key>":       "ENG",
+		"<content-id>":      "123",
+		"<blog-id-or-url>":  "123",
+		"<task-id>":         "10000",
+		"<webhook-id>":      "10000",
+		"<role-id-or-name>": "10000",
+		"<name>":            "local",
+		"<key>":             "status",
+		"<url>":             "https://example.atlassian.net/browse/PROJ-123",
+		"<command>":         "issue.create",
+		"<path>":            "/rest/api/2/myself",
+		"<file>":            "./note.txt",
+		"[name]":            "local",
+	}
+	for old, newValue := range replacements {
+		example = strings.ReplaceAll(example, old, newValue)
+	}
+	if r == "delete" && !strings.Contains(example, "--yes") {
+		example += " --yes"
+	}
+	return example + " --json"
 }
 
 func dotted(usage string) string {

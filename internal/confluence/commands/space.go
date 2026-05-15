@@ -44,9 +44,11 @@ func spaceCmd(o *Opts) *cobra.Command {
 	c.AddCommand(&cobra.Command{Use: "watchers <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		return do(o, cmd, "GET", "space/"+args[0]+"/watch", nil, nil)
 	}})
-	c.AddCommand(&cobra.Command{Use: "permission list <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+	permission := &cobra.Command{Use: "permission"}
+	permission.AddCommand(&cobra.Command{Use: "list <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		return do(o, cmd, "GET", "space/"+args[0]+"/permission", nil, nil)
 	}})
+	c.AddCommand(permission)
 	sp := &cobra.Command{Use: "property"}
 	sp.AddCommand(&cobra.Command{Use: "list <space-key>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		return do(o, cmd, "GET", "space/"+args[0]+"/property", nil, nil)

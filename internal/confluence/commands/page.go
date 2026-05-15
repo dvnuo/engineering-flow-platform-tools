@@ -198,6 +198,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "body.storage"}, nil)
 	}})
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "body-view", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
 		if e != nil {
@@ -205,6 +206,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "body.view"}, nil)
 	}})
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	labelList := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
 		if e != nil {
@@ -218,6 +220,9 @@ func pageCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
 		}
 		labels, _ := cmd.Flags().GetStringSlice("label")
+		if len(labels) == 0 {
+			return print(cmd, o, output.Failure("invalid_args", "--label required", "", 400))
+		}
 		arr := []map[string]string{}
 		for _, l := range labels {
 			arr = append(arr, map[string]string{"prefix": "global", "name": l})
@@ -264,6 +269,9 @@ func pageCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
 		}
+		if b == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--body, --body-file, or --body-stdin required", "", 400))
+		}
 		return do(o, cmd, "POST", "content/"+id+"/child/comment", nil, map[string]any{"type": "comment", "body": confluenceBody(cmd, b)})
 	}}
 	commentAdd.Flags().String("body", "", "")
@@ -306,6 +314,9 @@ func pageCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
 		}
+		if key == "" || b == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--key and body source required", "", 400))
+		}
 		return do(o, cmd, "PUT", "content/"+id+"/property/"+key, nil, map[string]any{"key": key, "value": b})
 	}})
 	prop.Commands()[2].Flags().String("key", "", "")
@@ -336,6 +347,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 		return do(o, cmd, "GET", "content/"+id+"/child", nil, nil)
 	}})
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "descendants", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
 		if e != nil {
@@ -343,6 +355,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 		return do(o, cmd, "GET", "content/"+id+"/descendant", nil, nil)
 	}})
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "ancestors", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
 		if e != nil {
@@ -350,6 +363,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "ancestors"}, nil)
 	}})
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "body", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
 		if e != nil {
@@ -362,6 +376,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "body." + f}, nil)
 	}})
 	c.Commands()[len(c.Commands())-1].Flags().String("format", "storage", "")
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "history", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
 		if e != nil {
@@ -369,6 +384,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 		return do(o, cmd, "GET", "content/"+id+"/version", nil, nil)
 	}})
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "version", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
 		if e != nil {
@@ -376,6 +392,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 		return do(o, cmd, "GET", "content/"+id+"/version/latest", nil, nil)
 	}})
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "restore", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
 		if e != nil {
@@ -385,6 +402,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		return do(o, cmd, "POST", "content/"+id+"/version", nil, map[string]any{"operationKey": "restore", "params": map[string]any{"versionNumber": v}})
 	}})
 	c.Commands()[len(c.Commands())-1].Flags().Int("version", 0, "")
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "move", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
 		if e != nil {
@@ -396,6 +414,7 @@ func pageCmd(o *Opts) *cobra.Command {
 	}})
 	c.Commands()[len(c.Commands())-1].Flags().String("parent-id", "", "")
 	c.Commands()[len(c.Commands())-1].Flags().String("position", "append", "")
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "watch", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
 		if e != nil {
@@ -403,6 +422,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 		return do(o, cmd, "POST", "user/watch/content/"+id, nil, nil)
 	}})
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "unwatch", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
 		if e != nil {
@@ -410,6 +430,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 		return do(o, cmd, "DELETE", "user/watch/content/"+id, nil, nil)
 	}})
+	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	restriction := &cobra.Command{Use: "restriction"}
 	restriction.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
 		id, e := pageID(cmd, o)
@@ -463,6 +484,15 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 	}
 	return c
+}
+
+func addPageIDURLFlags(cmd *cobra.Command) {
+	if cmd.Flags().Lookup("id") == nil {
+		cmd.Flags().String("id", "", "")
+	}
+	if cmd.Flags().Lookup("url") == nil {
+		cmd.Flags().String("url", "", "")
+	}
 }
 
 func printPageIDError(cmd *cobra.Command, o *Opts, err error, message string) error {

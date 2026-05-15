@@ -85,6 +85,20 @@ func TestSearchCreateTransitionDryDeleteRaw(t *testing.T) {
 		t.Fatal("off instance should fail")
 	}
 }
+
+func TestAttachmentDownloadOffInstanceFails(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"content":"https://evil.example/file.bin"}`))
+	})
+	out := run(t, cfg, "attachment", "download", "10000", "--output", filepath.Join(t.TempDir(), "file.bin"))
+	if out["ok"].(bool) {
+		t.Fatal("off-instance attachment download should fail")
+	}
+	if out["error"].(map[string]interface{})["code"].(string) != "instance_url_mismatch" {
+		t.Fatalf("wrong code: %#v", out)
+	}
+}
 func TestCommandsSchemaAndSecrets(t *testing.T) {
 	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(`{}`)) })
 	out := run(t, cfg, "commands")

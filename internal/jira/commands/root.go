@@ -123,6 +123,9 @@ func instanceCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
 		}
+		for i := range cfg.Jira.Instances {
+			cfg.Jira.Instances[i].Auth = config.RedactAuth(cfg.Jira.Instances[i].Auth)
+		}
 		return print(cmd, o, output.Success("", map[string]interface{}{"instances": cfg.Jira.Instances}))
 	}})
 	c.AddCommand(&cobra.Command{Use: "get <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
@@ -964,7 +967,7 @@ func commentCmd(o *Opts) *cobra.Command {
 func attachmentCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "attachment"}
 	c.AddCommand(&cobra.Command{Use: "get <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "attachment/"+args[0]) }})
-	c.AddCommand(&cobra.Command{Use: "create", Hidden: true, RunE: func(cmd *cobra.Command, args []string) error {
+	create := &cobra.Command{Use: "create", Hidden: true, RunE: func(cmd *cobra.Command, args []string) error {
 		project := mustS(cmd, "project")
 		name := mustS(cmd, "name")
 		if project == "" || name == "" {
@@ -972,12 +975,13 @@ func attachmentCmd(o *Opts) *cobra.Command {
 		}
 		b := map[string]any{"project": project, "name": name, "description": mustS(cmd, "description"), "leadUserName": mustS(cmd, "lead")}
 		return issueSubPost(o, cmd, "component", b)
-	}})
-	c.Commands()[1].Flags().String("project", "", "")
-	c.Commands()[1].Flags().String("name", "", "")
-	c.Commands()[1].Flags().String("description", "", "")
-	c.Commands()[1].Flags().String("lead", "", "")
-	c.AddCommand(&cobra.Command{Use: "update <attachment-id>", Hidden: true, Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+	}}
+	create.Flags().String("project", "", "")
+	create.Flags().String("name", "", "")
+	create.Flags().String("description", "", "")
+	create.Flags().String("lead", "", "")
+	c.AddCommand(create)
+	update := &cobra.Command{Use: "update <attachment-id>", Hidden: true, Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		name := mustS(cmd, "name")
 		desc := mustS(cmd, "description")
 		if name == "" && desc == "" {
@@ -985,16 +989,17 @@ func attachmentCmd(o *Opts) *cobra.Command {
 		}
 		b := map[string]any{"name": name, "description": desc}
 		return issueSubPut(o, cmd, "component/"+args[0], b)
-	}})
-	c.Commands()[2].Flags().String("name", "", "")
-	c.Commands()[2].Flags().String("description", "", "")
+	}}
+	update.Flags().String("name", "", "")
+	update.Flags().String("description", "", "")
+	c.AddCommand(update)
 	c.AddCommand(&cobra.Command{Use: "delete <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
 		}
 		return issueSubDelete(o, cmd, "attachment/"+args[0])
 	}})
-	c.AddCommand(&cobra.Command{Use: "download <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+	download := &cobra.Command{Use: "download <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		meta := mustB(cmd, "metadata-only")
 		if meta {
 			return issueSubGet(o, cmd, "attachment/"+args[0])
@@ -1029,9 +1034,10 @@ func attachmentCmd(o *Opts) *cobra.Command {
 		b, _ := io.ReadAll(r2.Body)
 		_ = os.WriteFile(out, b, 0o600)
 		return print(cmd, o, output.Success(ctx.Instance, map[string]any{"saved": out}))
-	}})
-	c.Commands()[4].Flags().String("output", "", "")
-	c.Commands()[4].Flags().Bool("metadata-only", false, "")
+	}}
+	download.Flags().String("output", "", "")
+	download.Flags().Bool("metadata-only", false, "")
+	c.AddCommand(download)
 	c.AddCommand(&cobra.Command{Use: "meta", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "attachment/meta") }})
 	return c
 }

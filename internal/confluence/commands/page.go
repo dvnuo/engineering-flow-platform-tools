@@ -2,12 +2,14 @@ package commands
 
 import (
 	"encoding/json"
+	"html"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/output"
-	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -142,7 +144,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		var m map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&m)
 		html := m["body"].(map[string]any)["view"].(map[string]any)["value"].(string)
-		md, _ := htmltomarkdown.ConvertString(html)
+		md := htmlToMarkdown(html)
 		out, _ := cmd.Flags().GetString("output")
 		if out != "" {
 			_ = os.WriteFile(out, []byte(md), 0644)
@@ -444,4 +446,28 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 	}
 	return c
+}
+
+func htmlToMarkdown(src string) string {
+	replacements := []struct {
+		re   *regexp.Regexp
+		with string
+	}{
+		{regexp.MustCompile(`(?i)<br\s*/?>`), "\n"},
+		{regexp.MustCompile(`(?i)</p\s*>`), "\n\n"},
+		{regexp.MustCompile(`(?i)</h[1-6]\s*>`), "\n\n"},
+		{regexp.MustCompile(`(?i)<li[^>]*>`), "- "},
+		{regexp.MustCompile(`(?i)</li\s*>`), "\n"},
+	}
+	out := src
+	for _, r := range replacements {
+		out = r.re.ReplaceAllString(out, r.with)
+	}
+	out = regexp.MustCompile(`<[^>]+>`).ReplaceAllString(out, "")
+	out = html.UnescapeString(out)
+	lines := strings.Split(out, "\n")
+	for i := range lines {
+		lines[i] = strings.TrimSpace(lines[i])
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
 }

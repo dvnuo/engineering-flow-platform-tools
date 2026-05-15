@@ -49,7 +49,50 @@ func IssueKey(input string) string {
 }
 
 func DryRunData(method, path string, q map[string]string, body interface{}) map[string]interface{} {
-	return map[string]interface{}{"dry_run": true, "method": method, "path": path, "query": q, "body": body}
+	return map[string]interface{}{"dry_run": true, "method": method, "path": path, "query": q, "body": redactBody(body)}
 }
 
-func RequireYes(yes bool) error { if !yes { return fmt.Errorf("invalid_args") }; return nil }
+func redactBody(v interface{}) interface{} {
+	switch x := v.(type) {
+	case map[string]interface{}:
+		out := map[string]interface{}{}
+		for k, v := range x {
+			if isSecretKey(k) {
+				out[k] = "***REDACTED***"
+				continue
+			}
+			out[k] = redactBody(v)
+		}
+		return out
+	case map[string]string:
+		out := map[string]string{}
+		for k, v := range x {
+			if isSecretKey(k) {
+				out[k] = "***REDACTED***"
+				continue
+			}
+			out[k] = v
+		}
+		return out
+	case []interface{}:
+		out := make([]interface{}, len(x))
+		for i, v := range x {
+			out[i] = redactBody(v)
+		}
+		return out
+	default:
+		return v
+	}
+}
+
+func isSecretKey(k string) bool {
+	k = strings.ToLower(k)
+	return strings.Contains(k, "password") || strings.Contains(k, "api_key") || strings.Contains(k, "apikey") || strings.Contains(k, "token") || k == "authorization"
+}
+
+func RequireYes(yes bool) error {
+	if !yes {
+		return fmt.Errorf("invalid_args")
+	}
+	return nil
+}

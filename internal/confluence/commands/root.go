@@ -141,7 +141,7 @@ func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body
 		return print(cmd, o, output.Failure("config_error", err.Error(), "", 400))
 	}
 	if o.DryRun {
-		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"dry_run": true, "method": method, "path": p, "query": q, "body": body}))
+		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"dry_run": true, "method": method, "path": p, "query": q, "body": redactDryRunBody(body)}))
 	}
 	resp, err := cx.client.Do(httpclient.Request{Method: method, Path: p, Query: q, JSONBody: body})
 	if err != nil {
@@ -152,6 +152,44 @@ func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body
 	out := map[string]any{"ok": true}
 	_ = json.Unmarshal(d, &out)
 	return print(cmd, o, output.Success(cx.inst.Name, out))
+}
+
+func redactDryRunBody(v any) any {
+	switch x := v.(type) {
+	case map[string]any:
+		out := map[string]any{}
+		for k, v := range x {
+			if isSecretKey(k) {
+				out[k] = "***REDACTED***"
+				continue
+			}
+			out[k] = redactDryRunBody(v)
+		}
+		return out
+	case map[string]string:
+		out := map[string]string{}
+		for k, v := range x {
+			if isSecretKey(k) {
+				out[k] = "***REDACTED***"
+				continue
+			}
+			out[k] = v
+		}
+		return out
+	case []any:
+		out := make([]any, len(x))
+		for i, v := range x {
+			out[i] = redactDryRunBody(v)
+		}
+		return out
+	default:
+		return v
+	}
+}
+
+func isSecretKey(k string) bool {
+	k = strings.ToLower(k)
+	return strings.Contains(k, "password") || strings.Contains(k, "api_key") || strings.Contains(k, "apikey") || strings.Contains(k, "token") || k == "authorization"
 }
 
 func helpLLMCmd() *cobra.Command {

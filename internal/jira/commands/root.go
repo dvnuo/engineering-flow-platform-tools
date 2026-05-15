@@ -66,10 +66,52 @@ func envelopeError(err error, fallbackCode string) output.Envelope {
 	if errors.As(err, &httpErr) {
 		return output.Failure(httpErr.Code, httpErr.Message, httpErr.Hint, httpErr.Status)
 	}
+	if isStableErrorCode(err.Error()) {
+		return output.Failure(err.Error(), err.Error(), "", 400)
+	}
 	if fallbackCode == "" {
 		fallbackCode = "server_error"
 	}
 	return output.Failure(fallbackCode, err.Error(), "", 500)
+}
+
+func isStableErrorCode(code string) bool {
+	switch code {
+	case "config_missing", "no_instance_configured", "instance_required", "ambiguous_instance", "instance_url_mismatch", "invalid_args", "not_found", "not_supported", "auth_failed", "permission_denied", "network_error", "server_error":
+		return true
+	default:
+		return false
+	}
+}
+
+func invalidArgs(cmd *cobra.Command, o *Opts, msg, hint string) error {
+	return print(cmd, o, output.Failure("invalid_args", msg, hint, 400))
+}
+
+func readJiraBody(cmd *cobra.Command) (string, error) {
+	b, err := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+	if err != nil {
+		switch {
+		case mustS(cmd, "body-file") != "":
+			return "", fmt.Errorf("failed to read --body-file")
+		case mustB(cmd, "body-stdin"):
+			return "", fmt.Errorf("failed to read --body-stdin")
+		default:
+			return "", fmt.Errorf("failed to read body")
+		}
+	}
+	return b, nil
+}
+
+func readJiraJSONValue(cmd *cobra.Command) (interface{}, error) {
+	v, err := files.ReadJSONValueFromFlags(mustS(cmd, "value"), mustS(cmd, "value-file"))
+	if err != nil {
+		if mustS(cmd, "value-file") != "" {
+			return nil, fmt.Errorf("failed to read --value-file")
+		}
+		return nil, fmt.Errorf("invalid --value")
+	}
+	return v, nil
 }
 
 func authFromFlags(cmd *cobra.Command) (config.AuthConfig, error) {
@@ -732,14 +774,27 @@ func issueCmd(o *Opts) *cobra.Command {
 	}})
 	notifyCmd := &cobra.Command{Use: "notify <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		subj, _ := cmd.Flags().GetString("subject")
-		b, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), false)
+		if subj == "" {
+			return invalidArgs(cmd, o, "--subject required", "Use jira issue notify PROJ-123 --subject 'Review' --body 'Please review' --to alice --json.")
+		}
+		if mustS(cmd, "body") == "" && mustS(cmd, "body-file") == "" && !mustB(cmd, "body-stdin") {
+			return invalidArgs(cmd, o, "--body, --body-file, or --body-stdin required", "Use jira issue notify PROJ-123 --subject 'Review' --body 'Please review' --to alice --json.")
+		}
+		b, err := readJiraBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "")
+		}
 		to, _ := cmd.Flags().GetStringArray("to")
+		if len(to) == 0 {
+			return invalidArgs(cmd, o, "--to required", "Use jira issue notify PROJ-123 --subject 'Review' --body 'Please review' --to alice --json.")
+		}
 		body := map[string]any{"subject": subj, "textBody": b, "to": to}
 		return issueEntityWrite(o, cmd, "POST", args[0], "/notify", nil, body)
 	}}
 	notifyCmd.Flags().String("subject", "", "")
 	notifyCmd.Flags().String("body", "", "")
 	notifyCmd.Flags().String("body-file", "", "")
+	notifyCmd.Flags().Bool("body-stdin", false, "")
 	notifyCmd.Flags().StringArray("to", nil, "")
 	c.AddCommand(notifyCmd)
 	c.AddCommand(issueCommentCmd(o))
@@ -776,7 +831,10 @@ func rawAPICmd(o *Opts) *cobra.Command {
 					q[kv[0]] = kv[1]
 				}
 			}
-			body, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+			body, err := readJiraBody(cmd)
+			if err != nil {
+				return invalidArgs(cmd, o, err.Error(), "")
+			}
 			var jb interface{}
 			if body != "" {
 				_ = json.Unmarshal([]byte(body), &jb)
@@ -852,12 +910,19 @@ func issueLinkCmd(o *Opts) *cobra.Command {
 		return issueEntityGet(o, cmd, args[0], "", map[string]string{"fields": "issuelinks"})
 	}})
 	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
+		if mustS(cmd, "type") == "" || mustS(cmd, "from") == "" || mustS(cmd, "to") == "" {
+			return invalidArgs(cmd, o, "--type, --from, and --to required", "Use jira issue link create --type Relates --from PROJ-123 --to PROJ-124 --json.")
+		}
 		b := map[string]any{"type": map[string]string{"name": mustS(cmd, "type")}, "inwardIssue": map[string]string{"key": mustS(cmd, "from")}, "outwardIssue": map[string]string{"key": mustS(cmd, "to")}}
+		if comment := mustS(cmd, "comment"); comment != "" {
+			b["comment"] = map[string]string{"body": comment}
+		}
 		return issueSubPost(o, cmd, "issueLink", b)
 	}})
 	c.Commands()[1].Flags().String("type", "", "")
 	c.Commands()[1].Flags().String("from", "", "")
 	c.Commands()[1].Flags().String("to", "", "")
+	c.Commands()[1].Flags().String("comment", "", "")
 	c.AddCommand(&cobra.Command{Use: "delete <link-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
@@ -873,6 +938,9 @@ func issueRemoteLinkCmd(o *Opts) *cobra.Command {
 		return issueEntityGet(o, cmd, args[0], "/remotelink", nil)
 	}})
 	c.AddCommand(&cobra.Command{Use: "add <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if mustS(cmd, "url") == "" || mustS(cmd, "title") == "" {
+			return invalidArgs(cmd, o, "--url and --title required", "Use jira issue remote-link add PROJ-123 --url https://example.test/spec --title Spec --json.")
+		}
 		b := map[string]any{"object": map[string]string{"url": mustS(cmd, "url"), "title": mustS(cmd, "title")}}
 		return issueEntityWrite(o, cmd, "POST", args[0], "/remotelink", nil, b)
 	}})
@@ -895,7 +963,13 @@ func issuePropertyCmd(o *Opts) *cobra.Command {
 		return issueEntityGet(o, cmd, args[0], "/properties/"+args[1], nil)
 	}})
 	c.AddCommand(&cobra.Command{Use: "set <issue-or-url> <key>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
-		v, _ := files.ReadJSONValueFromFlags(mustS(cmd, "value"), mustS(cmd, "value-file"))
+		if (mustS(cmd, "value") == "") == (mustS(cmd, "value-file") == "") {
+			return invalidArgs(cmd, o, "--value or --value-file required, but not both", "Use jira issue property set PROJ-123 review.state --value '{\"ok\":true}' --json.")
+		}
+		v, err := readJiraJSONValue(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "")
+		}
 		return issueEntityWrite(o, cmd, "PUT", args[0], "/properties/"+args[1], nil, v)
 	}})
 	c.Commands()[2].Flags().String("value", "", "")
@@ -918,7 +992,10 @@ func issueCommentCmd(o *Opts) *cobra.Command {
 		return issueEntityGet(o, cmd, args[0], "/comment/"+args[1], nil)
 	}})
 	c.AddCommand(&cobra.Command{Use: "add <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		b, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+		b, err := readJiraBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "")
+		}
 		if b == "" {
 			return print(cmd, o, output.Failure("invalid_args", "comment body required", "", 400))
 		}
@@ -928,7 +1005,10 @@ func issueCommentCmd(o *Opts) *cobra.Command {
 	c.Commands()[2].Flags().String("body-file", "", "")
 	c.Commands()[2].Flags().Bool("body-stdin", false, "")
 	c.AddCommand(&cobra.Command{Use: "update <issue-or-url> <comment-id>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
-		b, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+		b, err := readJiraBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "")
+		}
 		if b == "" {
 			return print(cmd, o, output.Failure("invalid_args", "comment body required", "", 400))
 		}
@@ -978,8 +1058,8 @@ func issueWorklogCmd(o *Opts) *cobra.Command {
 		ts := mustS(cmd, "time-spent")
 		st := mustS(cmd, "started")
 		cm := mustS(cmd, "comment")
-		if ts == "" && st == "" && cm == "" {
-			return print(cmd, o, output.Failure("invalid_args", "at least one field required", "", 400))
+		if ts == "" && cm == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--time-spent or --comment required", "", 400))
 		}
 		b := map[string]string{"timeSpent": ts, "started": st, "comment": cm}
 		return issueEntityWrite(o, cmd, "PUT", args[0], "/worklog/"+args[1], nil, b)
@@ -1002,7 +1082,10 @@ func commentCmd(o *Opts) *cobra.Command {
 		return issueEntityGet(o, cmd, args[0], "/comment", nil)
 	}})
 	c.AddCommand(&cobra.Command{Use: "add <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		b, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+		b, err := readJiraBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "")
+		}
 		if b == "" {
 			return print(cmd, o, output.Failure("invalid_args", "comment body required", "", 400))
 		}

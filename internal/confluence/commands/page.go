@@ -16,7 +16,7 @@ import (
 func pageCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "page"}
 	get := &cobra.Command{Use: "get", RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := pageID(cmd, o)
+		ref, err := resolvePageRef(cmd, o)
 		if err != nil {
 			return printPageIDError(cmd, o, err, "exactly one of --id/--url")
 		}
@@ -24,7 +24,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		if expand, _ := cmd.Flags().GetString("expand"); expand != "" {
 			q["expand"] = expand
 		}
-		return do(o, cmd, "GET", "content/"+id, q, nil)
+		return doWithCtx(o, cmd, ref.Ctx, "GET", "content/"+ref.ID, q, nil)
 	}}
 	get.Flags().String("id", "", "")
 	get.Flags().String("url", "", "")
@@ -33,6 +33,9 @@ func pageCmd(o *Opts) *cobra.Command {
 	gbt := &cobra.Command{Use: "get-by-title", RunE: func(cmd *cobra.Command, args []string) error {
 		sp, _ := cmd.Flags().GetString("space")
 		ti, _ := cmd.Flags().GetString("title")
+		if sp == "" || ti == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--space and --title required", "confluence page get-by-title --space ENG --title 'Runtime Profile' --json", 400))
+		}
 		q := map[string]string{"spaceKey": sp, "title": ti, "type": "page"}
 		for _, k := range []string{"expand", "limit"} {
 			if v, _ := cmd.Flags().GetString(k); v != "" {
@@ -71,14 +74,13 @@ func pageCmd(o *Opts) *cobra.Command {
 	cr.Flags().String("body-format", "storage", "")
 	c.AddCommand(cr)
 	upd := &cobra.Command{Use: "update", RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := pageID(cmd, o)
+		ref, err := resolvePageRef(cmd, o)
 		if err != nil {
 			return printPageIDError(cmd, o, err, "exactly one of --id/--url")
 		}
 		v, _ := cmd.Flags().GetInt("version")
-		cx, _ := loadCtx(o, "")
 		if v == 0 && !o.DryRun {
-			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + id, Query: map[string]string{"expand": "version"}})
+			r, e := ref.Ctx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + ref.ID, Query: map[string]string{"expand": "version"}})
 			if e != nil {
 				return print(cmd, o, output.Failure("server_error", "version fetch failed", "", 500))
 			}
@@ -109,7 +111,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		if b != "" {
 			payload["body"] = confluenceBody(cmd, b)
 		}
-		return do(o, cmd, "PUT", "content/"+id, nil, payload)
+		return doWithCtx(o, cmd, ref.Ctx, "PUT", "content/"+ref.ID, nil, payload)
 	}}
 	upd.Flags().String("id", "", "")
 	upd.Flags().String("url", "", "")
@@ -125,22 +127,21 @@ func pageCmd(o *Opts) *cobra.Command {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
 		}
-		id, err := pageID(cmd, o)
+		ref, err := resolvePageRef(cmd, o)
 		if err != nil {
 			return printPageIDError(cmd, o, err, "exactly one of --id/--url")
 		}
-		return do(o, cmd, "DELETE", "content/"+id, nil, nil)
+		return doWithCtx(o, cmd, ref.Ctx, "DELETE", "content/"+ref.ID, nil, nil)
 	}}
 	del.Flags().String("id", "", "")
 	del.Flags().String("url", "", "")
 	c.AddCommand(del)
 	ex := &cobra.Command{Use: "export-markdown", RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := pageID(cmd, o)
+		ref, err := resolvePageRef(cmd, o)
 		if err != nil {
-			return err
+			return printPageIDError(cmd, o, err, "exactly one of --id/--url")
 		}
-		cx, _ := loadCtx(o, "")
-		r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + id, Query: map[string]string{"expand": "body.view"}})
+		r, e := ref.Ctx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + ref.ID, Query: map[string]string{"expand": "body.view"}})
 		if e != nil {
 			return print(cmd, o, output.Failure("server_error", e.Error(), "", 500))
 		}
@@ -154,22 +155,23 @@ func pageCmd(o *Opts) *cobra.Command {
 		md := htmlToMarkdown(html)
 		out, _ := cmd.Flags().GetString("output")
 		if out != "" {
-			_ = os.WriteFile(out, []byte(md), 0644)
-			return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"output": filepath.Clean(out)}))
+			if err := os.WriteFile(out, []byte(md), 0644); err != nil {
+				return print(cmd, o, output.Failure("invalid_args", "failed to write --output", "", 400))
+			}
+			return print(cmd, o, output.Success(ref.Ctx.inst.Name, map[string]any{"output": filepath.Clean(out)}))
 		}
-		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"markdown": md}))
+		return print(cmd, o, output.Success(ref.Ctx.inst.Name, map[string]any{"markdown": md}))
 	}}
 	ex.Flags().String("id", "", "")
 	ex.Flags().String("url", "", "")
 	ex.Flags().String("output", "", "")
 	c.AddCommand(ex)
 	exh := &cobra.Command{Use: "export-html", RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := pageID(cmd, o)
+		ref, err := resolvePageRef(cmd, o)
 		if err != nil {
-			return err
+			return printPageIDError(cmd, o, err, "exactly one of --id/--url")
 		}
-		cx, _ := loadCtx(o, "")
-		r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + id, Query: map[string]string{"expand": "body.export_view"}})
+		r, e := ref.Ctx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + ref.ID, Query: map[string]string{"expand": "body.export_view"}})
 		if e != nil {
 			return print(cmd, o, output.Failure("server_error", e.Error(), "", 500))
 		}
@@ -182,43 +184,29 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 		out, _ := cmd.Flags().GetString("output")
 		if out != "" {
-			_ = os.WriteFile(out, []byte(html), 0644)
-			return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"output": filepath.Clean(out)}))
+			if err := os.WriteFile(out, []byte(html), 0644); err != nil {
+				return print(cmd, o, output.Failure("invalid_args", "failed to write --output", "", 400))
+			}
+			return print(cmd, o, output.Success(ref.Ctx.inst.Name, map[string]any{"output": filepath.Clean(out)}))
 		}
-		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"html": html}))
+		return print(cmd, o, output.Success(ref.Ctx.inst.Name, map[string]any{"html": html}))
 	}}
 	exh.Flags().String("id", "", "")
 	exh.Flags().String("url", "", "")
 	exh.Flags().String("output", "", "")
 	c.AddCommand(exh)
 	c.AddCommand(&cobra.Command{Use: "body-storage", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "body.storage"}, nil)
+		return doPageContent(o, cmd, "GET", "", map[string]string{"expand": "body.storage"}, nil)
 	}})
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "body-view", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "body.view"}, nil)
+		return doPageContent(o, cmd, "GET", "", map[string]string{"expand": "body.view"}, nil)
 	}})
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	labelList := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id+"/label", nil, nil)
+		return doPageContent(o, cmd, "GET", "/label", nil, nil)
 	}}
 	labelAdd := &cobra.Command{Use: "add", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
 		labels, _ := cmd.Flags().GetStringSlice("label")
 		if len(labels) == 0 {
 			return print(cmd, o, output.Failure("invalid_args", "--label required", "", 400))
@@ -227,19 +215,15 @@ func pageCmd(o *Opts) *cobra.Command {
 		for _, l := range labels {
 			arr = append(arr, map[string]string{"prefix": "global", "name": l})
 		}
-		return do(o, cmd, "POST", "content/"+id+"/label", nil, arr)
+		return doPageContent(o, cmd, "POST", "/label", nil, arr)
 	}}
 	labelAdd.Flags().StringSlice("label", nil, "")
 	labelDelete := &cobra.Command{Use: "delete", RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
 		}
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
 		n, _ := cmd.Flags().GetString("label")
-		return do(o, cmd, "DELETE", "content/"+id+"/label", map[string]string{"name": n}, nil)
+		return doPageContent(o, cmd, "DELETE", "/label", map[string]string{"name": n}, nil)
 	}}
 	labelDelete.Flags().String("label", "", "")
 	label := &cobra.Command{Use: "label"}
@@ -254,17 +238,9 @@ func pageCmd(o *Opts) *cobra.Command {
 	c.AddCommand(hiddenAlias("label-delete", labelDelete))
 
 	commentList := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id+"/child/comment", nil, nil)
+		return doPageContent(o, cmd, "GET", "/child/comment", nil, nil)
 	}}
 	commentAdd := &cobra.Command{Use: "add", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
 		b, err := readBody(cmd)
 		if err != nil {
 			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
@@ -272,7 +248,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		if b == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--body, --body-file, or --body-stdin required", "", 400))
 		}
-		return do(o, cmd, "POST", "content/"+id+"/child/comment", nil, map[string]any{"type": "comment", "body": confluenceBody(cmd, b)})
+		return doPageContent(o, cmd, "POST", "/child/comment", nil, map[string]any{"type": "comment", "body": confluenceBody(cmd, b)})
 	}}
 	commentAdd.Flags().String("body", "", "")
 	commentAdd.Flags().String("body-file", "", "")
@@ -289,27 +265,15 @@ func pageCmd(o *Opts) *cobra.Command {
 	c.AddCommand(hiddenAlias("comment-add", commentAdd))
 	prop := &cobra.Command{Use: "property"}
 	prop.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := pageID(cmd, o)
-		if err != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id+"/property", nil, nil)
+		return doPageContent(o, cmd, "GET", "/property", nil, nil)
 	}})
 	prop.AddCommand(&cobra.Command{Use: "get", RunE: func(cmd *cobra.Command, args []string) error {
 		key := mustS(cmd, "key")
-		id, err := pageID(cmd, o)
-		if err != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id+"/property/"+key, nil, nil)
+		return doPageContent(o, cmd, "GET", "/property/"+key, nil, nil)
 	}})
 	prop.Commands()[1].Flags().String("key", "", "")
 	prop.AddCommand(&cobra.Command{Use: "set", RunE: func(cmd *cobra.Command, args []string) error {
 		key := mustS(cmd, "key")
-		id, err := pageID(cmd, o)
-		if err != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
 		b, err := readBody(cmd)
 		if err != nil {
 			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
@@ -317,7 +281,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		if key == "" || b == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--key and body source required", "", 400))
 		}
-		return do(o, cmd, "PUT", "content/"+id+"/property/"+key, nil, map[string]any{"key": key, "value": b})
+		return doPageContent(o, cmd, "PUT", "/property/"+key, nil, map[string]any{"key": key, "value": b})
 	}})
 	prop.Commands()[2].Flags().String("key", "", "")
 	prop.Commands()[2].Flags().String("body", "", "")
@@ -328,11 +292,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
 		}
-		id, err := pageID(cmd, o)
-		if err != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "DELETE", "content/"+id+"/property/"+key, nil, nil)
+		return doPageContent(o, cmd, "DELETE", "/property/"+key, nil, nil)
 	}})
 	prop.Commands()[3].Flags().String("key", "", "")
 	for _, pc := range prop.Commands() {
@@ -341,121 +301,69 @@ func pageCmd(o *Opts) *cobra.Command {
 	}
 	c.AddCommand(prop)
 	c.AddCommand(&cobra.Command{Use: "children", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id+"/child", nil, nil)
+		return doPageContent(o, cmd, "GET", "/child", nil, nil)
 	}})
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "descendants", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id+"/descendant", nil, nil)
+		return doPageContent(o, cmd, "GET", "/descendant", nil, nil)
 	}})
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "ancestors", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "ancestors"}, nil)
+		return doPageContent(o, cmd, "GET", "", map[string]string{"expand": "ancestors"}, nil)
 	}})
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "body", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
 		f, _ := cmd.Flags().GetString("format")
 		if f == "" {
 			f = "storage"
 		}
-		return do(o, cmd, "GET", "content/"+id, map[string]string{"expand": "body." + f}, nil)
+		return doPageContent(o, cmd, "GET", "", map[string]string{"expand": "body." + f}, nil)
 	}})
 	c.Commands()[len(c.Commands())-1].Flags().String("format", "storage", "")
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "history", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id+"/version", nil, nil)
+		return doPageContent(o, cmd, "GET", "/version", nil, nil)
 	}})
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "version", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id+"/version/latest", nil, nil)
+		return doPageContent(o, cmd, "GET", "/version/latest", nil, nil)
 	}})
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "restore", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
 		v, _ := cmd.Flags().GetInt("version")
-		return do(o, cmd, "POST", "content/"+id+"/version", nil, map[string]any{"operationKey": "restore", "params": map[string]any{"versionNumber": v}})
+		return doPageContent(o, cmd, "POST", "/version", nil, map[string]any{"operationKey": "restore", "params": map[string]any{"versionNumber": v}})
 	}})
 	c.Commands()[len(c.Commands())-1].Flags().Int("version", 0, "")
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "move", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
 		pid, _ := cmd.Flags().GetString("parent-id")
 		pos, _ := cmd.Flags().GetString("position")
-		return do(o, cmd, "PUT", "content/"+id+"/move/"+pos+"/"+pid, nil, nil)
+		return doPagePath(o, cmd, "PUT", func(id string) string { return "content/" + id + "/move/" + pos + "/" + pid }, nil, nil)
 	}})
 	c.Commands()[len(c.Commands())-1].Flags().String("parent-id", "", "")
 	c.Commands()[len(c.Commands())-1].Flags().String("position", "append", "")
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "watch", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "POST", "user/watch/content/"+id, nil, nil)
+		return doPagePath(o, cmd, "POST", func(id string) string { return "user/watch/content/" + id }, nil, nil)
 	}})
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "unwatch", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "DELETE", "user/watch/content/"+id, nil, nil)
+		return doPagePath(o, cmd, "DELETE", func(id string) string { return "user/watch/content/" + id }, nil, nil)
 	}})
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	restriction := &cobra.Command{Use: "restriction"}
 	restriction.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "content/"+id+"/restriction/byOperation", nil, nil)
+		return doPageContent(o, cmd, "GET", "/restriction/byOperation", nil, nil)
 	}})
 	restriction.AddCommand(&cobra.Command{Use: "add", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "POST", "content/"+id+"/restriction/byOperation", nil, map[string]any{"operation": mustS(cmd, "operation")})
+		return doPageContent(o, cmd, "POST", "/restriction/byOperation", nil, map[string]any{"operation": mustS(cmd, "operation")})
 	}})
 	restriction.Commands()[1].Flags().String("operation", "read", "")
 	restriction.AddCommand(&cobra.Command{Use: "delete", RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
 		}
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "DELETE", "content/"+id+"/restriction/byOperation/"+mustS(cmd, "operation"), nil, nil)
+		return doPageContent(o, cmd, "DELETE", "/restriction/byOperation/"+mustS(cmd, "operation"), nil, nil)
 	}})
 	restriction.Commands()[2].Flags().String("operation", "read", "")
 	for _, pc := range restriction.Commands() {
@@ -465,11 +373,7 @@ func pageCmd(o *Opts) *cobra.Command {
 	c.AddCommand(restriction)
 	watcher := &cobra.Command{Use: "watcher"}
 	watcher.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
-		id, e := pageID(cmd, o)
-		if e != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
-		}
-		return do(o, cmd, "GET", "user/watch/content/"+id, nil, nil)
+		return doPagePath(o, cmd, "GET", func(id string) string { return "user/watch/content/" + id }, nil, nil)
 	}})
 	watcher.Commands()[0].Flags().String("id", "", "")
 	watcher.Commands()[0].Flags().String("url", "", "")
@@ -493,6 +397,22 @@ func addPageIDURLFlags(cmd *cobra.Command) {
 	if cmd.Flags().Lookup("url") == nil {
 		cmd.Flags().String("url", "", "")
 	}
+}
+
+func doPageContent(o *Opts, cmd *cobra.Command, method, suffix string, q map[string]string, body any) error {
+	ref, err := resolvePageRef(cmd, o)
+	if err != nil {
+		return printPageIDError(cmd, o, err, "--id/--url required")
+	}
+	return doWithCtx(o, cmd, ref.Ctx, method, "content/"+ref.ID+suffix, q, body)
+}
+
+func doPagePath(o *Opts, cmd *cobra.Command, method string, path func(string) string, q map[string]string, body any) error {
+	ref, err := resolvePageRef(cmd, o)
+	if err != nil {
+		return printPageIDError(cmd, o, err, "--id/--url required")
+	}
+	return doWithCtx(o, cmd, ref.Ctx, method, path(ref.ID), q, body)
 }
 
 func printPageIDError(cmd *cobra.Command, o *Opts, err error, message string) error {

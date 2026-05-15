@@ -34,6 +34,15 @@ type ctx struct {
 	client *httpclient.Client
 }
 
+type PageRef struct {
+	Ctx        *ctx
+	ID         string
+	Space      string
+	Title      string
+	SourceURL  string
+	EntityType string
+}
+
 func NewRoot() *cobra.Command {
 	cobra.EnableCommandSorting = false
 	o := &Opts{}
@@ -144,14 +153,14 @@ func loadCtx(o *Opts, entity string) (*ctx, error) {
 	return &ctx{cfg: cfg, inst: res.Instance, client: cl}, nil
 }
 func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body any) error {
-	entity := p
-	if o.Entity != "" {
-		entity = o.Entity
-	}
-	cx, err := loadCtx(o, entity)
+	cx, err := loadCtx(o, p)
 	if err != nil {
 		return print(cmd, o, envelopeError(err, "config_error"))
 	}
+	return doWithCtx(o, cmd, cx, method, p, q, body)
+}
+
+func doWithCtx(o *Opts, cmd *cobra.Command, cx *ctx, method, p string, q map[string]string, body any) error {
 	if o.DryRun {
 		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"dry_run": true, "method": method, "path": p, "query": q, "body": redactDryRunBody(body)}))
 	}
@@ -253,29 +262,56 @@ func confluenceBody(cmd *cobra.Command, v string) map[string]any {
 	return map[string]any{f: map[string]string{"value": v, "representation": f}}
 }
 func pageID(cmd *cobra.Command, o *Opts) (string, error) {
-	id, _ := cmd.Flags().GetString("id")
-	u, _ := cmd.Flags().GetString("url")
-	if (id == "") == (u == "") {
-		return "", fmt.Errorf("invalid_args")
-	}
-	if id != "" {
-		o.Entity = ""
-		return id, nil
-	}
-	o.Entity = u
-	pu, err := url.Parse(u)
+	ref, err := resolvePageRef(cmd, o)
 	if err != nil {
 		return "", err
 	}
-	if pu.IsAbs() && o.Instance != "" {
-		cx, e := loadCtx(o, "")
-		if e == nil && !urlBelongsToBase(u, cx.inst.BaseURL) {
-			return "", fmt.Errorf("instance_url_mismatch")
+	return ref.ID, nil
+}
+
+func resolvePageRef(cmd *cobra.Command, o *Opts) (*PageRef, error) {
+	id, _ := cmd.Flags().GetString("id")
+	u, _ := cmd.Flags().GetString("url")
+	defer func() {
+		_ = cmd.Flags().Set("id", "")
+		_ = cmd.Flags().Set("url", "")
+	}()
+	if (id == "") == (u == "") {
+		return nil, fmt.Errorf("invalid_args")
+	}
+	if id != "" {
+		cx, err := loadCtx(o, "")
+		if err != nil {
+			return nil, err
 		}
+		return &PageRef{Ctx: cx, ID: id, EntityType: "page_id"}, nil
+	}
+	pu, err := url.Parse(u)
+	if err != nil {
+		return nil, fmt.Errorf("invalid_args")
+	}
+	cx, ent, err := loadCtxForPageURL(o, u)
+	if err != nil {
+		return nil, err
 	}
 	pid := pu.Query().Get("pageId")
 	if pid != "" {
-		return pid, nil
+		return &PageRef{Ctx: cx, ID: pid, SourceURL: u, EntityType: "page_id"}, nil
+	}
+	if ent.Type == "page" {
+		if pid = ent.Attrs["id"]; pid != "" {
+			return &PageRef{Ctx: cx, ID: pid, Space: ent.Attrs["space"], SourceURL: u, EntityType: "page_id"}, nil
+		}
+		if title := ent.Attrs["title"]; title != "" {
+			space, _ := url.PathUnescape(ent.Attrs["space"])
+			title, _ = url.PathUnescape(title)
+			title = strings.ReplaceAll(title, "+", " ")
+			pid, err := lookupPageIDByTitleCtx(cx, space, title)
+			if err != nil {
+				return nil, err
+			}
+			return &PageRef{Ctx: cx, ID: pid, Space: space, Title: title, SourceURL: u, EntityType: "page_title"}, nil
+		}
 	}
 	seg := strings.Split(strings.Trim(pu.Path, "/"), "/")
 	for i := 0; i+2 < len(seg); i++ {
@@ -283,25 +319,42 @@ func pageID(cmd *cobra.Command, o *Opts) (string, error) {
 			space, _ := url.PathUnescape(seg[i+1])
 			title, _ := url.PathUnescape(strings.Join(seg[i+2:], "/"))
 			title = strings.ReplaceAll(title, "+", " ")
-			return lookupPageIDByTitle(o, u, space, title)
+			pid, err := lookupPageIDByTitleCtx(cx, space, title)
+			if err != nil {
+				return nil, err
+			}
+			return &PageRef{Ctx: cx, ID: pid, Space: space, Title: title, SourceURL: u, EntityType: "page_title"}, nil
 		}
 	}
 	for i := len(seg) - 1; i >= 0; i-- {
 		if _, e := strconv.Atoi(seg[i]); e == nil {
-			return seg[i], nil
+			return &PageRef{Ctx: cx, ID: seg[i], SourceURL: u, EntityType: "page_id"}, nil
 		}
 	}
-	return "", fmt.Errorf("invalid_args")
+	return nil, fmt.Errorf("invalid_args")
 }
 
-func lookupPageIDByTitle(o *Opts, entityURL, space, title string) (string, error) {
-	cx, err := loadCtx(o, entityURL)
+func loadCtxForPageURL(o *Opts, entityURL string) (*ctx, instance.ResolvedEntity, error) {
+	p, _ := config.ResolvePath(o.Config)
+	cfg, err := config.Load(p)
 	if err != nil {
-		return "", err
+		return nil, instance.ResolvedEntity{}, err
 	}
+	res, err := instance.Resolve(cfg.Confluence, o.Instance, entityURL, "confluence")
+	if err != nil {
+		return nil, instance.ResolvedEntity{}, err
+	}
+	cl, err := httpclient.New(res.Instance)
+	if err != nil {
+		return nil, instance.ResolvedEntity{}, err
+	}
+	return &ctx{cfg: cfg, inst: res.Instance, client: cl}, res.Entity, nil
+}
+
+func lookupPageIDByTitleCtx(cx *ctx, space, title string) (string, error) {
 	resp, err := cx.client.Do(httpclient.Request{Method: "GET", Path: "content", Query: map[string]string{"spaceKey": space, "title": title, "type": "page"}})
 	if err != nil {
-		return "", err
+		return "", errors.New(envelopeError(err, "server_error").Error.Code)
 	}
 	defer resp.Body.Close()
 	var out map[string]any

@@ -81,17 +81,17 @@ func pageAttachmentCmd(o *Opts) *cobra.Command {
 
 func listAttachmentRunE(o *Opts) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		pageID, err := attachmentPageID(cmd, o, args)
+		ref, err := attachmentPageRef(cmd, o, args)
 		if err != nil {
-			return print(cmd, o, output.Failure("invalid_args", "--page-id, --id, or --url required", "", 400))
+			return printPageIDError(cmd, o, err, "--page-id, --id, or --url required")
 		}
-		return do(o, cmd, "GET", "content/"+pageID+"/child/attachment", nil, nil)
+		return doWithCtx(o, cmd, ref.Ctx, "GET", "content/"+ref.ID+"/child/attachment", nil, nil)
 	}
 }
 
 func uploadAttachmentRunE(o *Opts) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		pageID, err := attachmentPageID(cmd, o, args)
+		ref, err := attachmentPageRef(cmd, o, args)
 		file, _ := cmd.Flags().GetString("file")
 		if len(args) >= 2 {
 			file = args[1]
@@ -100,26 +100,25 @@ func uploadAttachmentRunE(o *Opts) func(cmd *cobra.Command, args []string) error
 			return print(cmd, o, output.Failure("invalid_args", "--page-id/--id/--url and --file required", "", 400))
 		}
 		if o.DryRun {
-			return print(cmd, o, output.Success("", map[string]any{"dry_run": true, "method": "POST", "path": "content/" + pageID + "/child/attachment"}))
+			return print(cmd, o, output.Success(ref.Ctx.inst.Name, map[string]any{"dry_run": true, "method": "POST", "path": "content/" + ref.ID + "/child/attachment"}))
 		}
-		cx, _ := loadCtx(o, "")
 		f, err := os.Open(file)
 		if err != nil {
 			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
 		}
 		defer f.Close()
-		resp, err := cx.client.Do(httpclient.Request{Method: "POST", Path: "content/" + pageID + "/child/attachment", Multipart: f, MultipartField: "file", MultipartName: filepath.Base(file), Headers: map[string]string{"X-Atlassian-Token": "no-check"}})
+		resp, err := ref.Ctx.client.Do(httpclient.Request{Method: "POST", Path: "content/" + ref.ID + "/child/attachment", Multipart: f, MultipartField: "file", MultipartName: filepath.Base(file), Headers: map[string]string{"X-Atlassian-Token": "no-check"}})
 		if err != nil {
 			return print(cmd, o, envelopeError(err, "server_error"))
 		}
 		defer resp.Body.Close()
-		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"uploaded": true}))
+		return print(cmd, o, output.Success(ref.Ctx.inst.Name, map[string]any{"uploaded": true}))
 	}
 }
 
 func updateAttachmentRunE(o *Opts) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		pageID, err := attachmentPageID(cmd, o, args)
+		ref, err := attachmentPageRef(cmd, o, args)
 		attachmentID, _ := cmd.Flags().GetString("attachment-id")
 		file, _ := cmd.Flags().GetString("file")
 		if len(args) >= 3 {
@@ -129,42 +128,57 @@ func updateAttachmentRunE(o *Opts) func(cmd *cobra.Command, args []string) error
 			return print(cmd, o, output.Failure("invalid_args", "--page-id/--id/--url, --attachment-id, and --file required", "", 400))
 		}
 		if o.DryRun {
-			return print(cmd, o, output.Success("", map[string]any{"dry_run": true, "method": "POST", "path": "content/" + pageID + "/child/attachment/" + attachmentID + "/data"}))
+			return print(cmd, o, output.Success(ref.Ctx.inst.Name, map[string]any{"dry_run": true, "method": "POST", "path": "content/" + ref.ID + "/child/attachment/" + attachmentID + "/data"}))
 		}
-		cx, _ := loadCtx(o, "")
 		f, err := os.Open(file)
 		if err != nil {
 			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
 		}
 		defer f.Close()
-		resp, err := cx.client.Do(httpclient.Request{Method: "POST", Path: "content/" + pageID + "/child/attachment/" + attachmentID + "/data", Multipart: f, MultipartField: "file", MultipartName: filepath.Base(file), Headers: map[string]string{"X-Atlassian-Token": "no-check"}})
+		resp, err := ref.Ctx.client.Do(httpclient.Request{Method: "POST", Path: "content/" + ref.ID + "/child/attachment/" + attachmentID + "/data", Multipart: f, MultipartField: "file", MultipartName: filepath.Base(file), Headers: map[string]string{"X-Atlassian-Token": "no-check"}})
 		if err != nil {
 			return print(cmd, o, envelopeError(err, "server_error"))
 		}
 		defer resp.Body.Close()
-		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"updated": true}))
+		return print(cmd, o, output.Success(ref.Ctx.inst.Name, map[string]any{"updated": true}))
 	}
 }
 
 func attachmentPageID(cmd *cobra.Command, o *Opts, args []string) (string, error) {
-	if pageID, _ := cmd.Flags().GetString("page-id"); pageID != "" {
-		return pageID, nil
+	ref, err := attachmentPageRef(cmd, o, args)
+	if err != nil {
+		return "", err
 	}
-	if id, _ := cmd.Flags().GetString("id"); id != "" {
-		return id, nil
-	}
-	if u, _ := cmd.Flags().GetString("url"); u != "" {
-		return pageIDFromURL(cmd, o, u)
-	}
-	if len(args) > 0 && args[0] != "" {
-		return args[0], nil
-	}
-	return "", fmt.Errorf("invalid_args")
+	return ref.ID, nil
 }
 
-func pageIDFromURL(cmd *cobra.Command, o *Opts, raw string) (string, error) {
-	o.Entity = raw
-	return pageID(cmd, o)
+func attachmentPageRef(cmd *cobra.Command, o *Opts, args []string) (*PageRef, error) {
+	if pageID, _ := cmd.Flags().GetString("page-id"); pageID != "" {
+		cx, err := loadCtx(o, "")
+		if err != nil {
+			return nil, err
+		}
+		return &PageRef{Ctx: cx, ID: pageID, EntityType: "page_id"}, nil
+	}
+	if id, _ := cmd.Flags().GetString("id"); id != "" {
+		cx, err := loadCtx(o, "")
+		if err != nil {
+			return nil, err
+		}
+		return &PageRef{Ctx: cx, ID: id, EntityType: "page_id"}, nil
+	}
+	if u, _ := cmd.Flags().GetString("url"); u != "" {
+		cmd.Flags().Set("url", u)
+		return resolvePageRef(cmd, o)
+	}
+	if len(args) > 0 && args[0] != "" {
+		cx, err := loadCtx(o, "")
+		if err != nil {
+			return nil, err
+		}
+		return &PageRef{Ctx: cx, ID: args[0], EntityType: "page_id"}, nil
+	}
+	return nil, fmt.Errorf("invalid_args")
 }
 
 func attachmentDownloadURL(m map[string]any) (string, error) {

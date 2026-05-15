@@ -234,13 +234,95 @@ func TestIssueBatchBCommands(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"ok":true}`))
 	})
-	cases := [][]string{{"issue", "watchers", "EFP-1"}, {"issue", "vote", "EFP-1"}, {"issue", "notify", "EFP-1"}, {"issue", "comment", "list", "EFP-1"}}
+	cases := [][]string{{"issue", "watchers", "EFP-1"}, {"issue", "vote", "EFP-1"}, {"issue", "notify", "EFP-1", "--subject", "Review", "--body", "Please review", "--to", "alice"}, {"issue", "comment", "list", "EFP-1"}}
 	for _, c := range cases {
 		out := run(t, cfg, c...)
 		if !out["ok"].(bool) {
 			t.Fatalf("failed %v", c)
 		}
 	}
+}
+
+func requireJiraCode(t *testing.T, out map[string]interface{}, want string) {
+	t.Helper()
+	if ok, _ := out["ok"].(bool); ok {
+		t.Fatalf("unexpected success: %#v", out)
+	}
+	errObj, _ := out["error"].(map[string]interface{})
+	if got, _ := errObj["code"].(string); got != want {
+		t.Fatalf("error.code=%q want %q: %#v", got, want, out)
+	}
+}
+
+func TestJiraBodyAndJSONValueReadErrors(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("invalid args should not hit server: %s %s", r.Method, r.URL.Path)
+	})
+	missing := filepath.Join(t.TempDir(), "missing.json")
+	cases := [][]string{
+		{"issue", "comment", "add", "EFP-123", "--body-file", missing},
+		{"issue", "comment", "update", "EFP-123", "10001", "--body-file", missing},
+		{"api", "post", "/rest/api/2/issue", "--body-file", missing},
+		{"issue", "property", "set", "EFP-123", "review.state", "--value-file", missing},
+	}
+	for _, args := range cases {
+		requireJiraCode(t, run(t, cfg, args...), "invalid_args")
+	}
+}
+
+func TestJiraWriteRequiredArgs(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("invalid args should not hit server: %s %s", r.Method, r.URL.Path)
+	})
+	cases := [][]string{
+		{"issue", "link", "create", "--from", "EFP-1", "--to", "EFP-2"},
+		{"issue", "link", "create", "--type", "Relates", "--to", "EFP-2"},
+		{"issue", "link", "create", "--type", "Relates", "--from", "EFP-1"},
+		{"issue", "remote-link", "add", "EFP-1", "--title", "Spec"},
+		{"issue", "remote-link", "add", "EFP-1", "--url", "https://example.test"},
+		{"issue", "property", "set", "EFP-1", "review.state"},
+		{"issue", "notify", "EFP-1", "--subject", "Review", "--to", "alice"},
+		{"issue", "notify", "EFP-1", "--subject", "Review", "--body", "Body"},
+		{"component", "create", "--project", "EFP"},
+		{"version", "create", "--name", "1.0"},
+		{"filter", "create", "--name", "Mine"},
+	}
+	for _, args := range cases {
+		requireJiraCode(t, run(t, cfg, args...), "invalid_args")
+	}
+}
+
+func TestJiraStableInstanceErrorCodes(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"ok":true}`))
+	})
+	var rootCfg config.RootConfig
+	b, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(b, &rootCfg); err != nil {
+		t.Fatal(err)
+	}
+	rootCfg.Jira.DefaultInstance = ""
+	rootCfg.Jira.Instances = append(rootCfg.Jira.Instances, rootCfg.Jira.Instances[0])
+	rootCfg.Jira.Instances[1].Name = "jira-other"
+	rootCfg.Jira.Instances[1].BaseURL = "https://other.example"
+	multiCfg := filepath.Join(t.TempDir(), "multi.json")
+	if err := config.Save(multiCfg, rootCfg); err != nil {
+		t.Fatal(err)
+	}
+	requireJiraCode(t, run(t, multiCfg, "issue", "search", "--jql", "project = EFP"), "instance_required")
+	requireJiraCode(t, run(t, multiCfg, "--instance", "jira-main", "issue", "get", rootCfg.Jira.Instances[1].BaseURL+"/browse/EFP-1"), "instance_url_mismatch")
+	requireJiraCode(t, run(t, cfg, "api", "get", "https://evil.example/rest/api/2/myself"), "instance_url_mismatch")
+
+	rootCfg.Jira.Instances[1].BaseURL = rootCfg.Jira.Instances[0].BaseURL
+	ambCfg := filepath.Join(t.TempDir(), "ambiguous.json")
+	if err := config.Save(ambCfg, rootCfg); err != nil {
+		t.Fatal(err)
+	}
+	requireJiraCode(t, run(t, ambCfg, "issue", "get", rootCfg.Jira.Instances[0].BaseURL+"/browse/EFP-1"), "ambiguous_instance")
 }
 
 func TestFilterCrudAndDashboardCommands(t *testing.T) {

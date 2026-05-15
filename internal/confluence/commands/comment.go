@@ -12,8 +12,14 @@ func commentCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "comment"}
 	c.AddCommand(&cobra.Command{Use: "get <comment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "content/"+args[0], nil, nil) }})
 	c.AddCommand(&cobra.Command{Use: "update <comment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		b := readBody(cmd)
-		cx, _ := loadCtx(o, "")
+		b, err := readBody(cmd)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
+		}
+		cx, err := loadCtx(o, "")
+		if err != nil {
+			return print(cmd, o, envelopeError(err, "config_error"))
+		}
 		v, _ := cmd.Flags().GetInt("version")
 		if v == 0 && !o.DryRun {
 			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + args[0]})

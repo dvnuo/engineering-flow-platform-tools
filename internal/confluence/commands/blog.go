@@ -19,7 +19,10 @@ func blogCmd(o *Opts) *cobra.Command {
 	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
 		sp, _ := cmd.Flags().GetString("space")
 		ti, _ := cmd.Flags().GetString("title")
-		b := readBody(cmd)
+		b, err := readBody(cmd)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
+		}
 		return do(o, cmd, "POST", "content", nil, map[string]any{"type": "blogpost", "title": ti, "space": map[string]string{"key": sp}, "body": confluenceBody(cmd, b)})
 	}})
 	c.Commands()[2].Flags().String("space", "", "")
@@ -29,7 +32,10 @@ func blogCmd(o *Opts) *cobra.Command {
 	c.Commands()[2].Flags().Bool("body-stdin", false, "")
 	c.Commands()[2].Flags().String("body-format", "storage", "")
 	c.AddCommand(&cobra.Command{Use: "update <blog-id-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		cx, _ := loadCtx(o, "")
+		cx, err := loadCtx(o, "")
+		if err != nil {
+			return print(cmd, o, envelopeError(err, "config_error"))
+		}
 		v, _ := cmd.Flags().GetInt("version")
 		if v == 0 && !o.DryRun {
 			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + args[0]})
@@ -42,7 +48,10 @@ func blogCmd(o *Opts) *cobra.Command {
 			v = int(m["version"].(map[string]any)["number"].(float64)) + 1
 		}
 		ti, _ := cmd.Flags().GetString("title")
-		b := readBody(cmd)
+		b, err := readBody(cmd)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
+		}
 		return do(o, cmd, "PUT", "content/"+args[0], nil, map[string]any{"title": ti, "version": map[string]any{"number": v}, "body": confluenceBody(cmd, b)})
 	}})
 	c.Commands()[3].Flags().Int("version", 0, "")

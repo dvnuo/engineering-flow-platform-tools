@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -23,6 +24,106 @@ func setup(t *testing.T, h http.HandlerFunc) (string, *int) {
 	p := filepath.Join(t.TempDir(), "cfg.json")
 	_ = config.Save(p, cfg)
 	return p, &n
+}
+
+func TestIssueCreateJSONBodyOverrideAndSearchNumbers(t *testing.T) {
+	hits := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		if r.URL.Path == "/rest/api/2/search" {
+			var body map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if body["maxResults"] != float64(20) || body["startAt"] != float64(5) {
+				t.Fatalf("search numbers not numeric: %#v", body)
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"ok":true}`))
+	})
+	pre := hits
+	if !run(t, cfg, "--dry-run", "issue", "create", "--json-body", `{"fields":{"summary":"x"}}`)["ok"].(bool) {
+		t.Fatal("json-body override should not require project/type/summary")
+	}
+	if hits != pre {
+		t.Fatal("dry-run hit server")
+	}
+	bodyFile := filepath.Join(t.TempDir(), "issue.json")
+	if err := os.WriteFile(bodyFile, []byte(`{"fields":{"summary":"x"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if !run(t, cfg, "--dry-run", "issue", "create", "--json-body-file", bodyFile)["ok"].(bool) {
+		t.Fatal("json-body-file override should not require project/type/summary")
+	}
+	if run(t, cfg, "issue", "create")["ok"].(bool) {
+		t.Fatal("missing generated fields should fail")
+	}
+	if !run(t, cfg, "issue", "search", "--jql", "project = PROJ", "--limit", "20", "--start", "5")["ok"].(bool) {
+		t.Fatal("search failed")
+	}
+	if run(t, cfg, "issue", "search", "--jql", "project = PROJ", "--limit", "abc")["ok"].(bool) {
+		t.Fatal("bad limit should fail")
+	}
+	if run(t, cfg, "issue", "search", "--jql", "project = PROJ", "--start", "abc")["ok"].(bool) {
+		t.Fatal("bad start should fail")
+	}
+}
+
+func TestIssueTransitionCommentFieldAndSafety(t *testing.T) {
+	var gotPost map[string]any
+	gets := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/transitions") {
+			gets++
+			w.Write([]byte(`{"transitions":[{"id":"31","name":"Done"}]}`))
+			return
+		}
+		if r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/transitions") {
+			b, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(b, &gotPost)
+			w.Write([]byte(`{}`))
+			return
+		}
+		w.Write([]byte(`{"ok":true}`))
+	})
+	if !run(t, cfg, "issue", "transition", "PROJ-1", "--to", "done", "--comment", "Completed by agent", "--field", `resolution={"name":"Done"}`)["ok"].(bool) {
+		t.Fatal("transition by name failed")
+	}
+	if gets != 1 {
+		t.Fatalf("expected one transitions GET, got %d", gets)
+	}
+	fields := gotPost["fields"].(map[string]any)
+	if fields["resolution"].(map[string]any)["name"] != "Done" {
+		t.Fatalf("missing field: %#v", gotPost)
+	}
+	update := gotPost["update"].(map[string]any)
+	if len(update["comment"].([]any)) != 1 {
+		t.Fatalf("missing comment: %#v", gotPost)
+	}
+	gets = 0
+	if !run(t, cfg, "issue", "transition", "PROJ-1", "--transition-id", "31")["ok"].(bool) {
+		t.Fatal("transition by id failed")
+	}
+	if gets != 0 {
+		t.Fatal("transition-id should not GET transitions")
+	}
+	if run(t, cfg, "issue", "transition", "PROJ-1")["ok"].(bool) {
+		t.Fatal("missing transition selector should fail")
+	}
+	badCfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"transitions":"bad"}`))
+	})
+	if run(t, badCfg, "issue", "transition", "PROJ-1", "--to", "Done")["ok"].(bool) {
+		t.Fatal("bad transitions shape should fail")
+	}
+	weirdCfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"transitions":["bad"]}`))
+	})
+	if run(t, weirdCfg, "issue", "transition", "PROJ-1", "--to", "Done")["ok"].(bool) {
+		t.Fatal("non-object transition should fail without panic")
+	}
 }
 func run(t *testing.T, cfg string, args ...string) map[string]interface{} {
 	cmd := NewRoot()
@@ -133,13 +234,95 @@ func TestIssueBatchBCommands(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"ok":true}`))
 	})
-	cases := [][]string{{"issue", "watchers", "EFP-1"}, {"issue", "vote", "EFP-1"}, {"issue", "notify", "EFP-1"}, {"issue", "comment", "list", "EFP-1"}}
+	cases := [][]string{{"issue", "watchers", "EFP-1"}, {"issue", "vote", "EFP-1"}, {"issue", "notify", "EFP-1", "--subject", "Review", "--body", "Please review", "--to", "alice"}, {"issue", "comment", "list", "EFP-1"}}
 	for _, c := range cases {
 		out := run(t, cfg, c...)
 		if !out["ok"].(bool) {
 			t.Fatalf("failed %v", c)
 		}
 	}
+}
+
+func requireJiraCode(t *testing.T, out map[string]interface{}, want string) {
+	t.Helper()
+	if ok, _ := out["ok"].(bool); ok {
+		t.Fatalf("unexpected success: %#v", out)
+	}
+	errObj, _ := out["error"].(map[string]interface{})
+	if got, _ := errObj["code"].(string); got != want {
+		t.Fatalf("error.code=%q want %q: %#v", got, want, out)
+	}
+}
+
+func TestJiraBodyAndJSONValueReadErrors(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("invalid args should not hit server: %s %s", r.Method, r.URL.Path)
+	})
+	missing := filepath.Join(t.TempDir(), "missing.json")
+	cases := [][]string{
+		{"issue", "comment", "add", "EFP-123", "--body-file", missing},
+		{"issue", "comment", "update", "EFP-123", "10001", "--body-file", missing},
+		{"api", "post", "/rest/api/2/issue", "--body-file", missing},
+		{"issue", "property", "set", "EFP-123", "review.state", "--value-file", missing},
+	}
+	for _, args := range cases {
+		requireJiraCode(t, run(t, cfg, args...), "invalid_args")
+	}
+}
+
+func TestJiraWriteRequiredArgs(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("invalid args should not hit server: %s %s", r.Method, r.URL.Path)
+	})
+	cases := [][]string{
+		{"issue", "link", "create", "--from", "EFP-1", "--to", "EFP-2"},
+		{"issue", "link", "create", "--type", "Relates", "--to", "EFP-2"},
+		{"issue", "link", "create", "--type", "Relates", "--from", "EFP-1"},
+		{"issue", "remote-link", "add", "EFP-1", "--title", "Spec"},
+		{"issue", "remote-link", "add", "EFP-1", "--url", "https://example.test"},
+		{"issue", "property", "set", "EFP-1", "review.state"},
+		{"issue", "notify", "EFP-1", "--subject", "Review", "--to", "alice"},
+		{"issue", "notify", "EFP-1", "--subject", "Review", "--body", "Body"},
+		{"component", "create", "--project", "EFP"},
+		{"version", "create", "--name", "1.0"},
+		{"filter", "create", "--name", "Mine"},
+	}
+	for _, args := range cases {
+		requireJiraCode(t, run(t, cfg, args...), "invalid_args")
+	}
+}
+
+func TestJiraStableInstanceErrorCodes(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"ok":true}`))
+	})
+	var rootCfg config.RootConfig
+	b, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(b, &rootCfg); err != nil {
+		t.Fatal(err)
+	}
+	rootCfg.Jira.DefaultInstance = ""
+	rootCfg.Jira.Instances = append(rootCfg.Jira.Instances, rootCfg.Jira.Instances[0])
+	rootCfg.Jira.Instances[1].Name = "jira-other"
+	rootCfg.Jira.Instances[1].BaseURL = "https://other.example"
+	multiCfg := filepath.Join(t.TempDir(), "multi.json")
+	if err := config.Save(multiCfg, rootCfg); err != nil {
+		t.Fatal(err)
+	}
+	requireJiraCode(t, run(t, multiCfg, "issue", "search", "--jql", "project = EFP"), "instance_required")
+	requireJiraCode(t, run(t, multiCfg, "--instance", "jira-main", "issue", "get", rootCfg.Jira.Instances[1].BaseURL+"/browse/EFP-1"), "instance_url_mismatch")
+	requireJiraCode(t, run(t, cfg, "api", "get", "https://evil.example/rest/api/2/myself"), "instance_url_mismatch")
+
+	rootCfg.Jira.Instances[1].BaseURL = rootCfg.Jira.Instances[0].BaseURL
+	ambCfg := filepath.Join(t.TempDir(), "ambiguous.json")
+	if err := config.Save(ambCfg, rootCfg); err != nil {
+		t.Fatal(err)
+	}
+	requireJiraCode(t, run(t, ambCfg, "issue", "get", rootCfg.Jira.Instances[0].BaseURL+"/browse/EFP-1"), "ambiguous_instance")
 }
 
 func TestFilterCrudAndDashboardCommands(t *testing.T) {

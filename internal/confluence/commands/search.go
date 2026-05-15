@@ -44,6 +44,9 @@ func searchCmd(o *Opts) *cobra.Command {
 	cc.Flags().String("expand", "", "")
 	c.AddCommand(&cobra.Command{Use: "user", RunE: func(cmd *cobra.Command, args []string) error {
 		q, _ := cmd.Flags().GetString("query")
+		if q == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--query required", "", 400))
+		}
 		return do(o, cmd, "GET", "user/search", map[string]string{"query": q}, nil)
 	}})
 	c.Commands()[1].Flags().String("query", "", "")

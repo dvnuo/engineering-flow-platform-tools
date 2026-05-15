@@ -107,21 +107,21 @@ func Schema(product, name string) map[string]any {
 func meta(product, usage string) llm.CommandMeta {
 	name := dotted(usage)
 	ex := explicit[name]
+	r := risk(usage)
+	if ex.Risk != "" {
+		r = ex.Risk
+	}
 	flags := ex.Flags
 	if len(flags) == 0 {
-		flags = []string{"instance", "config", "json", "format", "verbose", "dry-run", "yes"}
+		flags = defaultFlags(r)
 	}
 	desc := ex.Description
 	if desc == "" {
 		desc = description(usage)
 	}
-	r := risk(usage)
-	if ex.Risk != "" {
-		r = ex.Risk
-	}
 	example := ex.Example
 	if example == "" {
-		example = usage + " --json"
+		example = exampleFor(usage, r)
 	}
 	if product == "confluence" && strings.HasPrefix(example, "jira ") {
 		example = strings.Replace(example, "jira ", "confluence ", 1)
@@ -163,7 +163,154 @@ func description(usage string) string {
 	if len(parts) <= 1 {
 		return usage
 	}
-	return "Execute " + strings.Join(parts[1:], " ") + " for " + parts[0] + "."
+	product := productName(parts[0])
+	cmd := cleanParts(parts[1:])
+	if len(cmd) == 0 {
+		return "Show " + product + " command information."
+	}
+	actionIdx := actionIndex(cmd)
+	action := cmd[actionIdx]
+	resourceParts := append([]string{}, cmd[:actionIdx]...)
+	resourceParts = append(resourceParts, cmd[actionIdx+1:]...)
+	resource := resourceName(product, resourceParts)
+	switch action {
+	case "list":
+		return "List " + resource + "."
+	case "get":
+		return "Fetch " + singular(resource) + "."
+	case "search", "cql":
+		return "Search " + resource + "."
+	case "create", "add", "upload", "login":
+		return strings.Title(action) + " " + singular(resource) + "."
+	case "update", "set", "edit", "assign", "transition", "move", "restore", "watch", "unwatch", "vote", "unvote", "default":
+		return strings.Title(action) + " " + singular(resource) + "."
+	case "delete", "remove", "logout":
+		return strings.Title(action) + " " + singular(resource) + " after explicit confirmation."
+	case "download", "export-html", "export-markdown":
+		return strings.Title(strings.ReplaceAll(action, "-", " ")) + " for " + singular(resource) + "."
+	case "commands":
+		return "List available " + product + " commands with metadata."
+	case "schema":
+		return "Show argument and flag schema for a " + product + " command."
+	case "llm":
+		return "Show " + product + " usage guidance for LLM agents."
+	case "version":
+		return "Print CLI version, commit, and build date."
+	default:
+		return strings.Title(action) + " " + resource + "."
+	}
+}
+
+func defaultFlags(r string) []string {
+	flags := []string{"instance", "config", "json", "format", "verbose"}
+	switch r {
+	case "write":
+		flags = append(flags, "dry-run")
+	case "delete":
+		flags = append([]string{"yes"}, flags...)
+	}
+	return flags
+}
+
+func cleanParts(parts []string) []string {
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if strings.HasPrefix(p, "<") || strings.HasPrefix(p, "[") {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
+func actionIndex(parts []string) int {
+	actions := map[string]bool{
+		"list": true, "get": true, "search": true, "cql": true, "create": true, "add": true,
+		"upload": true, "login": true, "update": true, "set": true, "edit": true, "assign": true,
+		"transition": true, "move": true, "restore": true, "watch": true, "unwatch": true,
+		"vote": true, "unvote": true, "default": true, "delete": true, "remove": true, "logout": true,
+		"download": true, "export-html": true, "export-markdown": true, "commands": true, "schema": true,
+		"llm": true, "version": true, "content": true, "pages": true, "blogs": true, "labels": true,
+		"watchers": true, "members": true, "statuses": true, "roles": true, "components": true,
+		"versions": true, "transitions": true, "changelog": true, "fields": true, "createmeta": true,
+		"editmeta": true, "votes": true, "notify": true, "myself": true, "server-info": true,
+		"resolve-url": true, "body": true, "body-storage": true, "body-view": true, "children": true,
+		"descendants": true, "ancestors": true, "history": true, "permission": true, "settings": true,
+		"config": true, "assignable": true, "issues": true,
+	}
+	for i := len(parts) - 1; i >= 0; i-- {
+		if actions[parts[i]] {
+			return i
+		}
+	}
+	return len(parts) - 1
+}
+
+func productName(product string) string {
+	switch product {
+	case "jira":
+		return "Jira"
+	case "confluence":
+		return "Confluence"
+	default:
+		return product
+	}
+}
+
+func resourceName(product string, parts []string) string {
+	if len(parts) == 0 {
+		return product + " resources"
+	}
+	words := append([]string{product}, parts...)
+	return strings.ReplaceAll(strings.Join(words, " "), "-", " ")
+}
+
+func singular(s string) string {
+	for _, suffix := range []string{" resources", " issues", " pages", " blogs", " labels", " watchers", " members", " statuses", " roles", " components", " versions", " transitions", " votes"} {
+		if strings.HasSuffix(s, suffix) {
+			return strings.TrimSuffix(s, "s")
+		}
+	}
+	return s
+}
+
+func exampleFor(usage, r string) string {
+	example := usage
+	replacements := map[string]string{
+		"<issue-or-url>":    "PROJ-123",
+		"<comment-id>":      "10000",
+		"<attachment-id>":   "10000",
+		"<worklog-id>":      "10000",
+		"<link-id>":         "10000",
+		"<project-key>":     "PROJ",
+		"<component-id>":    "10000",
+		"<version-id>":      "10000",
+		"<group-name>":      "team",
+		"<filter-id>":       "10000",
+		"<dashboard-id>":    "10000",
+		"<board-id>":        "1",
+		"<sprint-id>":       "1",
+		"<space-key>":       "ENG",
+		"<content-id>":      "123",
+		"<blog-id-or-url>":  "123",
+		"<task-id>":         "10000",
+		"<webhook-id>":      "10000",
+		"<role-id-or-name>": "10000",
+		"<name>":            "local",
+		"<key>":             "status",
+		"<url>":             "https://example.atlassian.net/browse/PROJ-123",
+		"<command>":         "issue.create",
+		"<path>":            "/rest/api/2/myself",
+		"<file>":            "./note.txt",
+		"[name]":            "local",
+	}
+	for old, newValue := range replacements {
+		example = strings.ReplaceAll(example, old, newValue)
+	}
+	if r == "delete" && !strings.Contains(example, "--yes") {
+		example += " --yes"
+	}
+	return example + " --json"
 }
 
 func dotted(usage string) string {
@@ -276,6 +423,7 @@ func flagDescription(command, name string) string {
 }
 
 var explicit = map[string]explicitMeta{
+	"version":                   {Description: "Print CLI version, commit, and build date.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira version --json"},
 	"auth.test":                 {Description: "Verify configured credentials against the current user endpoint.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira auth test --json"},
 	"server-info":               {Description: "Read server metadata from the selected instance.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira server-info --json"},
 	"issue.get":                 {Description: "Fetch a Jira issue by key or full issue URL.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue get PROJ-123 --json"},
@@ -283,7 +431,7 @@ var explicit = map[string]explicitMeta{
 	"issue.create":              {Description: "Create a Jira issue.", Flags: []string{"project", "type", "summary", "description", "field", "json-body", "json-body-file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"project", "type", "summary"}, Risk: "write", Example: "jira issue create --project PROJ --type Task --summary Test --json"},
 	"issue.update":              {Description: "Update fields on a Jira issue.", Flags: []string{"summary", "description", "field", "json-body", "json-body-file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"summary|description|field|json-body|json-body-file"}, Risk: "write", Example: "jira issue update PROJ-123 --summary Done --json"},
 	"issue.delete":              {Description: "Delete a Jira issue after explicit confirmation.", Flags: []string{"yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "yes"}, Risk: "delete", Example: "jira issue delete PROJ-123 --yes --json"},
-	"issue.transition":          {Description: "Transition a Jira issue by transition id or transition name.", Flags: []string{"transition-id", "to", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"transition-id|to"}, Risk: "write", Example: "jira issue transition PROJ-123 --to Done --json"},
+	"issue.transition":          {Description: "Transition a Jira issue by transition id or transition name.", Flags: []string{"transition-id", "to", "comment", "field", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"transition-id|to"}, Risk: "write", Example: "jira issue transition PROJ-123 --to Done --json"},
 	"issue.comment.list":        {Description: "List comments on a Jira issue.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue comment list PROJ-123 --json"},
 	"issue.comment.add":         {Description: "Add a comment to a Jira issue.", Flags: []string{"body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"body|body-file|body-stdin"}, Risk: "write", Example: "jira issue comment add PROJ-123 --body ok --json"},
 	"issue.comment.update":      {Description: "Update an existing Jira issue comment.", Flags: []string{"body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "comment-id", "body|body-file|body-stdin"}, Risk: "write", Example: "jira issue comment update PROJ-123 10000 --body ok --json"},
@@ -291,6 +439,9 @@ var explicit = map[string]explicitMeta{
 	"issue.attachment.list":     {Description: "List attachments on a Jira issue.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue attachment list PROJ-123 --json"},
 	"issue.attachment.upload":   {Description: "Upload a file attachment to a Jira issue.", Flags: []string{"instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "file"}, Risk: "write", Example: "jira issue attachment upload PROJ-123 ./note.txt --json"},
 	"issue.attachment.download": {Description: "Download or inspect a Jira issue attachment.", Flags: []string{"output", "instance", "config", "json", "format", "verbose", "dry-run"}, Risk: "read", Example: "jira attachment download 10000 --json"},
+	"issue.link.create":         {Description: "Create a Jira issue link between two issues.", Flags: []string{"type", "from", "to", "comment", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"type", "from", "to"}, Risk: "write", Example: "jira issue link create --type Relates --from PROJ-123 --to PROJ-124 --json"},
+	"issue.remote-link.add":     {Description: "Add an external remote link to a Jira issue.", Flags: []string{"url", "title", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "url", "title"}, Risk: "write", Example: "jira issue remote-link add PROJ-123 --url https://example.test/spec --title Spec --json"},
+	"issue.property.set":        {Description: "Set a JSON issue property value.", Flags: []string{"value", "value-file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "key", "value|value-file"}, Risk: "write", Example: "jira issue property set PROJ-123 review.state --value '{\"ok\":true}' --json"},
 	"attachment.delete":         {Description: "Delete an attachment after explicit confirmation.", Flags: []string{"yes", "instance", "config", "json", "format", "verbose"}, Required: []string{"attachment-id", "yes"}, Risk: "delete", Example: "jira attachment delete 10000 --yes --json"},
 	"project.list":              {Description: "List Jira projects.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira project list --json"},
 	"project.get":               {Description: "Fetch a Jira project by key.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"project-key"}, Risk: "read", Example: "jira project get PROJ --json"},

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"engineering-flow-platform-tools/internal/catalog"
@@ -27,6 +28,7 @@ type Opts struct {
 }
 
 func NewRoot() *cobra.Command {
+	cobra.EnableCommandSorting = false
 	o := &Opts{}
 	cmd := &cobra.Command{Use: "jira", SilenceErrors: true, SilenceUsage: true}
 	cmd.PersistentFlags().StringVar(&o.Instance, "instance", "", "")
@@ -64,10 +66,52 @@ func envelopeError(err error, fallbackCode string) output.Envelope {
 	if errors.As(err, &httpErr) {
 		return output.Failure(httpErr.Code, httpErr.Message, httpErr.Hint, httpErr.Status)
 	}
+	if isStableErrorCode(err.Error()) {
+		return output.Failure(err.Error(), err.Error(), "", 400)
+	}
 	if fallbackCode == "" {
 		fallbackCode = "server_error"
 	}
 	return output.Failure(fallbackCode, err.Error(), "", 500)
+}
+
+func isStableErrorCode(code string) bool {
+	switch code {
+	case "config_missing", "no_instance_configured", "instance_required", "ambiguous_instance", "instance_url_mismatch", "invalid_args", "not_found", "not_supported", "auth_failed", "permission_denied", "network_error", "server_error":
+		return true
+	default:
+		return false
+	}
+}
+
+func invalidArgs(cmd *cobra.Command, o *Opts, msg, hint string) error {
+	return print(cmd, o, output.Failure("invalid_args", msg, hint, 400))
+}
+
+func readJiraBody(cmd *cobra.Command) (string, error) {
+	b, err := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+	if err != nil {
+		switch {
+		case mustS(cmd, "body-file") != "":
+			return "", fmt.Errorf("failed to read --body-file")
+		case mustB(cmd, "body-stdin"):
+			return "", fmt.Errorf("failed to read --body-stdin")
+		default:
+			return "", fmt.Errorf("failed to read body")
+		}
+	}
+	return b, nil
+}
+
+func readJiraJSONValue(cmd *cobra.Command) (interface{}, error) {
+	v, err := files.ReadJSONValueFromFlags(mustS(cmd, "value"), mustS(cmd, "value-file"))
+	if err != nil {
+		if mustS(cmd, "value-file") != "" {
+			return nil, fmt.Errorf("failed to read --value-file")
+		}
+		return nil, fmt.Errorf("invalid --value")
+	}
+	return v, nil
 }
 
 func authFromFlags(cmd *cobra.Command) (config.AuthConfig, error) {
@@ -415,10 +459,18 @@ func issueCmd(o *Opts) *cobra.Command {
 		}
 		body := map[string]interface{}{"jql": jql}
 		if limit, _ := cmd.Flags().GetString("limit"); limit != "" {
-			body["maxResults"] = limit
+			n, err := strconv.Atoi(limit)
+			if err != nil {
+				return print(cmd, o, output.Failure("invalid_args", "--limit must be an integer", "", 400))
+			}
+			body["maxResults"] = n
 		}
 		if start, _ := cmd.Flags().GetString("start"); start != "" {
-			body["startAt"] = start
+			n, err := strconv.Atoi(start)
+			if err != nil {
+				return print(cmd, o, output.Failure("invalid_args", "--start must be an integer", "", 400))
+			}
+			body["startAt"] = n
 		}
 		if fields, _ := cmd.Flags().GetStringArray("fields"); len(fields) > 0 {
 			body["fields"] = fields
@@ -439,13 +491,6 @@ func issueCmd(o *Opts) *cobra.Command {
 	c.Commands()[1].Flags().String("start", "", "")
 	c.Commands()[1].Flags().StringArray("fields", nil, "")
 	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
-		project, _ := cmd.Flags().GetString("project")
-		typ, _ := cmd.Flags().GetString("type")
-		summary, _ := cmd.Flags().GetString("summary")
-		desc, _ := cmd.Flags().GetString("description")
-		if project == "" || typ == "" || summary == "" {
-			return print(cmd, o, output.Failure("invalid_args", "--project, --type, and --summary required", "", 400))
-		}
 		if raw := mustS(cmd, "json-body"); raw != "" {
 			var override map[string]interface{}
 			if err := json.Unmarshal([]byte(raw), &override); err != nil {
@@ -463,6 +508,13 @@ func issueCmd(o *Opts) *cobra.Command {
 				return print(cmd, o, output.Failure("invalid_args", "invalid --json-body-file", "", 400))
 			}
 			return issueCreateWithBody(o, cmd, override)
+		}
+		project, _ := cmd.Flags().GetString("project")
+		typ, _ := cmd.Flags().GetString("type")
+		summary, _ := cmd.Flags().GetString("summary")
+		desc, _ := cmd.Flags().GetString("description")
+		if project == "" || typ == "" || summary == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--project, --type, and --summary required", "", 400))
 		}
 		fields, _ := cmd.Flags().GetStringArray("field")
 		body := map[string]interface{}{"fields": map[string]interface{}{"project": map[string]string{"key": project}, "issuetype": map[string]string{"name": typ}, "summary": summary, "description": desc}}
@@ -489,6 +541,9 @@ func issueCmd(o *Opts) *cobra.Command {
 	c.AddCommand(&cobra.Command{Use: "transition <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		to, _ := cmd.Flags().GetString("to")
 		tid, _ := cmd.Flags().GetString("transition-id")
+		if tid == "" && to == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--transition-id or --to required", "Use jira issue transitions <issue> --json to inspect available transitions.", 400))
+		}
 		cfg, err := loadCfg(o)
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
@@ -505,9 +560,15 @@ func issueCmd(o *Opts) *cobra.Command {
 			}
 			defer resp.Body.Close()
 			d, _ := jira.ReadJSON(resp.Body)
-			arr, _ := d["transitions"].([]interface{})
+			arr, ok := d["transitions"].([]interface{})
+			if !ok {
+				return print(cmd, o, output.Failure("server_error", "transitions response missing array", "Use jira issue transitions <issue> --json to inspect available transitions.", 500))
+			}
 			for _, it := range arr {
-				m := it.(map[string]interface{})
+				m, ok := it.(map[string]interface{})
+				if !ok {
+					continue
+				}
 				if strings.EqualFold(fmt.Sprint(m["name"]), to) {
 					tid = fmt.Sprint(m["id"])
 					break
@@ -518,6 +579,12 @@ func issueCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Failure("invalid_args", "transition not found", "Use jira issue transitions to inspect available transitions.", 400))
 		}
 		body := map[string]interface{}{"transition": map[string]string{"id": tid}}
+		if fields := parseKeyValueFields(mustStringArray(cmd, "field")); len(fields) > 0 {
+			body["fields"] = fields
+		}
+		if comment := mustS(cmd, "comment"); comment != "" {
+			body["update"] = map[string]interface{}{"comment": []map[string]interface{}{{"add": map[string]string{"body": comment}}}}
+		}
 		if o.DryRun {
 			return print(cmd, o, output.Success(ctx.Instance, jira.DryRunData("POST", "issue/"+issue+"/transitions", nil, body)))
 		}
@@ -530,6 +597,8 @@ func issueCmd(o *Opts) *cobra.Command {
 	}})
 	c.Commands()[3].Flags().String("to", "", "")
 	c.Commands()[3].Flags().String("transition-id", "", "")
+	c.Commands()[3].Flags().String("comment", "", "")
+	c.Commands()[3].Flags().StringArray("field", nil, "")
 	c.AddCommand(&cobra.Command{Use: "delete <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if err := jira.RequireYes(o.Yes); err != nil {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
@@ -705,14 +774,27 @@ func issueCmd(o *Opts) *cobra.Command {
 	}})
 	notifyCmd := &cobra.Command{Use: "notify <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		subj, _ := cmd.Flags().GetString("subject")
-		b, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), false)
+		if subj == "" {
+			return invalidArgs(cmd, o, "--subject required", "Use jira issue notify PROJ-123 --subject 'Review' --body 'Please review' --to alice --json.")
+		}
+		if mustS(cmd, "body") == "" && mustS(cmd, "body-file") == "" && !mustB(cmd, "body-stdin") {
+			return invalidArgs(cmd, o, "--body, --body-file, or --body-stdin required", "Use jira issue notify PROJ-123 --subject 'Review' --body 'Please review' --to alice --json.")
+		}
+		b, err := readJiraBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "")
+		}
 		to, _ := cmd.Flags().GetStringArray("to")
+		if len(to) == 0 {
+			return invalidArgs(cmd, o, "--to required", "Use jira issue notify PROJ-123 --subject 'Review' --body 'Please review' --to alice --json.")
+		}
 		body := map[string]any{"subject": subj, "textBody": b, "to": to}
 		return issueEntityWrite(o, cmd, "POST", args[0], "/notify", nil, body)
 	}}
 	notifyCmd.Flags().String("subject", "", "")
 	notifyCmd.Flags().String("body", "", "")
 	notifyCmd.Flags().String("body-file", "", "")
+	notifyCmd.Flags().Bool("body-stdin", false, "")
 	notifyCmd.Flags().StringArray("to", nil, "")
 	c.AddCommand(notifyCmd)
 	c.AddCommand(issueCommentCmd(o))
@@ -749,7 +831,10 @@ func rawAPICmd(o *Opts) *cobra.Command {
 					q[kv[0]] = kv[1]
 				}
 			}
-			body, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+			body, err := readJiraBody(cmd)
+			if err != nil {
+				return invalidArgs(cmd, o, err.Error(), "")
+			}
 			var jb interface{}
 			if body != "" {
 				_ = json.Unmarshal([]byte(body), &jb)
@@ -776,6 +861,27 @@ func rawAPICmd(o *Opts) *cobra.Command {
 }
 func mustS(cmd *cobra.Command, n string) string { v, _ := cmd.Flags().GetString(n); return v }
 func mustB(cmd *cobra.Command, n string) bool   { v, _ := cmd.Flags().GetBool(n); return v }
+func mustStringArray(cmd *cobra.Command, n string) []string {
+	v, _ := cmd.Flags().GetStringArray(n)
+	return v
+}
+
+func parseKeyValueFields(values []string) map[string]interface{} {
+	out := map[string]interface{}{}
+	for _, f := range values {
+		kv := strings.SplitN(f, "=", 2)
+		if len(kv) != 2 || strings.TrimSpace(kv[0]) == "" {
+			continue
+		}
+		var any interface{}
+		if json.Unmarshal([]byte(kv[1]), &any) == nil {
+			out[kv[0]] = any
+		} else {
+			out[kv[0]] = kv[1]
+		}
+	}
+	return out
+}
 
 func issueCreateWithBody(o *Opts, cmd *cobra.Command, body map[string]interface{}) error {
 	cfg, err := loadCfg(o)
@@ -804,12 +910,19 @@ func issueLinkCmd(o *Opts) *cobra.Command {
 		return issueEntityGet(o, cmd, args[0], "", map[string]string{"fields": "issuelinks"})
 	}})
 	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
+		if mustS(cmd, "type") == "" || mustS(cmd, "from") == "" || mustS(cmd, "to") == "" {
+			return invalidArgs(cmd, o, "--type, --from, and --to required", "Use jira issue link create --type Relates --from PROJ-123 --to PROJ-124 --json.")
+		}
 		b := map[string]any{"type": map[string]string{"name": mustS(cmd, "type")}, "inwardIssue": map[string]string{"key": mustS(cmd, "from")}, "outwardIssue": map[string]string{"key": mustS(cmd, "to")}}
+		if comment := mustS(cmd, "comment"); comment != "" {
+			b["comment"] = map[string]string{"body": comment}
+		}
 		return issueSubPost(o, cmd, "issueLink", b)
 	}})
 	c.Commands()[1].Flags().String("type", "", "")
 	c.Commands()[1].Flags().String("from", "", "")
 	c.Commands()[1].Flags().String("to", "", "")
+	c.Commands()[1].Flags().String("comment", "", "")
 	c.AddCommand(&cobra.Command{Use: "delete <link-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
@@ -825,6 +938,9 @@ func issueRemoteLinkCmd(o *Opts) *cobra.Command {
 		return issueEntityGet(o, cmd, args[0], "/remotelink", nil)
 	}})
 	c.AddCommand(&cobra.Command{Use: "add <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if mustS(cmd, "url") == "" || mustS(cmd, "title") == "" {
+			return invalidArgs(cmd, o, "--url and --title required", "Use jira issue remote-link add PROJ-123 --url https://example.test/spec --title Spec --json.")
+		}
 		b := map[string]any{"object": map[string]string{"url": mustS(cmd, "url"), "title": mustS(cmd, "title")}}
 		return issueEntityWrite(o, cmd, "POST", args[0], "/remotelink", nil, b)
 	}})
@@ -847,7 +963,13 @@ func issuePropertyCmd(o *Opts) *cobra.Command {
 		return issueEntityGet(o, cmd, args[0], "/properties/"+args[1], nil)
 	}})
 	c.AddCommand(&cobra.Command{Use: "set <issue-or-url> <key>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
-		v, _ := files.ReadJSONValueFromFlags(mustS(cmd, "value"), mustS(cmd, "value-file"))
+		if (mustS(cmd, "value") == "") == (mustS(cmd, "value-file") == "") {
+			return invalidArgs(cmd, o, "--value or --value-file required, but not both", "Use jira issue property set PROJ-123 review.state --value '{\"ok\":true}' --json.")
+		}
+		v, err := readJiraJSONValue(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "")
+		}
 		return issueEntityWrite(o, cmd, "PUT", args[0], "/properties/"+args[1], nil, v)
 	}})
 	c.Commands()[2].Flags().String("value", "", "")
@@ -870,7 +992,10 @@ func issueCommentCmd(o *Opts) *cobra.Command {
 		return issueEntityGet(o, cmd, args[0], "/comment/"+args[1], nil)
 	}})
 	c.AddCommand(&cobra.Command{Use: "add <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		b, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+		b, err := readJiraBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "")
+		}
 		if b == "" {
 			return print(cmd, o, output.Failure("invalid_args", "comment body required", "", 400))
 		}
@@ -880,7 +1005,10 @@ func issueCommentCmd(o *Opts) *cobra.Command {
 	c.Commands()[2].Flags().String("body-file", "", "")
 	c.Commands()[2].Flags().Bool("body-stdin", false, "")
 	c.AddCommand(&cobra.Command{Use: "update <issue-or-url> <comment-id>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
-		b, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+		b, err := readJiraBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "")
+		}
 		if b == "" {
 			return print(cmd, o, output.Failure("invalid_args", "comment body required", "", 400))
 		}
@@ -930,8 +1058,8 @@ func issueWorklogCmd(o *Opts) *cobra.Command {
 		ts := mustS(cmd, "time-spent")
 		st := mustS(cmd, "started")
 		cm := mustS(cmd, "comment")
-		if ts == "" && st == "" && cm == "" {
-			return print(cmd, o, output.Failure("invalid_args", "at least one field required", "", 400))
+		if ts == "" && cm == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--time-spent or --comment required", "", 400))
 		}
 		b := map[string]string{"timeSpent": ts, "started": st, "comment": cm}
 		return issueEntityWrite(o, cmd, "PUT", args[0], "/worklog/"+args[1], nil, b)
@@ -954,7 +1082,10 @@ func commentCmd(o *Opts) *cobra.Command {
 		return issueEntityGet(o, cmd, args[0], "/comment", nil)
 	}})
 	c.AddCommand(&cobra.Command{Use: "add <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		b, _ := files.ReadBodyFromFlags(mustS(cmd, "body"), mustS(cmd, "body-file"), mustB(cmd, "body-stdin"))
+		b, err := readJiraBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "")
+		}
 		if b == "" {
 			return print(cmd, o, output.Failure("invalid_args", "comment body required", "", 400))
 		}
@@ -1024,6 +1155,9 @@ func attachmentCmd(o *Opts) *cobra.Command {
 		defer resp.Body.Close()
 		d, _ := jira.ReadJSON(resp.Body)
 		u, _ := d["content"].(string)
+		if u == "" {
+			return print(cmd, o, output.Failure("not_found", "attachment content URL missing", "Verify the attachment id or request metadata-only output.", 404))
+		}
 		if !jiraURLBelongsToBase(u, ctx.Inst.BaseURL) {
 			return print(cmd, o, output.Failure("instance_url_mismatch", "off-instance content URL", "", 400))
 		}
@@ -1032,9 +1166,14 @@ func attachmentCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, envelopeError(err, "server_error"))
 		}
 		defer r2.Body.Close()
-		b, _ := io.ReadAll(r2.Body)
-		_ = os.WriteFile(out, b, 0o600)
-		return print(cmd, o, output.Success(ctx.Instance, map[string]any{"saved": out}))
+		b, err := io.ReadAll(r2.Body)
+		if err != nil {
+			return print(cmd, o, output.Failure("server_error", "failed to read attachment response", "", 500))
+		}
+		if err := os.WriteFile(out, b, 0o600); err != nil {
+			return print(cmd, o, output.Failure("invalid_args", "failed to write --output: "+err.Error(), "Choose a writable output path.", 400))
+		}
+		return print(cmd, o, output.Success(ctx.Instance, map[string]any{"output": out, "saved": out}))
 	}}
 	download.Flags().String("output", "", "")
 	download.Flags().Bool("metadata-only", false, "")

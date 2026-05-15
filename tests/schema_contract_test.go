@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
@@ -46,11 +47,33 @@ func requireFlags(t *testing.T, data map[string]any, names ...string) {
 	}
 }
 
+func requireRequired(t *testing.T, data map[string]any, names ...string) {
+	t.Helper()
+	have := map[string]bool{}
+	required, _ := data["required"].([]any)
+	for _, r := range required {
+		name, _ := r.(string)
+		for _, part := range strings.Split(name, "|") {
+			have[strings.TrimSpace(part)] = true
+		}
+	}
+	for _, n := range names {
+		if !have[n] {
+			b, _ := json.Marshal(data)
+			t.Fatalf("missing required %s in %s", n, string(b))
+		}
+	}
+}
+
 func TestSchemaConcreteFlags(t *testing.T) {
-	requireFlags(t, schemaData(t, "jira", "issue.create"), "project", "type", "summary")
-	requireFlags(t, schemaData(t, "jira", "issue.transition"), "to", "transition-id")
+	requireFlags(t, schemaData(t, "jira", "issue.create"), "project", "type", "summary", "description", "field", "json-body", "json-body-file", "dry-run")
+	requireFlags(t, schemaData(t, "jira", "issue.transition"), "to", "transition-id", "comment", "field")
+	requireFlags(t, schemaData(t, "jira", "issue.link.create"), "type", "from", "to", "comment")
+	requireRequired(t, schemaData(t, "jira", "issue.property.set"), "value", "value-file")
 	requireFlags(t, schemaData(t, "jira", "issue.comment.add"), "body", "body-file", "body-stdin")
-	requireFlags(t, schemaData(t, "confluence", "page.create"), "space", "title", "body", "body-file", "body-stdin")
-	requireFlags(t, schemaData(t, "confluence", "page.update"), "id", "url", "version", "body", "body-file", "body-stdin")
+	requireFlags(t, schemaData(t, "jira", "api.get"), "query", "json", "instance", "config")
+	requireFlags(t, schemaData(t, "confluence", "page.create"), "space", "title", "parent-id", "body", "body-file", "body-stdin", "body-format", "dry-run")
+	requireFlags(t, schemaData(t, "confluence", "page.update"), "id", "url", "title", "version", "minor-edit", "body", "body-file", "body-stdin")
+	requireRequired(t, schemaData(t, "confluence", "page.get-by-title"), "space", "title")
 	requireFlags(t, schemaData(t, "confluence", "search"), "cql", "limit", "start", "expand")
 }

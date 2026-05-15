@@ -199,6 +199,13 @@
 - confluence page export-html
 - confluence page export-markdown
 
+Literal page-get forms:
+
+```text
+confluence page get --id <page-id>
+confluence page get --url <page-url>
+```
+
 ### Generic content
 - confluence content get <content-id>
 - confluence content list

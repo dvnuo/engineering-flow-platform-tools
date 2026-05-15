@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
@@ -52,7 +53,9 @@ func requireRequired(t *testing.T, data map[string]any, names ...string) {
 	required, _ := data["required"].([]any)
 	for _, r := range required {
 		name, _ := r.(string)
-		have[name] = true
+		for _, part := range strings.Split(name, "|") {
+			have[strings.TrimSpace(part)] = true
+		}
 	}
 	for _, n := range names {
 		if !have[n] {
@@ -66,6 +69,7 @@ func TestSchemaConcreteFlags(t *testing.T) {
 	requireFlags(t, schemaData(t, "jira", "issue.create"), "project", "type", "summary", "description", "field", "json-body", "json-body-file", "dry-run")
 	requireFlags(t, schemaData(t, "jira", "issue.transition"), "to", "transition-id", "comment", "field")
 	requireFlags(t, schemaData(t, "jira", "issue.link.create"), "type", "from", "to", "comment")
+	requireRequired(t, schemaData(t, "jira", "issue.property.set"), "value", "value-file")
 	requireFlags(t, schemaData(t, "jira", "issue.comment.add"), "body", "body-file", "body-stdin")
 	requireFlags(t, schemaData(t, "jira", "api.get"), "query", "json", "instance", "config")
 	requireFlags(t, schemaData(t, "confluence", "page.create"), "space", "title", "parent-id", "body", "body-file", "body-stdin", "body-format", "dry-run")

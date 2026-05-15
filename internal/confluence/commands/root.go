@@ -24,7 +24,6 @@ import (
 
 type Opts struct {
 	Instance, Config, Format   string
-	Entity                     string
 	JSON, Verbose, DryRun, Yes bool
 }
 
@@ -83,7 +82,7 @@ func envelopeError(err error, fallbackCode string) output.Envelope {
 
 func isStableErrorCode(code string) bool {
 	switch code {
-	case "config_missing", "no_instance_configured", "instance_required", "ambiguous_instance", "instance_url_mismatch", "invalid_args":
+	case "config_missing", "no_instance_configured", "instance_required", "ambiguous_instance", "instance_url_mismatch", "invalid_args", "not_found", "not_supported", "auth_failed", "permission_denied", "network_error", "server_error":
 		return true
 	default:
 		return false
@@ -351,6 +350,29 @@ func loadCtxForPageURL(o *Opts, entityURL string) (*ctx, instance.ResolvedEntity
 	return &ctx{cfg: cfg, inst: res.Instance, client: cl}, res.Entity, nil
 }
 
+func loadCtxForConfluencePathOrURL(o *Opts, pathOrURL string) (*ctx, error) {
+	if !isAbsoluteURL(pathOrURL) {
+		return loadCtx(o, "")
+	}
+	p, _ := config.ResolvePath(o.Config)
+	cfg, err := config.Load(p)
+	if err != nil {
+		return nil, err
+	}
+	res, err := instance.Resolve(cfg.Confluence, o.Instance, pathOrURL, "confluence")
+	if err != nil {
+		if err.Error() == "instance_required" {
+			return nil, errors.New("instance_url_mismatch")
+		}
+		return nil, err
+	}
+	cl, err := httpclient.New(res.Instance)
+	if err != nil {
+		return nil, err
+	}
+	return &ctx{cfg: cfg, inst: res.Instance, client: cl}, nil
+}
+
 func lookupPageIDByTitleCtx(cx *ctx, space, title string) (string, error) {
 	resp, err := cx.client.Do(httpclient.Request{Method: "GET", Path: "content", Query: map[string]string{"spaceKey": space, "title": title, "type": "page"}})
 	if err != nil {
@@ -409,12 +431,9 @@ func apiCmd(o *Opts) *cobra.Command {
 				return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
 			}
 			p := args[0]
-			if strings.HasPrefix(p, "http") {
-				cx, _ := loadCtx(o, "")
-				if !strings.HasPrefix(strings.TrimRight(p, "/"), strings.TrimRight(cx.inst.BaseURL, "/")) {
-					return print(cmd, o, output.Failure("instance_url_mismatch", "off-instance url", "", 400))
-				}
-				p = strings.TrimPrefix(p, cx.inst.BaseURL)
+			cx, err := loadCtxForConfluencePathOrURL(o, p)
+			if err != nil {
+				return print(cmd, o, envelopeError(err, "config_error"))
 			}
 			b, err := readBody(cmd)
 			if err != nil {
@@ -431,7 +450,7 @@ func apiCmd(o *Opts) *cobra.Command {
 			if b != "" {
 				_ = json.Unmarshal([]byte(b), &bj)
 			}
-			return do(o, cmd, method, p, q, bj)
+			return doWithCtx(o, cmd, cx, method, p, q, bj)
 		}}
 		cmd.Flags().StringSlice("query", nil, "")
 		cmd.Flags().String("body", "", "")

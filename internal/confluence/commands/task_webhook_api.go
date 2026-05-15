@@ -13,6 +13,9 @@ func webhookCmd(o *Opts) *cobra.Command {
 		n, _ := cmd.Flags().GetString("name")
 		u, _ := cmd.Flags().GetString("url")
 		e, _ := cmd.Flags().GetStringSlice("event")
+		if n == "" || u == "" || len(e) == 0 {
+			return print(cmd, o, output.Failure("invalid_args", "--name, --url, and --event required", "", 400))
+		}
 		return do(o, cmd, "POST", "webhooks", nil, map[string]any{"name": n, "url": u, "events": e})
 	}})
 	c.Commands()[2].Flags().String("name", "", "")

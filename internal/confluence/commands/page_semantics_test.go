@@ -205,6 +205,82 @@ func TestPageGetByTitleRequiredArgs(t *testing.T) {
 	}
 }
 
+func TestConfluenceRequiredArgsDoNotHitServer(t *testing.T) {
+	p := cfg(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("invalid args should not hit server: %s %s", r.Method, r.URL.Path)
+	})
+	cases := [][]string{
+		{"page", "label", "delete", "--id", "123", "--yes"},
+		{"page", "property", "get", "--id", "123"},
+		{"page", "property", "delete", "--id", "123", "--yes"},
+		{"page", "property", "delete", "--id", "123", "--key", "status"},
+		{"page", "restore", "--id", "123"},
+		{"page", "restore", "--id", "123", "--version", "0"},
+		{"page", "move", "--id", "123"},
+		{"page", "restriction", "add", "--id", "123", "--operation", "delete", "--user", "alice"},
+		{"page", "restriction", "add", "--id", "123", "--operation", "read"},
+		{"page", "restriction", "delete", "--id", "123", "--operation", "delete", "--yes"},
+		{"page", "restriction", "delete", "--id", "123", "--operation", "read"},
+		{"webhook", "create", "--url", "https://example.test", "--event", "page_created"},
+		{"webhook", "create", "--name", "hook", "--event", "page_created"},
+		{"webhook", "create", "--name", "hook", "--url", "https://example.test"},
+	}
+	for _, args := range cases {
+		assertConfluenceCode(t, p, args, "invalid_args")
+	}
+}
+
+func TestConfluenceRawAPIAbsoluteURLRouting(t *testing.T) {
+	var hitsA, hitsB int
+	var authA string
+	a := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hitsA++
+		authA = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true,"instance":"a"}`))
+	}))
+	defer a.Close()
+	b := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hitsB++
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true,"instance":"b"}`))
+	}))
+	defer b.Close()
+	v := true
+	p := writeConfluenceConfig(t, config.ProductConfig{Instances: []config.InstanceConfig{
+		{Name: "a", BaseURL: a.URL, RESTPath: "/rest/api", VerifySSL: &v, Auth: config.AuthConfig{Type: "bearer_token", Token: "token-a"}},
+		{Name: "b", BaseURL: b.URL, RESTPath: "/rest/api", VerifySSL: &v, Auth: config.AuthConfig{Type: "bearer_token", Token: "token-b"}},
+	}})
+	out := runWithArgs(t, NewRoot(), "--config", p, "--json", "api", "get", a.URL+"/rest/api/user/current")
+	if out["ok"] != true || hitsA != 1 || authA == "" {
+		t.Fatalf("absolute URL did not route to instance a: out=%#v hitsA=%d authA=%q", out, hitsA, authA)
+	}
+	assertConfluenceCode(t, p, []string{"--instance", "a", "api", "get", b.URL + "/rest/api/content"}, "instance_url_mismatch")
+	if hitsB != 0 {
+		t.Fatalf("mismatched explicit instance should not hit instance b, hits=%d", hitsB)
+	}
+	assertConfluenceCode(t, p, []string{"api", "get", "https://evil.example/rest/api/content"}, "instance_url_mismatch")
+
+	empty := writeConfluenceConfig(t, config.ProductConfig{})
+	assertConfluenceCode(t, empty, []string{"api", "get", "https://evil.example/rest/api/content"}, "no_instance_configured")
+}
+
+func TestConfluencePageLookupStableHTTPErrorCodes(t *testing.T) {
+	for status, code := range map[int]string{
+		http.StatusUnauthorized: "auth_failed",
+		http.StatusForbidden:    "permission_denied",
+		http.StatusNotFound:     "not_found",
+	} {
+		t.Run(code, func(t *testing.T) {
+			p := cfg(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(status)
+				_, _ = w.Write([]byte(`{"message":"failed"}`))
+			})
+			assertConfluenceCode(t, p, []string{"page", "get", "--url", confluenceBaseURLFromConfig(t, p) + "/display/ENG/Private"}, code)
+		})
+	}
+}
+
 func runWithArgs(t *testing.T, c *cobra.Command, args ...string) map[string]any {
 	t.Helper()
 	var b bytes.Buffer

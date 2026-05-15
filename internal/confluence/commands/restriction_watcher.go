@@ -35,7 +35,10 @@ func restrictionCmd(o *Opts) *cobra.Command {
 		if o.DryRun {
 			return do(o, cmd, "GET", "content/"+args[0]+"/notification/child-created", nil, nil)
 		}
-		cx, _ := loadCtx(o, "")
+		cx, err := loadCtx(o, "")
+		if err != nil {
+			return print(cmd, o, envelopeError(err, "config_error"))
+		}
 		resp, err := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + args[0] + "/notification/child-created"})
 		if err != nil {
 			if strings.Contains(err.Error(), "not_found") {

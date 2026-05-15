@@ -47,7 +47,10 @@ func contentCmd(o *Opts) *cobra.Command {
 	c.Commands()[2].Flags().Bool("body-stdin", false, "")
 	c.Commands()[2].Flags().String("body-format", "storage", "")
 	c.AddCommand(&cobra.Command{Use: "update <content-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		cx, _ := loadCtx(o, "")
+		cx, err := loadCtx(o, "")
+		if err != nil {
+			return print(cmd, o, envelopeError(err, "config_error"))
+		}
 		v, _ := cmd.Flags().GetInt("version")
 		if v == 0 && !o.DryRun {
 			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + args[0]})

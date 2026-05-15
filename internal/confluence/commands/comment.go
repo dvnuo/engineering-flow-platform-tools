@@ -16,7 +16,10 @@ func commentCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
 		}
-		cx, _ := loadCtx(o, "")
+		cx, err := loadCtx(o, "")
+		if err != nil {
+			return print(cmd, o, envelopeError(err, "config_error"))
+		}
 		v, _ := cmd.Flags().GetInt("version")
 		if v == 0 && !o.DryRun {
 			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + args[0]})

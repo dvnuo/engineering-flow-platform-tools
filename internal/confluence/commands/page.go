@@ -223,6 +223,9 @@ func pageCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
 		}
 		n, _ := cmd.Flags().GetString("label")
+		if n == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--label required", "", 400))
+		}
 		return doPageContent(o, cmd, "DELETE", "/label", map[string]string{"name": n}, nil)
 	}}
 	labelDelete.Flags().String("label", "", "")
@@ -269,6 +272,9 @@ func pageCmd(o *Opts) *cobra.Command {
 	}})
 	prop.AddCommand(&cobra.Command{Use: "get", RunE: func(cmd *cobra.Command, args []string) error {
 		key := mustS(cmd, "key")
+		if key == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--key required", "", 400))
+		}
 		return doPageContent(o, cmd, "GET", "/property/"+key, nil, nil)
 	}})
 	prop.Commands()[1].Flags().String("key", "", "")
@@ -291,6 +297,9 @@ func pageCmd(o *Opts) *cobra.Command {
 		key := mustS(cmd, "key")
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
+		}
+		if key == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--key required", "", 400))
 		}
 		return doPageContent(o, cmd, "DELETE", "/property/"+key, nil, nil)
 	}})
@@ -331,12 +340,18 @@ func pageCmd(o *Opts) *cobra.Command {
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "restore", RunE: func(cmd *cobra.Command, args []string) error {
 		v, _ := cmd.Flags().GetInt("version")
+		if v <= 0 {
+			return print(cmd, o, output.Failure("invalid_args", "--version must be greater than 0", "", 400))
+		}
 		return doPageContent(o, cmd, "POST", "/version", nil, map[string]any{"operationKey": "restore", "params": map[string]any{"versionNumber": v}})
 	}})
 	c.Commands()[len(c.Commands())-1].Flags().Int("version", 0, "")
 	addPageIDURLFlags(c.Commands()[len(c.Commands())-1])
 	c.AddCommand(&cobra.Command{Use: "move", RunE: func(cmd *cobra.Command, args []string) error {
 		pid, _ := cmd.Flags().GetString("parent-id")
+		if pid == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--parent-id required", "", 400))
+		}
 		pos, _ := cmd.Flags().GetString("position")
 		return doPagePath(o, cmd, "PUT", func(id string) string { return "content/" + id + "/move/" + pos + "/" + pid }, nil, nil)
 	}})
@@ -356,14 +371,29 @@ func pageCmd(o *Opts) *cobra.Command {
 		return doPageContent(o, cmd, "GET", "/restriction/byOperation", nil, nil)
 	}})
 	restriction.AddCommand(&cobra.Command{Use: "add", RunE: func(cmd *cobra.Command, args []string) error {
-		return doPageContent(o, cmd, "POST", "/restriction/byOperation", nil, map[string]any{"operation": mustS(cmd, "operation")})
+		op := mustS(cmd, "operation")
+		if !validRestrictionOperation(op) {
+			return print(cmd, o, output.Failure("invalid_args", "--operation must be read or update", "", 400))
+		}
+		users, _ := cmd.Flags().GetStringSlice("user")
+		groups, _ := cmd.Flags().GetStringSlice("group")
+		if len(users) == 0 && len(groups) == 0 {
+			return print(cmd, o, output.Failure("invalid_args", "--user or --group required", "", 400))
+		}
+		return doPageContent(o, cmd, "POST", "/restriction/byOperation", nil, map[string]any{"operation": op, "restrictions": map[string]any{"user": users, "group": groups}})
 	}})
 	restriction.Commands()[1].Flags().String("operation", "read", "")
+	restriction.Commands()[1].Flags().StringSlice("user", nil, "")
+	restriction.Commands()[1].Flags().StringSlice("group", nil, "")
 	restriction.AddCommand(&cobra.Command{Use: "delete", RunE: func(cmd *cobra.Command, args []string) error {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
 		}
-		return doPageContent(o, cmd, "DELETE", "/restriction/byOperation/"+mustS(cmd, "operation"), nil, nil)
+		op := mustS(cmd, "operation")
+		if !validRestrictionOperation(op) {
+			return print(cmd, o, output.Failure("invalid_args", "--operation must be read or update", "", 400))
+		}
+		return doPageContent(o, cmd, "DELETE", "/restriction/byOperation/"+op, nil, nil)
 	}})
 	restriction.Commands()[2].Flags().String("operation", "read", "")
 	for _, pc := range restriction.Commands() {
@@ -415,6 +445,10 @@ func doPagePath(o *Opts, cmd *cobra.Command, method string, path func(string) st
 	return doWithCtx(o, cmd, ref.Ctx, method, path(ref.ID), q, body)
 }
 
+func validRestrictionOperation(op string) bool {
+	return op == "read" || op == "update"
+}
+
 func printPageIDError(cmd *cobra.Command, o *Opts, err error, message string) error {
 	switch err.Error() {
 	case "instance_url_mismatch":
@@ -423,7 +457,7 @@ func printPageIDError(cmd *cobra.Command, o *Opts, err error, message string) er
 		return print(cmd, o, output.Failure("not_found", "page not found", "Check the page URL or title.", 404))
 	case "server_error":
 		return print(cmd, o, output.Failure("server_error", "page lookup failed", "", 500))
-	case "no_instance_configured", "instance_required", "ambiguous_instance":
+	case "config_missing", "no_instance_configured", "instance_required", "ambiguous_instance", "auth_failed", "permission_denied", "network_error", "not_supported":
 		return print(cmd, o, output.Failure(err.Error(), err.Error(), "", 400))
 	default:
 		return print(cmd, o, output.Failure("invalid_args", message, "", 400))

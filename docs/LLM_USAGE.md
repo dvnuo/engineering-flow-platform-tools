@@ -23,3 +23,44 @@
 | `invalid_args` | Run `schema <command> --json`, then provide the required args/flags. |
 | `network_error` | Retry after checking DNS, proxy, TLS, and connectivity. |
 | `server_error` | Retry if transient; otherwise inspect the response and server logs. |
+
+## Recommended Workflow
+
+1. Discover commands with `jira commands --json` or `confluence commands --json`.
+2. Inspect the exact command schema before constructing arguments.
+3. Prefer full Jira issue URLs or Confluence page URLs when the user provides them.
+4. Add `--instance` when the URL is ambiguous across configured instances.
+5. Use `--dry-run` for create, update, add, set, upload, move, restore, watch, vote, assign, and transition commands.
+6. Add `--yes` only after the user has explicitly confirmed a destructive operation.
+7. Parse the JSON envelope and branch on `ok`.
+8. On failure, branch on `error.code` before retrying.
+
+## Schema Checks
+
+Use schema output to avoid guessing required flags:
+
+```bash
+jira schema issue.create --json
+jira schema issue.transition --json
+confluence schema page.create --json
+confluence schema page.update --json
+```
+
+The `required` field lists mandatory arguments and flags. The `flags` field includes type and description metadata suitable for tool planning.
+
+## URL Routing
+
+Jira issue URLs and Confluence page URLs can select an instance automatically. If a URL belongs to a configured instance, omit `--instance` unless multiple instances share the same base URL.
+
+If the user also supplies `--instance`, the URL must belong to that instance. Otherwise the command returns `instance_url_mismatch` and must not send credentials to the URL.
+
+## Output Rules
+
+All automation should request JSON:
+
+```bash
+jira issue get PROJ-123 --json
+confluence page get --id 123 --json
+```
+
+Successful responses contain `ok=true` and `data`. Failed responses contain `ok=false`, `error.code`, and `error.message`; many failures also include `error.hint`.

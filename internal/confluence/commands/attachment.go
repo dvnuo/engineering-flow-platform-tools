@@ -19,7 +19,10 @@ func attachmentCmd(o *Opts) *cobra.Command {
 		return do(o, cmd, "GET", "content/"+args[0], nil, nil)
 	}})
 	download := &cobra.Command{Use: "download <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		cx, _ := loadCtx(o, "")
+		cx, err := loadCtx(o, "")
+		if err != nil {
+			return print(cmd, o, envelopeError(err, "config_error"))
+		}
 		if o.DryRun {
 			return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"dry_run": true}))
 		}

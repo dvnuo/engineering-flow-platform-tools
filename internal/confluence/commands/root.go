@@ -251,7 +251,7 @@ func pageID(cmd *cobra.Command, o *Opts) (string, error) {
 	}
 	if pu.IsAbs() && o.Instance != "" {
 		cx, e := loadCtx(o, "")
-		if e == nil && !strings.HasPrefix(strings.TrimRight(u, "/"), strings.TrimRight(cx.inst.BaseURL, "/")) {
+		if e == nil && !urlBelongsToBase(u, cx.inst.BaseURL) {
 			return "", fmt.Errorf("instance_url_mismatch")
 		}
 	}
@@ -266,6 +266,26 @@ func pageID(cmd *cobra.Command, o *Opts) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("invalid_args")
+}
+
+func urlBelongsToBase(raw, base string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	b, err := url.Parse(base)
+	if err != nil {
+		return false
+	}
+	if !strings.EqualFold(u.Scheme, b.Scheme) || !strings.EqualFold(u.Host, b.Host) {
+		return false
+	}
+	basePath := "/" + strings.Trim(strings.ToLower(b.Path), "/")
+	rawPath := "/" + strings.Trim(strings.ToLower(u.Path), "/")
+	if basePath == "/" {
+		return true
+	}
+	return rawPath == basePath || strings.HasPrefix(rawPath, strings.TrimRight(basePath, "/")+"/")
 }
 
 func apiCmd(o *Opts) *cobra.Command {

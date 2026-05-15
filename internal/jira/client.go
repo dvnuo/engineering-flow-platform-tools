@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
+	"regexp"
 	"strings"
 
 	"engineering-flow-platform-tools/internal/config"
@@ -41,8 +43,18 @@ func ReadJSON(resp io.Reader) (map[string]interface{}, error) {
 }
 
 func IssueKey(input string) string {
-	if strings.HasPrefix(input, "http") {
-		parts := strings.Split(strings.TrimRight(input, "/"), "/")
+	if strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://") {
+		u, err := url.Parse(input)
+		if err != nil {
+			return input
+		}
+		for _, pattern := range []string{`/browse/([A-Z][A-Z0-9]+-\d+)`, `/rest/api/\d+/issue/([A-Z][A-Z0-9]+-\d+)`} {
+			re := regexp.MustCompile(pattern)
+			if m := re.FindStringSubmatch(u.Path); len(m) == 2 {
+				return m[1]
+			}
+		}
+		parts := strings.Split(strings.TrimRight(u.Path, "/"), "/")
 		return parts[len(parts)-1]
 	}
 	return input

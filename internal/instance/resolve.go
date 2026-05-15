@@ -54,16 +54,11 @@ func Resolve(product config.ProductConfig, explicit, rawURL, productName string)
 }
 
 func matchByURL(instances []config.InstanceConfig, raw string) []config.InstanceConfig {
-	u, err := url.Parse(raw)
-	if err != nil {
-		return nil
-	}
-	n := normalize(u.Scheme + "://" + u.Host + u.Path)
 	long := 0
 	var out []config.InstanceConfig
 	for _, in := range instances {
-		b := normalize(in.BaseURL)
-		if strings.HasPrefix(n, b) {
+		if urlBelongsToBase(raw, in.BaseURL) {
+			b := normalize(in.BaseURL)
 			if len(b) > long {
 				long = len(b)
 				out = []config.InstanceConfig{in}
@@ -83,11 +78,27 @@ func isHTTP(raw string) bool {
 }
 
 func basePrefixMatch(raw, base string) bool {
+	return urlBelongsToBase(raw, base)
+}
+
+func urlBelongsToBase(raw, base string) bool {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return false
 	}
-	return strings.HasPrefix(normalize(u.Scheme+"://"+u.Host+u.Path), normalize(base))
+	b, err := url.Parse(base)
+	if err != nil {
+		return false
+	}
+	if !strings.EqualFold(u.Scheme, b.Scheme) || !strings.EqualFold(u.Host, b.Host) {
+		return false
+	}
+	basePath := "/" + strings.Trim(strings.ToLower(b.Path), "/")
+	rawPath := "/" + strings.Trim(strings.ToLower(u.Path), "/")
+	if basePath == "/" {
+		return true
+	}
+	return rawPath == basePath || strings.HasPrefix(rawPath, strings.TrimRight(basePath, "/")+"/")
 }
 
 func parseEntity(raw, product string) ResolvedEntity {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -23,6 +24,106 @@ func setup(t *testing.T, h http.HandlerFunc) (string, *int) {
 	p := filepath.Join(t.TempDir(), "cfg.json")
 	_ = config.Save(p, cfg)
 	return p, &n
+}
+
+func TestIssueCreateJSONBodyOverrideAndSearchNumbers(t *testing.T) {
+	hits := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		if r.URL.Path == "/rest/api/2/search" {
+			var body map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if body["maxResults"] != float64(20) || body["startAt"] != float64(5) {
+				t.Fatalf("search numbers not numeric: %#v", body)
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"ok":true}`))
+	})
+	pre := hits
+	if !run(t, cfg, "--dry-run", "issue", "create", "--json-body", `{"fields":{"summary":"x"}}`)["ok"].(bool) {
+		t.Fatal("json-body override should not require project/type/summary")
+	}
+	if hits != pre {
+		t.Fatal("dry-run hit server")
+	}
+	bodyFile := filepath.Join(t.TempDir(), "issue.json")
+	if err := os.WriteFile(bodyFile, []byte(`{"fields":{"summary":"x"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if !run(t, cfg, "--dry-run", "issue", "create", "--json-body-file", bodyFile)["ok"].(bool) {
+		t.Fatal("json-body-file override should not require project/type/summary")
+	}
+	if run(t, cfg, "issue", "create")["ok"].(bool) {
+		t.Fatal("missing generated fields should fail")
+	}
+	if !run(t, cfg, "issue", "search", "--jql", "project = PROJ", "--limit", "20", "--start", "5")["ok"].(bool) {
+		t.Fatal("search failed")
+	}
+	if run(t, cfg, "issue", "search", "--jql", "project = PROJ", "--limit", "abc")["ok"].(bool) {
+		t.Fatal("bad limit should fail")
+	}
+	if run(t, cfg, "issue", "search", "--jql", "project = PROJ", "--start", "abc")["ok"].(bool) {
+		t.Fatal("bad start should fail")
+	}
+}
+
+func TestIssueTransitionCommentFieldAndSafety(t *testing.T) {
+	var gotPost map[string]any
+	gets := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/transitions") {
+			gets++
+			w.Write([]byte(`{"transitions":[{"id":"31","name":"Done"}]}`))
+			return
+		}
+		if r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/transitions") {
+			b, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(b, &gotPost)
+			w.Write([]byte(`{}`))
+			return
+		}
+		w.Write([]byte(`{"ok":true}`))
+	})
+	if !run(t, cfg, "issue", "transition", "PROJ-1", "--to", "done", "--comment", "Completed by agent", "--field", `resolution={"name":"Done"}`)["ok"].(bool) {
+		t.Fatal("transition by name failed")
+	}
+	if gets != 1 {
+		t.Fatalf("expected one transitions GET, got %d", gets)
+	}
+	fields := gotPost["fields"].(map[string]any)
+	if fields["resolution"].(map[string]any)["name"] != "Done" {
+		t.Fatalf("missing field: %#v", gotPost)
+	}
+	update := gotPost["update"].(map[string]any)
+	if len(update["comment"].([]any)) != 1 {
+		t.Fatalf("missing comment: %#v", gotPost)
+	}
+	gets = 0
+	if !run(t, cfg, "issue", "transition", "PROJ-1", "--transition-id", "31")["ok"].(bool) {
+		t.Fatal("transition by id failed")
+	}
+	if gets != 0 {
+		t.Fatal("transition-id should not GET transitions")
+	}
+	if run(t, cfg, "issue", "transition", "PROJ-1")["ok"].(bool) {
+		t.Fatal("missing transition selector should fail")
+	}
+	badCfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"transitions":"bad"}`))
+	})
+	if run(t, badCfg, "issue", "transition", "PROJ-1", "--to", "Done")["ok"].(bool) {
+		t.Fatal("bad transitions shape should fail")
+	}
+	weirdCfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"transitions":["bad"]}`))
+	})
+	if run(t, weirdCfg, "issue", "transition", "PROJ-1", "--to", "Done")["ok"].(bool) {
+		t.Fatal("non-object transition should fail without panic")
+	}
 }
 func run(t *testing.T, cfg string, args ...string) map[string]interface{} {
 	cmd := NewRoot()

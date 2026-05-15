@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"engineering-flow-platform-tools/internal/catalog"
@@ -27,6 +28,7 @@ type Opts struct {
 }
 
 func NewRoot() *cobra.Command {
+	cobra.EnableCommandSorting = false
 	o := &Opts{}
 	cmd := &cobra.Command{Use: "jira", SilenceErrors: true, SilenceUsage: true}
 	cmd.PersistentFlags().StringVar(&o.Instance, "instance", "", "")
@@ -415,10 +417,18 @@ func issueCmd(o *Opts) *cobra.Command {
 		}
 		body := map[string]interface{}{"jql": jql}
 		if limit, _ := cmd.Flags().GetString("limit"); limit != "" {
-			body["maxResults"] = limit
+			n, err := strconv.Atoi(limit)
+			if err != nil {
+				return print(cmd, o, output.Failure("invalid_args", "--limit must be an integer", "", 400))
+			}
+			body["maxResults"] = n
 		}
 		if start, _ := cmd.Flags().GetString("start"); start != "" {
-			body["startAt"] = start
+			n, err := strconv.Atoi(start)
+			if err != nil {
+				return print(cmd, o, output.Failure("invalid_args", "--start must be an integer", "", 400))
+			}
+			body["startAt"] = n
 		}
 		if fields, _ := cmd.Flags().GetStringArray("fields"); len(fields) > 0 {
 			body["fields"] = fields
@@ -439,13 +449,6 @@ func issueCmd(o *Opts) *cobra.Command {
 	c.Commands()[1].Flags().String("start", "", "")
 	c.Commands()[1].Flags().StringArray("fields", nil, "")
 	c.AddCommand(&cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
-		project, _ := cmd.Flags().GetString("project")
-		typ, _ := cmd.Flags().GetString("type")
-		summary, _ := cmd.Flags().GetString("summary")
-		desc, _ := cmd.Flags().GetString("description")
-		if project == "" || typ == "" || summary == "" {
-			return print(cmd, o, output.Failure("invalid_args", "--project, --type, and --summary required", "", 400))
-		}
 		if raw := mustS(cmd, "json-body"); raw != "" {
 			var override map[string]interface{}
 			if err := json.Unmarshal([]byte(raw), &override); err != nil {
@@ -463,6 +466,13 @@ func issueCmd(o *Opts) *cobra.Command {
 				return print(cmd, o, output.Failure("invalid_args", "invalid --json-body-file", "", 400))
 			}
 			return issueCreateWithBody(o, cmd, override)
+		}
+		project, _ := cmd.Flags().GetString("project")
+		typ, _ := cmd.Flags().GetString("type")
+		summary, _ := cmd.Flags().GetString("summary")
+		desc, _ := cmd.Flags().GetString("description")
+		if project == "" || typ == "" || summary == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--project, --type, and --summary required", "", 400))
 		}
 		fields, _ := cmd.Flags().GetStringArray("field")
 		body := map[string]interface{}{"fields": map[string]interface{}{"project": map[string]string{"key": project}, "issuetype": map[string]string{"name": typ}, "summary": summary, "description": desc}}
@@ -489,6 +499,9 @@ func issueCmd(o *Opts) *cobra.Command {
 	c.AddCommand(&cobra.Command{Use: "transition <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		to, _ := cmd.Flags().GetString("to")
 		tid, _ := cmd.Flags().GetString("transition-id")
+		if tid == "" && to == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--transition-id or --to required", "Use jira issue transitions <issue> --json to inspect available transitions.", 400))
+		}
 		cfg, err := loadCfg(o)
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
@@ -505,9 +518,15 @@ func issueCmd(o *Opts) *cobra.Command {
 			}
 			defer resp.Body.Close()
 			d, _ := jira.ReadJSON(resp.Body)
-			arr, _ := d["transitions"].([]interface{})
+			arr, ok := d["transitions"].([]interface{})
+			if !ok {
+				return print(cmd, o, output.Failure("server_error", "transitions response missing array", "Use jira issue transitions <issue> --json to inspect available transitions.", 500))
+			}
 			for _, it := range arr {
-				m := it.(map[string]interface{})
+				m, ok := it.(map[string]interface{})
+				if !ok {
+					continue
+				}
 				if strings.EqualFold(fmt.Sprint(m["name"]), to) {
 					tid = fmt.Sprint(m["id"])
 					break
@@ -518,6 +537,12 @@ func issueCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Failure("invalid_args", "transition not found", "Use jira issue transitions to inspect available transitions.", 400))
 		}
 		body := map[string]interface{}{"transition": map[string]string{"id": tid}}
+		if fields := parseKeyValueFields(mustStringArray(cmd, "field")); len(fields) > 0 {
+			body["fields"] = fields
+		}
+		if comment := mustS(cmd, "comment"); comment != "" {
+			body["update"] = map[string]interface{}{"comment": []map[string]interface{}{{"add": map[string]string{"body": comment}}}}
+		}
 		if o.DryRun {
 			return print(cmd, o, output.Success(ctx.Instance, jira.DryRunData("POST", "issue/"+issue+"/transitions", nil, body)))
 		}
@@ -530,6 +555,8 @@ func issueCmd(o *Opts) *cobra.Command {
 	}})
 	c.Commands()[3].Flags().String("to", "", "")
 	c.Commands()[3].Flags().String("transition-id", "", "")
+	c.Commands()[3].Flags().String("comment", "", "")
+	c.Commands()[3].Flags().StringArray("field", nil, "")
 	c.AddCommand(&cobra.Command{Use: "delete <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		if err := jira.RequireYes(o.Yes); err != nil {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
@@ -776,6 +803,27 @@ func rawAPICmd(o *Opts) *cobra.Command {
 }
 func mustS(cmd *cobra.Command, n string) string { v, _ := cmd.Flags().GetString(n); return v }
 func mustB(cmd *cobra.Command, n string) bool   { v, _ := cmd.Flags().GetBool(n); return v }
+func mustStringArray(cmd *cobra.Command, n string) []string {
+	v, _ := cmd.Flags().GetStringArray(n)
+	return v
+}
+
+func parseKeyValueFields(values []string) map[string]interface{} {
+	out := map[string]interface{}{}
+	for _, f := range values {
+		kv := strings.SplitN(f, "=", 2)
+		if len(kv) != 2 || strings.TrimSpace(kv[0]) == "" {
+			continue
+		}
+		var any interface{}
+		if json.Unmarshal([]byte(kv[1]), &any) == nil {
+			out[kv[0]] = any
+		} else {
+			out[kv[0]] = kv[1]
+		}
+	}
+	return out
+}
 
 func issueCreateWithBody(o *Opts, cmd *cobra.Command, body map[string]interface{}) error {
 	cfg, err := loadCfg(o)

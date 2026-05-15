@@ -18,10 +18,7 @@ func pageCmd(o *Opts) *cobra.Command {
 	get := &cobra.Command{Use: "get", RunE: func(cmd *cobra.Command, args []string) error {
 		id, err := pageID(cmd, o)
 		if err != nil {
-			if err.Error() == "instance_url_mismatch" {
-				return print(cmd, o, output.Failure("instance_url_mismatch", "off-instance url", "", 400))
-			}
-			return print(cmd, o, output.Failure("invalid_args", "exactly one of --id/--url", "", 400))
+			return printPageIDError(cmd, o, err, "exactly one of --id/--url")
 		}
 		q := map[string]string{}
 		if expand, _ := cmd.Flags().GetString("expand"); expand != "" {
@@ -52,7 +49,10 @@ func pageCmd(o *Opts) *cobra.Command {
 	cr := &cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
 		sp, _ := cmd.Flags().GetString("space")
 		ti, _ := cmd.Flags().GetString("title")
-		b := readBody(cmd)
+		b, err := readBody(cmd)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
+		}
 		if sp == "" || ti == "" || b == "" {
 			return print(cmd, o, output.Failure("invalid_args", "missing required args", "", 400))
 		}
@@ -73,7 +73,7 @@ func pageCmd(o *Opts) *cobra.Command {
 	upd := &cobra.Command{Use: "update", RunE: func(cmd *cobra.Command, args []string) error {
 		id, err := pageID(cmd, o)
 		if err != nil {
-			return print(cmd, o, output.Failure("invalid_args", "exactly one of --id/--url", "", 400))
+			return printPageIDError(cmd, o, err, "exactly one of --id/--url")
 		}
 		v, _ := cmd.Flags().GetInt("version")
 		cx, _ := loadCtx(o, "")
@@ -102,7 +102,11 @@ func pageCmd(o *Opts) *cobra.Command {
 		if t, _ := cmd.Flags().GetString("title"); t != "" {
 			payload["title"] = t
 		}
-		if b := readBody(cmd); b != "" {
+		b, err := readBody(cmd)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
+		}
+		if b != "" {
 			payload["body"] = confluenceBody(cmd, b)
 		}
 		return do(o, cmd, "PUT", "content/"+id, nil, payload)
@@ -123,7 +127,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 		id, err := pageID(cmd, o)
 		if err != nil {
-			return print(cmd, o, output.Failure("invalid_args", "exactly one of --id/--url", "", 400))
+			return printPageIDError(cmd, o, err, "exactly one of --id/--url")
 		}
 		return do(o, cmd, "DELETE", "content/"+id, nil, nil)
 	}}
@@ -256,7 +260,10 @@ func pageCmd(o *Opts) *cobra.Command {
 		if e != nil {
 			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
 		}
-		b := readBody(cmd)
+		b, err := readBody(cmd)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
+		}
 		return do(o, cmd, "POST", "content/"+id+"/child/comment", nil, map[string]any{"type": "comment", "body": confluenceBody(cmd, b)})
 	}}
 	commentAdd.Flags().String("body", "", "")
@@ -295,7 +302,11 @@ func pageCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, output.Failure("invalid_args", "--id/--url required", "", 400))
 		}
-		return do(o, cmd, "PUT", "content/"+id+"/property/"+key, nil, map[string]any{"key": key, "value": readBody(cmd)})
+		b, err := readBody(cmd)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
+		}
+		return do(o, cmd, "PUT", "content/"+id+"/property/"+key, nil, map[string]any{"key": key, "value": b})
 	}})
 	prop.Commands()[2].Flags().String("key", "", "")
 	prop.Commands()[2].Flags().String("body", "", "")
@@ -452,6 +463,21 @@ func pageCmd(o *Opts) *cobra.Command {
 		}
 	}
 	return c
+}
+
+func printPageIDError(cmd *cobra.Command, o *Opts, err error, message string) error {
+	switch err.Error() {
+	case "instance_url_mismatch":
+		return print(cmd, o, output.Failure("instance_url_mismatch", "off-instance url", "", 400))
+	case "not_found":
+		return print(cmd, o, output.Failure("not_found", "page not found", "Check the page URL or title.", 404))
+	case "server_error":
+		return print(cmd, o, output.Failure("server_error", "page lookup failed", "", 500))
+	case "no_instance_configured", "instance_required", "ambiguous_instance":
+		return print(cmd, o, output.Failure(err.Error(), err.Error(), "", 400))
+	default:
+		return print(cmd, o, output.Failure("invalid_args", message, "", 400))
+	}
 }
 
 func htmlToMarkdown(src string) string {

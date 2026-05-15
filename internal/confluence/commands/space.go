@@ -55,7 +55,11 @@ func spaceCmd(o *Opts) *cobra.Command {
 		return do(o, cmd, "GET", "space/"+args[0]+"/property/"+args[1], nil, nil)
 	}})
 	sp.AddCommand(&cobra.Command{Use: "set <space-key> <key>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
-		return do(o, cmd, "PUT", "space/"+args[0]+"/property/"+args[1], nil, map[string]any{"key": args[1], "value": readBody(cmd)})
+		b, err := readBody(cmd)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
+		}
+		return do(o, cmd, "PUT", "space/"+args[0]+"/property/"+args[1], nil, map[string]any{"key": args[1], "value": b})
 	}})
 	sp.Commands()[2].Flags().String("body", "", "")
 	sp.Commands()[2].Flags().String("body-file", "", "")

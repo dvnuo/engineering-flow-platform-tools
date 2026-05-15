@@ -63,10 +63,22 @@ func envelopeError(err error, fallbackCode string) output.Envelope {
 	if errors.As(err, &httpErr) {
 		return output.Failure(httpErr.Code, httpErr.Message, httpErr.Hint, httpErr.Status)
 	}
+	if isStableErrorCode(err.Error()) {
+		return output.Failure(err.Error(), err.Error(), "", 400)
+	}
 	if fallbackCode == "" {
 		fallbackCode = "server_error"
 	}
 	return output.Failure(fallbackCode, err.Error(), "", 500)
+}
+
+func isStableErrorCode(code string) bool {
+	switch code {
+	case "config_missing", "no_instance_configured", "instance_required", "ambiguous_instance", "instance_url_mismatch", "invalid_args":
+		return true
+	default:
+		return false
+	}
 }
 
 func authFromFlags(cmd *cobra.Command) (config.AuthConfig, error) {
@@ -138,7 +150,7 @@ func do(o *Opts, cmd *cobra.Command, method, p string, q map[string]string, body
 	}
 	cx, err := loadCtx(o, entity)
 	if err != nil {
-		return print(cmd, o, output.Failure("config_error", err.Error(), "", 400))
+		return print(cmd, o, envelopeError(err, "config_error"))
 	}
 	if o.DryRun {
 		return print(cmd, o, output.Success(cx.inst.Name, map[string]any{"dry_run": true, "method": method, "path": p, "query": q, "body": redactDryRunBody(body)}))
@@ -206,22 +218,28 @@ func helpLLMCmd() *cobra.Command {
 	}}
 }
 
-func readBody(cmd *cobra.Command) string {
+func readBody(cmd *cobra.Command) (string, error) {
 	b, _ := cmd.Flags().GetString("body")
 	if b != "" {
-		return b
+		return b, nil
 	}
 	f, _ := cmd.Flags().GetString("body-file")
 	if f != "" {
-		d, _ := os.ReadFile(f)
-		return string(d)
+		d, err := os.ReadFile(f)
+		if err != nil {
+			return "", fmt.Errorf("failed to read --body-file: %w", err)
+		}
+		return string(d), nil
 	}
 	s, _ := cmd.Flags().GetBool("body-stdin")
 	if s {
-		d, _ := io.ReadAll(cmd.InOrStdin())
-		return string(d)
+		d, err := io.ReadAll(cmd.InOrStdin())
+		if err != nil {
+			return "", fmt.Errorf("failed to read --body-stdin: %w", err)
+		}
+		return string(d), nil
 	}
-	return ""
+	return "", nil
 }
 func bodyFormat(cmd *cobra.Command) string {
 	f, _ := cmd.Flags().GetString("body-format")
@@ -260,12 +278,52 @@ func pageID(cmd *cobra.Command, o *Opts) (string, error) {
 		return pid, nil
 	}
 	seg := strings.Split(strings.Trim(pu.Path, "/"), "/")
+	for i := 0; i+2 < len(seg); i++ {
+		if seg[i] == "display" {
+			space, _ := url.PathUnescape(seg[i+1])
+			title, _ := url.PathUnescape(strings.Join(seg[i+2:], "/"))
+			title = strings.ReplaceAll(title, "+", " ")
+			return lookupPageIDByTitle(o, u, space, title)
+		}
+	}
 	for i := len(seg) - 1; i >= 0; i-- {
 		if _, e := strconv.Atoi(seg[i]); e == nil {
 			return seg[i], nil
 		}
 	}
 	return "", fmt.Errorf("invalid_args")
+}
+
+func lookupPageIDByTitle(o *Opts, entityURL, space, title string) (string, error) {
+	cx, err := loadCtx(o, entityURL)
+	if err != nil {
+		return "", err
+	}
+	resp, err := cx.client.Do(httpclient.Request{Method: "GET", Path: "content", Query: map[string]string{"spaceKey": space, "title": title, "type": "page"}})
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	var out map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return "", fmt.Errorf("server_error")
+	}
+	results, ok := out["results"].([]any)
+	if !ok {
+		return "", fmt.Errorf("server_error")
+	}
+	if len(results) == 0 {
+		return "", fmt.Errorf("not_found")
+	}
+	first, ok := results[0].(map[string]any)
+	if !ok {
+		return "", fmt.Errorf("server_error")
+	}
+	id, ok := first["id"].(string)
+	if !ok || id == "" {
+		return "", fmt.Errorf("server_error")
+	}
+	return id, nil
 }
 
 func urlBelongsToBase(raw, base string) bool {
@@ -305,7 +363,10 @@ func apiCmd(o *Opts) *cobra.Command {
 				}
 				p = strings.TrimPrefix(p, cx.inst.BaseURL)
 			}
-			b := readBody(cmd)
+			b, err := readBody(cmd)
+			if err != nil {
+				return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
+			}
 			q := map[string]string{}
 			for _, kv := range mustStringSlice(cmd, "query") {
 				parts := strings.SplitN(kv, "=", 2)

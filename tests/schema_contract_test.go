@@ -48,7 +48,7 @@ func requireFlags(t *testing.T, data map[string]any, names ...string) {
 
 func TestSchemaConcreteFlags(t *testing.T) {
 	requireFlags(t, schemaData(t, "jira", "issue.create"), "project", "type", "summary")
-	requireFlags(t, schemaData(t, "jira", "issue.transition"), "to", "transition-id")
+	requireFlags(t, schemaData(t, "jira", "issue.transition"), "to", "transition-id", "comment", "field")
 	requireFlags(t, schemaData(t, "jira", "issue.comment.add"), "body", "body-file", "body-stdin")
 	requireFlags(t, schemaData(t, "confluence", "page.create"), "space", "title", "body", "body-file", "body-stdin")
 	requireFlags(t, schemaData(t, "confluence", "page.update"), "id", "url", "version", "body", "body-file", "body-stdin")

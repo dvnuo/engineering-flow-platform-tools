@@ -79,6 +79,61 @@ func TestBulkCreateRequiresConfirmation(t *testing.T) {
 	}
 }
 
+func TestBulkCreateRequiresConfirmMappingForActualCreate(t *testing.T) {
+	postIssue := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" && r.URL.Path == "/rest/api/2/issue" {
+			postIssue++
+			w.Write([]byte(`{"key":"QA-200"}`))
+			return
+		}
+		w.Write([]byte(`{"ok":true}`))
+	})
+	dir := t.TempDir()
+	csvPath := filepath.Join(dir, "testcases.csv")
+	mappingPath := filepath.Join(dir, "mapping.json")
+	if err := os.WriteFile(csvPath, []byte("Title\nLogin\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mapping := `{"version":1,"mode":"jira_csv_bulk_create","jira":{"project":"QA","issuetype":"Test"},"field_mappings":[{"csv_column":"Title","jira_field_id":"summary","jira_field_name":"Summary","required":true,"phase":"create","transform":"string","confidence":0.8}],"required_fields":[{"jira_field_id":"summary","jira_field_name":"Summary"}],"requires_confirmation":[{"csv_column":"Title","jira_field_id":"summary","reason":"mapping confidence below 0.90"}]}`
+	if err := os.WriteFile(mappingPath, []byte(mapping), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out := run(t, cfg, "--yes", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath)
+	if out["ok"].(bool) {
+		t.Fatalf("bulk-create should require --confirm-mapping: %#v", out)
+	}
+	errObj := out["error"].(map[string]interface{})
+	if errObj["code"].(string) != "mapping_requires_confirmation" || !strings.Contains(errObj["message"].(string), "1") {
+		t.Fatalf("wrong mapping confirmation error: %#v", out)
+	}
+	if !strings.Contains(errObj["hint"].(string), "--confirm-mapping") {
+		t.Fatalf("missing confirm hint: %#v", out)
+	}
+	if postIssue != 0 {
+		t.Fatalf("unexpected POST before confirmation: %d", postIssue)
+	}
+
+	dryRun := run(t, cfg, "--dry-run", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath)
+	if !dryRun["ok"].(bool) {
+		t.Fatalf("dry-run should allow unconfirmed mapping: %#v", dryRun)
+	}
+	warnings := dryRun["data"].(map[string]interface{})["warnings"].([]interface{})
+	if len(warnings) == 0 || warnings[0].(map[string]interface{})["code"].(string) != "mapping_requires_confirmation" {
+		t.Fatalf("dry-run did not report mapping warning: %#v", dryRun)
+	}
+
+	out = run(t, cfg, "--yes", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath, "--confirm-mapping")
+	if !out["ok"].(bool) {
+		t.Fatalf("bulk-create with --confirm-mapping failed: %#v", out)
+	}
+	if postIssue != 1 {
+		t.Fatalf("expected one POST after confirmation, got %d", postIssue)
+	}
+}
+
 func TestCreateMetaFromIssueSplitAndLegacyFallback(t *testing.T) {
 	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

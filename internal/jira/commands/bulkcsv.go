@@ -85,6 +85,7 @@ func addBulkCreateFlags(cmd *cobra.Command) {
 	cmd.Flags().Int("sample-rows", 5, "")
 	cmd.Flags().Float64("min-confidence", 0.75, "")
 	cmd.Flags().Bool("include-template-defaults", true, "")
+	cmd.Flags().Bool("confirm-mapping", false, "")
 }
 
 func buildCSVMappingPlan(o *Opts, cmd *cobra.Command) (bulkcsv.MappingPlan, error) {
@@ -231,6 +232,7 @@ func runIssueBulkCreate(o *Opts, cmd *cobra.Command, forceDryRun bool) error {
 		return printBulkCSVError(cmd, o, err)
 	}
 	dryRunResult := bulkcsv.DryRunRows(csvData.Rows, plan, 5)
+	dryRunResult.Warnings = append(dryRunResult.Warnings, mappingReviewWarnings(plan)...)
 	if dryRun {
 		if out := mustS(cmd, "output"); out != "" {
 			if err := bulkcsv.WritePrettyJSON(out, dryRunResult); err != nil {
@@ -238,6 +240,9 @@ func runIssueBulkCreate(o *Opts, cmd *cobra.Command, forceDryRun bool) error {
 			}
 		}
 		return print(cmd, o, output.Success(plan.Jira.Instance, dryRunResult))
+	}
+	if errEnv := enforceMappingConfirmation(plan, mustB(cmd, "confirm-mapping")); errEnv.Error != nil {
+		return print(cmd, o, errEnv)
 	}
 	if dryRunResult.InvalidRows > 0 {
 		return print(cmd, o, output.Failure("invalid_args", "CSV contains invalid rows; run --dry-run to inspect row errors", "No issues were created.", 400))
@@ -256,6 +261,47 @@ func runIssueBulkCreate(o *Opts, cmd *cobra.Command, forceDryRun bool) error {
 		}
 	}
 	return print(cmd, o, output.Success(plan.Jira.Instance, result))
+}
+
+func mappingReviewWarnings(plan bulkcsv.MappingPlan) []bulkcsv.PlanWarning {
+	warnings := []bulkcsv.PlanWarning{}
+	if len(plan.AmbiguousColumns) > 0 {
+		warnings = append(warnings, bulkcsv.PlanWarning{
+			Code:    "mapping_ambiguous",
+			Message: fmt.Sprintf("mapping plan has %d ambiguous columns; actual create requires --confirm-mapping", len(plan.AmbiguousColumns)),
+		})
+	}
+	if len(plan.RequiresConfirmation) > 0 {
+		warnings = append(warnings, bulkcsv.PlanWarning{
+			Code:    "mapping_requires_confirmation",
+			Message: fmt.Sprintf("mapping plan has %d entries requiring confirmation; actual create requires --confirm-mapping", len(plan.RequiresConfirmation)),
+		})
+	}
+	return warnings
+}
+
+func enforceMappingConfirmation(plan bulkcsv.MappingPlan, confirmMapping bool) output.Envelope {
+	hint := "Rerun --dry-run, review mapping-plan.json, then pass --confirm-mapping only after explicit user approval."
+	if n := missingRequiredPlanWarnings(plan); n > 0 {
+		return output.Failure("required_field_missing", fmt.Sprintf("mapping plan has %d missing required fields", n), "Rerun map-csv or edit mapping-plan.json so every required create field is mapped or supplied by a template default.", 400)
+	}
+	if !confirmMapping && len(plan.AmbiguousColumns) > 0 {
+		return output.Failure("mapping_ambiguous", fmt.Sprintf("mapping plan has %d ambiguous columns", len(plan.AmbiguousColumns)), hint, 400)
+	}
+	if !confirmMapping && len(plan.RequiresConfirmation) > 0 {
+		return output.Failure("mapping_requires_confirmation", fmt.Sprintf("mapping plan has %d entries requiring confirmation", len(plan.RequiresConfirmation)), hint, 400)
+	}
+	return output.Envelope{}
+}
+
+func missingRequiredPlanWarnings(plan bulkcsv.MappingPlan) int {
+	n := 0
+	for _, warning := range plan.Warnings {
+		if warning.Code == "required_field_missing" {
+			n++
+		}
+	}
+	return n
 }
 
 func loadOrBuildBulkPlan(o *Opts, cmd *cobra.Command, dryRun bool) (bulkcsv.MappingPlan, error) {

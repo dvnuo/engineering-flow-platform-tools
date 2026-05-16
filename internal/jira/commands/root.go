@@ -803,6 +803,7 @@ func issueCmd(o *Opts) *cobra.Command {
 	c.AddCommand(issueLinkCmd(o))
 	c.AddCommand(issueRemoteLinkCmd(o))
 	c.AddCommand(issuePropertyCmd(o))
+	c.AddCommand(issueMapCSVCmd(o), issueBulkCreateCmd(o), issueBulkValidateCmd(o))
 
 	return c
 }

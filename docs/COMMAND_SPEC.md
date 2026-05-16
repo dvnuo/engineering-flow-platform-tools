@@ -34,6 +34,9 @@
 - jira issue fields <issue-or-url>
 - jira issue createmeta
 - jira issue editmeta <issue-or-url>
+- jira issue map-csv
+- jira issue bulk-create
+- jira issue bulk-validate
 - jira issue watchers <issue-or-url>
 - jira issue watch <issue-or-url>
 - jira issue unwatch <issue-or-url>

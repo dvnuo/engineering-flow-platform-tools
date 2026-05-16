@@ -54,9 +54,30 @@ func BuildCreatePayload(row CSVRow, plan MappingPlan) (map[string]interface{}, [
 	payload := map[string]interface{}{"fields": fields}
 	var post *PostCreateUpdate
 	if len(postFields) > 0 {
-		post = &PostCreateUpdate{RowNumber: row.RowNumber, Fields: postFields}
+		post = &PostCreateUpdate{RowNumber: row.RowNumber, Fields: postFields, Payload: map[string]interface{}{"fields": postFields}}
 	}
 	return payload, errors, post
+}
+
+func BuildPostCreateUpdatePayload(row CSVRow, plan MappingPlan) (map[string]interface{}, []RowError) {
+	fields := map[string]interface{}{}
+	errors := []RowError{}
+	for _, m := range plan.FieldMappings {
+		if m.Phase != PhasePostCreateUpdate {
+			continue
+		}
+		raw := row.Values[m.CSVColumn]
+		if strings.TrimSpace(raw) == "" {
+			continue
+		}
+		value, rowErr := TransformValue(raw, m, row.RowNumber)
+		if rowErr != nil {
+			errors = append(errors, *rowErr)
+			continue
+		}
+		fields[m.JiraFieldID] = value
+	}
+	return fields, errors
 }
 
 func DryRunRows(rows []CSVRow, plan MappingPlan, previewLimit int) DryRunResult {
@@ -77,7 +98,7 @@ func DryRunRows(rows []CSVRow, plan MappingPlan, previewLimit int) DryRunResult 
 		}
 	}
 	if len(result.PlannedPostCreateUpdates) > 0 {
-		result.Warnings = append(result.Warnings, PlanWarning{Code: "post_create_update_not_applied", Message: "post-create update fields are planned but not sent in create payloads"})
+		result.Warnings = append(result.Warnings, PlanWarning{Code: "post_create_updates_planned_not_applied", Message: "post-create update fields are planned but not sent in create payloads"})
 	}
 	return result
 }

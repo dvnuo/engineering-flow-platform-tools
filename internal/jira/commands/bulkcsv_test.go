@@ -134,6 +134,134 @@ func TestBulkCreateRequiresConfirmMappingForActualCreate(t *testing.T) {
 	}
 }
 
+func TestBulkCreateDryRunIncludesPlannedPostCreateUpdatesWithoutPut(t *testing.T) {
+	putIssue := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "PUT" && strings.HasPrefix(r.URL.Path, "/rest/api/2/issue/") {
+			putIssue++
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"ok":true}`))
+	})
+	csvPath, mappingPath := writePostCreateFixture(t)
+	out := run(t, cfg, "--dry-run", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath)
+	if !out["ok"].(bool) {
+		t.Fatalf("dry-run failed: %#v", out)
+	}
+	if putIssue != 0 {
+		t.Fatalf("dry-run called PUT %d times", putIssue)
+	}
+	data := out["data"].(map[string]interface{})
+	planned := data["planned_post_create_updates"].([]interface{})
+	if len(planned) != 1 {
+		t.Fatalf("planned updates = %#v", data)
+	}
+	payload := planned[0].(map[string]interface{})["payload"].(map[string]interface{})
+	fields := payload["fields"].(map[string]interface{})
+	if fields["customfield_20000"].(map[string]interface{})["name"].(string) != "alice" {
+		t.Fatalf("wrong planned payload: %#v", planned[0])
+	}
+	warnings := data["warnings"].([]interface{})
+	if warnings[0].(map[string]interface{})["code"].(string) != "post_create_updates_planned_not_applied" {
+		t.Fatalf("wrong warning: %#v", warnings)
+	}
+}
+
+func TestBulkCreatePostCreateUpdatesAreOptIn(t *testing.T) {
+	postIssue := 0
+	putIssue := 0
+	var putPath string
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == "POST" && r.URL.Path == "/rest/api/2/issue":
+			postIssue++
+			w.Write([]byte(`{"key":"QA-200"}`))
+		case r.Method == "PUT" && strings.HasPrefix(r.URL.Path, "/rest/api/2/issue/"):
+			putIssue++
+			putPath = r.URL.Path
+			w.Write([]byte(`{"ok":true}`))
+		default:
+			w.Write([]byte(`{"ok":true}`))
+		}
+	})
+	csvPath, mappingPath := writePostCreateFixture(t)
+
+	out := run(t, cfg, "--yes", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath)
+	if !out["ok"].(bool) {
+		t.Fatalf("bulk-create failed: %#v", out)
+	}
+	if postIssue != 1 || putIssue != 0 {
+		t.Fatalf("without apply flag got POST=%d PUT=%d", postIssue, putIssue)
+	}
+	warnings := out["data"].(map[string]interface{})["warnings"].([]interface{})
+	if warnings[0].(map[string]interface{})["code"].(string) != "post_create_updates_planned_not_applied" {
+		t.Fatalf("missing not-applied warning: %#v", out)
+	}
+
+	out = run(t, cfg, "--yes", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath, "--apply-post-create-updates")
+	if !out["ok"].(bool) {
+		t.Fatalf("bulk-create with post updates failed: %#v", out)
+	}
+	if postIssue != 2 || putIssue != 1 || putPath != "/rest/api/2/issue/QA-200" {
+		t.Fatalf("with apply flag got POST=%d PUT=%d path=%s", postIssue, putIssue, putPath)
+	}
+	created := out["data"].(map[string]interface{})["created"].([]interface{})[0].(map[string]interface{})
+	if created["post_create_update_status"].(string) != "applied" {
+		t.Fatalf("wrong created status: %#v", created)
+	}
+}
+
+func TestBulkCreatePostCreateUpdateFailureIsReportedWithoutDelete(t *testing.T) {
+	deleteIssue := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == "POST" && r.URL.Path == "/rest/api/2/issue":
+			w.Write([]byte(`{"key":"QA-200"}`))
+		case r.Method == "PUT" && r.URL.Path == "/rest/api/2/issue/QA-200":
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"update failed"}`))
+		case r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/rest/api/2/issue/"):
+			deleteIssue++
+			w.Write([]byte(`{"ok":true}`))
+		default:
+			w.Write([]byte(`{"ok":true}`))
+		}
+	})
+	csvPath, mappingPath := writePostCreateFixture(t)
+	out := run(t, cfg, "--yes", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath, "--apply-post-create-updates")
+	if !out["ok"].(bool) {
+		t.Fatalf("bulk-create should report update failure in success envelope: %#v", out)
+	}
+	if deleteIssue != 0 {
+		t.Fatalf("created issue should not be deleted after post update failure")
+	}
+	created := out["data"].(map[string]interface{})["created"].([]interface{})[0].(map[string]interface{})
+	if !created["created"].(bool) || created["post_create_update_status"].(string) != "failed" {
+		t.Fatalf("wrong created failure status: %#v", created)
+	}
+	errObj := created["error"].(map[string]interface{})
+	if errObj["code"].(string) != "server_error" {
+		t.Fatalf("wrong update error: %#v", created)
+	}
+}
+
+func writePostCreateFixture(t *testing.T) (string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	csvPath := filepath.Join(dir, "testcases.csv")
+	mappingPath := filepath.Join(dir, "mapping.json")
+	if err := os.WriteFile(csvPath, []byte("Title,Reviewer\nLogin,alice\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mapping := `{"version":1,"mode":"jira_csv_bulk_create","jira":{"project":"QA","issuetype":"Test"},"field_mappings":[{"csv_column":"Title","jira_field_id":"summary","jira_field_name":"Summary","required":true,"phase":"create","transform":"string","confidence":0.98},{"csv_column":"Reviewer","jira_field_id":"customfield_20000","jira_field_name":"Reviewer","phase":"post_create_update","transform":"user","confidence":0.98}],"required_fields":[{"jira_field_id":"summary","jira_field_name":"Summary"}]}`
+	if err := os.WriteFile(mappingPath, []byte(mapping), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return csvPath, mappingPath
+}
+
 func TestCreateMetaFromIssueSplitAndLegacyFallback(t *testing.T) {
 	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

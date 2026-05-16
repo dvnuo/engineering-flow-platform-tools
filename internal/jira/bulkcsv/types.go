@@ -171,6 +171,7 @@ type PayloadPreview struct {
 type PostCreateUpdate struct {
 	RowNumber int                    `json:"row_number"`
 	Fields    map[string]interface{} `json:"fields"`
+	Payload   map[string]interface{} `json:"payload,omitempty"`
 }
 
 type DryRunResult struct {
@@ -185,8 +186,11 @@ type DryRunResult struct {
 }
 
 type CreatedIssue struct {
-	RowNumber int                    `json:"row_number"`
-	Issue     map[string]interface{} `json:"issue"`
+	RowNumber              int                    `json:"row_number"`
+	Created                bool                   `json:"created"`
+	Issue                  map[string]interface{} `json:"issue"`
+	PostCreateUpdateStatus string                 `json:"post_create_update_status,omitempty"`
+	Error                  *CreateFailure         `json:"error,omitempty"`
 }
 
 type CreateFailure struct {

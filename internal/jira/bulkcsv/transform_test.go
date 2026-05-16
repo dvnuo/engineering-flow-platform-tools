@@ -80,3 +80,21 @@ func TestDryRunRowsReturnsPreviewPayloadsAndValidationErrors(t *testing.T) {
 		t.Fatalf("dry run errors = %#v", result.Errors)
 	}
 }
+
+func TestBuildPostCreateUpdatePayload(t *testing.T) {
+	plan := MappingPlan{FieldMappings: []FieldMapping{
+		{CSVColumn: "Title", JiraFieldID: "summary", Phase: PhaseCreate, Transform: "string"},
+		{CSVColumn: "Reviewer", JiraFieldID: "customfield_20000", Phase: PhasePostCreateUpdate, Transform: "user"},
+	}}
+	fields, errs := BuildPostCreateUpdatePayload(CSVRow{RowNumber: 2, Values: map[string]string{"Title": "Login", "Reviewer": "alice"}}, plan)
+	if len(errs) != 0 {
+		t.Fatalf("unexpected errors: %#v", errs)
+	}
+	if len(fields) != 1 {
+		t.Fatalf("post fields = %#v", fields)
+	}
+	user := fields["customfield_20000"].(map[string]string)
+	if user["name"] != "alice" {
+		t.Fatalf("post update user = %#v", fields)
+	}
+}

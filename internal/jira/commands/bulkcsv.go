@@ -86,6 +86,7 @@ func addBulkCreateFlags(cmd *cobra.Command) {
 	cmd.Flags().Float64("min-confidence", 0.75, "")
 	cmd.Flags().Bool("include-template-defaults", true, "")
 	cmd.Flags().Bool("confirm-mapping", false, "")
+	cmd.Flags().Bool("apply-post-create-updates", false, "")
 }
 
 func buildCSVMappingPlan(o *Opts, cmd *cobra.Command) (bulkcsv.MappingPlan, error) {
@@ -327,10 +328,11 @@ func createBulkIssues(o *Opts, cmd *cobra.Command, rows []bulkcsv.CSVRow, plan b
 		return bulkcsv.CreateResult{}, err
 	}
 	failFast, _ := cmd.Flags().GetBool("fail-fast")
+	applyPostCreateUpdates := mustB(cmd, "apply-post-create-updates")
 	result := bulkcsv.CreateResult{Rows: len(rows), Created: []bulkcsv.CreatedIssue{}, Failures: []bulkcsv.CreateFailure{}, Warnings: plan.Warnings}
 	for _, row := range rows {
 		payload, rowErrors, post := bulkcsv.BuildCreatePayload(row, plan)
-		if post != nil {
+		if post != nil && !applyPostCreateUpdates {
 			result.PlannedPostCreateUpdates = append(result.PlannedPostCreateUpdates, *post)
 		}
 		if len(rowErrors) > 0 {
@@ -348,14 +350,56 @@ func createBulkIssues(o *Opts, cmd *cobra.Command, rows []bulkcsv.CSVRow, plan b
 			}
 			continue
 		}
-		defer resp.Body.Close()
 		issue, _ := jira.ReadJSON(resp.Body)
-		result.Created = append(result.Created, bulkcsv.CreatedIssue{RowNumber: row.RowNumber, Issue: issue})
+		resp.Body.Close()
+		created := bulkcsv.CreatedIssue{RowNumber: row.RowNumber, Created: true, Issue: issue}
+		if post != nil {
+			if applyPostCreateUpdates {
+				status, failure := applyPostCreateUpdate(ctx, issue, *post)
+				created.PostCreateUpdateStatus = status
+				if failure != nil {
+					created.Error = failure
+					result.Failures = append(result.Failures, *failure)
+					if failFast {
+						result.Created = append(result.Created, created)
+						break
+					}
+				}
+			} else {
+				created.PostCreateUpdateStatus = "planned_not_applied"
+			}
+		}
+		result.Created = append(result.Created, created)
 	}
 	if len(result.PlannedPostCreateUpdates) > 0 {
-		result.Warnings = append(result.Warnings, bulkcsv.PlanWarning{Code: "post_create_update_not_applied", Message: "post-create update fields are planned but not implemented by bulk-create"})
+		result.Warnings = append(result.Warnings, bulkcsv.PlanWarning{Code: "post_create_updates_planned_not_applied", Message: "post-create update fields are planned but --apply-post-create-updates was not passed"})
 	}
 	return result, nil
+}
+
+func applyPostCreateUpdate(ctx *jira.Context, issue map[string]interface{}, post bulkcsv.PostCreateUpdate) (string, *bulkcsv.CreateFailure) {
+	key := metadataString(issue["key"])
+	if key == "" {
+		key = metadataString(issue["id"])
+	}
+	if key == "" {
+		return "failed", &bulkcsv.CreateFailure{RowNumber: post.RowNumber, Code: "server_error", Message: "created issue response missing key"}
+	}
+	payload := post.Payload
+	if len(payload) == 0 {
+		payload = map[string]interface{}{"fields": post.Fields}
+	}
+	resp, err := ctx.Client.Do(httpclient.Request{Method: "PUT", Path: "issue/" + key, JSONBody: payload})
+	if err != nil {
+		if resp != nil {
+			resp.Body.Close()
+		}
+		return "failed", &bulkcsv.CreateFailure{RowNumber: post.RowNumber, Code: httpErrorCode(err), Message: err.Error()}
+	}
+	if resp != nil {
+		resp.Body.Close()
+	}
+	return "applied", nil
 }
 
 func getJiraValue(ctx *jira.Context, path string, q map[string]string) (interface{}, error) {

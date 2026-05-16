@@ -113,7 +113,7 @@ func TestCommandCoverage(t *testing.T) {
 	assertSame(t, "confluence catalog/docs", catalog.SortedUsages("confluence"), confSpec)
 	for _, product := range []string{"jira", "confluence"} {
 		for _, item := range catalog.Commands(product) {
-			if item.Risk != "read" && item.Risk != "write" && item.Risk != "delete" && item.Risk != "admin" {
+			if item.Risk != "read" && item.Risk != "write" && item.Risk != "write_requires_confirmation" && item.Risk != "delete" && item.Risk != "admin" {
 				t.Fatalf("%s has invalid risk %q", item.Usage, item.Risk)
 			}
 			if len(item.Examples) == 0 {

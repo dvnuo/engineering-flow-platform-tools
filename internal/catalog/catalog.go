@@ -24,7 +24,7 @@ type explicitMeta struct {
 
 var jiraCommands = []string{
 	"jira instance list", "jira instance get <name>", "jira instance add <name>", "jira instance update <name>", "jira instance remove <name>", "jira instance default [name]", "jira auth login", "jira auth logout", "jira auth test", "jira myself", "jira server-info", "jira resolve-url <url>", "jira commands", "jira schema <command>", "jira help llm", "jira version",
-	"jira issue get <issue-or-url>", "jira issue search", "jira issue create", "jira issue update <issue-or-url>", "jira issue edit <issue-or-url>", "jira issue delete <issue-or-url>", "jira issue assign <issue-or-url>", "jira issue transitions <issue-or-url>", "jira issue transition <issue-or-url>", "jira issue changelog <issue-or-url>", "jira issue fields <issue-or-url>", "jira issue createmeta", "jira issue editmeta <issue-or-url>", "jira issue watchers <issue-or-url>", "jira issue watch <issue-or-url>", "jira issue unwatch <issue-or-url>", "jira issue votes <issue-or-url>", "jira issue vote <issue-or-url>", "jira issue unvote <issue-or-url>", "jira issue notify <issue-or-url>",
+	"jira issue get <issue-or-url>", "jira issue search", "jira issue create", "jira issue update <issue-or-url>", "jira issue edit <issue-or-url>", "jira issue delete <issue-or-url>", "jira issue assign <issue-or-url>", "jira issue transitions <issue-or-url>", "jira issue transition <issue-or-url>", "jira issue changelog <issue-or-url>", "jira issue fields <issue-or-url>", "jira issue createmeta", "jira issue editmeta <issue-or-url>", "jira issue map-csv", "jira issue bulk-create", "jira issue bulk-validate", "jira issue watchers <issue-or-url>", "jira issue watch <issue-or-url>", "jira issue unwatch <issue-or-url>", "jira issue votes <issue-or-url>", "jira issue vote <issue-or-url>", "jira issue unvote <issue-or-url>", "jira issue notify <issue-or-url>",
 	"jira issue comment list <issue-or-url>", "jira issue comment get <issue-or-url> <comment-id>", "jira issue comment add <issue-or-url>", "jira issue comment update <issue-or-url> <comment-id>", "jira issue comment delete <issue-or-url> <comment-id>",
 	"jira issue attachment list <issue-or-url>", "jira issue attachment upload <issue-or-url> <file>", "jira attachment get <attachment-id>", "jira attachment download <attachment-id>", "jira attachment delete <attachment-id>", "jira attachment meta",
 	"jira issue worklog list <issue-or-url>", "jira issue worklog get <issue-or-url> <worklog-id>", "jira issue worklog add <issue-or-url>", "jira issue worklog update <issue-or-url> <worklog-id>", "jira issue worklog delete <issue-or-url> <worklog-id>",
@@ -376,8 +376,12 @@ func flagSpecs(command string, flags, required []string) []FlagSpec {
 
 func flagType(name string) string {
 	switch name {
-	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit":
+	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit", "legacy", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates":
 		return "bool"
+	case "sample-rows", "max-create":
+		return "int"
+	case "min-confidence":
+		return "float"
 	case "field", "fields", "query":
 		return "string[]"
 	default:
@@ -417,6 +421,48 @@ func flagDescription(command, name string) string {
 		return "Jira transition id."
 	case "to":
 		return "Jira transition name."
+	case "fields":
+		return "Comma-separated Jira fields selector."
+	case "expand":
+		return "Jira expand selector."
+	case "from-csv":
+		return "CSV file to read."
+	case "template-issue":
+		return "Existing Jira issue used as metadata and default template."
+	case "mapping":
+		return "Mapping plan JSON file."
+	case "field-catalog":
+		return "Local JSON field catalog file."
+	case "example-issue":
+		return "Local JSON example issue file."
+	case "create-meta":
+		return "Local JSON create metadata file."
+	case "edit-meta":
+		return "Local JSON edit metadata file."
+	case "output":
+		return "Path to write JSON output."
+	case "sample-rows":
+		return "Number of CSV sample rows used for mapping."
+	case "min-confidence":
+		return "Minimum confidence required to suggest a mapping."
+	case "include-template-defaults":
+		return "Copy safe writable defaults from the template issue."
+	case "max-create":
+		return "Maximum number of issues allowed for this run."
+	case "fail-fast":
+		return "Stop after the first row validation or create failure."
+	case "confirm-mapping":
+		return "Confirm reviewed ambiguous or low-confidence mapping plan entries."
+	case "apply-post-create-updates":
+		return "Apply post_create_update mappings with Jira issue update after create."
+	case "project-id":
+		return "Jira project id."
+	case "type-id":
+		return "Jira issue type id."
+	case "from-issue":
+		return "Issue key or URL used to infer project and issue type."
+	case "legacy":
+		return "Force legacy createmeta endpoint."
 	default:
 		return "Command option."
 	}
@@ -426,12 +472,16 @@ var explicit = map[string]explicitMeta{
 	"version":                   {Description: "Print CLI version, commit, and build date.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira version --json"},
 	"auth.test":                 {Description: "Verify configured credentials against the current user endpoint.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira auth test --json"},
 	"server-info":               {Description: "Read server metadata from the selected instance.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira server-info --json"},
-	"issue.get":                 {Description: "Fetch a Jira issue by key or full issue URL.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue get PROJ-123 --json"},
+	"issue.get":                 {Description: "Fetch a Jira issue by key or full issue URL.", Flags: []string{"fields", "expand", "instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue get PROJ-123 --fields '*all' --expand names,schema,editmeta --json"},
 	"issue.search":              {Description: "Search Jira issues with JQL.", Flags: []string{"jql", "limit", "start", "fields", "instance", "config", "json", "format", "verbose"}, Required: []string{"jql"}, Risk: "read", Example: "jira issue search --jql \"project = PROJ\" --json"},
 	"issue.create":              {Description: "Create a Jira issue.", Flags: []string{"project", "type", "summary", "description", "field", "json-body", "json-body-file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"project", "type", "summary"}, Risk: "write", Example: "jira issue create --project PROJ --type Task --summary Test --json"},
 	"issue.update":              {Description: "Update fields on a Jira issue.", Flags: []string{"summary", "description", "field", "json-body", "json-body-file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"summary|description|field|json-body|json-body-file"}, Risk: "write", Example: "jira issue update PROJ-123 --summary Done --json"},
 	"issue.delete":              {Description: "Delete a Jira issue after explicit confirmation.", Flags: []string{"yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "yes"}, Risk: "delete", Example: "jira issue delete PROJ-123 --yes --json"},
 	"issue.transition":          {Description: "Transition a Jira issue by transition id or transition name.", Flags: []string{"transition-id", "to", "comment", "field", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"transition-id|to"}, Risk: "write", Example: "jira issue transition PROJ-123 --to Done --json"},
+	"issue.createmeta":          {Description: "Fetch and normalize Jira create metadata.", Flags: []string{"project", "project-id", "type", "type-id", "from-issue", "legacy", "expand", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira issue createmeta --from-issue PROJ-123 --json"},
+	"issue.map-csv":             {Description: "Build a deterministic Jira field mapping plan for a test case CSV.", Flags: []string{"from-csv", "template-issue", "project", "type", "field-catalog", "example-issue", "create-meta", "edit-meta", "output", "sample-rows", "min-confidence", "include-template-defaults", "instance", "config", "json", "format", "verbose"}, Required: []string{"from-csv", "template-issue"}, Risk: "read", Example: "jira issue map-csv --from-csv testcases.csv --template-issue PROJ-123 --output mapping-plan.json --json"},
+	"issue.bulk-create":         {Description: "Validate or create Jira issues from a CSV mapping plan; actual create requires --yes and may require --confirm-mapping.", Flags: []string{"from-csv", "mapping", "template-issue", "output", "max-create", "fail-fast", "confirm-mapping", "apply-post-create-updates", "project", "type", "field-catalog", "example-issue", "create-meta", "edit-meta", "sample-rows", "min-confidence", "include-template-defaults", "yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"from-csv"}, Risk: "write_requires_confirmation", Example: "jira issue bulk-create --from-csv testcases.csv --mapping mapping-plan.json --dry-run --output dry-run.json --json"},
+	"issue.bulk-validate":       {Description: "Alias for dry-run CSV bulk create validation.", Flags: []string{"from-csv", "mapping", "template-issue", "output", "max-create", "fail-fast", "confirm-mapping", "apply-post-create-updates", "project", "type", "field-catalog", "example-issue", "create-meta", "edit-meta", "sample-rows", "min-confidence", "include-template-defaults", "instance", "config", "json", "format", "verbose"}, Required: []string{"from-csv"}, Risk: "read", Example: "jira issue bulk-validate --from-csv testcases.csv --mapping mapping-plan.json --json"},
 	"issue.comment.list":        {Description: "List comments on a Jira issue.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue comment list PROJ-123 --json"},
 	"issue.comment.add":         {Description: "Add a comment to a Jira issue.", Flags: []string{"body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"body|body-file|body-stdin"}, Risk: "write", Example: "jira issue comment add PROJ-123 --body ok --json"},
 	"issue.comment.update":      {Description: "Update an existing Jira issue comment.", Flags: []string{"body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "comment-id", "body|body-file|body-stdin"}, Risk: "write", Example: "jira issue comment update PROJ-123 10000 --body ok --json"},

@@ -42,6 +42,15 @@ func ReadJSON(resp io.Reader) (map[string]interface{}, error) {
 	return out, nil
 }
 
+func ReadJSONValue(resp io.Reader) (interface{}, error) {
+	var out interface{}
+	err := json.NewDecoder(resp).Decode(&out)
+	if err != nil {
+		return map[string]interface{}{"raw": ""}, nil
+	}
+	return out, nil
+}
+
 func IssueKey(input string) string {
 	if strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://") {
 		u, err := url.Parse(input)

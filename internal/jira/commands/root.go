@@ -423,27 +423,19 @@ func helpLLMCmd() *cobra.Command {
 
 func issueCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "issue"}
-	c.AddCommand(&cobra.Command{Use: "get <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := loadCfg(o)
-		if err != nil {
-			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
+	getCmd := &cobra.Command{Use: "get <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		q := map[string]string{}
+		if fields := mustS(cmd, "fields"); fields != "" {
+			q["fields"] = fields
 		}
-		ctx, err := jira.NewContext(cfg, o.Instance, args[0], o.DryRun)
-		if err != nil {
-			return print(cmd, o, output.Failure(err.Error(), err.Error(), "", 400))
+		if expand := mustS(cmd, "expand"); expand != "" {
+			q["expand"] = expand
 		}
-		p := "issue/" + jira.IssueKey(args[0])
-		if o.DryRun {
-			return print(cmd, o, output.Success(ctx.Instance, jira.DryRunData("GET", p, nil, nil)))
-		}
-		resp, err := ctx.Client.Do(httpclient.Request{Method: "GET", Path: p})
-		if err != nil {
-			return print(cmd, o, envelopeError(err, "server_error"))
-		}
-		defer resp.Body.Close()
-		d, _ := jira.ReadJSON(resp.Body)
-		return print(cmd, o, output.Success(ctx.Instance, d))
-	}})
+		return issueEntityGet(o, cmd, args[0], "", q)
+	}}
+	getCmd.Flags().String("fields", "", "")
+	getCmd.Flags().String("expand", "", "")
+	c.AddCommand(getCmd)
 	c.AddCommand(&cobra.Command{Use: "search", RunE: func(cmd *cobra.Command, args []string) error {
 		jql, _ := cmd.Flags().GetString("jql")
 		if jql == "" {
@@ -736,9 +728,17 @@ func issueCmd(o *Opts) *cobra.Command {
 	c.AddCommand(&cobra.Command{Use: "fields <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		return issueEntityGet(o, cmd, args[0], "", map[string]string{"expand": "names,schema"})
 	}})
-	c.AddCommand(&cobra.Command{Use: "createmeta", RunE: func(cmd *cobra.Command, args []string) error {
-		return issueSubGet(o, cmd, "issue/createmeta")
-	}})
+	createMetaCmd := &cobra.Command{Use: "createmeta", RunE: func(cmd *cobra.Command, args []string) error {
+		return issueCreateMeta(o, cmd)
+	}}
+	createMetaCmd.Flags().String("project", "", "")
+	createMetaCmd.Flags().String("project-id", "", "")
+	createMetaCmd.Flags().String("type", "", "")
+	createMetaCmd.Flags().String("type-id", "", "")
+	createMetaCmd.Flags().String("from-issue", "", "")
+	createMetaCmd.Flags().Bool("legacy", false, "")
+	createMetaCmd.Flags().String("expand", "", "")
+	c.AddCommand(createMetaCmd)
 	c.AddCommand(&cobra.Command{Use: "editmeta <issue-or-url>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		return issueEntityGet(o, cmd, args[0], "/editmeta", nil)
 	}})
@@ -803,6 +803,7 @@ func issueCmd(o *Opts) *cobra.Command {
 	c.AddCommand(issueLinkCmd(o))
 	c.AddCommand(issueRemoteLinkCmd(o))
 	c.AddCommand(issuePropertyCmd(o))
+	c.AddCommand(issueMapCSVCmd(o), issueBulkCreateCmd(o), issueBulkValidateCmd(o))
 
 	return c
 }
@@ -902,6 +903,332 @@ func issueCreateWithBody(o *Opts, cmd *cobra.Command, body map[string]interface{
 	defer resp.Body.Close()
 	d, _ := jira.ReadJSON(resp.Body)
 	return print(cmd, o, output.Success(ctx.Instance, d))
+}
+
+type createMetaOptions struct {
+	ProjectKey string
+	ProjectID  string
+	TypeName   string
+	TypeID     string
+	FromIssue  string
+	Legacy     bool
+	Expand     string
+}
+
+func issueCreateMeta(o *Opts, cmd *cobra.Command) error {
+	opts := createMetaOptions{
+		ProjectKey: mustS(cmd, "project"),
+		ProjectID:  mustS(cmd, "project-id"),
+		TypeName:   mustS(cmd, "type"),
+		TypeID:     mustS(cmd, "type-id"),
+		FromIssue:  mustS(cmd, "from-issue"),
+		Legacy:     mustB(cmd, "legacy"),
+		Expand:     mustS(cmd, "expand"),
+	}
+	if opts.ProjectKey == "" && opts.ProjectID == "" && opts.TypeName == "" && opts.TypeID == "" && opts.FromIssue == "" && !opts.Legacy && opts.Expand == "" {
+		return issueSubGet(o, cmd, "issue/createmeta")
+	}
+
+	cfg, err := loadCfg(o)
+	if err != nil {
+		return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
+	}
+	ctxEntity := opts.FromIssue
+	ctx, err := jira.NewContext(cfg, o.Instance, ctxEntity, o.DryRun)
+	if err != nil {
+		return print(cmd, o, output.Failure(err.Error(), err.Error(), "", 400))
+	}
+	if o.DryRun {
+		return print(cmd, o, output.Success(ctx.Instance, createMetaDryRun(opts)))
+	}
+
+	if opts.FromIssue != "" {
+		if err := populateCreateMetaFromIssue(ctx, &opts); err != nil {
+			return print(cmd, o, envelopeError(err, "server_error"))
+		}
+	}
+	if !opts.Legacy {
+		out, err := fetchSplitCreateMeta(ctx, opts)
+		if err == nil {
+			return print(cmd, o, output.Success(ctx.Instance, out))
+		}
+		if !isCreateMetaFallbackError(err) {
+			return print(cmd, o, envelopeError(err, "server_error"))
+		}
+	}
+	out, err := fetchLegacyCreateMeta(ctx, opts)
+	if err != nil {
+		return print(cmd, o, envelopeError(err, "server_error"))
+	}
+	return print(cmd, o, output.Success(ctx.Instance, out))
+}
+
+func createMetaDryRun(opts createMetaOptions) map[string]interface{} {
+	requests := []interface{}{}
+	if opts.FromIssue != "" {
+		requests = append(requests, jira.DryRunData("GET", "issue/"+jira.IssueKey(opts.FromIssue), map[string]string{"fields": "project,issuetype", "expand": "names,schema"}, nil))
+	}
+	projectRef := opts.ProjectID
+	if projectRef == "" {
+		projectRef = opts.ProjectKey
+	}
+	if !opts.Legacy && projectRef != "" {
+		base := "issue/createmeta/" + url.PathEscape(projectRef) + "/issuetypes"
+		requests = append(requests, jira.DryRunData("GET", base, nil, nil))
+		if opts.TypeID != "" {
+			requests = append(requests, jira.DryRunData("GET", base+"/"+url.PathEscape(opts.TypeID), nil, nil))
+		}
+	} else {
+		requests = append(requests, jira.DryRunData("GET", "issue/createmeta", legacyCreateMetaQuery(opts), nil))
+	}
+	return map[string]interface{}{"dry_run": true, "requests": requests}
+}
+
+func populateCreateMetaFromIssue(ctx *jira.Context, opts *createMetaOptions) error {
+	resp, err := ctx.Client.Do(httpclient.Request{
+		Method: "GET",
+		Path:   "issue/" + jira.IssueKey(opts.FromIssue),
+		Query:  map[string]string{"fields": "project,issuetype", "expand": "names,schema"},
+	})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	d, _ := jira.ReadJSON(resp.Body)
+	fields := mapValue(d, "fields")
+	project := mapValue(fields, "project")
+	issueType := mapValue(fields, "issuetype")
+	if opts.ProjectKey == "" {
+		opts.ProjectKey = stringValue(project, "key")
+	}
+	if opts.ProjectID == "" {
+		opts.ProjectID = stringValue(project, "id")
+	}
+	if opts.TypeName == "" {
+		opts.TypeName = stringValue(issueType, "name")
+	}
+	if opts.TypeID == "" {
+		opts.TypeID = stringValue(issueType, "id")
+	}
+	return nil
+}
+
+func fetchSplitCreateMeta(ctx *jira.Context, opts createMetaOptions) (map[string]interface{}, error) {
+	projectRef := opts.ProjectID
+	if projectRef == "" {
+		projectRef = opts.ProjectKey
+	}
+	if projectRef == "" {
+		return nil, fmt.Errorf("invalid_args")
+	}
+	base := "issue/createmeta/" + url.PathEscape(projectRef) + "/issuetypes"
+	issueTypesResp, err := getJiraMap(ctx, base, nil)
+	if err != nil {
+		return nil, err
+	}
+	selected := selectCreateMetaIssueType(issueTypesResp, opts.TypeID, opts.TypeName)
+	if opts.TypeID == "" {
+		opts.TypeID = stringValue(selected, "id")
+	}
+	if opts.TypeName == "" {
+		opts.TypeName = stringValue(selected, "name")
+	}
+	if opts.TypeID == "" {
+		return nil, fmt.Errorf("invalid_args")
+	}
+	fieldsResp, err := getJiraMap(ctx, base+"/"+url.PathEscape(opts.TypeID), nil)
+	if err != nil {
+		return nil, err
+	}
+	fields := mapValue(fieldsResp, "fields")
+	project := map[string]interface{}{"key": opts.ProjectKey, "id": opts.ProjectID}
+	issueType := map[string]interface{}{"id": opts.TypeID, "name": opts.TypeName}
+	for _, key := range []string{"id", "name"} {
+		if issueType[key] == "" {
+			if v := stringValue(selected, key); v != "" {
+				issueType[key] = v
+			}
+		}
+	}
+	return map[string]interface{}{
+		"project":   project,
+		"issuetype": issueType,
+		"fields":    fields,
+		"source":    "split",
+	}, nil
+}
+
+func fetchLegacyCreateMeta(ctx *jira.Context, opts createMetaOptions) (map[string]interface{}, error) {
+	resp, err := getJiraMap(ctx, "issue/createmeta", legacyCreateMetaQuery(opts))
+	if err != nil {
+		return nil, err
+	}
+	project, issueType := selectLegacyCreateMeta(resp, opts)
+	fields := mapValue(issueType, "fields")
+	return map[string]interface{}{
+		"project": map[string]interface{}{
+			"key": firstNonEmpty(stringValue(project, "key"), opts.ProjectKey),
+			"id":  firstNonEmpty(stringValue(project, "id"), opts.ProjectID),
+		},
+		"issuetype": map[string]interface{}{
+			"id":   firstNonEmpty(stringValue(issueType, "id"), opts.TypeID),
+			"name": firstNonEmpty(stringValue(issueType, "name"), opts.TypeName),
+		},
+		"fields": fields,
+		"source": "legacy",
+	}, nil
+}
+
+func legacyCreateMetaQuery(opts createMetaOptions) map[string]string {
+	q := map[string]string{}
+	if opts.ProjectID != "" {
+		q["projectIds"] = opts.ProjectID
+	} else if opts.ProjectKey != "" {
+		q["projectKeys"] = opts.ProjectKey
+	}
+	if opts.TypeID != "" {
+		q["issuetypeIds"] = opts.TypeID
+	} else if opts.TypeName != "" {
+		q["issuetypeNames"] = opts.TypeName
+	}
+	if opts.Expand != "" {
+		q["expand"] = opts.Expand
+	} else {
+		q["expand"] = "projects.issuetypes.fields"
+	}
+	return q
+}
+
+func getJiraMap(ctx *jira.Context, path string, q map[string]string) (map[string]interface{}, error) {
+	resp, err := ctx.Client.Do(httpclient.Request{Method: "GET", Path: path, Query: q})
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	d, _ := jira.ReadJSON(resp.Body)
+	return d, nil
+}
+
+func isCreateMetaFallbackError(err error) bool {
+	var httpErr *httpclient.HTTPError
+	if errors.As(err, &httpErr) {
+		return httpErr.Status == 404 || httpErr.Code == "not_supported" || httpErr.Code == "server_error"
+	}
+	return err != nil && err.Error() == "invalid_args"
+}
+
+func selectCreateMetaIssueType(resp map[string]interface{}, typeID, typeName string) map[string]interface{} {
+	values := arrayValue(resp, "issueTypes")
+	if len(values) == 0 {
+		values = arrayValue(resp, "values")
+	}
+	var first map[string]interface{}
+	for _, item := range values {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if first == nil {
+			first = m
+		}
+		if typeID != "" && stringValue(m, "id") == typeID {
+			return m
+		}
+		if typeName != "" && strings.EqualFold(stringValue(m, "name"), typeName) {
+			return m
+		}
+	}
+	if typeID == "" && typeName == "" {
+		return first
+	}
+	return nil
+}
+
+func selectLegacyCreateMeta(resp map[string]interface{}, opts createMetaOptions) (map[string]interface{}, map[string]interface{}) {
+	projects := arrayValue(resp, "projects")
+	var firstProject map[string]interface{}
+	var firstIssueType map[string]interface{}
+	for _, item := range projects {
+		project, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if firstProject == nil {
+			firstProject = project
+		}
+		projectMatch := opts.ProjectID == "" && opts.ProjectKey == ""
+		if opts.ProjectID != "" && stringValue(project, "id") == opts.ProjectID {
+			projectMatch = true
+		}
+		if opts.ProjectKey != "" && strings.EqualFold(stringValue(project, "key"), opts.ProjectKey) {
+			projectMatch = true
+		}
+		for _, issueItem := range arrayValue(project, "issuetypes") {
+			issueType, ok := issueItem.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if firstIssueType == nil {
+				firstIssueType = issueType
+			}
+			typeMatch := opts.TypeID == "" && opts.TypeName == ""
+			if opts.TypeID != "" && stringValue(issueType, "id") == opts.TypeID {
+				typeMatch = true
+			}
+			if opts.TypeName != "" && strings.EqualFold(stringValue(issueType, "name"), opts.TypeName) {
+				typeMatch = true
+			}
+			if projectMatch && typeMatch {
+				return project, issueType
+			}
+		}
+	}
+	if firstProject == nil {
+		firstProject = map[string]interface{}{}
+	}
+	if firstIssueType == nil {
+		firstIssueType = map[string]interface{}{}
+	}
+	return firstProject, firstIssueType
+}
+
+func mapValue(m map[string]interface{}, key string) map[string]interface{} {
+	if m == nil {
+		return map[string]interface{}{}
+	}
+	v, ok := m[key].(map[string]interface{})
+	if !ok {
+		return map[string]interface{}{}
+	}
+	return v
+}
+
+func arrayValue(m map[string]interface{}, key string) []interface{} {
+	if m == nil {
+		return nil
+	}
+	v, _ := m[key].([]interface{})
+	return v
+}
+
+func stringValue(m map[string]interface{}, key string) string {
+	if m == nil {
+		return ""
+	}
+	v := m[key]
+	if v == nil {
+		return ""
+	}
+	return fmt.Sprint(v)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func issueLinkCmd(o *Opts) *cobra.Command {
@@ -1215,7 +1542,7 @@ func agileCmd(o *Opts) *cobra.Command {
 
 func metaCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "meta"}
-	c.AddCommand(&cobra.Command{Use: "field-list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "field") }})
+	c.AddCommand(&cobra.Command{Use: "field-list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGetValue(o, cmd, "field", "fields") }})
 	c.AddCommand(&cobra.Command{Use: "issue-type-list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "issuetype") }})
 	c.AddCommand(&cobra.Command{Use: "status-list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "status") }})
 	c.AddCommand(&cobra.Command{Use: "priority-list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "priority") }})
@@ -1454,7 +1781,7 @@ func versionCmd(o *Opts) *cobra.Command {
 
 func metadataCmds(o *Opts) []*cobra.Command {
 	field := &cobra.Command{Use: "field"}
-	field.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "field") }})
+	field.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGetValue(o, cmd, "field", "fields") }})
 	issueType := &cobra.Command{Use: "issue-type"}
 	issueType.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "issuetype") }})
 	status := &cobra.Command{Use: "status"}
@@ -1666,6 +1993,31 @@ func issueSubGet(o *Opts, cmd *cobra.Command, path string) error {
 	d, _ := jira.ReadJSON(resp.Body)
 	return print(cmd, o, output.Success(ctx.Instance, d))
 }
+
+func issueSubGetValue(o *Opts, cmd *cobra.Command, path, wrapper string) error {
+	cfg, err := loadCfg(o)
+	if err != nil {
+		return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
+	}
+	ctx, err := jira.NewContext(cfg, o.Instance, "", o.DryRun)
+	if err != nil {
+		return print(cmd, o, output.Failure(err.Error(), err.Error(), "", 400))
+	}
+	if o.DryRun {
+		return print(cmd, o, output.Success(ctx.Instance, jira.DryRunData("GET", path, nil, nil)))
+	}
+	resp, err := ctx.Client.Do(httpclient.Request{Method: "GET", Path: path})
+	if err != nil {
+		return print(cmd, o, envelopeError(err, "server_error"))
+	}
+	defer resp.Body.Close()
+	d, _ := jira.ReadJSONValue(resp.Body)
+	if wrapper != "" {
+		d = map[string]interface{}{wrapper: d}
+	}
+	return print(cmd, o, output.Success(ctx.Instance, d))
+}
+
 func issueSubPost(o *Opts, cmd *cobra.Command, path string, body interface{}) error {
 	cfg, err := loadCfg(o)
 	if err != nil {

@@ -1541,7 +1541,7 @@ func agileCmd(o *Opts) *cobra.Command {
 
 func metaCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "meta"}
-	c.AddCommand(&cobra.Command{Use: "field-list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "field") }})
+	c.AddCommand(&cobra.Command{Use: "field-list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGetValue(o, cmd, "field", "fields") }})
 	c.AddCommand(&cobra.Command{Use: "issue-type-list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "issuetype") }})
 	c.AddCommand(&cobra.Command{Use: "status-list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "status") }})
 	c.AddCommand(&cobra.Command{Use: "priority-list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "priority") }})
@@ -1780,7 +1780,7 @@ func versionCmd(o *Opts) *cobra.Command {
 
 func metadataCmds(o *Opts) []*cobra.Command {
 	field := &cobra.Command{Use: "field"}
-	field.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "field") }})
+	field.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGetValue(o, cmd, "field", "fields") }})
 	issueType := &cobra.Command{Use: "issue-type"}
 	issueType.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error { return issueSubGet(o, cmd, "issuetype") }})
 	status := &cobra.Command{Use: "status"}
@@ -1992,6 +1992,31 @@ func issueSubGet(o *Opts, cmd *cobra.Command, path string) error {
 	d, _ := jira.ReadJSON(resp.Body)
 	return print(cmd, o, output.Success(ctx.Instance, d))
 }
+
+func issueSubGetValue(o *Opts, cmd *cobra.Command, path, wrapper string) error {
+	cfg, err := loadCfg(o)
+	if err != nil {
+		return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
+	}
+	ctx, err := jira.NewContext(cfg, o.Instance, "", o.DryRun)
+	if err != nil {
+		return print(cmd, o, output.Failure(err.Error(), err.Error(), "", 400))
+	}
+	if o.DryRun {
+		return print(cmd, o, output.Success(ctx.Instance, jira.DryRunData("GET", path, nil, nil)))
+	}
+	resp, err := ctx.Client.Do(httpclient.Request{Method: "GET", Path: path})
+	if err != nil {
+		return print(cmd, o, envelopeError(err, "server_error"))
+	}
+	defer resp.Body.Close()
+	d, _ := jira.ReadJSONValue(resp.Body)
+	if wrapper != "" {
+		d = map[string]interface{}{wrapper: d}
+	}
+	return print(cmd, o, output.Success(ctx.Instance, d))
+}
+
 func issueSubPost(o *Opts, cmd *cobra.Command, path string, body interface{}) error {
 	cfg, err := loadCfg(o)
 	if err != nil {

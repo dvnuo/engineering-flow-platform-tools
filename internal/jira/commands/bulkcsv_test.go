@@ -134,6 +134,44 @@ func TestBulkCreateRequiresConfirmMappingForActualCreate(t *testing.T) {
 	}
 }
 
+func TestBulkCreateBlocksAmbiguousAndMissingRequiredPlans(t *testing.T) {
+	postIssue := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" && r.URL.Path == "/rest/api/2/issue" {
+			postIssue++
+		}
+		w.Write([]byte(`{"key":"QA-200"}`))
+	})
+	dir := t.TempDir()
+	csvPath := filepath.Join(dir, "testcases.csv")
+	if err := os.WriteFile(csvPath, []byte("Title\nLogin\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ambiguousPath := filepath.Join(dir, "ambiguous.json")
+	ambiguous := `{"version":1,"mode":"jira_csv_bulk_create","jira":{"project":"QA","issuetype":"Test"},"field_mappings":[{"csv_column":"Title","jira_field_id":"summary","jira_field_name":"Summary","required":true,"phase":"create","transform":"string","confidence":0.98}],"required_fields":[{"jira_field_id":"summary","jira_field_name":"Summary"}],"ambiguous_columns":[{"csv_column":"Area","candidates":[{"jira_field_id":"components","jira_field_name":"Components","confidence":0.7}]}]}`
+	if err := os.WriteFile(ambiguousPath, []byte(ambiguous), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out := run(t, cfg, "--yes", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", ambiguousPath)
+	if out["ok"].(bool) || out["error"].(map[string]interface{})["code"].(string) != "mapping_ambiguous" {
+		t.Fatalf("ambiguous mapping should fail: %#v", out)
+	}
+
+	missingRequiredPath := filepath.Join(dir, "missing-required.json")
+	missingRequired := `{"version":1,"mode":"jira_csv_bulk_create","jira":{"project":"QA","issuetype":"Test"},"field_mappings":[{"csv_column":"Title","jira_field_id":"summary","jira_field_name":"Summary","required":true,"phase":"create","transform":"string","confidence":0.98}],"required_fields":[{"jira_field_id":"summary","jira_field_name":"Summary"}],"warnings":[{"code":"required_field_missing","message":"customfield_1 is required"}]}`
+	if err := os.WriteFile(missingRequiredPath, []byte(missingRequired), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out = run(t, cfg, "--yes", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", missingRequiredPath, "--confirm-mapping")
+	if out["ok"].(bool) || out["error"].(map[string]interface{})["code"].(string) != "required_field_missing" {
+		t.Fatalf("missing required field should fail even with confirmation: %#v", out)
+	}
+	if postIssue != 0 {
+		t.Fatalf("blocked plans should not POST, got %d", postIssue)
+	}
+}
+
 func TestBulkCreateDryRunIncludesPlannedPostCreateUpdatesWithoutPut(t *testing.T) {
 	putIssue := 0
 	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {

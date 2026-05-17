@@ -173,6 +173,48 @@ func TestBulkCreateBlocksAmbiguousAndMissingRequiredPlans(t *testing.T) {
 	}
 }
 
+func TestBulkCreateDoesNotPostWhenSummaryMissingFromCreatePayload(t *testing.T) {
+	postIssue := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "POST" && r.URL.Path == "/rest/api/2/issue" {
+			postIssue++
+		}
+		w.Write([]byte(`{"ok":true}`))
+	})
+	dir := t.TempDir()
+	csvPath := filepath.Join(dir, "testcases.csv")
+	mappingPath := filepath.Join(dir, "mapping.json")
+	if err := os.WriteFile(csvPath, []byte("Title\nLogin\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mapping := `{"version":1,"mode":"jira_csv_bulk_create","jira":{"project":"QA","issuetype":"Test"},"field_mappings":[{"csv_column":"Title","jira_field_id":"summary","jira_field_name":"Summary","required":true,"phase":"post_create_update","transform":"string","confidence":0.98}]}`
+	if err := os.WriteFile(mappingPath, []byte(mapping), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	dryRun := run(t, cfg, "--dry-run", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath)
+	if !dryRun["ok"].(bool) {
+		t.Fatalf("dry-run should return row validation data: %#v", dryRun)
+	}
+	data := dryRun["data"].(map[string]interface{})
+	if data["invalid_rows"].(float64) != 1 {
+		t.Fatalf("summary-missing row should be invalid: %#v", data)
+	}
+	errRow := data["errors"].([]interface{})[0].(map[string]interface{})
+	if errRow["code"].(string) != "summary_required_missing" {
+		t.Fatalf("wrong row error: %#v", data)
+	}
+
+	out := run(t, cfg, "--yes", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath, "--confirm-mapping")
+	if out["ok"].(bool) || out["error"].(map[string]interface{})["code"].(string) != "invalid_args" {
+		t.Fatalf("actual create should fail before POST: %#v", out)
+	}
+	if postIssue != 0 {
+		t.Fatalf("unexpected POST with missing summary: %d", postIssue)
+	}
+}
+
 func TestBulkCreateDryRunIncludesPlannedPostCreateUpdatesWithoutPut(t *testing.T) {
 	putIssue := 0
 	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {

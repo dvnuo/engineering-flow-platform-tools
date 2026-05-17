@@ -948,6 +948,7 @@ func issueCreateMeta(o *Opts, cmd *cobra.Command) error {
 		}
 	}
 	fallbackFromSplitError := false
+	var splitFallbackErr error
 	if !opts.Legacy {
 		out, err := fetchSplitCreateMeta(ctx, opts)
 		if err == nil {
@@ -972,6 +973,7 @@ func issueCreateMeta(o *Opts, cmd *cobra.Command) error {
 			return print(cmd, o, envelopeError(err, "server_error"))
 		}
 		fallbackFromSplitError = true
+		splitFallbackErr = err
 	}
 	out, err := fetchLegacyCreateMeta(ctx, opts)
 	if err != nil {
@@ -982,10 +984,7 @@ func issueCreateMeta(o *Opts, cmd *cobra.Command) error {
 	}
 	if fallbackFromSplitError {
 		out["source"] = "legacy_after_split_fallback_error"
-		out["warnings"] = []interface{}{map[string]interface{}{
-			"code":    "split_createmeta_fallback_error",
-			"message": "Split createmeta failed; legacy createmeta was used.",
-		}}
+		out["warnings"] = []interface{}{splitCreateMetaFallbackWarning(splitFallbackErr)}
 	}
 	return print(cmd, o, output.Success(ctx.Instance, out))
 }
@@ -1009,35 +1008,51 @@ func createMetaFieldsEmptyError() error {
 func createMetaDryRun(opts createMetaOptions) map[string]interface{} {
 	requests := []interface{}{}
 	if opts.FromIssue != "" {
-		requests = append(requests, jira.DryRunData("GET", "issue/"+jira.IssueKey(opts.FromIssue), map[string]string{"fields": "project,issuetype", "expand": "names,schema"}, nil))
+		issuePath := "issue/" + jira.IssueKey(opts.FromIssue)
+		requests = append(requests, jira.DryRunData("GET", issuePath, map[string]string{"fields": "project,issuetype", "expand": "names,schema"}, nil))
+		fullIssue := jira.DryRunData("GET", issuePath, map[string]string{"fields": "*all", "expand": "names,schema,editmeta"}, nil)
+		fullIssue["fallback_candidate"] = true
+		requests = append(requests, fullIssue)
 	}
 	projectRef := opts.ProjectID
 	if projectRef == "" {
 		projectRef = opts.ProjectKey
 	}
+	if projectRef == "" && opts.FromIssue != "" {
+		projectRef = "{projectIdOrKey}"
+	}
 	if !opts.Legacy && projectRef != "" {
-		base := "issue/createmeta/" + url.PathEscape(projectRef) + "/issuetypes"
+		base := "issue/createmeta/" + dryRunPathEscape(projectRef) + "/issuetypes"
 		requests = append(requests, jira.DryRunData("GET", base, nil, nil))
-		if opts.TypeID != "" {
-			requests = append(requests, jira.DryRunData("GET", base+"/"+url.PathEscape(opts.TypeID), nil, nil))
+		typeRef := opts.TypeID
+		if typeRef == "" && (opts.TypeName != "" || opts.FromIssue != "") {
+			typeRef = "{issueTypeId}"
+		}
+		if typeRef != "" {
+			requests = append(requests, jira.DryRunData("GET", base+"/"+dryRunPathEscape(typeRef), nil, nil))
+		}
+		if opts.FromIssue != "" {
+			legacy := jira.DryRunData("GET", "issue/createmeta", legacyCreateMetaDryRunQuery(opts), nil)
+			legacy["fallback_candidate"] = true
+			requests = append(requests, legacy)
 		}
 	} else {
-		requests = append(requests, jira.DryRunData("GET", "issue/createmeta", legacyCreateMetaQuery(opts), nil))
+		requests = append(requests, jira.DryRunData("GET", "issue/createmeta", legacyCreateMetaDryRunQuery(opts), nil))
 	}
 	return map[string]interface{}{"dry_run": true, "requests": requests}
 }
 
 func populateCreateMetaFromIssue(ctx *jira.Context, opts *createMetaOptions) error {
-	resp, err := ctx.Client.Do(httpclient.Request{
-		Method: "GET",
-		Path:   "issue/" + jira.IssueKey(opts.FromIssue),
-		Query:  map[string]string{"fields": "project,issuetype", "expand": "names,schema"},
-	})
+	d, err := readCreateMetaFromIssue(ctx, opts.FromIssue, "project,issuetype", "names,schema")
 	if err != nil {
-		return err
+		if !isIssueReadMissingError(err) {
+			return err
+		}
+		d, err = readCreateMetaFromIssue(ctx, opts.FromIssue, "*all", "names,schema,editmeta")
+		if err != nil {
+			return fromIssueReadError(opts.FromIssue, err)
+		}
 	}
-	defer resp.Body.Close()
-	d, _ := jira.ReadJSON(resp.Body)
 	fields := mapValue(d, "fields")
 	project := mapValue(fields, "project")
 	issueType := mapValue(fields, "issuetype")
@@ -1054,6 +1069,23 @@ func populateCreateMetaFromIssue(ctx *jira.Context, opts *createMetaOptions) err
 		opts.TypeID = stringValue(issueType, "id")
 	}
 	return nil
+}
+
+func readCreateMetaFromIssue(ctx *jira.Context, issueKey, fields, expand string) (map[string]interface{}, error) {
+	resp, err := ctx.Client.Do(httpclient.Request{
+		Method: "GET",
+		Path:   "issue/" + jira.IssueKey(issueKey),
+		Query:  map[string]string{"fields": fields, "expand": expand},
+	})
+	if err != nil {
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
+		return nil, err
+	}
+	defer resp.Body.Close()
+	d, _ := jira.ReadJSON(resp.Body)
+	return d, nil
 }
 
 func fetchSplitCreateMeta(ctx *jira.Context, opts createMetaOptions) (map[string]interface{}, error) {
@@ -1142,6 +1174,31 @@ func legacyCreateMetaQuery(opts createMetaOptions) map[string]string {
 	return q
 }
 
+func legacyCreateMetaDryRunQuery(opts createMetaOptions) map[string]string {
+	q := legacyCreateMetaQuery(opts)
+	if opts.FromIssue == "" {
+		return q
+	}
+	if _, ok := q["projectIds"]; !ok {
+		if _, ok := q["projectKeys"]; !ok {
+			q["projectIds"] = "{projectIdOrKey}"
+		}
+	}
+	if _, ok := q["issuetypeIds"]; !ok {
+		if _, ok := q["issuetypeNames"]; !ok {
+			q["issuetypeIds"] = "{issueTypeId}"
+		}
+	}
+	return q
+}
+
+func dryRunPathEscape(ref string) string {
+	if strings.HasPrefix(ref, "{") && strings.HasSuffix(ref, "}") {
+		return ref
+	}
+	return url.PathEscape(ref)
+}
+
 func getJiraMap(ctx *jira.Context, path string, q map[string]string) (map[string]interface{}, error) {
 	resp, err := ctx.Client.Do(httpclient.Request{Method: "GET", Path: path, Query: q})
 	if err != nil {
@@ -1155,9 +1212,71 @@ func getJiraMap(ctx *jira.Context, path string, q map[string]string) (map[string
 func isCreateMetaFallbackError(err error) bool {
 	var httpErr *httpclient.HTTPError
 	if errors.As(err, &httpErr) {
-		return httpErr.Status == 404 || httpErr.Code == "not_supported" || httpErr.Code == "server_error"
+		if httpErr.Code == "auth_failed" || httpErr.Code == "permission_denied" {
+			return false
+		}
+		if httpErr.Status == 404 || httpErr.Status == 405 || httpErr.Status == 501 {
+			return true
+		}
+		if httpErr.Code == "not_found" {
+			return true
+		}
+		return createMetaFallbackMessage(httpErr.Message)
 	}
 	return err != nil && err.Error() == "invalid_args"
+}
+
+func createMetaFallbackMessage(message string) bool {
+	message = strings.ToLower(message)
+	for _, needle := range []string{"issue does not exist", "does not exist", "null for uri", "createmeta"} {
+		if strings.Contains(message, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+func isIssueReadMissingError(err error) bool {
+	var httpErr *httpclient.HTTPError
+	if errors.As(err, &httpErr) {
+		if httpErr.Code == "auth_failed" || httpErr.Code == "permission_denied" {
+			return false
+		}
+		return httpErr.Status == 404 || httpErr.Code == "not_found" || issueReadMissingMessage(httpErr.Message)
+	}
+	return false
+}
+
+func issueReadMissingMessage(message string) bool {
+	message = strings.ToLower(message)
+	return strings.Contains(message, "issue does not exist") || strings.Contains(message, "does not exist")
+}
+
+func fromIssueReadError(issueKey string, err error) error {
+	message := "from issue " + jira.IssueKey(issueKey) + " could not be read"
+	var httpErr *httpclient.HTTPError
+	if errors.As(err, &httpErr) {
+		if strings.TrimSpace(httpErr.Message) != "" {
+			message += ": " + httpErr.Message
+		}
+		return &httpclient.HTTPError{Code: httpErr.Code, Message: message, Hint: httpErr.Hint, Status: httpErr.Status}
+	}
+	if err != nil && strings.TrimSpace(err.Error()) != "" {
+		message += ": " + err.Error()
+	}
+	return fmt.Errorf("%s", message)
+}
+
+func splitCreateMetaFallbackWarning(err error) map[string]interface{} {
+	warning := map[string]interface{}{
+		"code":    "split_createmeta_fallback_error",
+		"message": "Split createmeta failed; legacy createmeta was used.",
+	}
+	var httpErr *httpclient.HTTPError
+	if errors.As(err, &httpErr) && strings.TrimSpace(httpErr.Message) != "" {
+		warning["detail"] = httpErr.Message
+	}
+	return warning
 }
 
 func selectCreateMetaIssueType(resp map[string]interface{}, typeID, typeName string) map[string]interface{} {

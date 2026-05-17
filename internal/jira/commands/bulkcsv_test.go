@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"engineering-flow-platform-tools/internal/httpclient"
 )
 
 func TestBulkCreateDryRunDoesNotPostIssue(t *testing.T) {
@@ -402,6 +404,80 @@ func writeReporterPostCreateFixture(t *testing.T) (string, string) {
 	return csvPath, mappingPath
 }
 
+func TestCreateMetaFromIssueRetriesFullReadWhenMinimalReadReportsMissing(t *testing.T) {
+	minimalRead := 0
+	fullRead := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/issue/MMGFX-13887":
+			switch {
+			case r.URL.Query().Get("fields") == "project,issuetype" && r.URL.Query().Get("expand") == "names,schema":
+				minimalRead++
+				w.WriteHeader(404)
+				w.Write([]byte(`Issue Does Not Exist`))
+			case r.URL.Query().Get("fields") == "*all" && r.URL.Query().Get("expand") == "names,schema,editmeta":
+				fullRead++
+				w.Write([]byte(`{"fields":{"project":{"key":"MMGFX","id":"10000"},"issuetype":{"id":"10001","name":"Bug"}}}`))
+			default:
+				w.WriteHeader(404)
+				w.Write([]byte(`{"error":"unexpected issue query"}`))
+			}
+		case r.URL.Path == "/rest/api/2/issue/createmeta":
+			w.Write([]byte(`{"projects":[{"key":"MMGFX","id":"10000","issuetypes":[{"id":"10001","name":"Bug","fields":{"summary":{"name":"Summary"}}}]}]}`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+
+	out := run(t, cfg, "issue", "createmeta", "--from-issue", "MMGFX-13887", "--legacy")
+	if !out["ok"].(bool) {
+		t.Fatalf("legacy createmeta should succeed after full issue read retry: %#v", out)
+	}
+	if minimalRead != 1 || fullRead != 1 {
+		t.Fatalf("expected one minimal and one full issue read, got minimal=%d full=%d", minimalRead, fullRead)
+	}
+	fields := out["data"].(map[string]interface{})["fields"].(map[string]interface{})
+	if _, ok := fields["summary"]; !ok {
+		t.Fatalf("missing summary field: %#v", out)
+	}
+}
+
+func TestCreateMetaDryRunShowsFallbackFlow(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("dry-run should not call server: %s", r.URL.String())
+	})
+
+	out := run(t, cfg, "--dry-run", "issue", "createmeta", "--from-issue", "MMGFX-13887")
+	if !out["ok"].(bool) {
+		t.Fatalf("dry-run failed: %#v", out)
+	}
+	requests := out["data"].(map[string]interface{})["requests"].([]interface{})
+	paths := make([]string, 0, len(requests))
+	fallbackCandidates := 0
+	for _, req := range requests {
+		m := req.(map[string]interface{})
+		paths = append(paths, m["path"].(string))
+		if m["fallback_candidate"] == true {
+			fallbackCandidates++
+		}
+	}
+	wantPaths := []string{
+		"issue/MMGFX-13887",
+		"issue/MMGFX-13887",
+		"issue/createmeta/{projectIdOrKey}/issuetypes",
+		"issue/createmeta/{projectIdOrKey}/issuetypes/{issueTypeId}",
+		"issue/createmeta",
+	}
+	if strings.Join(paths, "\n") != strings.Join(wantPaths, "\n") {
+		t.Fatalf("unexpected dry-run flow: %#v", paths)
+	}
+	if fallbackCandidates != 2 {
+		t.Fatalf("expected full issue read and legacy createmeta as fallback candidates, got %d", fallbackCandidates)
+	}
+}
+
 func TestCreateMetaFromIssueSplitAndLegacyFallback(t *testing.T) {
 	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -426,14 +502,16 @@ func TestCreateMetaFromIssueSplitAndLegacyFallback(t *testing.T) {
 		t.Fatalf("wrong source: %#v", data)
 	}
 
+	var splitAuthHeader string
 	legacyCfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
 		case r.URL.Path == "/rest/api/2/issue/QA-1234":
 			w.Write([]byte(`{"fields":{"project":{"key":"QA","id":"10000"},"issuetype":{"id":"10001","name":"Test"}}}`))
 		case strings.Contains(r.URL.Path, "/issue/createmeta/10000/issuetypes"):
+			splitAuthHeader = r.Header.Get("Authorization")
 			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not found"}`))
+			w.Write([]byte(`{"error":"Issue Does Not Exist","authorization":"` + splitAuthHeader + `","token":"plain-secret"}`))
 		case r.URL.Path == "/rest/api/2/issue/createmeta":
 			w.Write([]byte(`{"projects":[{"key":"QA","id":"10000","issuetypes":[{"id":"10001","name":"Test","fields":{"summary":{"name":"Summary"}}}]}]}`))
 		default:
@@ -455,6 +533,13 @@ func TestCreateMetaFromIssueSplitAndLegacyFallback(t *testing.T) {
 	warnings := data["warnings"].([]interface{})
 	if len(warnings) != 1 || warnings[0].(map[string]interface{})["code"].(string) != "split_createmeta_fallback_error" {
 		t.Fatalf("missing split fallback warning: %#v", data)
+	}
+	detail := warnings[0].(map[string]interface{})["detail"].(string)
+	if !strings.Contains(detail, "Issue Does Not Exist") {
+		t.Fatalf("missing split error detail: %#v", warnings[0])
+	}
+	if strings.Contains(detail, splitAuthHeader) || strings.Contains(detail, "plain-secret") {
+		t.Fatalf("warning detail leaked credentials: %s", detail)
 	}
 }
 
@@ -533,7 +618,7 @@ func TestCreateMetaFailsWhenSplitErrorFallbackLegacyFieldsEmpty(t *testing.T) {
 			w.Write([]byte(`{"fields":{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Test"}}}`))
 		case strings.Contains(r.URL.Path, "/issue/createmeta/10000/issuetypes"):
 			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not found"}`))
+			w.Write([]byte(`Issue Does Not Exist`))
 		case r.URL.Path == "/rest/api/2/issue/createmeta":
 			w.Write([]byte(`{"projects":[{"key":"EX","id":"10000","issuetypes":[{"id":"10001","name":"Test","fields":{}}]}]}`))
 		default:
@@ -552,6 +637,97 @@ func TestCreateMetaFailsWhenSplitErrorFallbackLegacyFieldsEmpty(t *testing.T) {
 	}
 	if !strings.Contains(errObj["message"].(string), "no creatable fields") {
 		t.Fatalf("wrong message: %#v", out)
+	}
+}
+
+func TestCreateMetaFromIssueFailsWhenMinimalAndFullIssueReadsAreMissing(t *testing.T) {
+	createmetaHits := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/issue/MMGFX-13887":
+			w.WriteHeader(404)
+			w.Write([]byte(`Issue Does Not Exist`))
+		case strings.Contains(r.URL.Path, "/rest/api/2/issue/createmeta"):
+			createmetaHits++
+			w.Write([]byte(`{"projects":[]}`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+
+	out := run(t, cfg, "issue", "createmeta", "--from-issue", "MMGFX-13887")
+	if out["ok"].(bool) {
+		t.Fatalf("missing from issue should fail: %#v", out)
+	}
+	if createmetaHits != 0 {
+		t.Fatalf("createmeta should not be requested when from issue cannot be read, got %d hits", createmetaHits)
+	}
+	errObj := out["error"].(map[string]interface{})
+	if errObj["code"].(string) != "not_found" {
+		t.Fatalf("wrong error code: %#v", out)
+	}
+	if !strings.Contains(errObj["message"].(string), "from issue MMGFX-13887 could not be read") {
+		t.Fatalf("message should identify unreadable from issue: %#v", out)
+	}
+}
+
+func TestCreateMetaDoesNotFallbackForSplitPermissionDenied(t *testing.T) {
+	legacyHits := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/issue/EX-1":
+			w.Write([]byte(`{"fields":{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Test"}}}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta/10000/issuetypes":
+			w.WriteHeader(403)
+			w.Write([]byte(`{"error":"Forbidden"}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta":
+			legacyHits++
+			w.Write([]byte(`{"projects":[{"key":"EX","id":"10000","issuetypes":[{"id":"10001","name":"Test","fields":{"summary":{"name":"Summary"}}}]}]}`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+
+	out := run(t, cfg, "issue", "createmeta", "--from-issue", "EX-1")
+	if out["ok"].(bool) {
+		t.Fatalf("permission denied split createmeta should fail: %#v", out)
+	}
+	if legacyHits != 0 {
+		t.Fatalf("permission denied should not fall back to legacy, got %d legacy hits", legacyHits)
+	}
+	errObj := out["error"].(map[string]interface{})
+	if errObj["code"].(string) != "permission_denied" {
+		t.Fatalf("wrong error: %#v", out)
+	}
+}
+
+func TestCreateMetaFallbackErrorClassification(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "404 status", err: &httpclient.HTTPError{Code: "not_found", Message: "request failed", Status: 404}, want: true},
+		{name: "not found code", err: &httpclient.HTTPError{Code: "not_found", Message: "request failed", Status: 400}, want: true},
+		{name: "405 status", err: &httpclient.HTTPError{Code: "invalid_args", Message: "request failed", Status: 405}, want: true},
+		{name: "501 status", err: &httpclient.HTTPError{Code: "server_error", Message: "request failed", Status: 501}, want: true},
+		{name: "issue does not exist body", err: &httpclient.HTTPError{Code: "invalid_args", Message: "request failed: Issue Does Not Exist", Status: 400}, want: true},
+		{name: "null for uri body", err: &httpclient.HTTPError{Code: "invalid_args", Message: "request failed: null for uri", Status: 400}, want: true},
+		{name: "createmeta body", err: &httpclient.HTTPError{Code: "invalid_args", Message: "request failed: createmeta endpoint unavailable", Status: 400}, want: true},
+		{name: "auth failed", err: &httpclient.HTTPError{Code: "auth_failed", Message: "Issue Does Not Exist", Status: 401}, want: false},
+		{name: "permission denied", err: &httpclient.HTTPError{Code: "permission_denied", Message: "createmeta forbidden", Status: 403}, want: false},
+		{name: "plain server error", err: &httpclient.HTTPError{Code: "server_error", Message: "request failed", Status: 500}, want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isCreateMetaFallbackError(tc.err); got != tc.want {
+				t.Fatalf("got %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 

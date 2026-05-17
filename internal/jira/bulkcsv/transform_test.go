@@ -120,6 +120,53 @@ func TestDryRunRowsPlansReporterPostCreateUpdate(t *testing.T) {
 	}
 }
 
+func TestEditMetaDegradedDryRunKeepsCreatePayloadMinimal(t *testing.T) {
+	plan := MappingPlan{
+		Version:      PlanVersion,
+		Mode:         PlanMode,
+		MetadataMode: MetadataModeEditMetaDegraded,
+		Jira:         JiraInfo{ProjectID: "104804", IssueTypeID: "7"},
+		FieldMappings: []FieldMapping{
+			{CSVColumn: "Summary", JiraFieldID: "summary", Phase: PhaseCreate, Transform: "string", Required: true},
+			{CSVColumn: "Priority", JiraFieldID: "priority", Phase: PhasePostCreateUpdate, Transform: "priority"},
+			{CSVColumn: "Component", JiraFieldID: "components", Phase: PhasePostCreateUpdate, Transform: "components"},
+			{CSVColumn: "Reporter", JiraFieldID: "reporter", Phase: PhasePostCreateUpdate, Transform: "user"},
+			{CSVColumn: "Story Type", JiraFieldID: "customfield_26388", Phase: PhasePostCreateUpdate, Transform: "option"},
+		},
+		TemplateDefaults: []TemplateDefault{{JiraFieldID: "labels", JiraFieldName: "Labels", Value: []interface{}{"template"}}},
+		RequiredFields:   []FieldRef{{JiraFieldID: "summary", JiraFieldName: "Summary"}},
+	}
+	rows := []CSVRow{{RowNumber: 2, Values: map[string]string{
+		"Summary":    "Login",
+		"Priority":   "High",
+		"Component":  "Web",
+		"Reporter":   "alice",
+		"Story Type": "Feature",
+	}}}
+	result := DryRunRows(rows, plan, 3)
+	if result.MetadataMode != MetadataModeEditMetaDegraded || result.ValidRows != 1 || len(result.PlannedPostCreateUpdates) != 1 {
+		t.Fatalf("dry run result = %#v", result)
+	}
+	createFields := result.PreviewPayloads[0].CreatePreview["fields"].(map[string]interface{})
+	for _, field := range []string{"priority", "components", "reporter", "customfield_26388", "labels"} {
+		if _, ok := createFields[field]; ok {
+			t.Fatalf("%s leaked into create payload: %#v", field, createFields)
+		}
+	}
+	if createFields["summary"].(string) != "Login" || createFields["project"].(map[string]string)["id"] != "104804" || createFields["issuetype"].(map[string]string)["id"] != "7" {
+		t.Fatalf("wrong create fields: %#v", createFields)
+	}
+	postFields := result.PlannedPostCreateUpdates[0].Fields
+	component := postFields["components"].([]interface{})[0].(map[string]string)
+	if component["name"] != "Web" {
+		t.Fatalf("wrong components transform: %#v", postFields)
+	}
+	reporter := postFields["reporter"].(map[string]string)
+	if reporter["name"] != "alice" {
+		t.Fatalf("wrong reporter transform: %#v", postFields)
+	}
+}
+
 func TestDryRunRowsRequiresSummaryInCreatePayload(t *testing.T) {
 	plan := MappingPlan{
 		Version: PlanVersion,

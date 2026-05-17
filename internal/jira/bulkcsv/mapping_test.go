@@ -224,6 +224,72 @@ func TestBuildMappingPlanDoesNotMapSummaryAsPostCreateUpdate(t *testing.T) {
 	}
 }
 
+func TestBuildMappingPlanEditMetaDegradedMappingRules(t *testing.T) {
+	input := MappingInput{
+		MetadataMode: MetadataModeEditMetaDegraded,
+		CSV:          CSVSummary{Path: "testcases.csv", Columns: []string{"Summary", "Priority", "Component", "Reporter", "Story Type"}},
+		Rows: []CSVRow{{
+			RowNumber: 2,
+			Values: map[string]string{
+				"Summary":    "Login works",
+				"Priority":   "High",
+				"Component":  "Web",
+				"Reporter":   "alice",
+				"Story Type": "Feature",
+			},
+		}},
+		FieldCatalog: []interface{}{
+			map[string]interface{}{"id": "summary", "name": "Summary", "schema": map[string]interface{}{"type": "string"}},
+			map[string]interface{}{"id": "priority", "name": "Priority", "schema": map[string]interface{}{"type": "priority"}},
+			map[string]interface{}{"id": "components", "name": "Components", "schema": map[string]interface{}{"type": "array", "items": "component"}},
+			map[string]interface{}{"id": "reporter", "name": "Reporter", "schema": map[string]interface{}{"type": "user", "system": "reporter"}},
+			map[string]interface{}{"id": "customfield_26388", "name": "Story Type", "schema": map[string]interface{}{"type": "option"}},
+		},
+		ExampleIssue: editMetaDegradedIssueFixture(),
+		EditMeta: map[string]interface{}{"fields": map[string]interface{}{
+			"summary":           map[string]interface{}{"name": "Summary", "required": true, "schema": map[string]interface{}{"type": "string"}, "operations": []interface{}{"set"}},
+			"description":       map[string]interface{}{"name": "Description", "schema": map[string]interface{}{"type": "string"}, "operations": []interface{}{"set"}},
+			"priority":          map[string]interface{}{"name": "Priority", "schema": map[string]interface{}{"type": "priority"}, "allowedValues": []interface{}{map[string]interface{}{"id": "3", "name": "High"}}, "operations": []interface{}{"set"}},
+			"components":        map[string]interface{}{"name": "Components", "schema": map[string]interface{}{"type": "array", "items": "component"}, "allowedValues": []interface{}{map[string]interface{}{"id": "20", "name": "Web"}}, "operations": []interface{}{"set"}},
+			"reporter":          map[string]interface{}{"name": "Reporter", "schema": map[string]interface{}{"type": "user", "system": "reporter"}, "operations": []interface{}{"set"}},
+			"customfield_26388": map[string]interface{}{"name": "Story Type", "schema": map[string]interface{}{"type": "option"}, "allowedValues": []interface{}{map[string]interface{}{"id": "100", "value": "Feature"}}, "operations": []interface{}{"set"}},
+			"status":            map[string]interface{}{"name": "Status", "schema": map[string]interface{}{"type": "status"}, "operations": []interface{}{"set"}},
+			"resolution":        map[string]interface{}{"name": "Resolution", "schema": map[string]interface{}{"type": "resolution"}, "operations": []interface{}{"set"}},
+		}},
+		MinConfidence: 0.75,
+	}
+	plan, err := BuildMappingPlan(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.MetadataMode != MetadataModeEditMetaDegraded {
+		t.Fatalf("metadata mode = %s", plan.MetadataMode)
+	}
+	summary := mappingFor(t, plan, "Summary")
+	if summary.Phase != PhaseCreate || summary.Transform != "string" || !summary.Required || summary.Reason != "summary is required for Jira issue creation" {
+		t.Fatalf("summary mapping = %#v", summary)
+	}
+	priority := mappingFor(t, plan, "Priority")
+	if priority.Phase != PhasePostCreateUpdate {
+		t.Fatalf("priority mapping = %#v", priority)
+	}
+	components := mappingFor(t, plan, "Component")
+	if components.JiraFieldID != "components" || components.Phase != PhasePostCreateUpdate {
+		t.Fatalf("components mapping = %#v", components)
+	}
+	reporter := mappingFor(t, plan, "Reporter")
+	if reporter.Phase != PhasePostCreateUpdate || reporter.Transform != "user" {
+		t.Fatalf("reporter mapping = %#v", reporter)
+	}
+	storyType := mappingFor(t, plan, "Story Type")
+	if storyType.JiraFieldID != "customfield_26388" || storyType.Phase != PhasePostCreateUpdate {
+		t.Fatalf("story type mapping = %#v", storyType)
+	}
+	if !blockedField(plan, "status") || !blockedField(plan, "resolution") {
+		t.Fatalf("status/resolution should be blocked: %#v", plan.BlockedFields)
+	}
+}
+
 func assertMapping(t *testing.T, plan MappingPlan, column, fieldID string) {
 	t.Helper()
 	m := mappingFor(t, plan, column)
@@ -246,6 +312,15 @@ func mappingFor(t *testing.T, plan MappingPlan, column string) FieldMapping {
 func containsString(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func blockedField(plan MappingPlan, fieldID string) bool {
+	for _, field := range plan.BlockedFields {
+		if field.JiraFieldID == fieldID {
 			return true
 		}
 	}
@@ -281,6 +356,33 @@ func mappingCreateMetaFixture() map[string]interface{} {
 				"schema":        map[string]interface{}{"type": "array", "items": "component"},
 				"allowedValues": []interface{}{map[string]interface{}{"id": "20", "name": "Web"}, map[string]interface{}{"id": "21", "name": "API"}},
 			},
+		},
+	}
+}
+
+func editMetaDegradedIssueFixture() map[string]interface{} {
+	return map[string]interface{}{
+		"key": "MMGFX-13887",
+		"fields": map[string]interface{}{
+			"project":   map[string]interface{}{"key": "MMGFX", "id": "104804"},
+			"issuetype": map[string]interface{}{"name": "Story", "id": "7"},
+			"summary":   "Template",
+		},
+		"names": map[string]interface{}{
+			"summary":           "Summary",
+			"priority":          "Priority",
+			"components":        "Components",
+			"reporter":          "Reporter",
+			"customfield_26388": "Story Type",
+			"status":            "Status",
+			"resolution":        "Resolution",
+		},
+		"schema": map[string]interface{}{
+			"summary":           map[string]interface{}{"type": "string"},
+			"priority":          map[string]interface{}{"type": "priority"},
+			"components":        map[string]interface{}{"type": "array", "items": "component"},
+			"reporter":          map[string]interface{}{"type": "user", "system": "reporter"},
+			"customfield_26388": map[string]interface{}{"type": "option"},
 		},
 	}
 }

@@ -1134,7 +1134,15 @@ func fetchSplitCreateMeta(ctx *jira.Context, opts createMetaOptions) (map[string
 }
 
 func fetchLegacyCreateMeta(ctx *jira.Context, opts createMetaOptions) (map[string]interface{}, error) {
-	resp, err := getJiraMap(ctx, "issue/createmeta", legacyCreateMetaQuery(opts))
+	return fetchLegacyCreateMetaPath(ctx, opts, "issue/createmeta")
+}
+
+func fetchRawLegacyCreateMeta(ctx *jira.Context, opts createMetaOptions) (map[string]interface{}, error) {
+	return fetchLegacyCreateMetaPath(ctx, opts, "/rest/api/2/issue/createmeta")
+}
+
+func fetchLegacyCreateMetaPath(ctx *jira.Context, opts createMetaOptions, path string) (map[string]interface{}, error) {
+	resp, err := getJiraMap(ctx, path, legacyCreateMetaQuery(opts))
 	if err != nil {
 		return nil, err
 	}

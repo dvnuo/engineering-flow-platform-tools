@@ -10,7 +10,10 @@ import (
 var nonWord = regexp.MustCompile(`[^a-z0-9]+`)
 
 func BuildMappingPlan(input MappingInput) (MappingPlan, error) {
-	if len(fieldsMap(input.CreateMeta)) == 0 {
+	mode := EffectiveMetadataMode(input.MetadataMode)
+	if mode == MetadataModeEditMetaDegraded {
+		input.CreateMeta = editMetaDegradedCreateMeta(input)
+	} else if len(fieldsMap(input.CreateMeta)) == 0 {
 		return MappingPlan{}, CreateMetaFieldsEmptyError("")
 	}
 	if input.MinConfidence == 0 {
@@ -21,6 +24,7 @@ func BuildMappingPlan(input MappingInput) (MappingPlan, error) {
 	plan := MappingPlan{
 		Version:          PlanVersion,
 		Mode:             PlanMode,
+		MetadataMode:     mode,
 		Jira:             jiraInfo,
 		CSV:              input.CSV,
 		FieldMappings:    []FieldMapping{},
@@ -28,7 +32,7 @@ func BuildMappingPlan(input MappingInput) (MappingPlan, error) {
 		BlockedFields:    []BlockedField{},
 		AmbiguousColumns: []AmbiguousColumn{},
 		UnmappedColumns:  []UnmappedColumn{},
-		Warnings:         []PlanWarning{},
+		Warnings:         append([]PlanWarning{}, input.Warnings...),
 		RequiredFields:   []FieldRef{},
 		CreateFields:     map[string]FieldRef{},
 	}
@@ -70,6 +74,9 @@ func BuildMappingPlan(input MappingInput) (MappingPlan, error) {
 			Reason:        top.Reason,
 			AllowedValues: top.AllowedValues,
 		}
+		if mode == MetadataModeEditMetaDegraded {
+			applyEditMetaDegradedMappingRules(&mapping)
+		}
 		if mapping.Transform == "unknown" {
 			plan.RequiresConfirmation = append(plan.RequiresConfirmation, ConfirmationItem{CSVColumn: column, JiraFieldID: mapping.JiraFieldID, Reason: "unknown field schema requires an explicit raw_json transform"})
 		}
@@ -82,11 +89,57 @@ func BuildMappingPlan(input MappingInput) (MappingPlan, error) {
 		plan.FieldMappings = append(plan.FieldMappings, mapping)
 	}
 
-	if input.IncludeTemplateDefaults {
+	if input.IncludeTemplateDefaults && mode != MetadataModeEditMetaDegraded {
 		addTemplateDefaults(&plan, input, fields)
+	}
+	if mode == MetadataModeEditMetaDegraded {
+		addEditMetaDegradedBlockedFields(&plan, fields)
 	}
 	addMissingRequiredWarnings(&plan)
 	return plan, nil
+}
+
+func editMetaDegradedCreateMeta(input MappingInput) map[string]interface{} {
+	summary := map[string]interface{}{
+		"name":     "Summary",
+		"required": true,
+		"schema":   map[string]interface{}{"type": "string"},
+	}
+	if raw := fieldsMap(input.EditMeta)["summary"]; len(raw) > 0 {
+		for k, v := range raw {
+			summary[k] = v
+		}
+		summary["required"] = true
+	}
+	if raw := exampleSchemas(input.ExampleIssue)["summary"]; len(raw) > 0 {
+		currentSchema := asMap(summary["schema"])
+		for k, v := range raw {
+			currentSchema[k] = v
+		}
+		summary["schema"] = currentSchema
+	}
+	if name := exampleNames(input.ExampleIssue)["summary"]; name != "" {
+		summary["name"] = name
+	}
+	info := inferJiraInfo(input)
+	return map[string]interface{}{
+		"project":   map[string]interface{}{"key": info.ProjectKey, "id": info.ProjectID},
+		"issuetype": map[string]interface{}{"name": info.IssueTypeName, "id": info.IssueTypeID},
+		"fields":    map[string]interface{}{"summary": summary},
+		"source":    MetadataModeEditMetaDegraded,
+	}
+}
+
+func applyEditMetaDegradedMappingRules(mapping *FieldMapping) {
+	switch mapping.JiraFieldID {
+	case "summary":
+		mapping.Phase = PhaseCreate
+		mapping.Transform = "string"
+		mapping.Required = true
+		mapping.Reason = "summary is required for Jira issue creation"
+	default:
+		mapping.Phase = PhasePostCreateUpdate
+	}
 }
 
 func candidatesForColumn(column string, samples []string, fields map[string]fieldInfo) []FieldCandidate {
@@ -173,8 +226,20 @@ func scoreField(column string, samples []string, f fieldInfo) FieldCandidate {
 }
 
 func isUnmappableSystemField(id string) bool {
+	if isBlockedPostCreateActionField(id) {
+		return true
+	}
 	switch id {
 	case "project", "issuetype", "status", "resolution":
+		return true
+	default:
+		return false
+	}
+}
+
+func isBlockedPostCreateActionField(id string) bool {
+	switch id {
+	case "attachment", "attachments", "comment", "comments", "worklog", "watchers", "votes", "issuelinks", "status", "resolution":
 		return true
 	default:
 		return false
@@ -243,6 +308,23 @@ func addTemplateDefaults(plan *MappingPlan, input MappingInput, fields map[strin
 			continue
 		}
 		plan.TemplateDefaults = append(plan.TemplateDefaults, TemplateDefault{JiraFieldID: id, JiraFieldName: f.Name, Required: f.Required, Value: value})
+	}
+}
+
+func addEditMetaDegradedBlockedFields(plan *MappingPlan, fields map[string]fieldInfo) {
+	for _, id := range sortedFieldIDs(fields) {
+		if !isBlockedPostCreateActionField(id) {
+			continue
+		}
+		f := fields[id]
+		if !f.Editable && !f.Creatable {
+			continue
+		}
+		plan.BlockedFields = append(plan.BlockedFields, BlockedField{
+			JiraFieldID:   id,
+			JiraFieldName: f.Name,
+			Reason:        "not mapped as a field in editmeta-degraded mode; requires a future post-create action",
+		})
 	}
 }
 

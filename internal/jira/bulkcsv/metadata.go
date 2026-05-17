@@ -59,6 +59,12 @@ func collectFields(input MappingInput) map[string]fieldInfo {
 		info.Raw = mergeRaw(info.Raw, raw)
 		fields[id] = info
 	}
+	for id, raw := range exampleSchemas(input.ExampleIssue) {
+		info := fields[id]
+		info.ID = id
+		applySchema(&info, raw)
+		fields[id] = info
+	}
 	for id, raw := range exampleNames(input.ExampleIssue) {
 		info := fields[id]
 		info.ID = id
@@ -106,6 +112,17 @@ func exampleNames(issue map[string]interface{}) map[string]string {
 	names := asMap(issue["names"])
 	for k, v := range names {
 		out[k] = fmt.Sprint(v)
+	}
+	return out
+}
+
+func exampleSchemas(issue map[string]interface{}) map[string]map[string]interface{} {
+	out := map[string]map[string]interface{}{}
+	schemas := asMap(issue["schema"])
+	for k, v := range schemas {
+		if m := asMap(v); len(m) > 0 {
+			out[k] = m
+		}
 	}
 	return out
 }

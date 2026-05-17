@@ -26,6 +26,7 @@ func LoadMappingPlan(path string) (MappingPlan, error) {
 	if plan.Version != PlanVersion || plan.Mode != PlanMode {
 		return MappingPlan{}, InvalidArgs("mapping plan version or mode is unsupported")
 	}
+	plan.MetadataMode = EffectiveMetadataMode(plan.MetadataMode)
 	return plan, nil
 }
 

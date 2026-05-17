@@ -69,10 +69,10 @@ func TestSchemaConcreteFlags(t *testing.T) {
 	requireFlags(t, schemaData(t, "jira", "issue.create"), "project", "type", "summary", "description", "field", "json-body", "json-body-file", "dry-run")
 	requireFlags(t, schemaData(t, "jira", "issue.transition"), "to", "transition-id", "comment", "field")
 	mapCSV := schemaData(t, "jira", "issue.map-csv")
-	requireFlags(t, mapCSV, "from-csv", "template-issue", "output", "sample-rows", "min-confidence", "include-template-defaults")
+	requireFlags(t, mapCSV, "from-csv", "template-issue", "metadata-mode", "output", "sample-rows", "min-confidence", "include-template-defaults")
 	requireRequired(t, mapCSV, "from-csv", "template-issue")
 	bulkCreate := schemaData(t, "jira", "issue.bulk-create")
-	requireFlags(t, bulkCreate, "from-csv", "mapping", "dry-run", "yes", "max-create", "fail-fast", "confirm-mapping", "apply-post-create-updates")
+	requireFlags(t, bulkCreate, "from-csv", "mapping", "metadata-mode", "dry-run", "yes", "max-create", "fail-fast", "confirm-mapping", "apply-post-create-updates")
 	requireRequired(t, bulkCreate, "from-csv")
 	if bulkCreate["risk"].(string) != "write_requires_confirmation" {
 		t.Fatalf("bulk-create risk = %s", bulkCreate["risk"].(string))

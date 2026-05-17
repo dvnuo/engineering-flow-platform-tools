@@ -1,9 +1,11 @@
-# Atlassian CLI Tools
+# Engineering Flow Platform Tools
 
-Atlassian CLI Tools provides two cross-platform command line binaries for Jira and Confluence automation:
+This repository hosts cross-platform Go-based CLI tools for agent, runtime, shell, and automation workflows. Current tool binaries include:
 
 - `jira`
 - `confluence`
+
+Jira and Confluence are the first tool family in this repository. Future tools may be added as separate command binaries under `cmd/<tool-name>`.
 
 The project is designed for humans, shell scripts, and LLM/agent workflows that need stable machine-readable output.
 
@@ -11,9 +13,21 @@ The project is designed for humans, shell scripts, and LLM/agent workflows that 
 
 - Keep user-visible commands predictable across platforms.
 - Return stable JSON envelopes with `ok`, `data`, and `error`.
-- Support multiple Jira and Confluence instances from one config file.
+- Support cross-platform builds for Go-based custom tool binaries.
+- Keep commands suitable for humans, shell scripts, and LLM/agent workflows.
 - Avoid printing credentials in normal, error, dry-run, or verbose output.
 - Provide command metadata through `commands --json` and `schema <command> --json`.
+
+## Current Tool Families
+
+### Jira and Confluence
+
+The repository currently includes:
+
+- `jira`: Jira Server/Data Center automation
+- `confluence`: Confluence Server/Data Center automation
+
+These commands use `ATLASSIAN_CONFIG` and `~/.config/atlassian/config.json` because they are Atlassian product integrations. This does not mean the repository is limited to those product integrations.
 
 ## Quick Install
 
@@ -143,7 +157,7 @@ bash scripts/build.sh --snapshot
 ./scripts/build.ps1 --snapshot
 ```
 
-Build outputs are placed under `dist/<os>-<arch>/` for linux, darwin, and windows on amd64 and arm64.
+Build outputs are placed under `dist/<goos>-<goarch>/` for linux, darwin, and windows on amd64 and arm64.
 
 ## Development And Testing
 
@@ -164,4 +178,6 @@ go vet ./...
 
 ## Release
 
-Tags matching `v*` trigger the release workflow. Release archives include the binaries plus README and install/config/LLM usage docs.
+Tags matching `v*` trigger the release workflow. Release archives are named `engineering-flow-platform-tools_<version>_<goos>_<goarch>`.
+
+Current archives include `jira`, `confluence`, README, and install/config/LLM usage docs. Future archives may include more tool binaries from `cmd/<tool-name>`.

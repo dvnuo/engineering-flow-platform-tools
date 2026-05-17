@@ -408,3 +408,70 @@ func TestCreateMetaFromIssueSplitAndLegacyFallback(t *testing.T) {
 		t.Fatalf("wrong fallback source: %#v", data)
 	}
 }
+
+func TestCreateMetaFallsBackToLegacyWhenSplitFieldsEmpty(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/issue/EX-1":
+			w.Write([]byte(`{"fields":{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Story"}}}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta/10000/issuetypes":
+			w.Write([]byte(`{"issueTypes":[{"id":"10001","name":"Story"}]}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta/10000/issuetypes/10001":
+			w.Write([]byte(`{"fields":{}}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta":
+			w.Write([]byte(`{"projects":[{"key":"EX","id":"10000","issuetypes":[{"id":"10001","name":"Story","fields":{"summary":{"name":"Summary","required":true,"schema":{"type":"string"}}}}]}]}`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+
+	out := run(t, cfg, "issue", "createmeta", "--from-issue", "EX-1")
+	if !out["ok"].(bool) {
+		t.Fatalf("legacy fallback after empty split failed: %#v", out)
+	}
+	data := out["data"].(map[string]interface{})
+	if data["source"].(string) != "legacy_after_empty_split" {
+		t.Fatalf("wrong source: %#v", data)
+	}
+	fields := data["fields"].(map[string]interface{})
+	if _, ok := fields["summary"]; !ok {
+		t.Fatalf("missing summary field: %#v", fields)
+	}
+	warnings := data["warnings"].([]interface{})
+	if len(warnings) != 1 || warnings[0].(map[string]interface{})["code"].(string) != "split_createmeta_empty_fields" {
+		t.Fatalf("missing empty split warning: %#v", data)
+	}
+}
+
+func TestCreateMetaFailsWhenSplitAndLegacyFieldsEmpty(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/issue/EX-1":
+			w.Write([]byte(`{"fields":{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Story"}}}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta/10000/issuetypes":
+			w.Write([]byte(`{"issueTypes":[{"id":"10001","name":"Story"}]}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta/10000/issuetypes/10001":
+			w.Write([]byte(`{"fields":{}}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta":
+			w.Write([]byte(`{"projects":[{"key":"EX","id":"10000","issuetypes":[{"id":"10001","name":"Story","fields":{}}]}]}`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+
+	out := run(t, cfg, "issue", "createmeta", "--from-issue", "EX-1")
+	if out["ok"].(bool) {
+		t.Fatalf("empty split and legacy fields should fail: %#v", out)
+	}
+	errObj := out["error"].(map[string]interface{})
+	if errObj["code"].(string) != "createmeta_fields_empty" {
+		t.Fatalf("wrong error: %#v", out)
+	}
+	if !strings.Contains(errObj["hint"].(string), "--legacy") {
+		t.Fatalf("missing legacy hint: %#v", out)
+	}
+}

@@ -172,9 +172,25 @@ func TestClientRespectsNOProxyFromEnvironment(t *testing.T) {
 	}
 }
 
+func TestClientUsesLowercaseProxyEnvironment(t *testing.T) {
+	clearProxyEnv(t)
+
+	t.Setenv("https_proxy", "http://proxy.internal:8080")
+	t.Setenv("no_proxy", "skip.internal")
+	t.Setenv("HTTPCLIENT_PROXY_HELPER", "proxy_func")
+	t.Setenv("HTTPCLIENT_PROXY_BASE_URL", "https://jira.internal")
+
+	runProxyEnvironmentHelper(t)
+}
+
 func TestProxyEnvironmentHelper(t *testing.T) {
-	if os.Getenv("HTTPCLIENT_PROXY_HELPER") == "" {
+	scenario := os.Getenv("HTTPCLIENT_PROXY_HELPER")
+	if scenario == "" {
 		t.Skip("helper process only")
+	}
+	if scenario == "proxy_func" {
+		assertProxyFunctionFromEnvironment(t)
+		return
 	}
 
 	if dialHost := os.Getenv("HTTPCLIENT_PROXY_DIAL_HOST"); dialHost != "" {
@@ -196,6 +212,41 @@ func TestProxyEnvironmentHelper(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, resp.Body)
+}
+
+func assertProxyFunctionFromEnvironment(t *testing.T) {
+	t.Helper()
+	v := true
+	c, err := New(config.InstanceConfig{Name: "x", BaseURL: os.Getenv("HTTPCLIENT_PROXY_BASE_URL"), RESTPath: "/rest/api/2", VerifySSL: &v, Auth: config.AuthConfig{Type: "bearer_token", Token: "t"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr, ok := c.http.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("expected *http.Transport, got %T", c.http.Transport)
+	}
+	proxiedURL, err := url.Parse("https://jira.internal/rest/api/2/myself")
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxyURL, err := tr.Proxy(&http.Request{URL: proxiedURL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if proxyURL == nil || proxyURL.String() != "http://proxy.internal:8080" {
+		t.Fatalf("proxy=%v want http://proxy.internal:8080", proxyURL)
+	}
+	bypassURL, err := url.Parse("https://skip.internal/rest/api/2/myself")
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxyURL, err = tr.Proxy(&http.Request{URL: bypassURL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if proxyURL != nil {
+		t.Fatalf("proxy=%v want nil for no_proxy host", proxyURL)
+	}
 }
 
 func TestClientAllowsSelfSignedServerWhenVerifySSLDisabled(t *testing.T) {

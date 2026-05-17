@@ -28,11 +28,23 @@ func New(instance config.InstanceConfig) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	tr := &http.Transport{TLSClientConfig: &tls.Config{}}
+	baseTransport, ok := http.DefaultTransport.(*http.Transport)
+	var tr *http.Transport
+	if ok && baseTransport != nil {
+		tr = baseTransport.Clone()
+	} else {
+		tr = &http.Transport{}
+	}
+	tr.Proxy = http.ProxyFromEnvironment
+	if tr.TLSClientConfig != nil {
+		tr.TLSClientConfig = tr.TLSClientConfig.Clone()
+	} else {
+		tr.TLSClientConfig = &tls.Config{}
+	}
 	if instance.VerifySSL != nil && !*instance.VerifySSL {
 		tr.TLSClientConfig.InsecureSkipVerify = true
 	}
-	if instance.CACert != "" {
+	if strings.TrimSpace(instance.CACert) != "" {
 		pool := x509.NewCertPool()
 		if !pool.AppendCertsFromPEM([]byte(instance.CACert)) {
 			return nil, errors.New("config_error")

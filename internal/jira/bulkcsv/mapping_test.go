@@ -183,6 +183,47 @@ func TestBuildMappingPlanRejectsEmptyCreateMetaFields(t *testing.T) {
 	}
 }
 
+func TestBuildMappingPlanDoesNotMapSummaryAsPostCreateUpdate(t *testing.T) {
+	input := MappingInput{
+		CSV: CSVSummary{Path: "testcases.csv", Columns: []string{"Title"}},
+		Rows: []CSVRow{{
+			RowNumber: 2,
+			Values:    map[string]string{"Title": "Login works"},
+		}},
+		FieldCatalog: []interface{}{
+			map[string]interface{}{"id": "summary", "name": "Summary", "schema": map[string]interface{}{"type": "string"}},
+			map[string]interface{}{"id": "priority", "name": "Priority", "schema": map[string]interface{}{"type": "priority"}},
+		},
+		CreateMeta: map[string]interface{}{
+			"project":   map[string]interface{}{"key": "QA", "id": "10000"},
+			"issuetype": map[string]interface{}{"name": "Test", "id": "10001"},
+			"fields": map[string]interface{}{
+				"priority": map[string]interface{}{"name": "Priority", "schema": map[string]interface{}{"type": "priority"}},
+			},
+		},
+		EditMeta: map[string]interface{}{
+			"fields": map[string]interface{}{
+				"summary": map[string]interface{}{"name": "Summary", "schema": map[string]interface{}{"type": "string"}},
+			},
+		},
+		MinConfidence: 0.75,
+	}
+
+	plan, err := BuildMappingPlan(input)
+	if err == nil {
+		for _, mapping := range plan.FieldMappings {
+			if mapping.JiraFieldID == "summary" && mapping.Phase == PhasePostCreateUpdate {
+				t.Fatalf("summary mapped as post-create update: %#v", plan)
+			}
+		}
+		t.Fatalf("expected summary_not_creatable error, got plan: %#v", plan)
+	}
+	bulkErr, ok := err.(*Error)
+	if !ok || bulkErr.Code != "summary_not_creatable" {
+		t.Fatalf("wrong error: %#v", err)
+	}
+}
+
 func assertMapping(t *testing.T, plan MappingPlan, column, fieldID string) {
 	t.Helper()
 	m := mappingFor(t, plan, column)

@@ -54,6 +54,9 @@ func BuildMappingPlan(input MappingInput) (MappingPlan, error) {
 			continue
 		}
 		top := candidates[0]
+		if top.JiraFieldID == "summary" && top.Phase == PhasePostCreateUpdate {
+			return MappingPlan{}, SummaryNotCreatableError()
+		}
 		mapping := FieldMapping{
 			CSVColumn:     column,
 			JiraFieldID:   top.JiraFieldID,

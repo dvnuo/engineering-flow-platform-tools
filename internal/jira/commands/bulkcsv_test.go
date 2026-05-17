@@ -594,3 +594,38 @@ func TestMapCSVRejectsSuppliedCreateMetaWithEmptyFields(t *testing.T) {
 		t.Fatalf("wrong hint: %#v", out)
 	}
 }
+
+func TestMapCSVRejectsSummaryPostCreateOnlyMapping(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/field":
+			w.Write([]byte(`[{"id":"summary","name":"Summary","schema":{"type":"string"}},{"id":"priority","name":"Priority","schema":{"type":"priority"}}]`))
+		case r.URL.Path == "/rest/api/2/issue/EX-1":
+			w.Write([]byte(`{"fields":{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Story"},"summary":"Template"},"names":{"summary":"Summary","priority":"Priority"}}`))
+		case r.URL.Path == "/rest/api/2/issue/EX-1/editmeta":
+			w.Write([]byte(`{"fields":{"summary":{"name":"Summary","schema":{"type":"string"}}}}`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+	dir := t.TempDir()
+	csvPath := filepath.Join(dir, "testcases.csv")
+	createMetaPath := filepath.Join(dir, "create-meta.json")
+	if err := os.WriteFile(csvPath, []byte("Title\nLogin\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(createMetaPath, []byte(`{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Story"},"fields":{"priority":{"name":"Priority","schema":{"type":"priority"}}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out := run(t, cfg, "issue", "map-csv", "--from-csv", csvPath, "--template-issue", "EX-1", "--create-meta", createMetaPath)
+	if out["ok"].(bool) {
+		t.Fatalf("map-csv should reject summary as post-create-only: %#v", out)
+	}
+	errObj := out["error"].(map[string]interface{})
+	if errObj["code"].(string) != "summary_not_creatable" {
+		t.Fatalf("wrong error: %#v", out)
+	}
+}

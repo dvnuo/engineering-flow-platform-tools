@@ -40,6 +40,15 @@ func CreateMetaFieldsEmptyError(hint string) *Error {
 	}
 }
 
+func SummaryNotCreatableError() *Error {
+	return &Error{
+		Code:    "summary_not_creatable",
+		Message: "summary is required for Jira issue creation but is not present in create metadata.",
+		Hint:    "Regenerate create metadata with `jira issue createmeta --from-issue <KEY> --legacy --json`.",
+		Status:  400,
+	}
+}
+
 type CSVSummary struct {
 	Path       string              `json:"path"`
 	Columns    []string            `json:"columns"`

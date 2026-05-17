@@ -90,6 +90,33 @@ func TestHTTPStatusErrorCodes(t *testing.T) {
 	}
 }
 
+func TestHTTPStatusErrorIncludesBodySnippetAndRedactsCredentials(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"create failed","authorization":"` + r.Header.Get("Authorization") + `","token":"plain-secret"}`))
+	}))
+	defer s.Close()
+	v := true
+	c, err := New(config.InstanceConfig{Name: "x", BaseURL: s.URL, RESTPath: "/rest/api/2", VerifySSL: &v, Auth: config.AuthConfig{Type: "bearer_token", Token: "plain-secret"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.Do(Request{Method: "POST", Path: "issue", JSONBody: map[string]string{"summary": "x"}})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	httpErr, ok := err.(*HTTPError)
+	if !ok {
+		t.Fatalf("expected HTTPError, got %T", err)
+	}
+	if httpErr.Status != http.StatusBadRequest || !strings.Contains(httpErr.Message, "HTTP 400") || !strings.Contains(httpErr.Message, "create failed") {
+		t.Fatalf("missing status/body in error: %#v", httpErr)
+	}
+	if strings.Contains(httpErr.Message, "plain-secret") || strings.Contains(httpErr.Message, "Bearer") {
+		t.Fatalf("credentials leaked in error: %s", httpErr.Message)
+	}
+}
+
 func TestClientUsesHTTPProxyFromEnvironment(t *testing.T) {
 	clearProxyEnv(t)
 

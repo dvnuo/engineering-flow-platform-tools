@@ -6,10 +6,12 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -22,6 +24,13 @@ type Client struct {
 	http     *http.Client
 	headers  map[string]string
 }
+
+const maxErrorBodySnippet = 2048
+
+var (
+	authCredentialPattern = regexp.MustCompile(`(?i)\b(?:bearer|basic)\s+[A-Za-z0-9._~+/\-=]+`)
+	sensitiveFieldPattern = regexp.MustCompile(`(?i)((?:"?(?:password|token|api[_-]?key|authorization)"?)\s*[:=]\s*)("[^"]*"|[^\s,}]+)`)
+)
 
 func New(instance config.InstanceConfig) (*Client, error) {
 	h, err := auth.AuthHeaders(instance.Auth)
@@ -94,10 +103,53 @@ func (c *Client) Do(r Request) (*http.Response, error) {
 		return nil, &HTTPError{Code: "network_error", Message: "request failed", Hint: err.Error()}
 	}
 	if resp.StatusCode >= 400 {
-		return resp, &HTTPError{Code: mapStatus(resp.StatusCode), Message: "request failed", Status: resp.StatusCode}
+		return resp, c.statusError(resp)
 	}
 	return resp, nil
 }
+
+func (c *Client) statusError(resp *http.Response) *HTTPError {
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodySnippet+1))
+	resp.Body = io.NopCloser(bytes.NewReader(body))
+	message := fmt.Sprintf("request failed with HTTP %d", resp.StatusCode)
+	if snippet := sanitizeErrorSnippet(body, c.headers); snippet != "" {
+		message += ": " + snippet
+	}
+	return &HTTPError{Code: mapStatus(resp.StatusCode), Message: message, Status: resp.StatusCode}
+}
+
+func sanitizeErrorSnippet(body []byte, headers map[string]string) string {
+	truncated := len(body) > maxErrorBodySnippet
+	if truncated {
+		body = body[:maxErrorBodySnippet]
+	}
+	snippet := strings.TrimSpace(string(body))
+	if snippet == "" {
+		return ""
+	}
+	snippet = strings.Map(func(r rune) rune {
+		switch r {
+		case '\n', '\r', '\t':
+			return ' '
+		}
+		if r < 32 {
+			return -1
+		}
+		return r
+	}, snippet)
+	for _, secret := range headers {
+		if strings.TrimSpace(secret) != "" {
+			snippet = strings.ReplaceAll(snippet, secret, "***REDACTED***")
+		}
+	}
+	snippet = authCredentialPattern.ReplaceAllString(snippet, "***REDACTED***")
+	snippet = sensitiveFieldPattern.ReplaceAllString(snippet, `${1}"***REDACTED***"`)
+	if truncated {
+		snippet += "..."
+	}
+	return snippet
+}
+
 func (c *Client) resolveURL(path string) (string, error) {
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
 		if !urlBelongsToBase(path, c.instance.BaseURL) {

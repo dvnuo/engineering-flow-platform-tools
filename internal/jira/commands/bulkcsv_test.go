@@ -446,8 +446,15 @@ func TestCreateMetaFromIssueSplitAndLegacyFallback(t *testing.T) {
 		t.Fatalf("legacy createmeta failed: %#v", out)
 	}
 	data = out["data"].(map[string]interface{})
-	if data["source"].(string) != "legacy" {
+	if data["source"].(string) != "legacy_after_split_fallback_error" {
 		t.Fatalf("wrong fallback source: %#v", data)
+	}
+	if _, ok := data["fields"].(map[string]interface{})["summary"]; !ok {
+		t.Fatalf("missing fallback summary field: %#v", data)
+	}
+	warnings := data["warnings"].([]interface{})
+	if len(warnings) != 1 || warnings[0].(map[string]interface{})["code"].(string) != "split_createmeta_fallback_error" {
+		t.Fatalf("missing split fallback warning: %#v", data)
 	}
 }
 
@@ -515,6 +522,60 @@ func TestCreateMetaFailsWhenSplitAndLegacyFieldsEmpty(t *testing.T) {
 	}
 	if !strings.Contains(errObj["hint"].(string), "--legacy") {
 		t.Fatalf("missing legacy hint: %#v", out)
+	}
+}
+
+func TestCreateMetaFailsWhenSplitErrorFallbackLegacyFieldsEmpty(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/issue/EX-1":
+			w.Write([]byte(`{"fields":{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Test"}}}`))
+		case strings.Contains(r.URL.Path, "/issue/createmeta/10000/issuetypes"):
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta":
+			w.Write([]byte(`{"projects":[{"key":"EX","id":"10000","issuetypes":[{"id":"10001","name":"Test","fields":{}}]}]}`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+
+	out := run(t, cfg, "issue", "createmeta", "--from-issue", "EX-1")
+	if out["ok"].(bool) {
+		t.Fatalf("split error fallback with empty legacy fields should fail: %#v", out)
+	}
+	errObj := out["error"].(map[string]interface{})
+	if errObj["code"].(string) != "createmeta_fields_empty" {
+		t.Fatalf("wrong error: %#v", out)
+	}
+	if !strings.Contains(errObj["message"].(string), "no creatable fields") {
+		t.Fatalf("wrong message: %#v", out)
+	}
+}
+
+func TestCreateMetaLegacyFlagFailsWhenLegacyFieldsEmpty(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/issue/EX-1":
+			w.Write([]byte(`{"fields":{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Test"}}}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta":
+			w.Write([]byte(`{"projects":[{"key":"EX","id":"10000","issuetypes":[{"id":"10001","name":"Test","fields":{}}]}]}`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+
+	out := run(t, cfg, "issue", "createmeta", "--from-issue", "EX-1", "--legacy")
+	if out["ok"].(bool) {
+		t.Fatalf("--legacy with empty legacy fields should fail: %#v", out)
+	}
+	errObj := out["error"].(map[string]interface{})
+	if errObj["code"].(string) != "createmeta_fields_empty" {
+		t.Fatalf("wrong error: %#v", out)
 	}
 }
 

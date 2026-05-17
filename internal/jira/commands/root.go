@@ -947,6 +947,7 @@ func issueCreateMeta(o *Opts, cmd *cobra.Command) error {
 			return print(cmd, o, envelopeError(err, "server_error"))
 		}
 	}
+	fallbackFromSplitError := false
 	if !opts.Legacy {
 		out, err := fetchSplitCreateMeta(ctx, opts)
 		if err == nil {
@@ -957,8 +958,8 @@ func issueCreateMeta(o *Opts, cmd *cobra.Command) error {
 			if legacyErr != nil {
 				return print(cmd, o, envelopeError(legacyErr, "server_error"))
 			}
-			if len(mapValue(legacy, "fields")) == 0 {
-				return print(cmd, o, envelopeError(createMetaFieldsEmptyError(), "server_error"))
+			if err := ensureCreateMetaFields(legacy); err != nil {
+				return print(cmd, o, envelopeError(err, "server_error"))
 			}
 			legacy["source"] = "legacy_after_empty_split"
 			legacy["warnings"] = []interface{}{map[string]interface{}{
@@ -970,12 +971,30 @@ func issueCreateMeta(o *Opts, cmd *cobra.Command) error {
 		if !isCreateMetaFallbackError(err) {
 			return print(cmd, o, envelopeError(err, "server_error"))
 		}
+		fallbackFromSplitError = true
 	}
 	out, err := fetchLegacyCreateMeta(ctx, opts)
 	if err != nil {
 		return print(cmd, o, envelopeError(err, "server_error"))
 	}
+	if err := ensureCreateMetaFields(out); err != nil {
+		return print(cmd, o, envelopeError(err, "server_error"))
+	}
+	if fallbackFromSplitError {
+		out["source"] = "legacy_after_split_fallback_error"
+		out["warnings"] = []interface{}{map[string]interface{}{
+			"code":    "split_createmeta_fallback_error",
+			"message": "Split createmeta failed; legacy createmeta was used.",
+		}}
+	}
 	return print(cmd, o, output.Success(ctx.Instance, out))
+}
+
+func ensureCreateMetaFields(out map[string]interface{}) error {
+	if len(mapValue(out, "fields")) == 0 {
+		return createMetaFieldsEmptyError()
+	}
+	return nil
 }
 
 func createMetaFieldsEmptyError() error {

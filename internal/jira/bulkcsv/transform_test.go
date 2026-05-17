@@ -57,6 +57,18 @@ func TestTransformInvalidOptionReturnsRowError(t *testing.T) {
 	}
 }
 
+func TestTransformReporterUserReturnsNamePayload(t *testing.T) {
+	m := FieldMapping{CSVColumn: "Reporter", JiraFieldID: "reporter", Transform: "user"}
+	got, rowErr := TransformValue("XXXXX", m, 2)
+	if rowErr != nil {
+		t.Fatal(rowErr)
+	}
+	user := got.(map[string]string)
+	if user["name"] != "XXXXX" {
+		t.Fatalf("reporter payload = %#v", got)
+	}
+}
+
 func TestDryRunRowsReturnsPreviewPayloadsAndValidationErrors(t *testing.T) {
 	plan := MappingPlan{
 		Version: PlanVersion,
@@ -78,6 +90,33 @@ func TestDryRunRowsReturnsPreviewPayloadsAndValidationErrors(t *testing.T) {
 	}
 	if result.Errors[0].Code != "invalid_option" || result.Errors[0].RowNumber != 3 {
 		t.Fatalf("dry run errors = %#v", result.Errors)
+	}
+}
+
+func TestDryRunRowsPlansReporterPostCreateUpdate(t *testing.T) {
+	plan := MappingPlan{
+		Version: PlanVersion,
+		Mode:    PlanMode,
+		Jira:    JiraInfo{ProjectKey: "QA", IssueTypeName: "Test"},
+		FieldMappings: []FieldMapping{
+			{CSVColumn: "Title", JiraFieldID: "summary", Phase: PhaseCreate, Transform: "string", Required: true},
+			{CSVColumn: "Reporter", JiraFieldID: "reporter", Phase: PhasePostCreateUpdate, Transform: "user"},
+		},
+		RequiredFields: []FieldRef{{JiraFieldID: "summary", JiraFieldName: "Summary"}},
+	}
+	rows := []CSVRow{{RowNumber: 2, Values: map[string]string{"Title": "Login", "Reporter": "XXXXX"}}}
+	result := DryRunRows(rows, plan, 3)
+	if result.ValidRows != 1 || len(result.PreviewPayloads) != 1 || len(result.PlannedPostCreateUpdates) != 1 {
+		t.Fatalf("dry run result = %#v", result)
+	}
+	createFields := result.PreviewPayloads[0].Payload["fields"].(map[string]interface{})
+	if _, ok := createFields["reporter"]; ok {
+		t.Fatalf("reporter leaked into create payload: %#v", createFields)
+	}
+	updateFields := result.PlannedPostCreateUpdates[0].Payload["fields"].(map[string]interface{})
+	reporter := updateFields["reporter"].(map[string]string)
+	if reporter["name"] != "XXXXX" {
+		t.Fatalf("planned reporter update = %#v", result.PlannedPostCreateUpdates[0])
 	}
 }
 

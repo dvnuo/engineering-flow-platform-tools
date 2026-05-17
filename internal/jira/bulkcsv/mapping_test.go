@@ -1,6 +1,9 @@
 package bulkcsv
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestBuildMappingPlanMapsCommonTestCaseColumns(t *testing.T) {
 	input := MappingInput{
@@ -52,17 +55,127 @@ func TestBuildMappingPlanMapsCommonTestCaseColumns(t *testing.T) {
 	}
 }
 
+func TestBuildMappingPlanDefersReporterSystemUserUpdate(t *testing.T) {
+	input := MappingInput{
+		CSV: CSVSummary{Path: "testcases.csv", Columns: []string{"Title", "Reporter"}},
+		Rows: []CSVRow{{
+			RowNumber: 2,
+			Values: map[string]string{
+				"Title":    "Login works",
+				"Reporter": "XXXXX",
+			},
+		}},
+		FieldCatalog: []interface{}{
+			map[string]interface{}{"id": "summary", "name": "Summary", "schema": map[string]interface{}{"type": "string"}},
+			map[string]interface{}{"id": "reporter", "name": "Reporter", "schema": map[string]interface{}{"type": "user", "system": "reporter"}},
+		},
+		CreateMeta: map[string]interface{}{
+			"project":   map[string]interface{}{"key": "QA", "id": "10000"},
+			"issuetype": map[string]interface{}{"name": "Test", "id": "10001"},
+			"fields": map[string]interface{}{
+				"summary":  map[string]interface{}{"name": "Summary", "required": true, "schema": map[string]interface{}{"type": "string"}},
+				"reporter": map[string]interface{}{"name": "Reporter", "schema": map[string]interface{}{"type": "user", "system": "reporter"}},
+			},
+		},
+		EditMeta: map[string]interface{}{
+			"fields": map[string]interface{}{
+				"reporter": map[string]interface{}{"name": "Reporter", "schema": map[string]interface{}{"type": "user", "system": "reporter"}},
+			},
+		},
+		MinConfidence: 0.75,
+	}
+	plan, err := BuildMappingPlan(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := mappingFor(t, plan, "Reporter")
+	if m.JiraFieldID != "reporter" || m.Transform != "user" || m.Phase != PhasePostCreateUpdate {
+		t.Fatalf("reporter mapping = %#v", m)
+	}
+	if !strings.Contains(m.Reason, "Reporter is a system user field") {
+		t.Fatalf("missing reporter deferred reason: %#v", m)
+	}
+
+	fields := collectFields(input)
+	c := scoreField("Reporter", sampleValues(input.Rows, "Reporter"), fields["reporter"])
+	if !containsString(c.Signals, "system_reporter_deferred") {
+		t.Fatalf("missing reporter deferred signal: %#v", c.Signals)
+	}
+}
+
+func TestBuildMappingPlanTransformsSystemUserAndCustomUserPicker(t *testing.T) {
+	input := MappingInput{
+		CSV: CSVSummary{Path: "testcases.csv", Columns: []string{"Assignee", "Reviewer"}},
+		Rows: []CSVRow{{
+			RowNumber: 2,
+			Values: map[string]string{
+				"Assignee": "bob",
+				"Reviewer": "alice",
+			},
+		}},
+		CreateMeta: map[string]interface{}{
+			"project":   map[string]interface{}{"key": "QA", "id": "10000"},
+			"issuetype": map[string]interface{}{"name": "Test", "id": "10001"},
+			"fields": map[string]interface{}{
+				"assignee": map[string]interface{}{"name": "Assignee", "schema": map[string]interface{}{"type": "user", "system": "assignee"}},
+				"customfield_20000": map[string]interface{}{
+					"name":   "Reviewer",
+					"schema": map[string]interface{}{"type": "any", "custom": "com.atlassian.jira.plugin.system.customfieldtypes:userpicker"},
+				},
+			},
+		},
+		MinConfidence: 0.75,
+	}
+	plan, err := BuildMappingPlan(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assignee := mappingFor(t, plan, "Assignee")
+	if assignee.JiraFieldID != "assignee" || assignee.Transform != "user" {
+		t.Fatalf("assignee mapping = %#v", assignee)
+	}
+	got, rowErr := TransformValue("bob", assignee, 2)
+	if rowErr != nil {
+		t.Fatal(rowErr)
+	}
+	if got.(map[string]string)["name"] != "bob" {
+		t.Fatalf("assignee transform = %#v", got)
+	}
+
+	reviewer := mappingFor(t, plan, "Reviewer")
+	if reviewer.JiraFieldID != "customfield_20000" || reviewer.Transform != "user" {
+		t.Fatalf("custom userpicker mapping = %#v", reviewer)
+	}
+}
+
 func assertMapping(t *testing.T, plan MappingPlan, column, fieldID string) {
+	t.Helper()
+	m := mappingFor(t, plan, column)
+	if m.JiraFieldID != fieldID {
+		t.Fatalf("%s mapped to %s, want %s", column, m.JiraFieldID, fieldID)
+	}
+}
+
+func mappingFor(t *testing.T, plan MappingPlan, column string) FieldMapping {
 	t.Helper()
 	for _, m := range plan.FieldMappings {
 		if m.CSVColumn == column {
-			if m.JiraFieldID != fieldID {
-				t.Fatalf("%s mapped to %s, want %s", column, m.JiraFieldID, fieldID)
-			}
-			return
+			return m
 		}
 	}
 	t.Fatalf("mapping for %s not found", column)
+	return FieldMapping{}
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
 
 func mappingCreateMetaFixture() map[string]interface{} {

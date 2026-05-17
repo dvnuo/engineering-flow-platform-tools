@@ -87,7 +87,7 @@ func candidatesForColumn(column string, samples []string, fields map[string]fiel
 	out := []FieldCandidate{}
 	for _, id := range sortedFieldIDs(fields) {
 		f := fields[id]
-		if (!f.Creatable && !f.Editable) || id == "project" || id == "issuetype" {
+		if (!f.Creatable && !f.Editable) || isUnmappableSystemField(id) {
 			continue
 		}
 		c := scoreField(column, samples, f)
@@ -147,6 +147,11 @@ func scoreField(column string, samples []string, f fieldInfo) FieldCandidate {
 	if !f.Creatable && f.Editable {
 		phase = PhasePostCreateUpdate
 	}
+	phase = preferredPhase(f, phase)
+	if f.ID == "reporter" && f.Editable {
+		signals = append(signals, "system_reporter_deferred")
+		reasons = append(reasons, "Reporter is a system user field and is applied after creation to avoid create-screen inconsistencies.")
+	}
 	return FieldCandidate{
 		JiraFieldID:   f.ID,
 		JiraFieldName: f.Name,
@@ -161,10 +166,30 @@ func scoreField(column string, samples []string, f fieldInfo) FieldCandidate {
 	}
 }
 
+func isUnmappableSystemField(id string) bool {
+	switch id {
+	case "project", "issuetype", "status", "resolution":
+		return true
+	default:
+		return false
+	}
+}
+
+func preferredPhase(f fieldInfo, defaultPhase string) string {
+	if f.ID == "reporter" && f.Editable {
+		return PhasePostCreateUpdate
+	}
+	return defaultPhase
+}
+
 func builtInAliasScore(colNorm, fieldNorm string, f fieldInfo) (float64, string) {
 	switch {
 	case hasAlias(colNorm, "case title", "test case title", "title", "name") && f.ID == "summary":
 		return 0.98, "alias_summary"
+	case hasAlias(colNorm, "reporter", "reported by", "requester") && f.ID == "reporter":
+		return 0.98, "alias_reporter"
+	case hasAlias(colNorm, "assignee", "assigned to", "owner") && f.ID == "assignee":
+		return 0.96, "alias_assignee"
 	case hasAlias(colNorm, "description", "desc") && f.ID == "description":
 		return 0.96, "alias_description"
 	case hasAlias(colNorm, "precondition", "preconditions", "pre condition") && strings.Contains(fieldNorm, "precondition"):
@@ -237,7 +262,10 @@ func transformName(f fieldInfo) string {
 	schemaType := strings.ToLower(f.SchemaType)
 	schemaItems := strings.ToLower(f.SchemaItems)
 	schemaCustom := strings.ToLower(f.SchemaCustom)
+	schemaSystem := strings.ToLower(f.SchemaSystem)
 	switch {
+	case id == "reporter" || id == "assignee" || schemaType == "user" || schemaSystem == "reporter" || schemaSystem == "assignee":
+		return "user"
 	case id == "summary" || id == "description" || schemaType == "string" || schemaType == "textarea":
 		return "string"
 	case id == "priority":

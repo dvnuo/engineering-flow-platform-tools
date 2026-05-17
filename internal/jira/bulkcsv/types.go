@@ -28,6 +28,18 @@ func InvalidArgs(format string, args ...interface{}) *Error {
 	return &Error{Code: "invalid_args", Message: fmt.Sprintf(format, args...), Status: 400}
 }
 
+func CreateMetaFieldsEmptyError(hint string) *Error {
+	if hint == "" {
+		hint = "Regenerate create metadata with `jira issue createmeta --from-issue <KEY> --legacy --json`."
+	}
+	return &Error{
+		Code:    "createmeta_fields_empty",
+		Message: "Jira createmeta returned no creatable fields for the project and issue type.",
+		Hint:    hint,
+		Status:  400,
+	}
+}
+
 type CSVSummary struct {
 	Path       string              `json:"path"`
 	Columns    []string            `json:"columns"`

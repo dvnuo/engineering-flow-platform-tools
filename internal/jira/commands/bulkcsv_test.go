@@ -475,3 +475,80 @@ func TestCreateMetaFailsWhenSplitAndLegacyFieldsEmpty(t *testing.T) {
 		t.Fatalf("missing legacy hint: %#v", out)
 	}
 }
+
+func TestMapCSVAutoCreateMetaFallsBackWhenSplitFieldsEmpty(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/field":
+			w.Write([]byte(`[{"id":"summary","name":"Summary","schema":{"type":"string"}}]`))
+		case r.URL.Path == "/rest/api/2/issue/EX-1":
+			w.Write([]byte(`{"fields":{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Story"},"summary":"Template"},"names":{"summary":"Summary"}}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta/10000/issuetypes":
+			w.Write([]byte(`{"issueTypes":[{"id":"10001","name":"Story"}]}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta/10000/issuetypes/10001":
+			w.Write([]byte(`{"fields":{}}`))
+		case r.URL.Path == "/rest/api/2/issue/createmeta":
+			w.Write([]byte(`{"projects":[{"key":"EX","id":"10000","issuetypes":[{"id":"10001","name":"Story","fields":{"summary":{"name":"Summary","required":true,"schema":{"type":"string"}}}}]}]}`))
+		case r.URL.Path == "/rest/api/2/issue/EX-1/editmeta":
+			w.Write([]byte(`{"fields":{}}`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+	csvPath := filepath.Join(t.TempDir(), "testcases.csv")
+	if err := os.WriteFile(csvPath, []byte("Title\nLogin\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out := run(t, cfg, "issue", "map-csv", "--from-csv", csvPath, "--template-issue", "EX-1")
+	if !out["ok"].(bool) {
+		t.Fatalf("map-csv legacy fallback failed: %#v", out)
+	}
+	plan := out["data"].(map[string]interface{})["plan"].(map[string]interface{})
+	mappings := plan["field_mappings"].([]interface{})
+	if len(mappings) != 1 {
+		t.Fatalf("unexpected mappings: %#v", mappings)
+	}
+	mapping := mappings[0].(map[string]interface{})
+	if mapping["jira_field_id"].(string) != "summary" || mapping["phase"].(string) != "create" {
+		t.Fatalf("summary was not mapped for create: %#v", mapping)
+	}
+}
+
+func TestMapCSVRejectsSuppliedCreateMetaWithEmptyFields(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/field":
+			w.Write([]byte(`[{"id":"summary","name":"Summary","schema":{"type":"string"}}]`))
+		case r.URL.Path == "/rest/api/2/issue/EX-1":
+			w.Write([]byte(`{"fields":{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Story"},"summary":"Template"},"names":{"summary":"Summary"}}`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+	dir := t.TempDir()
+	csvPath := filepath.Join(dir, "testcases.csv")
+	createMetaPath := filepath.Join(dir, "create-meta.json")
+	if err := os.WriteFile(csvPath, []byte("Title\nLogin\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(createMetaPath, []byte(`{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Story"},"fields":{}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out := run(t, cfg, "issue", "map-csv", "--from-csv", csvPath, "--template-issue", "EX-1", "--create-meta", createMetaPath)
+	if out["ok"].(bool) {
+		t.Fatalf("map-csv should reject empty create-meta fields: %#v", out)
+	}
+	errObj := out["error"].(map[string]interface{})
+	if errObj["code"].(string) != "createmeta_fields_empty" {
+		t.Fatalf("wrong error: %#v", out)
+	}
+	if errObj["hint"].(string) != "Regenerate create metadata with `jira issue createmeta --from-issue <KEY> --legacy --json`." {
+		t.Fatalf("wrong hint: %#v", out)
+	}
+}

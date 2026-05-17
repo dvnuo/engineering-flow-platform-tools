@@ -10,6 +10,9 @@ import (
 var nonWord = regexp.MustCompile(`[^a-z0-9]+`)
 
 func BuildMappingPlan(input MappingInput) (MappingPlan, error) {
+	if len(fieldsMap(input.CreateMeta)) == 0 {
+		return MappingPlan{}, CreateMetaFieldsEmptyError("")
+	}
 	if input.MinConfidence == 0 {
 		input.MinConfidence = 0.75
 	}

@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"engineering-flow-platform-tools/internal/config"
@@ -160,6 +162,83 @@ func TestAuthHeaderAndIssuePaths(t *testing.T) {
 		t.Fatal("unmatched issue URL should fail")
 	}
 }
+
+func TestAuthTestUsesHTTPProxyFromEnvironment(t *testing.T) {
+	clearCommandProxyEnv(t)
+
+	var proxyHits atomic.Int32
+	var badProxyRequest atomic.Bool
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		proxyHits.Add(1)
+		if !r.URL.IsAbs() || r.URL.Host != "jira.internal" || r.URL.Path != "/rest/api/2/myself" {
+			badProxyRequest.Store(true)
+			http.Error(w, "bad proxy request", http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"name":"proxied"}`))
+	}))
+	defer proxy.Close()
+
+	v := true
+	cfg := config.RootConfig{Version: 1, Jira: config.ProductConfig{DefaultInstance: "jira-main", Instances: []config.InstanceConfig{{Name: "jira-main", BaseURL: "http://jira.internal", RESTPath: "/rest/api/2", VerifySSL: &v, Auth: config.AuthConfig{Type: "basic_password", Username: "u", Password: "p"}}}}}
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	if err := config.Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("HTTP_PROXY", proxy.URL)
+	t.Setenv("NO_PROXY", "")
+	t.Setenv("JIRA_PROXY_HELPER", "1")
+	t.Setenv("JIRA_PROXY_HELPER_CONFIG", cfgPath)
+
+	runJiraProxyEnvironmentHelper(t)
+
+	if proxyHits.Load() == 0 {
+		t.Fatal("expected jira auth test to hit proxy")
+	}
+	if badProxyRequest.Load() {
+		t.Fatal("expected jira auth test to proxy the absolute Jira URL")
+	}
+}
+
+func TestAuthTestProxyHelper(t *testing.T) {
+	if os.Getenv("JIRA_PROXY_HELPER") == "" {
+		t.Skip("helper process only")
+	}
+	out := run(t, os.Getenv("JIRA_PROXY_HELPER_CONFIG"), "auth", "test")
+	if ok, _ := out["ok"].(bool); !ok {
+		t.Fatalf("jira auth test failed: %#v", out)
+	}
+}
+
+func clearCommandProxyEnv(t *testing.T) {
+	t.Helper()
+	for _, key := range []string{
+		"HTTP_PROXY",
+		"HTTPS_PROXY",
+		"ALL_PROXY",
+		"NO_PROXY",
+		"http_proxy",
+		"https_proxy",
+		"all_proxy",
+		"no_proxy",
+		"REQUEST_METHOD",
+	} {
+		t.Setenv(key, "")
+	}
+}
+
+func runJiraProxyEnvironmentHelper(t *testing.T) {
+	t.Helper()
+	cmd := exec.Command(os.Args[0], "-test.run=^TestAuthTestProxyHelper$", "-test.count=1")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("jira proxy environment helper failed: %v\n%s", err, output)
+	}
+}
+
 func TestSearchCreateTransitionDryDeleteRaw(t *testing.T) {
 	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

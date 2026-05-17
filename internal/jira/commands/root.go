@@ -915,6 +915,8 @@ type createMetaOptions struct {
 	Expand     string
 }
 
+const createMetaUnavailableCSVHint = "The example issue exists, but Jira createmeta endpoints are unavailable for this instance. For CSV bulk-create, run `jira issue map-csv --metadata-mode auto ...` to use editmeta-degraded fallback. (createmeta unavailable)"
+
 func issueCreateMeta(o *Opts, cmd *cobra.Command) error {
 	opts := createMetaOptions{
 		ProjectKey: mustS(cmd, "project"),
@@ -957,7 +959,7 @@ func issueCreateMeta(o *Opts, cmd *cobra.Command) error {
 			}
 			legacy, legacyErr := fetchLegacyCreateMeta(ctx, opts)
 			if legacyErr != nil {
-				return print(cmd, o, envelopeError(legacyErr, "server_error"))
+				return print(cmd, o, envelopeError(createMetaUnavailableHintError(legacyErr, opts), "server_error"))
 			}
 			if err := ensureCreateMetaFields(legacy); err != nil {
 				return print(cmd, o, envelopeError(err, "server_error"))
@@ -977,7 +979,7 @@ func issueCreateMeta(o *Opts, cmd *cobra.Command) error {
 	}
 	out, err := fetchLegacyCreateMeta(ctx, opts)
 	if err != nil {
-		return print(cmd, o, envelopeError(err, "server_error"))
+		return print(cmd, o, envelopeError(createMetaUnavailableHintError(err, opts), "server_error"))
 	}
 	if err := ensureCreateMetaFields(out); err != nil {
 		return print(cmd, o, envelopeError(err, "server_error"))
@@ -1001,6 +1003,24 @@ func createMetaFieldsEmptyError() error {
 		Code:    "createmeta_fields_empty",
 		Message: "Jira createmeta returned no creatable fields for the project and issue type.",
 		Hint:    "Verify Jira create screens or run with --legacy and inspect the response.",
+		Status:  400,
+	}
+}
+
+func createMetaUnavailableHintError(err error, opts createMetaOptions) error {
+	if opts.FromIssue == "" || !isCreateMetaFallbackError(err) {
+		return err
+	}
+	var httpErr *httpclient.HTTPError
+	if errors.As(err, &httpErr) {
+		hinted := *httpErr
+		hinted.Hint = createMetaUnavailableCSVHint
+		return &hinted
+	}
+	return &httpclient.HTTPError{
+		Code:    "invalid_args",
+		Message: err.Error(),
+		Hint:    createMetaUnavailableCSVHint,
 		Status:  400,
 	}
 }

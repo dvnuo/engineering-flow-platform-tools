@@ -640,6 +640,51 @@ func TestCreateMetaFailsWhenSplitErrorFallbackLegacyFieldsEmpty(t *testing.T) {
 	}
 }
 
+func TestCreateMetaFromIssueUnavailableCreateMetaHintsMapCSVAuto(t *testing.T) {
+	issueReads := 0
+	createmetaHits := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/issue/EX-1":
+			issueReads++
+			w.Write([]byte(`{"fields":{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Story"}}}`))
+		case strings.Contains(r.URL.Path, "/rest/api/2/issue/createmeta"):
+			createmetaHits++
+			w.WriteHeader(404)
+			w.Write([]byte(`Issue Does Not Exist`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+
+	out := run(t, cfg, "issue", "createmeta", "--from-issue", "EX-1")
+	if out["ok"].(bool) {
+		t.Fatalf("unavailable createmeta should fail: %#v", out)
+	}
+	if issueReads != 1 {
+		t.Fatalf("expected from-issue read to succeed once, got %d", issueReads)
+	}
+	if createmetaHits != 2 {
+		t.Fatalf("expected split and legacy createmeta failures, got %d hits", createmetaHits)
+	}
+	errObj := out["error"].(map[string]interface{})
+	if errObj["code"].(string) != "not_found" {
+		t.Fatalf("wrong error: %#v", out)
+	}
+	hint := errObj["hint"].(string)
+	for _, want := range []string{
+		"issue exists",
+		"createmeta unavailable",
+		"jira issue map-csv --metadata-mode auto",
+	} {
+		if !strings.Contains(hint, want) {
+			t.Fatalf("hint %q missing %q", hint, want)
+		}
+	}
+}
+
 func TestCreateMetaFromIssueFailsWhenMinimalAndFullIssueReadsAreMissing(t *testing.T) {
 	createmetaHits := 0
 	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {

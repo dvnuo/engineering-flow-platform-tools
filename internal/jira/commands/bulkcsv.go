@@ -170,6 +170,9 @@ func loadBulkCSVMetadata(o *Opts, cmd *cobra.Command, templateIssue string) (bul
 			return meta, err
 		}
 		meta.createMeta = unwrapEnvelopeMap(v)
+		if len(mapValue(meta.createMeta, "fields")) == 0 {
+			return meta, bulkcsv.CreateMetaFieldsEmptyError("")
+		}
 	} else {
 		v, err := fetchBulkCreateMeta(ctx, templateIssue, meta.jiraInfo.ProjectKey, meta.jiraInfo.IssueTypeName)
 		if err != nil {
@@ -208,12 +211,30 @@ func fetchBulkCreateMeta(ctx *jira.Context, templateIssue, project, issueType st
 	}
 	out, err := fetchSplitCreateMeta(ctx, opts)
 	if err == nil {
-		return out, nil
+		if len(mapValue(out, "fields")) > 0 {
+			return out, nil
+		}
+		legacy, legacyErr := fetchLegacyCreateMeta(ctx, opts)
+		if legacyErr != nil {
+			return nil, legacyErr
+		}
+		if len(mapValue(legacy, "fields")) == 0 {
+			return nil, bulkcsv.CreateMetaFieldsEmptyError("")
+		}
+		legacy["source"] = "legacy_after_empty_split"
+		return legacy, nil
 	}
 	if !isCreateMetaFallbackError(err) {
 		return nil, err
 	}
-	return fetchLegacyCreateMeta(ctx, opts)
+	legacy, err := fetchLegacyCreateMeta(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	if len(mapValue(legacy, "fields")) == 0 {
+		return nil, bulkcsv.CreateMetaFieldsEmptyError("")
+	}
+	return legacy, nil
 }
 
 func runIssueBulkCreate(o *Opts, cmd *cobra.Command, forceDryRun bool) error {

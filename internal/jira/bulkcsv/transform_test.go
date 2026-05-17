@@ -120,6 +120,25 @@ func TestDryRunRowsPlansReporterPostCreateUpdate(t *testing.T) {
 	}
 }
 
+func TestDryRunRowsRequiresSummaryInCreatePayload(t *testing.T) {
+	plan := MappingPlan{
+		Version: PlanVersion,
+		Mode:    PlanMode,
+		Jira:    JiraInfo{ProjectKey: "QA", IssueTypeName: "Test"},
+		FieldMappings: []FieldMapping{
+			{CSVColumn: "Title", JiraFieldID: "summary", Phase: PhasePostCreateUpdate, Transform: "string", Required: true},
+		},
+	}
+	rows := []CSVRow{{RowNumber: 2, Values: map[string]string{"Title": "Login"}}}
+	result := DryRunRows(rows, plan, 3)
+	if result.ValidRows != 0 || result.InvalidRows != 1 || len(result.PreviewPayloads) != 0 {
+		t.Fatalf("dry run result = %#v", result)
+	}
+	if len(result.Errors) != 1 || result.Errors[0].Code != "summary_required_missing" {
+		t.Fatalf("dry run errors = %#v", result.Errors)
+	}
+}
+
 func TestBuildPostCreateUpdatePayload(t *testing.T) {
 	plan := MappingPlan{FieldMappings: []FieldMapping{
 		{CSVColumn: "Title", JiraFieldID: "summary", Phase: PhaseCreate, Transform: "string"},

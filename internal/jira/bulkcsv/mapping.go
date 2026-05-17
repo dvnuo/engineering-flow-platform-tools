@@ -10,6 +10,9 @@ import (
 var nonWord = regexp.MustCompile(`[^a-z0-9]+`)
 
 func BuildMappingPlan(input MappingInput) (MappingPlan, error) {
+	if len(fieldsMap(input.CreateMeta)) == 0 {
+		return MappingPlan{}, CreateMetaFieldsEmptyError("")
+	}
 	if input.MinConfidence == 0 {
 		input.MinConfidence = 0.75
 	}
@@ -51,6 +54,9 @@ func BuildMappingPlan(input MappingInput) (MappingPlan, error) {
 			continue
 		}
 		top := candidates[0]
+		if top.JiraFieldID == "summary" && top.Phase == PhasePostCreateUpdate {
+			return MappingPlan{}, SummaryNotCreatableError()
+		}
 		mapping := FieldMapping{
 			CSVColumn:     column,
 			JiraFieldID:   top.JiraFieldID,

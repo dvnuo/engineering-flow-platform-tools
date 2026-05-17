@@ -42,6 +42,9 @@ func BuildCreatePayload(row CSVRow, plan MappingPlan) (map[string]interface{}, [
 		}
 	}
 	for _, required := range plan.RequiredFields {
+		if required.JiraFieldID == "summary" {
+			continue
+		}
 		if isEmptyValue(fields[required.JiraFieldID]) {
 			errors = append(errors, RowError{
 				RowNumber:   row.RowNumber,
@@ -51,12 +54,42 @@ func BuildCreatePayload(row CSVRow, plan MappingPlan) (map[string]interface{}, [
 			})
 		}
 	}
+	errors = append(errors, validateCoreCreateFields(fields, row.RowNumber)...)
 	payload := map[string]interface{}{"fields": fields}
 	var post *PostCreateUpdate
 	if len(postFields) > 0 {
 		post = &PostCreateUpdate{RowNumber: row.RowNumber, Fields: postFields, Payload: map[string]interface{}{"fields": postFields}}
 	}
 	return payload, errors, post
+}
+
+func validateCoreCreateFields(fields map[string]interface{}, rowNumber int) []RowError {
+	errors := []RowError{}
+	if isEmptyValue(fields["project"]) {
+		errors = append(errors, RowError{
+			RowNumber:   rowNumber,
+			JiraFieldID: "project",
+			Code:        "project_required_missing",
+			Message:     "project is required for Jira issue creation; mapping plan did not include Jira project metadata.",
+		})
+	}
+	if isEmptyValue(fields["issuetype"]) {
+		errors = append(errors, RowError{
+			RowNumber:   rowNumber,
+			JiraFieldID: "issuetype",
+			Code:        "issuetype_required_missing",
+			Message:     "issuetype is required for Jira issue creation; mapping plan did not include Jira issue type metadata.",
+		})
+	}
+	if isEmptyValue(fields["summary"]) {
+		errors = append(errors, RowError{
+			RowNumber:   rowNumber,
+			JiraFieldID: "summary",
+			Code:        "summary_required_missing",
+			Message:     "summary is required for Jira issue creation; mapping placed it outside the create payload or did not map it.",
+		})
+	}
+	return errors
 }
 
 func BuildPostCreateUpdatePayload(row CSVRow, plan MappingPlan) (map[string]interface{}, []RowError) {

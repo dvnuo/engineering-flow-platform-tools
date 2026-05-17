@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -250,6 +251,50 @@ func TestBulkCreatePostCreateUpdatesAreOptIn(t *testing.T) {
 	}
 }
 
+func TestBulkCreateAppliesReporterPostCreateUpdate(t *testing.T) {
+	postIssue := 0
+	putIssue := 0
+	var postPayload map[string]interface{}
+	var putPayload map[string]interface{}
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == "POST" && r.URL.Path == "/rest/api/2/issue":
+			postIssue++
+			if err := json.NewDecoder(r.Body).Decode(&postPayload); err != nil {
+				t.Fatalf("decode post payload: %v", err)
+			}
+			w.Write([]byte(`{"key":"QA-300"}`))
+		case r.Method == "PUT" && r.URL.Path == "/rest/api/2/issue/QA-300":
+			putIssue++
+			if err := json.NewDecoder(r.Body).Decode(&putPayload); err != nil {
+				t.Fatalf("decode put payload: %v", err)
+			}
+			w.Write([]byte(`{"ok":true}`))
+		default:
+			w.Write([]byte(`{"ok":true}`))
+		}
+	})
+	csvPath, mappingPath := writeReporterPostCreateFixture(t)
+
+	out := run(t, cfg, "--yes", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath, "--apply-post-create-updates")
+	if !out["ok"].(bool) {
+		t.Fatalf("bulk-create with reporter update failed: %#v", out)
+	}
+	if postIssue != 1 || putIssue != 1 {
+		t.Fatalf("got POST=%d PUT=%d", postIssue, putIssue)
+	}
+	postFields := postPayload["fields"].(map[string]interface{})
+	if _, ok := postFields["reporter"]; ok {
+		t.Fatalf("reporter leaked into create payload: %#v", postPayload)
+	}
+	putFields := putPayload["fields"].(map[string]interface{})
+	reporter := putFields["reporter"].(map[string]interface{})
+	if reporter["name"].(string) != "XXXXX" {
+		t.Fatalf("wrong reporter update payload: %#v", putPayload)
+	}
+}
+
 func TestBulkCreatePostCreateUpdateFailureIsReportedWithoutDelete(t *testing.T) {
 	deleteIssue := 0
 	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
@@ -294,6 +339,21 @@ func writePostCreateFixture(t *testing.T) (string, string) {
 		t.Fatal(err)
 	}
 	mapping := `{"version":1,"mode":"jira_csv_bulk_create","jira":{"project":"QA","issuetype":"Test"},"field_mappings":[{"csv_column":"Title","jira_field_id":"summary","jira_field_name":"Summary","required":true,"phase":"create","transform":"string","confidence":0.98},{"csv_column":"Reviewer","jira_field_id":"customfield_20000","jira_field_name":"Reviewer","phase":"post_create_update","transform":"user","confidence":0.98}],"required_fields":[{"jira_field_id":"summary","jira_field_name":"Summary"}]}`
+	if err := os.WriteFile(mappingPath, []byte(mapping), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return csvPath, mappingPath
+}
+
+func writeReporterPostCreateFixture(t *testing.T) (string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	csvPath := filepath.Join(dir, "testcases.csv")
+	mappingPath := filepath.Join(dir, "mapping.json")
+	if err := os.WriteFile(csvPath, []byte("Title,Reporter\nLogin,XXXXX\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mapping := `{"version":1,"mode":"jira_csv_bulk_create","jira":{"project":"QA","issuetype":"Test"},"field_mappings":[{"csv_column":"Title","jira_field_id":"summary","jira_field_name":"Summary","required":true,"phase":"create","transform":"string","confidence":0.98},{"csv_column":"Reporter","jira_field_id":"reporter","jira_field_name":"Reporter","phase":"post_create_update","transform":"user","confidence":0.99}],"required_fields":[{"jira_field_id":"summary","jira_field_name":"Summary"}]}`
 	if err := os.WriteFile(mappingPath, []byte(mapping), 0o600); err != nil {
 		t.Fatal(err)
 	}

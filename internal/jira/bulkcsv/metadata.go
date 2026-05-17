@@ -11,6 +11,7 @@ type fieldInfo struct {
 	SchemaType    string
 	SchemaItems   string
 	SchemaCustom  string
+	SchemaSystem  string
 	Required      bool
 	AllowedValues []AllowedValue
 	Creatable     bool
@@ -156,6 +157,7 @@ func applySchema(info *fieldInfo, schema map[string]interface{}) {
 	info.SchemaType = firstString(info.SchemaType, stringAt(schema, "type"))
 	info.SchemaItems = firstString(info.SchemaItems, stringAt(schema, "items"))
 	info.SchemaCustom = firstString(info.SchemaCustom, stringAt(schema, "custom"))
+	info.SchemaSystem = firstString(info.SchemaSystem, stringAt(schema, "system"))
 }
 
 func allowedValues(v interface{}) []AllowedValue {

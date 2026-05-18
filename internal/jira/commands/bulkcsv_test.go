@@ -640,6 +640,51 @@ func TestCreateMetaFailsWhenSplitErrorFallbackLegacyFieldsEmpty(t *testing.T) {
 	}
 }
 
+func TestCreateMetaFromIssueUnavailableCreateMetaHintsMapCSVAuto(t *testing.T) {
+	issueReads := 0
+	createmetaHits := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/issue/EX-1":
+			issueReads++
+			w.Write([]byte(`{"fields":{"project":{"key":"EX","id":"10000"},"issuetype":{"id":"10001","name":"Story"}}}`))
+		case strings.Contains(r.URL.Path, "/rest/api/2/issue/createmeta"):
+			createmetaHits++
+			w.WriteHeader(404)
+			w.Write([]byte(`Issue Does Not Exist`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+
+	out := run(t, cfg, "issue", "createmeta", "--from-issue", "EX-1")
+	if out["ok"].(bool) {
+		t.Fatalf("unavailable createmeta should fail: %#v", out)
+	}
+	if issueReads != 1 {
+		t.Fatalf("expected from-issue read to succeed once, got %d", issueReads)
+	}
+	if createmetaHits != 2 {
+		t.Fatalf("expected split and legacy createmeta failures, got %d hits", createmetaHits)
+	}
+	errObj := out["error"].(map[string]interface{})
+	if errObj["code"].(string) != "not_found" {
+		t.Fatalf("wrong error: %#v", out)
+	}
+	hint := errObj["hint"].(string)
+	for _, want := range []string{
+		"issue exists",
+		"createmeta unavailable",
+		"jira issue map-csv --metadata-mode auto",
+	} {
+		if !strings.Contains(hint, want) {
+			t.Fatalf("hint %q missing %q", hint, want)
+		}
+	}
+}
+
 func TestCreateMetaFromIssueFailsWhenMinimalAndFullIssueReadsAreMissing(t *testing.T) {
 	createmetaHits := 0
 	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
@@ -865,4 +910,227 @@ func TestMapCSVRejectsSummaryPostCreateOnlyMapping(t *testing.T) {
 	if errObj["code"].(string) != "summary_not_creatable" {
 		t.Fatalf("wrong error: %#v", out)
 	}
+}
+
+func TestMapCSVAutoFallsBackToEditMetaDegradedWhenCreateMetaUnavailable(t *testing.T) {
+	cfg, _ := setup(t, editMetaDegradedMetadataServer(t))
+	csvPath := writeEditMetaDegradedCSV(t)
+
+	out := run(t, cfg, "issue", "map-csv", "--from-csv", csvPath, "--template-issue", "MMGFX-13887", "--metadata-mode", "auto")
+	if !out["ok"].(bool) {
+		t.Fatalf("map-csv auto fallback failed: %#v", out)
+	}
+	plan := out["data"].(map[string]interface{})["plan"].(map[string]interface{})
+	if plan["metadata_mode"].(string) != "editmeta_degraded" {
+		t.Fatalf("metadata mode = %#v", plan["metadata_mode"])
+	}
+	if !jsonWarningsContain(plan["warnings"].([]interface{}), "createmeta_unavailable_using_editmeta_degraded") {
+		t.Fatalf("missing fallback warning: %#v", plan["warnings"])
+	}
+	mappings := plan["field_mappings"].([]interface{})
+	phases := map[string]string{}
+	transforms := map[string]string{}
+	for _, item := range mappings {
+		m := item.(map[string]interface{})
+		phases[m["jira_field_id"].(string)] = m["phase"].(string)
+		transforms[m["jira_field_id"].(string)] = m["transform"].(string)
+	}
+	if phases["summary"] != "create" || phases["priority"] != "post_create_update" || phases["components"] != "post_create_update" || phases["reporter"] != "post_create_update" || phases["customfield_26388"] != "post_create_update" {
+		t.Fatalf("wrong degraded phases: %#v", phases)
+	}
+	if transforms["reporter"] != "user" {
+		t.Fatalf("reporter transform = %s", transforms["reporter"])
+	}
+}
+
+func TestMapCSVCreateMetaModeFailsWhenCreateMetaUnavailable(t *testing.T) {
+	cfg, _ := setup(t, editMetaDegradedMetadataServer(t))
+	csvPath := writeEditMetaDegradedCSV(t)
+
+	out := run(t, cfg, "issue", "map-csv", "--from-csv", csvPath, "--template-issue", "MMGFX-13887", "--metadata-mode", "createmeta")
+	if out["ok"].(bool) {
+		t.Fatalf("strict createmeta should fail: %#v", out)
+	}
+	code := out["error"].(map[string]interface{})["code"].(string)
+	if code != "not_found" && code != "createmeta_fields_empty" {
+		t.Fatalf("wrong strict failure: %#v", out)
+	}
+}
+
+func TestMapCSVEditMetaDegradedDoesNotCallCreateMeta(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/field":
+			w.Write([]byte(`[{"id":"summary","name":"Summary","schema":{"type":"string"}},{"id":"priority","name":"Priority","schema":{"type":"priority"}},{"id":"components","name":"Components","schema":{"type":"array","items":"component"}},{"id":"reporter","name":"Reporter","schema":{"type":"user","system":"reporter"}},{"id":"customfield_26388","name":"Story Type","schema":{"type":"option"}}]`))
+		case r.URL.Path == "/rest/api/2/issue/MMGFX-13887":
+			w.Write([]byte(editMetaDegradedIssueJSON()))
+		case strings.Contains(r.URL.Path, "/createmeta"):
+			t.Fatalf("editmeta-degraded mode must not call createmeta: %s", r.URL.String())
+		case strings.HasSuffix(r.URL.Path, "/editmeta"):
+			t.Fatalf("editmeta-degraded mode should use full issue expand editmeta, got %s", r.URL.String())
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+	csvPath := writeEditMetaDegradedCSV(t)
+
+	out := run(t, cfg, "issue", "map-csv", "--from-csv", csvPath, "--template-issue", "MMGFX-13887", "--metadata-mode", "editmeta-degraded")
+	if !out["ok"].(bool) {
+		t.Fatalf("editmeta-degraded map-csv failed: %#v", out)
+	}
+	plan := out["data"].(map[string]interface{})["plan"].(map[string]interface{})
+	if plan["metadata_mode"].(string) != "editmeta_degraded" {
+		t.Fatalf("metadata mode = %#v", plan["metadata_mode"])
+	}
+}
+
+func TestBulkCreateAutoFallbackDryRunSucceedsWithEditMeta(t *testing.T) {
+	cfg, _ := setup(t, editMetaDegradedMetadataServer(t))
+	csvPath := writeEditMetaDegradedCSV(t)
+
+	out := run(t, cfg, "--dry-run", "issue", "bulk-create", "--from-csv", csvPath, "--template-issue", "MMGFX-13887", "--metadata-mode", "auto")
+	if !out["ok"].(bool) {
+		t.Fatalf("bulk-create auto fallback dry-run failed: %#v", out)
+	}
+	data := out["data"].(map[string]interface{})
+	if data["metadata_mode"].(string) != "editmeta_degraded" {
+		t.Fatalf("metadata mode = %#v", data["metadata_mode"])
+	}
+	planned := data["planned_post_create_updates"].([]interface{})
+	if len(planned) != 1 {
+		t.Fatalf("missing planned updates: %#v", data)
+	}
+	createFields := data["preview_payloads"].([]interface{})[0].(map[string]interface{})["create_preview"].(map[string]interface{})["fields"].(map[string]interface{})
+	for _, field := range []string{"reporter", "priority", "components", "customfield_26388"} {
+		if _, ok := createFields[field]; ok {
+			t.Fatalf("%s leaked into create preview: %#v", field, createFields)
+		}
+	}
+	if createFields["summary"].(string) != "Login works" {
+		t.Fatalf("summary missing from create preview: %#v", createFields)
+	}
+}
+
+func TestBulkCreateEditMetaDegradedRequiresAndAppliesPostCreateUpdates(t *testing.T) {
+	postIssue := 0
+	putIssue := 0
+	var postPayload map[string]interface{}
+	var putPayload map[string]interface{}
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == "POST" && r.URL.Path == "/rest/api/2/issue":
+			postIssue++
+			if err := json.NewDecoder(r.Body).Decode(&postPayload); err != nil {
+				t.Fatalf("decode post: %v", err)
+			}
+			w.Write([]byte(`{"key":"MMGFX-20000"}`))
+		case r.Method == "PUT" && r.URL.Path == "/rest/api/2/issue/MMGFX-20000":
+			putIssue++
+			if err := json.NewDecoder(r.Body).Decode(&putPayload); err != nil {
+				t.Fatalf("decode put: %v", err)
+			}
+			w.Write([]byte(`{"ok":true}`))
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	})
+	csvPath, mappingPath := writeEditMetaDegradedCreateFixture(t)
+
+	out := run(t, cfg, "--yes", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath)
+	if out["ok"].(bool) {
+		t.Fatalf("bulk-create should require post-create apply flag: %#v", out)
+	}
+	if out["error"].(map[string]interface{})["code"].(string) != "post_create_updates_required" {
+		t.Fatalf("wrong error: %#v", out)
+	}
+	if postIssue != 0 || putIssue != 0 {
+		t.Fatalf("should not create without apply flag, got POST=%d PUT=%d", postIssue, putIssue)
+	}
+
+	out = run(t, cfg, "--yes", "issue", "bulk-create", "--from-csv", csvPath, "--mapping", mappingPath, "--apply-post-create-updates")
+	if !out["ok"].(bool) {
+		t.Fatalf("bulk-create with post updates failed: %#v", out)
+	}
+	if postIssue != 1 || putIssue != 1 {
+		t.Fatalf("got POST=%d PUT=%d", postIssue, putIssue)
+	}
+	postFields := postPayload["fields"].(map[string]interface{})
+	for _, field := range []string{"reporter", "priority", "components", "customfield_26388"} {
+		if _, ok := postFields[field]; ok {
+			t.Fatalf("%s leaked into create payload: %#v", field, postPayload)
+		}
+	}
+	if postFields["summary"].(string) != "Login works" {
+		t.Fatalf("missing summary in create payload: %#v", postPayload)
+	}
+	putFields := putPayload["fields"].(map[string]interface{})
+	if putFields["reporter"].(map[string]interface{})["name"].(string) != "alice" {
+		t.Fatalf("wrong reporter update: %#v", putPayload)
+	}
+	if putFields["components"].([]interface{})[0].(map[string]interface{})["name"].(string) != "Web" {
+		t.Fatalf("wrong component update: %#v", putPayload)
+	}
+}
+
+func editMetaDegradedMetadataServer(t *testing.T) http.HandlerFunc {
+	t.Helper()
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/rest/api/2/field":
+			w.Write([]byte(`[{"id":"summary","name":"Summary","schema":{"type":"string"}},{"id":"priority","name":"Priority","schema":{"type":"priority"}},{"id":"components","name":"Components","schema":{"type":"array","items":"component"}},{"id":"reporter","name":"Reporter","schema":{"type":"user","system":"reporter"}},{"id":"customfield_26388","name":"Story Type","schema":{"type":"option"}}]`))
+		case r.URL.Path == "/rest/api/2/issue/MMGFX-13887":
+			w.Write([]byte(editMetaDegradedIssueJSON()))
+		case strings.Contains(r.URL.Path, "/createmeta"):
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"createmeta unavailable"}`))
+		case strings.HasSuffix(r.URL.Path, "/editmeta"):
+			t.Fatalf("editmeta-degraded fallback should use full issue expand editmeta, got %s", r.URL.String())
+		default:
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not found"}`))
+		}
+	}
+}
+
+func writeEditMetaDegradedCSV(t *testing.T) string {
+	t.Helper()
+	csvPath := filepath.Join(t.TempDir(), "testcases.csv")
+	if err := os.WriteFile(csvPath, []byte("Summary,Priority,Component,Reporter,Story Type\nLogin works,High,Web,alice,Feature\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return csvPath
+}
+
+func writeEditMetaDegradedCreateFixture(t *testing.T) (string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	csvPath := filepath.Join(dir, "testcases.csv")
+	mappingPath := filepath.Join(dir, "mapping.json")
+	if err := os.WriteFile(csvPath, []byte("Summary,Priority,Component,Reporter,Story Type\nLogin works,High,Web,alice,Feature\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mapping := `{"version":1,"mode":"jira_csv_bulk_create","metadata_mode":"editmeta_degraded","jira":{"project":"MMGFX","project_id":"104804","issuetype":"Story","issuetype_id":"7"},"field_mappings":[{"csv_column":"Summary","jira_field_id":"summary","jira_field_name":"Summary","required":true,"phase":"create","transform":"string","confidence":0.98},{"csv_column":"Priority","jira_field_id":"priority","jira_field_name":"Priority","phase":"post_create_update","transform":"priority","confidence":0.98},{"csv_column":"Component","jira_field_id":"components","jira_field_name":"Components","phase":"post_create_update","transform":"components","confidence":0.98},{"csv_column":"Reporter","jira_field_id":"reporter","jira_field_name":"Reporter","phase":"post_create_update","transform":"user","confidence":0.98},{"csv_column":"Story Type","jira_field_id":"customfield_26388","jira_field_name":"Story Type","phase":"post_create_update","transform":"option","confidence":0.98}],"required_fields":[{"jira_field_id":"summary","jira_field_name":"Summary"}]}`
+	if err := os.WriteFile(mappingPath, []byte(mapping), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return csvPath, mappingPath
+}
+
+func editMetaDegradedIssueJSON() string {
+	return `{"key":"MMGFX-13887","fields":{"project":{"key":"MMGFX","id":"104804"},"issuetype":{"id":"7","name":"Story"},"summary":"Template"},"names":{"summary":"Summary","description":"Description","priority":"Priority","components":"Components","reporter":"Reporter","customfield_26388":"Story Type","status":"Status","resolution":"Resolution"},"schema":{"summary":{"type":"string"},"description":{"type":"string"},"priority":{"type":"priority"},"components":{"type":"array","items":"component"},"reporter":{"type":"user","system":"reporter"},"customfield_26388":{"type":"option"}},"editmeta":{"fields":{"summary":{"name":"Summary","required":true,"schema":{"type":"string"},"operations":["set"]},"description":{"name":"Description","schema":{"type":"string"},"operations":["set"]},"priority":{"name":"Priority","schema":{"type":"priority"},"allowedValues":[{"id":"3","name":"High"}],"operations":["set"]},"components":{"name":"Components","schema":{"type":"array","items":"component"},"allowedValues":[{"id":"20","name":"Web"}],"operations":["set"]},"reporter":{"name":"Reporter","schema":{"type":"user","system":"reporter"},"operations":["set"]},"customfield_26388":{"name":"Story Type","schema":{"type":"option"},"allowedValues":[{"id":"100","value":"Feature"}],"operations":["set"]},"status":{"name":"Status","schema":{"type":"status"},"operations":["set"]},"resolution":{"name":"Resolution","schema":{"type":"resolution"},"operations":["set"]}}}}`
+}
+
+func jsonWarningsContain(warnings []interface{}, code string) bool {
+	for _, item := range warnings {
+		warning := item.(map[string]interface{})
+		if warning["code"].(string) == code {
+			return true
+		}
+	}
+	return false
 }

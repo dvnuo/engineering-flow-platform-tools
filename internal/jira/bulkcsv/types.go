@@ -1,6 +1,9 @@
 package bulkcsv
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 const (
 	PlanVersion = 1
@@ -8,6 +11,11 @@ const (
 
 	PhaseCreate           = "create"
 	PhasePostCreateUpdate = "post_create_update"
+
+	MetadataModeAuto               = "auto"
+	MetadataModeCreateMeta         = "createmeta"
+	MetadataModeEditMetaDegraded   = "editmeta_degraded"
+	MetadataModeEditMetaDegradedUI = "editmeta-degraded"
 )
 
 type Error struct {
@@ -28,6 +36,28 @@ func InvalidArgs(format string, args ...interface{}) *Error {
 	return &Error{Code: "invalid_args", Message: fmt.Sprintf(format, args...), Status: 400}
 }
 
+func NormalizeMetadataMode(mode string) (string, error) {
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	switch mode {
+	case "", MetadataModeAuto:
+		return MetadataModeAuto, nil
+	case MetadataModeCreateMeta:
+		return MetadataModeCreateMeta, nil
+	case MetadataModeEditMetaDegraded, MetadataModeEditMetaDegradedUI:
+		return MetadataModeEditMetaDegraded, nil
+	default:
+		return "", InvalidArgs("--metadata-mode must be auto, createmeta, or editmeta-degraded")
+	}
+}
+
+func EffectiveMetadataMode(mode string) string {
+	normalized, err := NormalizeMetadataMode(mode)
+	if err != nil || normalized == MetadataModeAuto {
+		return MetadataModeCreateMeta
+	}
+	return normalized
+}
+
 func CreateMetaFieldsEmptyError(hint string) *Error {
 	if hint == "" {
 		hint = "Regenerate create metadata with `jira issue createmeta --from-issue <KEY> --legacy --json`."
@@ -45,6 +75,15 @@ func SummaryNotCreatableError() *Error {
 		Code:    "summary_not_creatable",
 		Message: "summary is required for Jira issue creation but is not present in create metadata.",
 		Hint:    "Regenerate create metadata with `jira issue createmeta --from-issue <KEY> --legacy --json`.",
+		Status:  400,
+	}
+}
+
+func PostCreateUpdatesRequiredError() *Error {
+	return &Error{
+		Code:    "post_create_updates_required",
+		Message: "This mapping uses editmeta-degraded mode and has planned post-create updates. Pass --apply-post-create-updates after reviewing dry-run.",
+		Hint:    "Run with --dry-run, inspect planned_post_create_updates, then rerun with --yes --apply-post-create-updates.",
 		Status:  400,
 	}
 }
@@ -151,6 +190,7 @@ type FieldRef struct {
 type MappingPlan struct {
 	Version              int                 `json:"version"`
 	Mode                 string              `json:"mode"`
+	MetadataMode         string              `json:"metadata_mode,omitempty"`
 	Jira                 JiraInfo            `json:"jira"`
 	CSV                  CSVSummary          `json:"csv"`
 	FieldMappings        []FieldMapping      `json:"field_mappings"`
@@ -167,11 +207,13 @@ type MappingPlan struct {
 type MappingInput struct {
 	CSV                     CSVSummary
 	Rows                    []CSVRow
+	MetadataMode            string
 	FieldCatalog            interface{}
 	ExampleIssue            map[string]interface{}
 	CreateMeta              map[string]interface{}
 	EditMeta                map[string]interface{}
 	Jira                    JiraInfo
+	Warnings                []PlanWarning
 	MinConfidence           float64
 	IncludeTemplateDefaults bool
 }
@@ -185,8 +227,9 @@ type RowError struct {
 }
 
 type PayloadPreview struct {
-	RowNumber int                    `json:"row_number"`
-	Payload   map[string]interface{} `json:"payload"`
+	RowNumber     int                    `json:"row_number"`
+	Payload       map[string]interface{} `json:"payload"`
+	CreatePreview map[string]interface{} `json:"create_preview,omitempty"`
 }
 
 type PostCreateUpdate struct {
@@ -197,6 +240,7 @@ type PostCreateUpdate struct {
 
 type DryRunResult struct {
 	DryRun                   bool               `json:"dry_run"`
+	MetadataMode             string             `json:"metadata_mode,omitempty"`
 	Rows                     int                `json:"rows"`
 	ValidRows                int                `json:"valid_rows"`
 	InvalidRows              int                `json:"invalid_rows"`
@@ -221,6 +265,7 @@ type CreateFailure struct {
 }
 
 type CreateResult struct {
+	MetadataMode             string             `json:"metadata_mode,omitempty"`
 	Rows                     int                `json:"rows"`
 	Created                  []CreatedIssue     `json:"created"`
 	Failures                 []CreateFailure    `json:"failures"`

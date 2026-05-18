@@ -8,6 +8,7 @@ import (
 )
 
 func BuildCreatePayload(row CSVRow, plan MappingPlan) (map[string]interface{}, []RowError, *PostCreateUpdate) {
+	metadataMode := EffectiveMetadataMode(plan.MetadataMode)
 	fields := map[string]interface{}{}
 	if plan.Jira.ProjectID != "" {
 		fields["project"] = map[string]string{"id": plan.Jira.ProjectID}
@@ -19,8 +20,10 @@ func BuildCreatePayload(row CSVRow, plan MappingPlan) (map[string]interface{}, [
 	} else if plan.Jira.IssueTypeName != "" {
 		fields["issuetype"] = map[string]string{"name": plan.Jira.IssueTypeName}
 	}
-	for _, d := range plan.TemplateDefaults {
-		fields[d.JiraFieldID] = cloneJSONValue(d.Value)
+	if metadataMode != MetadataModeEditMetaDegraded {
+		for _, d := range plan.TemplateDefaults {
+			fields[d.JiraFieldID] = cloneJSONValue(d.Value)
+		}
 	}
 
 	errors := []RowError{}
@@ -35,10 +38,10 @@ func BuildCreatePayload(row CSVRow, plan MappingPlan) (map[string]interface{}, [
 			errors = append(errors, *rowErr)
 			continue
 		}
-		if m.Phase == PhasePostCreateUpdate {
-			postFields[m.JiraFieldID] = value
-		} else {
+		if createPayloadField(metadataMode, m) {
 			fields[m.JiraFieldID] = value
+		} else {
+			postFields[m.JiraFieldID] = value
 		}
 	}
 	for _, required := range plan.RequiredFields {
@@ -61,6 +64,13 @@ func BuildCreatePayload(row CSVRow, plan MappingPlan) (map[string]interface{}, [
 		post = &PostCreateUpdate{RowNumber: row.RowNumber, Fields: postFields, Payload: map[string]interface{}{"fields": postFields}}
 	}
 	return payload, errors, post
+}
+
+func createPayloadField(metadataMode string, mapping FieldMapping) bool {
+	if metadataMode == MetadataModeEditMetaDegraded {
+		return mapping.JiraFieldID == "summary"
+	}
+	return mapping.Phase != PhasePostCreateUpdate
 }
 
 func validateCoreCreateFields(fields map[string]interface{}, rowNumber int) []RowError {
@@ -114,7 +124,7 @@ func BuildPostCreateUpdatePayload(row CSVRow, plan MappingPlan) (map[string]inte
 }
 
 func DryRunRows(rows []CSVRow, plan MappingPlan, previewLimit int) DryRunResult {
-	result := DryRunResult{DryRun: true, Rows: len(rows), PreviewPayloads: []PayloadPreview{}, Errors: []RowError{}, Warnings: plan.Warnings}
+	result := DryRunResult{DryRun: true, MetadataMode: EffectiveMetadataMode(plan.MetadataMode), Rows: len(rows), PreviewPayloads: []PayloadPreview{}, Errors: []RowError{}, Warnings: plan.Warnings}
 	for _, row := range rows {
 		payload, errs, post := BuildCreatePayload(row, plan)
 		if len(errs) > 0 {
@@ -124,7 +134,7 @@ func DryRunRows(rows []CSVRow, plan MappingPlan, previewLimit int) DryRunResult 
 		}
 		result.ValidRows++
 		if previewLimit < 0 || len(result.PreviewPayloads) < previewLimit {
-			result.PreviewPayloads = append(result.PreviewPayloads, PayloadPreview{RowNumber: row.RowNumber, Payload: payload})
+			result.PreviewPayloads = append(result.PreviewPayloads, PayloadPreview{RowNumber: row.RowNumber, Payload: payload, CreatePreview: payload})
 		}
 		if post != nil {
 			result.PlannedPostCreateUpdates = append(result.PlannedPostCreateUpdates, *post)

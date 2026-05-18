@@ -46,6 +46,7 @@ func issueMapCSVCmd(o *Opts) *cobra.Command {
 	cmd.Flags().String("example-issue", "", "")
 	cmd.Flags().String("create-meta", "", "")
 	cmd.Flags().String("edit-meta", "", "")
+	cmd.Flags().String("metadata-mode", bulkcsv.MetadataModeAuto, "")
 	cmd.Flags().String("output", "", "")
 	cmd.Flags().Int("sample-rows", 5, "")
 	cmd.Flags().Float64("min-confidence", 0.75, "")
@@ -82,6 +83,7 @@ func addBulkCreateFlags(cmd *cobra.Command) {
 	cmd.Flags().String("example-issue", "", "")
 	cmd.Flags().String("create-meta", "", "")
 	cmd.Flags().String("edit-meta", "", "")
+	cmd.Flags().String("metadata-mode", bulkcsv.MetadataModeAuto, "")
 	cmd.Flags().Int("sample-rows", 5, "")
 	cmd.Flags().Float64("min-confidence", 0.75, "")
 	cmd.Flags().Bool("include-template-defaults", true, "")
@@ -106,11 +108,13 @@ func buildCSVMappingPlan(o *Opts, cmd *cobra.Command) (bulkcsv.MappingPlan, erro
 	input := bulkcsv.MappingInput{
 		CSV:                     csvData.Summary,
 		Rows:                    csvData.Rows,
+		MetadataMode:            metadata.metadataMode,
 		FieldCatalog:            metadata.fieldCatalog,
 		ExampleIssue:            metadata.exampleIssue,
 		CreateMeta:              metadata.createMeta,
 		EditMeta:                metadata.editMeta,
 		Jira:                    metadata.jiraInfo,
+		Warnings:                metadata.warnings,
 		MinConfidence:           minConfidence,
 		IncludeTemplateDefaults: includeDefaults,
 	}
@@ -123,9 +127,15 @@ type bulkCSVMetadata struct {
 	createMeta   map[string]interface{}
 	editMeta     map[string]interface{}
 	jiraInfo     bulkcsv.JiraInfo
+	metadataMode string
+	warnings     []bulkcsv.PlanWarning
 }
 
 func loadBulkCSVMetadata(o *Opts, cmd *cobra.Command, templateIssue string) (bulkCSVMetadata, error) {
+	requestedMode, err := bulkcsv.NormalizeMetadataMode(mustS(cmd, "metadata-mode"))
+	if err != nil {
+		return bulkCSVMetadata{}, err
+	}
 	cfg, err := loadCfg(o)
 	if err != nil {
 		return bulkCSVMetadata{}, err
@@ -134,7 +144,11 @@ func loadBulkCSVMetadata(o *Opts, cmd *cobra.Command, templateIssue string) (bul
 	if err != nil {
 		return bulkCSVMetadata{}, err
 	}
-	meta := bulkCSVMetadata{jiraInfo: bulkcsv.JiraInfo{Instance: ctx.Instance, TemplateIssue: templateIssue, ProjectKey: mustS(cmd, "project"), IssueTypeName: mustS(cmd, "type")}}
+	meta := bulkCSVMetadata{
+		jiraInfo:     bulkcsv.JiraInfo{Instance: ctx.Instance, TemplateIssue: templateIssue, ProjectKey: mustS(cmd, "project"), IssueTypeName: mustS(cmd, "type")},
+		metadataMode: requestedMode,
+		warnings:     []bulkcsv.PlanWarning{},
+	}
 
 	if path := mustS(cmd, "field-catalog"); path != "" {
 		v, err := bulkcsv.LoadJSONValue(path)
@@ -163,6 +177,12 @@ func loadBulkCSVMetadata(o *Opts, cmd *cobra.Command, templateIssue string) (bul
 		}
 		meta.exampleIssue = v
 	}
+	if requestedMode == bulkcsv.MetadataModeEditMetaDegraded {
+		if err := configureEditMetaDegradedMetadata(cmd, &meta); err != nil {
+			return meta, err
+		}
+		return meta, nil
+	}
 
 	if path := mustS(cmd, "create-meta"); path != "" {
 		v, err := bulkcsv.LoadJSONObject(path)
@@ -176,6 +196,16 @@ func loadBulkCSVMetadata(o *Opts, cmd *cobra.Command, templateIssue string) (bul
 	} else {
 		v, err := fetchBulkCreateMeta(ctx, templateIssue, meta.jiraInfo.ProjectKey, meta.jiraInfo.IssueTypeName)
 		if err != nil {
+			if requestedMode == bulkcsv.MetadataModeAuto && shouldUseEditMetaDegraded(err) {
+				meta.warnings = append(meta.warnings, bulkcsv.PlanWarning{
+					Code:    "createmeta_unavailable_using_editmeta_degraded",
+					Message: "Jira createmeta endpoints are unavailable; using editmeta-derived metadata. Initial create will use minimal fields and mapped fields will be applied after creation.",
+				})
+				if err := configureEditMetaDegradedMetadata(cmd, &meta); err != nil {
+					return meta, err
+				}
+				return meta, nil
+			}
 			return meta, err
 		}
 		meta.createMeta = v
@@ -201,7 +231,46 @@ func loadBulkCSVMetadata(o *Opts, cmd *cobra.Command, templateIssue string) (bul
 	meta.jiraInfo.ProjectID = firstNonEmpty(meta.jiraInfo.ProjectID, metadataString(project["id"]))
 	meta.jiraInfo.IssueTypeName = firstNonEmpty(meta.jiraInfo.IssueTypeName, metadataString(issueType["name"]))
 	meta.jiraInfo.IssueTypeID = firstNonEmpty(meta.jiraInfo.IssueTypeID, metadataString(issueType["id"]))
+	meta.metadataMode = bulkcsv.MetadataModeCreateMeta
 	return meta, nil
+}
+
+func configureEditMetaDegradedMetadata(cmd *cobra.Command, meta *bulkCSVMetadata) error {
+	if path := mustS(cmd, "edit-meta"); path != "" {
+		v, err := bulkcsv.LoadJSONObject(path)
+		if err != nil {
+			return err
+		}
+		meta.editMeta = unwrapEnvelopeMap(v)
+	} else {
+		meta.editMeta = mapFromInterface(meta.exampleIssue["editmeta"])
+	}
+	populateJiraInfoFromExample(meta)
+	meta.createMeta = map[string]interface{}{}
+	meta.metadataMode = bulkcsv.MetadataModeEditMetaDegraded
+	return nil
+}
+
+func populateJiraInfoFromExample(meta *bulkCSVMetadata) {
+	fields := mapFromInterface(meta.exampleIssue["fields"])
+	project := mapFromInterface(fields["project"])
+	issueType := mapFromInterface(fields["issuetype"])
+	meta.jiraInfo.ProjectKey = firstNonEmpty(meta.jiraInfo.ProjectKey, metadataString(project["key"]))
+	meta.jiraInfo.ProjectID = firstNonEmpty(meta.jiraInfo.ProjectID, metadataString(project["id"]))
+	meta.jiraInfo.IssueTypeName = firstNonEmpty(meta.jiraInfo.IssueTypeName, metadataString(issueType["name"]))
+	meta.jiraInfo.IssueTypeID = firstNonEmpty(meta.jiraInfo.IssueTypeID, metadataString(issueType["id"]))
+}
+
+func shouldUseEditMetaDegraded(err error) bool {
+	var bulkErr *bulkcsv.Error
+	if errors.As(err, &bulkErr) && bulkErr.Code == "createmeta_fields_empty" {
+		return true
+	}
+	var httpErr *httpclient.HTTPError
+	if errors.As(err, &httpErr) && httpErr.Code == "createmeta_fields_empty" {
+		return true
+	}
+	return isCreateMetaFallbackError(err)
 }
 
 func fetchBulkCreateMeta(ctx *jira.Context, templateIssue, project, issueType string) (map[string]interface{}, error) {
@@ -209,32 +278,36 @@ func fetchBulkCreateMeta(ctx *jira.Context, templateIssue, project, issueType st
 	if err := populateCreateMetaFromIssue(ctx, &opts); err != nil {
 		return nil, err
 	}
+	splitFieldsEmpty := false
 	out, err := fetchSplitCreateMeta(ctx, opts)
 	if err == nil {
 		if len(mapValue(out, "fields")) > 0 {
 			return out, nil
 		}
-		legacy, legacyErr := fetchLegacyCreateMeta(ctx, opts)
-		if legacyErr != nil {
-			return nil, legacyErr
-		}
-		if len(mapValue(legacy, "fields")) == 0 {
-			return nil, bulkcsv.CreateMetaFieldsEmptyError("")
-		}
-		legacy["source"] = "legacy_after_empty_split"
-		return legacy, nil
-	}
-	if !isCreateMetaFallbackError(err) {
+		splitFieldsEmpty = true
+	} else if !isCreateMetaFallbackError(err) {
 		return nil, err
 	}
 	legacy, err := fetchLegacyCreateMeta(ctx, opts)
-	if err != nil {
+	if err == nil {
+		if len(mapValue(legacy, "fields")) > 0 {
+			if splitFieldsEmpty {
+				legacy["source"] = "legacy_after_empty_split"
+			}
+			return legacy, nil
+		}
+	} else if !isCreateMetaFallbackError(err) {
 		return nil, err
 	}
-	if len(mapValue(legacy, "fields")) == 0 {
+	raw, rawErr := fetchRawLegacyCreateMeta(ctx, opts)
+	if rawErr != nil {
+		return nil, rawErr
+	}
+	if len(mapValue(raw, "fields")) == 0 {
 		return nil, bulkcsv.CreateMetaFieldsEmptyError("")
 	}
-	return legacy, nil
+	raw["source"] = "raw_legacy"
+	return raw, nil
 }
 
 func runIssueBulkCreate(o *Opts, cmd *cobra.Command, forceDryRun bool) error {
@@ -268,6 +341,9 @@ func runIssueBulkCreate(o *Opts, cmd *cobra.Command, forceDryRun bool) error {
 	}
 	if dryRunResult.InvalidRows > 0 {
 		return print(cmd, o, output.Failure("invalid_args", "CSV contains invalid rows; run --dry-run to inspect row errors", "No issues were created.", 400))
+	}
+	if bulkcsv.EffectiveMetadataMode(plan.MetadataMode) == bulkcsv.MetadataModeEditMetaDegraded && len(dryRunResult.PlannedPostCreateUpdates) > 0 && !mustB(cmd, "apply-post-create-updates") {
+		return printBulkCSVError(cmd, o, bulkcsv.PostCreateUpdatesRequiredError())
 	}
 	maxCreate, _ := cmd.Flags().GetInt("max-create")
 	if maxCreate > 0 && dryRunResult.ValidRows > maxCreate {
@@ -350,7 +426,7 @@ func createBulkIssues(o *Opts, cmd *cobra.Command, rows []bulkcsv.CSVRow, plan b
 	}
 	failFast, _ := cmd.Flags().GetBool("fail-fast")
 	applyPostCreateUpdates := mustB(cmd, "apply-post-create-updates")
-	result := bulkcsv.CreateResult{Rows: len(rows), Created: []bulkcsv.CreatedIssue{}, Failures: []bulkcsv.CreateFailure{}, Warnings: plan.Warnings}
+	result := bulkcsv.CreateResult{MetadataMode: bulkcsv.EffectiveMetadataMode(plan.MetadataMode), Rows: len(rows), Created: []bulkcsv.CreatedIssue{}, Failures: []bulkcsv.CreateFailure{}, Warnings: plan.Warnings}
 	for _, row := range rows {
 		payload, rowErrors, post := bulkcsv.BuildCreatePayload(row, plan)
 		if post != nil && !applyPostCreateUpdates {

@@ -1,0 +1,158 @@
+package commands
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	"engineering-flow-platform-tools/internal/browser/probe"
+	"engineering-flow-platform-tools/internal/catalog"
+	"engineering-flow-platform-tools/internal/output"
+	"engineering-flow-platform-tools/internal/version"
+	"github.com/spf13/cobra"
+)
+
+type Opts struct {
+	Format        string
+	JSON, Verbose bool
+}
+
+func NewRoot() *cobra.Command {
+	return NewRootWithRunner(probe.NewChromeDPRunner())
+}
+
+func NewRootWithRunner(r probe.Runner) *cobra.Command {
+	cobra.EnableCommandSorting = false
+	o := &Opts{Format: "table"}
+	c := &cobra.Command{Use: "browser", SilenceErrors: true, SilenceUsage: true}
+	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
+	c.PersistentFlags().StringVar(&o.Format, "format", "table", "")
+	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "")
+	c.AddCommand(probeCmd(o, r), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	return c
+}
+
+func probeCmd(o *Opts, r probe.Runner) *cobra.Command {
+	opts := probe.ProbeOptions{WaitSeconds: 8, TimeoutSeconds: 90, OutDir: "result", Browser: "auto", MaxNetworkEvents: 1000, SaveHTML: true, SaveScreenshot: true}
+	c := &cobra.Command{Use: "probe", RunE: func(cmd *cobra.Command, args []string) error {
+		opts.Verbose = o.Verbose
+		if strings.TrimSpace(opts.URL) == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--url is required", "Run browser schema probe --json.", 400))
+		}
+		if opts.ProfileDir == "" {
+			opts.ProfileDir = probe.DefaultProfileDir()
+		}
+		timeout := time.Duration(opts.TimeoutSeconds) * time.Second
+		if timeout <= 0 {
+			timeout = 90 * time.Second
+		}
+		ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
+		defer cancel()
+		result, err := r.Probe(ctx, opts)
+		if err != nil {
+			var probeErr *probe.ProbeError
+			if errors.As(err, &probeErr) {
+				return print(cmd, o, output.Failure(probeErr.Code, probeErr.Message, probeErr.Hint, probeErr.Status))
+			}
+			return print(cmd, o, output.Failure("server_error", err.Error(), "", 500))
+		}
+		if opts.RequireSelector && opts.Selector != "" && !result.SelectorFound {
+			return print(cmd, o, output.Failure(
+				"selector_not_found",
+				"Selector was not found.",
+				"Selector was not found. Inspect the generated summary.json, screenshot.png, and page.html.",
+				404,
+			))
+		}
+		return print(cmd, o, output.Success("", result))
+	}}
+	c.Flags().StringVar(&opts.URL, "url", "", "")
+	c.Flags().StringVar(&opts.Selector, "selector", "", "")
+	c.Flags().BoolVar(&opts.RequireSelector, "require-selector", false, "")
+	c.Flags().IntVar(&opts.WaitSeconds, "wait", 8, "")
+	c.Flags().IntVar(&opts.TimeoutSeconds, "timeout", 90, "")
+	c.Flags().StringVar(&opts.OutDir, "out", "result", "")
+	c.Flags().StringVar(&opts.ProfileDir, "profile", "", "")
+	c.Flags().BoolVar(&opts.CleanProfile, "clean-profile", false, "")
+	c.Flags().StringVar(&opts.BrowserExe, "browser-exe", "", "")
+	c.Flags().StringVar(&opts.Browser, "browser", "auto", "")
+	c.Flags().BoolVar(&opts.Headless, "headless", false, "")
+	c.Flags().BoolVar(&opts.IgnoreCertErrors, "ignore-cert-errors", false, "")
+	c.Flags().StringVar(&opts.FetchAPI, "fetch-api", "", "")
+	c.Flags().StringVar(&opts.NetworkFilter, "network-filter", "", "")
+	c.Flags().IntVar(&opts.MaxNetworkEvents, "max-network-events", 1000, "")
+	c.Flags().BoolVar(&opts.SaveHTML, "save-html", true, "")
+	c.Flags().BoolVar(&opts.SaveScreenshot, "save-screenshot", true, "")
+	return c
+}
+
+func commandsCmd(o *Opts) *cobra.Command {
+	return &cobra.Command{Use: "commands", RunE: func(cmd *cobra.Command, args []string) error {
+		return print(cmd, o, output.Success("", map[string]any{"commands": catalog.Commands("browser")}))
+	}}
+}
+
+func schemaCmd(o *Opts) *cobra.Command {
+	return &cobra.Command{Use: "schema <command>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		return print(cmd, o, output.Success("", catalog.Schema("browser", args[0])))
+	}}
+}
+
+func versionCmd(o *Opts) *cobra.Command {
+	return &cobra.Command{Use: "version", RunE: func(cmd *cobra.Command, args []string) error {
+		return print(cmd, o, output.Success("", map[string]any{"version": version.Version, "commit": version.Commit, "date": version.Date}))
+	}}
+}
+
+func helpLLMCmd(o *Opts) *cobra.Command {
+	return &cobra.Command{Use: "help llm", RunE: func(cmd *cobra.Command, args []string) error {
+		tips := browserLLMTips()
+		if fmtOut(o) == "json" {
+			return print(cmd, o, output.Success("", map[string]any{"tips": tips, "commands": catalog.Commands("browser")}))
+		}
+		_, err := fmt.Fprintln(cmd.OutOrStdout(), browserLLMMarkdown(tips))
+		return err
+	}}
+}
+
+func browserLLMTips() []string {
+	return []string{
+		"Always use --json.",
+		"browser is a CLI binary invoked through Bash.",
+		"It opens Edge/Chrome/Chromium through DevTools.",
+		"It uses a dedicated browser profile by default.",
+		"It does not export cookies or tokens.",
+		"Use --selector to check login success.",
+		"Use --clean-profile to distinguish true OS/enterprise SSO from cached browser session.",
+		"Inspect network.json and summary.json.",
+		"Do not treat negotiate_401_seen as proof; it is only an indicator.",
+		"In OpenCode runtime, this command requires a browser executable in the runtime image.",
+	}
+}
+
+func browserLLMMarkdown(tips []string) string {
+	var b strings.Builder
+	b.WriteString("# browser CLI usage for agents\n\n")
+	for _, tip := range tips {
+		b.WriteString("- ")
+		b.WriteString(tip)
+		b.WriteString("\n")
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func print(cmd *cobra.Command, o *Opts, env output.Envelope) error {
+	return output.Print(cmd.OutOrStdout(), fmtOut(o), env)
+}
+
+func fmtOut(o *Opts) string {
+	if o.JSON {
+		return "json"
+	}
+	if o.Format != "" {
+		return strings.ToLower(o.Format)
+	}
+	return "table"
+}

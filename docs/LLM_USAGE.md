@@ -7,6 +7,19 @@
 - Use --yes for destructive operations.
 - Inspect error.code and error.hint before retrying.
 
+## Browser SSO Diagnostics
+
+- Always call `browser schema probe --json` before constructing a probe command.
+- Always use `--json`.
+- `browser` is a CLI binary invoked through Bash, not an OpenCode built-in browser tool, MCP tool, or Web UI component.
+- Use `--selector` for a deterministic login-success signal.
+- Use `--clean-profile` when the user wants to distinguish true OS/enterprise SSO from cached browser session.
+- Read `data.files.summary`, `data.files.screenshot`, `data.files.html`, and `data.files.network`.
+- Use `--save-html=false` or `--save-screenshot=false` when the user wants to avoid writing those artifacts.
+- Do not ask the tool to export cookies or tokens.
+- Do not treat `negotiate_401_seen` as definitive proof; it is an indicator only.
+- In OpenCode runtime, this command requires a browser executable in the runtime image. If no browser is installed, expect `browser_not_found`.
+
 ## How to recover from CLI errors
 
 | error.code | Next action |
@@ -26,7 +39,7 @@
 
 ## Recommended Workflow
 
-1. Discover commands with `jira commands --json` or `confluence commands --json`.
+1. Discover commands with `jira commands --json`, `confluence commands --json`, or `browser commands --json`.
 2. Inspect the exact command schema before constructing arguments.
 3. Prefer full Jira issue URLs or Confluence page URLs when the user provides them.
 4. Add `--instance` when the URL is ambiguous across configured instances.
@@ -44,6 +57,7 @@ jira schema issue.create --json
 jira schema issue.transition --json
 confluence schema page.create --json
 confluence schema page.update --json
+browser schema probe --json
 ```
 
 The `required` field lists mandatory arguments and flags. The `flags` field includes type and description metadata suitable for tool planning.

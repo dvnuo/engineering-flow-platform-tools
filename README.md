@@ -4,6 +4,7 @@ This repository hosts cross-platform Go-based CLI tools for agent, runtime, shel
 
 - `jira`
 - `confluence`
+- `browser`
 
 Jira and Confluence are the first tool family in this repository. Future tools may be added as separate command binaries under `cmd/<tool-name>`.
 
@@ -22,20 +23,25 @@ The project is designed for humans, shell scripts, and LLM/agent workflows that 
 
 ### Jira and Confluence
 
-The repository currently includes:
+The Atlassian product integrations currently include:
 
 - `jira`: Jira Server/Data Center automation
 - `confluence`: Confluence Server/Data Center automation
 
-These commands use `ATLASSIAN_CONFIG` and `~/.config/atlassian/config.json` because they are Atlassian product integrations. This does not mean the repository is limited to those product integrations.
+Jira and Confluence use `ATLASSIAN_CONFIG` and `~/.config/atlassian/config.json` because they are Atlassian product integrations. This does not mean the repository is limited to those product integrations.
+
+### Browser
+
+`browser` is a CLI binary invoked through Bash. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. It uses a dedicated browser profile by default and does not export cookies or tokens.
 
 ## Quick Install
 
-Download a release artifact for your platform, place `jira` and `confluence` on your `PATH`, then run:
+Download a release artifact for your platform, place `jira`, `confluence`, and `browser` on your `PATH`, then run:
 
 ```bash
 jira version --json
 confluence version --json
+browser version --json
 ```
 
 ## Config File
@@ -97,6 +103,28 @@ confluence page create --instance docs --space ENG --title "Test Page" --body "<
 confluence version --json
 ```
 
+## Browser Examples
+
+Windows:
+
+```powershell
+browser probe --url "https://intranet.example.test/app" --selector ".user-avatar" --wait 10 --out result --json
+```
+
+Validate whether access depends on a prior browser cookie:
+
+```powershell
+browser probe --url "https://intranet.example.test/app" --selector ".user-avatar" --clean-profile --wait 10 --out result-clean --json
+```
+
+Optional page-context API fetch:
+
+```bash
+browser probe --url "https://intranet.example.test/app" --fetch-api "/api/me" --json
+```
+
+The current OpenCode runtime image consumes prebuilt binaries copied into `runtime-tools/` by an external pipeline. A future runtime change must place `browser` on `PATH`, and probe execution inside a runtime container also requires Edge/Chrome/Chromium in that image.
+
 ## URL Instance Routing
 
 Commands that accept Jira issue URLs or Confluence page URLs can select the matching configured instance automatically. Use `--instance` when multiple configured instances could match the same URL.
@@ -108,6 +136,7 @@ Agents should first inspect available commands:
 ```bash
 jira commands --json
 confluence commands --json
+browser commands --json
 ```
 
 Then inspect the exact schema before calling a command:
@@ -115,6 +144,7 @@ Then inspect the exact schema before calling a command:
 ```bash
 jira schema issue.create --json
 confluence schema page.create --json
+browser schema probe --json
 ```
 
 Always use `--json`, inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
@@ -180,4 +210,4 @@ go vet ./...
 
 Tags matching `v*` trigger the release workflow. Release archives are named `engineering-flow-platform-tools_<version>_<goos>_<goarch>`.
 
-Current archives include `jira`, `confluence`, README, and install/config/LLM usage docs. Future archives may include more tool binaries from `cmd/<tool-name>`.
+Current archives include `jira`, `confluence`, `browser`, README, and install/config/LLM usage docs. Future archives may include more tool binaries from `cmd/<tool-name>`.

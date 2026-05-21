@@ -52,6 +52,14 @@ var confluenceCommands = []string{
 	"confluence longtask list", "confluence longtask get <task-id>", "confluence webhook list", "confluence webhook get <webhook-id>", "confluence webhook create", "confluence webhook delete <webhook-id>", "confluence api get <path>", "confluence api post <path>", "confluence api put <path>", "confluence api delete <path>",
 }
 
+var browserCommands = []string{
+	"browser probe",
+	"browser commands",
+	"browser schema <command>",
+	"browser help llm",
+	"browser version",
+}
+
 func Commands(product string) []llm.CommandMeta {
 	var src []string
 	switch product {
@@ -59,6 +67,8 @@ func Commands(product string) []llm.CommandMeta {
 		src = jiraCommands
 	case "confluence":
 		src = confluenceCommands
+	case "browser":
+		src = browserCommands
 	default:
 		return nil
 	}
@@ -113,7 +123,10 @@ func meta(product, usage string) llm.CommandMeta {
 	}
 	flags := ex.Flags
 	if len(flags) == 0 {
-		flags = defaultFlags(r)
+		flags = defaultFlags(product, r)
+	}
+	if product == "browser" && name != "probe" {
+		flags = []string{"json", "format", "verbose"}
 	}
 	desc := ex.Description
 	if desc == "" {
@@ -128,6 +141,12 @@ func meta(product, usage string) llm.CommandMeta {
 	}
 	if product == "confluence" && strings.HasPrefix(name, "api.") {
 		example = strings.ReplaceAll(example, "/rest/api/2", "/rest/api")
+	}
+	if product == "browser" && strings.HasPrefix(example, "jira ") {
+		example = strings.Replace(example, "jira ", "browser ", 1)
+	}
+	if product == "browser" && strings.HasPrefix(example, "confluence ") {
+		example = strings.Replace(example, "confluence ", "browser ", 1)
 	}
 	req := ex.Required
 	if len(req) == 0 {
@@ -201,7 +220,10 @@ func description(usage string) string {
 	}
 }
 
-func defaultFlags(r string) []string {
+func defaultFlags(product, r string) []string {
+	if product == "browser" {
+		return []string{"json", "format", "verbose"}
+	}
 	flags := []string{"instance", "config", "json", "format", "verbose"}
 	switch r {
 	case "write":
@@ -252,6 +274,8 @@ func productName(product string) string {
 		return "Jira"
 	case "confluence":
 		return "Confluence"
+	case "browser":
+		return "Browser"
 	default:
 		return product
 	}
@@ -303,6 +327,10 @@ func exampleFor(usage, r string) string {
 		"<path>":            "/rest/api/2/myself",
 		"<file>":            "./note.txt",
 		"[name]":            "local",
+	}
+	if strings.HasPrefix(usage, "browser ") {
+		replacements["<command>"] = "probe"
+		replacements["<url>"] = "https://intranet.example.test/app"
 	}
 	for old, newValue := range replacements {
 		example = strings.ReplaceAll(example, old, newValue)
@@ -356,6 +384,8 @@ func required(name string) []string {
 		return []string{"time-spent"}
 	case "issue.worklog.update":
 		return []string{"time-spent|started|comment"}
+	case "probe":
+		return []string{"url"}
 	}
 	return []string{}
 }
@@ -376,9 +406,9 @@ func flagSpecs(command string, flags, required []string) []FlagSpec {
 
 func flagType(name string) string {
 	switch name {
-	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit", "legacy", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates":
+	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit", "legacy", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot":
 		return "bool"
-	case "sample-rows", "max-create":
+	case "sample-rows", "max-create", "wait", "timeout", "max-network-events":
 		return "int"
 	case "min-confidence":
 		return "float"
@@ -465,12 +495,47 @@ func flagDescription(command, name string) string {
 		return "Issue key or URL used to infer project and issue type."
 	case "legacy":
 		return "Force legacy createmeta endpoint."
+	case "url":
+		return "HTTP or HTTPS URL to open."
+	case "selector":
+		return "CSS selector used as a deterministic login-success signal."
+	case "require-selector":
+		return "Fail with selector_not_found when --selector is not visible."
+	case "wait":
+		return "Seconds to wait after the page body is ready."
+	case "timeout":
+		return "Overall probe timeout in seconds."
+	case "out":
+		return "Directory for screenshot, HTML, network, and summary artifacts."
+	case "profile":
+		return "Dedicated browser user-data-dir for this probe."
+	case "clean-profile":
+		return "Delete the dedicated probe profile before launching the browser."
+	case "browser-exe":
+		return "Explicit Edge/Chrome/Chromium executable path."
+	case "browser":
+		return "Browser family: edge, chrome, chromium, or auto."
+	case "headless":
+		return "Run the browser without a visible UI."
+	case "ignore-cert-errors":
+		return "Ignore certificate errors for internal self-signed certificate diagnostics."
+	case "fetch-api":
+		return "Path or URL to fetch from the loaded page context with credentials included."
+	case "network-filter":
+		return "Substring used to highlight matching network URLs in api_events."
+	case "max-network-events":
+		return "Maximum number of network events to retain."
+	case "save-html":
+		return "Write page.html into --out."
+	case "save-screenshot":
+		return "Write screenshot.png into --out."
 	default:
 		return "Command option."
 	}
 }
 
 var explicit = map[string]explicitMeta{
+	"probe":                     {Description: "Open an internal URL in Edge/Chrome/Chromium, capture screenshot/HTML/network summary, and report browser SSO indicators.", Flags: []string{"url", "selector", "require-selector", "wait", "timeout", "out", "profile", "clean-profile", "browser-exe", "browser", "headless", "ignore-cert-errors", "fetch-api", "network-filter", "max-network-events", "save-html", "save-screenshot", "json", "format", "verbose"}, Required: []string{"url"}, Risk: "read", Example: "browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json"},
 	"version":                   {Description: "Print CLI version, commit, and build date.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira version --json"},
 	"auth.test":                 {Description: "Verify configured credentials against the current user endpoint.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira auth test --json"},
 	"server-info":               {Description: "Read server metadata from the selected instance.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira server-info --json"},

@@ -55,6 +55,8 @@ If a clean profile still reaches the business page, OS/enterprise SSO is more li
 
 `network.json` contains only `kind`, `time`, `request_id`, `method`, `url`, `resource_type`, `status`, and `mime_type`. Sensitive URL query values and fragments are redacted.
 
+To disable artifact types, pass `--save-html=false` or `--save-screenshot=false`.
+
 ## JSON Envelope Example
 
 ```json

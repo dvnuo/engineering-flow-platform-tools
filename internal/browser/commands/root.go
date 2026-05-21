@@ -41,6 +41,14 @@ func probeCmd(o *Opts, r probe.Runner) *cobra.Command {
 		if strings.TrimSpace(opts.URL) == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--url is required", "Run browser schema probe --json.", 400))
 		}
+		if opts.RequireSelector && strings.TrimSpace(opts.Selector) == "" {
+			return print(cmd, o, output.Failure(
+				"invalid_args",
+				"--require-selector requires --selector",
+				"Pass --selector <css> or remove --require-selector.",
+				400,
+			))
+		}
 		if opts.ProfileDir == "" {
 			opts.ProfileDir = probe.DefaultProfileDir()
 		}
@@ -56,7 +64,7 @@ func probeCmd(o *Opts, r probe.Runner) *cobra.Command {
 			if errors.As(err, &probeErr) {
 				return print(cmd, o, output.Failure(probeErr.Code, probeErr.Message, probeErr.Hint, probeErr.Status))
 			}
-			return print(cmd, o, output.Failure("server_error", err.Error(), "", 500))
+			return print(cmd, o, output.Failure("server_error", probe.RedactErrorMessage(err.Error()), "", 500))
 		}
 		if opts.RequireSelector && opts.Selector != "" && !result.SelectorFound {
 			return print(cmd, o, output.Failure(

@@ -212,7 +212,7 @@ func (r *ChromeDPRunner) Probe(ctx context.Context, opts ProbeOptions) (ProbeRes
 		return result, artifactWriteError(err)
 	}
 	if fetchErr != nil {
-		return result, &ProbeError{Code: "fetch_api_failed", Message: fetchErr.Error(), Hint: "Inspect fetch_api_result.json and network.json.", Status: 502}
+		return result, &ProbeError{Code: "fetch_api_failed", Message: RedactErrorMessage(fetchErr.Error()), Hint: "Inspect fetch_api_result.json and network.json.", Status: 502}
 	}
 	if opts.RequireSelector && opts.Selector != "" && !selectorFound {
 		return result, &ProbeError{
@@ -288,7 +288,9 @@ func runFetchAPI(ctx context.Context, target string) (map[string]any, error) {
 	}
 	if status, _ := result["status"].(float64); status == 0 {
 		if msg, _ := result["error"].(string); msg != "" {
-			return result, errors.New(msg)
+			clean := RedactErrorMessage(msg)
+			result["error"] = clean
+			return result, errors.New(clean)
 		}
 	}
 	return result, nil
@@ -329,21 +331,21 @@ func writeJSON(path string, value any) error {
 }
 
 func artifactWriteError(err error) *ProbeError {
-	return &ProbeError{Code: "artifact_write_failed", Message: err.Error(), Hint: "Check --out permissions and available disk space.", Status: 500}
+	return &ProbeError{Code: "artifact_write_failed", Message: RedactErrorMessage(err.Error()), Hint: "Check --out permissions and available disk space.", Status: 500}
 }
 
 func mapProbeRunError(err error, fallback string) *ProbeError {
 	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-		return &ProbeError{Code: "timeout", Message: err.Error(), Hint: "Increase --timeout or check browser/network availability.", Status: 408}
+		return &ProbeError{Code: "timeout", Message: RedactErrorMessage(err.Error()), Hint: "Increase --timeout or check browser/network availability.", Status: 408}
 	}
 	switch fallback {
 	case "browser_launch_failed":
-		return &ProbeError{Code: "browser_launch_failed", Message: err.Error(), Hint: "Check --browser-exe and whether the browser can be launched.", Status: 500}
+		return &ProbeError{Code: "browser_launch_failed", Message: RedactErrorMessage(err.Error()), Hint: "Check --browser-exe and whether the browser can be launched.", Status: 500}
 	case "network_capture_failed":
-		return &ProbeError{Code: "network_capture_failed", Message: err.Error(), Hint: "The browser launched, but DevTools network capture could not be enabled.", Status: 500}
+		return &ProbeError{Code: "network_capture_failed", Message: RedactErrorMessage(err.Error()), Hint: "The browser launched, but DevTools network capture could not be enabled.", Status: 500}
 	case "navigation_failed":
-		return &ProbeError{Code: "navigation_failed", Message: err.Error(), Hint: "Check the URL, TLS, proxy, and browser policy prompts.", Status: 502}
+		return &ProbeError{Code: "navigation_failed", Message: RedactErrorMessage(err.Error()), Hint: "Check the URL, TLS, proxy, and browser policy prompts.", Status: 502}
 	default:
-		return &ProbeError{Code: "server_error", Message: err.Error(), Status: 500}
+		return &ProbeError{Code: "server_error", Message: RedactErrorMessage(err.Error()), Status: 500}
 	}
 }

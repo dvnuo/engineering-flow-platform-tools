@@ -15,6 +15,7 @@
 - Use `--selector` for a deterministic login-success signal.
 - Use `--clean-profile` when the user wants to distinguish true OS/enterprise SSO from cached browser session.
 - Read `data.files.summary`, `data.files.screenshot`, `data.files.html`, and `data.files.network`.
+- Use `--save-html=false` or `--save-screenshot=false` when the user wants to avoid writing those artifacts.
 - Do not ask the tool to export cookies or tokens.
 - Do not treat `negotiate_401_seen` as definitive proof; it is an indicator only.
 - In OpenCode runtime, this command requires a browser executable in the runtime image. If no browser is installed, expect `browser_not_found`.

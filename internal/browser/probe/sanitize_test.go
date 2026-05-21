@@ -59,3 +59,24 @@ func TestRedactTextRedactsSensitiveHeaders(t *testing.T) {
 		}
 	}
 }
+
+func TestRedactErrorMessageRedactsSensitiveValues(t *testing.T) {
+	got := RedactErrorMessage("navigation failed for https://x/cb?code=abc&access_token=secret Authorization: Bearer private Cookie: sid=123")
+	for _, leaked := range []string{"abc", "secret", "Bearer private", "sid=123"} {
+		if strings.Contains(got, leaked) {
+			t.Fatalf("RedactErrorMessage leaked %q in %q", leaked, got)
+		}
+	}
+	for _, want := range []string{"code=REDACTED", "access_token=REDACTED", "Authorization: REDACTED", "Cookie: REDACTED"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("RedactErrorMessage missing %q in %q", want, got)
+		}
+	}
+}
+
+func TestRedactErrorMessageTruncatesLongMessages(t *testing.T) {
+	got := RedactErrorMessage(strings.Repeat("x", 5000))
+	if len(got) != 4000 {
+		t.Fatalf("got length %d", len(got))
+	}
+}

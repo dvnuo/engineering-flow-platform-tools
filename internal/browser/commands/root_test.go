@@ -66,6 +66,21 @@ func TestProbeRequiresURL(t *testing.T) {
 	}
 }
 
+func TestRequireSelectorRequiresSelector(t *testing.T) {
+	fake := &fakeRunner{}
+	out := run(t, fake, "probe", "--url", "https://intranet.test", "--require-selector", "--json")
+	if out["ok"] != false {
+		t.Fatalf("missing selector should fail: %#v", out)
+	}
+	errObj := out["error"].(map[string]any)
+	if errObj["code"] != "invalid_args" {
+		t.Fatalf("code = %#v", errObj)
+	}
+	if fake.calls != 0 {
+		t.Fatalf("runner should not be called")
+	}
+}
+
 func TestProbeUsesRunner(t *testing.T) {
 	fake := &fakeRunner{result: probe.ProbeResult{Selector: ".user", SelectorFound: true}}
 	out := run(t, fake, "probe", "--url", "https://intranet.test", "--selector", ".user", "--json")

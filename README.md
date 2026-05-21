@@ -23,13 +23,12 @@ The project is designed for humans, shell scripts, and LLM/agent workflows that 
 
 ### Jira and Confluence
 
-The repository currently includes:
+The Atlassian product integrations currently include:
 
 - `jira`: Jira Server/Data Center automation
 - `confluence`: Confluence Server/Data Center automation
-- `browser`: browser SSO diagnostics for internal URLs
 
-These commands use `ATLASSIAN_CONFIG` and `~/.config/atlassian/config.json` because they are Atlassian product integrations. This does not mean the repository is limited to those product integrations.
+Jira and Confluence use `ATLASSIAN_CONFIG` and `~/.config/atlassian/config.json` because they are Atlassian product integrations. This does not mean the repository is limited to those product integrations.
 
 ### Browser
 

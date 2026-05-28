@@ -10,18 +10,30 @@ import (
 )
 
 type DoctorResult struct {
-	Product          string                 `json:"product"`
-	Detected         bool                   `json:"detected"`
-	APIFamily        string                 `json:"api_family"`
-	PluginKey        string                 `json:"plugin_key"`
-	BasePath         string                 `json:"base_path"`
-	ProjectKey       string                 `json:"project_key"`
-	ProjectID        string                 `json:"project_id"`
-	DefaultVersionID string                 `json:"default_version_id"`
-	TestIssueType    interface{}            `json:"test_issue_type"`
-	StatusMap        map[string]int         `json:"status_map"`
-	ServerInfo       map[string]interface{} `json:"server_info,omitempty"`
-	CycleProbe       interface{}            `json:"cycle_probe,omitempty"`
+	Product           string                 `json:"product"`
+	Detected          bool                   `json:"detected"`
+	APIFamily         string                 `json:"api_family"`
+	PluginKey         string                 `json:"plugin_key"`
+	BasePath          string                 `json:"base_path"`
+	ProjectKey        string                 `json:"project_key"`
+	ProjectID         string                 `json:"project_id"`
+	DefaultVersionID  string                 `json:"default_version_id"`
+	ModuleInfo        interface{}            `json:"module_info,omitempty"`
+	SystemInfo        interface{}            `json:"system_info,omitempty"`
+	License           interface{}            `json:"license,omitempty"`
+	TestIssueType     interface{}            `json:"test_issue_type"`
+	StatusMap         map[string]int         `json:"status_map"`
+	ExecutionStatuses []StatusDefinition     `json:"execution_statuses,omitempty"`
+	StepStatuses      []StatusDefinition     `json:"step_statuses,omitempty"`
+	ServerInfo        map[string]interface{} `json:"server_info,omitempty"`
+	CycleProbe        interface{}            `json:"cycle_probe,omitempty"`
+	ProbeErrors       map[string]ProbeError  `json:"probe_errors,omitempty"`
+}
+
+type ProbeError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Status  int    `json:"status,omitempty"`
 }
 
 func Doctor(ctx *jira.Context, client *Client, cfg EffectiveConfig, projectKey string) (DoctorResult, error) {
@@ -43,27 +55,49 @@ func Doctor(ctx *jira.Context, client *Client, cfg EffectiveConfig, projectKey s
 	if projectID == "" || projectID == "<nil>" {
 		return DoctorResult{}, NewError("zephyr_project_unresolved", "Jira project did not include an id", "Run jira project get "+projectKey+" --json and verify the project exists.", 404)
 	}
-	testIssueType, err := client.Get("util/zephyrTestIssueType", nil)
+	moduleInfo, err := client.Get("moduleInfo", nil)
 	if err != nil {
 		return DoctorResult{}, mapDetectError(err)
 	}
-	cycleProbe, err := client.Get("cycle", map[string]string{"projectId": projectID, "versionId": cfg.DefaultVersionID})
-	if err != nil {
-		return DoctorResult{}, mapDetectError(err)
+
+	probeErrors := map[string]ProbeError{}
+	probe := func(name, path string, q map[string]string) interface{} {
+		data, err := client.Get(path, q)
+		if err != nil {
+			probeErrors[name] = probeError(err)
+			return nil
+		}
+		return data
+	}
+
+	systemInfo := probe("system_info", "systemInfo", nil)
+	license := probe("license", "license", nil)
+	testIssueType := probe("test_issue_type", "util/zephyrTestIssueType", nil)
+	execRaw := probe("execution_statuses", "util/testExecutionStatus", nil)
+	stepRaw := probe("step_statuses", "util/teststepExecutionStatus", nil)
+	cycleProbe := probe("cycle", "cycle", map[string]string{"projectId": projectID, "versionId": cfg.DefaultVersionID})
+	if len(probeErrors) == 0 {
+		probeErrors = nil
 	}
 	return DoctorResult{
-		Product:          "zephyr",
-		Detected:         true,
-		APIFamily:        cfg.APIFamily,
-		PluginKey:        PluginKey,
-		BasePath:         cfg.RESTPath,
-		ProjectKey:       projectKey,
-		ProjectID:        projectID,
-		DefaultVersionID: cfg.DefaultVersionID,
-		TestIssueType:    testIssueType,
-		StatusMap:        cfg.StatusMap,
-		ServerInfo:       serverInfo,
-		CycleProbe:       cycleProbe,
+		Product:           "zephyr",
+		Detected:          true,
+		APIFamily:         cfg.APIFamily,
+		PluginKey:         PluginKey,
+		BasePath:          cfg.RESTPath,
+		ProjectKey:        projectKey,
+		ProjectID:         projectID,
+		DefaultVersionID:  cfg.DefaultVersionID,
+		ModuleInfo:        moduleInfo,
+		SystemInfo:        systemInfo,
+		License:           license,
+		TestIssueType:     testIssueType,
+		StatusMap:         cfg.StatusMap,
+		ExecutionStatuses: ParseStatusDefinitions(execRaw),
+		StepStatuses:      ParseStatusDefinitions(stepRaw),
+		ServerInfo:        serverInfo,
+		CycleProbe:        cycleProbe,
+		ProbeErrors:       probeErrors,
 	}, nil
 }
 
@@ -110,4 +144,16 @@ func mapDetectError(err error) error {
 		}
 	}
 	return err
+}
+
+func probeError(err error) ProbeError {
+	var zerr *Error
+	if errors.As(err, &zerr) {
+		return ProbeError{Code: zerr.Code, Message: zerr.Message, Status: zerr.Status}
+	}
+	var httpErr *httpclient.HTTPError
+	if errors.As(err, &httpErr) {
+		return ProbeError{Code: httpErr.Code, Message: httpErr.Message, Status: httpErr.Status}
+	}
+	return ProbeError{Code: "server_error", Message: err.Error()}
 }

@@ -62,27 +62,45 @@
 - jira zephyr test get <issue-or-url>
 - jira zephyr test create
 - jira zephyr cycle list
+- jira zephyr cycle resolve
 - jira zephyr cycle get <cycle-id>
 - jira zephyr cycle create
 - jira zephyr cycle update <cycle-id>
 - jira zephyr cycle delete <cycle-id>
 - jira zephyr execution list
+- jira zephyr execution resolve
 - jira zephyr execution get <execution-id>
 - jira zephyr execution create
-- jira zephyr execution update-status <execution-id>
+- jira zephyr execution update-status [execution-id]
 - jira zephyr execution add-tests-to-cycle
 - jira zephyr execution count
 - jira zephyr execution delete <execution-id>
 - jira zephyr execution bulk-update-status
 - jira zephyr execution export
 - jira zephyr zql search
+- jira zephyr zql clauses
+- jira zephyr zql autocomplete-json
+- jira zephyr zql autocomplete
 - jira zephyr step-result list
 - jira zephyr step-result update-status <step-result-id>
 - jira zephyr attachment list
+- jira zephyr attachment get <attachment-id>
 - jira zephyr attachment upload
+- jira zephyr attachment delete <attachment-id>
+- jira zephyr folder list
+- jira zephyr folder create
+- jira zephyr folder update <folder-id>
+- jira zephyr folder delete <folder-id>
+- jira zephyr teststep list
+- jira zephyr teststep get
+- jira zephyr teststep create
+- jira zephyr teststep update
+- jira zephyr teststep delete
 - jira zephyr defect list
 - jira zephyr defect add
 - jira zephyr report coverage
+- jira zephyr api catalog
+- jira zephyr api describe <endpoint-id>
 - jira zephyr api get <path>
 - jira zephyr api post <path>
 - jira zephyr api put <path>

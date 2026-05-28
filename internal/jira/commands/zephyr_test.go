@@ -20,8 +20,18 @@ func TestZephyrDoctorSuccess(t *testing.T) {
 			w.Write([]byte(`{"baseUrl":"https://jira.example.test"}`))
 		case "/rest/api/2/project/EFP":
 			w.Write([]byte(`{"id":"10000","key":"EFP"}`))
+		case "/rest/zapi/latest/moduleInfo":
+			w.Write([]byte(`{"enabled":true}`))
+		case "/rest/zapi/latest/systemInfo":
+			w.Write([]byte(`{"version":"9.0"}`))
+		case "/rest/zapi/latest/license":
+			w.Write([]byte(`{"valid":true}`))
 		case "/rest/zapi/latest/util/zephyrTestIssueType":
 			w.Write([]byte(`{"id":"12345","name":"Test"}`))
+		case "/rest/zapi/latest/util/testExecutionStatus":
+			w.Write([]byte(`[{"id":1,"name":"PASS"},{"id":2,"name":"FAIL"}]`))
+		case "/rest/zapi/latest/util/teststepExecutionStatus":
+			w.Write([]byte(`[{"id":1,"name":"PASS"},{"id":2,"name":"FAIL"}]`))
 		case "/rest/zapi/latest/cycle":
 			if r.URL.Query().Get("projectId") != "10000" || r.URL.Query().Get("versionId") != "-1" {
 				t.Fatalf("bad doctor cycle query: %s", r.URL.RawQuery)
@@ -39,6 +49,9 @@ func TestZephyrDoctorSuccess(t *testing.T) {
 	if data["project_id"] != "10000" || data["api_family"] != "zapi_legacy" || data["base_path"] != "/rest/zapi/latest" {
 		t.Fatalf("bad doctor data: %#v", data)
 	}
+	if data["module_info"] == nil || len(data["execution_statuses"].([]interface{})) != 2 || len(data["step_statuses"].([]interface{})) != 2 {
+		t.Fatalf("doctor did not include official probes: %#v", data)
+	}
 }
 
 func TestZephyrDoctorNotDetected(t *testing.T) {
@@ -49,7 +62,7 @@ func TestZephyrDoctorNotDetected(t *testing.T) {
 			w.Write([]byte(`{"baseUrl":"https://jira.example.test"}`))
 		case "/rest/api/2/project/EFP":
 			w.Write([]byte(`{"id":"10000","key":"EFP"}`))
-		case "/rest/zapi/latest/util/zephyrTestIssueType":
+		case "/rest/zapi/latest/moduleInfo":
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(`{"error":"not found"}`))
 		default:
@@ -67,8 +80,18 @@ func TestZephyrDisabledBlocksCommandsAndDoctorCanProbe(t *testing.T) {
 			w.Write([]byte(`{"baseUrl":"https://jira.example.test"}`))
 		case "/rest/api/2/project/EFP":
 			w.Write([]byte(`{"id":"10000","key":"EFP"}`))
+		case "/rest/zapi/latest/moduleInfo":
+			w.Write([]byte(`{"enabled":true}`))
+		case "/rest/zapi/latest/systemInfo":
+			w.Write([]byte(`{"version":"9.0"}`))
+		case "/rest/zapi/latest/license":
+			w.Write([]byte(`{"valid":true}`))
 		case "/rest/zapi/latest/util/zephyrTestIssueType":
 			w.Write([]byte(`{"id":"12345","name":"Test"}`))
+		case "/rest/zapi/latest/util/testExecutionStatus":
+			w.Write([]byte(`[{"id":1,"name":"PASS"}]`))
+		case "/rest/zapi/latest/util/teststepExecutionStatus":
+			w.Write([]byte(`[{"id":1,"name":"PASS"}]`))
 		case "/rest/zapi/latest/cycle":
 			w.Write([]byte(`{"cycles":[]}`))
 		default:
@@ -405,6 +428,400 @@ func TestZephyrExecutionListStatusDryRun(t *testing.T) {
 	}
 }
 
+func TestZephyrExecutionResolveShapesAndErrors(t *testing.T) {
+	t.Run("list issueKey", func(t *testing.T) {
+		cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch r.URL.Path {
+			case "/rest/api/2/issue/EFP-123":
+				w.Write([]byte(`{"id":"10001","key":"EFP-123","fields":{"project":{"id":"10000"}}}`))
+			case "/rest/zapi/latest/execution":
+				if r.URL.Query().Get("cycleId") != "20000" || r.URL.Query().Get("projectId") != "10000" || r.URL.Query().Get("versionId") != "-1" || r.URL.Query().Get("action") != "expand" {
+					t.Fatalf("bad execution query: %s", r.URL.RawQuery)
+				}
+				w.Write([]byte(`{"executions":[{"id":"30000","issueKey":"EFP-123","issueId":"10001","cycleId":"20000","folderId":"40000"}]}`))
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+			}
+		})
+		out := run(t, cfg, "zephyr", "execution", "resolve", "--cycle-id", "20000", "--issue", "EFP-123", "--version-id", "-1")
+		if ok, _ := out["ok"].(bool); !ok {
+			t.Fatalf("resolve failed: %#v", out)
+		}
+		data := out["data"].(map[string]interface{})
+		if data["execution_id"] != "30000" || data["issue_key"] != "EFP-123" || data["issue_id"] != "10001" || data["folder_id"] != "40000" {
+			t.Fatalf("bad resolve data: %#v", data)
+		}
+	})
+
+	t.Run("map issueId", func(t *testing.T) {
+		cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch r.URL.Path {
+			case "/rest/api/2/issue/EFP-123":
+				w.Write([]byte(`{"id":"10001","key":"EFP-123","fields":{"project":{"id":"10000"}}}`))
+			case "/rest/zapi/latest/execution":
+				w.Write([]byte(`{"30000":{"issueId":"10001","cycleId":"20000","projectId":"10000"}}`))
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+			}
+		})
+		out := run(t, cfg, "zephyr", "execution", "resolve", "--cycle-id", "20000", "--issue", "EFP-123")
+		if ok, _ := out["ok"].(bool); !ok {
+			t.Fatalf("resolve failed: %#v", out)
+		}
+		if got := out["data"].(map[string]interface{})["execution_id"]; got != "30000" {
+			t.Fatalf("execution_id=%#v", got)
+		}
+	})
+
+	t.Run("zero and ambiguous", func(t *testing.T) {
+		cfgZero, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch r.URL.Path {
+			case "/rest/api/2/issue/EFP-123":
+				w.Write([]byte(`{"id":"10001","key":"EFP-123","fields":{"project":{"id":"10000"}}}`))
+			case "/rest/zapi/latest/execution":
+				w.Write([]byte(`{"executions":[{"id":"30001","issueKey":"EFP-999"}]}`))
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+			}
+		})
+		requireJiraCode(t, run(t, cfgZero, "zephyr", "execution", "resolve", "--cycle-id", "20000", "--issue", "EFP-123"), "zephyr_execution_not_found")
+
+		cfgAmb, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch r.URL.Path {
+			case "/rest/api/2/issue/EFP-123":
+				w.Write([]byte(`{"id":"10001","key":"EFP-123","fields":{"project":{"id":"10000"}}}`))
+			case "/rest/zapi/latest/execution":
+				w.Write([]byte(`{"executions":[{"id":"30000","issueKey":"EFP-123","cycleId":"20000"},{"id":"30001","issueId":"10001","cycleId":"20000","folderId":"40000"}]}`))
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+			}
+		})
+		out := run(t, cfgAmb, "zephyr", "execution", "resolve", "--cycle-id", "20000", "--issue", "EFP-123")
+		requireJiraCode(t, out, "ambiguous_zephyr_execution")
+		if !strings.Contains(out["error"].(map[string]interface{})["hint"].(string), "30000") {
+			t.Fatalf("ambiguous hint missing candidates: %#v", out)
+		}
+	})
+}
+
+func TestZephyrExecutionUpdateStatusSemanticDryRunAndInvalidMix(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/api/2/issue/EFP-123":
+			w.Write([]byte(`{"id":"10001","key":"EFP-123","fields":{"project":{"id":"10000"}}}`))
+		case "/rest/zapi/latest/execution":
+			w.Write([]byte(`{"executions":{"30000":{"issueKey":"EFP-123","issueId":"10001","cycleId":"20000"}}}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	out := run(t, cfg, "--dry-run", "zephyr", "execution", "update-status", "--cycle-id", "20000", "--issue", "EFP-123", "--status", "PASSED")
+	if ok, _ := out["ok"].(bool); !ok {
+		t.Fatalf("semantic dry-run failed: %#v", out)
+	}
+	data := out["data"].(map[string]interface{})
+	body := data["body"].(map[string]interface{})
+	if data["execution_id"] != "30000" || data["issue_key"] != "EFP-123" || data["path"] != "/rest/zapi/latest/execution/30000/execute" || body["status"] != "1" || data["target_status"] != "PASS" {
+		t.Fatalf("bad semantic dry-run data: %#v", data)
+	}
+	direct := run(t, cfg, "--dry-run", "zephyr", "execution", "update-status", "30000", "--status", "PASSED")
+	if ok, _ := direct["ok"].(bool); !ok {
+		t.Fatalf("direct dry-run failed: %#v", direct)
+	}
+	requireJiraCode(t, run(t, cfg, "zephyr", "execution", "update-status", "30000", "--issue", "EFP-123", "--status", "PASS"), "invalid_args")
+}
+
+func TestZephyrDynamicStatusesAndFallback(t *testing.T) {
+	t.Run("status list parses server statuses", func(t *testing.T) {
+		cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch r.URL.Path {
+			case "/rest/zapi/latest/util/testExecutionStatus":
+				w.Write([]byte(`[{"id":1,"name":"PASS"},{"id":9,"name":"CUSTOM"}]`))
+			case "/rest/zapi/latest/util/teststepExecutionStatus":
+				w.Write([]byte(`[{"id":1,"name":"PASS"},{"id":5,"name":"APPROVED"}]`))
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+			}
+		})
+		out := run(t, cfg, "zephyr", "status", "list")
+		if ok, _ := out["ok"].(bool); !ok {
+			t.Fatalf("status list failed: %#v", out)
+		}
+		data := out["data"].(map[string]interface{})
+		if data["source"] != "server" || len(data["execution_statuses"].([]interface{})) != 2 || len(data["step_statuses"].([]interface{})) != 2 {
+			t.Fatalf("bad status list: %#v", data)
+		}
+	})
+
+	t.Run("server custom status maps for writes", func(t *testing.T) {
+		var body map[string]interface{}
+		cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch r.URL.Path {
+			case "/rest/zapi/latest/util/testExecutionStatus":
+				w.Write([]byte(`[{"id":1,"name":"PASS"},{"id":9,"name":"CUSTOM"}]`))
+			case "/rest/zapi/latest/util/teststepExecutionStatus":
+				w.Write([]byte(`[{"id":1,"name":"PASS"}]`))
+			case "/rest/zapi/latest/execution/30000/execute":
+				if r.Method != http.MethodPut {
+					t.Fatalf("bad method: %s", r.Method)
+				}
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Fatal(err)
+				}
+				w.Write([]byte(`{"updated":true}`))
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+			}
+		})
+		if ok, _ := run(t, cfg, "zephyr", "execution", "update-status", "30000", "--status", "custom")["ok"].(bool); !ok {
+			t.Fatal("custom status update failed")
+		}
+		if body["status"] != "9" {
+			t.Fatalf("custom status not mapped: %#v", body)
+		}
+	})
+
+	t.Run("write fallback when status endpoints unavailable", func(t *testing.T) {
+		var body map[string]interface{}
+		cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch r.URL.Path {
+			case "/rest/zapi/latest/util/testExecutionStatus", "/rest/zapi/latest/util/teststepExecutionStatus":
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{}`))
+			case "/rest/zapi/latest/execution/30000/execute":
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Fatal(err)
+				}
+				w.Write([]byte(`{"updated":true}`))
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+			}
+		})
+		if ok, _ := run(t, cfg, "zephyr", "execution", "update-status", "30000", "--status", "PASSED")["ok"].(bool); !ok {
+			t.Fatal("fallback status update failed")
+		}
+		if body["status"] != "1" {
+			t.Fatalf("fallback status not mapped: %#v", body)
+		}
+	})
+}
+
+func TestZephyrCycleResolve(t *testing.T) {
+	t.Run("exact and case-insensitive", func(t *testing.T) {
+		cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch r.URL.Path {
+			case "/rest/api/2/project/EFP":
+				w.Write([]byte(`{"id":"10000","key":"EFP"}`))
+			case "/rest/zapi/latest/cycle":
+				w.Write([]byte(`{"cycles":[{"id":"20000","name":"Sprint 42 Regression","projectId":"10000","versionId":"-1"},{"id":"20001","name":"smoke"}]}`))
+			default:
+				t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+			}
+		})
+		exact := run(t, cfg, "zephyr", "cycle", "resolve", "--project", "EFP", "--name", "Sprint 42 Regression", "--version-id", "-1")
+		if ok, _ := exact["ok"].(bool); !ok {
+			t.Fatalf("exact cycle resolve failed: %#v", exact)
+		}
+		if got := exact["data"].(map[string]interface{})["cycle_id"]; got != "20000" {
+			t.Fatalf("cycle_id=%#v", got)
+		}
+		ci := run(t, cfg, "zephyr", "cycle", "resolve", "--project", "EFP", "--name", "SMOKE", "--version-id", "-1")
+		if ok, _ := ci["ok"].(bool); !ok {
+			t.Fatalf("case-insensitive cycle resolve failed: %#v", ci)
+		}
+		if got := ci["data"].(map[string]interface{})["cycle_id"]; got != "20001" {
+			t.Fatalf("cycle_id=%#v", got)
+		}
+	})
+
+	cfgAmb, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/zapi/latest/cycle":
+			w.Write([]byte(`{"cycles":[{"id":"20000","name":"Regression"},{"id":"20001","name":"Regression"}]}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	requireJiraCode(t, run(t, cfgAmb, "zephyr", "cycle", "resolve", "--name", "Regression"), "ambiguous_zephyr_cycle")
+}
+
+func TestZephyrAPICatalogAndDescribe(t *testing.T) {
+	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("api catalog should not hit server: %s %s", r.Method, r.URL.Path)
+	})
+	before := *hits
+	out := run(t, cfg, "zephyr", "api", "catalog")
+	if ok, _ := out["ok"].(bool); !ok {
+		t.Fatalf("catalog failed: %#v", out)
+	}
+	data := out["data"].(map[string]interface{})
+	groups := map[string]bool{}
+	for _, item := range data["groups"].([]interface{}) {
+		groups[item.(string)] = true
+	}
+	for _, want := range []string{"ChartResource", "ExecutionSearchResource", "ZQLFilterResource", "CycleResource", "ZNavResource", "LicenseResource", "PreferenceResource", "StepResultResource", "TraceabilityResource", "TestcaseResource", "UtilResource", "FolderResource", "ExecutionResource", "IssuePickerResource", "AuditResource", "TeststepResource", "AttachmentResource", "ZAPIResource", "ZQLAutoCompleteResource", "SystemInfoResource", "FilterPickerResource"} {
+		if !groups[want] {
+			t.Fatalf("catalog missing group %s", want)
+		}
+	}
+	for _, id := range []string{"execution.update-status", "cycle.list", "folder.create", "teststep.list", "attachment.delete", "zql.clauses"} {
+		desc := run(t, cfg, "zephyr", "api", "describe", id)
+		if ok, _ := desc["ok"].(bool); !ok {
+			t.Fatalf("describe %s failed: %#v", id, desc)
+		}
+		if desc["data"].(map[string]interface{})["id"] != id {
+			t.Fatalf("bad describe %s: %#v", id, desc)
+		}
+	}
+	if *hits != before {
+		t.Fatal("api catalog/describe hit server")
+	}
+}
+
+func TestZephyrZQLMetadataCommands(t *testing.T) {
+	seen := map[string]bool{}
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/zapi/latest/zql/clauses":
+			seen["clauses"] = true
+			w.Write([]byte(`{"clauses":[]}`))
+		case "/rest/zapi/latest/zql/autocompleteZQLJson":
+			seen["autocomplete-json"] = true
+			w.Write([]byte(`{"fields":[]}`))
+		case "/rest/zapi/latest/zql/autocomplete":
+			if r.URL.Query().Get("fieldName") != "executionStatus" || r.URL.Query().Get("fieldValue") != "PA" {
+				t.Fatalf("bad autocomplete query: %s", r.URL.RawQuery)
+			}
+			seen["autocomplete"] = true
+			w.Write([]byte(`{"values":[]}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	for _, args := range [][]string{
+		{"zephyr", "zql", "clauses"},
+		{"zephyr", "zql", "autocomplete-json"},
+		{"zephyr", "zql", "autocomplete", "--field-name", "executionStatus", "--field-value", "PA"},
+	} {
+		if ok, _ := run(t, cfg, args...)["ok"].(bool); !ok {
+			t.Fatalf("zql command failed: %v", args)
+		}
+	}
+	if len(seen) != 3 {
+		t.Fatalf("missing zql metadata requests: %#v", seen)
+	}
+}
+
+func TestZephyrFolderCommands(t *testing.T) {
+	var sawList bool
+	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path != "/rest/zapi/latest/cycle/20000/folders" || r.Method != http.MethodGet {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+		if r.URL.Query().Get("projectId") != "10000" || r.URL.Query().Get("versionId") != "-1" || r.URL.Query().Get("limit") != "10" || r.URL.Query().Get("offset") != "5" {
+			t.Fatalf("bad folder list query: %s", r.URL.RawQuery)
+		}
+		sawList = true
+		w.Write([]byte(`{"folders":[]}`))
+	})
+	if ok, _ := run(t, cfg, "zephyr", "folder", "list", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1", "--limit", "10", "--offset", "5")["ok"].(bool); !ok {
+		t.Fatal("folder list failed")
+	}
+	before := *hits
+	create := run(t, cfg, "--dry-run", "zephyr", "folder", "create", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1", "--name", "Smoke", "--description", "d")
+	update := run(t, cfg, "--dry-run", "zephyr", "folder", "update", "40000", "--name", "Smoke RC2")
+	requireJiraCode(t, run(t, cfg, "zephyr", "folder", "delete", "40000", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1"), "invalid_args")
+	del := run(t, cfg, "--yes", "--dry-run", "zephyr", "folder", "delete", "40000", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1")
+	if *hits != before {
+		t.Fatal("folder dry-runs hit server")
+	}
+	if !sawList {
+		t.Fatal("folder list was not sent")
+	}
+	if create["data"].(map[string]interface{})["body"].(map[string]interface{})["name"] != "Smoke" || update["data"].(map[string]interface{})["body"].(map[string]interface{})["name"] != "Smoke RC2" {
+		t.Fatalf("bad folder body: create=%#v update=%#v", create, update)
+	}
+	if del["data"].(map[string]interface{})["method"] != "DELETE" {
+		t.Fatalf("bad folder delete dry-run: %#v", del)
+	}
+}
+
+func TestZephyrTeststepCRUD(t *testing.T) {
+	var sawList bool
+	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/api/2/issue/EFP-123":
+			w.Write([]byte(`{"id":"10001","key":"EFP-123","fields":{"project":{"id":"10000"}}}`))
+		case "/rest/zapi/latest/teststep/10001":
+			if r.Method != http.MethodGet || r.URL.Query().Get("offset") != "0" || r.URL.Query().Get("limit") != "50" {
+				t.Fatalf("bad teststep list request: %s %s", r.Method, r.URL.String())
+			}
+			sawList = true
+			w.Write([]byte(`{"stepBeanCollection":[]}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	if ok, _ := run(t, cfg, "zephyr", "teststep", "list", "--issue", "EFP-123")["ok"].(bool); !ok {
+		t.Fatal("teststep list failed")
+	}
+	before := *hits
+	get := run(t, cfg, "--dry-run", "zephyr", "teststep", "get", "--issue", "EFP-123", "--step-id", "10")
+	create := run(t, cfg, "--dry-run", "zephyr", "teststep", "create", "--issue", "EFP-123", "--step", "Open login page", "--data", "user exists", "--result", "Login page is shown")
+	update := run(t, cfg, "--dry-run", "zephyr", "teststep", "update", "--issue", "EFP-123", "--step-id", "10", "--step", "Open login page")
+	requireJiraCode(t, run(t, cfg, "zephyr", "teststep", "delete", "--issue", "EFP-123", "--step-id", "10"), "invalid_args")
+	del := run(t, cfg, "--yes", "--dry-run", "zephyr", "teststep", "delete", "--issue", "EFP-123", "--step-id", "10")
+	if *hits != before+4 {
+		t.Fatalf("teststep dry-runs should resolve issue only, hits before=%d after=%d", before, *hits)
+	}
+	if !sawList {
+		t.Fatal("teststep list was not sent")
+	}
+	if get["data"].(map[string]interface{})["path"] != "/rest/zapi/latest/teststep/10001/10" || del["data"].(map[string]interface{})["path"] != "/rest/zapi/latest/teststep/10001/10" {
+		t.Fatalf("bad teststep paths: get=%#v delete=%#v", get, del)
+	}
+	if create["data"].(map[string]interface{})["body"].(map[string]interface{})["result"] != "Login page is shown" || update["data"].(map[string]interface{})["body"].(map[string]interface{})["step"] != "Open login page" {
+		t.Fatalf("bad teststep bodies: create=%#v update=%#v", create, update)
+	}
+}
+
+func TestZephyrAttachmentGetDelete(t *testing.T) {
+	var sawGet bool
+	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path != "/rest/zapi/latest/attachment/50000" || r.Method != http.MethodGet {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+		sawGet = true
+		w.Write([]byte(`{"id":"50000"}`))
+	})
+	if ok, _ := run(t, cfg, "zephyr", "attachment", "get", "50000")["ok"].(bool); !ok {
+		t.Fatal("attachment get failed")
+	}
+	before := *hits
+	requireJiraCode(t, run(t, cfg, "zephyr", "attachment", "delete", "50000"), "invalid_args")
+	del := run(t, cfg, "--yes", "--dry-run", "zephyr", "attachment", "delete", "50000")
+	if *hits != before {
+		t.Fatal("attachment delete validation/dry-run hit server")
+	}
+	if !sawGet || del["data"].(map[string]interface{})["path"] != "/rest/zapi/latest/attachment/50000" {
+		t.Fatalf("bad attachment behavior: get=%v delete=%#v", sawGet, del)
+	}
+}
+
 func TestZephyrCommandSchemaCatalogCoverage(t *testing.T) {
 	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(`{}`)) })
 	commands := run(t, cfg, "commands")
@@ -417,8 +834,15 @@ func TestZephyrCommandSchemaCatalogCoverage(t *testing.T) {
 	for _, want := range []string{
 		"jira zephyr summary",
 		"jira zephyr zql search",
+		"jira zephyr zql clauses",
 		"jira zephyr step-result update-status <step-result-id>",
 		"jira zephyr attachment upload",
+		"jira zephyr attachment delete <attachment-id>",
+		"jira zephyr execution resolve",
+		"jira zephyr cycle resolve",
+		"jira zephyr folder list",
+		"jira zephyr teststep list",
+		"jira zephyr api catalog",
 		"jira zephyr execution bulk-update-status",
 		"jira zephyr api delete <path>",
 	} {
@@ -428,8 +852,15 @@ func TestZephyrCommandSchemaCatalogCoverage(t *testing.T) {
 	}
 	cases := map[string]string{
 		"zephyr.zql.search":                   "jira zephyr zql search",
+		"zephyr.zql.clauses":                  "jira zephyr zql clauses",
 		"zephyr.step-result.update-status":    "jira zephyr step-result update-status <step-result-id>",
 		"zephyr.attachment.upload":            "jira zephyr attachment upload",
+		"zephyr.attachment.delete":            "jira zephyr attachment delete <attachment-id>",
+		"zephyr.execution.resolve":            "jira zephyr execution resolve",
+		"zephyr.cycle.resolve":                "jira zephyr cycle resolve",
+		"zephyr.folder.list":                  "jira zephyr folder list",
+		"zephyr.teststep.list":                "jira zephyr teststep list",
+		"zephyr.api.catalog":                  "jira zephyr api catalog",
 		"zephyr.execution.bulk-update-status": "jira zephyr execution bulk-update-status",
 		"zephyr.api.delete":                   "jira zephyr api delete <path>",
 	}

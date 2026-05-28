@@ -55,7 +55,11 @@ func zephyrCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, zephyrFailure(err, "server_error"))
 		}
-		return print(cmd, o, output.Success(rt.ctx.Instance, zephyrStatusData(rt.cfg)))
+		catalog, err := zapi.DiscoverStatusCatalog(rt.client, rt.cfg, !o.DryRun, true)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_not_detected"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, zephyrStatusData(rt.cfg, catalog)))
 	}})
 	c.AddCommand(status)
 
@@ -77,7 +81,7 @@ func zephyrCmd(o *Opts) *cobra.Command {
 	}})
 	c.AddCommand(util)
 
-	c.AddCommand(zephyrTestCmd(o), zephyrCycleCmd(o), zephyrExecutionCmd(o), zephyrSummaryCmd(o), zephyrZQLCmd(o), zephyrStepResultCmd(o), zephyrAttachmentCmd(o), zephyrDefectCmd(o), zephyrReportCmd(o), zephyrAPICmd(o))
+	c.AddCommand(zephyrTestCmd(o), zephyrCycleCmd(o), zephyrExecutionCmd(o), zephyrSummaryCmd(o), zephyrZQLCmd(o), zephyrStepResultCmd(o), zephyrAttachmentCmd(o), zephyrFolderCmd(o), zephyrTeststepCmd(o), zephyrDefectCmd(o), zephyrReportCmd(o), zephyrAPICmd(o))
 	return c
 }
 
@@ -216,6 +220,21 @@ func zephyrCycleCmd(o *Opts) *cobra.Command {
 	addProjectVersionFlags(list)
 	c.AddCommand(list)
 
+	resolve := &cobra.Command{Use: "resolve", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		data, err := zephyrResolveCycle(rt, mustS(cmd, "name"), mustS(cmd, "project"), mustS(cmd, "project-id"), zephyrVersionID(rt, cmd))
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_cycle_not_found"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, data))
+	}}
+	resolve.Flags().String("name", "", "")
+	addProjectVersionFlags(resolve)
+	c.AddCommand(resolve)
+
 	get := &cobra.Command{Use: "get <cycle-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		rt, err := newZephyrRuntime(o, "", false)
 		if err != nil {
@@ -344,6 +363,27 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 	list.Flags().String("status", "", "")
 	c.AddCommand(list)
 
+	resolve := &cobra.Command{Use: "resolve", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, mustS(cmd, "issue"), false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		resolved, err := zephyrResolveExecution(rt, zephyrExecutionResolveOptions{
+			CycleID:   mustS(cmd, "cycle-id"),
+			Issue:     mustS(cmd, "issue"),
+			Project:   mustS(cmd, "project"),
+			ProjectID: mustS(cmd, "project-id"),
+			VersionID: zephyrVersionID(rt, cmd),
+			FolderID:  mustS(cmd, "folder-id"),
+		})
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_execution_not_found"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, zephyrResolvedExecutionData(resolved)))
+	}}
+	addExecutionResolverFlags(resolve)
+	c.AddCommand(resolve)
+
 	get := &cobra.Command{Use: "get <execution-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		rt, err := newZephyrRuntime(o, "", false)
 		if err != nil {
@@ -386,8 +426,11 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 	create.Flags().String("version-id", "", "")
 	c.AddCommand(create)
 
-	updateStatus := &cobra.Command{Use: "update-status <execution-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		rt, err := newZephyrRuntime(o, "", false)
+	updateStatus := &cobra.Command{Use: "update-status [execution-id]", Args: cobra.MaximumNArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 1 && (mustS(cmd, "cycle-id") != "" || mustS(cmd, "issue") != "") {
+			return invalidArgs(cmd, o, "<execution-id> cannot be combined with --cycle-id or --issue", "Use direct mode with only <execution-id>, or semantic mode with --cycle-id and --issue.")
+		}
+		rt, err := newZephyrRuntime(o, mustS(cmd, "issue"), false)
 		if err != nil {
 			return print(cmd, o, zephyrFailure(err, "server_error"))
 		}
@@ -395,22 +438,43 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 		if status == "" {
 			return invalidArgs(cmd, o, "--status required", "Use jira zephyr execution update-status <execution-id> --status PASS --json.")
 		}
-		mapped, err := zapi.MapStatus(status, rt.cfg.StatusMap)
+		mapped, err := zephyrMapStatus(rt, status)
 		if err != nil {
-			env := zephyrFailure(err, "invalid_zephyr_status")
-			if env.Error != nil {
-				env.Error.Hint = "Known statuses: " + strings.Join(zapi.KnownStatuses(rt.cfg.StatusMap), ", ")
+			return print(cmd, o, zephyrStatusFailure(err, rt.cfg))
+		}
+		body := zephyrStatusBody(mapped, mustS(cmd, "comment"))
+		executionID := ""
+		var resolved zephyrExecutionCandidate
+		if len(args) == 1 {
+			executionID = args[0]
+		} else {
+			resolved, err = zephyrResolveExecution(rt, zephyrExecutionResolveOptions{
+				CycleID:   mustS(cmd, "cycle-id"),
+				Issue:     mustS(cmd, "issue"),
+				Project:   mustS(cmd, "project"),
+				ProjectID: mustS(cmd, "project-id"),
+				VersionID: zephyrVersionID(rt, cmd),
+				FolderID:  mustS(cmd, "folder-id"),
+			})
+			if err != nil {
+				return print(cmd, o, zephyrFailure(err, "zephyr_execution_not_found"))
 			}
-			return print(cmd, o, env)
+			executionID = resolved.ExecutionID
 		}
-		body := map[string]interface{}{"status": strconv.Itoa(mapped.ID)}
-		if comment := mustS(cmd, "comment"); comment != "" {
-			body["comment"] = comment
-		}
-		path := rt.client.ZAPI("execution/" + zapi.PathEscape(args[0]) + "/execute")
+		path := rt.client.ZAPI("execution/" + zapi.PathEscape(executionID) + "/execute")
 		if o.DryRun {
 			data := jira.DryRunData("PUT", path, nil, body)
 			data["status"] = mapped
+			data["target_status"] = mapped.Name
+			if len(args) == 0 {
+				for k, v := range zephyrResolvedExecutionData(resolved) {
+					if k != "raw" {
+						data[k] = v
+					}
+				}
+			} else {
+				data["execution_id"] = executionID
+			}
 			return print(cmd, o, output.Success(rt.ctx.Instance, data))
 		}
 		data, err := rt.client.DoJSON(http.MethodPut, path, nil, body)
@@ -421,6 +485,7 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 	}}
 	updateStatus.Flags().String("status", "", "")
 	updateStatus.Flags().String("comment", "", "")
+	addExecutionResolverFlags(updateStatus)
 	c.AddCommand(updateStatus)
 
 	addTests := &cobra.Command{Use: "add-tests-to-cycle", RunE: func(cmd *cobra.Command, args []string) error {
@@ -639,6 +704,66 @@ func zephyrZQLCmd(o *Opts) *cobra.Command {
 	search.Flags().String("limit", "", "")
 	search.Flags().String("start", "", "")
 	c.AddCommand(search)
+
+	clauses := &cobra.Command{Use: "clauses", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		path := rt.client.ZAPI("zql/clauses")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, nil, nil)))
+		}
+		raw, err := rt.client.Get("zql/clauses", nil)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	c.AddCommand(clauses)
+
+	autocompleteJSON := &cobra.Command{Use: "autocomplete-json", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		path := rt.client.ZAPI("zql/autocompleteZQLJson")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, nil, nil)))
+		}
+		raw, err := rt.client.Get("zql/autocompleteZQLJson", nil)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	c.AddCommand(autocompleteJSON)
+
+	autocomplete := &cobra.Command{Use: "autocomplete", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		if mustS(cmd, "field-name") == "" {
+			return invalidArgs(cmd, o, "--field-name required", "Use jira zephyr zql autocomplete --field-name executionStatus --field-value PA --json.")
+		}
+		q := map[string]string{"fieldName": mustS(cmd, "field-name")}
+		if fieldValue := mustS(cmd, "field-value"); fieldValue != "" {
+			q["fieldValue"] = fieldValue
+		}
+		path := rt.client.ZAPI("zql/autocomplete")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.Get("zql/autocomplete", q)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	autocomplete.Flags().String("field-name", "", "")
+	autocomplete.Flags().String("field-value", "", "")
+	c.AddCommand(autocomplete)
 	return c
 }
 
@@ -722,6 +847,23 @@ func zephyrAttachmentCmd(o *Opts) *cobra.Command {
 	addZephyrEntityFlags(list)
 	c.AddCommand(list)
 
+	get := &cobra.Command{Use: "get <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		path := rt.client.ZAPI("attachment/" + zapi.PathEscape(args[0]))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, nil, nil)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodGet, path, nil, nil)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	c.AddCommand(get)
+
 	upload := &cobra.Command{Use: "upload", RunE: func(cmd *cobra.Command, args []string) error {
 		rt, err := newZephyrRuntime(o, "", false)
 		if err != nil {
@@ -766,6 +908,282 @@ func zephyrAttachmentCmd(o *Opts) *cobra.Command {
 	addZephyrEntityFlags(upload)
 	upload.Flags().String("file", "", "")
 	c.AddCommand(upload)
+
+	del := &cobra.Command{Use: "delete <attachment-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return invalidArgs(cmd, o, "--yes required", "Add --yes after confirming the Zephyr attachment deletion.")
+		}
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		path := rt.client.ZAPI("attachment/" + zapi.PathEscape(args[0]))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("DELETE", path, nil, nil)))
+		}
+		if err := zephyrDelete(rt, path, nil); err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"deleted": true}))
+	}}
+	c.AddCommand(del)
+	return c
+}
+
+func zephyrFolderCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "folder"}
+	list := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		if mustS(cmd, "cycle-id") == "" || mustS(cmd, "project-id") == "" || mustS(cmd, "version-id") == "" {
+			return invalidArgs(cmd, o, "--cycle-id, --project-id, and --version-id required", "Use jira zephyr folder list --cycle-id <ID> --project-id <ID> --version-id -1 --json.")
+		}
+		q := map[string]string{"projectId": mustS(cmd, "project-id"), "versionId": mustS(cmd, "version-id")}
+		if limit := mustS(cmd, "limit"); limit != "" {
+			q["limit"] = limit
+		}
+		if offset := mustS(cmd, "offset"); offset != "" {
+			q["offset"] = offset
+		}
+		path := rt.client.ZAPI("cycle/" + zapi.PathEscape(mustS(cmd, "cycle-id")) + "/folders")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodGet, path, q, nil)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	addFolderScopeFlags(list)
+	list.Flags().String("limit", "", "")
+	list.Flags().String("offset", "", "")
+	c.AddCommand(list)
+
+	create := &cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		if mustS(cmd, "cycle-id") == "" || mustS(cmd, "project-id") == "" || mustS(cmd, "version-id") == "" || mustS(cmd, "name") == "" {
+			return invalidArgs(cmd, o, "--cycle-id, --project-id, --version-id, and --name required", "Use jira zephyr folder create --cycle-id <ID> --project-id <ID> --version-id -1 --name Smoke --json.")
+		}
+		body := map[string]interface{}{
+			"cycleId":   mustS(cmd, "cycle-id"),
+			"projectId": mustS(cmd, "project-id"),
+			"versionId": mustS(cmd, "version-id"),
+			"name":      mustS(cmd, "name"),
+		}
+		addOptionalString(body, "description", mustS(cmd, "description"))
+		path := rt.client.ZAPI("folder/create")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("POST", path, nil, body)))
+		}
+		raw, err := rt.client.Post("folder/create", body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	addFolderScopeFlags(create)
+	create.Flags().String("name", "", "")
+	create.Flags().String("description", "", "")
+	c.AddCommand(create)
+
+	update := &cobra.Command{Use: "update <folder-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		body := map[string]interface{}{"folderId": args[0]}
+		addOptionalString(body, "name", mustS(cmd, "name"))
+		addOptionalString(body, "description", mustS(cmd, "description"))
+		if len(body) == 1 {
+			return invalidArgs(cmd, o, "--name or --description required", "Use jira zephyr folder update <folder-id> --name 'Smoke RC2' --json.")
+		}
+		path := rt.client.ZAPI("folder/" + zapi.PathEscape(args[0]))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("PUT", path, nil, body)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodPut, path, nil, body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	update.Flags().String("name", "", "")
+	update.Flags().String("description", "", "")
+	c.AddCommand(update)
+
+	del := &cobra.Command{Use: "delete <folder-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return invalidArgs(cmd, o, "--yes required", "Add --yes after confirming the Zephyr folder deletion.")
+		}
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		if mustS(cmd, "cycle-id") == "" || mustS(cmd, "project-id") == "" || mustS(cmd, "version-id") == "" {
+			return invalidArgs(cmd, o, "--cycle-id, --project-id, and --version-id required", "Use jira zephyr folder delete <folder-id> --cycle-id <ID> --project-id <ID> --version-id -1 --yes --json.")
+		}
+		q := map[string]string{"cycleId": mustS(cmd, "cycle-id"), "projectId": mustS(cmd, "project-id"), "versionId": mustS(cmd, "version-id")}
+		path := rt.client.ZAPI("folder/" + zapi.PathEscape(args[0]))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("DELETE", path, q, nil)))
+		}
+		if err := zephyrDelete(rt, path, q); err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"deleted": true}))
+	}}
+	addFolderScopeFlags(del)
+	c.AddCommand(del)
+	return c
+}
+
+func zephyrTeststepCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "teststep"}
+	list := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, mustS(cmd, "issue"), false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		issue, err := zephyrResolveIssue(rt, mustS(cmd, "issue"))
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		if issue.ID == "" {
+			return print(cmd, o, zephyrFailure(zapi.NewError("invalid_args", "Jira issue id could not be resolved", "Run jira issue get "+mustS(cmd, "issue")+" --json to inspect the issue.", 400), "invalid_args"))
+		}
+		q := map[string]string{"offset": mustS(cmd, "offset"), "limit": mustS(cmd, "limit")}
+		path := rt.client.ZAPI("teststep/" + zapi.PathEscape(issue.ID))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodGet, path, q, nil)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	addTeststepIssueFlags(list)
+	list.Flags().String("offset", "0", "")
+	list.Flags().String("limit", "50", "")
+	c.AddCommand(list)
+
+	get := &cobra.Command{Use: "get", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, mustS(cmd, "issue"), false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		if mustS(cmd, "step-id") == "" {
+			return invalidArgs(cmd, o, "--step-id required", "Use jira zephyr teststep get --issue EFP-123 --step-id 10 --json.")
+		}
+		issue, err := zephyrResolveIssue(rt, mustS(cmd, "issue"))
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		path := rt.client.ZAPI("teststep/" + zapi.PathEscape(issue.ID) + "/" + zapi.PathEscape(mustS(cmd, "step-id")))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, nil, nil)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodGet, path, nil, nil)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	addTeststepIssueFlags(get)
+	get.Flags().String("step-id", "", "")
+	c.AddCommand(get)
+
+	create := &cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, mustS(cmd, "issue"), false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		if mustS(cmd, "step") == "" {
+			return invalidArgs(cmd, o, "--step required", "Use jira zephyr teststep create --issue EFP-123 --step 'Open login page' --json.")
+		}
+		issue, err := zephyrResolveIssue(rt, mustS(cmd, "issue"))
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		body := zephyrTeststepBody(cmd, false)
+		path := rt.client.ZAPI("teststep/" + zapi.PathEscape(issue.ID))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("POST", path, nil, body)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodPost, path, nil, body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	addTeststepIssueFlags(create)
+	addTeststepBodyFlags(create)
+	c.AddCommand(create)
+
+	update := &cobra.Command{Use: "update", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, mustS(cmd, "issue"), false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		if mustS(cmd, "step-id") == "" {
+			return invalidArgs(cmd, o, "--step-id required", "Use jira zephyr teststep update --issue EFP-123 --step-id 10 --step 'Open login page' --json.")
+		}
+		body := zephyrTeststepBody(cmd, true)
+		if len(body) == 0 {
+			return invalidArgs(cmd, o, "--step, --data, or --result required", "Use jira zephyr teststep update --issue EFP-123 --step-id 10 --step 'Open login page' --json.")
+		}
+		issue, err := zephyrResolveIssue(rt, mustS(cmd, "issue"))
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		path := rt.client.ZAPI("teststep/" + zapi.PathEscape(issue.ID) + "/" + zapi.PathEscape(mustS(cmd, "step-id")))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("PUT", path, nil, body)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodPut, path, nil, body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	addTeststepIssueFlags(update)
+	update.Flags().String("step-id", "", "")
+	addTeststepBodyFlags(update)
+	c.AddCommand(update)
+
+	del := &cobra.Command{Use: "delete", RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return invalidArgs(cmd, o, "--yes required", "Add --yes after confirming the Zephyr test step deletion.")
+		}
+		rt, err := newZephyrRuntime(o, mustS(cmd, "issue"), false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		if mustS(cmd, "step-id") == "" {
+			return invalidArgs(cmd, o, "--step-id required", "Use jira zephyr teststep delete --issue EFP-123 --step-id 10 --yes --json.")
+		}
+		issue, err := zephyrResolveIssue(rt, mustS(cmd, "issue"))
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		path := rt.client.ZAPI("teststep/" + zapi.PathEscape(issue.ID) + "/" + zapi.PathEscape(mustS(cmd, "step-id")))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("DELETE", path, nil, nil)))
+		}
+		if err := zephyrDelete(rt, path, nil); err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"deleted": true}))
+	}}
+	addTeststepIssueFlags(del)
+	del.Flags().String("step-id", "", "")
+	c.AddCommand(del)
 	return c
 }
 
@@ -851,6 +1269,16 @@ func zephyrReportCmd(o *Opts) *cobra.Command {
 
 func zephyrAPICmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "api"}
+	c.AddCommand(&cobra.Command{Use: "catalog", RunE: func(cmd *cobra.Command, args []string) error {
+		return print(cmd, o, output.Success("", zapi.CatalogEnvelope()))
+	}})
+	c.AddCommand(&cobra.Command{Use: "describe <endpoint-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		endpoint, err := zapi.DescribeEndpoint(args[0])
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_endpoint_not_found"))
+		}
+		return print(cmd, o, output.Success("", endpoint))
+	}})
 	for _, item := range []struct {
 		use    string
 		method string
@@ -953,7 +1381,7 @@ func zephyrFailure(err error, fallbackCode string) output.Envelope {
 	return output.Failure(fallbackCode, err.Error(), "", 500)
 }
 
-func zephyrStatusData(cfg zapi.EffectiveConfig) map[string]interface{} {
+func zephyrStatusData(cfg zapi.EffectiveConfig, catalog zapi.StatusCatalog) map[string]interface{} {
 	statuses := make([]map[string]interface{}, 0, len(cfg.StatusMap))
 	for _, name := range zapi.KnownStatuses(cfg.StatusMap) {
 		statuses = append(statuses, map[string]interface{}{"name": name, "id": cfg.StatusMap[name]})
@@ -964,11 +1392,19 @@ func zephyrStatusData(cfg zapi.EffectiveConfig) map[string]interface{} {
 		"default_version_id": cfg.DefaultVersionID,
 		"status_map":         cfg.StatusMap,
 		"statuses":           statuses,
+		"execution_statuses": catalog.ExecutionStatuses,
+		"step_statuses":      catalog.StepStatuses,
+		"aliases":            catalog.Aliases,
+		"source":             catalog.Source,
 	}
 }
 
 func zephyrMapStatus(rt *zephyrRuntime, status string) (zapi.MappedStatus, error) {
-	return zapi.MapStatus(status, rt.cfg.StatusMap)
+	catalog, err := zapi.DiscoverStatusCatalog(rt.client, rt.cfg, !rt.ctx.DryRun, false)
+	if err != nil {
+		return zapi.MappedStatus{}, err
+	}
+	return zapi.MapStatusWithCatalog(status, catalog)
 }
 
 func zephyrStatusFailure(err error, cfg zapi.EffectiveConfig) output.Envelope {
@@ -1040,9 +1476,24 @@ func addProjectVersionFlags(cmd *cobra.Command) {
 	cmd.Flags().String("version-id", "", "")
 }
 
+func addExecutionResolverFlags(cmd *cobra.Command) {
+	cmd.Flags().String("cycle-id", "", "")
+	cmd.Flags().String("issue", "", "")
+	cmd.Flags().String("project", "", "")
+	cmd.Flags().String("project-id", "", "")
+	cmd.Flags().String("version-id", "", "")
+	cmd.Flags().String("folder-id", "", "")
+}
+
 func addZephyrEntityFlags(cmd *cobra.Command) {
 	cmd.Flags().String("entity-type", "", "")
 	cmd.Flags().String("entity-id", "", "")
+}
+
+func addFolderScopeFlags(cmd *cobra.Command) {
+	cmd.Flags().String("cycle-id", "", "")
+	cmd.Flags().String("project-id", "", "")
+	cmd.Flags().String("version-id", "", "")
 }
 
 func zephyrEntityQuery(cmd *cobra.Command) (map[string]string, bool) {
@@ -1059,6 +1510,31 @@ func addCycleBodyFlags(cmd *cobra.Command) {
 	cmd.Flags().String("description", "", "")
 	cmd.Flags().String("build", "", "")
 	cmd.Flags().String("environment", "", "")
+}
+
+func addTeststepIssueFlags(cmd *cobra.Command) {
+	cmd.Flags().String("issue", "", "")
+}
+
+func addTeststepBodyFlags(cmd *cobra.Command) {
+	cmd.Flags().String("step", "", "")
+	cmd.Flags().String("data", "", "")
+	cmd.Flags().String("result", "", "")
+}
+
+func zephyrTeststepBody(cmd *cobra.Command, partial bool) map[string]interface{} {
+	body := map[string]interface{}{}
+	for _, key := range []string{"step", "data", "result"} {
+		value := mustS(cmd, key)
+		if partial {
+			if value != "" {
+				body[key] = value
+			}
+			continue
+		}
+		body[key] = value
+	}
+	return body
 }
 
 func zephyrCycleBody(cmd *cobra.Command, projectID, versionID string) map[string]interface{} {

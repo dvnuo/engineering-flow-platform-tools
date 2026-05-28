@@ -26,6 +26,12 @@
 - For a project you have not checked, first run `jira zephyr doctor --project <PROJECT> --json`.
 - Use Jira core commands for issues, stories, bugs, comments, attachments, and workflows.
 - Use `jira zephyr` for test cycles, executions, execution status, step results, defects, attachments, ZQL, reports, and test summary context.
+- A Zephyr Test Cycle is a Zephyr container for test executions, not a Jira issue. Do not send cycle ids to `jira issue ...`.
+- To update "case X in cycle Y", use `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; the CLI resolves the execution id.
+- Prefer `jira zephyr execution resolve --cycle-id <ID> --issue <KEY> --json` before writes when the user's wording or cycle context is uncertain.
+- Use `jira zephyr cycle resolve --project <PROJECT> --name '<cycle name>' --version-id -1 --json` when the user gives a cycle name instead of a cycle id.
+- Use `jira zephyr status list --json` and server status aliases instead of hard-coding numeric Zephyr status ids.
+- Use `jira zephyr api catalog --json` and `jira zephyr api describe <endpoint-id> --json` to discover official long-tail ZAPI endpoints before falling back to raw `jira zephyr api ...`.
 - Use `--dry-run` before Zephyr write operations unless the user has explicitly approved the write.
 - Zephyr delete commands and raw `jira zephyr api delete` require `--yes`; do not add it until the user has confirmed the destructive action.
 - Do not browser-scrape Jira Test pages unless the API is unavailable and the user explicitly asks for UI investigation.
@@ -67,6 +73,10 @@ Use schema output to avoid guessing required flags:
 jira schema issue.create --json
 jira schema issue.transition --json
 jira schema zephyr.zql.search --json
+jira schema zephyr.execution.update-status --json
+jira schema zephyr.execution.resolve --json
+jira schema zephyr.cycle.resolve --json
+jira schema zephyr.api.catalog --json
 jira schema zephyr.execution.bulk-update-status --json
 confluence schema page.create --json
 confluence schema page.update --json

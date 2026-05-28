@@ -34,6 +34,17 @@ func TestLLMHelpTips(t *testing.T) {
 					t.Fatalf("missing %q in %s", sentence, out)
 				}
 			}
+			if name == "jira" {
+				for _, sentence := range []string{
+					"selectedItem=com.thed.zephyr.je",
+					"jira zephyr doctor --project",
+					"Use jira zephyr commands for test cycles, executions, execution status",
+				} {
+					if !strings.Contains(out, sentence) {
+						t.Fatalf("missing Jira Zephyr guidance %q in %s", sentence, out)
+					}
+				}
+			}
 		})
 	}
 }

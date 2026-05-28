@@ -20,6 +20,15 @@
 - Do not treat `negotiate_401_seen` as definitive proof; it is an indicator only.
 - In OpenCode runtime, this command requires a browser executable in the runtime image. If no browser is installed, expect `browser_not_found`.
 
+## Jira Zephyr Test Management
+
+- If a Jira URL contains `selectedItem=com.thed.zephyr.je`, treat it as a Zephyr test-management page.
+- For a project you have not checked, first run `jira zephyr doctor --project <PROJECT> --json`.
+- Use Jira core commands for issues, stories, bugs, comments, attachments, and workflows.
+- Use `jira zephyr` for test cycles, executions, execution status, and test summary context.
+- Use `--dry-run` before Zephyr write operations unless the user has explicitly approved the write.
+- Do not browser-scrape Jira Test pages unless the API is unavailable and the user explicitly asks for UI investigation.
+
 ## How to recover from CLI errors
 
 | error.code | Next action |

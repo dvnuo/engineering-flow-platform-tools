@@ -26,6 +26,11 @@ var jiraCommands = []string{
 	"jira instance list", "jira instance get <name>", "jira instance add <name>", "jira instance update <name>", "jira instance remove <name>", "jira instance default [name]", "jira auth login", "jira auth logout", "jira auth test", "jira myself", "jira server-info", "jira resolve-url <url>", "jira commands", "jira schema <command>", "jira help llm", "jira version",
 	"jira issue get <issue-or-url>", "jira issue search", "jira issue create", "jira issue update <issue-or-url>", "jira issue edit <issue-or-url>", "jira issue delete <issue-or-url>", "jira issue assign <issue-or-url>", "jira issue transitions <issue-or-url>", "jira issue transition <issue-or-url>", "jira issue changelog <issue-or-url>", "jira issue fields <issue-or-url>", "jira issue createmeta", "jira issue editmeta <issue-or-url>", "jira issue map-csv", "jira issue bulk-create", "jira issue bulk-validate", "jira issue watchers <issue-or-url>", "jira issue watch <issue-or-url>", "jira issue unwatch <issue-or-url>", "jira issue votes <issue-or-url>", "jira issue vote <issue-or-url>", "jira issue unvote <issue-or-url>", "jira issue notify <issue-or-url>",
 	"jira issue comment list <issue-or-url>", "jira issue comment get <issue-or-url> <comment-id>", "jira issue comment add <issue-or-url>", "jira issue comment update <issue-or-url> <comment-id>", "jira issue comment delete <issue-or-url> <comment-id>",
+	"jira zephyr doctor", "jira zephyr resolve-url <jira-url>", "jira zephyr status list", "jira zephyr util test-issue-type",
+	"jira zephyr test list", "jira zephyr test get <issue-or-url>", "jira zephyr test create",
+	"jira zephyr cycle list", "jira zephyr cycle get <cycle-id>", "jira zephyr cycle create", "jira zephyr cycle update <cycle-id>",
+	"jira zephyr execution list", "jira zephyr execution get <execution-id>", "jira zephyr execution create", "jira zephyr execution update-status <execution-id>", "jira zephyr execution add-tests-to-cycle",
+	"jira zephyr api get <path>", "jira zephyr api post <path>", "jira zephyr api put <path>",
 	"jira issue attachment list <issue-or-url>", "jira issue attachment upload <issue-or-url> <file>", "jira attachment get <attachment-id>", "jira attachment download <attachment-id>", "jira attachment delete <attachment-id>", "jira attachment meta",
 	"jira issue worklog list <issue-or-url>", "jira issue worklog get <issue-or-url> <worklog-id>", "jira issue worklog add <issue-or-url>", "jira issue worklog update <issue-or-url> <worklog-id>", "jira issue worklog delete <issue-or-url> <worklog-id>",
 	"jira issue link list <issue-or-url>", "jira issue link create", "jira issue link delete <link-id>", "jira issue remote-link list <issue-or-url>", "jira issue remote-link add <issue-or-url>", "jira issue remote-link delete <issue-or-url> <link-id>", "jira issue property list <issue-or-url>", "jira issue property get <issue-or-url> <key>", "jira issue property set <issue-or-url> <key>", "jira issue property delete <issue-or-url> <key>",
@@ -302,11 +307,16 @@ func exampleFor(usage, r string) string {
 	example := usage
 	replacements := map[string]string{
 		"<issue-or-url>":    "PROJ-123",
+		"<jira-url>":        "https://jira.example.test/projects/PROJ?selectedItem=com.thed.zephyr.je%3Azephyr-tests-page#test-summary-tab",
 		"<comment-id>":      "10000",
 		"<attachment-id>":   "10000",
 		"<worklog-id>":      "10000",
 		"<link-id>":         "10000",
 		"<project-key>":     "PROJ",
+		"<project-id>":      "10000",
+		"<issue-id>":        "10001",
+		"<cycle-id>":        "20000",
+		"<execution-id>":    "30000",
 		"<component-id>":    "10000",
 		"<version-id>":      "10000",
 		"<group-name>":      "team",
@@ -406,7 +416,7 @@ func flagSpecs(command string, flags, required []string) []FlagSpec {
 
 func flagType(name string) string {
 	switch name {
-	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit", "legacy", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot":
+	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot":
 		return "bool"
 	case "sample-rows", "max-create", "wait", "timeout", "max-network-events":
 		return "int"
@@ -435,6 +445,38 @@ func flagDescription(command, name string) string {
 		return "Confirm destructive operations."
 	case "project":
 		return "Jira project key."
+	case "project-id":
+		return "Jira project id."
+	case "version-id":
+		return "Jira or Zephyr version id; -1 uses the legacy unscheduled/ad hoc version."
+	case "cycle-id":
+		return "Zephyr test cycle id."
+	case "execution-id":
+		return "Zephyr test execution id."
+	case "issue-id":
+		return "Jira issue id."
+	case "issues":
+		return "Comma-separated Jira test issue keys."
+	case "status":
+		return "Zephyr execution status: PASS, FAIL, WIP, BLOCKED, or UNEXECUTED."
+	case "comment":
+		return "Comment text."
+	case "jql":
+		return "Jira JQL query."
+	case "limit":
+		return "Maximum number of results."
+	case "start":
+		return "Start offset for paged results."
+	case "description":
+		return "Description text."
+	case "name":
+		return "Resource name."
+	case "build":
+		return "Zephyr cycle build value."
+	case "environment":
+		return "Zephyr cycle environment value."
+	case "enable-probe":
+		return "Allow Zephyr doctor to probe even when zephyr.enabled=false."
 	case "type":
 		return "Issue type name."
 	case "summary":
@@ -487,8 +529,6 @@ func flagDescription(command, name string) string {
 		return "Confirm reviewed ambiguous or low-confidence mapping plan entries."
 	case "apply-post-create-updates":
 		return "Apply post_create_update mappings with Jira issue update after create."
-	case "project-id":
-		return "Jira project id."
 	case "type-id":
 		return "Jira issue type id."
 	case "from-issue":
@@ -535,24 +575,59 @@ func flagDescription(command, name string) string {
 }
 
 var explicit = map[string]explicitMeta{
-	"probe":                     {Description: "Open an internal URL in Edge/Chrome/Chromium, capture screenshot/HTML/network summary, and report browser SSO indicators.", Flags: []string{"url", "selector", "require-selector", "wait", "timeout", "out", "profile", "clean-profile", "browser-exe", "browser", "headless", "ignore-cert-errors", "fetch-api", "network-filter", "max-network-events", "save-html", "save-screenshot", "json", "format", "verbose"}, Required: []string{"url"}, Risk: "read", Example: "browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json"},
-	"version":                   {Description: "Print CLI version, commit, and build date.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira version --json"},
-	"auth.test":                 {Description: "Verify configured credentials against the current user endpoint.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira auth test --json"},
-	"server-info":               {Description: "Read server metadata from the selected instance.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira server-info --json"},
-	"issue.get":                 {Description: "Fetch a Jira issue by key or full issue URL.", Flags: []string{"fields", "expand", "instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue get PROJ-123 --fields '*all' --expand names,schema,editmeta --json"},
-	"issue.search":              {Description: "Search Jira issues with JQL.", Flags: []string{"jql", "limit", "start", "fields", "instance", "config", "json", "format", "verbose"}, Required: []string{"jql"}, Risk: "read", Example: "jira issue search --jql \"project = PROJ\" --json"},
-	"issue.create":              {Description: "Create a Jira issue.", Flags: []string{"project", "type", "summary", "description", "field", "json-body", "json-body-file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"project", "type", "summary"}, Risk: "write", Example: "jira issue create --project PROJ --type Task --summary Test --json"},
-	"issue.update":              {Description: "Update fields on a Jira issue.", Flags: []string{"summary", "description", "field", "json-body", "json-body-file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"summary|description|field|json-body|json-body-file"}, Risk: "write", Example: "jira issue update PROJ-123 --summary Done --json"},
-	"issue.delete":              {Description: "Delete a Jira issue after explicit confirmation.", Flags: []string{"yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "yes"}, Risk: "delete", Example: "jira issue delete PROJ-123 --yes --json"},
-	"issue.transition":          {Description: "Transition a Jira issue by transition id or transition name.", Flags: []string{"transition-id", "to", "comment", "field", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"transition-id|to"}, Risk: "write", Example: "jira issue transition PROJ-123 --to Done --json"},
-	"issue.createmeta":          {Description: "Fetch and normalize Jira create metadata.", Flags: []string{"project", "project-id", "type", "type-id", "from-issue", "legacy", "expand", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira issue createmeta --from-issue PROJ-123 --json"},
-	"issue.map-csv":             {Description: "Build a deterministic Jira field mapping plan for a test case CSV.", Flags: []string{"from-csv", "template-issue", "project", "type", "field-catalog", "example-issue", "create-meta", "edit-meta", "metadata-mode", "output", "sample-rows", "min-confidence", "include-template-defaults", "instance", "config", "json", "format", "verbose"}, Required: []string{"from-csv", "template-issue"}, Risk: "read", Example: "jira issue map-csv --from-csv testcases.csv --template-issue PROJ-123 --output mapping-plan.json --json"},
-	"issue.bulk-create":         {Description: "Validate or create Jira issues from a CSV mapping plan; actual create requires --yes and may require --confirm-mapping.", Flags: []string{"from-csv", "mapping", "template-issue", "output", "max-create", "fail-fast", "confirm-mapping", "apply-post-create-updates", "project", "type", "field-catalog", "example-issue", "create-meta", "edit-meta", "metadata-mode", "sample-rows", "min-confidence", "include-template-defaults", "yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"from-csv"}, Risk: "write_requires_confirmation", Example: "jira issue bulk-create --from-csv testcases.csv --mapping mapping-plan.json --dry-run --output dry-run.json --json"},
-	"issue.bulk-validate":       {Description: "Alias for dry-run CSV bulk create validation.", Flags: []string{"from-csv", "mapping", "template-issue", "output", "max-create", "fail-fast", "confirm-mapping", "apply-post-create-updates", "project", "type", "field-catalog", "example-issue", "create-meta", "edit-meta", "metadata-mode", "sample-rows", "min-confidence", "include-template-defaults", "instance", "config", "json", "format", "verbose"}, Required: []string{"from-csv"}, Risk: "read", Example: "jira issue bulk-validate --from-csv testcases.csv --mapping mapping-plan.json --json"},
-	"issue.comment.list":        {Description: "List comments on a Jira issue.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue comment list PROJ-123 --json"},
-	"issue.comment.add":         {Description: "Add a comment to a Jira issue.", Flags: []string{"body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"body|body-file|body-stdin"}, Risk: "write", Example: "jira issue comment add PROJ-123 --body ok --json"},
-	"issue.comment.update":      {Description: "Update an existing Jira issue comment.", Flags: []string{"body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "comment-id", "body|body-file|body-stdin"}, Risk: "write", Example: "jira issue comment update PROJ-123 10000 --body ok --json"},
-	"issue.comment.delete":      {Description: "Delete a Jira issue comment after explicit confirmation.", Flags: []string{"yes", "instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url", "comment-id", "yes"}, Risk: "delete", Example: "jira issue comment delete PROJ-123 10000 --yes --json"},
+	"probe":                {Description: "Open an internal URL in Edge/Chrome/Chromium, capture screenshot/HTML/network summary, and report browser SSO indicators.", Flags: []string{"url", "selector", "require-selector", "wait", "timeout", "out", "profile", "clean-profile", "browser-exe", "browser", "headless", "ignore-cert-errors", "fetch-api", "network-filter", "max-network-events", "save-html", "save-screenshot", "json", "format", "verbose"}, Required: []string{"url"}, Risk: "read", Example: "browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json"},
+	"version":              {Description: "Print CLI version, commit, and build date.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira version --json"},
+	"auth.test":            {Description: "Verify configured credentials against the current user endpoint.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira auth test --json"},
+	"server-info":          {Description: "Read server metadata from the selected instance.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira server-info --json"},
+	"issue.get":            {Description: "Fetch a Jira issue by key or full issue URL.", Flags: []string{"fields", "expand", "instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue get PROJ-123 --fields '*all' --expand names,schema,editmeta --json"},
+	"issue.search":         {Description: "Search Jira issues with JQL.", Flags: []string{"jql", "limit", "start", "fields", "instance", "config", "json", "format", "verbose"}, Required: []string{"jql"}, Risk: "read", Example: "jira issue search --jql \"project = PROJ\" --json"},
+	"issue.create":         {Description: "Create a Jira issue.", Flags: []string{"project", "type", "summary", "description", "field", "json-body", "json-body-file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"project", "type", "summary"}, Risk: "write", Example: "jira issue create --project PROJ --type Task --summary Test --json"},
+	"issue.update":         {Description: "Update fields on a Jira issue.", Flags: []string{"summary", "description", "field", "json-body", "json-body-file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"summary|description|field|json-body|json-body-file"}, Risk: "write", Example: "jira issue update PROJ-123 --summary Done --json"},
+	"issue.delete":         {Description: "Delete a Jira issue after explicit confirmation.", Flags: []string{"yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "yes"}, Risk: "delete", Example: "jira issue delete PROJ-123 --yes --json"},
+	"issue.transition":     {Description: "Transition a Jira issue by transition id or transition name.", Flags: []string{"transition-id", "to", "comment", "field", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"transition-id|to"}, Risk: "write", Example: "jira issue transition PROJ-123 --to Done --json"},
+	"issue.createmeta":     {Description: "Fetch and normalize Jira create metadata.", Flags: []string{"project", "project-id", "type", "type-id", "from-issue", "legacy", "expand", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira issue createmeta --from-issue PROJ-123 --json"},
+	"issue.map-csv":        {Description: "Build a deterministic Jira field mapping plan for a test case CSV.", Flags: []string{"from-csv", "template-issue", "project", "type", "field-catalog", "example-issue", "create-meta", "edit-meta", "metadata-mode", "output", "sample-rows", "min-confidence", "include-template-defaults", "instance", "config", "json", "format", "verbose"}, Required: []string{"from-csv", "template-issue"}, Risk: "read", Example: "jira issue map-csv --from-csv testcases.csv --template-issue PROJ-123 --output mapping-plan.json --json"},
+	"issue.bulk-create":    {Description: "Validate or create Jira issues from a CSV mapping plan; actual create requires --yes and may require --confirm-mapping.", Flags: []string{"from-csv", "mapping", "template-issue", "output", "max-create", "fail-fast", "confirm-mapping", "apply-post-create-updates", "project", "type", "field-catalog", "example-issue", "create-meta", "edit-meta", "metadata-mode", "sample-rows", "min-confidence", "include-template-defaults", "yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"from-csv"}, Risk: "write_requires_confirmation", Example: "jira issue bulk-create --from-csv testcases.csv --mapping mapping-plan.json --dry-run --output dry-run.json --json"},
+	"issue.bulk-validate":  {Description: "Alias for dry-run CSV bulk create validation.", Flags: []string{"from-csv", "mapping", "template-issue", "output", "max-create", "fail-fast", "confirm-mapping", "apply-post-create-updates", "project", "type", "field-catalog", "example-issue", "create-meta", "edit-meta", "metadata-mode", "sample-rows", "min-confidence", "include-template-defaults", "instance", "config", "json", "format", "verbose"}, Required: []string{"from-csv"}, Risk: "read", Example: "jira issue bulk-validate --from-csv testcases.csv --mapping mapping-plan.json --json"},
+	"issue.comment.list":   {Description: "List comments on a Jira issue.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue comment list PROJ-123 --json"},
+	"issue.comment.add":    {Description: "Add a comment to a Jira issue.", Flags: []string{"body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"body|body-file|body-stdin"}, Risk: "write", Example: "jira issue comment add PROJ-123 --body ok --json"},
+	"issue.comment.update": {Description: "Update an existing Jira issue comment.", Flags: []string{"body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "comment-id", "body|body-file|body-stdin"}, Risk: "write", Example: "jira issue comment update PROJ-123 10000 --body ok --json"},
+	"issue.comment.delete": {Description: "Delete a Jira issue comment after explicit confirmation.", Flags: []string{"yes", "instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url", "comment-id", "yes"}, Risk: "delete", Example: "jira issue comment delete PROJ-123 10000 --yes --json"},
+	"zephyr.doctor":        {Description: "Probe Zephyr legacy ZAPI availability for a Jira project.", Flags: []string{"project", "enable-probe", "instance", "config", "json", "format", "verbose"}, Required: []string{"project"}, Risk: "read", Example: "jira zephyr doctor --project EFP --json"},
+	"zephyr.resolve-url":   {Description: "Parse a Jira project URL that points at a Zephyr test-management page.", Flags: []string{"json", "format", "verbose"}, Required: []string{"jira-url"}, Risk: "read", Example: "jira zephyr resolve-url 'https://jira.example.test/projects/EFP?selectedItem=com.thed.zephyr.je%3Azephyr-tests-page#test-summary-tab' --json"},
+	"zephyr.status.list":   {Description: "List configured Zephyr execution status names and legacy ids.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira zephyr status list --json"},
+	"zephyr.util.test-issue-type": {Description: "Fetch Zephyr's configured Jira Test issue type metadata.",
+		Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira zephyr util test-issue-type --json"},
+	"zephyr.test.list": {Description: "List Jira Test issues using Jira search under the Zephyr namespace.",
+		Flags: []string{"project", "jql", "limit", "start", "instance", "config", "json", "format", "verbose"}, Required: []string{"project|jql"}, Risk: "read", Example: "jira zephyr test list --project EFP --jql 'project = EFP AND issuetype = Test' --json"},
+	"zephyr.test.get": {Description: "Fetch a Jira Test issue by key or URL.",
+		Flags: []string{"fields", "expand", "instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira zephyr test get EFP-T123 --json"},
+	"zephyr.test.create": {Description: "Create a Jira issue with issue type Test.",
+		Flags: []string{"project", "summary", "description", "field", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"project", "summary"}, Risk: "write", Example: "jira zephyr test create --project EFP --summary 'Login rejects expired token' --dry-run --json"},
+	"zephyr.cycle.list": {Description: "List Zephyr test cycles for a Jira project and version.",
+		Flags: []string{"project", "project-id", "version-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"project|project-id"}, Risk: "read", Example: "jira zephyr cycle list --project EFP --version-id -1 --json"},
+	"zephyr.cycle.get": {Description: "Fetch a Zephyr test cycle by id.",
+		Flags: []string{"project-id", "version-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"cycle-id"}, Risk: "read", Example: "jira zephyr cycle get 20000 --project-id 10000 --version-id -1 --json"},
+	"zephyr.cycle.create": {Description: "Create a Zephyr test cycle.",
+		Flags: []string{"project", "project-id", "version-id", "name", "description", "build", "environment", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"project|project-id", "name"}, Risk: "write", Example: "jira zephyr cycle create --project EFP --version-id -1 --name 'Sprint 42 Regression' --dry-run --json"},
+	"zephyr.cycle.update": {Description: "Update fields on a Zephyr test cycle.",
+		Flags: []string{"name", "description", "build", "environment", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"cycle-id", "name|description|build|environment"}, Risk: "write", Example: "jira zephyr cycle update 20000 --name 'Sprint 42 Regression - RC2' --dry-run --json"},
+	"zephyr.execution.list": {Description: "List Zephyr test executions in a cycle.",
+		Flags: []string{"cycle-id", "project-id", "version-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"cycle-id", "project-id"}, Risk: "read", Example: "jira zephyr execution list --cycle-id 20000 --project-id 10000 --version-id -1 --json"},
+	"zephyr.execution.get": {Description: "Fetch a Zephyr test execution by id.",
+		Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"execution-id"}, Risk: "read", Example: "jira zephyr execution get 30000 --json"},
+	"zephyr.execution.create": {Description: "Create a Zephyr test execution for a Jira Test issue.",
+		Flags: []string{"issue-id", "cycle-id", "project-id", "version-id", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-id", "cycle-id", "project-id"}, Risk: "write", Example: "jira zephyr execution create --issue-id 10001 --cycle-id 20000 --project-id 10000 --version-id -1 --dry-run --json"},
+	"zephyr.execution.update-status": {Description: "Update the execution status of a Zephyr test execution.",
+		Flags: []string{"status", "comment", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-id", "status"}, Risk: "write", Example: "jira zephyr execution update-status 30000 --status PASS --dry-run --json"},
+	"zephyr.execution.add-tests-to-cycle": {Description: "Add Jira Test issues to a Zephyr test cycle.",
+		Flags: []string{"cycle-id", "project-id", "version-id", "issues", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"cycle-id", "project-id", "issues"}, Risk: "write", Example: "jira zephyr execution add-tests-to-cycle --cycle-id 20000 --project-id 10000 --version-id -1 --issues EFP-T1,EFP-T2 --dry-run --json"},
+	"zephyr.api.get": {Description: "Call a raw Zephyr legacy ZAPI GET path on the selected Jira instance.",
+		Flags: []string{"query", "instance", "config", "json", "format", "verbose"}, Required: []string{"path"}, Risk: "read", Example: "jira zephyr api get cycle --query projectId=10000 --query versionId=-1 --json"},
+	"zephyr.api.post": {Description: "Call a raw Zephyr legacy ZAPI POST path on the selected Jira instance.",
+		Flags: []string{"query", "body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"path"}, Risk: "write", Example: "jira zephyr api post cycle --body '{}' --dry-run --json"},
+	"zephyr.api.put": {Description: "Call a raw Zephyr legacy ZAPI PUT path on the selected Jira instance.",
+		Flags: []string{"query", "body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"path"}, Risk: "write", Example: "jira zephyr api put execution/30000/execute --body '{\"status\":\"1\"}' --dry-run --json"},
 	"issue.attachment.list":     {Description: "List attachments on a Jira issue.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue attachment list PROJ-123 --json"},
 	"issue.attachment.upload":   {Description: "Upload a file attachment to a Jira issue.", Flags: []string{"instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "file"}, Risk: "write", Example: "jira issue attachment upload PROJ-123 ./note.txt --json"},
 	"issue.attachment.download": {Description: "Download or inspect a Jira issue attachment.", Flags: []string{"output", "instance", "config", "json", "format", "verbose", "dry-run"}, Risk: "read", Example: "jira attachment download 10000 --json"},

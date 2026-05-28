@@ -14,15 +14,16 @@ type ProductConfig struct {
 }
 
 type InstanceConfig struct {
-	Name           string     `json:"name" yaml:"name"`
-	BaseURL        string     `json:"base_url" yaml:"base_url"`
-	APIVersion     string     `json:"api_version,omitempty" yaml:"api_version,omitempty"`
-	RESTPath       string     `json:"rest_path" yaml:"rest_path"`
-	Auth           AuthConfig `json:"auth" yaml:"auth"`
-	DefaultProject string     `json:"default_project,omitempty" yaml:"default_project,omitempty"`
-	DefaultSpace   string     `json:"default_space,omitempty" yaml:"default_space,omitempty"`
-	VerifySSL      *bool      `json:"verify_ssl,omitempty" yaml:"verify_ssl,omitempty"`
-	CACert         string     `json:"ca_cert,omitempty" yaml:"ca_cert,omitempty"`
+	Name           string       `json:"name" yaml:"name"`
+	BaseURL        string       `json:"base_url" yaml:"base_url"`
+	APIVersion     string       `json:"api_version,omitempty" yaml:"api_version,omitempty"`
+	RESTPath       string       `json:"rest_path" yaml:"rest_path"`
+	Auth           AuthConfig   `json:"auth" yaml:"auth"`
+	DefaultProject string       `json:"default_project,omitempty" yaml:"default_project,omitempty"`
+	DefaultSpace   string       `json:"default_space,omitempty" yaml:"default_space,omitempty"`
+	VerifySSL      *bool        `json:"verify_ssl,omitempty" yaml:"verify_ssl,omitempty"`
+	CACert         string       `json:"ca_cert,omitempty" yaml:"ca_cert,omitempty"`
+	Zephyr         ZephyrConfig `json:"zephyr,omitempty" yaml:"zephyr,omitempty"`
 }
 
 type AuthConfig struct {
@@ -31,6 +32,15 @@ type AuthConfig struct {
 	Password string `json:"password,omitempty" yaml:"password,omitempty"`
 	APIKey   string `json:"api_key,omitempty" yaml:"api_key,omitempty"`
 	Token    string `json:"token,omitempty" yaml:"token,omitempty"`
+}
+
+type ZephyrConfig struct {
+	Enabled          *bool          `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	APIFamily        string         `json:"api_family,omitempty" yaml:"api_family,omitempty"`
+	RESTPath         string         `json:"rest_path,omitempty" yaml:"rest_path,omitempty"`
+	DefaultVersionID string         `json:"default_version_id,omitempty" yaml:"default_version_id,omitempty"`
+	StatusMap        map[string]int `json:"status_map,omitempty" yaml:"status_map,omitempty"`
+	StrictStatus     *bool          `json:"strict_status,omitempty" yaml:"strict_status,omitempty"`
 }
 
 func (c *RootConfig) Normalize() {

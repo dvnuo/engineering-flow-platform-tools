@@ -148,6 +148,16 @@ func TestCommandSemanticsMatrixJiraFamilies(t *testing.T) {
 		{"board", "list"},
 		{"sprint", "list", "1"},
 		{"backlog", "issues", "1"},
+		{"zephyr", "resolve-url", "https://jira.example.test/projects/PROJ?selectedItem=com.thed.zephyr.je%3Azephyr-tests-page#test-summary-tab"},
+		{"zephyr", "doctor", "--project", "PROJ"},
+		{"zephyr", "status", "list"},
+		{"zephyr", "util", "test-issue-type"},
+		{"zephyr", "test", "list", "--project", "PROJ"},
+		{"zephyr", "test", "get", "PROJ-T1"},
+		{"zephyr", "cycle", "list", "--project", "PROJ"},
+		{"zephyr", "execution", "list", "--cycle-id", "1", "--project-id", "123"},
+		{"zephyr", "execution", "get", "1"},
+		{"zephyr", "api", "get", "cycle", "--query", "projectId=123", "--query", "versionId=-1"},
 	}
 	for _, args := range readCases {
 		requireOK(t, "jira", cfg, args...)
@@ -168,6 +178,14 @@ func TestCommandSemanticsMatrixJiraFamilies(t *testing.T) {
 		{"version", "create", "--project", "PROJ", "--name", "1.0"},
 		{"filter", "create", "--name", "Mine", "--jql", "project = PROJ"},
 		{"api", "post", "/rest/api/2/issue", "--body", `{"fields":{}}`},
+		{"zephyr", "test", "create", "--project", "PROJ", "--summary", "Login rejects expired token"},
+		{"zephyr", "cycle", "create", "--project", "PROJ", "--name", "Regression"},
+		{"zephyr", "cycle", "update", "1", "--name", "Regression RC2"},
+		{"zephyr", "execution", "create", "--issue-id", "10001", "--cycle-id", "1", "--project-id", "123"},
+		{"zephyr", "execution", "update-status", "1", "--status", "PASS"},
+		{"zephyr", "execution", "add-tests-to-cycle", "--cycle-id", "1", "--project-id", "123", "--issues", "PROJ-T1,PROJ-T2"},
+		{"zephyr", "api", "post", "cycle", "--body", `{}`},
+		{"zephyr", "api", "put", "execution/1/execute", "--body", `{"status":"1"}`},
 	}
 	for _, args := range writeDryRuns {
 		requireDryRunNoHit(t, m, "jira", cfg, args...)
@@ -181,11 +199,14 @@ func TestCommandSemanticsMatrixJiraFamilies(t *testing.T) {
 		{"issue", "worklog", "add", "PROJ-123"},
 		{"component", "create", "--project", "PROJ"},
 		{"filter", "create", "--name", "Mine"},
+		{"zephyr", "cycle", "create", "--project", "PROJ"},
 	}
 	for _, args := range invalidCases {
 		requireErrorCode(t, "invalid_args", "jira", cfg, args...)
 	}
+	requireErrorCode(t, "invalid_zephyr_status", "jira", cfg, "zephyr", "execution", "update-status", "1", "--status", "unknown")
 	requireErrorCode(t, "instance_url_mismatch", "jira", cfg, "api", "get", "https://evil.example/rest/api/2/myself")
+	requireErrorCode(t, "zephyr_raw_path_blocked", "jira", cfg, "zephyr", "api", "get", "https://evil.example/rest/zapi/latest/cycle")
 }
 
 func TestCommandSemanticsMatrixConfluenceFamilies(t *testing.T) {

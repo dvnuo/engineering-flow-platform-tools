@@ -28,7 +28,7 @@ The Atlassian product integrations currently include:
 - `jira`: Jira Server/Data Center automation
 - `confluence`: Confluence Server/Data Center automation
 
-Jira and Confluence use `ATLASSIAN_CONFIG` and `~/.config/atlassian/config.json` because they are Atlassian product integrations. This does not mean the repository is limited to those product integrations.
+Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squad test-management resources on the same Jira instance. Jira and Confluence use `ATLASSIAN_CONFIG` and `~/.config/atlassian/config.json` because they are Atlassian product integrations. This does not mean the repository is limited to those product integrations.
 
 ### Browser
 
@@ -91,6 +91,8 @@ Supported authentication modes:
 jira auth test --instance local --json
 jira issue get PROJ-123 --instance local --json
 jira issue search --jql 'project = PROJ' --limit 10 --json
+jira zephyr doctor --project PROJ --json
+jira zephyr cycle list --project PROJ --version-id -1 --json
 jira version --json
 ```
 

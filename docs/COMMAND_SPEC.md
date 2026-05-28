@@ -52,6 +52,27 @@
 - jira issue comment update <issue-or-url> <comment-id>
 - jira issue comment delete <issue-or-url> <comment-id>
 
+### Zephyr
+- jira zephyr doctor
+- jira zephyr resolve-url <jira-url>
+- jira zephyr status list
+- jira zephyr util test-issue-type
+- jira zephyr test list
+- jira zephyr test get <issue-or-url>
+- jira zephyr test create
+- jira zephyr cycle list
+- jira zephyr cycle get <cycle-id>
+- jira zephyr cycle create
+- jira zephyr cycle update <cycle-id>
+- jira zephyr execution list
+- jira zephyr execution get <execution-id>
+- jira zephyr execution create
+- jira zephyr execution update-status <execution-id>
+- jira zephyr execution add-tests-to-cycle
+- jira zephyr api get <path>
+- jira zephyr api post <path>
+- jira zephyr api put <path>
+
 ### Attachment
 - jira issue attachment list <issue-or-url>
 - jira issue attachment upload <issue-or-url> <file>

@@ -38,7 +38,7 @@ func NewRoot() *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "")
 	cmd.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "")
 	cmd.PersistentFlags().BoolVar(&o.Yes, "yes", false, "")
-	cmd.AddCommand(instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), commandsCmd(), schemaCmd(), helpLLMCmd(), issueCmd(o), attachmentCmd(o), rawAPICmd(o), projectCmd(o), userGroupCmd(o), groupCmd(o), filterDashboardCmd(o), dashboardCmd(o), componentCmd(o), versionCmd(o))
+	cmd.AddCommand(instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), commandsCmd(), schemaCmd(), helpLLMCmd(), issueCmd(o), zephyrCmd(o), attachmentCmd(o), rawAPICmd(o), projectCmd(o), userGroupCmd(o), groupCmd(o), filterDashboardCmd(o), dashboardCmd(o), componentCmd(o), versionCmd(o))
 	cmd.AddCommand(metadataCmds(o)...)
 	cmd.AddCommand(boardCmd(o), sprintCmd(o), backlogCmd(o))
 	cmd.AddCommand(hiddenCmd(commentCmd(o)), hiddenCmd(worklogCmd(o)), hiddenCmd(agileCmd(o)), hiddenCmd(metaCmd(o)))
@@ -416,6 +416,12 @@ func helpLLMCmd() *cobra.Command {
 			"Use --dry-run before write operations.",
 			"Use --yes for destructive operations.",
 			"Inspect error.code and error.hint before retrying.",
+			"If a Jira URL contains selectedItem=com.thed.zephyr.je, treat it as a Zephyr test-management page.",
+			"Use jira zephyr doctor --project <PROJECT> --json first for a Jira project you have not inspected.",
+			"Use Jira core commands for issues, stories, bugs, comments, attachments, and workflows.",
+			"Use jira zephyr commands for test cycles, executions, execution status, and test summaries.",
+			"Use --dry-run before jira zephyr write operations unless the user already approved the action.",
+			"Do not browser-scrape Jira Test pages unless the API is unavailable and the user explicitly asks for UI investigation.",
 		}
 		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]interface{}{"tips": tips, "commands": catalog.Commands("jira")}))
 	}}

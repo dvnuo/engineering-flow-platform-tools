@@ -28,7 +28,7 @@ The Atlassian product integrations currently include:
 - `jira`: Jira Server/Data Center automation
 - `confluence`: Confluence Server/Data Center automation
 
-Jira and Confluence use `ATLASSIAN_CONFIG` and `~/.config/atlassian/config.json` because they are Atlassian product integrations. This does not mean the repository is limited to those product integrations.
+Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squad test-management resources on the same Jira instance, including cycles, executions, semantic execution resolution, server status discovery, test steps, folders, attachments, defects, ZQL metadata/search, conservative summaries, and raw ZAPI catalog/access. Jira and Confluence use `ATLASSIAN_CONFIG` and `~/.config/atlassian/config.json` because they are Atlassian product integrations. This does not mean the repository is limited to those product integrations.
 
 ### Browser
 
@@ -91,6 +91,17 @@ Supported authentication modes:
 jira auth test --instance local --json
 jira issue get PROJ-123 --instance local --json
 jira issue search --jql 'project = PROJ' --limit 10 --json
+jira zephyr doctor --project PROJ --json
+jira zephyr summary --project PROJ --version-id -1 --json
+jira zephyr cycle list --project PROJ --version-id -1 --json
+jira zephyr cycle resolve --project PROJ --name "Sprint 42 Regression" --version-id -1 --json
+jira zephyr execution list --cycle-id 20000 --project-id 10000 --version-id -1 --status FAIL --json
+jira zephyr execution resolve --cycle-id 20000 --issue PROJ-123 --project PROJ --version-id -1 --json
+jira zephyr execution update-status --cycle-id 20000 --issue PROJ-123 --status PASSED --dry-run --json
+jira zephyr execution bulk-update-status --execution-ids 30000,30001 --status PASS --dry-run --json
+jira zephyr status list --json
+jira zephyr api catalog --json
+jira zephyr cycle delete 20000 --yes --dry-run --json
 jira version --json
 ```
 
@@ -148,6 +159,8 @@ browser schema probe --json
 ```
 
 Always use `--json`, inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+
+For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jira issue. When a user asks to update case `X` in cycle `Y`, prefer `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; use `execution resolve` or `cycle resolve` first when the target is ambiguous, and use `status list` rather than hard-coding numeric status ids.
 
 ## How to recover from CLI errors
 

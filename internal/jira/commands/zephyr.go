@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -74,7 +77,7 @@ func zephyrCmd(o *Opts) *cobra.Command {
 	}})
 	c.AddCommand(util)
 
-	c.AddCommand(zephyrTestCmd(o), zephyrCycleCmd(o), zephyrExecutionCmd(o), zephyrAPICmd(o))
+	c.AddCommand(zephyrTestCmd(o), zephyrCycleCmd(o), zephyrExecutionCmd(o), zephyrSummaryCmd(o), zephyrZQLCmd(o), zephyrStepResultCmd(o), zephyrAttachmentCmd(o), zephyrDefectCmd(o), zephyrReportCmd(o), zephyrAPICmd(o))
 	return c
 }
 
@@ -285,6 +288,25 @@ func zephyrCycleCmd(o *Opts) *cobra.Command {
 	}}
 	addCycleBodyFlags(update)
 	c.AddCommand(update)
+
+	del := &cobra.Command{Use: "delete <cycle-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return invalidArgs(cmd, o, "--yes required", "Add --yes after confirming the Zephyr cycle deletion.")
+		}
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		path := rt.client.ZAPI("cycle/" + zapi.PathEscape(args[0]))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("DELETE", path, nil, nil)))
+		}
+		if err := zephyrDelete(rt, path, nil); err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_cycle_not_found"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"deleted": true}))
+	}}
+	c.AddCommand(del)
 	return c
 }
 
@@ -299,6 +321,13 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 			return invalidArgs(cmd, o, "--cycle-id and --project-id required", "Use jira zephyr execution list --cycle-id <ID> --project-id <ID> --json.")
 		}
 		q := map[string]string{"action": "expand", "cycleId": mustS(cmd, "cycle-id"), "projectId": mustS(cmd, "project-id"), "versionId": zephyrVersionID(rt, cmd)}
+		if status := mustS(cmd, "status"); status != "" {
+			mapped, err := zephyrMapStatus(rt, status)
+			if err != nil {
+				return print(cmd, o, zephyrStatusFailure(err, rt.cfg))
+			}
+			q["status"] = strconv.Itoa(mapped.ID)
+		}
 		path := rt.client.ZAPI("execution")
 		if o.DryRun {
 			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
@@ -312,6 +341,7 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 	list.Flags().String("cycle-id", "", "")
 	list.Flags().String("project-id", "", "")
 	list.Flags().String("version-id", "", "")
+	list.Flags().String("status", "", "")
 	c.AddCommand(list)
 
 	get := &cobra.Command{Use: "get <execution-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
@@ -418,6 +448,404 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 	addTests.Flags().String("version-id", "", "")
 	addTests.Flags().String("issues", "", "")
 	c.AddCommand(addTests)
+
+	count := &cobra.Command{Use: "count", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		projectID := mustS(cmd, "project-id")
+		if projectID == "" {
+			return invalidArgs(cmd, o, "--project-id required", "Use jira zephyr execution count --project-id <ID> --json.")
+		}
+		group := firstNonEmpty(mustS(cmd, "group"), "cycle")
+		if group != "cycle" {
+			return invalidArgs(cmd, o, "--group must be cycle", "Only cycle grouping is currently supported.")
+		}
+		versionID := zephyrVersionID(rt, cmd)
+		q := map[string]string{"projectId": projectID, "versionId": versionID}
+		path := rt.client.ZAPI("cycle")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.Get("cycle", q)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, zephyrExecutionCountData(projectID, versionID, group, raw)))
+	}}
+	count.Flags().String("project-id", "", "")
+	count.Flags().String("version-id", "", "")
+	count.Flags().String("group", "cycle", "")
+	c.AddCommand(count)
+
+	del := &cobra.Command{Use: "delete <execution-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return invalidArgs(cmd, o, "--yes required", "Add --yes after confirming the Zephyr execution deletion.")
+		}
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		path := rt.client.ZAPI("execution/" + zapi.PathEscape(args[0]))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("DELETE", path, nil, nil)))
+		}
+		if err := zephyrDelete(rt, path, nil); err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_execution_not_found"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"deleted": true}))
+	}}
+	c.AddCommand(del)
+
+	bulkUpdate := &cobra.Command{Use: "bulk-update-status", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		ids := splitCSV(mustS(cmd, "execution-ids"))
+		if len(ids) == 0 || mustS(cmd, "status") == "" {
+			return invalidArgs(cmd, o, "--execution-ids and --status required", "Use jira zephyr execution bulk-update-status --execution-ids 1,2,3 --status PASS --json.")
+		}
+		mapped, err := zephyrMapStatus(rt, mustS(cmd, "status"))
+		if err != nil {
+			return print(cmd, o, zephyrStatusFailure(err, rt.cfg))
+		}
+		updates := make([]map[string]interface{}, 0, len(ids))
+		for _, id := range ids {
+			body := zephyrStatusBody(mapped, mustS(cmd, "comment"))
+			path := rt.client.ZAPI("execution/" + zapi.PathEscape(id) + "/execute")
+			item := jira.DryRunData("PUT", path, nil, body)
+			item["status"] = mapped
+			updates = append(updates, item)
+		}
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"dry_run": true, "updates": updates}))
+		}
+		results := make([]interface{}, 0, len(updates))
+		for i, id := range ids {
+			item := updates[i]
+			data, err := rt.client.DoJSON(http.MethodPut, item["path"].(string), nil, item["body"])
+			if err != nil {
+				return print(cmd, o, zephyrFailure(err, "zephyr_execution_not_found"))
+			}
+			results = append(results, map[string]interface{}{"execution_id": id, "result": data})
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"updated": len(results), "results": results}))
+	}}
+	bulkUpdate.Flags().String("execution-ids", "", "")
+	bulkUpdate.Flags().String("status", "", "")
+	bulkUpdate.Flags().String("comment", "", "")
+	c.AddCommand(bulkUpdate)
+
+	exportCmd := &cobra.Command{Use: "export", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		zql := mustS(cmd, "zql")
+		if zql == "" {
+			return invalidArgs(cmd, o, "--zql required", "Use jira zephyr execution export --zql \"executionStatus != UNEXECUTED\" --json.")
+		}
+		exportType := firstNonEmpty(mustS(cmd, "type"), "xls")
+		if !isAllowedZephyrExportType(exportType) {
+			return invalidArgs(cmd, o, "--type must be xls, xlsx, or csv", "")
+		}
+		q := map[string]string{"zqlQuery": zql}
+		path := rt.client.ZAPI("zql/executeSearch")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.Get("zql/executeSearch", q)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{
+			"export_type": exportType,
+			"zql":         zql,
+			"results":     raw,
+			"note":        "This command returns exportable Zephyr query results as JSON and does not write a file.",
+		}))
+	}}
+	exportCmd.Flags().String("zql", "", "")
+	exportCmd.Flags().String("type", "xls", "")
+	c.AddCommand(exportCmd)
+	return c
+}
+
+func zephyrSummaryCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "summary", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		project := firstNonEmpty(mustS(cmd, "project"), rt.ctx.Inst.DefaultProject)
+		projectID, err := zephyrProjectID(rt, project, "", o.DryRun)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_project_unresolved"))
+		}
+		versionID := zephyrVersionID(rt, cmd)
+		q := map[string]string{"projectId": projectID, "versionId": versionID}
+		path := rt.client.ZAPI("cycle")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.Get("cycle", q)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, zephyrCycleSummaryData(project, projectID, versionID, raw)))
+	}}
+	c.Flags().String("project", "", "")
+	c.Flags().String("version-id", "", "")
+	return c
+}
+
+func zephyrZQLCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "zql"}
+	search := &cobra.Command{Use: "search", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		zqlQuery := mustS(cmd, "query")
+		if zqlQuery == "" {
+			return invalidArgs(cmd, o, "--query required", "Use jira zephyr zql search --query \"executionStatus = FAIL\" --json.")
+		}
+		q := map[string]string{"zqlQuery": zqlQuery}
+		if limit := mustS(cmd, "limit"); limit != "" {
+			if _, err := strconv.Atoi(limit); err != nil {
+				return invalidArgs(cmd, o, "--limit must be an integer", "")
+			}
+			q["maxRecords"] = limit
+		}
+		if start := mustS(cmd, "start"); start != "" {
+			if _, err := strconv.Atoi(start); err != nil {
+				return invalidArgs(cmd, o, "--start must be an integer", "")
+			}
+			q["offset"] = start
+		}
+		path := rt.client.ZAPI("zql/executeSearch")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.Get("zql/executeSearch", q)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	search.Flags().String("query", "", "")
+	search.Flags().String("limit", "", "")
+	search.Flags().String("start", "", "")
+	c.AddCommand(search)
+	return c
+}
+
+func zephyrStepResultCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "step-result"}
+	list := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		executionID := mustS(cmd, "execution-id")
+		if executionID == "" {
+			return invalidArgs(cmd, o, "--execution-id required", "Use jira zephyr step-result list --execution-id <ID> --json.")
+		}
+		q := map[string]string{"executionId": executionID}
+		path := rt.client.ZAPI("stepResult")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.Get("stepResult", q)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	list.Flags().String("execution-id", "", "")
+	c.AddCommand(list)
+
+	updateStatus := &cobra.Command{Use: "update-status <step-result-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		if mustS(cmd, "status") == "" {
+			return invalidArgs(cmd, o, "--status required", "Use jira zephyr step-result update-status <step-result-id> --status PASS --json.")
+		}
+		mapped, err := zephyrMapStatus(rt, mustS(cmd, "status"))
+		if err != nil {
+			return print(cmd, o, zephyrStatusFailure(err, rt.cfg))
+		}
+		body := zephyrStatusBody(mapped, mustS(cmd, "comment"))
+		path := rt.client.ZAPI("stepResult/" + zapi.PathEscape(args[0]))
+		if o.DryRun {
+			data := jira.DryRunData("PUT", path, nil, body)
+			data["status"] = mapped
+			return print(cmd, o, output.Success(rt.ctx.Instance, data))
+		}
+		raw, err := rt.client.DoJSON(http.MethodPut, path, nil, body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	updateStatus.Flags().String("status", "", "")
+	updateStatus.Flags().String("comment", "", "")
+	c.AddCommand(updateStatus)
+	return c
+}
+
+func zephyrAttachmentCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "attachment"}
+	list := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		q, ok := zephyrEntityQuery(cmd)
+		if !ok {
+			return invalidArgs(cmd, o, "--entity-type and --entity-id required", "Use jira zephyr attachment list --entity-type execution --entity-id <ID> --json.")
+		}
+		path := rt.client.ZAPI("attachment/attachmentsByEntity")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.Get("attachment/attachmentsByEntity", q)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	addZephyrEntityFlags(list)
+	c.AddCommand(list)
+
+	upload := &cobra.Command{Use: "upload", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		q, ok := zephyrEntityQuery(cmd)
+		if !ok {
+			return invalidArgs(cmd, o, "--entity-type and --entity-id required", "Use jira zephyr attachment upload --entity-type execution --entity-id <ID> --file ./report.png --json.")
+		}
+		file := mustS(cmd, "file")
+		if file == "" {
+			return invalidArgs(cmd, o, "--file required", "Use jira zephyr attachment upload --entity-type execution --entity-id <ID> --file ./report.png --json.")
+		}
+		path := rt.client.ZAPI("attachment")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("POST", path, q, map[string]interface{}{"file": file})))
+		}
+		f, err := os.Open(file)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "")
+		}
+		defer f.Close()
+		resp, err := rt.client.JiraClient.Do(httpclient.Request{
+			Method:         http.MethodPost,
+			Path:           path,
+			Query:          q,
+			MultipartField: "file",
+			MultipartName:  filepath.Base(file),
+			Multipart:      f,
+			Headers:        map[string]string{"X-Atlassian-Token": "no-check"},
+		})
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		defer resp.Body.Close()
+		raw, err := zapi.ReadJSONValue(resp.Body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	addZephyrEntityFlags(upload)
+	upload.Flags().String("file", "", "")
+	c.AddCommand(upload)
+	return c
+}
+
+func zephyrDefectCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "defect"}
+	list := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		executionID := mustS(cmd, "execution-id")
+		if executionID == "" {
+			return invalidArgs(cmd, o, "--execution-id required", "Use jira zephyr defect list --execution-id <ID> --json.")
+		}
+		path := rt.client.ZAPI("execution/" + zapi.PathEscape(executionID) + "/defects")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, nil, nil)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodGet, path, nil, nil)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_execution_not_found"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	list.Flags().String("execution-id", "", "")
+	c.AddCommand(list)
+
+	add := &cobra.Command{Use: "add", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		executionID := mustS(cmd, "execution-id")
+		issue := mustS(cmd, "issue")
+		if executionID == "" || issue == "" {
+			return invalidArgs(cmd, o, "--execution-id and --issue required", "Use jira zephyr defect add --execution-id <ID> --issue EFP-999 --json.")
+		}
+		body := map[string]interface{}{"issueKey": issue}
+		path := rt.client.ZAPI("execution/" + zapi.PathEscape(executionID) + "/defect")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("POST", path, nil, body)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodPost, path, nil, body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_execution_not_found"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	add.Flags().String("execution-id", "", "")
+	add.Flags().String("issue", "", "")
+	c.AddCommand(add)
+	return c
+}
+
+func zephyrReportCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "report"}
+	coverage := &cobra.Command{Use: "coverage", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		project := firstNonEmpty(mustS(cmd, "project"), rt.ctx.Inst.DefaultProject)
+		projectID, err := zephyrProjectID(rt, project, mustS(cmd, "project-id"), o.DryRun)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_project_unresolved"))
+		}
+		versionID := zephyrVersionID(rt, cmd)
+		q := map[string]string{"projectId": projectID, "versionId": versionID}
+		path := rt.client.ZAPI("cycle")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.Get("cycle", q)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, zephyrCoverageData(project, projectID, versionID, raw)))
+	}}
+	addProjectVersionFlags(coverage)
+	c.AddCommand(coverage)
 	return c
 }
 
@@ -431,10 +859,14 @@ func zephyrAPICmd(o *Opts) *cobra.Command {
 		{"get <path>", http.MethodGet, false},
 		{"post <path>", http.MethodPost, true},
 		{"put <path>", http.MethodPut, true},
+		{"delete <path>", http.MethodDelete, false},
 	} {
 		method := item.method
 		acceptsBody := item.body
 		cc := &cobra.Command{Use: item.use, Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+			if method == http.MethodDelete && !o.Yes {
+				return invalidArgs(cmd, o, "--yes required", "Add --yes after confirming the Zephyr raw API DELETE.")
+			}
 			rt, err := newZephyrRuntime(o, "", false)
 			if err != nil {
 				return print(cmd, o, zephyrFailure(err, "server_error"))
@@ -453,6 +885,12 @@ func zephyrAPICmd(o *Opts) *cobra.Command {
 			}
 			if o.DryRun {
 				return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData(method, path, q, body)))
+			}
+			if method == http.MethodDelete {
+				if err := zephyrDelete(rt, path, q); err != nil {
+					return print(cmd, o, zephyrFailure(err, "server_error"))
+				}
+				return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"deleted": true}))
 			}
 			data, err := rt.client.DoJSON(method, path, q, body)
 			if err != nil {
@@ -529,6 +967,35 @@ func zephyrStatusData(cfg zapi.EffectiveConfig) map[string]interface{} {
 	}
 }
 
+func zephyrMapStatus(rt *zephyrRuntime, status string) (zapi.MappedStatus, error) {
+	return zapi.MapStatus(status, rt.cfg.StatusMap)
+}
+
+func zephyrStatusFailure(err error, cfg zapi.EffectiveConfig) output.Envelope {
+	env := zephyrFailure(err, "invalid_zephyr_status")
+	if env.Error != nil {
+		env.Error.Hint = "Known statuses: " + strings.Join(zapi.KnownStatuses(cfg.StatusMap), ", ")
+	}
+	return env
+}
+
+func zephyrStatusBody(mapped zapi.MappedStatus, comment string) map[string]interface{} {
+	body := map[string]interface{}{"status": strconv.Itoa(mapped.ID)}
+	if comment != "" {
+		body["comment"] = comment
+	}
+	return body
+}
+
+func zephyrDelete(rt *zephyrRuntime, path string, q map[string]string) error {
+	resp, err := rt.client.JiraClient.Do(httpclient.Request{Method: http.MethodDelete, Path: path, Query: q})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
 func zephyrProjectID(rt *zephyrRuntime, project, projectID string, dryRun bool) (string, error) {
 	if projectID != "" {
 		return projectID, nil
@@ -573,6 +1040,20 @@ func addProjectVersionFlags(cmd *cobra.Command) {
 	cmd.Flags().String("version-id", "", "")
 }
 
+func addZephyrEntityFlags(cmd *cobra.Command) {
+	cmd.Flags().String("entity-type", "", "")
+	cmd.Flags().String("entity-id", "", "")
+}
+
+func zephyrEntityQuery(cmd *cobra.Command) (map[string]string, bool) {
+	entityType := mustS(cmd, "entity-type")
+	entityID := mustS(cmd, "entity-id")
+	if entityType == "" || entityID == "" {
+		return nil, false
+	}
+	return map[string]string{"entityId": entityID, "entityType": entityType}, true
+}
+
 func addCycleBodyFlags(cmd *cobra.Command) {
 	cmd.Flags().String("name", "", "")
 	cmd.Flags().String("description", "", "")
@@ -591,6 +1072,259 @@ func zephyrCycleBody(cmd *cobra.Command, projectID, versionID string) map[string
 func addOptionalString(m map[string]interface{}, key, value string) {
 	if value != "" {
 		m[key] = value
+	}
+}
+
+func zephyrCycleSummaryData(project, projectID, versionID string, raw interface{}) map[string]interface{} {
+	out := map[string]interface{}{
+		"project":    project,
+		"project_id": projectID,
+		"version_id": versionID,
+	}
+	if cycles, ok := zephyrExtractCycles(raw); ok {
+		out["cycles"] = cycles
+		out["cycle_count"] = len(cycles)
+	} else {
+		out["raw"] = raw
+	}
+	return out
+}
+
+func zephyrExecutionCountData(projectID, versionID, group string, raw interface{}) map[string]interface{} {
+	out := map[string]interface{}{
+		"project_id": projectID,
+		"version_id": versionID,
+		"group":      group,
+		"groups":     []map[string]interface{}{},
+		"raw":        raw,
+	}
+	cycles, ok := zephyrExtractCycles(raw)
+	if !ok {
+		return out
+	}
+	groups := make([]map[string]interface{}, 0, len(cycles))
+	for _, cycle := range cycles {
+		count, _ := zephyrCycleExecutionCount(cycle)
+		groups = append(groups, map[string]interface{}{
+			"cycle_id": zephyrStringField(cycle, "id"),
+			"name":     zephyrStringField(cycle, "name"),
+			"count":    count,
+		})
+	}
+	out["groups"] = groups
+	return out
+}
+
+func zephyrCoverageData(project, projectID, versionID string, raw interface{}) map[string]interface{} {
+	out := map[string]interface{}{
+		"project":    project,
+		"project_id": projectID,
+		"version_id": versionID,
+		"source":     "cycle",
+	}
+	cycles, ok := zephyrExtractCycles(raw)
+	if !ok {
+		out["raw"] = raw
+		return out
+	}
+	out["cycles"] = cycles
+	out["cycle_count"] = len(cycles)
+	totalExecutions := 0
+	hasExecutionCount := false
+	statusCounts := map[string]int{}
+	for _, cycle := range cycles {
+		if count, ok := zephyrCycleExecutionCount(cycle); ok {
+			totalExecutions += count
+			hasExecutionCount = true
+		}
+		if counts, ok := zephyrCycleStatusCounts(cycle); ok {
+			for k, v := range counts {
+				statusCounts[k] += v
+			}
+		}
+	}
+	if hasExecutionCount {
+		out["execution_count"] = totalExecutions
+	}
+	if len(statusCounts) > 0 {
+		out["status_counts"] = statusCounts
+	}
+	return out
+}
+
+func zephyrExtractCycles(raw interface{}) ([]map[string]interface{}, bool) {
+	switch v := raw.(type) {
+	case []interface{}:
+		return zephyrCycleMapsFromList(v)
+	case []map[string]interface{}:
+		out := make([]map[string]interface{}, 0, len(v))
+		for _, item := range v {
+			out = append(out, item)
+		}
+		return out, true
+	case map[string]interface{}:
+		for _, key := range []string{"cycles", "cycleSummaries", "cycle_summaries"} {
+			if child, ok := v[key]; ok {
+				if cycles, ok := zephyrExtractCycles(child); ok {
+					return cycles, true
+				}
+			}
+		}
+		return zephyrCycleMapsFromMap(v)
+	default:
+		return nil, false
+	}
+}
+
+func zephyrCycleMapsFromList(items []interface{}) ([]map[string]interface{}, bool) {
+	out := make([]map[string]interface{}, 0, len(items))
+	for _, item := range items {
+		if m, ok := item.(map[string]interface{}); ok {
+			out = append(out, m)
+		}
+	}
+	return out, true
+}
+
+func zephyrCycleMapsFromMap(m map[string]interface{}) ([]map[string]interface{}, bool) {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]map[string]interface{}, 0, len(keys))
+	for _, key := range keys {
+		child, ok := m[key].(map[string]interface{})
+		if !ok || !zephyrLooksLikeCycle(key, child) {
+			continue
+		}
+		if _, exists := child["id"]; !exists && key != "" {
+			copyChild := map[string]interface{}{}
+			for k, v := range child {
+				copyChild[k] = v
+			}
+			copyChild["id"] = key
+			child = copyChild
+		}
+		out = append(out, child)
+	}
+	return out, len(out) > 0
+}
+
+func zephyrLooksLikeCycle(key string, m map[string]interface{}) bool {
+	if key == "recordsCount" || key == "offset" || key == "maxRecords" {
+		return false
+	}
+	for _, field := range []string{"id", "name", "totalExecutions", "executionSummaries", "projectId", "versionId", "environment", "build"} {
+		if _, ok := m[field]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func zephyrCycleExecutionCount(cycle map[string]interface{}) (int, bool) {
+	for _, key := range []string{"executionCount", "execution_count", "totalExecutions", "totalExecution", "totalExecuted", "total"} {
+		if count, ok := zephyrInt(cycle[key]); ok {
+			return count, true
+		}
+	}
+	if items, ok := cycle["executions"].([]interface{}); ok {
+		return len(items), true
+	}
+	return 0, false
+}
+
+func zephyrCycleStatusCounts(cycle map[string]interface{}) (map[string]int, bool) {
+	for _, key := range []string{"executionSummaries", "statusCounts", "status_counts", "summary"} {
+		if counts, ok := zephyrStatusCounts(cycle[key]); ok {
+			return counts, true
+		}
+	}
+	return nil, false
+}
+
+func zephyrStatusCounts(v interface{}) (map[string]int, bool) {
+	switch x := v.(type) {
+	case map[string]interface{}:
+		out := map[string]int{}
+		for k, v := range x {
+			if normalized, err := zapi.NormalizeStatus(k); err == nil {
+				if count, ok := zephyrInt(v); ok {
+					out[normalized] += count
+				}
+			}
+		}
+		if len(out) > 0 {
+			return out, true
+		}
+		for _, key := range []string{"executionSummary", "statuses", "statusCounts", "status_counts"} {
+			if counts, ok := zephyrStatusCounts(x[key]); ok {
+				return counts, true
+			}
+		}
+	case []interface{}:
+		out := map[string]int{}
+		for _, item := range x {
+			m, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			name := firstNonEmpty(zephyrStringField(m, "statusName"), zephyrStringField(m, "name"), zephyrStringField(m, "status"))
+			normalized, err := zapi.NormalizeStatus(name)
+			if err != nil {
+				continue
+			}
+			for _, countKey := range []string{"count", "executionCount", "total", "value"} {
+				if count, ok := zephyrInt(m[countKey]); ok {
+					out[normalized] += count
+					break
+				}
+			}
+		}
+		if len(out) > 0 {
+			return out, true
+		}
+	}
+	return nil, false
+}
+
+func zephyrInt(v interface{}) (int, bool) {
+	switch x := v.(type) {
+	case int:
+		return x, true
+	case int64:
+		return int(x), true
+	case float64:
+		return int(x), true
+	case json.Number:
+		n, err := x.Int64()
+		return int(n), err == nil
+	case string:
+		if x == "" {
+			return 0, false
+		}
+		n, err := strconv.Atoi(x)
+		return n, err == nil
+	default:
+		return 0, false
+	}
+}
+
+func zephyrStringField(m map[string]interface{}, key string) string {
+	v, ok := m[key]
+	if !ok || v == nil {
+		return ""
+	}
+	return fmt.Sprint(v)
+}
+
+func isAllowedZephyrExportType(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "xls", "xlsx", "csv":
+		return true
+	default:
+		return false
 	}
 }
 

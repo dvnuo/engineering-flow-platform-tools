@@ -27,10 +27,12 @@ var jiraCommands = []string{
 	"jira issue get <issue-or-url>", "jira issue search", "jira issue create", "jira issue update <issue-or-url>", "jira issue edit <issue-or-url>", "jira issue delete <issue-or-url>", "jira issue assign <issue-or-url>", "jira issue transitions <issue-or-url>", "jira issue transition <issue-or-url>", "jira issue changelog <issue-or-url>", "jira issue fields <issue-or-url>", "jira issue createmeta", "jira issue editmeta <issue-or-url>", "jira issue map-csv", "jira issue bulk-create", "jira issue bulk-validate", "jira issue watchers <issue-or-url>", "jira issue watch <issue-or-url>", "jira issue unwatch <issue-or-url>", "jira issue votes <issue-or-url>", "jira issue vote <issue-or-url>", "jira issue unvote <issue-or-url>", "jira issue notify <issue-or-url>",
 	"jira issue comment list <issue-or-url>", "jira issue comment get <issue-or-url> <comment-id>", "jira issue comment add <issue-or-url>", "jira issue comment update <issue-or-url> <comment-id>", "jira issue comment delete <issue-or-url> <comment-id>",
 	"jira zephyr doctor", "jira zephyr resolve-url <jira-url>", "jira zephyr status list", "jira zephyr util test-issue-type",
+	"jira zephyr summary",
 	"jira zephyr test list", "jira zephyr test get <issue-or-url>", "jira zephyr test create",
-	"jira zephyr cycle list", "jira zephyr cycle get <cycle-id>", "jira zephyr cycle create", "jira zephyr cycle update <cycle-id>",
-	"jira zephyr execution list", "jira zephyr execution get <execution-id>", "jira zephyr execution create", "jira zephyr execution update-status <execution-id>", "jira zephyr execution add-tests-to-cycle",
-	"jira zephyr api get <path>", "jira zephyr api post <path>", "jira zephyr api put <path>",
+	"jira zephyr cycle list", "jira zephyr cycle get <cycle-id>", "jira zephyr cycle create", "jira zephyr cycle update <cycle-id>", "jira zephyr cycle delete <cycle-id>",
+	"jira zephyr execution list", "jira zephyr execution get <execution-id>", "jira zephyr execution create", "jira zephyr execution update-status <execution-id>", "jira zephyr execution add-tests-to-cycle", "jira zephyr execution count", "jira zephyr execution delete <execution-id>", "jira zephyr execution bulk-update-status", "jira zephyr execution export",
+	"jira zephyr zql search", "jira zephyr step-result list", "jira zephyr step-result update-status <step-result-id>", "jira zephyr attachment list", "jira zephyr attachment upload", "jira zephyr defect list", "jira zephyr defect add", "jira zephyr report coverage",
+	"jira zephyr api get <path>", "jira zephyr api post <path>", "jira zephyr api put <path>", "jira zephyr api delete <path>",
 	"jira issue attachment list <issue-or-url>", "jira issue attachment upload <issue-or-url> <file>", "jira attachment get <attachment-id>", "jira attachment download <attachment-id>", "jira attachment delete <attachment-id>", "jira attachment meta",
 	"jira issue worklog list <issue-or-url>", "jira issue worklog get <issue-or-url> <worklog-id>", "jira issue worklog add <issue-or-url>", "jira issue worklog update <issue-or-url> <worklog-id>", "jira issue worklog delete <issue-or-url> <worklog-id>",
 	"jira issue link list <issue-or-url>", "jira issue link create", "jira issue link delete <link-id>", "jira issue remote-link list <issue-or-url>", "jira issue remote-link add <issue-or-url>", "jira issue remote-link delete <issue-or-url> <link-id>", "jira issue property list <issue-or-url>", "jira issue property get <issue-or-url> <key>", "jira issue property set <issue-or-url> <key>", "jira issue property delete <issue-or-url> <key>",
@@ -256,14 +258,15 @@ func actionIndex(parts []string) int {
 		"upload": true, "login": true, "update": true, "set": true, "edit": true, "assign": true,
 		"transition": true, "move": true, "restore": true, "watch": true, "unwatch": true,
 		"vote": true, "unvote": true, "default": true, "delete": true, "remove": true, "logout": true,
-		"download": true, "export-html": true, "export-markdown": true, "commands": true, "schema": true,
+		"download": true, "export": true, "export-html": true, "export-markdown": true, "commands": true, "schema": true,
 		"llm": true, "version": true, "content": true, "pages": true, "blogs": true, "labels": true,
 		"watchers": true, "members": true, "statuses": true, "roles": true, "components": true,
 		"versions": true, "transitions": true, "changelog": true, "fields": true, "createmeta": true,
 		"editmeta": true, "votes": true, "notify": true, "myself": true, "server-info": true,
 		"resolve-url": true, "body": true, "body-storage": true, "body-view": true, "children": true,
 		"descendants": true, "ancestors": true, "history": true, "permission": true, "settings": true,
-		"config": true, "assignable": true, "issues": true,
+		"config": true, "assignable": true, "issues": true, "summary": true, "count": true,
+		"bulk-update-status": true, "coverage": true,
 	}
 	for i := len(parts) - 1; i >= 0; i-- {
 		if actions[parts[i]] {
@@ -409,9 +412,19 @@ func flagSpecs(command string, flags, required []string) []FlagSpec {
 	}
 	out := make([]FlagSpec, 0, len(flags))
 	for _, f := range flags {
-		out = append(out, FlagSpec{Name: f, Type: flagType(f), Required: req[f], Description: flagDescription(command, f)})
+		out = append(out, FlagSpec{Name: f, Type: flagTypeFor(command, f), Required: req[f], Description: flagDescription(command, f)})
 	}
 	return out
+}
+
+func flagTypeFor(command, name string) string {
+	if name == "query" {
+		if strings.HasPrefix(command, "api.") || strings.HasPrefix(command, "zephyr.api.") {
+			return "string[]"
+		}
+		return "string"
+	}
+	return flagType(name)
 }
 
 func flagType(name string) string {
@@ -422,7 +435,7 @@ func flagType(name string) string {
 		return "int"
 	case "min-confidence":
 		return "float"
-	case "field", "fields", "query":
+	case "field", "fields":
 		return "string[]"
 	default:
 		return "string"
@@ -453,20 +466,36 @@ func flagDescription(command, name string) string {
 		return "Zephyr test cycle id."
 	case "execution-id":
 		return "Zephyr test execution id."
+	case "execution-ids":
+		return "Comma-separated Zephyr test execution ids."
 	case "issue-id":
 		return "Jira issue id."
+	case "issue":
+		return "Jira issue key."
 	case "issues":
 		return "Comma-separated Jira test issue keys."
 	case "status":
 		return "Zephyr execution status: PASS, FAIL, WIP, BLOCKED, or UNEXECUTED."
 	case "comment":
 		return "Comment text."
+	case "entity-type":
+		return "Zephyr attachment entity type, such as execution."
+	case "entity-id":
+		return "Zephyr attachment entity id."
+	case "file":
+		return "File path to upload."
 	case "jql":
 		return "Jira JQL query."
+	case "zql":
+		return "Zephyr ZQL query."
+	case "query":
+		return "Search query or raw key=value query parameter."
 	case "limit":
 		return "Maximum number of results."
 	case "start":
 		return "Start offset for paged results."
+	case "group":
+		return "Grouping mode; currently cycle for Zephyr execution counts."
 	case "description":
 		return "Description text."
 	case "name":
@@ -598,6 +627,8 @@ var explicit = map[string]explicitMeta{
 	"zephyr.status.list":   {Description: "List configured Zephyr execution status names and legacy ids.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira zephyr status list --json"},
 	"zephyr.util.test-issue-type": {Description: "Fetch Zephyr's configured Jira Test issue type metadata.",
 		Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira zephyr util test-issue-type --json"},
+	"zephyr.summary": {Description: "Fetch a conservative Zephyr project test summary from legacy ZAPI cycles.",
+		Flags: []string{"project", "version-id", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira zephyr summary --project EFP --version-id -1 --json"},
 	"zephyr.test.list": {Description: "List Jira Test issues using Jira search under the Zephyr namespace.",
 		Flags: []string{"project", "jql", "limit", "start", "instance", "config", "json", "format", "verbose"}, Required: []string{"project|jql"}, Risk: "read", Example: "jira zephyr test list --project EFP --jql 'project = EFP AND issuetype = Test' --json"},
 	"zephyr.test.get": {Description: "Fetch a Jira Test issue by key or URL.",
@@ -612,8 +643,10 @@ var explicit = map[string]explicitMeta{
 		Flags: []string{"project", "project-id", "version-id", "name", "description", "build", "environment", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"project|project-id", "name"}, Risk: "write", Example: "jira zephyr cycle create --project EFP --version-id -1 --name 'Sprint 42 Regression' --dry-run --json"},
 	"zephyr.cycle.update": {Description: "Update fields on a Zephyr test cycle.",
 		Flags: []string{"name", "description", "build", "environment", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"cycle-id", "name|description|build|environment"}, Risk: "write", Example: "jira zephyr cycle update 20000 --name 'Sprint 42 Regression - RC2' --dry-run --json"},
+	"zephyr.cycle.delete": {Description: "Delete a Zephyr test cycle after explicit confirmation.",
+		Flags: []string{"yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"cycle-id", "yes"}, Risk: "delete", Example: "jira zephyr cycle delete 20000 --yes --dry-run --json"},
 	"zephyr.execution.list": {Description: "List Zephyr test executions in a cycle.",
-		Flags: []string{"cycle-id", "project-id", "version-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"cycle-id", "project-id"}, Risk: "read", Example: "jira zephyr execution list --cycle-id 20000 --project-id 10000 --version-id -1 --json"},
+		Flags: []string{"cycle-id", "project-id", "version-id", "status", "instance", "config", "json", "format", "verbose"}, Required: []string{"cycle-id", "project-id"}, Risk: "read", Example: "jira zephyr execution list --cycle-id 20000 --project-id 10000 --version-id -1 --status FAIL --json"},
 	"zephyr.execution.get": {Description: "Fetch a Zephyr test execution by id.",
 		Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"execution-id"}, Risk: "read", Example: "jira zephyr execution get 30000 --json"},
 	"zephyr.execution.create": {Description: "Create a Zephyr test execution for a Jira Test issue.",
@@ -622,12 +655,38 @@ var explicit = map[string]explicitMeta{
 		Flags: []string{"status", "comment", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-id", "status"}, Risk: "write", Example: "jira zephyr execution update-status 30000 --status PASS --dry-run --json"},
 	"zephyr.execution.add-tests-to-cycle": {Description: "Add Jira Test issues to a Zephyr test cycle.",
 		Flags: []string{"cycle-id", "project-id", "version-id", "issues", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"cycle-id", "project-id", "issues"}, Risk: "write", Example: "jira zephyr execution add-tests-to-cycle --cycle-id 20000 --project-id 10000 --version-id -1 --issues EFP-T1,EFP-T2 --dry-run --json"},
+	"zephyr.execution.count": {Description: "Count Zephyr executions grouped by cycle using conservative cycle fields.",
+		Flags: []string{"project-id", "version-id", "group", "instance", "config", "json", "format", "verbose"}, Required: []string{"project-id"}, Risk: "read", Example: "jira zephyr execution count --project-id 10000 --version-id -1 --group cycle --json"},
+	"zephyr.execution.delete": {Description: "Delete a Zephyr test execution after explicit confirmation.",
+		Flags: []string{"yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-id", "yes"}, Risk: "delete", Example: "jira zephyr execution delete 30000 --yes --dry-run --json"},
+	"zephyr.execution.bulk-update-status": {Description: "Update the status of multiple Zephyr test executions.",
+		Flags: []string{"execution-ids", "status", "comment", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-ids", "status"}, Risk: "write", Example: "jira zephyr execution bulk-update-status --execution-ids 1,2,3 --status PASS --dry-run --json"},
+	"zephyr.execution.export": {Description: "Return exportable Zephyr execution query results as JSON.",
+		Flags: []string{"zql", "type", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"zql"}, Risk: "read", Example: "jira zephyr execution export --zql 'executionStatus != UNEXECUTED' --type xls --json"},
+	"zephyr.zql.search": {Description: "Search Zephyr executions with ZQL through legacy ZAPI.",
+		Flags: []string{"query", "limit", "start", "instance", "config", "json", "format", "verbose"}, Required: []string{"query"}, Risk: "read", Example: "jira zephyr zql search --query 'executionStatus = FAIL' --limit 100 --json"},
+	"zephyr.step-result.list": {Description: "List Zephyr step results for an execution.",
+		Flags: []string{"execution-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"execution-id"}, Risk: "read", Example: "jira zephyr step-result list --execution-id 30000 --json"},
+	"zephyr.step-result.update-status": {Description: "Update the status of a Zephyr step result.",
+		Flags: []string{"status", "comment", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"step-result-id", "status"}, Risk: "write", Example: "jira zephyr step-result update-status 40000 --status PASS --dry-run --json"},
+	"zephyr.attachment.list": {Description: "List Zephyr attachments for an entity.",
+		Flags: []string{"entity-type", "entity-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"entity-type", "entity-id"}, Risk: "read", Example: "jira zephyr attachment list --entity-type execution --entity-id 30000 --json"},
+	"zephyr.attachment.upload": {Description: "Upload a Zephyr attachment for an entity.",
+		Flags: []string{"entity-type", "entity-id", "file", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"entity-type", "entity-id", "file"}, Risk: "write", Example: "jira zephyr attachment upload --entity-type execution --entity-id 30000 --file ./report.png --dry-run --json"},
+	"zephyr.defect.list": {Description: "List Jira defects linked to a Zephyr execution.",
+		Flags: []string{"execution-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"execution-id"}, Risk: "read", Example: "jira zephyr defect list --execution-id 30000 --json"},
+	"zephyr.defect.add": {Description: "Link a Jira defect issue to a Zephyr execution.",
+		Flags: []string{"execution-id", "issue", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-id", "issue"}, Risk: "write", Example: "jira zephyr defect add --execution-id 30000 --issue EFP-999 --dry-run --json"},
+	"zephyr.report.coverage": {Description: "Build a conservative Zephyr coverage summary from cycle data.",
+		Flags: []string{"project", "project-id", "version-id", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira zephyr report coverage --project EFP --version-id -1 --json"},
 	"zephyr.api.get": {Description: "Call a raw Zephyr legacy ZAPI GET path on the selected Jira instance.",
 		Flags: []string{"query", "instance", "config", "json", "format", "verbose"}, Required: []string{"path"}, Risk: "read", Example: "jira zephyr api get cycle --query projectId=10000 --query versionId=-1 --json"},
 	"zephyr.api.post": {Description: "Call a raw Zephyr legacy ZAPI POST path on the selected Jira instance.",
 		Flags: []string{"query", "body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"path"}, Risk: "write", Example: "jira zephyr api post cycle --body '{}' --dry-run --json"},
 	"zephyr.api.put": {Description: "Call a raw Zephyr legacy ZAPI PUT path on the selected Jira instance.",
 		Flags: []string{"query", "body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"path"}, Risk: "write", Example: "jira zephyr api put execution/30000/execute --body '{\"status\":\"1\"}' --dry-run --json"},
+	"zephyr.api.delete": {Description: "Call a raw Zephyr legacy ZAPI DELETE path after explicit confirmation.",
+		Flags: []string{"query", "yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"path", "yes"}, Risk: "delete", Example: "jira zephyr api delete execution/30000 --yes --dry-run --json"},
 	"issue.attachment.list":     {Description: "List attachments on a Jira issue.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira issue attachment list PROJ-123 --json"},
 	"issue.attachment.upload":   {Description: "Upload a file attachment to a Jira issue.", Flags: []string{"instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"issue-or-url", "file"}, Risk: "write", Example: "jira issue attachment upload PROJ-123 ./note.txt --json"},
 	"issue.attachment.download": {Description: "Download or inspect a Jira issue attachment.", Flags: []string{"output", "instance", "config", "json", "format", "verbose", "dry-run"}, Risk: "read", Example: "jira attachment download 10000 --json"},

@@ -57,6 +57,7 @@
 - jira zephyr resolve-url <jira-url>
 - jira zephyr status list
 - jira zephyr util test-issue-type
+- jira zephyr summary
 - jira zephyr test list
 - jira zephyr test get <issue-or-url>
 - jira zephyr test create
@@ -64,14 +65,28 @@
 - jira zephyr cycle get <cycle-id>
 - jira zephyr cycle create
 - jira zephyr cycle update <cycle-id>
+- jira zephyr cycle delete <cycle-id>
 - jira zephyr execution list
 - jira zephyr execution get <execution-id>
 - jira zephyr execution create
 - jira zephyr execution update-status <execution-id>
 - jira zephyr execution add-tests-to-cycle
+- jira zephyr execution count
+- jira zephyr execution delete <execution-id>
+- jira zephyr execution bulk-update-status
+- jira zephyr execution export
+- jira zephyr zql search
+- jira zephyr step-result list
+- jira zephyr step-result update-status <step-result-id>
+- jira zephyr attachment list
+- jira zephyr attachment upload
+- jira zephyr defect list
+- jira zephyr defect add
+- jira zephyr report coverage
 - jira zephyr api get <path>
 - jira zephyr api post <path>
 - jira zephyr api put <path>
+- jira zephyr api delete <path>
 
 ### Attachment
 - jira issue attachment list <issue-or-url>

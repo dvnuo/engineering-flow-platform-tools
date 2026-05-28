@@ -419,8 +419,9 @@ func helpLLMCmd() *cobra.Command {
 			"If a Jira URL contains selectedItem=com.thed.zephyr.je, treat it as a Zephyr test-management page.",
 			"Use jira zephyr doctor --project <PROJECT> --json first for a Jira project you have not inspected.",
 			"Use Jira core commands for issues, stories, bugs, comments, attachments, and workflows.",
-			"Use jira zephyr commands for test cycles, executions, execution status, and test summaries.",
+			"Use jira zephyr commands for test cycles, executions, execution status, step results, defects, attachments, ZQL, reports, and test summaries.",
 			"Use --dry-run before jira zephyr write operations unless the user already approved the action.",
+			"Zephyr delete commands and raw jira zephyr api delete require --yes after explicit confirmation.",
 			"Do not browser-scrape Jira Test pages unless the API is unavailable and the user explicitly asks for UI investigation.",
 		}
 		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]interface{}{"tips": tips, "commands": catalog.Commands("jira")}))

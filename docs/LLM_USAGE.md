@@ -25,9 +25,11 @@
 - If a Jira URL contains `selectedItem=com.thed.zephyr.je`, treat it as a Zephyr test-management page.
 - For a project you have not checked, first run `jira zephyr doctor --project <PROJECT> --json`.
 - Use Jira core commands for issues, stories, bugs, comments, attachments, and workflows.
-- Use `jira zephyr` for test cycles, executions, execution status, and test summary context.
+- Use `jira zephyr` for test cycles, executions, execution status, step results, defects, attachments, ZQL, reports, and test summary context.
 - Use `--dry-run` before Zephyr write operations unless the user has explicitly approved the write.
+- Zephyr delete commands and raw `jira zephyr api delete` require `--yes`; do not add it until the user has confirmed the destructive action.
 - Do not browser-scrape Jira Test pages unless the API is unavailable and the user explicitly asks for UI investigation.
+- For Jira Test page URLs, prefer `jira zephyr resolve-url`, `jira zephyr summary`, `jira zephyr cycle list`, and `jira zephyr execution list` instead of browser scraping.
 
 ## How to recover from CLI errors
 
@@ -64,6 +66,8 @@ Use schema output to avoid guessing required flags:
 ```bash
 jira schema issue.create --json
 jira schema issue.transition --json
+jira schema zephyr.zql.search --json
+jira schema zephyr.execution.bulk-update-status --json
 confluence schema page.create --json
 confluence schema page.update --json
 browser schema probe --json

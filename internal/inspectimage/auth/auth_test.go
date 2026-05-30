@@ -11,6 +11,8 @@ import (
 	"engineering-flow-platform-tools/internal/inspectimage/config"
 )
 
+var fixedNow = time.Date(2026, 5, 30, 0, 0, 0, 0, time.UTC)
+
 func TestStatusMissingConfigEquivalent(t *testing.T) {
 	cfg := config.Default()
 	st := Summarize(cfg, time.Now())
@@ -34,18 +36,18 @@ func TestLogoutClearsTokenFieldsOnly(t *testing.T) {
 }
 
 func TestDeviceFlowWithMockEndpoints(t *testing.T) {
-	now := time.Date(2026, 5, 30, 0, 0, 0, 0, time.UTC)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/login/device/code":
+			if r.Header.Get("Content-Type") != "application/json" || r.Header.Get("User-Agent") != "GitHubCopilotChat/0.35.0" {
+				t.Fatalf("device request did not match portal headers")
+			}
 			_, _ = w.Write([]byte(`{"device_code":"dev","user_code":"ABCD-EFGH","verification_uri":"https://github.com/login/device","expires_in":60,"interval":1}`))
 		case "/login/oauth/access_token":
-			_, _ = w.Write([]byte(`{"access_token":"github-token"}`))
-		case "/copilot":
-			if r.Header.Get("Authorization") != "Bearer github-token" {
-				t.Fatalf("bad auth header")
+			if r.Header.Get("Content-Type") != "application/json" || r.Header.Get("User-Agent") != "GitHubCopilotChat/0.35.0" {
+				t.Fatalf("poll request did not match portal headers")
 			}
-			_, _ = w.Write([]byte(`{"token":"copilot-token","expires_at":1780000000}`))
+			_, _ = w.Write([]byte(`{"access_token":"github-token"}`))
 		case "/user":
 			_, _ = w.Write([]byte(`{"login":"octocat"}`))
 		default:
@@ -53,16 +55,36 @@ func TestDeviceFlowWithMockEndpoints(t *testing.T) {
 		}
 	}))
 	defer s.Close()
-	client := &DeviceClient{HTTPClient: s.Client(), GitHubBaseURL: s.URL, CopilotTokenURL: s.URL + "/copilot", Now: func() time.Time { return now }}
+	client := &DeviceClient{HTTPClient: s.Client(), GitHubBaseURL: s.URL, Now: func() time.Time { return fixedNow }}
 	var human strings.Builder
 	cfg, result, err := client.Login(context.Background(), config.Default(), &human)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Auth.GitHubAccessToken != "github-token" || cfg.Auth.CopilotToken != "copilot-token" || result.GitHubUser != "octocat" {
+	if cfg.Auth.GitHubAccessToken != "github-token" || cfg.Auth.CopilotToken != "github-token" || result.GitHubUser != "octocat" {
 		t.Fatalf("bad login cfg=%#v result=%#v", cfg.Auth, result)
 	}
-	if strings.Contains(human.String(), "github-token") || strings.Contains(human.String(), "copilot-token") {
+	if strings.Contains(human.String(), "github-token") {
 		t.Fatal("token leaked")
+	}
+}
+
+func TestTokenWithoutExpiryIsValid(t *testing.T) {
+	cfg := config.Default()
+	cfg.Auth.CopilotToken = "token"
+	if !TokenValid(cfg, fixedNow) {
+		t.Fatal("expected portal-style token without expiry to be valid")
+	}
+}
+
+func TestEndpointErrorIncludesSanitizedDetail(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"error":"bad_verification_code"}`, http.StatusBadRequest)
+	}))
+	defer s.Close()
+	client := &DeviceClient{HTTPClient: s.Client(), GitHubBaseURL: s.URL, Now: func() time.Time { return fixedNow }}
+	_, err := client.Start(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "bad_verification_code") {
+		t.Fatalf("expected detail in error, got %v", err)
 	}
 }

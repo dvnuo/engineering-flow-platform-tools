@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -17,12 +16,11 @@ import (
 const defaultGitHubClientID = "Iv1.b507a08c87ecfe98"
 
 type DeviceClient struct {
-	HTTPClient      *http.Client
-	GitHubBaseURL   string
-	CopilotTokenURL string
-	ClientID        string
-	Scopes          string
-	Now             func() time.Time
+	HTTPClient    *http.Client
+	GitHubBaseURL string
+	ClientID      string
+	Scopes        string
+	Now           func() time.Time
 }
 
 type DeviceStart struct {
@@ -61,14 +59,10 @@ func (c *DeviceClient) Login(ctx context.Context, cfg config.Config, out io.Writ
 	if err != nil {
 		return cfg, LoginResult{}, err
 	}
-	copilotToken, expiresAt, err := c.ExchangeCopilotToken(ctx, ghToken)
-	if err != nil {
-		return cfg, LoginResult{}, err
-	}
 	now := c.now().UTC().Format(time.RFC3339)
 	cfg.Auth.GitHubAccessToken = ghToken
-	cfg.Auth.CopilotToken = copilotToken
-	cfg.Auth.CopilotTokenExpiresAt = expiresAt.UTC().Format(time.RFC3339)
+	cfg.Auth.CopilotToken = ghToken
+	cfg.Auth.CopilotTokenExpiresAt = ""
 	cfg.Auth.UpdatedAt = now
 	if cfg.Auth.GitHubHost == "" {
 		cfg.Auth.GitHubHost = "github.com"
@@ -79,15 +73,11 @@ func (c *DeviceClient) Login(ctx context.Context, cfg config.Config, out io.Writ
 }
 
 func (c *DeviceClient) Start(ctx context.Context) (DeviceStart, error) {
-	values := url.Values{}
-	values.Set("client_id", c.clientID())
-	values.Set("scope", c.scopes())
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(c.githubBase(), "/")+"/login/device/code", strings.NewReader(values.Encode()))
+	body := map[string]string{"client_id": c.clientID(), "scope": c.scopes()}
+	req, err := c.newJSONRequest(ctx, strings.TrimRight(c.githubBase(), "/")+"/login/device/code", body)
 	if err != nil {
 		return DeviceStart{}, err
 	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	var start DeviceStart
 	if err := c.doJSON(req, &start); err != nil {
 		return start, err
@@ -105,16 +95,15 @@ func (c *DeviceClient) Poll(ctx context.Context, start DeviceStart) (string, err
 		deadline = c.now().Add(15 * time.Minute)
 	}
 	for {
-		values := url.Values{}
-		values.Set("client_id", c.clientID())
-		values.Set("device_code", start.DeviceCode)
-		values.Set("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(c.githubBase(), "/")+"/login/oauth/access_token", strings.NewReader(values.Encode()))
+		body := map[string]string{
+			"client_id":   c.clientID(),
+			"device_code": start.DeviceCode,
+			"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
+		}
+		req, err := c.newJSONRequest(ctx, strings.TrimRight(c.githubBase(), "/")+"/login/oauth/access_token", body)
 		if err != nil {
 			return "", err
 		}
-		req.Header.Set("Accept", "application/json")
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		var resp struct {
 			AccessToken string `json:"access_token"`
 			Error       string `json:"error"`
@@ -149,30 +138,6 @@ func (c *DeviceClient) Poll(ctx context.Context, start DeviceStart) (string, err
 	}
 }
 
-func (c *DeviceClient) ExchangeCopilotToken(ctx context.Context, githubToken string) (string, time.Time, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.copilotURL(), nil)
-	if err != nil {
-		return "", time.Time{}, err
-	}
-	req.Header.Set("Authorization", "Bearer "+githubToken)
-	req.Header.Set("Accept", "application/json")
-	var resp struct {
-		Token     string `json:"token"`
-		ExpiresAt int64  `json:"expires_at"`
-	}
-	if err := c.doJSON(req, &resp); err != nil {
-		return "", time.Time{}, err
-	}
-	if resp.Token == "" {
-		return "", time.Time{}, &APIError{Code: "auth_failed", Message: "Copilot token exchange failed.", Hint: "Check that GitHub Copilot access is enabled for this account.", Status: 401}
-	}
-	expires := time.Unix(resp.ExpiresAt, 0).UTC()
-	if resp.ExpiresAt == 0 {
-		expires = c.now().Add(30 * time.Minute).UTC()
-	}
-	return resp.Token, expires, nil
-}
-
 func (c *DeviceClient) User(ctx context.Context, githubToken string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(c.githubBase(), "/")+"/user", nil)
 	if err != nil {
@@ -189,6 +154,21 @@ func (c *DeviceClient) User(ctx context.Context, githubToken string) (string, er
 	return resp.Login, nil
 }
 
+func (c *DeviceClient) newJSONRequest(ctx context.Context, endpoint string, body any) (*http.Request, error) {
+	b, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(b))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "GitHubCopilotChat/0.35.0")
+	return req, nil
+}
+
 func (c *DeviceClient) doJSON(req *http.Request, out any) error {
 	client := c.HTTPClient
 	if client == nil {
@@ -201,7 +181,12 @@ func (c *DeviceClient) doJSON(req *http.Request, out any) error {
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return &APIError{Code: "auth_failed", Message: "Authentication endpoint returned an error.", Hint: "Retry inspect-image auth login.", Status: resp.StatusCode}
+		detail := sanitizedResponseDetail(body)
+		message := "Authentication endpoint returned an error."
+		if detail != "" {
+			message += " " + detail
+		}
+		return &APIError{Code: "auth_failed", Message: message, Hint: "Retry inspect-image auth login. If it repeats, check the displayed endpoint error and GitHub Copilot access for this account.", Status: resp.StatusCode}
 	}
 	dec := json.NewDecoder(bytes.NewReader(body))
 	if err := dec.Decode(out); err != nil {
@@ -215,13 +200,6 @@ func (c *DeviceClient) githubBase() string {
 		return c.GitHubBaseURL
 	}
 	return "https://github.com"
-}
-
-func (c *DeviceClient) copilotURL() string {
-	if c.CopilotTokenURL != "" {
-		return c.CopilotTokenURL
-	}
-	return "https://api.github.com/copilot_internal/v2/token"
 }
 
 func (c *DeviceClient) clientID() string {
@@ -243,4 +221,23 @@ func (c *DeviceClient) now() time.Time {
 		return c.Now()
 	}
 	return time.Now()
+}
+
+func sanitizedResponseDetail(body []byte) string {
+	if len(bytes.TrimSpace(body)) == 0 {
+		return ""
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err == nil {
+		for _, key := range []string{"message", "error_description", "error", "details"} {
+			if v, ok := payload[key].(string); ok && strings.TrimSpace(v) != "" {
+				return config.RedactString(strings.TrimSpace(v))
+			}
+		}
+	}
+	text := strings.TrimSpace(string(body))
+	if len(text) > 300 {
+		text = text[:300]
+	}
+	return config.RedactString(text)
 }

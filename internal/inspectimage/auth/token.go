@@ -15,8 +15,11 @@ type Status struct {
 }
 
 func TokenValid(c config.Config, now time.Time) bool {
-	if c.Auth.CopilotToken == "" || c.Auth.CopilotTokenExpiresAt == "" {
+	if c.Auth.CopilotToken == "" {
 		return false
+	}
+	if c.Auth.CopilotTokenExpiresAt == "" {
+		return true
 	}
 	t, err := time.Parse(time.RFC3339, c.Auth.CopilotTokenExpiresAt)
 	if err != nil {

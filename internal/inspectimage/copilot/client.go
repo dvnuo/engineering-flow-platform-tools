@@ -71,7 +71,7 @@ func (c *Client) postJSON(ctx context.Context, path string, body any, out any) e
 		if strings.Contains(strings.ToLower(msg), "proxy") {
 			code = "proxy_error"
 		}
-		return &APIError{Code: code, Message: "The /responses endpoint could not be reached.", Hint: "Check network, proxy, and Copilot availability.", Status: 502}
+		return &APIError{Code: code, Message: "The /responses endpoint could not be reached. " + iconfig.RedactString(msg), Hint: "Check network, proxy, and Copilot availability.", Status: 502}
 	}
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
@@ -98,33 +98,90 @@ func (c *Client) postJSON(ctx context.Context, path string, body any, out any) e
 		return &APIError{Code: code, Message: message, Hint: hint, Status: resp.StatusCode}
 	}
 	if err := json.Unmarshal(data, out); err != nil {
-		return &APIError{Code: "response_parse_failed", Message: "The /responses response could not be parsed.", Hint: "Retry later; if it persists, report the response shape without tokens.", Status: 502}
+		detail := sanitizedResponseDetail(data)
+		message := "The /responses response could not be parsed. " + iconfig.RedactString(err.Error())
+		if detail != "" {
+			message += " Body: " + detail
+		}
+		return &APIError{Code: "response_parse_failed", Message: message, Hint: "Retry later; if it persists, report the response shape without tokens.", Status: 502}
 	}
 	return nil
 }
 
 func sanitizedResponseDetail(body []byte) string {
-	if len(bytes.TrimSpace(body)) == 0 {
+	trimmed := bytes.TrimSpace(body)
+	if len(trimmed) == 0 {
 		return ""
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(body, &payload); err == nil {
-		if errObj, ok := payload["error"].(map[string]any); ok {
-			for _, key := range []string{"message", "code", "type"} {
-				if v, ok := errObj[key].(string); ok && strings.TrimSpace(v) != "" {
-					return iconfig.RedactString(strings.TrimSpace(v))
-				}
-			}
-		}
-		for _, key := range []string{"message", "error_description", "error", "detail", "details"} {
-			if v, ok := payload[key].(string); ok && strings.TrimSpace(v) != "" {
-				return iconfig.RedactString(strings.TrimSpace(v))
-			}
+	var payload any
+	if err := json.Unmarshal(trimmed, &payload); err == nil {
+		if detail := detailFromValue(payload); detail != "" {
+			return iconfig.RedactString(limitDetail(detail, 1000))
 		}
 	}
-	text := strings.TrimSpace(string(body))
-	if len(text) > 500 {
-		text = text[:500]
+	return iconfig.RedactString(limitDetail(strings.TrimSpace(string(trimmed)), 1000))
+}
+
+func detailFromValue(v any) string {
+	switch x := v.(type) {
+	case string:
+		return strings.TrimSpace(x)
+	case map[string]any:
+		return detailFromMap(x)
+	case []any:
+		parts := make([]string, 0, len(x))
+		for i, item := range x {
+			if i >= 5 {
+				parts = append(parts, "...")
+				break
+			}
+			if detail := detailFromValue(item); detail != "" {
+				parts = append(parts, detail)
+			}
+		}
+		return strings.Join(parts, "; ")
+	case nil:
+		return ""
+	default:
+		b, err := json.Marshal(x)
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(b))
 	}
-	return iconfig.RedactString(text)
+}
+
+func detailFromMap(m map[string]any) string {
+	keys := []string{"message", "error_description", "code", "type", "param", "detail", "details", "status", "statusCode", "request_id", "requestId"}
+	parts := make([]string, 0, len(keys)+1)
+	if errValue, ok := m["error"]; ok {
+		if detail := detailFromValue(errValue); detail != "" {
+			parts = append(parts, "error="+detail)
+		}
+	}
+	for _, key := range keys {
+		value, ok := m[key]
+		if !ok {
+			continue
+		}
+		if detail := detailFromValue(value); detail != "" {
+			parts = append(parts, key+"="+detail)
+		}
+	}
+	if len(parts) > 0 {
+		return strings.Join(parts, "; ")
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func limitDetail(s string, max int) string {
+	s = strings.TrimSpace(s)
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "...(truncated)"
 }

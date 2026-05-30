@@ -16,8 +16,8 @@ func TestRedactRemovesTokens(t *testing.T) {
 }
 
 func TestRedactStringRemovesCopilotSecrets(t *testing.T) {
-	got := RedactString("Authorization: Bearer gho_SECRET tid=SECRET data:image/png;base64,abc123")
-	for _, secret := range []string{"gho_SECRET", "tid=SECRET", "abc123", "Authorization"} {
+	got := RedactString(`Authorization: Bearer gho_SECRET ghp_SECRET tid=SECRET data:image/png;base64,abc123 proxy=https://user:pass@example.com "token":"plain-secret"`)
+	for _, secret := range []string{"gho_SECRET", "ghp_SECRET", "tid=SECRET", "abc123", "Authorization", "user:pass", "plain-secret"} {
 		if strings.Contains(got, secret) {
 			t.Fatalf("secret %q leaked in %q", secret, got)
 		}

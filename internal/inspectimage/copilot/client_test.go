@@ -77,7 +77,7 @@ func TestResponsesHTTPErrorCodes(t *testing.T) {
 func TestResponsesHTTPErrorIncludesSanitizedDetail(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(`{"error":{"message":"bad request gho_SECRET tid=SECRET"}}`))
+		_, _ = w.Write([]byte(`{"error":{"message":"bad request: error: invalid apiVersion gho_SECRET tid=SECRET","code":"invalid_api_version","type":"invalid_request_error","param":"apiVersion"},"request_id":"req_123"}`))
 	}))
 	defer s.Close()
 	c := &Client{BaseURL: s.URL, Token: "token", HTTPClient: s.Client()}
@@ -86,7 +86,30 @@ func TestResponsesHTTPErrorIncludesSanitizedDetail(t *testing.T) {
 		t.Fatal("expected error")
 	}
 	msg := err.Error()
-	if !strings.Contains(msg, "bad request") || strings.Contains(msg, "gho_SECRET") || strings.Contains(msg, "tid=SECRET") {
+	for _, want := range []string{"bad request", "invalid apiVersion", "code=invalid_api_version", "type=invalid_request_error", "param=apiVersion", "request_id=req_123"} {
+		if !strings.Contains(msg, want) {
+			t.Fatalf("missing %q in sanitized error: %s", want, msg)
+		}
+	}
+	for _, secret := range []string{"gho_SECRET", "tid=SECRET", "data:image/png;base64"} {
+		if strings.Contains(msg, secret) {
+			t.Fatalf("secret leaked in sanitized error: %s", msg)
+		}
+	}
+}
+
+func TestResponsesParseErrorIncludesSanitizedBody(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`not-json gho_SECRET tid=SECRET`))
+	}))
+	defer s.Close()
+	c := &Client{BaseURL: s.URL, Token: "token", HTTPClient: s.Client()}
+	err := c.postJSON(context.Background(), "/responses", map[string]any{}, &map[string]any{})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "not-json") || strings.Contains(msg, "gho_SECRET") || strings.Contains(msg, "tid=SECRET") {
 		t.Fatalf("bad sanitized error: %s", msg)
 	}
 }

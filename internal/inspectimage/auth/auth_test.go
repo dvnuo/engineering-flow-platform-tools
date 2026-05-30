@@ -103,12 +103,22 @@ func TestParseCopilotAPIBaseURL(t *testing.T) {
 
 func TestEndpointErrorIncludesSanitizedDetail(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, `{"error":"bad_verification_code"}`, http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":{"message":"bad_verification_code gho_SECRET tid=SECRET","code":"bad_verification_code","type":"oauth_error"},"request_id":"req_123"}`))
 	}))
 	defer s.Close()
 	client := &DeviceClient{HTTPClient: s.Client(), GitHubBaseURL: s.URL, Now: func() time.Time { return fixedNow }}
 	_, err := client.Start(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "bad_verification_code") {
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	msg := err.Error()
+	for _, want := range []string{"bad_verification_code", "code=bad_verification_code", "type=oauth_error", "request_id=req_123"} {
+		if !strings.Contains(msg, want) {
+			t.Fatalf("missing %q in error %s", want, msg)
+		}
+	}
+	if strings.Contains(msg, "gho_SECRET") || strings.Contains(msg, "tid=SECRET") {
 		t.Fatalf("expected detail in error, got %v", err)
 	}
 }

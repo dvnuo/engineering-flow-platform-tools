@@ -225,7 +225,7 @@ func (c *DeviceClient) doJSON(req *http.Request, out any) error {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return &APIError{Code: "auth_failed", Message: "Authentication request failed.", Hint: "Check network, proxy, and GitHub availability.", Status: 502}
+		return &APIError{Code: "auth_failed", Message: "Authentication request failed. " + config.RedactString(err.Error()), Hint: "Check network, proxy, and GitHub availability.", Status: 502}
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
@@ -239,7 +239,12 @@ func (c *DeviceClient) doJSON(req *http.Request, out any) error {
 	}
 	dec := json.NewDecoder(bytes.NewReader(body))
 	if err := dec.Decode(out); err != nil {
-		return &APIError{Code: "response_parse_failed", Message: "Authentication response could not be parsed.", Hint: "Retry later or check GitHub service status.", Status: 502}
+		detail := sanitizedResponseDetail(body)
+		message := "Authentication response could not be parsed. " + config.RedactString(err.Error())
+		if detail != "" {
+			message += " Body: " + detail
+		}
+		return &APIError{Code: "response_parse_failed", Message: message, Hint: "Retry later or check GitHub service status.", Status: 502}
 	}
 	return nil
 }
@@ -280,22 +285,81 @@ func (c *DeviceClient) now() time.Time {
 }
 
 func sanitizedResponseDetail(body []byte) string {
-	if len(bytes.TrimSpace(body)) == 0 {
+	trimmed := bytes.TrimSpace(body)
+	if len(trimmed) == 0 {
 		return ""
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(body, &payload); err == nil {
-		for _, key := range []string{"message", "error_description", "error", "details"} {
-			if v, ok := payload[key].(string); ok && strings.TrimSpace(v) != "" {
-				return config.RedactString(strings.TrimSpace(v))
-			}
+	var payload any
+	if err := json.Unmarshal(trimmed, &payload); err == nil {
+		if detail := detailFromValue(payload); detail != "" {
+			return config.RedactString(limitDetail(detail, 1000))
 		}
 	}
-	text := strings.TrimSpace(string(body))
-	if len(text) > 300 {
-		text = text[:300]
+	return config.RedactString(limitDetail(strings.TrimSpace(string(trimmed)), 1000))
+}
+
+func detailFromValue(v any) string {
+	switch x := v.(type) {
+	case string:
+		return strings.TrimSpace(x)
+	case map[string]any:
+		return detailFromMap(x)
+	case []any:
+		parts := make([]string, 0, len(x))
+		for i, item := range x {
+			if i >= 5 {
+				parts = append(parts, "...")
+				break
+			}
+			if detail := detailFromValue(item); detail != "" {
+				parts = append(parts, detail)
+			}
+		}
+		return strings.Join(parts, "; ")
+	case nil:
+		return ""
+	default:
+		b, err := json.Marshal(x)
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(b))
 	}
-	return config.RedactString(text)
+}
+
+func detailFromMap(m map[string]any) string {
+	keys := []string{"message", "error_description", "code", "type", "param", "detail", "details", "status", "statusCode", "request_id", "requestId"}
+	parts := make([]string, 0, len(keys)+1)
+	if errValue, ok := m["error"]; ok {
+		if detail := detailFromValue(errValue); detail != "" {
+			parts = append(parts, "error="+detail)
+		}
+	}
+	for _, key := range keys {
+		value, ok := m[key]
+		if !ok {
+			continue
+		}
+		if detail := detailFromValue(value); detail != "" {
+			parts = append(parts, key+"="+detail)
+		}
+	}
+	if len(parts) > 0 {
+		return strings.Join(parts, "; ")
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func limitDetail(s string, max int) string {
+	s = strings.TrimSpace(s)
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "...(truncated)"
 }
 
 func setCopilotPluginHeaders(h http.Header) {

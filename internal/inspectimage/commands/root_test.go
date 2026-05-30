@@ -79,9 +79,74 @@ func TestVersionJSON(t *testing.T) {
 	}
 }
 
+func TestHelpIncludesDetailedCommandGuidance(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{
+			name: "root",
+			args: []string{"--help"},
+			want: []string{"text-only agents", "GitHub Copilot plugin /responses endpoint", "INSPECT_IMAGE_CONFIG"},
+		},
+		{
+			name: "inspect",
+			args: []string{"inspect", "--help"},
+			want: []string{"Validate one local JPEG", "Remote image URLs", "--preset"},
+		},
+		{
+			name: "auth",
+			args: []string{"auth", "--help"},
+			want: []string{"device-flow login", "Token values are never printed"},
+		},
+		{
+			name: "auth login",
+			args: []string{"auth", "login", "--help"},
+			want: []string{"verification URL", "copilot_token_expires_at"},
+		},
+		{
+			name: "doctor",
+			args: []string{"doctor", "--help"},
+			want: []string{"readiness checks", "error.code=auth_required"},
+		},
+		{
+			name: "schema",
+			args: []string{"schema", "--help"},
+			want: []string{"model and reasoning enums", "image size and MIME type limits"},
+		},
+		{
+			name: "help llm",
+			args: []string{"help", "llm", "--help"},
+			want: []string{"LLM agents", "command catalog"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out := runText(t, nil, tc.args...)
+			for _, want := range tc.want {
+				if !strings.Contains(out, want) {
+					t.Fatalf("help missing %q\n%s", want, out)
+				}
+			}
+		})
+	}
+}
+
 func TestAuthStatusMissingConfigJSON(t *testing.T) {
 	out := run(t, nil, "auth", "status", "--config", filepath.Join(t.TempDir(), "missing.json"), "--json")
 	if out["ok"] != false || out["error"].(map[string]any)["code"] != "auth_required" {
+		t.Fatalf("bad status: %#v", out)
+	}
+}
+
+func TestAuthStatusInvalidConfigReturnsParseDetail(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
+	if err := os.WriteFile(cfgPath, []byte(`{"auth":`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out := run(t, nil, "auth", "status", "--config", cfgPath, "--json")
+	errOut := out["error"].(map[string]any)
+	if errOut["code"] != "config_error" || !strings.Contains(errOut["message"].(string), "unexpected end") {
 		t.Fatalf("bad status: %#v", out)
 	}
 }
@@ -109,6 +174,21 @@ func run(t *testing.T, client interface {
 		t.Fatalf("invalid json err=%v execErr=%v out=%s", uerr, err, b.String())
 	}
 	return out
+}
+
+func runText(t *testing.T, client interface {
+	Responses(context.Context, copilot.ResponsesRequest) (map[string]any, error)
+}, args ...string) string {
+	t.Helper()
+	cmd := NewRootWithClient(client)
+	var b bytes.Buffer
+	cmd.SetOut(&b)
+	cmd.SetErr(&b)
+	cmd.SetArgs(args)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute failed: %v out=%s", err, b.String())
+	}
+	return b.String()
 }
 
 func writePNG(t *testing.T) string {

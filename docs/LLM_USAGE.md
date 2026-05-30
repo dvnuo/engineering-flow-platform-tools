@@ -32,6 +32,7 @@
 - For OCR-like tasks, read `data.result.visible_text`.
 - If `ok=false`, inspect `error.code` and `error.hint`.
 - If `auth_required`, ask the user to run `inspect-image auth login`.
+- For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so this guidance is available during coding sessions.
 
 ## Jira Zephyr Test Management
 

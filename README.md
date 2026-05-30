@@ -52,6 +52,8 @@ inspect-image help llm
 
 Supported image formats: JPEG, PNG, WEBP, GIF. Max size: 3145728 bytes.
 
+For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so Copilot has durable guidance for when and how to invoke this CLI.
+
 ## Quick Install
 
 Download a release artifact for your platform, place `jira`, `confluence`, `browser`, and `inspect-image` on your `PATH`, then run:

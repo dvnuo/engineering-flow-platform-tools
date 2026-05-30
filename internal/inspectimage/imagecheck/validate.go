@@ -6,6 +6,8 @@ import (
 	"errors"
 	"os"
 	"strings"
+
+	"engineering-flow-platform-tools/internal/inspectimage/config"
 )
 
 type ImageInfo struct {
@@ -41,7 +43,7 @@ func Validate(path string, maxBytes int64, allowed []string) (ImageInfo, []strin
 		if errors.Is(err, os.ErrNotExist) {
 			return ImageInfo{}, nil, &ValidationError{Code: "image_not_found", Message: "Image path does not exist.", Hint: "Pass a valid local image path.", Status: 404}
 		}
-		return ImageInfo{}, nil, &ValidationError{Code: "invalid_args", Message: "Image path could not be inspected.", Hint: "Pass a readable local image file.", Status: 400}
+		return ImageInfo{}, nil, &ValidationError{Code: "invalid_args", Message: "Image path could not be inspected. " + config.RedactString(err.Error()), Hint: "Pass a readable local image file.", Status: 400}
 	}
 	if !info.Mode().IsRegular() {
 		return ImageInfo{}, nil, &ValidationError{Code: "not_a_file", Message: "Image path is not a regular file.", Hint: "Pass a local JPEG, PNG, WEBP, or GIF file.", Status: 400}
@@ -51,7 +53,7 @@ func Validate(path string, maxBytes int64, allowed []string) (ImageInfo, []strin
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return ImageInfo{}, nil, &ValidationError{Code: "invalid_args", Message: "Image file could not be read.", Hint: "Check file permissions and retry.", Status: 400}
+		return ImageInfo{}, nil, &ValidationError{Code: "invalid_args", Message: "Image file could not be read. " + config.RedactString(err.Error()), Hint: "Check file permissions and retry.", Status: 400}
 	}
 	mime := DetectMIME(data)
 	if mime == "" {

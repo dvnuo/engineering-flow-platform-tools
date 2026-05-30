@@ -19,6 +19,9 @@ func TestResponsesUsesResponsesPathAndShape(t *testing.T) {
 		if r.Header.Get("Authorization") != "Bearer token" {
 			t.Fatalf("missing auth")
 		}
+		if r.Header.Get("Accept") != "application/vnd.github.copilot-chat-preview+json" || r.Header.Get("Copilot-Integration-Id") != "vscode-chat" || r.Header.Get("Openai-Intent") != "conversation-edits" {
+			t.Fatalf("missing copilot headers: %#v", r.Header)
+		}
 		_ = json.NewDecoder(r.Body).Decode(&got)
 		_, _ = w.Write([]byte(`{"output_text":"{\"answer\":\"ok\"}"}`))
 	}))
@@ -65,5 +68,22 @@ func TestResponsesHTTPErrorCodes(t *testing.T) {
 		if err == nil || err.(*APIError).Code != code {
 			t.Fatalf("status %d code err=%v", status, err)
 		}
+	}
+}
+
+func TestResponsesHTTPErrorIncludesSanitizedDetail(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":{"message":"bad request gho_SECRET tid=SECRET"}}`))
+	}))
+	defer s.Close()
+	c := &Client{BaseURL: s.URL, Token: "token", HTTPClient: s.Client()}
+	err := c.postJSON(context.Background(), "/responses", map[string]any{}, &map[string]any{})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "bad request") || strings.Contains(msg, "gho_SECRET") || strings.Contains(msg, "tid=SECRET") {
+		t.Fatalf("bad sanitized error: %s", msg)
 	}
 }

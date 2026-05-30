@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -16,11 +18,12 @@ import (
 const defaultGitHubClientID = "Iv1.b507a08c87ecfe98"
 
 type DeviceClient struct {
-	HTTPClient    *http.Client
-	GitHubBaseURL string
-	ClientID      string
-	Scopes        string
-	Now           func() time.Time
+	HTTPClient              *http.Client
+	GitHubBaseURL           string
+	CopilotGitHubAPIBaseURL string
+	ClientID                string
+	Scopes                  string
+	Now                     func() time.Time
 }
 
 type DeviceStart struct {
@@ -59,11 +62,18 @@ func (c *DeviceClient) Login(ctx context.Context, cfg config.Config, out io.Writ
 	if err != nil {
 		return cfg, LoginResult{}, err
 	}
+	copilotToken, expiresAt, apiBaseURL, err := c.ExchangeCopilotToken(ctx, ghToken)
+	if err != nil {
+		return cfg, LoginResult{}, err
+	}
 	now := c.now().UTC().Format(time.RFC3339)
 	cfg.Auth.GitHubAccessToken = ghToken
-	cfg.Auth.CopilotToken = ghToken
-	cfg.Auth.CopilotTokenExpiresAt = ""
+	cfg.Auth.CopilotToken = copilotToken
+	cfg.Auth.CopilotTokenExpiresAt = expiresAt.UTC().Format(time.RFC3339)
 	cfg.Auth.UpdatedAt = now
+	if apiBaseURL != "" {
+		cfg.API.BaseURL = apiBaseURL
+	}
 	if cfg.Auth.GitHubHost == "" {
 		cfg.Auth.GitHubHost = "github.com"
 	}
@@ -138,6 +148,45 @@ func (c *DeviceClient) Poll(ctx context.Context, start DeviceStart) (string, err
 	}
 }
 
+type ExchangedToken struct {
+	Token      string
+	ExpiresAt  time.Time
+	APIBaseURL string
+}
+
+func (c *DeviceClient) ExchangeCopilotToken(ctx context.Context, sourceCredential string) (string, time.Time, string, error) {
+	token, err := c.ExchangeCopilotInternalToken(ctx, sourceCredential)
+	if err != nil {
+		return "", time.Time{}, "", err
+	}
+	return token.Token, token.ExpiresAt, token.APIBaseURL, nil
+}
+
+func (c *DeviceClient) ExchangeCopilotInternalToken(ctx context.Context, sourceCredential string) (ExchangedToken, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(c.copilotGitHubAPIBase(), "/")+"/copilot_internal/v2/token", nil)
+	if err != nil {
+		return ExchangedToken{}, err
+	}
+	req.Header.Set("Authorization", "Bearer "+sourceCredential)
+	req.Header.Set("Accept", "application/json")
+	setCopilotPluginHeaders(req.Header)
+	var resp struct {
+		Token     string `json:"token"`
+		ExpiresAt int64  `json:"expires_at"`
+	}
+	if err := c.doJSON(req, &resp); err != nil {
+		return ExchangedToken{}, err
+	}
+	if resp.Token == "" || resp.ExpiresAt <= 0 {
+		return ExchangedToken{}, &APIError{Code: "auth_failed", Message: "Copilot token exchange returned an invalid response.", Hint: "Run inspect-image auth login again and confirm GitHub Copilot access for this account.", Status: 401}
+	}
+	return ExchangedToken{
+		Token:      resp.Token,
+		ExpiresAt:  time.Unix(resp.ExpiresAt, 0).UTC(),
+		APIBaseURL: ParseCopilotAPIBaseURL(resp.Token),
+	}, nil
+}
+
 func (c *DeviceClient) User(ctx context.Context, githubToken string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(c.githubBase(), "/")+"/user", nil)
 	if err != nil {
@@ -165,7 +214,7 @@ func (c *DeviceClient) newJSONRequest(ctx context.Context, endpoint string, body
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "GitHubCopilotChat/0.35.0")
+	setCopilotPluginHeaders(req.Header)
 	return req, nil
 }
 
@@ -200,6 +249,13 @@ func (c *DeviceClient) githubBase() string {
 		return c.GitHubBaseURL
 	}
 	return "https://github.com"
+}
+
+func (c *DeviceClient) copilotGitHubAPIBase() string {
+	if c.CopilotGitHubAPIBaseURL != "" {
+		return c.CopilotGitHubAPIBaseURL
+	}
+	return "https://api.github.com"
 }
 
 func (c *DeviceClient) clientID() string {
@@ -240,4 +296,40 @@ func sanitizedResponseDetail(body []byte) string {
 		text = text[:300]
 	}
 	return config.RedactString(text)
+}
+
+func setCopilotPluginHeaders(h http.Header) {
+	h.Set("User-Agent", "GitHubCopilotChat/0.35.0")
+	h.Set("Editor-Version", "vscode/1.107.0")
+	h.Set("Editor-Plugin-Version", "copilot-chat/0.35.0")
+	h.Set("Copilot-Integration-Id", "vscode-chat")
+}
+
+var proxyEndpointPattern = regexp.MustCompile(`(?:^|[;&,\s])proxy-ep=([^;&,\s]+)`)
+
+func ParseCopilotAPIBaseURL(token string) string {
+	match := proxyEndpointPattern.FindStringSubmatch(token)
+	if len(match) < 2 {
+		return ""
+	}
+	raw, err := url.QueryUnescape(strings.TrimSpace(match[1]))
+	if err != nil {
+		raw = strings.TrimSpace(match[1])
+	}
+	parsed, err := url.Parse(raw)
+	host := ""
+	if err == nil {
+		host = parsed.Host
+		if host == "" {
+			host = strings.SplitN(parsed.Path, "/", 2)[0]
+		}
+	}
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return ""
+	}
+	if strings.HasPrefix(host, "proxy.") {
+		host = "api." + strings.TrimPrefix(host, "proxy.")
+	}
+	return "https://" + strings.TrimRight(host, "/")
 }

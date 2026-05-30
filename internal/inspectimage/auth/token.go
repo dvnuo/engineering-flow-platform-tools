@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"strings"
 	"time"
 
 	"engineering-flow-platform-tools/internal/inspectimage/config"
@@ -14,8 +15,28 @@ type Status struct {
 	CopilotTokenExpiresAt string `json:"copilot_token_expires_at,omitempty"`
 }
 
+func NeedsExchange(c config.Config) bool {
+	if c.Auth.GitHubAccessToken == "" {
+		return false
+	}
+	token := strings.TrimSpace(c.Auth.CopilotToken)
+	if token == "" {
+		return true
+	}
+	if token == strings.TrimSpace(c.Auth.GitHubAccessToken) {
+		return true
+	}
+	if strings.HasPrefix(token, "gho_") || strings.HasPrefix(token, "ghu_") {
+		return true
+	}
+	return false
+}
+
 func TokenValid(c config.Config, now time.Time) bool {
 	if c.Auth.CopilotToken == "" {
+		return false
+	}
+	if NeedsExchange(c) {
 		return false
 	}
 	if c.Auth.CopilotTokenExpiresAt == "" {

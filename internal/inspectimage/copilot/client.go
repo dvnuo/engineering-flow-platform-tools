@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	iconfig "engineering-flow-platform-tools/internal/inspectimage/config"
 )
 
 type Client struct {
@@ -47,7 +49,14 @@ func (c *Client) postJSON(ctx context.Context, path string, body any, out any) e
 	}
 	req.Header.Set("Authorization", "Bearer "+c.Token)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", "application/vnd.github.copilot-chat-preview+json")
+	req.Header.Set("X-GitHub-Api-Version", "2023-06-01")
+	req.Header.Set("User-Agent", "GitHubCopilotChat/0.35.0")
+	req.Header.Set("Editor-Version", "vscode/1.107.0")
+	req.Header.Set("Editor-Plugin-Version", "copilot-chat/0.35.0")
+	req.Header.Set("Copilot-Integration-Id", "vscode-chat")
+	req.Header.Set("Openai-Intent", "conversation-edits")
+	req.Header.Set("x-initiator", "agent")
 	client := c.HTTPClient
 	if client == nil {
 		client = http.DefaultClient
@@ -82,10 +91,41 @@ func (c *Client) postJSON(ctx context.Context, path string, body any, out any) e
 				code = "responses_api_unavailable"
 			}
 		}
-		return &APIError{Code: code, Message: "The /responses endpoint returned an error.", Hint: hint, Status: resp.StatusCode}
+		detail := sanitizedResponseDetail(data)
+		message := "The /responses endpoint returned an error."
+		if detail != "" {
+			message += " " + detail
+		}
+		return &APIError{Code: code, Message: message, Hint: hint, Status: resp.StatusCode}
 	}
 	if err := json.Unmarshal(data, out); err != nil {
 		return &APIError{Code: "response_parse_failed", Message: "The /responses response could not be parsed.", Hint: "Retry later; if it persists, report the response shape without tokens.", Status: 502}
 	}
 	return nil
+}
+
+func sanitizedResponseDetail(body []byte) string {
+	if len(bytes.TrimSpace(body)) == 0 {
+		return ""
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err == nil {
+		if errObj, ok := payload["error"].(map[string]any); ok {
+			for _, key := range []string{"message", "code", "type"} {
+				if v, ok := errObj[key].(string); ok && strings.TrimSpace(v) != "" {
+					return iconfig.RedactString(strings.TrimSpace(v))
+				}
+			}
+		}
+		for _, key := range []string{"message", "error_description", "error", "detail", "details"} {
+			if v, ok := payload[key].(string); ok && strings.TrimSpace(v) != "" {
+				return iconfig.RedactString(strings.TrimSpace(v))
+			}
+		}
+	}
+	text := strings.TrimSpace(string(body))
+	if len(text) > 500 {
+		text = text[:500]
+	}
+	return iconfig.RedactString(text)
 }

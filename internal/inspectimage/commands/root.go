@@ -67,7 +67,7 @@ func inspectCmd(o *Opts, client inspect.ResponsesClient) *cobra.Command {
 				return printErr(cmd, o, err)
 			}
 			var refreshErr error
-			cfg, refreshErr = ensureCopilotToken(cfg, cfgPath)
+			cfg, refreshErr = ensureCopilotToken(cmd.Context(), cfg, cfgPath)
 			if refreshErr != nil {
 				return printErr(cmd, o, refreshErr)
 			}
@@ -112,8 +112,8 @@ func inspectLocalOnly(cfg config.Config, opts inspect.Options) (imagecheck.Image
 	return imagecheck.Validate(opts.ImagePath, cfg.Limits.MaxImageBytes, cfg.Limits.AllowedMIMETypes)
 }
 
-func ensureCopilotToken(cfg config.Config, path string) (config.Config, error) {
-	if iauth.TokenValid(cfg, time.Now()) {
+func ensureCopilotToken(ctx context.Context, cfg config.Config, path string) (config.Config, error) {
+	if iauth.TokenValid(cfg, time.Now()) && !iauth.NeedsExchange(cfg) {
 		return cfg, nil
 	}
 	if cfg.Auth.CopilotToken == "" && cfg.Auth.GitHubAccessToken == "" {
@@ -122,8 +122,16 @@ func ensureCopilotToken(cfg config.Config, path string) (config.Config, error) {
 	if cfg.Auth.GitHubAccessToken == "" {
 		return cfg, &copilot.APIError{Code: "auth_expired", Message: "GitHub Copilot authentication expired.", Hint: "Run inspect-image auth login.", Status: 401}
 	}
-	cfg.Auth.CopilotToken = cfg.Auth.GitHubAccessToken
-	cfg.Auth.CopilotTokenExpiresAt = ""
+	client := &iauth.DeviceClient{HTTPClient: copilot.NewHTTPClient(time.Duration(cfg.API.TimeoutSeconds) * time.Second)}
+	token, expires, apiBaseURL, err := client.ExchangeCopilotToken(ctx, cfg.Auth.GitHubAccessToken)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.Auth.CopilotToken = token
+	cfg.Auth.CopilotTokenExpiresAt = expires.UTC().Format(time.RFC3339)
+	if apiBaseURL != "" {
+		cfg.API.BaseURL = apiBaseURL
+	}
 	cfg.Auth.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	if err := config.Save(path, cfg); err != nil {
 		return cfg, &copilot.APIError{Code: "config_error", Message: "Config file could not be saved.", Hint: "Check permissions for ~/.copilot/inspect-image.json.", Status: 500}

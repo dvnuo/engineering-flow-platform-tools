@@ -48,6 +48,11 @@ func TestDeviceFlowWithMockEndpoints(t *testing.T) {
 				t.Fatalf("poll request did not match portal headers")
 			}
 			_, _ = w.Write([]byte(`{"access_token":"github-token"}`))
+		case "/copilot_internal/v2/token":
+			if r.Header.Get("Authorization") != "Bearer github-token" || r.Header.Get("Editor-Version") != "vscode/1.107.0" || r.Header.Get("Copilot-Integration-Id") != "vscode-chat" {
+				t.Fatalf("exchange request did not match runtime headers")
+			}
+			_, _ = w.Write([]byte(`{"token":"tid=abc;proxy-ep=proxy.individual.githubcopilot.com;","expires_at":1780000000}`))
 		case "/user":
 			_, _ = w.Write([]byte(`{"login":"octocat"}`))
 		default:
@@ -55,14 +60,17 @@ func TestDeviceFlowWithMockEndpoints(t *testing.T) {
 		}
 	}))
 	defer s.Close()
-	client := &DeviceClient{HTTPClient: s.Client(), GitHubBaseURL: s.URL, Now: func() time.Time { return fixedNow }}
+	client := &DeviceClient{HTTPClient: s.Client(), GitHubBaseURL: s.URL, CopilotGitHubAPIBaseURL: s.URL, Now: func() time.Time { return fixedNow }}
 	var human strings.Builder
 	cfg, result, err := client.Login(context.Background(), config.Default(), &human)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Auth.GitHubAccessToken != "github-token" || cfg.Auth.CopilotToken != "github-token" || result.GitHubUser != "octocat" {
+	if cfg.Auth.GitHubAccessToken != "github-token" || cfg.Auth.CopilotToken == "" || cfg.Auth.CopilotToken == "github-token" || result.GitHubUser != "octocat" {
 		t.Fatalf("bad login cfg=%#v result=%#v", cfg.Auth, result)
+	}
+	if cfg.Auth.CopilotTokenExpiresAt == "" || cfg.API.BaseURL != "https://api.individual.githubcopilot.com" {
+		t.Fatalf("exchange metadata not stored: cfg=%#v", cfg)
 	}
 	if strings.Contains(human.String(), "github-token") {
 		t.Fatal("token leaked")
@@ -74,6 +82,22 @@ func TestTokenWithoutExpiryIsValid(t *testing.T) {
 	cfg.Auth.CopilotToken = "token"
 	if !TokenValid(cfg, fixedNow) {
 		t.Fatal("expected portal-style token without expiry to be valid")
+	}
+}
+
+func TestNeedsExchangeForOAuthToken(t *testing.T) {
+	cfg := config.Default()
+	cfg.Auth.GitHubAccessToken = "gho_source"
+	cfg.Auth.CopilotToken = "gho_source"
+	if !NeedsExchange(cfg) || TokenValid(cfg, fixedNow) {
+		t.Fatal("expected source token to require exchange")
+	}
+}
+
+func TestParseCopilotAPIBaseURL(t *testing.T) {
+	got := ParseCopilotAPIBaseURL("tid=abc;proxy-ep=proxy.enterprise.githubcopilot.com;")
+	if got != "https://api.enterprise.githubcopilot.com" {
+		t.Fatalf("base=%q", got)
 	}
 }
 

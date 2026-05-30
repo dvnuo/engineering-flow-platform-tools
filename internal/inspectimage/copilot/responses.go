@@ -9,13 +9,20 @@ import (
 )
 
 type ResponsesRequest struct {
-	Model     string             `json:"model"`
-	Reasoning ResponsesReasoning `json:"reasoning"`
-	Input     []ResponsesInput   `json:"input"`
+	Model           string              `json:"model"`
+	Instructions    string              `json:"instructions,omitempty"`
+	Reasoning       ResponsesReasoning  `json:"reasoning"`
+	Input           []ResponsesInput    `json:"input"`
+	MaxOutputTokens int                 `json:"max_output_tokens,omitempty"`
+	Text            ResponsesTextFormat `json:"text,omitempty"`
 }
 
 type ResponsesReasoning struct {
 	Effort string `json:"effort"`
+}
+
+type ResponsesTextFormat struct {
+	Format map[string]string `json:"format,omitempty"`
 }
 
 type ResponsesInput struct {
@@ -38,8 +45,11 @@ func BuildRequest(model, reasoning, prompt string, img imagecheck.ImageInfo) (Re
 	}
 	dataURL := "data:" + img.MIMEType + ";base64," + base64.StdEncoding.EncodeToString(img.Data)
 	return ResponsesRequest{
-		Model:     model,
-		Reasoning: ResponsesReasoning{Effort: reasoning},
+		Model:           model,
+		Instructions:    "Inspect exactly one local image. Return concise structured JSON. Do not invent details. Mark unreadable text as uncertain.",
+		Reasoning:       ResponsesReasoning{Effort: reasoning},
+		MaxOutputTokens: 4096,
+		Text:            ResponsesTextFormat{Format: map[string]string{"type": "text"}},
 		Input: []ResponsesInput{{
 			Role: "user",
 			Content: []ResponsesContent{

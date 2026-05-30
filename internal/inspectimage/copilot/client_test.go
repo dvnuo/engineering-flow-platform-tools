@@ -22,6 +22,9 @@ func TestResponsesUsesResponsesPathAndShape(t *testing.T) {
 		if r.Header.Get("Accept") != "application/vnd.github.copilot-chat-preview+json" || r.Header.Get("Copilot-Integration-Id") != "vscode-chat" || r.Header.Get("Openai-Intent") != "conversation-edits" {
 			t.Fatalf("missing copilot headers: %#v", r.Header)
 		}
+		if r.Header.Get("X-GitHub-Api-Version") != "" {
+			t.Fatalf("responses request must not send X-GitHub-Api-Version: %#v", r.Header)
+		}
 		_ = json.NewDecoder(r.Body).Decode(&got)
 		_, _ = w.Write([]byte(`{"output_text":"{\"answer\":\"ok\"}"}`))
 	}))

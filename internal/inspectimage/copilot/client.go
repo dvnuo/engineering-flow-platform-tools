@@ -50,7 +50,6 @@ func (c *Client) postJSON(ctx context.Context, path string, body any, out any) e
 	req.Header.Set("Authorization", "Bearer "+c.Token)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/vnd.github.copilot-chat-preview+json")
-	req.Header.Set("X-GitHub-Api-Version", "2023-06-01")
 	req.Header.Set("User-Agent", "GitHubCopilotChat/0.35.0")
 	req.Header.Set("Editor-Version", "vscode/1.107.0")
 	req.Header.Set("Editor-Plugin-Version", "copilot-chat/0.35.0")

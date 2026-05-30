@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
 $Version = '0.1.0'
-if ($args.Count -gt 0 -and $args[0] -eq '--snapshot') {
+if ($args.Count -gt 0 -and ($args[0] -eq '--snapshot' -or $args[0] -eq '-Snapshot')) {
   $Version = '0.1.0-snapshot'
 }
 $Commit = (git rev-parse --short HEAD 2>$null)
@@ -19,6 +19,7 @@ function Build-One($goos, $goarch, $exe) {
   go build -ldflags "$Ldflags" -o "$outdir/jira$exe" ./cmd/jira
   go build -ldflags "$Ldflags" -o "$outdir/confluence$exe" ./cmd/confluence
   go build -ldflags "$Ldflags" -o "$outdir/browser$exe" ./cmd/browser
+  go build -ldflags "$Ldflags" -o "$outdir/inspect-image$exe" ./cmd/inspect-image
 }
 
 Build-One 'linux' 'amd64' ''

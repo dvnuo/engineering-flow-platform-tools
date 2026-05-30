@@ -5,6 +5,7 @@ This repository hosts cross-platform Go-based CLI tools for agent, runtime, shel
 - `jira`
 - `confluence`
 - `browser`
+- `inspect-image`
 
 Jira and Confluence are the first tool family in this repository. Future tools may be added as separate command binaries under `cmd/<tool-name>`.
 
@@ -34,14 +35,32 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 `browser` is a CLI binary invoked through Bash. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. It uses a dedicated browser profile by default and does not export cookies or tokens.
 
+### Inspect Image
+
+`inspect-image` is a CLI binary invoked through Bash. It lets text-only agents inspect exactly one local image using a GitHub Copilot plugin backed vision model through `/responses`.
+
+Examples:
+
+```bash
+inspect-image auth login
+inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --json
+inspect-image inspect --image ./diagram.webp --preset diagram --prompt "Explain this architecture diagram." --json
+inspect-image commands --json
+inspect-image schema inspect --json
+inspect-image help llm
+```
+
+Supported image formats: JPEG, PNG, WEBP, GIF. Max size: 3145728 bytes.
+
 ## Quick Install
 
-Download a release artifact for your platform, place `jira`, `confluence`, and `browser` on your `PATH`, then run:
+Download a release artifact for your platform, place `jira`, `confluence`, `browser`, and `inspect-image` on your `PATH`, then run:
 
 ```bash
 jira version --json
 confluence version --json
 browser version --json
+inspect-image version --json
 ```
 
 ## Config File
@@ -148,6 +167,7 @@ Agents should first inspect available commands:
 jira commands --json
 confluence commands --json
 browser commands --json
+inspect-image commands --json
 ```
 
 Then inspect the exact schema before calling a command:
@@ -156,6 +176,7 @@ Then inspect the exact schema before calling a command:
 jira schema issue.create --json
 confluence schema page.create --json
 browser schema probe --json
+inspect-image schema inspect --json
 ```
 
 Always use `--json`, inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
@@ -223,4 +244,4 @@ go vet ./...
 
 Tags matching `v*` trigger the release workflow. Release archives are named `engineering-flow-platform-tools_<version>_<goos>_<goarch>`.
 
-Current archives include `jira`, `confluence`, `browser`, README, and install/config/LLM usage docs. Future archives may include more tool binaries from `cmd/<tool-name>`.
+Current archives include `jira`, `confluence`, `browser`, `inspect-image`, README, and docs.

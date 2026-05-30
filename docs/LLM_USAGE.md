@@ -20,6 +20,19 @@
 - Do not treat `negotiate_401_seen` as definitive proof; it is an indicator only.
 - In OpenCode runtime, this command requires a browser executable in the runtime image. If no browser is installed, expect `browser_not_found`.
 
+## Image Inspection
+
+- Use `inspect-image` when you need to understand a local image, screenshot, UI, diagram, chart, or visible text.
+- Prefer it over OCR for screenshots, UI states, diagrams, charts, and visual errors.
+- `inspect-image` is a CLI binary invoked through Bash, not a Portal tool, runtime built-in tool, MCP tool, or Web UI component.
+- Always call `inspect-image schema inspect --json` before constructing a complex command.
+- Always use `--json`.
+- Use `inspect-image inspect --image <path> --prompt "<task>" --json`.
+- Read `data.result.answer` first.
+- For OCR-like tasks, read `data.result.visible_text`.
+- If `ok=false`, inspect `error.code` and `error.hint`.
+- If `auth_required`, ask the user to run `inspect-image auth login`.
+
 ## Jira Zephyr Test Management
 
 - If a Jira URL contains `selectedItem=com.thed.zephyr.je`, treat it as a Zephyr test-management page.
@@ -81,6 +94,7 @@ jira schema zephyr.execution.bulk-update-status --json
 confluence schema page.create --json
 confluence schema page.update --json
 browser schema probe --json
+inspect-image schema inspect --json
 ```
 
 The `required` field lists mandatory arguments and flags. The `flags` field includes type and description metadata suitable for tool planning.

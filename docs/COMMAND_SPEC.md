@@ -329,6 +329,24 @@ confluence page get --url <page-url>
 - confluence api put <path>
 - confluence api delete <path>
 
+## Inspect Image
+
+### Basic
+- inspect-image inspect
+- inspect-image auth login
+- inspect-image auth status
+- inspect-image auth logout
+- inspect-image doctor
+- inspect-image models
+- inspect-image commands
+- inspect-image schema
+- inspect-image help llm
+- inspect-image version
+
+Optional future/P1:
+
+- inspect-image prepare
+
 
 ## Contract Notes
 

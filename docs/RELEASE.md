@@ -8,4 +8,4 @@ The release workflow builds linux, darwin, and windows binaries for amd64 and ar
 - `engineering-flow-platform-tools_0.1.0_darwin_arm64.tar.gz`
 - `engineering-flow-platform-tools_0.1.0_windows_amd64.zip`
 
-Each archive includes `jira`, `confluence`, `README.md`, `docs/INSTALL.md`, `docs/CONFIG.md`, and `docs/LLM_USAGE.md`.
+Each archive includes `jira`, `confluence`, `browser`, `inspect-image`, `README.md`, and the docs directory content.

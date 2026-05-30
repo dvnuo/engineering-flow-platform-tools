@@ -1,0 +1,246 @@
+package auth
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
+	"engineering-flow-platform-tools/internal/inspectimage/config"
+)
+
+const defaultGitHubClientID = "Iv1.b507a08c87ecfe98"
+
+type DeviceClient struct {
+	HTTPClient      *http.Client
+	GitHubBaseURL   string
+	CopilotTokenURL string
+	ClientID        string
+	Scopes          string
+	Now             func() time.Time
+}
+
+type DeviceStart struct {
+	DeviceCode      string `json:"device_code"`
+	UserCode        string `json:"user_code"`
+	VerificationURI string `json:"verification_uri"`
+	ExpiresIn       int    `json:"expires_in"`
+	Interval        int    `json:"interval"`
+}
+
+type LoginResult struct {
+	AuthConfigured        bool   `json:"auth_configured"`
+	GitHubHost            string `json:"github_host"`
+	GitHubUser            string `json:"github_user,omitempty"`
+	CopilotTokenExpiresAt string `json:"copilot_token_expires_at,omitempty"`
+}
+
+type APIError struct {
+	Code    string
+	Message string
+	Hint    string
+	Status  int
+}
+
+func (e *APIError) Error() string { return e.Code + ": " + e.Message }
+
+func (c *DeviceClient) Login(ctx context.Context, cfg config.Config, out io.Writer) (config.Config, LoginResult, error) {
+	start, err := c.Start(ctx)
+	if err != nil {
+		return cfg, LoginResult{}, err
+	}
+	if out != nil {
+		fmt.Fprintf(out, "Open: %s\nCode: %s\n", start.VerificationURI, start.UserCode)
+	}
+	ghToken, err := c.Poll(ctx, start)
+	if err != nil {
+		return cfg, LoginResult{}, err
+	}
+	copilotToken, expiresAt, err := c.ExchangeCopilotToken(ctx, ghToken)
+	if err != nil {
+		return cfg, LoginResult{}, err
+	}
+	now := c.now().UTC().Format(time.RFC3339)
+	cfg.Auth.GitHubAccessToken = ghToken
+	cfg.Auth.CopilotToken = copilotToken
+	cfg.Auth.CopilotTokenExpiresAt = expiresAt.UTC().Format(time.RFC3339)
+	cfg.Auth.UpdatedAt = now
+	if cfg.Auth.GitHubHost == "" {
+		cfg.Auth.GitHubHost = "github.com"
+	}
+	user, _ := c.User(ctx, ghToken)
+	cfg.Auth.GitHubUser = user
+	return cfg, LoginResult{AuthConfigured: true, GitHubHost: cfg.Auth.GitHubHost, GitHubUser: cfg.Auth.GitHubUser, CopilotTokenExpiresAt: cfg.Auth.CopilotTokenExpiresAt}, nil
+}
+
+func (c *DeviceClient) Start(ctx context.Context) (DeviceStart, error) {
+	values := url.Values{}
+	values.Set("client_id", c.clientID())
+	values.Set("scope", c.scopes())
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(c.githubBase(), "/")+"/login/device/code", strings.NewReader(values.Encode()))
+	if err != nil {
+		return DeviceStart{}, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	var start DeviceStart
+	if err := c.doJSON(req, &start); err != nil {
+		return start, err
+	}
+	return start, nil
+}
+
+func (c *DeviceClient) Poll(ctx context.Context, start DeviceStart) (string, error) {
+	interval := time.Duration(start.Interval) * time.Second
+	if interval <= 0 {
+		interval = 5 * time.Second
+	}
+	deadline := c.now().Add(time.Duration(start.ExpiresIn) * time.Second)
+	if start.ExpiresIn <= 0 {
+		deadline = c.now().Add(15 * time.Minute)
+	}
+	for {
+		values := url.Values{}
+		values.Set("client_id", c.clientID())
+		values.Set("device_code", start.DeviceCode)
+		values.Set("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(c.githubBase(), "/")+"/login/oauth/access_token", strings.NewReader(values.Encode()))
+		if err != nil {
+			return "", err
+		}
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		var resp struct {
+			AccessToken string `json:"access_token"`
+			Error       string `json:"error"`
+			ErrorDesc   string `json:"error_description"`
+		}
+		err = c.doJSON(req, &resp)
+		if err != nil {
+			return "", err
+		}
+		if resp.AccessToken != "" {
+			return resp.AccessToken, nil
+		}
+		switch resp.Error {
+		case "authorization_pending":
+			if c.now().After(deadline) {
+				return "", &APIError{Code: "auth_poll_pending", Message: "GitHub device authorization is still pending.", Hint: "Re-run inspect-image auth login and complete the device flow before it expires.", Status: 408}
+			}
+			select {
+			case <-ctx.Done():
+				return "", &APIError{Code: "timeout", Message: "Authentication timed out.", Hint: "Retry inspect-image auth login.", Status: 408}
+			case <-time.After(interval):
+			}
+		case "slow_down":
+			interval += 5 * time.Second
+		case "expired_token":
+			return "", &APIError{Code: "auth_expired", Message: "GitHub device code expired.", Hint: "Run inspect-image auth login again.", Status: 401}
+		case "access_denied":
+			return "", &APIError{Code: "auth_failed", Message: "GitHub device authorization was denied.", Hint: "Run inspect-image auth login again and approve the request.", Status: 401}
+		default:
+			return "", &APIError{Code: "auth_failed", Message: "GitHub authentication failed.", Hint: "Run inspect-image auth login again.", Status: 401}
+		}
+	}
+}
+
+func (c *DeviceClient) ExchangeCopilotToken(ctx context.Context, githubToken string) (string, time.Time, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.copilotURL(), nil)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	req.Header.Set("Authorization", "Bearer "+githubToken)
+	req.Header.Set("Accept", "application/json")
+	var resp struct {
+		Token     string `json:"token"`
+		ExpiresAt int64  `json:"expires_at"`
+	}
+	if err := c.doJSON(req, &resp); err != nil {
+		return "", time.Time{}, err
+	}
+	if resp.Token == "" {
+		return "", time.Time{}, &APIError{Code: "auth_failed", Message: "Copilot token exchange failed.", Hint: "Check that GitHub Copilot access is enabled for this account.", Status: 401}
+	}
+	expires := time.Unix(resp.ExpiresAt, 0).UTC()
+	if resp.ExpiresAt == 0 {
+		expires = c.now().Add(30 * time.Minute).UTC()
+	}
+	return resp.Token, expires, nil
+}
+
+func (c *DeviceClient) User(ctx context.Context, githubToken string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(c.githubBase(), "/")+"/user", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+githubToken)
+	req.Header.Set("Accept", "application/json")
+	var resp struct {
+		Login string `json:"login"`
+	}
+	if err := c.doJSON(req, &resp); err != nil {
+		return "", err
+	}
+	return resp.Login, nil
+}
+
+func (c *DeviceClient) doJSON(req *http.Request, out any) error {
+	client := c.HTTPClient
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return &APIError{Code: "auth_failed", Message: "Authentication request failed.", Hint: "Check network, proxy, and GitHub availability.", Status: 502}
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return &APIError{Code: "auth_failed", Message: "Authentication endpoint returned an error.", Hint: "Retry inspect-image auth login.", Status: resp.StatusCode}
+	}
+	dec := json.NewDecoder(bytes.NewReader(body))
+	if err := dec.Decode(out); err != nil {
+		return &APIError{Code: "response_parse_failed", Message: "Authentication response could not be parsed.", Hint: "Retry later or check GitHub service status.", Status: 502}
+	}
+	return nil
+}
+
+func (c *DeviceClient) githubBase() string {
+	if c.GitHubBaseURL != "" {
+		return c.GitHubBaseURL
+	}
+	return "https://github.com"
+}
+
+func (c *DeviceClient) copilotURL() string {
+	if c.CopilotTokenURL != "" {
+		return c.CopilotTokenURL
+	}
+	return "https://api.github.com/copilot_internal/v2/token"
+}
+
+func (c *DeviceClient) clientID() string {
+	if c.ClientID != "" {
+		return c.ClientID
+	}
+	return defaultGitHubClientID
+}
+
+func (c *DeviceClient) scopes() string {
+	if c.Scopes != "" {
+		return c.Scopes
+	}
+	return "read:user"
+}
+
+func (c *DeviceClient) now() time.Time {
+	if c.Now != nil {
+		return c.Now()
+	}
+	return time.Now()
+}

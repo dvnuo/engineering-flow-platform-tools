@@ -35,6 +35,10 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 `browser` is a CLI binary invoked through Bash. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. It uses a dedicated browser profile by default and does not export cookies or tokens.
 
+For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
+
+For Jira and Confluence, copy `cmd/jira/jira-cli.instructions.md` and `cmd/confluence/confluence-cli.instructions.md` into `~/.copilot/instructions/` so Copilot understands the JSON envelope, `--dry-run`, `--yes`, instance selection, and error recovery conventions.
+
 ### Inspect Image
 
 `inspect-image` is a CLI binary invoked through Bash. It lets text-only agents inspect exactly one local image using a GitHub Copilot plugin backed vision model through `/responses`.

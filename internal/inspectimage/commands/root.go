@@ -370,7 +370,7 @@ func helpLLMCmd(o *Opts) *cobra.Command {
 The JSON form includes tips and the command catalog. The text form is suitable for humans or for copying into an agent instruction file.`),
 		Example: strings.TrimSpace(`inspect-image help llm
 inspect-image help llm --json`),
-		Args: cobra.NoArgs,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tips := inspectImageLLMTips()
 			if fmtOut(o) == "json" {

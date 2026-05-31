@@ -79,6 +79,13 @@ func TestVersionJSON(t *testing.T) {
 	}
 }
 
+func TestHelpLLMAcceptsTwoWordCommand(t *testing.T) {
+	out := run(t, nil, "help", "llm", "--json")
+	if out["ok"] != true {
+		t.Fatalf("help llm failed: %#v", out)
+	}
+}
+
 func TestHelpIncludesDetailedCommandGuidance(t *testing.T) {
 	for _, tc := range []struct {
 		name string

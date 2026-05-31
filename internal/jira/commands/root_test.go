@@ -15,6 +15,8 @@ import (
 	"testing"
 
 	"engineering-flow-platform-tools/internal/config"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 func setup(t *testing.T, h http.HandlerFunc) (string, *int) {
@@ -67,6 +69,17 @@ func TestIssueCreateJSONBodyOverrideAndSearchNumbers(t *testing.T) {
 	}
 	if run(t, cfg, "issue", "search", "--jql", "project = PROJ", "--start", "abc")["ok"].(bool) {
 		t.Fatal("bad start should fail")
+	}
+}
+
+func TestHelpIsAnnotatedForVisibleCommands(t *testing.T) {
+	cmd := NewRoot()
+	assertHelpAnnotated(t, cmd)
+	help := runText(t, "", "issue", "transition", "--help")
+	for _, want := range []string{"Transition a Jira issue", "--dry-run", "Jira transition name"} {
+		if !strings.Contains(help, want) {
+			t.Fatalf("issue transition help missing %q\n%s", want, help)
+		}
 	}
 }
 
@@ -142,6 +155,51 @@ func run(t *testing.T, cfg string, args ...string) map[string]interface{} {
 		out["ok"] = false
 	}
 	return out
+}
+
+func runText(t *testing.T, cfg string, args ...string) string {
+	t.Helper()
+	cmd := NewRoot()
+	b := &bytes.Buffer{}
+	cmd.SetOut(b)
+	cmd.SetErr(b)
+	fullArgs := args
+	if cfg != "" {
+		fullArgs = append([]string{"--config", cfg}, args...)
+	}
+	cmd.SetArgs(fullArgs)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute failed: %v out=%s", err, b.String())
+	}
+	return b.String()
+}
+
+func assertHelpAnnotated(t *testing.T, cmd *cobra.Command) {
+	t.Helper()
+	if !cmd.Hidden {
+		if strings.TrimSpace(cmd.Short) == "" {
+			t.Fatalf("%s missing Short", cmd.CommandPath())
+		}
+		if strings.TrimSpace(cmd.Long) == "" {
+			t.Fatalf("%s missing Long", cmd.CommandPath())
+		}
+		cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			if strings.TrimSpace(f.Usage) == "" {
+				t.Fatalf("%s flag --%s missing usage", cmd.CommandPath(), f.Name)
+			}
+		})
+		cmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+			if strings.TrimSpace(f.Usage) == "" {
+				t.Fatalf("%s persistent flag --%s missing usage", cmd.CommandPath(), f.Name)
+			}
+		})
+	}
+	for _, child := range cmd.Commands() {
+		if child.Hidden {
+			continue
+		}
+		assertHelpAnnotated(t, child)
+	}
 }
 func TestAuthHeaderAndIssuePaths(t *testing.T) {
 	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {

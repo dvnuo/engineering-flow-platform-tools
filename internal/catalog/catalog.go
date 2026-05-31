@@ -215,8 +215,14 @@ func inspectImageExplicit(name string) (explicitMeta, bool) {
 			Flags: []string{"config", "json", "format", "verbose"}, Risk: "read", Example: "inspect-image doctor --json"},
 		"models": {Description: "List inspect-image allowed models and reasoning efforts.",
 			Flags: []string{"json", "format", "verbose"}, Risk: "read", Example: "inspect-image models --json"},
+		"commands": {Description: "List available Inspect Image commands with metadata.",
+			Flags: []string{"json", "format", "verbose", "config"}, Risk: "read", Example: "inspect-image commands --json"},
 		"schema": {Description: "Show inspect-image command schema.",
 			Flags: []string{"json", "format", "verbose", "config"}, Required: []string{"command"}, Risk: "read", Example: "inspect-image schema inspect --json"},
+		"help.llm": {Description: "Show Inspect Image usage guidance for LLM agents.",
+			Flags: []string{"json", "format", "verbose", "config"}, Risk: "read", Example: "inspect-image help llm --json"},
+		"version": {Description: "Print CLI version, commit, and build date.",
+			Flags: []string{"json", "format", "verbose", "config"}, Risk: "read", Example: "inspect-image version --json"},
 	}
 	item, ok := items[name]
 	return item, ok
@@ -508,6 +514,24 @@ func flagDescription(command, name string) string {
 		return "Configured instance name."
 	case "config":
 		return "Path to config file."
+	case "base-url":
+		return "Base URL for the Jira or Confluence instance."
+	case "rest-path":
+		return "REST API base path for the instance."
+	case "api-version":
+		return "Jira REST API version."
+	case "default":
+		return "Set the added instance as the default instance."
+	case "username":
+		return "Username for basic authentication."
+	case "auth-type":
+		return "Authentication type: basic_password, basic_api_key, or bearer_token."
+	case "password-stdin":
+		return "Read the account password from stdin."
+	case "api-key-stdin":
+		return "Read the API key from stdin."
+	case "token-stdin":
+		return "Read the bearer token from stdin."
 	case "json":
 		return "Print JSON envelope."
 	case "format":
@@ -554,6 +578,28 @@ func flagDescription(command, name string) string {
 		return "Zephyr attachment entity id."
 	case "file":
 		return "File path to upload."
+	case "id", "page-id":
+		return "Confluence page id."
+	case "parent-id":
+		return "Confluence parent page id."
+	case "key":
+		return "Content property key."
+	case "label":
+		return "Confluence label name."
+	case "version":
+		return "Content version number."
+	case "minor-edit":
+		return "Mark a Confluence content update as a minor edit."
+	case "body-format":
+		return "Confluence body representation, such as storage."
+	case "value":
+		return "JSON value to set."
+	case "value-file":
+		return "File containing the JSON value to set."
+	case "json-body":
+		return "Raw JSON request body."
+	case "json-body-file":
+		return "File containing a raw JSON request body."
 	case "jql":
 		return "Jira JQL query."
 	case "zql":
@@ -600,8 +646,10 @@ func flagDescription(command, name string) string {
 		return "Jira transition id."
 	case "to":
 		return "Jira transition name."
+	case "field":
+		return "Additional field assignment, usually key=value or key=JSON."
 	case "fields":
-		return "Comma-separated Jira fields selector."
+		return "Comma-separated fields selector."
 	case "expand":
 		return "Jira expand selector."
 	case "from-csv":
@@ -643,7 +691,7 @@ func flagDescription(command, name string) string {
 	case "legacy":
 		return "Force legacy createmeta endpoint."
 	case "url":
-		return "HTTP or HTTPS URL to open."
+		return "HTTP or HTTPS resource URL."
 	case "selector":
 		return "CSS selector used as a deterministic login-success signal."
 	case "require-selector":
@@ -679,6 +727,10 @@ func flagDescription(command, name string) string {
 	default:
 		return "Command option."
 	}
+}
+
+func FlagDescription(command, name string) string {
+	return flagDescription(command, name)
 }
 
 var explicit = map[string]explicitMeta{

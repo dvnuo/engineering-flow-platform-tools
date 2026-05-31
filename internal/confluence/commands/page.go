@@ -82,7 +82,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		if v == 0 && !o.DryRun {
 			r, e := ref.Ctx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + ref.ID, Query: map[string]string{"expand": "version"}})
 			if e != nil {
-				return print(cmd, o, output.Failure("server_error", "version fetch failed", "", 500))
+				return print(cmd, o, output.Failure("server_error", "version fetch failed: "+httpclient.SanitizeErrorText(e.Error()), "Retry with --version or inspect the upstream error.", 500))
 			}
 			defer r.Body.Close()
 			var m map[string]any
@@ -156,7 +156,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		out, _ := cmd.Flags().GetString("output")
 		if out != "" {
 			if err := os.WriteFile(out, []byte(md), 0644); err != nil {
-				return print(cmd, o, output.Failure("invalid_args", "failed to write --output", "", 400))
+				return print(cmd, o, output.Failure("invalid_args", "failed to write --output: "+httpclient.SanitizeErrorText(err.Error()), "Choose a writable output path.", 400))
 			}
 			return print(cmd, o, output.Success(ref.Ctx.inst.Name, map[string]any{"output": filepath.Clean(out)}))
 		}
@@ -185,7 +185,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		out, _ := cmd.Flags().GetString("output")
 		if out != "" {
 			if err := os.WriteFile(out, []byte(html), 0644); err != nil {
-				return print(cmd, o, output.Failure("invalid_args", "failed to write --output", "", 400))
+				return print(cmd, o, output.Failure("invalid_args", "failed to write --output: "+httpclient.SanitizeErrorText(err.Error()), "Choose a writable output path.", 400))
 			}
 			return print(cmd, o, output.Success(ref.Ctx.inst.Name, map[string]any{"output": filepath.Clean(out)}))
 		}

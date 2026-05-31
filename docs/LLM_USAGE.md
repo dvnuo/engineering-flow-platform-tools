@@ -6,6 +6,7 @@
 - Use --dry-run before write operations.
 - Use --yes for destructive operations.
 - Inspect error.code and error.hint before retrying.
+- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
 
 ## Browser SSO Diagnostics
 

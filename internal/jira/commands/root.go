@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"engineering-flow-platform-tools/internal/catalog"
+	"engineering-flow-platform-tools/internal/clihelp"
 	"engineering-flow-platform-tools/internal/config"
 	"engineering-flow-platform-tools/internal/files"
 	"engineering-flow-platform-tools/internal/httpclient"
@@ -42,6 +43,71 @@ func NewRoot() *cobra.Command {
 	cmd.AddCommand(metadataCmds(o)...)
 	cmd.AddCommand(boardCmd(o), sprintCmd(o), backlogCmd(o))
 	cmd.AddCommand(hiddenCmd(commentCmd(o)), hiddenCmd(worklogCmd(o)), hiddenCmd(agileCmd(o)), hiddenCmd(metaCmd(o)))
+	clihelp.ApplyCatalogHelp(cmd, clihelp.ProductHelp{
+		Product: "jira",
+		Binary:  "jira",
+		Short:   "Operate Jira issues, projects, metadata, Agile resources, and Zephyr test management",
+		Long: strings.TrimSpace(`jira is a terminal-invoked CLI for agents and scripts that need stable JSON access to Jira Server/Data Center resources.
+
+Use it for issues, search, transitions, comments, attachments, projects, users, groups, metadata, filters, dashboards, Agile boards and sprints, and Zephyr test-management resources. Always use --json for agent workflows. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
+
+Configuration uses the shared Atlassian config file, normally ~/.config/atlassian/config.json on Linux/macOS or %APPDATA%\atlassian\config.json on Windows.`),
+		Examples: []string{
+			`jira issue get PROJ-123 --json`,
+			`jira issue search --jql "project = PROJ ORDER BY updated DESC" --json`,
+			`jira issue update PROJ-123 --summary "New summary" --dry-run --json`,
+			`jira zephyr doctor --project PROJ --json`,
+			`jira schema issue.update --json`,
+			`jira help llm --json`,
+		},
+		Instructions: "copy cmd/jira/jira-cli.instructions.md to ~/.copilot/instructions/jira-cli.instructions.md.",
+		Groups: map[string]string{
+			"instance":           "Manage configured Jira instances.",
+			"auth":               "Manage Jira credentials stored in the Atlassian config.",
+			"issue":              "Work with Jira issues by key or URL.",
+			"issue.comment":      "Manage comments on Jira issues.",
+			"issue.attachment":   "Manage attachments on Jira issues.",
+			"issue.worklog":      "Manage Jira issue worklogs.",
+			"issue.link":         "Manage Jira issue links.",
+			"issue.remote-link":  "Manage Jira remote issue links.",
+			"issue.property":     "Read and write Jira issue properties.",
+			"zephyr":             "Work with Zephyr test-management resources through Jira.",
+			"zephyr.status":      "Inspect Zephyr execution status catalogs.",
+			"zephyr.util":        "Inspect Zephyr utility endpoints.",
+			"zephyr.test":        "Work with Jira Test issues under Zephyr.",
+			"zephyr.cycle":       "Work with Zephyr test cycles.",
+			"zephyr.execution":   "Work with Zephyr test executions.",
+			"zephyr.zql":         "Search and inspect Zephyr ZQL metadata.",
+			"zephyr.step-result": "Work with Zephyr step results.",
+			"zephyr.attachment":  "Manage Zephyr attachments.",
+			"zephyr.folder":      "Manage Zephyr folders.",
+			"zephyr.teststep":    "Manage Zephyr test steps.",
+			"zephyr.defect":      "Manage Zephyr execution defects.",
+			"zephyr.report":      "Inspect Zephyr reports.",
+			"zephyr.api":         "Call cataloged or raw Zephyr ZAPI endpoints.",
+			"attachment":         "Read, download, or delete Jira attachments.",
+			"project":            "Inspect Jira projects and project metadata.",
+			"component":          "Manage Jira project components.",
+			"version":            "Manage Jira project versions.",
+			"user":               "Inspect and search Jira users.",
+			"group":              "Inspect Jira groups and members.",
+			"field":              "List Jira fields.",
+			"issue-type":         "List Jira issue types.",
+			"status":             "List Jira statuses.",
+			"priority":           "List Jira priorities.",
+			"resolution":         "List Jira resolutions.",
+			"workflow":           "Inspect Jira workflows.",
+			"permissions":        "Inspect Jira permissions.",
+			"settings":           "Inspect Jira settings.",
+			"config":             "Inspect Jira configuration metadata.",
+			"filter":             "Manage Jira filters.",
+			"dashboard":          "Inspect Jira dashboards.",
+			"api":                "Call raw Jira REST endpoints on the selected instance.",
+			"board":              "Inspect Jira Agile boards.",
+			"sprint":             "Inspect Jira Agile sprints.",
+			"backlog":            "Inspect Jira Agile backlog issues.",
+		},
+	})
 	return cmd
 }
 func fmtOut(o *Opts) string {
@@ -66,13 +132,14 @@ func envelopeError(err error, fallbackCode string) output.Envelope {
 	if errors.As(err, &httpErr) {
 		return output.Failure(httpErr.Code, httpErr.Message, httpErr.Hint, httpErr.Status)
 	}
-	if isStableErrorCode(err.Error()) {
-		return output.Failure(err.Error(), err.Error(), "", 400)
+	msg := httpclient.SanitizeErrorText(err.Error())
+	if isStableErrorCode(msg) {
+		return output.Failure(msg, msg, "", 400)
 	}
 	if fallbackCode == "" {
 		fallbackCode = "server_error"
 	}
-	return output.Failure(fallbackCode, err.Error(), "", 500)
+	return output.Failure(fallbackCode, msg, "", 500)
 }
 
 func isStableErrorCode(code string) bool {
@@ -93,11 +160,11 @@ func readJiraBody(cmd *cobra.Command) (string, error) {
 	if err != nil {
 		switch {
 		case mustS(cmd, "body-file") != "":
-			return "", fmt.Errorf("failed to read --body-file")
+			return "", fmt.Errorf("failed to read --body-file: %w", err)
 		case mustB(cmd, "body-stdin"):
-			return "", fmt.Errorf("failed to read --body-stdin")
+			return "", fmt.Errorf("failed to read --body-stdin: %w", err)
 		default:
-			return "", fmt.Errorf("failed to read body")
+			return "", fmt.Errorf("failed to read body: %w", err)
 		}
 	}
 	return b, nil
@@ -107,9 +174,9 @@ func readJiraJSONValue(cmd *cobra.Command) (interface{}, error) {
 	v, err := files.ReadJSONValueFromFlags(mustS(cmd, "value"), mustS(cmd, "value-file"))
 	if err != nil {
 		if mustS(cmd, "value-file") != "" {
-			return nil, fmt.Errorf("failed to read --value-file")
+			return nil, fmt.Errorf("failed to read --value-file: %w", err)
 		}
-		return nil, fmt.Errorf("invalid --value")
+		return nil, fmt.Errorf("invalid --value: %w", err)
 	}
 	return v, nil
 }

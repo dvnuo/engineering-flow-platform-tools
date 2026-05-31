@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"engineering-flow-platform-tools/internal/catalog"
+	"engineering-flow-platform-tools/internal/clihelp"
 	"engineering-flow-platform-tools/internal/config"
 	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/instance"
@@ -54,6 +55,48 @@ func NewRoot() *cobra.Command {
 	c.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "")
 	c.PersistentFlags().BoolVar(&o.Yes, "yes", false, "")
 	c.AddCommand(commandsCmd(), schemaCmd(), helpLLMCmd(), cliVersionCmd(o), instanceCmd(o), authCmd(o), myselfCmd(o), serverInfoCmd(o), resolveCmd(o), searchCmd(o), cqlCmd(o), spaceCmd(o), pageCmd(o), contentCmd(o), blogCmd(o), labelCmd(o), userGroupCmd(o), groupCmd(o), webhookCmd(o), longtaskCmd(o), attachmentCmd(o), commentCmd(o), hiddenCmd(restrictionCmd(o)), apiCmd(o))
+	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
+		Product: "confluence",
+		Binary:  "confluence",
+		Short:   "Operate Confluence pages, spaces, content, attachments, comments, and search",
+		Long: strings.TrimSpace(`confluence is a terminal-invoked CLI for agents and scripts that need stable JSON access to Confluence Server/Data Center resources.
+
+Use it for pages, spaces, content, blogs, attachments, comments, labels, restrictions, users, groups, long tasks, webhooks, and raw REST calls. Always use --json for agent workflows. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
+
+Configuration uses the shared Atlassian config file, normally ~/.config/atlassian/config.json on Linux/macOS or %APPDATA%\atlassian\config.json on Windows.`),
+		Examples: []string{
+			`confluence page get --id 123 --json`,
+			`confluence page update --id 123 --title "Runbook" --body-file page.html --dry-run --json`,
+			`confluence schema page.update --json`,
+			`confluence help llm --json`,
+		},
+		Instructions: "copy cmd/confluence/confluence-cli.instructions.md to ~/.copilot/instructions/confluence-cli.instructions.md.",
+		Groups: map[string]string{
+			"instance":         "Manage configured Confluence instances.",
+			"auth":             "Manage Confluence credentials stored in the Atlassian config.",
+			"search":           "Search Confluence content and users.",
+			"space":            "Work with Confluence spaces.",
+			"space.permission": "Inspect Confluence space permissions.",
+			"space.property":   "Read and write Confluence space properties.",
+			"page":             "Work with Confluence pages by id, URL, space, or title.",
+			"page.attachment":  "Manage attachments on Confluence pages.",
+			"page.comment":     "Manage comments on Confluence pages.",
+			"page.label":       "Manage labels on Confluence pages.",
+			"page.property":    "Read and write Confluence page properties.",
+			"page.restriction": "Manage Confluence page restrictions.",
+			"page.watcher":     "Manage Confluence page watchers.",
+			"content":          "Work with generic Confluence content resources.",
+			"blog":             "Work with Confluence blog posts.",
+			"label":            "Inspect Confluence labels.",
+			"user":             "Inspect and search Confluence users.",
+			"group":            "Inspect Confluence groups and members.",
+			"webhook":          "Manage Confluence webhooks.",
+			"longtask":         "Inspect Confluence long-running tasks.",
+			"attachment":       "Read, download, or delete Confluence attachments.",
+			"comment":          "Read, update, or delete Confluence comments.",
+			"api":              "Call raw Confluence REST endpoints on the selected instance.",
+		},
+	})
 	return c
 }
 func print(cmd *cobra.Command, o *Opts, e output.Envelope) error {
@@ -71,13 +114,14 @@ func envelopeError(err error, fallbackCode string) output.Envelope {
 	if errors.As(err, &httpErr) {
 		return output.Failure(httpErr.Code, httpErr.Message, httpErr.Hint, httpErr.Status)
 	}
-	if isStableErrorCode(err.Error()) {
-		return output.Failure(err.Error(), err.Error(), "", 400)
+	msg := httpclient.SanitizeErrorText(err.Error())
+	if isStableErrorCode(msg) {
+		return output.Failure(msg, msg, "", 400)
 	}
 	if fallbackCode == "" {
 		fallbackCode = "server_error"
 	}
-	return output.Failure(fallbackCode, err.Error(), "", 500)
+	return output.Failure(fallbackCode, msg, "", 500)
 }
 
 func isStableErrorCode(code string) bool {

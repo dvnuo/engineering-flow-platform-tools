@@ -86,6 +86,26 @@ func TestHelpLLMAcceptsTwoWordCommand(t *testing.T) {
 	}
 }
 
+func TestHelpLLMRequiresInspectImageOnlyForImageAnalysis(t *testing.T) {
+	out := run(t, nil, "help", "llm", "--json")
+	tips := out["data"].(map[string]any)["tips"].([]any)
+	joined := ""
+	for _, tip := range tips {
+		joined += tip.(string) + "\n"
+	}
+	for _, want := range []string{
+		"only image-analysis path",
+		"Do not use OCR tools as the primary path",
+		"do not write Python",
+		"auth_required or auth_expired",
+		"Do not fall back to OCR",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("help llm tips missing %q\n%s", want, joined)
+		}
+	}
+}
+
 func TestHelpIncludesDetailedCommandGuidance(t *testing.T) {
 	for _, tc := range []struct {
 		name string

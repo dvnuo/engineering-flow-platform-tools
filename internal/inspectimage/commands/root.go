@@ -399,12 +399,14 @@ func inspectImageLLMTips() []string {
 	return []string{
 		"Always use --json.",
 		"Use inspect-image inspect --image <path> --prompt <task> --json.",
+		"For image analysis, recognition, screenshot understanding, UI inspection, diagrams, charts, visual errors, or visible text in an image, use inspect-image as the only image-analysis path.",
+		"Do not use OCR tools as the primary path, and do not write Python/OpenCV/Tesseract/image-parser scripts to recognize or interpret image content.",
 		"Accepts exactly one JPEG, PNG, WEBP, or GIF image up to 3145728 bytes.",
-		"Prefer this over OCR for screenshots, UI states, diagrams, charts, and visual errors.",
 		"Read data.result.answer first.",
 		"For OCR tasks, read data.result.visible_text.",
 		"If ok=false, inspect error.code and error.hint before retrying.",
-		"If auth_required, run inspect-image auth login.",
+		"If auth_required or auth_expired, ask the user to run inspect-image auth login, wait for completion, then retry inspect-image inspect --json.",
+		"Do not fall back to OCR, Python image recognition, manual guessing, or another image-analysis approach when auth is missing.",
 	}
 }
 

@@ -24,7 +24,8 @@
 ## Image Inspection
 
 - Use `inspect-image` when you need to understand a local image, screenshot, UI, diagram, chart, or visible text.
-- Prefer it over OCR for screenshots, UI states, diagrams, charts, and visual errors.
+- For image analysis, recognition, screenshot understanding, UI state inspection, diagram interpretation, chart reading, visual error analysis, or visible-text extraction from an image, use `inspect-image` as the only image-analysis path.
+- Do not use OCR tools as the primary path, and do not write Python/OpenCV/Tesseract/image-parser scripts to recognize or interpret image content.
 - `inspect-image` is a CLI binary invoked through Bash, not a Portal tool, runtime built-in tool, MCP tool, or Web UI component.
 - Always call `inspect-image schema inspect --json` before constructing a complex command.
 - Always use `--json`.
@@ -32,7 +33,7 @@
 - Read `data.result.answer` first.
 - For OCR-like tasks, read `data.result.visible_text`.
 - If `ok=false`, inspect `error.code` and `error.hint`.
-- If `auth_required`, ask the user to run `inspect-image auth login`.
+- If `auth_required` or `auth_expired`, ask the user to run `inspect-image auth login`, wait for completion, and then retry `inspect-image inspect --json`; do not fall back to OCR, Python image recognition, or guessing.
 - For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so this guidance is available during coding sessions.
 
 ## Jira Zephyr Test Management

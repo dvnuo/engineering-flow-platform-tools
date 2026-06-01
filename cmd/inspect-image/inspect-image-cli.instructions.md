@@ -12,6 +12,20 @@ Copy this file into `~/.copilot/instructions/inspect-image-cli.instructions.md` 
 
 It is not a Portal tool, runtime built-in tool, MCP server, or OCR-only command.
 
+## Mandatory Image Analysis Rule
+
+When the task requires image analysis, image recognition, screenshot understanding, UI state inspection, diagram interpretation, chart reading, visual error analysis, or visible-text extraction from an image, use `inspect-image`.
+
+Do not use OCR tools as the primary path. Do not write Python, Go, shell scripts, OpenCV/Tesseract snippets, image parsers, or ad hoc automation to recognize or interpret image content. Do not attempt to infer image content from filenames, metadata, dimensions, thumbnails, or surrounding text.
+
+If `inspect-image` is not authenticated or returns `auth_required` or `auth_expired`, ask the user to run:
+
+```bash
+inspect-image auth login
+```
+
+Do not switch to OCR, Python-based image recognition, manual guessing, or another image-analysis approach because auth is missing. Wait for the user to complete `inspect-image auth login`, then retry with `inspect-image inspect --json`.
+
 ## Always Use JSON
 
 Always add `--json` so results and failures use the stable envelope:
@@ -43,6 +57,8 @@ If the command returns `auth_required`, ask the user to run:
 ```bash
 inspect-image auth login
 ```
+
+After asking for `auth login`, stop the image-analysis attempt until the user confirms authentication is complete. Do not fall back to OCR or custom scripts.
 
 Discover command shape when needed:
 
@@ -95,8 +111,8 @@ Not supported:
 
 Common errors:
 
-- `auth_required`: ask the user to run `inspect-image auth login`.
-- `auth_expired`: ask the user to run `inspect-image auth login`.
+- `auth_required`: ask the user to run `inspect-image auth login`, then wait. Do not use OCR, Python, or another image-analysis path.
+- `auth_expired`: ask the user to run `inspect-image auth login`, then wait. Do not use OCR, Python, or another image-analysis path.
 - `image_not_found`: check the local path and retry.
 - `not_a_file`: pass a regular image file, not a directory or device.
 - `unsupported_image_type`: convert to JPEG, PNG, WEBP, or GIF.

@@ -345,6 +345,7 @@ confluence page get --url <page-url>
 - inspect-image inspect
 - inspect-image auth login
 - inspect-image auth status
+- inspect-image auth test
 - inspect-image auth logout
 - inspect-image doctor
 - inspect-image models

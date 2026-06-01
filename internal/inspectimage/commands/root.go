@@ -29,6 +29,11 @@ type Opts struct {
 	JSON, Verbose bool
 }
 
+var exchangeCopilotToken = func(ctx context.Context, cfg config.Config) (string, time.Time, string, error) {
+	client := &iauth.DeviceClient{HTTPClient: copilot.NewHTTPClient(time.Duration(cfg.API.TimeoutSeconds) * time.Second)}
+	return client.ExchangeCopilotToken(ctx, cfg.Auth.GitHubAccessToken)
+}
+
 func NewRoot() *cobra.Command {
 	return NewRootWithClient(nil)
 }
@@ -84,6 +89,7 @@ inspect-image inspect --image ./chart.png --preset chart --prompt-file ./task.tx
 inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error" --out "%TEMP%\inspect-image-result.json" --json`),
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			externalClient := client != nil
 			if len(args) > 0 && opts.ImagePath == "" {
 				opts.ImagePath = args[0]
 			}
@@ -122,6 +128,16 @@ inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visib
 			}
 			client = wrapVerboseClient(cmd, o, client)
 			result, err := inspect.Run(ctx, cfg, client, opts)
+			if err != nil && !externalClient && shouldRefreshAfterResponsesAuthError(err, cfg) {
+				debugf(cmd, o, "responses auth failed; refreshing Copilot token with stored GitHub access token")
+				var refreshErr error
+				cfg, refreshErr = refreshCopilotToken(cmd.Context(), cfg, cfgPath)
+				if refreshErr != nil {
+					return printErrWithOut(cmd, o, refreshErr, outPath)
+				}
+				client = wrapVerboseClient(cmd, o, &copilot.Client{BaseURL: cfg.API.BaseURL, Token: cfg.Auth.CopilotToken, HTTPClient: copilot.NewHTTPClient(time.Duration(timeout) * time.Second)})
+				result, err = inspect.Run(ctx, cfg, client, opts)
+			}
 			if err != nil {
 				return printErrWithOut(cmd, o, err, outPath)
 			}
@@ -137,6 +153,11 @@ inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visib
 	c.Flags().IntVar(&opts.TimeoutSecond, "timeout", 0, "Request timeout in seconds. Defaults to config api.timeout_seconds.")
 	c.Flags().StringVar(&outPath, "out", "", "Write the full JSON envelope to this file in addition to stdout.")
 	return c
+}
+
+func shouldRefreshAfterResponsesAuthError(err error, cfg config.Config) bool {
+	var apiErr *copilot.APIError
+	return errors.As(err, &apiErr) && apiErr.Code == "auth_required" && iauth.GitHubTokenValid(cfg, time.Now())
 }
 
 func inspectLocalOnly(cfg config.Config, opts inspect.Options) (imagecheck.ImageInfo, []string, error) {
@@ -167,11 +188,14 @@ func ensureCopilotToken(ctx context.Context, cfg config.Config, path string) (co
 	if cfg.Auth.CopilotToken == "" && cfg.Auth.GitHubAccessToken == "" {
 		return cfg, &copilot.APIError{Code: "auth_required", Message: "GitHub Copilot authentication is required.", Hint: "Run inspect-image auth login.", Status: 401}
 	}
-	if cfg.Auth.GitHubAccessToken == "" {
+	return refreshCopilotToken(ctx, cfg, path)
+}
+
+func refreshCopilotToken(ctx context.Context, cfg config.Config, path string) (config.Config, error) {
+	if !iauth.GitHubTokenValid(cfg, time.Now()) {
 		return cfg, &copilot.APIError{Code: "auth_expired", Message: "GitHub Copilot authentication expired.", Hint: "Run inspect-image auth login.", Status: 401}
 	}
-	client := &iauth.DeviceClient{HTTPClient: copilot.NewHTTPClient(time.Duration(cfg.API.TimeoutSeconds) * time.Second)}
-	token, expires, apiBaseURL, err := client.ExchangeCopilotToken(ctx, cfg.Auth.GitHubAccessToken)
+	token, expires, apiBaseURL, err := exchangeCopilotToken(ctx, cfg)
 	if err != nil {
 		return cfg, err
 	}
@@ -196,10 +220,16 @@ func authCmd(o *Opts) *cobra.Command {
 Tokens are stored in the same inspect-image config file as defaults and limits. Token values are never printed by auth status, doctor, errors, or verbose diagnostics.`),
 		Example: strings.TrimSpace(`inspect-image auth status --json
 inspect-image auth login
+inspect-image auth test --json
 inspect-image auth logout --yes --json`),
 	}
-	c.AddCommand(authLoginCmd(o), authStatusCmd(o), authLogoutCmd(o))
+	c.AddCommand(authLoginCmd(o), authStatusCmd(o), authTestCmd(o), authLogoutCmd(o))
 	return c
+}
+
+type authTestResult struct {
+	iauth.Status
+	Refreshed bool `json:"refreshed"`
 }
 
 func authLoginCmd(o *Opts) *cobra.Command {
@@ -239,9 +269,9 @@ inspect-image auth login --json`),
 func authStatusCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "status",
 		Short: "Show non-secret authentication status",
-		Long: strings.TrimSpace(`Read the inspect-image config and report whether Copilot authentication is configured and currently valid.
+		Long: strings.TrimSpace(`Read the inspect-image config and report whether Copilot authentication is configured, currently valid, or refreshable using the stored GitHub access token.
 
-This command never prints github_access_token, copilot_token, Authorization headers, or token-derived secrets. In --json mode, missing or expired auth returns ok=false with error.code=auth_required.`),
+This command never prints github_access_token, copilot_token, Authorization headers, or token-derived secrets. In --json mode, an expired Copilot token still returns ok=true when the stored GitHub access token can refresh it.`),
 		Example: "inspect-image auth status --json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -256,11 +286,45 @@ This command never prints github_access_token, copilot_token, Authorization head
 				}
 				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
 			}
-			status := iauth.Summarize(cfg, time.Now())
-			if !status.CopilotTokenValid {
+			now := time.Now()
+			status := iauth.Summarize(cfg, now)
+			if !iauth.AuthUsable(cfg, now) {
 				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
 			}
 			return print(cmd, o, output.Success("", status))
+		}}
+}
+
+func authTestCmd(o *Opts) *cobra.Command {
+	return &cobra.Command{Use: "test",
+		Short: "Refresh and validate Copilot authentication",
+		Long: strings.TrimSpace(`Validate inspect-image authentication without printing secrets.
+
+If the short-lived Copilot token is expired but the stored GitHub access token is still usable, this command exchanges it for a fresh Copilot token and saves the updated config. Only run auth login when this command returns auth_required or auth_expired.`),
+		Example: "inspect-image auth test --json",
+		Args:    cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path, err := config.ResolvePath(o.ConfigPath)
+			if err != nil {
+				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set INSPECT_IMAGE_CONFIG or pass --config.", 500))
+			}
+			cfg, err := config.Load(path)
+			if err != nil {
+				if !errors.Is(err, os.ErrNotExist) {
+					return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix inspect-image.json or pass --config.", 400))
+				}
+				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
+			}
+			refreshed := false
+			if !iauth.TokenValid(cfg, time.Now()) || iauth.NeedsExchange(cfg) {
+				var refreshErr error
+				cfg, refreshErr = refreshCopilotToken(cmd.Context(), cfg, path)
+				if refreshErr != nil {
+					return printErr(cmd, o, refreshErr)
+				}
+				refreshed = true
+			}
+			return print(cmd, o, output.Success("", authTestResult{Status: iauth.Summarize(cfg, time.Now()), Refreshed: refreshed}))
 		}}
 }
 
@@ -300,7 +364,7 @@ func doctorCmd(o *Opts) *cobra.Command {
 		Short: "Check inspect-image configuration and Copilot readiness",
 		Long: strings.TrimSpace(`Run local readiness checks for the config file, permissions, authentication, system proxy mode, /responses endpoint configuration, and allowed model defaults.
 
-Doctor does not print tokens. If authentication is missing or expired, --json returns ok=false with error.code=auth_required and a hint to run auth login.`),
+Doctor does not print tokens. An expired Copilot token is ok when it is refreshable from the stored GitHub access token; missing or unusable auth returns ok=false with error.code=auth_required.`),
 		Example: "inspect-image doctor --json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -315,16 +379,24 @@ Doctor does not print tokens. If authentication is missing or expired, --json re
 				}
 				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
 			}
-			if !iauth.TokenValid(cfg, time.Now()) {
+			now := time.Now()
+			status := iauth.Summarize(cfg, now)
+			if !iauth.AuthUsable(cfg, now) {
 				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
 			}
+			authCheck := "ok"
+			if !status.CopilotTokenValid && status.CopilotTokenRefreshable {
+				authCheck = "refreshable"
+			}
 			return print(cmd, o, output.Success("", map[string]any{"checks": map[string]any{
-				"config":             "ok",
-				"permissions":        permStatus(path),
-				"auth":               "ok",
-				"proxy":              "system",
-				"responses_endpoint": "ok",
-				"default_model":      cfg.Defaults.Model,
+				"config":                    "ok",
+				"permissions":               permStatus(path),
+				"auth":                      authCheck,
+				"copilot_token_valid":       status.CopilotTokenValid,
+				"copilot_token_refreshable": status.CopilotTokenRefreshable,
+				"proxy":                     "system",
+				"responses_endpoint":        "ok",
+				"default_model":             cfg.Defaults.Model,
 			}}))
 		}}
 }
@@ -426,7 +498,8 @@ func inspectImageLLMTips() []string {
 		"Read data.result.answer first.",
 		"For OCR tasks, read data.result.visible_text.",
 		"If ok=false, inspect error.code and error.hint before retrying.",
-		"If auth_required or auth_expired, ask the user to run inspect-image auth login, wait for completion, then retry inspect-image inspect --json.",
+		"If inspect-image auth status returns token_state=refreshable, run inspect-image auth test --json or retry inspect-image inspect --json; do not ask for auth login.",
+		"If auth_required or auth_expired and auth status is not refreshable, ask the user to run inspect-image auth login, wait for completion, then retry inspect-image inspect --json.",
 		"Do not fall back to OCR, Python image recognition, manual guessing, or another image-analysis approach when auth is missing.",
 		"On Windows cmd, use double quotes, cmd-native commands such as where/dir/cd/type, and --out <file> instead of shell redirection when output capture is unreliable.",
 		"Example for Windows cmd: inspect-image.exe inspect --image \"%CD%\\screenshot.png\" --prompt \"Read the visible error\" --out \"%TEMP%\\inspect-image-result.json\" --json",

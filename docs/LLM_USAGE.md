@@ -38,7 +38,8 @@
 - Read `data.result.answer` first.
 - For OCR-like tasks, read `data.result.visible_text`.
 - If `ok=false`, inspect `error.code` and `error.hint`.
-- If `auth_required` or `auth_expired`, ask the user to run `inspect-image auth login`, wait for completion, and then retry `inspect-image inspect --json`; do not fall back to OCR, Python image recognition, or guessing.
+- If `inspect-image auth status --json` returns `token_state=refreshable` or `copilot_token_refreshable=true`, run `inspect-image auth test --json` or retry `inspect-image inspect --json`; do not ask the user to log in again.
+- If `auth_required` or `auth_expired` is not refreshable, ask the user to run `inspect-image auth login`, wait for completion, and then retry `inspect-image inspect --json`; do not fall back to OCR, Python image recognition, or guessing.
 - On Windows `cmd`, use double quotes, `where`, `dir`, `cd`, and `type`; avoid Bash-only commands and use `--out "%TEMP%\inspect-image-result.json"` rather than shell redirection when capture is unreliable.
 - For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so this guidance is available during coding sessions.
 

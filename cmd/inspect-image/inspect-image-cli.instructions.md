@@ -18,13 +18,27 @@ When the task requires image analysis, image recognition, screenshot understandi
 
 Do not use OCR tools as the primary path. Do not write Python, Go, shell scripts, OpenCV/Tesseract snippets, image parsers, or ad hoc automation to recognize or interpret image content. Do not attempt to infer image content from filenames, metadata, dimensions, thumbnails, or surrounding text.
 
-If `inspect-image` is not authenticated or returns `auth_required` or `auth_expired`, ask the user to run:
+If `inspect-image` is not authenticated, first check whether the stored GitHub access token can refresh the short-lived Copilot token:
+
+```bash
+inspect-image auth status --json
+```
+
+If `data.token_state` is `refreshable` or `data.copilot_token_refreshable` is `true`, do not ask the user to log in again. Run:
+
+```bash
+inspect-image auth test --json
+```
+
+Then retry `inspect-image inspect --json`.
+
+Only when auth status/test returns `auth_required` or `auth_expired` and it is not refreshable, ask the user to run:
 
 ```bash
 inspect-image auth login
 ```
 
-Do not switch to OCR, Python-based image recognition, manual guessing, or another image-analysis approach because auth is missing. Wait for the user to complete `inspect-image auth login`, then retry with `inspect-image inspect --json`.
+Do not switch to OCR, Python-based image recognition, manual guessing, or another image-analysis approach because auth is missing. Wait for the user to complete `inspect-image auth login` only when refresh is not possible, then retry with `inspect-image inspect --json`.
 
 ## Always Use JSON
 
@@ -52,7 +66,13 @@ Check auth before the first real request:
 inspect-image auth status --json
 ```
 
-If the command returns `auth_required`, ask the user to run:
+If `auth status` returns `ok=true` with `token_state=refreshable`, run:
+
+```bash
+inspect-image auth test --json
+```
+
+If the command returns `auth_required` and is not refreshable, ask the user to run:
 
 ```bash
 inspect-image auth login
@@ -67,6 +87,7 @@ inspect-image commands --json
 inspect-image schema inspect --json
 inspect-image models --json
 inspect-image help llm --json
+inspect-image auth test --json
 ```
 
 Inspect one image:
@@ -154,8 +175,9 @@ Not supported:
 
 Common errors:
 
-- `auth_required`: ask the user to run `inspect-image auth login`, then wait. Do not use OCR, Python, or another image-analysis path.
-- `auth_expired`: ask the user to run `inspect-image auth login`, then wait. Do not use OCR, Python, or another image-analysis path.
+- `auth_required`: run `inspect-image auth status --json`; if not refreshable, ask the user to run `inspect-image auth login`, then wait. Do not use OCR, Python, or another image-analysis path.
+- `auth_expired`: run `inspect-image auth status --json`; if not refreshable, ask the user to run `inspect-image auth login`, then wait. Do not use OCR, Python, or another image-analysis path.
+- `token_state=refreshable`: run `inspect-image auth test --json` or retry `inspect-image inspect --json`; do not ask the user to log in again.
 - `image_not_found`: check the local path and retry.
 - `not_a_file`: pass a regular image file, not a directory or device.
 - `unsupported_image_type`: convert to JPEG, PNG, WEBP, or GIF.

@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"engineering-flow-platform-tools/internal/inspectimage/config"
 	"engineering-flow-platform-tools/internal/inspectimage/copilot"
@@ -28,7 +31,7 @@ func TestCommandsJSONListsCoreCommands(t *testing.T) {
 	for _, item := range commands {
 		joined += item.(map[string]any)["usage"].(string) + "\n"
 	}
-	for _, want := range []string{"inspect-image inspect", "inspect-image auth status", "inspect-image doctor", "inspect-image models", "inspect-image version"} {
+	for _, want := range []string{"inspect-image inspect", "inspect-image auth status", "inspect-image auth test", "inspect-image doctor", "inspect-image models", "inspect-image version"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("missing %s in %s", want, joined)
 		}
@@ -214,6 +217,126 @@ func TestAuthStatusInvalidConfigReturnsParseDetail(t *testing.T) {
 	errOut := out["error"].(map[string]any)
 	if errOut["code"] != "config_error" || !strings.Contains(errOut["message"].(string), "unexpected end") {
 		t.Fatalf("bad status: %#v", out)
+	}
+}
+
+func TestAuthStatusRefreshableGitHubTokenIsOK(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
+	cfg := config.Default()
+	cfg.Auth.GitHubAccessToken = "github-token"
+	cfg.Auth.CopilotToken = "stale-copilot-token"
+	cfg.Auth.CopilotTokenExpiresAt = time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
+	if err := config.Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := run(t, nil, "auth", "status", "--config", cfgPath, "--json")
+	if out["ok"] != true {
+		t.Fatalf("refreshable auth should be ok: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if data["copilot_token_valid"] != false || data["copilot_token_refreshable"] != true || data["token_state"] != "refreshable" {
+		t.Fatalf("bad refreshable status: %#v", data)
+	}
+}
+
+func TestDoctorAcceptsRefreshableGitHubToken(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
+	cfg := config.Default()
+	cfg.Auth.GitHubAccessToken = "github-token"
+	cfg.Auth.CopilotToken = "stale-copilot-token"
+	cfg.Auth.CopilotTokenExpiresAt = time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
+	if err := config.Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := run(t, nil, "doctor", "--config", cfgPath, "--json")
+	if out["ok"] != true {
+		t.Fatalf("refreshable doctor should be ok: %#v", out)
+	}
+	checks := out["data"].(map[string]any)["checks"].(map[string]any)
+	if checks["auth"] != "refreshable" || checks["copilot_token_refreshable"] != true {
+		t.Fatalf("bad doctor checks: %#v", checks)
+	}
+}
+
+func TestAuthTestRefreshesExpiredCopilotToken(t *testing.T) {
+	oldExchange := exchangeCopilotToken
+	t.Cleanup(func() { exchangeCopilotToken = oldExchange })
+	expires := time.Now().Add(30 * time.Minute).UTC()
+	exchangeCopilotToken = func(ctx context.Context, cfg config.Config) (string, time.Time, string, error) {
+		return "tid=abc;proxy-ep=proxy.individual.githubcopilot.com;", expires, "https://api.individual.githubcopilot.com", nil
+	}
+	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
+	cfg := config.Default()
+	cfg.Auth.GitHubAccessToken = "github-token"
+	cfg.Auth.CopilotToken = "stale-copilot-token"
+	cfg.Auth.CopilotTokenExpiresAt = time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
+	if err := config.Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := run(t, nil, "auth", "test", "--config", cfgPath, "--json")
+	if out["ok"] != true {
+		t.Fatalf("auth test should refresh: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if data["refreshed"] != true || data["copilot_token_valid"] != true || data["token_state"] != "valid" {
+		t.Fatalf("bad auth test data: %#v", data)
+	}
+	saved, err := config.Load(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.Auth.CopilotToken != "tid=abc;proxy-ep=proxy.individual.githubcopilot.com;" || saved.API.BaseURL != "https://api.individual.githubcopilot.com" {
+		t.Fatalf("refresh was not saved: %#v", saved)
+	}
+}
+
+func TestInspectRefreshesAfterResponsesAuthError(t *testing.T) {
+	oldExchange := exchangeCopilotToken
+	t.Cleanup(func() { exchangeCopilotToken = oldExchange })
+	expires := time.Now().Add(30 * time.Minute).UTC()
+	exchangeCopilotToken = func(ctx context.Context, cfg config.Config) (string, time.Time, string, error) {
+		return "new-copilot-token", expires, cfg.API.BaseURL, nil
+	}
+	var responsesCalls int
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/responses" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+		responsesCalls++
+		if r.Header.Get("Authorization") == "Bearer old-copilot-token" {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"error":{"message":"expired"}}`))
+			return
+		}
+		if r.Header.Get("Authorization") != "Bearer new-copilot-token" {
+			t.Fatalf("unexpected authorization header")
+		}
+		_, _ = w.Write([]byte(`{"output_text":"{\"answer\":\"refreshed\"}"}`))
+	}))
+	defer s.Close()
+	path := writePNG(t)
+	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
+	cfg := config.Default()
+	cfg.API.BaseURL = s.URL
+	cfg.Auth.GitHubAccessToken = "github-token"
+	cfg.Auth.CopilotToken = "old-copilot-token"
+	cfg.Auth.CopilotTokenExpiresAt = time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
+	if err := config.Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := run(t, nil, "inspect", "--config", cfgPath, "--image", path, "--prompt", "x", "--json")
+	if out["ok"] != true {
+		t.Fatalf("inspect should refresh and retry: %#v", out)
+	}
+	if responsesCalls != 2 {
+		t.Fatalf("responses calls=%d", responsesCalls)
+	}
+	saved, err := config.Load(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.Auth.CopilotToken != "new-copilot-token" {
+		t.Fatalf("token was not refreshed: %#v", saved.Auth)
 	}
 }
 

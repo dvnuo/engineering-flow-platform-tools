@@ -49,6 +49,7 @@ Examples:
 
 ```bash
 inspect-image auth login
+inspect-image auth test --json
 inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --json
 inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --out ./inspect-image-result.json --json
 inspect-image inspect --image ./diagram.webp --preset diagram --prompt "Explain this architecture diagram." --json

@@ -461,7 +461,7 @@ func resolveCmd(o *Opts) *cobra.Command {
 }
 func commandsCmd() *cobra.Command {
 	return &cobra.Command{Use: "commands", RunE: func(cmd *cobra.Command, args []string) error {
-		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]interface{}{"commands": catalog.Commands("jira")}))
+		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]interface{}{"commands": catalog.CommandsFromCobra("jira", cmd.Root())}))
 	}}
 }
 func cliVersionCmd(o *Opts) *cobra.Command {
@@ -471,7 +471,11 @@ func cliVersionCmd(o *Opts) *cobra.Command {
 }
 func schemaCmd() *cobra.Command {
 	return &cobra.Command{Use: "schema <command>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		return output.Print(cmd.OutOrStdout(), "json", output.Success("", catalog.Schema("jira", args[0])))
+		schema, ok := catalog.SchemaFromCobra("jira", args[0], cmd.Root())
+		if !ok {
+			return output.Print(cmd.OutOrStdout(), "json", output.Failure("not_found", "command not found", "Run jira commands --json to list command names.", 404))
+		}
+		return output.Print(cmd.OutOrStdout(), "json", output.Success("", schema))
 	}}
 }
 func helpLLMCmd() *cobra.Command {

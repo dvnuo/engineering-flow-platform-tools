@@ -113,13 +113,17 @@ func probeCmd(o *Opts, r probe.Runner) *cobra.Command {
 
 func commandsCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "commands", RunE: func(cmd *cobra.Command, args []string) error {
-		return print(cmd, o, output.Success("", map[string]any{"commands": catalog.Commands("browser")}))
+		return print(cmd, o, output.Success("", map[string]any{"commands": catalog.CommandsFromCobra("browser", cmd.Root())}))
 	}}
 }
 
 func schemaCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "schema <command>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		return print(cmd, o, output.Success("", catalog.Schema("browser", args[0])))
+		schema, ok := catalog.SchemaFromCobra("browser", args[0], cmd.Root())
+		if !ok {
+			return print(cmd, o, output.Failure("not_found", "command not found", "Run browser commands --json to list command names.", 404))
+		}
+		return print(cmd, o, output.Success("", schema))
 	}}
 }
 

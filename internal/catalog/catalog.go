@@ -5,11 +5,23 @@ import (
 	"strings"
 
 	"engineering-flow-platform-tools/internal/llm"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type FlagSpec struct {
 	Name        string `json:"name"`
 	Type        string `json:"type"`
+	Required    bool   `json:"required"`
+	Description string `json:"description"`
+	Default     string `json:"default,omitempty"`
+	Repeatable  bool   `json:"repeatable,omitempty"`
+	Shorthand   string `json:"shorthand,omitempty"`
+	Source      string `json:"source,omitempty"`
+}
+
+type ArgumentSpec struct {
+	Name        string `json:"name"`
 	Required    bool   `json:"required"`
 	Description string `json:"description"`
 }
@@ -134,6 +146,348 @@ func Schema(product, name string) map[string]any {
 		"examples":  item.Examples,
 		"required":  item.Required,
 	}
+}
+
+func CommandsFromCobra(product string, root *cobra.Command) []llm.CommandMeta {
+	bindings := cobraBindings(product, root)
+	out := make([]llm.CommandMeta, 0, len(bindings))
+	for _, binding := range bindings {
+		m := meta(product, binding.Usage)
+		m.Flags = cobraFlagNames(binding.Command)
+		m.Examples = examplesForCobra(m, binding.Command)
+		out = append(out, m)
+	}
+	return out
+}
+
+func SchemaFromCobra(product, name string, root *cobra.Command) (map[string]any, bool) {
+	binding, ok := findCobraBinding(product, root, name)
+	if !ok {
+		return nil, false
+	}
+	item := meta(product, binding.Usage)
+	item.Examples = examplesForCobra(item, binding.Command)
+	args := argumentSpecs(binding.Usage)
+	return map[string]any{
+		"command":          item.Name,
+		"usage":            binding.Usage,
+		"description":      item.Description,
+		"risk":             item.Risk,
+		"arguments":        arguments(binding.Usage),
+		"argument_details": args,
+		"flags":            cobraFlagSpecs(item.Name, binding.Command, item.Required),
+		"examples":         item.Examples,
+		"required":         item.Required,
+	}, true
+}
+
+type cobraBinding struct {
+	Command *cobra.Command
+	Usage   string
+	Name    string
+}
+
+func cobraBindings(product string, root *cobra.Command) []cobraBinding {
+	var out []cobraBinding
+	var walk func(*cobra.Command, []string)
+	walk = func(cmd *cobra.Command, parent []string) {
+		for _, child := range cmd.Commands() {
+			if !visibleCommand(child) {
+				continue
+			}
+			parts := append(append([]string{}, parent...), strings.Fields(child.Use)...)
+			visibleChildren := 0
+			for _, grand := range child.Commands() {
+				if visibleCommand(grand) {
+					visibleChildren++
+				}
+			}
+			usage := strings.Join(parts, " ")
+			if visibleChildren == 0 || child.RunE != nil || child.Run != nil {
+				out = append(out, cobraBinding{Command: child, Usage: usage, Name: dotted(usage)})
+			}
+			walk(child, parts)
+		}
+	}
+	walk(root, []string{product})
+	return out
+}
+
+func visibleCommand(cmd *cobra.Command) bool {
+	if cmd == nil || cmd.Hidden {
+		return false
+	}
+	if cmd.Name() == "completion" {
+		return false
+	}
+	if cmd.Name() == "help" && strings.TrimSpace(cmd.Use) != "help llm" {
+		return false
+	}
+	return true
+}
+
+func findCobraBinding(product string, root *cobra.Command, key string) (cobraBinding, bool) {
+	key = strings.TrimSpace(key)
+	for _, binding := range cobraBindings(product, root) {
+		if key == binding.Name || key == binding.Usage || key == strings.TrimPrefix(binding.Usage, product+" ") {
+			return binding, true
+		}
+	}
+	return cobraBinding{}, false
+}
+
+func cobraFlagNames(cmd *cobra.Command) []string {
+	var out []string
+	visitCommandFlags(cmd, func(flag *pflag.Flag, source string) {
+		out = append(out, flag.Name)
+	})
+	return out
+}
+
+func cobraFlagSpecs(command string, cmd *cobra.Command, required []string) []FlagSpec {
+	req := requiredNames(required)
+	var out []FlagSpec
+	visitCommandFlags(cmd, func(flag *pflag.Flag, source string) {
+		out = append(out, FlagSpec{
+			Name:        flag.Name,
+			Type:        normalizeFlagType(flag.Value.Type()),
+			Required:    req[flag.Name],
+			Description: flagDescriptionFor(command, flag),
+			Default:     flag.DefValue,
+			Repeatable:  repeatableFlag(flag.Value.Type()),
+			Shorthand:   flag.Shorthand,
+			Source:      source,
+		})
+	})
+	return out
+}
+
+func visitCommandFlags(cmd *cobra.Command, fn func(*pflag.Flag, string)) {
+	seen := map[string]bool{}
+	visitSet := func(flags *pflag.FlagSet, source string) {
+		if flags == nil {
+			return
+		}
+		flags.VisitAll(func(flag *pflag.Flag) {
+			if flag.Name == "help" || seen[flag.Name] {
+				return
+			}
+			seen[flag.Name] = true
+			fn(flag, source)
+		})
+	}
+	visitSet(cmd.NonInheritedFlags(), "command")
+	visitSet(cmd.InheritedFlags(), "global")
+}
+
+func normalizeFlagType(t string) string {
+	switch t {
+	case "bool":
+		return "bool"
+	case "int", "int32", "int64":
+		return "int"
+	case "float32", "float64":
+		return "float"
+	case "stringArray", "stringSlice", "strings":
+		return "string[]"
+	default:
+		return "string"
+	}
+}
+
+func examplesForCobra(item llm.CommandMeta, cmd *cobra.Command) []string {
+	examples := append([]string{}, item.Examples...)
+	if len(examples) == 0 {
+		examples = []string{item.Usage + " --json"}
+	}
+	flags := commandFlagMap(cmd)
+	for i, example := range examples {
+		examples[i] = completeRequiredExample(example, item.Required, flags)
+	}
+	return examples
+}
+
+func commandFlagMap(cmd *cobra.Command) map[string]*pflag.Flag {
+	flags := map[string]*pflag.Flag{}
+	visitCommandFlags(cmd, func(flag *pflag.Flag, source string) {
+		flags[flag.Name] = flag
+	})
+	return flags
+}
+
+func completeRequiredExample(example string, required []string, flags map[string]*pflag.Flag) string {
+	for _, expr := range required {
+		if requiredExpressionSatisfied(example, expr, flags) {
+			continue
+		}
+		for _, term := range strings.Split(expr, "|") {
+			if term = strings.TrimSpace(term); term != "" {
+				example = appendRequiredTerms(example, term, flags)
+				break
+			}
+		}
+	}
+	return example
+}
+
+func requiredExpressionSatisfied(example, expr string, flags map[string]*pflag.Flag) bool {
+	for _, alt := range strings.Split(expr, "|") {
+		alt = strings.TrimSpace(alt)
+		if alt == "" {
+			continue
+		}
+		ok := true
+		for _, term := range strings.Split(alt, "+") {
+			term = strings.TrimSpace(term)
+			flag, isFlag := flags[term]
+			if !isFlag {
+				continue
+			}
+			if !exampleHasFlag(example, flag.Name) {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			return true
+		}
+	}
+	return false
+}
+
+func appendRequiredTerms(example, expr string, flags map[string]*pflag.Flag) string {
+	for _, term := range strings.Split(expr, "+") {
+		term = strings.TrimSpace(term)
+		flag, ok := flags[term]
+		if !ok || exampleHasFlag(example, flag.Name) {
+			continue
+		}
+		example += " --" + flag.Name
+		if normalizeFlagType(flag.Value.Type()) != "bool" {
+			example += " " + sampleFlagValue(flag.Name)
+		}
+	}
+	return example
+}
+
+func exampleHasFlag(example, name string) bool {
+	return strings.Contains(example, "--"+name+" ") || strings.HasSuffix(example, "--"+name) || strings.Contains(example, "--"+name+"=")
+}
+
+func sampleFlagValue(name string) string {
+	switch name {
+	case "base-url":
+		return "https://example.atlassian.test"
+	case "rest-path":
+		return "/rest/api"
+	case "auth-type":
+		return "basic_api_key"
+	case "username":
+		return "user@example.test"
+	case "project":
+		return "PROJ"
+	case "project-id":
+		return "10000"
+	case "version-id":
+		return "-1"
+	case "cycle-id":
+		return "20000"
+	case "issue", "from":
+		return "PROJ-123"
+	case "to":
+		return "alice"
+	case "user":
+		return "alice"
+	case "subject":
+		return "'Review requested'"
+	case "body":
+		return "'ok'"
+	case "body-file":
+		return "./body.txt"
+	case "field":
+		return "customfield_10000=value"
+	case "json-body":
+		return "'{\"fields\":{\"summary\":\"Test\"}}'"
+	case "json-body-file":
+		return "./body.json"
+	case "time-spent":
+		return "1h"
+	case "started":
+		return "2026-05-29T09:00:00.000+0000"
+	case "value":
+		return "'{\"ok\":true}'"
+	case "value-file":
+		return "./value.json"
+	case "name":
+		return "Example"
+	case "jql":
+		return "'project = PROJ'"
+	case "query":
+		return "alice"
+	case "key":
+		return "status"
+	case "space":
+		return "ENG"
+	case "title":
+		return "'Home'"
+	case "id", "page-id", "parent-id", "attachment-id", "version":
+		return "123"
+	case "url":
+		return "https://confluence.example.test/display/ENG/Home"
+	case "operation":
+		return "read"
+	case "group":
+		return "team"
+	case "event":
+		return "page_created"
+	case "file":
+		return "./note.txt"
+	case "label":
+		return "runbook"
+	default:
+		return "VALUE"
+	}
+}
+
+func repeatableFlag(t string) bool {
+	switch t {
+	case "stringArray", "stringSlice", "strings":
+		return true
+	default:
+		return false
+	}
+}
+
+func requiredNames(required []string) map[string]bool {
+	out := map[string]bool{}
+	for _, expr := range required {
+		for _, part := range strings.FieldsFunc(expr, func(r rune) bool {
+			return r == '|' || r == '+' || r == ',' || r == ' '
+		}) {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				out[part] = true
+			}
+		}
+	}
+	return out
+}
+
+func flagDescriptionFor(command string, flag *pflag.Flag) string {
+	if strings.TrimSpace(flag.Usage) != "" {
+		return strings.TrimSpace(flag.Usage)
+	}
+	return flagDescription(command, flag.Name)
+}
+
+func argumentSpecs(usage string) []ArgumentSpec {
+	out := []ArgumentSpec{}
+	for _, raw := range arguments(usage) {
+		name := strings.Trim(raw, "<>[]")
+		required := strings.HasPrefix(raw, "<")
+		out = append(out, ArgumentSpec{Name: name, Required: required, Description: argumentDescription(name)})
+	}
+	return out
 }
 
 func meta(product, usage string) llm.CommandMeta {
@@ -436,7 +790,7 @@ func dotted(usage string) string {
 }
 
 func arguments(usage string) []string {
-	var out []string
+	out := []string{}
 	for _, p := range strings.Fields(usage) {
 		if strings.HasPrefix(p, "<") || strings.HasPrefix(p, "[") {
 			out = append(out, p)
@@ -445,16 +799,103 @@ func arguments(usage string) []string {
 	return out
 }
 
+func argumentDescription(name string) string {
+	switch name {
+	case "issue-or-url":
+		return "Jira issue key or full Jira issue URL."
+	case "jira-url":
+		return "Full Jira URL, especially a Zephyr project or test-management URL."
+	case "comment-id":
+		return "Comment id."
+	case "attachment-id":
+		return "Attachment id."
+	case "worklog-id":
+		return "Jira worklog id."
+	case "link-id":
+		return "Jira issue link id."
+	case "project-key":
+		return "Jira project key."
+	case "project-id":
+		return "Jira numeric project id."
+	case "issue-id":
+		return "Jira numeric issue id."
+	case "cycle-id":
+		return "Zephyr test cycle id."
+	case "execution-id":
+		return "Zephyr execution id. Omit it only when the command supports resolving by --cycle-id plus --issue."
+	case "folder-id":
+		return "Zephyr folder id."
+	case "endpoint-id":
+		return "Zephyr API endpoint id from jira zephyr api catalog."
+	case "component-id":
+		return "Jira component id."
+	case "version-id":
+		return "Jira or Zephyr version id."
+	case "group-name":
+		return "Jira or Confluence group name."
+	case "filter-id":
+		return "Jira filter id."
+	case "dashboard-id":
+		return "Jira dashboard id."
+	case "board-id":
+		return "Jira agile board id."
+	case "sprint-id":
+		return "Jira sprint id."
+	case "space-key":
+		return "Confluence space key."
+	case "content-id":
+		return "Confluence content id."
+	case "blog-id-or-url":
+		return "Confluence blog id or full blog URL."
+	case "task-id":
+		return "Confluence long task id."
+	case "webhook-id":
+		return "Confluence webhook id."
+	case "role-id-or-name":
+		return "Jira project role id or role name."
+	case "name":
+		return "Instance or resource name."
+	case "key":
+		return "Property key."
+	case "url":
+		return "Full HTTP or HTTPS URL."
+	case "command":
+		return "Dotted command name such as issue.get."
+	case "path":
+		return "REST API path. Relative paths are resolved under the selected instance; full URLs must belong to that instance."
+	case "file":
+		return "Local file path."
+	default:
+		return "Positional command argument."
+	}
+}
+
 func required(name string) []string {
 	switch name {
+	case "instance.add":
+		return []string{"name", "base-url", "username+password-stdin|username+api-key-stdin|token-stdin"}
+	case "instance.update":
+		return []string{"name", "base-url|rest-path"}
+	case "instance.remove":
+		return []string{"name", "yes"}
+	case "auth.login":
+		return []string{"username+password-stdin|username+api-key-stdin|token-stdin"}
 	case "issue.create":
 		return []string{"project", "type", "summary"}
+	case "issue.assign":
+		return []string{"issue-or-url", "user"}
+	case "issue.notify":
+		return []string{"issue-or-url", "subject", "body|body-file|body-stdin", "to"}
 	case "page.create":
-		return []string{"space", "title", "body"}
+		return []string{"space", "title", "body|body-file|body-stdin"}
 	case "filter.create":
 		return []string{"name", "jql"}
+	case "filter.update":
+		return []string{"filter-id", "name|jql|description"}
 	case "component.create", "version.create":
 		return []string{"project", "name"}
+	case "component.update", "version.update":
+		return []string{"name|description"}
 	case "issue.update":
 		return []string{"summary|description|field"}
 	case "issue.comment.add", "issue.comment.update":
@@ -463,6 +904,50 @@ func required(name string) []string {
 		return []string{"time-spent"}
 	case "issue.worklog.update":
 		return []string{"time-spent|started|comment"}
+	case "user.get":
+		return []string{"username|key|user-key"}
+	case "user.search", "group.search", "search.user":
+		return []string{"query"}
+	case "user.assignable":
+		return []string{"project|issue"}
+	case "space.create":
+		return []string{"key", "name"}
+	case "space.update":
+		return []string{"space-key", "name"}
+	case "space.property.set":
+		return []string{"space-key", "key", "body|body-file|body-stdin"}
+	case "page.move":
+		return []string{"id|url", "parent-id"}
+	case "page.children", "page.descendants", "page.ancestors", "page.body", "page.body-storage", "page.body-view", "page.version", "page.history", "page.watcher.list", "page.watch", "page.unwatch":
+		return []string{"id|url"}
+	case "page.restore":
+		return []string{"id|url", "version"}
+	case "page.export-html":
+		return []string{"id|url"}
+	case "content.create":
+		return []string{"space", "title", "body|body-file|body-stdin"}
+	case "content.update":
+		return []string{"content-id", "title|body|body-file|body-stdin"}
+	case "blog.create":
+		return []string{"space", "title", "body|body-file|body-stdin"}
+	case "blog.update":
+		return []string{"blog-id-or-url", "title|body|body-file|body-stdin"}
+	case "page.attachment.update":
+		return []string{"page-id|id|url", "attachment-id", "file"}
+	case "page.property.list":
+		return []string{"id|url"}
+	case "page.property.get", "page.property.delete":
+		return []string{"id|url", "key"}
+	case "page.property.set":
+		return []string{"id|url", "key", "body|body-file|body-stdin"}
+	case "page.restriction.list":
+		return []string{"id|url"}
+	case "page.restriction.add":
+		return []string{"id|url", "user|group"}
+	case "page.restriction.delete":
+		return []string{"id|url", "operation"}
+	case "webhook.create":
+		return []string{"name", "url", "event"}
 	case "probe":
 		return []string{"url"}
 	}
@@ -509,6 +994,24 @@ func flagType(name string) string {
 }
 
 func flagDescription(command, name string) string {
+	switch {
+	case command == "page.body" && name == "format":
+		return "Confluence body representation to expand, such as storage, view, or export_view."
+	case strings.HasPrefix(command, "page.restriction.") && name == "user":
+		return "Confluence username to add to the page restriction; repeat for multiple users."
+	case strings.HasPrefix(command, "page.restriction.") && name == "group":
+		return "Confluence group name to add to the page restriction; repeat for multiple groups."
+	case strings.HasPrefix(command, "page.restriction.") && name == "operation":
+		return "Restriction operation: read or update."
+	case command == "issue.assign" && name == "user":
+		return "Jira username or account identifier to assign the issue to."
+	case strings.Contains(command, "attachment") && name == "file":
+		return "Local file path to upload."
+	case strings.HasPrefix(command, "api.") && name == "query":
+		return "Raw query parameter in key=value form; repeat for multiple parameters."
+	case strings.HasPrefix(command, "zephyr.api.") && name == "query":
+		return "Raw Zephyr ZAPI query parameter in key=value form; repeat for multiple parameters."
+	}
 	switch name {
 	case "instance":
 		return "Configured instance name."
@@ -536,10 +1039,32 @@ func flagDescription(command, name string) string {
 		return "Print JSON envelope."
 	case "format":
 		return "Output format: table, json, or yaml."
+	case "verbose":
+		return "Print additional diagnostic details when available; secrets must remain redacted."
 	case "dry-run":
 		return "Preview write request without sending it."
 	case "yes":
 		return "Confirm destructive operations."
+	case "base-url":
+		return "Base URL for the Jira or Confluence instance, for example https://jira.example.test."
+	case "rest-path":
+		return "REST API root path for the instance."
+	case "api-version":
+		return "Jira REST API version used to build the default REST path."
+	case "auth-type":
+		return "Authentication type: basic_password, basic_api_key, bearer_token, or a supported alias."
+	case "username":
+		return "Username for basic authentication or user lookup."
+	case "user-key":
+		return "Confluence user key."
+	case "password-stdin":
+		return "Read the password from stdin."
+	case "api-key-stdin":
+		return "Read the API key from stdin."
+	case "token-stdin":
+		return "Read the bearer token or PAT from stdin."
+	case "default":
+		return "Make the added instance the default instance."
 	case "project":
 		return "Jira project key."
 	case "project-id":
@@ -564,6 +1089,12 @@ func flagDescription(command, name string) string {
 		return "Zephyr execution status name or alias, such as PASS, PASSED, FAIL, WIP, BLOCKED, or UNEXECUTED."
 	case "comment":
 		return "Comment text."
+	case "subject":
+		return "Notification subject."
+	case "to":
+		return "Target transition name, issue link target, or notification recipient depending on the command."
+	case "user":
+		return "User identifier for this command."
 	case "step-id":
 		return "Zephyr test step id."
 	case "step":
@@ -605,7 +1136,7 @@ func flagDescription(command, name string) string {
 	case "zql":
 		return "Zephyr ZQL query."
 	case "query":
-		return "Search query or raw key=value query parameter."
+		return "Search query text."
 	case "limit":
 		return "Maximum number of results."
 	case "start":
@@ -623,7 +1154,9 @@ func flagDescription(command, name string) string {
 	case "description":
 		return "Description text."
 	case "name":
-		return "Resource name."
+		return "Resource name for the command target, such as an instance, cycle, folder, component, version, filter, or webhook name."
+	case "key":
+		return "Property key or user key, depending on the command."
 	case "build":
 		return "Zephyr cycle build value."
 	case "environment":
@@ -634,24 +1167,38 @@ func flagDescription(command, name string) string {
 		return "Issue type name."
 	case "summary":
 		return "Issue summary."
+	case "field":
+		return "Jira field override in key=value form; repeat for multiple fields. Values that parse as JSON are sent as JSON."
+	case "json-body":
+		return "Complete JSON request body. When set, field-specific create/update flags are ignored."
+	case "json-body-file":
+		return "Path to a file containing the complete JSON request body."
 	case "space":
 		return "Confluence space key."
 	case "title":
 		return "Page title."
-	case "body", "body-file", "body-stdin":
-		return "Request body source."
+	case "body":
+		return "Inline request body text or JSON, depending on the command."
+	case "body-file":
+		return "Path to a file containing the request body."
+	case "body-stdin":
+		return "Read the request body from stdin."
+	case "body-format":
+		return "Confluence body representation for page/content/blog/comment writes, usually storage."
 	case "cql":
 		return "Confluence CQL query."
 	case "transition-id":
 		return "Jira transition id."
 	case "to":
 		return "Jira transition name."
+	case "from":
+		return "Source Jira issue key for an issue link."
 	case "field":
 		return "Additional field assignment, usually key=value or key=JSON."
 	case "fields":
-		return "Comma-separated fields selector."
+		return "Jira fields selector. Repeat or pass comma-separated fields depending on the command."
 	case "expand":
-		return "Jira expand selector."
+		return "Expand selector for richer response fields."
 	case "from-csv":
 		return "CSV file to read."
 	case "template-issue":
@@ -690,8 +1237,59 @@ func flagDescription(command, name string) string {
 		return "Issue key or URL used to infer project and issue type."
 	case "legacy":
 		return "Force legacy createmeta endpoint."
+	case "lead":
+		return "Project lead username for a Jira component."
+	case "release-date":
+		return "Version release date in YYYY-MM-DD form."
+	case "released":
+		return "Mark the Jira version as released."
+	case "favorite":
+		return "Limit to favorite filters or mark the filter as favorite, depending on the command."
+	case "state":
+		return "Sprint state filter, such as active, future, or closed."
+	case "time-spent":
+		return "Jira worklog duration, such as 1h or 30m."
+	case "started":
+		return "Jira worklog start timestamp accepted by the Jira REST API."
+	case "value":
+		return "Inline JSON value for the Jira issue property."
+	case "value-file":
+		return "Path to a file containing the JSON value for the Jira issue property."
+	case "metadata-only":
+		return "Return attachment metadata without downloading content."
+	case "id":
+		return "Confluence page id. Use exactly one of --id or --url where both are available."
 	case "url":
-		return "HTTP or HTTPS resource URL."
+		if strings.HasPrefix(command, "issue.remote-link.") {
+			return "External URL for the Jira remote link."
+		}
+		if command == "probe" {
+			return "HTTP or HTTPS URL to open in Edge, Chrome, or Chromium."
+		}
+		if strings.HasPrefix(command, "page.") {
+			return "Confluence page URL. Use exactly one of --id or --url where both are available."
+		}
+		return "HTTP or HTTPS URL to open or resolve. For Confluence page commands, use exactly one of --id or --url."
+	case "page-id":
+		return "Confluence page id for attachment commands; --id and --url are accepted aliases where available."
+	case "parent-id":
+		return "Confluence parent page id."
+	case "position":
+		return "Confluence move position relative to --parent-id, such as append, above, or below."
+	case "minor-edit":
+		return "Mark the Confluence update as a minor edit."
+	case "version":
+		return "Confluence content version number."
+	case "label":
+		return "Confluence label name. Repeat when the flag accepts multiple values."
+	case "prefix":
+		return "Confluence label prefix."
+	case "event":
+		return "Confluence webhook event name; repeat for multiple events."
+	case "attachment-id":
+		return "Confluence attachment id."
+	case "text":
+		return "Text term used to build a Confluence content search query."
 	case "selector":
 		return "CSS selector used as a deterministic login-success signal."
 	case "require-selector":

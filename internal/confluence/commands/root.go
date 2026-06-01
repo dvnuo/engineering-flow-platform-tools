@@ -265,6 +265,9 @@ func helpLLMCmd() *cobra.Command {
 			"Use --dry-run before write operations.",
 			"Use --yes for destructive operations.",
 			"Inspect error.code and error.hint before retrying.",
+			"Command parsing failures return an invalid_args JSON envelope when --json is present.",
+			"On Windows cmd, use double quotes, cmd-native commands such as where/dir/cd/type, and avoid Bash-only quoting.",
+			"If terminal output capture is unreliable, rerun the exact .exe path from where confluence and redirect stdout to a file, then inspect the JSON envelope.",
 		}
 		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"tips": tips, "commands": catalog.Commands("confluence")}))
 	}}

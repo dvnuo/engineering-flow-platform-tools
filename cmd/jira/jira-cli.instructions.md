@@ -67,6 +67,31 @@ Use full Jira URLs when they help select the instance:
 jira issue get "https://jira.example.test/browse/PROJ-123" --json
 ```
 
+## Windows cmd Workflow
+
+When Copilot is operating in Windows `cmd`, use cmd-native commands and double quotes. Do not use Bash-only commands such as `pwd`, `ls`, `cat`, or single-quote quoting.
+
+Recommended checks:
+
+```cmd
+where jira
+cd
+dir
+jira version --json
+jira commands --json
+```
+
+Robust read command:
+
+```cmd
+jira.exe issue get "PROJ-123" --json > "%TEMP%\jira-result.json"
+type "%TEMP%\jira-result.json"
+```
+
+If PATH lookup is unstable or `jira is not recognized` appears after it worked earlier, run `where jira`, then invoke the exact `.exe` path shown by `where`, wrapped in double quotes.
+
+If command output capture is unreliable, redirect stdout to a file and read it with `type`. Keep using `--json`, then inspect `ok`, `data`, `error.code`, and `error.hint`.
+
 ## Zephyr Test Management
 
 If a Jira URL contains `selectedItem=com.thed.zephyr.je`, treat it as a Zephyr test-management page.
@@ -108,6 +133,7 @@ Common errors:
 - `instance_required`: pass `--instance <name>` or use a full Jira URL that belongs to a configured instance.
 - `instance_url_mismatch`: use a URL under the selected Jira instance.
 - `invalid_args`: call `jira schema <command> --json` and rebuild the command.
+- Command parsing errors also return `invalid_args` JSON when `--json` is present.
 - `auth_failed`: check credentials with `jira auth test --json`.
 - `permission_denied`: report missing Jira permissions.
 - `not_found`: verify the issue, project, attachment, or URL.

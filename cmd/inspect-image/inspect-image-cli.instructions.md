@@ -163,6 +163,7 @@ Common errors:
 - `prompt_required`: add `--prompt "<task>"` or `--prompt-file <path>`.
 - `model_not_allowed`: run `inspect-image models --json` and choose an allowed model.
 - `reasoning_not_allowed`: use `low`, `medium`, `high`, or `xhigh`.
+- `invalid_args`: command parsing failed; call `inspect-image schema inspect --json` and rebuild the command.
 - `rate_limited`: wait and retry the same request.
 - `responses_api_error`: read `error.message` for the sanitized upstream detail, then retry or report the visible detail.
 - `responses_api_unavailable`: retry later or check network/proxy/Copilot availability.

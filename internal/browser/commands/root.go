@@ -155,6 +155,9 @@ func browserLLMTips() []string {
 		"Use --clean-profile to distinguish true OS/enterprise SSO from cached browser session.",
 		"Inspect network.json and summary.json.",
 		"Do not treat negotiate_401_seen as proof; it is only an indicator.",
+		"Command parsing failures return an invalid_args JSON envelope when --json is present.",
+		"On Windows cmd, use double quotes, cmd-native commands such as where/dir/cd/type, and avoid Bash-only quoting.",
+		"If terminal output capture is unreliable, rerun the exact .exe path from where browser and inspect the artifact files under --out.",
 		"In OpenCode runtime, this command requires a browser executable in the runtime image.",
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"engineering-flow-platform-tools/internal/catalog"
+	"engineering-flow-platform-tools/internal/clihelp"
 	iauth "engineering-flow-platform-tools/internal/inspectimage/auth"
 	"engineering-flow-platform-tools/internal/inspectimage/config"
 	"engineering-flow-platform-tools/internal/inspectimage/copilot"
@@ -33,19 +34,7 @@ func NewRoot() *cobra.Command {
 }
 
 func Execute(args []string, stdout, stderr io.Writer) int {
-	cmd := NewRoot()
-	if stdout != nil {
-		cmd.SetOut(stdout)
-	}
-	if stderr != nil {
-		cmd.SetErr(stderr)
-	}
-	cmd.SetArgs(args)
-	if err := cmd.Execute(); err != nil {
-		_ = printExecuteError(cmd.OutOrStdout(), args, err)
-		return 1
-	}
-	return 0
+	return clihelp.Execute(NewRoot(), "inspect-image", args, stdout, stderr)
 }
 
 func NewRootWithClient(client inspect.ResponsesClient) *cobra.Command {
@@ -458,40 +447,6 @@ func inspectImageLLMMarkdown(tips []string) string {
 
 func printErr(cmd *cobra.Command, o *Opts, err error) error {
 	return print(cmd, o, errEnvelope(err))
-}
-
-func printExecuteError(w io.Writer, args []string, err error) error {
-	return output.Print(w, fallbackFormat(args), fail(
-		"invalid_args",
-		messageWithDetail("inspect-image command could not be executed.", err),
-		"Run inspect-image commands --json or inspect-image schema inspect --json. On Windows cmd, use double quotes and rerun with --out <file> if stdout capture is unreliable.",
-		400,
-	))
-}
-
-func fallbackFormat(args []string) string {
-	for i, arg := range args {
-		switch {
-		case arg == "--json":
-			return "json"
-		case arg == "--format=json" || arg == "-o=json":
-			return "json"
-		case arg == "--format=yaml" || arg == "-o=yaml":
-			return "yaml"
-		case arg == "--format=table" || arg == "-o=table":
-			return "table"
-		case arg == "--format" && i+1 < len(args):
-			switch strings.ToLower(strings.TrimSpace(args[i+1])) {
-			case "json":
-				return "json"
-			case "yaml":
-				return "yaml"
-			case "table":
-				return "table"
-			}
-		}
-	}
-	return "table"
 }
 
 func printErrWithOut(cmd *cobra.Command, o *Opts, err error, outPath string) error {

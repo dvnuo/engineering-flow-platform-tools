@@ -74,7 +74,7 @@ func applyGroupFallback(cmd *cobra.Command, h ProductHelp, key string) {
 		cmd.Short = desc
 	}
 	if strings.TrimSpace(cmd.Long) == "" {
-		cmd.Long = strings.TrimSpace(desc + "\n\nUse `" + commandUsage(cmd) + " --help` to inspect subcommands and flags. For agent workflows, prefer `--json`, inspect `error.code` and `error.hint`, and use `--dry-run` before write operations when available.")
+		cmd.Long = strings.TrimSpace(desc + "\n\nUse `" + commandUsage(cmd) + " --help` to inspect subcommands and flags. For agent workflows, prefer `--json`, inspect `error.code` and `error.hint`, and use `--dry-run` before write operations when available. On Windows cmd, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`.")
 	}
 }
 
@@ -99,6 +99,8 @@ func commandLong(h ProductHelp, meta llm.CommandMeta) string {
 		b.WriteString(h.Instructions)
 	}
 	b.WriteString("\n- If `ok=false`, read `error.code`, `error.message`, and `error.hint` before retrying.")
+	b.WriteString("\n- Command parsing failures return `invalid_args` JSON when `--json` is present.")
+	b.WriteString("\n- On Windows cmd, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`.")
 	return b.String()
 }
 

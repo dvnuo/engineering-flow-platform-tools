@@ -1,5 +1,15 @@
 # Command Specification
 
+## Common Conventions
+
+- `--json` returns the stable `ok/data/error` envelope.
+- Command parsing failures return `ok=false` with `error.code=invalid_args` when `--json` is present.
+- `--format table|json|yaml` selects output rendering where supported.
+- `--verbose` writes non-secret diagnostics.
+- Destructive commands require `--yes`.
+- Write commands support `--dry-run` unless explicitly documented otherwise.
+- Windows `cmd` agents should use double quotes, `where <binary>`, `dir`, `cd`, and `type` rather than Bash-only commands or single-quote quoting.
+
 ## Jira
 
 ### Basic

@@ -19,6 +19,8 @@ func TestLLMHelpTips(t *testing.T) {
 		"Use --dry-run before write operations.",
 		"Use --yes for destructive operations.",
 		"Inspect error.code and error.hint before retrying.",
+		"Command parsing failures",
+		"On Windows cmd",
 	}
 	for name, root := range map[string]*cobra.Command{"jira": jcmd.NewRoot(), "confluence": ccmd.NewRoot()} {
 		t.Run(name, func(t *testing.T) {

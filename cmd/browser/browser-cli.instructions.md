@@ -67,11 +67,38 @@ Fetch an API from the loaded page context:
 browser probe --url https://intranet.example.test --fetch-api /api/me --network-filter /api/ --json
 ```
 
+## Windows cmd Workflow
+
+When Copilot is operating in Windows `cmd`, use cmd-native commands and double quotes. Do not use Bash-only commands such as `pwd`, `ls`, `cat`, or single-quote quoting.
+
+Recommended checks:
+
+```cmd
+where browser
+cd
+dir
+browser version --json
+browser commands --json
+browser schema probe --json
+```
+
+Robust probe command:
+
+```cmd
+browser.exe probe --url "https://intranet.example.test" --selector ".user-avatar" --out "%TEMP%\browser-probe" --json
+type "%TEMP%\browser-probe\summary.json"
+```
+
+If PATH lookup is unstable or `browser is not recognized` appears after it worked earlier, run `where browser`, then invoke the exact `.exe` path shown by `where`, wrapped in double quotes.
+
+If command output capture is unreliable, inspect the files under `--out`, especially `summary.json`, `network.json`, `page.html`, and `screenshot.png`.
+
 ## Error Recovery
 
 Common errors:
 
 - `invalid_args`: call `browser schema probe --json` and rebuild the command.
+- Command parsing errors also return `invalid_args` JSON when `--json` is present.
 - `browser_not_found`: install Edge, Chrome, or Chromium, or pass `--browser-exe <path>`.
 - `page_timeout`: increase `--timeout`, increase `--wait`, or verify the URL is reachable.
 - `selector_not_found`: inspect `data.files.screenshot`, `data.files.html`, and `data.files.summary`, then adjust `--selector`.

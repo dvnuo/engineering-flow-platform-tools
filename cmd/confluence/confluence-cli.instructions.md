@@ -68,6 +68,31 @@ Use full Confluence URLs when they help select the instance:
 confluence page get --url "https://confluence.example.test/display/ENG/Runtime+Profile" --json
 ```
 
+## Windows cmd Workflow
+
+When Copilot is operating in Windows `cmd`, use cmd-native commands and double quotes. Do not use Bash-only commands such as `pwd`, `ls`, `cat`, or single-quote quoting.
+
+Recommended checks:
+
+```cmd
+where confluence
+cd
+dir
+confluence version --json
+confluence commands --json
+```
+
+Robust read command:
+
+```cmd
+confluence.exe page get --id "123" --json > "%TEMP%\confluence-result.json"
+type "%TEMP%\confluence-result.json"
+```
+
+If PATH lookup is unstable or `confluence is not recognized` appears after it worked earlier, run `where confluence`, then invoke the exact `.exe` path shown by `where`, wrapped in double quotes.
+
+If command output capture is unreliable, redirect stdout to a file and read it with `type`. Keep using `--json`, then inspect `ok`, `data`, `error.code`, and `error.hint`.
+
 ## Auth And Config
 
 The shared Atlassian config is used:
@@ -86,6 +111,7 @@ Common errors:
 - `instance_required`: pass `--instance <name>` or use a full Confluence URL that belongs to a configured instance.
 - `instance_url_mismatch`: use a URL under the selected Confluence instance.
 - `invalid_args`: call `confluence schema <command> --json` and rebuild the command.
+- Command parsing errors also return `invalid_args` JSON when `--json` is present.
 - `auth_failed`: check credentials with `confluence auth test --json`.
 - `permission_denied`: report missing Confluence permissions.
 - `not_found`: verify the page, space, attachment, comment, or URL.

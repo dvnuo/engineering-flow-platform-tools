@@ -39,6 +39,8 @@ For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~
 
 For Jira and Confluence, copy `cmd/jira/jira-cli.instructions.md` and `cmd/confluence/confluence-cli.instructions.md` into `~/.copilot/instructions/` so Copilot understands the JSON envelope, `--dry-run`, `--yes`, instance selection, and error recovery conventions.
 
+All CLI binaries return a stable JSON `invalid_args` envelope for command parsing failures when `--json` is present. On Windows `cmd`, use double quotes and `where <binary>` to resolve unstable PATH behavior.
+
 ### Inspect Image
 
 `inspect-image` is a CLI binary invoked through Bash. It lets text-only agents inspect exactly one local image using a GitHub Copilot plugin backed vision model through `/responses`.

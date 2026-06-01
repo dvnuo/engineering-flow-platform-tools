@@ -6,6 +6,9 @@
 - Use --dry-run before write operations.
 - Use --yes for destructive operations.
 - Inspect error.code and error.hint before retrying.
+- Command parsing failures across `jira`, `confluence`, `browser`, and `inspect-image` return a JSON `invalid_args` envelope when `--json` is present.
+- On Windows `cmd`, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`; avoid Bash-only quoting and commands.
+- If PATH lookup is unstable, run `where <binary>` and invoke the exact `.exe` path with double quotes.
 - For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
 
 ## Browser SSO Diagnostics

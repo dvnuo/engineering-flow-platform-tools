@@ -11,6 +11,8 @@ import (
 
 	"engineering-flow-platform-tools/internal/inspectimage/config"
 	"engineering-flow-platform-tools/internal/inspectimage/copilot"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type fakeClient struct{}
@@ -115,6 +117,7 @@ func TestHelpLLMRequiresInspectImageOnlyForImageAnalysis(t *testing.T) {
 }
 
 func TestHelpIncludesDetailedCommandGuidance(t *testing.T) {
+	assertHelpAnnotated(t, NewRootWithClient(&fakeClient{}))
 	for _, tc := range []struct {
 		name string
 		args []string
@@ -164,6 +167,34 @@ func TestHelpIncludesDetailedCommandGuidance(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func assertHelpAnnotated(t *testing.T, cmd *cobra.Command) {
+	t.Helper()
+	if !cmd.Hidden {
+		if strings.TrimSpace(cmd.Short) == "" {
+			t.Fatalf("%s missing Short", cmd.CommandPath())
+		}
+		if strings.TrimSpace(cmd.Long) == "" {
+			t.Fatalf("%s missing Long", cmd.CommandPath())
+		}
+		cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			if strings.TrimSpace(f.Usage) == "" {
+				t.Fatalf("%s flag --%s missing usage", cmd.CommandPath(), f.Name)
+			}
+		})
+		cmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+			if strings.TrimSpace(f.Usage) == "" {
+				t.Fatalf("%s persistent flag --%s missing usage", cmd.CommandPath(), f.Name)
+			}
+		})
+	}
+	for _, child := range cmd.Commands() {
+		if child.Hidden || (child.Name() == "help" && strings.TrimSpace(child.Use) == "help") {
+			continue
+		}
+		assertHelpAnnotated(t, child)
 	}
 }
 

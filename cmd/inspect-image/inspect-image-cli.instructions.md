@@ -1,3 +1,7 @@
+--- 
+applyTo: "**" 
+---
+
 # inspect-image CLI Instructions for VS Code GitHub Copilot
 
 Copy this file into `~/.copilot/instructions/inspect-image-cli.instructions.md` so VS Code GitHub Copilot has durable guidance for using the local `inspect-image` CLI.

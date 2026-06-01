@@ -128,7 +128,7 @@ func flagDescription(product, key, name string) string {
 	case "instance":
 		return "Configured " + product + " instance name."
 	case "config":
-		return "Path to the Atlassian config file."
+		return "Path to the EFP config file."
 	case "json":
 		return "Print a JSON envelope to stdout."
 	case "format":

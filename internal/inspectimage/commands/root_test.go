@@ -95,7 +95,7 @@ func TestHelpIncludesDetailedCommandGuidance(t *testing.T) {
 		{
 			name: "root",
 			args: []string{"--help"},
-			want: []string{"text-only agents", "GitHub Copilot plugin /responses endpoint", "INSPECT_IMAGE_CONFIG"},
+			want: []string{"text-only agents", "GitHub Copilot plugin /responses endpoint", "EFP_CONFIG"},
 		},
 		{
 			name: "inspect",

@@ -14,5 +14,5 @@
 - `inspect-image` sends local image bytes to the configured GitHub Copilot plugin `/responses` endpoint.
 - It accepts exactly one local image path and rejects remote URLs.
 - It does not store raw images or raw responses.
-- Config and token are stored in `~/.copilot/inspect-image.json` with `0600` permissions where supported.
+- Shared config is stored in `~/.efp/config.yaml`; short-lived Copilot tokens are stored in `~/.efp/tmp/copilot_token`. Files are written with `0600` permissions where supported.
 - `github_access_token`, `copilot_token`, Authorization headers, and base64 image data must never appear in stdout, stderr, verbose output, dry-run output, or test snapshots.

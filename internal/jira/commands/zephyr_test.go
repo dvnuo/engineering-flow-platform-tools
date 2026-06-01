@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"engineering-flow-platform-tools/internal/config"
+	"gopkg.in/yaml.v3"
 )
 
 func TestZephyrDoctorSuccess(t *testing.T) {
@@ -103,7 +104,7 @@ func TestZephyrDisabledBlocksCommandsAndDoctorCanProbe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := json.Unmarshal(b, &root); err != nil {
+	if err := yaml.Unmarshal(b, &root); err != nil {
 		t.Fatal(err)
 	}
 	disabled := false

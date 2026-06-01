@@ -17,49 +17,50 @@ var AllowedReasoning = []string{"low", "medium", "high", "xhigh"}
 var AllowedMIMETypes = []string{"image/jpeg", "image/png", "image/webp", "image/gif"}
 
 type Config struct {
-	Version  int            `json:"version"`
-	Provider string         `json:"provider"`
-	API      APIConfig      `json:"api"`
-	Defaults DefaultsConfig `json:"defaults"`
-	Limits   LimitsConfig   `json:"limits"`
-	Auth     AuthConfig     `json:"auth"`
-	Privacy  PrivacyConfig  `json:"privacy"`
+	Version  int            `json:"version" yaml:"version"`
+	Provider string         `json:"provider" yaml:"provider"`
+	API      APIConfig      `json:"api" yaml:"api"`
+	Defaults DefaultsConfig `json:"defaults" yaml:"defaults"`
+	Limits   LimitsConfig   `json:"limits" yaml:"limits"`
+	Auth     AuthConfig     `json:"auth" yaml:"auth"`
+	Privacy  PrivacyConfig  `json:"privacy" yaml:"privacy"`
 }
 
 type APIConfig struct {
-	EndpointKind   string `json:"endpoint_kind"`
-	BaseURL        string `json:"base_url"`
-	TimeoutSeconds int    `json:"timeout_seconds"`
-	UseSystemProxy bool   `json:"use_system_proxy"`
+	EndpointKind   string `json:"endpoint_kind" yaml:"endpoint_kind"`
+	BaseURL        string `json:"base_url" yaml:"base_url"`
+	TimeoutSeconds int    `json:"timeout_seconds" yaml:"timeout_seconds"`
+	UseSystemProxy bool   `json:"use_system_proxy" yaml:"use_system_proxy"`
 }
 
 type DefaultsConfig struct {
-	Model     string `json:"model"`
-	Reasoning string `json:"reasoning"`
-	Output    string `json:"output"`
+	Model     string `json:"model" yaml:"model"`
+	Reasoning string `json:"reasoning" yaml:"reasoning"`
+	Output    string `json:"output" yaml:"output"`
 }
 
 type LimitsConfig struct {
-	MaxImageBytes    int64    `json:"max_image_bytes"`
-	MaxImagesPerCall int      `json:"max_images_per_call"`
-	AllowedMIMETypes []string `json:"allowed_mime_types"`
+	MaxImageBytes    int64    `json:"max_image_bytes" yaml:"max_image_bytes"`
+	MaxImagesPerCall int      `json:"max_images_per_call" yaml:"max_images_per_call"`
+	AllowedMIMETypes []string `json:"allowed_mime_types" yaml:"allowed_mime_types"`
 }
 
 type AuthConfig struct {
-	Method                     string `json:"method"`
-	GitHubHost                 string `json:"github_host"`
-	GitHubUser                 string `json:"github_user"`
-	GitHubAccessToken          string `json:"github_access_token"`
-	GitHubAccessTokenExpiresAt string `json:"github_access_token_expires_at"`
-	CopilotToken               string `json:"copilot_token"`
-	CopilotTokenExpiresAt      string `json:"copilot_token_expires_at"`
-	UpdatedAt                  string `json:"updated_at"`
+	Method                     string `json:"method" yaml:"method"`
+	GitHubHost                 string `json:"github_host" yaml:"github_host"`
+	GitHubUser                 string `json:"github_user" yaml:"github_user"`
+	GitHubAccessToken          string `json:"github_access_token" yaml:"github_access_token"`
+	GitHubAccessTokenExpiresAt string `json:"github_access_token_expires_at" yaml:"github_access_token_expires_at"`
+	CopilotToken               string `json:"copilot_token" yaml:"copilot_token"`
+	CopilotTokenExpiresAt      string `json:"copilot_token_expires_at" yaml:"copilot_token_expires_at"`
+	CopilotTokenFile           string `json:"copilot_token_file" yaml:"copilot_token_file"`
+	UpdatedAt                  string `json:"updated_at" yaml:"updated_at"`
 }
 
 type PrivacyConfig struct {
-	StoreRawImage      bool `json:"store_raw_image"`
-	StoreRawResponse   bool `json:"store_raw_response"`
-	RedactTokensInLogs bool `json:"redact_tokens_in_logs"`
+	StoreRawImage      bool `json:"store_raw_image" yaml:"store_raw_image"`
+	StoreRawResponse   bool `json:"store_raw_response" yaml:"store_raw_response"`
+	RedactTokensInLogs bool `json:"redact_tokens_in_logs" yaml:"redact_tokens_in_logs"`
 }
 
 func Default() Config {
@@ -74,7 +75,7 @@ func Default() Config {
 		},
 		Defaults: DefaultsConfig{Model: DefaultModel, Reasoning: DefaultReasoning, Output: DefaultOutput},
 		Limits:   LimitsConfig{MaxImageBytes: MaxImageBytes, MaxImagesPerCall: MaxImagesPerCall, AllowedMIMETypes: append([]string{}, AllowedMIMETypes...)},
-		Auth:     AuthConfig{Method: "device_code", GitHubHost: "github.com"},
+		Auth:     AuthConfig{Method: "device_code", GitHubHost: "github.com", CopilotTokenFile: "~/.efp/tmp/copilot_token"},
 		Privacy:  PrivacyConfig{StoreRawImage: false, StoreRawResponse: false, RedactTokensInLogs: true},
 	}
 }
@@ -119,6 +120,9 @@ func (c *Config) FillDefaults() {
 	}
 	if c.Auth.GitHubHost == "" {
 		c.Auth.GitHubHost = d.Auth.GitHubHost
+	}
+	if c.Auth.CopilotTokenFile == "" {
+		c.Auth.CopilotTokenFile = d.Auth.CopilotTokenFile
 	}
 	if !c.Privacy.RedactTokensInLogs {
 		c.Privacy.RedactTokensInLogs = true

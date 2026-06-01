@@ -1,29 +1,63 @@
 # Configuration
 
-Environment variable: `ATLASSIAN_CONFIG`
+Default config path: `~/.efp/config.yaml`
 
-Default config path:
+Environment override: `EFP_CONFIG`
 
-- Linux/macOS: `~/.config/atlassian/config.json`
-- Windows: `%APPDATA%\\atlassian\\config.json`
+Legacy environment overrides are still accepted for compatibility:
 
-## JSON structure
+- Jira and Confluence: `ATLASSIAN_CONFIG`
+- inspect-image: `INSPECT_IMAGE_CONFIG`
 
-```json
-{
-  "version": 1,
-  "jira": {
-    "default_instance": "jira-main",
-    "instances": []
-  },
-  "confluence": {
-    "default_instance": "confluence-main",
-    "instances": []
-  }
-}
+## YAML Structure
+
+```yaml
+version: 1
+
+jira:
+  default_instance: jira-main
+  instances: []
+
+confluence:
+  default_instance: confluence-main
+  instances: []
+
+copilot:
+  provider: github_copilot_plugin
+  auth:
+    method: device_code
+    github_host: github.com
+    github_user: ""
+    github_access_token: ""
+    github_access_token_expires_at: ""
+    copilot_token_file: ~/.efp/tmp/copilot_token
+    updated_at: ""
+
+inspect_image:
+  api:
+    endpoint_kind: responses
+    base_url: https://api.githubcopilot.com
+    timeout_seconds: 90
+    use_system_proxy: true
+  defaults:
+    model: gpt-5.4
+    reasoning: medium
+    output: text
+  limits:
+    max_image_bytes: 3145728
+    max_images_per_call: 1
+    allowed_mime_types:
+      - image/jpeg
+      - image/png
+      - image/webp
+      - image/gif
+  privacy:
+    store_raw_image: false
+    store_raw_response: false
+    redact_tokens_in_logs: true
 ```
 
-### Jira instance fields
+## Jira Instance Fields
 
 - `name`
 - `base_url`
@@ -37,29 +71,31 @@ Default config path:
 - `default_project`
 - `verify_ssl`
 - `ca_cert`
+- `zephyr`
 
-### Confluence instance fields
+## Confluence Instance Fields
 
 - `name`
 - `base_url`
 - `rest_path`: `"/rest/api"`
-- `auth` (same auth structure as Jira)
+- `auth` with the same structure as Jira
 - `default_space`
 - `verify_ssl`
 - `ca_cert`
 
+## Copilot Auth
 
-## TLS and CA behavior
+`copilot.auth` stores shared GitHub/Copilot authentication metadata for commands that use Copilot-backed APIs. The short-lived `copilot_token` is not stored in `config.yaml`; it is stored in the file named by `copilot.auth.copilot_token_file`, which defaults to `~/.efp/tmp/copilot_token`.
+
+The token file uses YAML:
+
+```yaml
+copilot_token: ""
+copilot_token_expires_at: ""
+updated_at: ""
+```
+
+## TLS and CA Behavior
 
 - `verify_ssl=false` disables certificate verification and is intended only for internal testing.
 - `ca_cert` can embed PEM text for private CA trust.
-
-## Inspect Image Config
-
-`inspect-image` does not use the Atlassian config file or schema above. It stores one combined config/auth file:
-
-- Environment override: `INSPECT_IMAGE_CONFIG`
-- Copilot home override: `COPILOT_HOME`
-- Linux/macOS/Windows default: `~/.copilot/inspect-image.json`
-
-The file contains provider/API defaults, image limits, auth tokens, and privacy settings. It is written with `0600` permissions where supported, and token values must be redacted from all command output.

@@ -3,10 +3,10 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 )
 
-const EnvConfigPath = "ATLASSIAN_CONFIG"
+const EnvConfigPath = "EFP_CONFIG"
+const EnvLegacyConfigPath = "ATLASSIAN_CONFIG"
 
 func ResolvePath(flagPath string) (string, error) {
 	if flagPath != "" {
@@ -15,18 +15,16 @@ func ResolvePath(flagPath string) (string, error) {
 	if p := os.Getenv(EnvConfigPath); p != "" {
 		return p, nil
 	}
+	if p := os.Getenv(EnvLegacyConfigPath); p != "" {
+		return p, nil
+	}
 	return DefaultPath()
 }
 
 func DefaultPath() (string, error) {
-	if runtime.GOOS == "windows" {
-		if app := os.Getenv("APPDATA"); app != "" {
-			return filepath.Join(app, "atlassian", "config.json"), nil
-		}
-	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".config", "atlassian", "config.json"), nil
+	return filepath.Join(home, ".efp", "config.yaml"), nil
 }

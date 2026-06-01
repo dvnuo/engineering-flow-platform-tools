@@ -29,7 +29,7 @@ The Atlassian product integrations currently include:
 - `jira`: Jira Server/Data Center automation
 - `confluence`: Confluence Server/Data Center automation
 
-Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squad test-management resources on the same Jira instance, including cycles, executions, semantic execution resolution, server status discovery, test steps, folders, attachments, defects, ZQL metadata/search, conservative summaries, and raw ZAPI catalog/access. Jira and Confluence use `ATLASSIAN_CONFIG` and `~/.config/atlassian/config.json` because they are Atlassian product integrations. This does not mean the repository is limited to those product integrations.
+Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squad test-management resources on the same Jira instance, including cycles, executions, semantic execution resolution, server status discovery, test steps, folders, attachments, defects, ZQL metadata/search, conservative summaries, and raw ZAPI catalog/access. Jira, Confluence, and inspect-image share `EFP_CONFIG` and `~/.efp/config.yaml`; each command owns its own YAML node so product settings do not interfere with one another.
 
 ### Browser
 
@@ -71,37 +71,87 @@ inspect-image version --json
 
 ## Config File
 
-- Environment override: `ATLASSIAN_CONFIG`
-- Linux/macOS default: `~/.config/atlassian/config.json`
-- Windows default: `%APPDATA%\atlassian\config.json`
+- Environment override: `EFP_CONFIG`
+- Default path: `~/.efp/config.yaml`
+- Legacy overrides still work: `ATLASSIAN_CONFIG` for Jira/Confluence and `INSPECT_IMAGE_CONFIG` for inspect-image.
+- Short-lived Copilot tokens are stored outside the main config at `~/.efp/tmp/copilot_token`.
 
-Example multi-instance config:
+Complete example:
 
-```json
-{
-  "jira": {
-    "default_instance": "local",
-    "instances": [
-      {
-        "name": "local",
-        "base_url": "https://jira.example.test",
-        "rest_path": "/rest/api/2",
-        "auth": {"type": "basic_api_key", "username": "user@example.test", "api_key": "redacted"}
-      }
-    ]
-  },
-  "confluence": {
-    "default_instance": "docs",
-    "instances": [
-      {
-        "name": "docs",
-        "base_url": "https://confluence.example.test",
-        "rest_path": "/rest/api",
-        "auth": {"type": "bearer_token", "token": "redacted"}
-      }
-    ]
-  }
-}
+```yaml
+version: 1
+
+jira:
+  default_instance: local
+  instances:
+    - name: local
+      base_url: https://jira.example.test
+      api_version: "2"
+      rest_path: /rest/api/2
+      auth:
+        type: basic_api_key
+        username: user@example.test
+        api_key: redacted
+      default_project: PROJ
+      verify_ssl: true
+      ca_cert: ""
+      zephyr:
+        enabled: false
+        api_family: server
+        rest_path: /rest/zapi
+        default_version_id: ""
+        strict_status: true
+        status_map:
+          pass: 1
+          fail: 2
+          blocked: 3
+
+confluence:
+  default_instance: docs
+  instances:
+    - name: docs
+      base_url: https://confluence.example.test
+      rest_path: /rest/api
+      auth:
+        type: bearer_token
+        token: redacted
+      default_space: DOC
+      verify_ssl: true
+      ca_cert: ""
+
+copilot:
+  provider: github_copilot_plugin
+  auth:
+    method: device_code
+    github_host: github.com
+    github_user: ""
+    github_access_token: ""
+    github_access_token_expires_at: ""
+    copilot_token_file: ~/.efp/tmp/copilot_token
+    updated_at: ""
+
+inspect_image:
+  api:
+    endpoint_kind: responses
+    base_url: https://api.githubcopilot.com
+    timeout_seconds: 90
+    use_system_proxy: true
+  defaults:
+    model: gpt-5.4
+    reasoning: medium
+    output: text
+  limits:
+    max_image_bytes: 3145728
+    max_images_per_call: 1
+    allowed_mime_types:
+      - image/jpeg
+      - image/png
+      - image/webp
+      - image/gif
+  privacy:
+    store_raw_image: false
+    store_raw_response: false
+    redact_tokens_in_logs: true
 ```
 
 Supported authentication modes:
@@ -109,6 +159,13 @@ Supported authentication modes:
 - username/password
 - username/API key
 - bearer token/PAT
+
+Config node ownership:
+
+- `jira`: Jira instances, defaults, auth, TLS, and Zephyr settings.
+- `confluence`: Confluence instances, defaults, auth, and TLS settings.
+- `copilot`: GitHub/Copilot authentication shared by commands that use Copilot-backed APIs.
+- `inspect_image`: inspect-image API defaults, model defaults, image limits, and privacy settings.
 
 ## Jira Examples
 

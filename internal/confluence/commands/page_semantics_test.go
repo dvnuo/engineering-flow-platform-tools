@@ -12,6 +12,7 @@ import (
 
 	"engineering-flow-platform-tools/internal/config"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 func TestPageUpdateFetchesVersionWithExpand(t *testing.T) {
@@ -326,7 +327,7 @@ func confluenceBaseURLFromConfig(t *testing.T, path string) string {
 		t.Fatal(err)
 	}
 	var cfg config.RootConfig
-	if err := json.Unmarshal(b, &cfg); err != nil {
+	if err := yaml.Unmarshal(b, &cfg); err != nil {
 		t.Fatal(err)
 	}
 	return cfg.Confluence.Instances[0].BaseURL

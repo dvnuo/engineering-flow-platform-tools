@@ -2,7 +2,7 @@
 
 ## Layers
 
-- `cmd/jira` and `cmd/confluence`: thin binary entrypoints that call the real product command roots.
+- `cmd/jira`, `cmd/confluence`, `cmd/browser`, and `cmd/inspect-image`: thin binary entrypoints that call the real command roots.
 - `internal/jira/commands` and `internal/confluence/commands`: Cobra command trees, global flags, argument validation, dry-run output, and REST command mapping.
 - `internal/config`: config path resolution, load/save, auth canonicalization, and redaction.
 - `internal/auth`: Authorization header construction.
@@ -10,6 +10,7 @@
 - `internal/httpclient`: REST client, pagination helpers, URL guarding, and HTTP error normalization.
 - `internal/output`: table, JSON, and YAML envelope rendering.
 - `internal/catalog`: command metadata used by `commands --json` and `schema <command> --json`.
+- `internal/inspectimage`: standalone image inspection CLI packages for Copilot auth, one-file image validation, `/responses` calls, and agent-facing command metadata. It does not use the Atlassian `internal/config` schema.
 - `internal/testutil`: mock Jira/Confluence servers and config helpers for tests.
 
 ## REST Coverage
@@ -25,3 +26,4 @@ Confluence commands for auth test, server info, search/CQL, spaces, pages, conte
 - Secrets must stay redacted in success, failure, verbose, and dry-run output.
 - Schema metadata must stay aligned with actual command flags.
 - Mock-server tests should cover REST methods, request paths, query parameters, and request bodies.
+- `inspect-image` must validate local image type and size before network egress and must never log tokens or base64 image data.

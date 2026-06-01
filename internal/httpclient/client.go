@@ -30,6 +30,7 @@ const maxErrorBodySnippet = 2048
 var (
 	authCredentialPattern = regexp.MustCompile(`(?i)\b(?:bearer|basic)\s+[A-Za-z0-9._~+/\-=]+`)
 	sensitiveFieldPattern = regexp.MustCompile(`(?i)((?:"?(?:password|token|api[_-]?key|authorization)"?)\s*[:=]\s*)("[^"]*"|[^\s,}]+)`)
+	urlUserInfoPattern    = regexp.MustCompile(`(?i)\b([a-z][a-z0-9+.-]*://)[^/\s?#@]+@`)
 )
 
 func New(instance config.InstanceConfig) (*Client, error) {
@@ -100,7 +101,12 @@ func (c *Client) Do(r Request) (*http.Response, error) {
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, &HTTPError{Code: "network_error", Message: "request failed", Hint: err.Error()}
+		detail := SanitizeErrorText(err.Error())
+		message := "request failed"
+		if detail != "" {
+			message += ": " + detail
+		}
+		return nil, &HTTPError{Code: "network_error", Message: message, Hint: "Check network connectivity, proxy settings, and the selected instance base_url."}
 	}
 	if resp.StatusCode >= 400 {
 		return resp, c.statusError(resp)
@@ -116,6 +122,10 @@ func (c *Client) statusError(resp *http.Response) *HTTPError {
 		message += ": " + snippet
 	}
 	return &HTTPError{Code: mapStatus(resp.StatusCode), Message: message, Status: resp.StatusCode}
+}
+
+func SanitizeErrorText(s string) string {
+	return sanitizeErrorSnippet([]byte(s), nil)
 }
 
 func sanitizeErrorSnippet(body []byte, headers map[string]string) string {
@@ -143,7 +153,8 @@ func sanitizeErrorSnippet(body []byte, headers map[string]string) string {
 		}
 	}
 	snippet = authCredentialPattern.ReplaceAllString(snippet, "***REDACTED***")
-	snippet = sensitiveFieldPattern.ReplaceAllString(snippet, `${1}"***REDACTED***"`)
+	snippet = sensitiveFieldPattern.ReplaceAllString(snippet, "***REDACTED***")
+	snippet = urlUserInfoPattern.ReplaceAllString(snippet, `${1}***REDACTED***@`)
 	if truncated {
 		snippet += "..."
 	}

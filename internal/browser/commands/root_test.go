@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"engineering-flow-platform-tools/internal/browser/probe"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type fakeRunner struct {
@@ -108,6 +110,17 @@ func TestProbeErrorEnvelope(t *testing.T) {
 	}
 }
 
+func TestHelpIsAnnotatedForVisibleCommands(t *testing.T) {
+	cmd := NewRootWithRunner(&fakeRunner{})
+	assertHelpAnnotated(t, cmd)
+	help := runText(t, &fakeRunner{}, "probe", "--help")
+	for _, want := range []string{"Open an internal URL", "--url", "CSS selector"} {
+		if !strings.Contains(help, want) {
+			t.Fatalf("probe help missing %q\n%s", want, help)
+		}
+	}
+}
+
 func TestRequireSelectorFailsWhenRunnerDoesNot(t *testing.T) {
 	fake := &fakeRunner{result: probe.ProbeResult{Selector: ".user", SelectorFound: false}}
 	out := run(t, fake, "probe", "--url", "https://intranet.test", "--selector", ".user", "--require-selector", "--json")
@@ -133,4 +146,45 @@ func run(t *testing.T, r probe.Runner, args ...string) map[string]any {
 		t.Fatalf("invalid json err=%v execErr=%v out=%s", uerr, err, b.String())
 	}
 	return out
+}
+
+func runText(t *testing.T, r probe.Runner, args ...string) string {
+	t.Helper()
+	cmd := NewRootWithRunner(r)
+	var b bytes.Buffer
+	cmd.SetOut(&b)
+	cmd.SetErr(&b)
+	cmd.SetArgs(args)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute failed: %v out=%s", err, b.String())
+	}
+	return b.String()
+}
+
+func assertHelpAnnotated(t *testing.T, cmd *cobra.Command) {
+	t.Helper()
+	if !cmd.Hidden {
+		if strings.TrimSpace(cmd.Short) == "" {
+			t.Fatalf("%s missing Short", cmd.CommandPath())
+		}
+		if strings.TrimSpace(cmd.Long) == "" {
+			t.Fatalf("%s missing Long", cmd.CommandPath())
+		}
+		cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			if strings.TrimSpace(f.Usage) == "" {
+				t.Fatalf("%s flag --%s missing usage", cmd.CommandPath(), f.Name)
+			}
+		})
+		cmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+			if strings.TrimSpace(f.Usage) == "" {
+				t.Fatalf("%s persistent flag --%s missing usage", cmd.CommandPath(), f.Name)
+			}
+		})
+	}
+	for _, child := range cmd.Commands() {
+		if child.Hidden {
+			continue
+		}
+		assertHelpAnnotated(t, child)
+	}
 }

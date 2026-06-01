@@ -117,6 +117,18 @@ func TestHTTPStatusErrorIncludesBodySnippetAndRedactsCredentials(t *testing.T) {
 	}
 }
 
+func TestSanitizeErrorTextRedactsURLCredentials(t *testing.T) {
+	got := SanitizeErrorText(`proxy failed for https://user:pass@example.test/path with Authorization: Bearer secret-token`)
+	for _, secret := range []string{"user:pass", "Bearer secret-token", "Authorization"} {
+		if strings.Contains(got, secret) {
+			t.Fatalf("secret %q leaked in %q", secret, got)
+		}
+	}
+	if !strings.Contains(got, "example.test") {
+		t.Fatalf("sanitized detail lost useful host: %q", got)
+	}
+}
+
 func TestClientUsesHTTPProxyFromEnvironment(t *testing.T) {
 	clearProxyEnv(t)
 

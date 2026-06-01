@@ -24,7 +24,7 @@ func commentCmd(o *Opts) *cobra.Command {
 		if v == 0 && !o.DryRun {
 			r, e := cx.client.Do(httpclient.Request{Method: "GET", Path: "content/" + args[0]})
 			if e != nil {
-				return print(cmd, o, output.Failure("server_error", "version fetch failed", "", 500))
+				return print(cmd, o, output.Failure("server_error", "version fetch failed: "+httpclient.SanitizeErrorText(e.Error()), "Retry with --version or inspect the upstream error.", 500))
 			}
 			defer r.Body.Close()
 			var m map[string]any

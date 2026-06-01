@@ -2,7 +2,7 @@ package files
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"os"
 )
@@ -37,7 +37,7 @@ func ReadJSONValueFromFlags(value, valueFile string) (interface{}, error) {
 	}
 	var out interface{}
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return nil, errors.New("invalid_args")
+		return nil, fmt.Errorf("invalid_args: %w", err)
 	}
 	return out, nil
 }

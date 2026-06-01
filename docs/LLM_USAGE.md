@@ -6,6 +6,7 @@
 - Use --dry-run before write operations.
 - Use --yes for destructive operations.
 - Inspect error.code and error.hint before retrying.
+- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
 
 ## Browser SSO Diagnostics
 
@@ -19,6 +20,20 @@
 - Do not ask the tool to export cookies or tokens.
 - Do not treat `negotiate_401_seen` as definitive proof; it is an indicator only.
 - In OpenCode runtime, this command requires a browser executable in the runtime image. If no browser is installed, expect `browser_not_found`.
+
+## Image Inspection
+
+- Use `inspect-image` when you need to understand a local image, screenshot, UI, diagram, chart, or visible text.
+- Prefer it over OCR for screenshots, UI states, diagrams, charts, and visual errors.
+- `inspect-image` is a CLI binary invoked through Bash, not a Portal tool, runtime built-in tool, MCP tool, or Web UI component.
+- Always call `inspect-image schema inspect --json` before constructing a complex command.
+- Always use `--json`.
+- Use `inspect-image inspect --image <path> --prompt "<task>" --json`.
+- Read `data.result.answer` first.
+- For OCR-like tasks, read `data.result.visible_text`.
+- If `ok=false`, inspect `error.code` and `error.hint`.
+- If `auth_required`, ask the user to run `inspect-image auth login`.
+- For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so this guidance is available during coding sessions.
 
 ## Jira Zephyr Test Management
 
@@ -81,6 +96,7 @@ jira schema zephyr.execution.bulk-update-status --json
 confluence schema page.create --json
 confluence schema page.update --json
 browser schema probe --json
+inspect-image schema inspect --json
 ```
 
 The `required` field lists mandatory arguments and flags. The `flags` field includes type and description metadata suitable for tool planning.

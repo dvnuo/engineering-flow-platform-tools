@@ -53,3 +53,13 @@ Default config path:
 
 - `verify_ssl=false` disables certificate verification and is intended only for internal testing.
 - `ca_cert` can embed PEM text for private CA trust.
+
+## Inspect Image Config
+
+`inspect-image` does not use the Atlassian config file or schema above. It stores one combined config/auth file:
+
+- Environment override: `INSPECT_IMAGE_CONFIG`
+- Copilot home override: `COPILOT_HOME`
+- Linux/macOS/Windows default: `~/.copilot/inspect-image.json`
+
+The file contains provider/API defaults, image limits, auth tokens, and privacy settings. It is written with `0600` permissions where supported, and token values must be redacted from all command output.

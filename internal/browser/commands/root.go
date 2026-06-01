@@ -9,6 +9,7 @@ import (
 
 	"engineering-flow-platform-tools/internal/browser/probe"
 	"engineering-flow-platform-tools/internal/catalog"
+	"engineering-flow-platform-tools/internal/clihelp"
 	"engineering-flow-platform-tools/internal/output"
 	"engineering-flow-platform-tools/internal/version"
 	"github.com/spf13/cobra"
@@ -31,6 +32,20 @@ func NewRootWithRunner(r probe.Runner) *cobra.Command {
 	c.PersistentFlags().StringVar(&o.Format, "format", "table", "")
 	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "")
 	c.AddCommand(probeCmd(o, r), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
+		Product: "browser",
+		Binary:  "browser",
+		Short:   "Probe browser SSO and page state through Edge/Chrome/Chromium",
+		Long: strings.TrimSpace(`browser is a terminal-invoked CLI for agents that need to open an internal URL, capture page artifacts, and inspect browser SSO indicators through Edge, Chrome, or Chromium DevTools.
+
+It writes non-secret diagnostics such as summary.json, network.json, page.html, and screenshot.png. It does not export cookies or tokens. Always use --json for agent workflows so callers can read ok, data.files, error.code, and error.hint.`),
+		Examples: []string{
+			`browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json`,
+			`browser schema probe --json`,
+			`browser help llm --json`,
+		},
+		Instructions: "copy cmd/browser/browser-cli.instructions.md to ~/.copilot/instructions/browser-cli.instructions.md.",
+	})
 	return c
 }
 

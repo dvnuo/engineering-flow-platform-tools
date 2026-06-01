@@ -19,6 +19,7 @@ build_one() {
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/jira$exe" ./cmd/jira
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/confluence$exe" ./cmd/confluence
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/browser$exe" ./cmd/browser
+  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/inspect-image$exe" ./cmd/inspect-image
 }
 
 build_one linux amd64 ""

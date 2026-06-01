@@ -8,17 +8,49 @@ Copy this file into `~/.copilot/instructions/inspect-image-cli.instructions.md` 
 
 ## What This Tool Is
 
-`inspect-image` is a terminal/Bash-invoked CLI for agents that need to understand exactly one local image. Use it for screenshots, UI states, diagrams, charts, visible errors, and OCR-like text extraction when plain OCR is too limited.
+`inspect-image` is a terminal-invoked CLI for agents that need to understand exactly one local image. Use it for screenshots, UI states, diagrams, charts, visible errors, and OCR-like text extraction when plain OCR is too limited.
 
 It is not a Portal tool, runtime built-in tool, MCP server, or OCR-only command.
 
+## Mandatory Image Analysis Rule
+
+When the task requires image analysis, image recognition, screenshot understanding, UI state inspection, diagram interpretation, chart reading, visual error analysis, or visible-text extraction from an image, use `inspect-image`.
+
+Do not use OCR tools as the primary path. Do not write Python, Go, shell scripts, OpenCV/Tesseract snippets, image parsers, or ad hoc automation to recognize or interpret image content. Do not attempt to infer image content from filenames, metadata, dimensions, thumbnails, or surrounding text.
+
+If `inspect-image` is not authenticated, first check whether the stored GitHub access token can refresh the short-lived Copilot token:
+
+```bash
+inspect-image auth status --json
+```
+
+If `data.token_state` is `refreshable` or `data.copilot_token_refreshable` is `true`, do not ask the user to log in again. Run:
+
+```bash
+inspect-image auth test --json
+```
+
+Then retry `inspect-image inspect --json`.
+
+Only when auth status/test returns `auth_required` or `auth_expired` and it is not refreshable, ask the user to run:
+
+```bash
+inspect-image auth login
+```
+
+Do not switch to OCR, Python-based image recognition, manual guessing, or another image-analysis approach because auth is missing. Wait for the user to complete `inspect-image auth login` only when refresh is not possible, then retry with `inspect-image inspect --json`.
+
 ## Always Use JSON
 
-Always add `--json` so results and failures use the stable envelope:
+For agents, `--json` is the default way to use every `inspect-image` command and subcommand. Always add `--json` to `inspect`, `auth status`, `auth test`, `doctor`, `models`, `commands`, `schema`, `version`, and `help llm` so results and failures use the stable envelope.
 
 ```bash
 inspect-image inspect --image <local-path> --prompt "<task>" --json
 ```
+
+Only omit `--json` for human-facing interactive output such as asking the user to run `inspect-image auth login` and read the device-code prompt.
+
+The CLI writes the JSON envelope to stdout by default. `--out <file>` is only a diagnostic fallback or a second copy for terminal-capture issues; it is not required for normal use.
 
 Read these fields first:
 
@@ -32,17 +64,27 @@ If `ok=false`, inspect `error.code` and `error.hint` before retrying.
 
 ## Basic Workflow
 
+First identify the active terminal model before choosing command syntax. If the terminal is Windows `cmd`, do not probe with Bash commands such as `pwd`, `command -v`, `cat`, `ls`, `cd "$PWD"`, `$PWD`, or single-quote quoting. Use the Windows `cmd` workflow below.
+
 Check auth before the first real request:
 
 ```bash
 inspect-image auth status --json
 ```
 
-If the command returns `auth_required`, ask the user to run:
+If `auth status` returns `ok=true` with `token_state=refreshable`, run:
+
+```bash
+inspect-image auth test --json
+```
+
+If the command returns `auth_required` and is not refreshable, ask the user to run:
 
 ```bash
 inspect-image auth login
 ```
+
+After asking for `auth login`, stop the image-analysis attempt until the user confirms authentication is complete. Do not fall back to OCR or custom scripts.
 
 Discover command shape when needed:
 
@@ -51,6 +93,7 @@ inspect-image commands --json
 inspect-image schema inspect --json
 inspect-image models --json
 inspect-image help llm --json
+inspect-image auth test --json
 ```
 
 Inspect one image:
@@ -58,6 +101,16 @@ Inspect one image:
 ```bash
 inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --json
 ```
+
+When stdout capture is unreliable, especially from Windows terminal bridges, write the full JSON envelope to a file:
+
+```bash
+inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --out ./inspect-image-result.json --json
+```
+
+Prefer a result file inside the current workspace or next to the inspected image, not a temp directory, when you have a file-read tool available. After the command returns, read the `--out` JSON file with the file-read tool and answer from `ok`, `data.result.answer`, `data.result.visible_text`, `error.code`, and `error.hint`.
+
+Use `--verbose` for non-secret stage diagnostics on stderr. It reports whether config loaded, the image validated, auth was checked, the `/responses` request was sent, the response was received, and the JSON envelope was written.
 
 Use presets to focus the task:
 
@@ -68,6 +121,43 @@ inspect-image inspect --image ./chart.png --preset chart --prompt "Summarize lab
 inspect-image inspect --image ./error.gif --preset error --prompt "Read the error and suggest the next action." --json
 inspect-image inspect --image ./receipt.jpg --preset ocr --prompt "Extract visible text preserving line breaks." --json
 ```
+
+## Windows cmd Workflow
+
+When Copilot is operating in Windows `cmd`, use cmd-native commands and double quotes. Do not use Bash-only commands such as `pwd`, `command -v`, `ls`, `cat`, `cd "$PWD"`, `$PWD`, or single-quote quoting.
+
+Recommended checks:
+
+```cmd
+where inspect-image
+cd
+dir
+inspect-image auth status --json
+```
+
+Robust inspect command with file output:
+
+```cmd
+inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error and explain the UI state." --out "%CD%\inspect-image-result.json" --json
+```
+
+Then read `%CD%\inspect-image-result.json` with the file-read tool. Use `type "%CD%\inspect-image-result.json"` only when no file-read tool is available.
+
+If PATH lookup is unstable or `inspect-image is not recognized` appears after it worked earlier, run `where inspect-image`, then invoke the exact `.exe` path shown by `where`, wrapped in double quotes:
+
+```cmd
+"C:\path\to\inspect-image.exe" inspect --image "%CD%\screenshot.png" --prompt "What is shown?" --out "%CD%\inspect-image-result.json" --json
+```
+
+If a command appears to produce no output, do not switch to OCR or Python. Re-run with:
+
+```cmd
+inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "What is shown?" --verbose --out "%CD%\inspect-image-result.json" --json
+```
+
+Then read `%CD%\inspect-image-result.json` with the file-read tool. Avoid repeated shell probes after the result file exists.
+
+If the command text contains unexpected control characters or the command name appears corrupted, retype the command manually in `cmd` using only plain ASCII characters.
 
 ## Limits
 
@@ -95,8 +185,9 @@ Not supported:
 
 Common errors:
 
-- `auth_required`: ask the user to run `inspect-image auth login`.
-- `auth_expired`: ask the user to run `inspect-image auth login`.
+- `auth_required`: run `inspect-image auth status --json`; if not refreshable, ask the user to run `inspect-image auth login`, then wait. Do not use OCR, Python, or another image-analysis path.
+- `auth_expired`: run `inspect-image auth status --json`; if not refreshable, ask the user to run `inspect-image auth login`, then wait. Do not use OCR, Python, or another image-analysis path.
+- `token_state=refreshable`: run `inspect-image auth test --json` or retry `inspect-image inspect --json`; do not ask the user to log in again.
 - `image_not_found`: check the local path and retry.
 - `not_a_file`: pass a regular image file, not a directory or device.
 - `unsupported_image_type`: convert to JPEG, PNG, WEBP, or GIF.
@@ -104,12 +195,15 @@ Common errors:
 - `prompt_required`: add `--prompt "<task>"` or `--prompt-file <path>`.
 - `model_not_allowed`: run `inspect-image models --json` and choose an allowed model.
 - `reasoning_not_allowed`: use `low`, `medium`, `high`, or `xhigh`.
+- `invalid_args`: command parsing failed; call `inspect-image schema inspect --json` and rebuild the command.
 - `rate_limited`: wait and retry the same request.
 - `responses_api_error`: read `error.message` for the sanitized upstream detail, then retry or report the visible detail.
 - `responses_api_unavailable`: retry later or check network/proxy/Copilot availability.
 - `proxy_error`: check `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, and `NO_PROXY`.
 - `response_parse_failed`: use `data.result.raw_text` when present, or report the sanitized parse error.
 - `safety_refusal`: report that the model refused and do not invent missing image details.
+- Empty terminal output: re-run with `--verbose --out <workspace-file> --json`, then read the file with the file-read tool. Do not switch to OCR or Python.
+- `inspect-image is not recognized`: run `where inspect-image`, then invoke the exact `.exe` path with double quotes.
 
 ## Security Rules
 

@@ -8,17 +8,19 @@ Copy this file into `~/.copilot/instructions/browser-cli.instructions.md` so VS 
 
 ## What This Tool Is
 
-`browser` is a terminal/Bash-invoked CLI for agents that need to open an internal URL in Edge, Chrome, or Chromium through DevTools and collect page diagnostics.
+`browser` is a terminal-invoked CLI for agents that need to open an internal URL in Edge, Chrome, or Chromium through DevTools and collect page diagnostics.
 
 Use it for browser SSO checks, login-success probes, screenshots, HTML snapshots, network summaries, and page-state inspection. It is not a Portal tool, runtime built-in browser tool, MCP server, or cookie export tool.
 
 ## Always Use JSON
 
-Always add `--json` so results and failures use the stable envelope:
+For agents, `--json` is the default way to use every `browser` command and subcommand. Always add `--json` so results and failures use the stable envelope:
 
 ```bash
 browser probe --url <url> --json
 ```
+
+Only omit `--json` when intentionally reading human-oriented `--help` text.
 
 Read these fields first:
 
@@ -67,11 +69,43 @@ Fetch an API from the loaded page context:
 browser probe --url https://intranet.example.test --fetch-api /api/me --network-filter /api/ --json
 ```
 
+## Windows cmd Workflow
+
+When Copilot is operating in Windows `cmd`, use cmd-native commands and double quotes. Do not use Bash-only commands such as `pwd`, `command -v`, `ls`, `cat`, `cd "$PWD"`, `$PWD`, or single-quote quoting.
+
+Recommended checks:
+
+```cmd
+where browser
+cd
+dir
+browser version --json
+browser commands --json
+browser schema probe --json
+```
+
+Normal probe command:
+
+```cmd
+browser.exe probe --url "https://intranet.example.test" --selector ".user-avatar" --out "%CD%\browser-probe" --json
+```
+
+If PATH lookup is unstable or `browser is not recognized` appears after it worked earlier, run `where browser`, then invoke the exact `.exe` path shown by `where`, wrapped in double quotes.
+
+If command output capture is unreliable, redirect the JSON envelope to a workspace file and read it with the file-read tool. Use `type` only when no file-read tool is available:
+
+```cmd
+browser.exe probe --url "https://intranet.example.test" --selector ".user-avatar" --out "%CD%\browser-probe" --json > "%CD%\browser-result.json"
+```
+
+Also inspect the artifact files under `--out`, especially `summary.json`, `network.json`, `page.html`, and `screenshot.png`.
+
 ## Error Recovery
 
 Common errors:
 
 - `invalid_args`: call `browser schema probe --json` and rebuild the command.
+- Command parsing errors also return `invalid_args` JSON when `--json` is present.
 - `browser_not_found`: install Edge, Chrome, or Chromium, or pass `--browser-exe <path>`.
 - `page_timeout`: increase `--timeout`, increase `--wait`, or verify the URL is reachable.
 - `selector_not_found`: inspect `data.files.screenshot`, `data.files.html`, and `data.files.summary`, then adjust `--selector`.

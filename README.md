@@ -33,21 +33,25 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 ### Browser
 
-`browser` is a CLI binary invoked through Bash. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. It uses a dedicated browser profile by default and does not export cookies or tokens.
+`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. It uses a dedicated browser profile by default and does not export cookies or tokens.
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
 
 For Jira and Confluence, copy `cmd/jira/jira-cli.instructions.md` and `cmd/confluence/confluence-cli.instructions.md` into `~/.copilot/instructions/` so Copilot understands the JSON envelope, `--dry-run`, `--yes`, instance selection, and error recovery conventions.
 
+All CLI binaries return a stable JSON `invalid_args` envelope for command parsing failures when `--json` is present. On Windows `cmd`, use double quotes and `where <binary>` to resolve unstable PATH behavior.
+
 ### Inspect Image
 
-`inspect-image` is a CLI binary invoked through Bash. It lets text-only agents inspect exactly one local image using a GitHub Copilot plugin backed vision model through `/responses`.
+`inspect-image` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It lets text-only agents inspect exactly one local image using a GitHub Copilot plugin backed vision model through `/responses`.
 
 Examples:
 
 ```bash
 inspect-image auth login
+inspect-image auth test --json
 inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --json
+inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --out ./inspect-image-result.json --json
 inspect-image inspect --image ./diagram.webp --preset diagram --prompt "Explain this architecture diagram." --json
 inspect-image commands --json
 inspect-image schema inspect --json
@@ -55,6 +59,8 @@ inspect-image help llm
 ```
 
 Supported image formats: JPEG, PNG, WEBP, GIF. Max size: 3145728 bytes.
+
+For agents, `--json` is the default way to use `inspect-image`; human-facing interactive `auth login` prompts can omit it. Stdout is the primary output path. Use `--out <file>` only when terminal stdout capture is unreliable or you want a second JSON envelope copy, preferably inside the current workspace. Use `--verbose` for non-secret stage diagnostics on stderr.
 
 For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so Copilot has durable guidance for when and how to invoke this CLI.
 
@@ -185,7 +191,7 @@ browser schema probe --json
 inspect-image schema inspect --json
 ```
 
-Always use `--json`, inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+For agents, default every `jira`, `confluence`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
 
 For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jira issue. When a user asks to update case `X` in cycle `Y`, prefer `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; use `execution resolve` or `cycle resolve` first when the target is ambiguous, and use `status list` rather than hard-coding numeric status ids.
 

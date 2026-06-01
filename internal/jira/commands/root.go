@@ -49,7 +49,7 @@ func NewRoot() *cobra.Command {
 		Short:   "Operate Jira issues, projects, metadata, Agile resources, and Zephyr test management",
 		Long: strings.TrimSpace(`jira is a terminal-invoked CLI for agents and scripts that need stable JSON access to Jira Server/Data Center resources.
 
-Use it for issues, search, transitions, comments, attachments, projects, users, groups, metadata, filters, dashboards, Agile boards and sprints, and Zephyr test-management resources. Always use --json for agent workflows. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
+Use it for issues, search, transitions, comments, attachments, projects, users, groups, metadata, filters, dashboards, Agile boards and sprints, and Zephyr test-management resources. For agent workflows, default every command and subcommand to --json. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
 
 Configuration uses the shared Atlassian config file, normally ~/.config/atlassian/config.json on Linux/macOS or %APPDATA%\atlassian\config.json on Windows.`),
 		Examples: []string{
@@ -481,12 +481,16 @@ func schemaCmd() *cobra.Command {
 func helpLLMCmd() *cobra.Command {
 	return &cobra.Command{Use: "help llm", RunE: func(cmd *cobra.Command, args []string) error {
 		tips := []string{
-			"Always use --json for machine-readable output.",
+			"For agents, --json is the default way to use every jira command and subcommand.",
+			"Always add --json so results and failures use the stable ok/data/error envelope; omit it only when intentionally reading human-oriented --help text.",
 			"Use --instance when multiple instances are configured.",
 			"Full Jira/Confluence URLs can auto-select the instance.",
 			"Use --dry-run before write operations.",
 			"Use --yes for destructive operations.",
 			"Inspect error.code and error.hint before retrying.",
+			"Command parsing failures return an invalid_args JSON envelope when --json is present.",
+			"On Windows cmd, use double quotes and cmd-native commands such as where/dir/cd/type; do not use Bash-only commands such as pwd, command -v, cat, ls, cd \"$PWD\", or single quotes.",
+			"If terminal output capture is unreliable, rerun the exact .exe path from where jira and redirect stdout to a workspace file, then inspect the JSON envelope with the file-read tool.",
 			"If a Jira URL contains selectedItem=com.thed.zephyr.je, treat it as a Zephyr test-management page.",
 			"Use jira zephyr doctor --project <PROJECT> --json first for a Jira project you have not inspected.",
 			"Use Jira core commands for issues, stories, bugs, comments, attachments, and workflows.",

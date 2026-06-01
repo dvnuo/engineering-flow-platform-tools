@@ -8,17 +8,19 @@ Copy this file into `~/.copilot/instructions/confluence-cli.instructions.md` so 
 
 ## What This Tool Is
 
-`confluence` is a terminal/Bash-invoked CLI for agents that need stable JSON access to Confluence Server/Data Center resources.
+`confluence` is a terminal-invoked CLI for agents that need stable JSON access to Confluence Server/Data Center resources.
 
 Use it for pages, spaces, content, blogs, attachments, comments, labels, restrictions, users, groups, long tasks, webhooks, and raw REST calls. It is not a Portal tool, runtime built-in tool, MCP server, or browser scraper.
 
 ## Always Use JSON
 
-Always add `--json` so results and failures use the stable envelope:
+For agents, `--json` is the default way to use every `confluence` command and subcommand. Always add `--json` so results and failures use the stable envelope:
 
 ```bash
 confluence page get --id <page-id> --json
 ```
+
+Only omit `--json` when intentionally reading human-oriented `--help` text.
 
 Read these fields first:
 
@@ -68,6 +70,36 @@ Use full Confluence URLs when they help select the instance:
 confluence page get --url "https://confluence.example.test/display/ENG/Runtime+Profile" --json
 ```
 
+## Windows cmd Workflow
+
+When Copilot is operating in Windows `cmd`, use cmd-native commands and double quotes. Do not use Bash-only commands such as `pwd`, `command -v`, `ls`, `cat`, `cd "$PWD"`, `$PWD`, or single-quote quoting.
+
+Recommended checks:
+
+```cmd
+where confluence
+cd
+dir
+confluence version --json
+confluence commands --json
+```
+
+Normal read command:
+
+```cmd
+confluence.exe page get --id "123" --json
+```
+
+If PATH lookup is unstable or `confluence is not recognized` appears after it worked earlier, run `where confluence`, then invoke the exact `.exe` path shown by `where`, wrapped in double quotes.
+
+If command output capture is unreliable, redirect stdout to a workspace file, then read it with the file-read tool. Use `type` only when no file-read tool is available:
+
+```cmd
+confluence.exe page get --id "123" --json > "%CD%\confluence-result.json"
+```
+
+Keep using `--json`, then inspect `ok`, `data`, `error.code`, and `error.hint`.
+
 ## Auth And Config
 
 The shared Atlassian config is used:
@@ -86,6 +118,7 @@ Common errors:
 - `instance_required`: pass `--instance <name>` or use a full Confluence URL that belongs to a configured instance.
 - `instance_url_mismatch`: use a URL under the selected Confluence instance.
 - `invalid_args`: call `confluence schema <command> --json` and rebuild the command.
+- Command parsing errors also return `invalid_args` JSON when `--json` is present.
 - `auth_failed`: check credentials with `confluence auth test --json`.
 - `permission_denied`: report missing Confluence permissions.
 - `not_found`: verify the page, space, attachment, comment, or URL.

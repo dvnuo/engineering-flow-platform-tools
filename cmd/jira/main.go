@@ -1,12 +1,11 @@
 package main
 
 import (
+	"engineering-flow-platform-tools/internal/clihelp"
 	"engineering-flow-platform-tools/internal/jira/commands"
 	"os"
 )
 
 func main() {
-	if err := commands.NewRoot().Execute(); err != nil {
-		os.Exit(1)
-	}
+	os.Exit(clihelp.Execute(commands.NewRoot(), "jira", os.Args[1:], os.Stdout, os.Stderr))
 }

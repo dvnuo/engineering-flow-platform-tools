@@ -76,7 +76,7 @@ func TestHelpIsAnnotatedForVisibleCommands(t *testing.T) {
 	cmd := NewRoot()
 	assertHelpAnnotated(t, cmd)
 	help := runText(t, "", "issue", "transition", "--help")
-	for _, want := range []string{"Transition a Jira issue", "--dry-run", "Jira transition name"} {
+	for _, want := range []string{"Transition a Jira issue", "--dry-run", "Target transition name"} {
 		if !strings.Contains(help, want) {
 			t.Fatalf("issue transition help missing %q\n%s", want, help)
 		}

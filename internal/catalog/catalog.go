@@ -1017,24 +1017,6 @@ func flagDescription(command, name string) string {
 		return "Configured instance name."
 	case "config":
 		return "Path to config file."
-	case "base-url":
-		return "Base URL for the Jira or Confluence instance."
-	case "rest-path":
-		return "REST API base path for the instance."
-	case "api-version":
-		return "Jira REST API version."
-	case "default":
-		return "Set the added instance as the default instance."
-	case "username":
-		return "Username for basic authentication."
-	case "auth-type":
-		return "Authentication type: basic_password, basic_api_key, or bearer_token."
-	case "password-stdin":
-		return "Read the account password from stdin."
-	case "api-key-stdin":
-		return "Read the API key from stdin."
-	case "token-stdin":
-		return "Read the bearer token from stdin."
 	case "json":
 		return "Print JSON envelope."
 	case "format":
@@ -1109,28 +1091,6 @@ func flagDescription(command, name string) string {
 		return "Zephyr attachment entity id."
 	case "file":
 		return "File path to upload."
-	case "id", "page-id":
-		return "Confluence page id."
-	case "parent-id":
-		return "Confluence parent page id."
-	case "key":
-		return "Content property key."
-	case "label":
-		return "Confluence label name."
-	case "version":
-		return "Content version number."
-	case "minor-edit":
-		return "Mark a Confluence content update as a minor edit."
-	case "body-format":
-		return "Confluence body representation, such as storage."
-	case "value":
-		return "JSON value to set."
-	case "value-file":
-		return "File containing the JSON value to set."
-	case "json-body":
-		return "Raw JSON request body."
-	case "json-body-file":
-		return "File containing a raw JSON request body."
 	case "jql":
 		return "Jira JQL query."
 	case "zql":
@@ -1189,12 +1149,8 @@ func flagDescription(command, name string) string {
 		return "Confluence CQL query."
 	case "transition-id":
 		return "Jira transition id."
-	case "to":
-		return "Jira transition name."
 	case "from":
 		return "Source Jira issue key for an issue link."
-	case "field":
-		return "Additional field assignment, usually key=value or key=JSON."
 	case "fields":
 		return "Jira fields selector. Repeat or pass comma-separated fields depending on the command."
 	case "expand":

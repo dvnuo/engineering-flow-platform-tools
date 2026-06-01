@@ -61,7 +61,7 @@ func NewRoot() *cobra.Command {
 		Short:   "Operate Confluence pages, spaces, content, attachments, comments, and search",
 		Long: strings.TrimSpace(`confluence is a terminal-invoked CLI for agents and scripts that need stable JSON access to Confluence Server/Data Center resources.
 
-Use it for pages, spaces, content, blogs, attachments, comments, labels, restrictions, users, groups, long tasks, webhooks, and raw REST calls. Always use --json for agent workflows. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
+Use it for pages, spaces, content, blogs, attachments, comments, labels, restrictions, users, groups, long tasks, webhooks, and raw REST calls. For agent workflows, default every command and subcommand to --json. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
 
 Configuration uses the shared Atlassian config file, normally ~/.config/atlassian/config.json on Linux/macOS or %APPDATA%\atlassian\config.json on Windows.`),
 		Examples: []string{
@@ -259,15 +259,16 @@ func isSecretKey(k string) bool {
 func helpLLMCmd() *cobra.Command {
 	return &cobra.Command{Use: "help llm", RunE: func(cmd *cobra.Command, args []string) error {
 		tips := []string{
-			"Always use --json for machine-readable output.",
+			"For agents, --json is the default way to use every confluence command and subcommand.",
+			"Always add --json so results and failures use the stable ok/data/error envelope; omit it only when intentionally reading human-oriented --help text.",
 			"Use --instance when multiple instances are configured.",
 			"Full Jira/Confluence URLs can auto-select the instance.",
 			"Use --dry-run before write operations.",
 			"Use --yes for destructive operations.",
 			"Inspect error.code and error.hint before retrying.",
 			"Command parsing failures return an invalid_args JSON envelope when --json is present.",
-			"On Windows cmd, use double quotes, cmd-native commands such as where/dir/cd/type, and avoid Bash-only quoting.",
-			"If terminal output capture is unreliable, rerun the exact .exe path from where confluence and redirect stdout to a file, then inspect the JSON envelope.",
+			"On Windows cmd, use double quotes and cmd-native commands such as where/dir/cd/type; do not use Bash-only commands such as pwd, command -v, cat, ls, cd \"$PWD\", or single quotes.",
+			"If terminal output capture is unreliable, rerun the exact .exe path from where confluence and redirect stdout to a workspace file, then inspect the JSON envelope with the file-read tool.",
 		}
 		return output.Print(cmd.OutOrStdout(), "json", output.Success("", map[string]any{"tips": tips, "commands": catalog.Commands("confluence")}))
 	}}

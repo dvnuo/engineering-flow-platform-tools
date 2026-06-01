@@ -128,7 +128,7 @@ func TestHelpLLMIncludesWindowsAndFallbackGuidance(t *testing.T) {
 	for _, tip := range tips {
 		joined += tip.(string) + "\n"
 	}
-	for _, want := range []string{"Command parsing failures", "Windows cmd", "where browser"} {
+	for _, want := range []string{"default way to use every browser command", "Command parsing failures", "Windows cmd", "where browser", "file-read tool"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("help llm missing %q\n%s", want, joined)
 		}

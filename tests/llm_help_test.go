@@ -13,7 +13,8 @@ import (
 
 func TestLLMHelpTips(t *testing.T) {
 	required := []string{
-		"Always use --json for machine-readable output.",
+		"For agents, --json is the default way to use every",
+		"Always add --json",
 		"Use --instance when multiple instances are configured.",
 		"Full Jira/Confluence URLs can auto-select the instance.",
 		"Use --dry-run before write operations.",

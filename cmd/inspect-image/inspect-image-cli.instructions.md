@@ -8,7 +8,7 @@ Copy this file into `~/.copilot/instructions/inspect-image-cli.instructions.md` 
 
 ## What This Tool Is
 
-`inspect-image` is a terminal/Bash-invoked CLI for agents that need to understand exactly one local image. Use it for screenshots, UI states, diagrams, charts, visible errors, and OCR-like text extraction when plain OCR is too limited.
+`inspect-image` is a terminal-invoked CLI for agents that need to understand exactly one local image. Use it for screenshots, UI states, diagrams, charts, visible errors, and OCR-like text extraction when plain OCR is too limited.
 
 It is not a Portal tool, runtime built-in tool, MCP server, or OCR-only command.
 
@@ -42,11 +42,15 @@ Do not switch to OCR, Python-based image recognition, manual guessing, or anothe
 
 ## Always Use JSON
 
-Always add `--json` so results and failures use the stable envelope:
+For agents, `--json` is the default way to use every `inspect-image` command and subcommand. Always add `--json` to `inspect`, `auth status`, `auth test`, `doctor`, `models`, `commands`, `schema`, `version`, and `help llm` so results and failures use the stable envelope.
 
 ```bash
 inspect-image inspect --image <local-path> --prompt "<task>" --json
 ```
+
+Only omit `--json` for human-facing interactive output such as asking the user to run `inspect-image auth login` and read the device-code prompt.
+
+The CLI writes the JSON envelope to stdout by default. `--out <file>` is only a diagnostic fallback or a second copy for terminal-capture issues; it is not required for normal use.
 
 Read these fields first:
 
@@ -59,6 +63,8 @@ Read these fields first:
 If `ok=false`, inspect `error.code` and `error.hint` before retrying.
 
 ## Basic Workflow
+
+First identify the active terminal model before choosing command syntax. If the terminal is Windows `cmd`, do not probe with Bash commands such as `pwd`, `command -v`, `cat`, `ls`, `cd "$PWD"`, `$PWD`, or single-quote quoting. Use the Windows `cmd` workflow below.
 
 Check auth before the first real request:
 
@@ -102,6 +108,8 @@ When stdout capture is unreliable, especially from Windows terminal bridges, wri
 inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --out ./inspect-image-result.json --json
 ```
 
+Prefer a result file inside the current workspace or next to the inspected image, not a temp directory, when you have a file-read tool available. After the command returns, read the `--out` JSON file with the file-read tool and answer from `ok`, `data.result.answer`, `data.result.visible_text`, `error.code`, and `error.hint`.
+
 Use `--verbose` for non-secret stage diagnostics on stderr. It reports whether config loaded, the image validated, auth was checked, the `/responses` request was sent, the response was received, and the JSON envelope was written.
 
 Use presets to focus the task:
@@ -116,7 +124,7 @@ inspect-image inspect --image ./receipt.jpg --preset ocr --prompt "Extract visib
 
 ## Windows cmd Workflow
 
-When Copilot is operating in Windows `cmd`, use cmd-native commands and double quotes. Do not use Bash-only commands such as `pwd`, `ls`, `cat`, or single-quote quoting.
+When Copilot is operating in Windows `cmd`, use cmd-native commands and double quotes. Do not use Bash-only commands such as `pwd`, `command -v`, `ls`, `cat`, `cd "$PWD"`, `$PWD`, or single-quote quoting.
 
 Recommended checks:
 
@@ -130,22 +138,24 @@ inspect-image auth status --json
 Robust inspect command with file output:
 
 ```cmd
-inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error and explain the UI state." --out "%TEMP%\inspect-image-result.json" --json
-type "%TEMP%\inspect-image-result.json"
+inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error and explain the UI state." --out "%CD%\inspect-image-result.json" --json
 ```
+
+Then read `%CD%\inspect-image-result.json` with the file-read tool. Use `type "%CD%\inspect-image-result.json"` only when no file-read tool is available.
 
 If PATH lookup is unstable or `inspect-image is not recognized` appears after it worked earlier, run `where inspect-image`, then invoke the exact `.exe` path shown by `where`, wrapped in double quotes:
 
 ```cmd
-"C:\path\to\inspect-image.exe" inspect --image "%CD%\screenshot.png" --prompt "What is shown?" --out "%TEMP%\inspect-image-result.json" --json
+"C:\path\to\inspect-image.exe" inspect --image "%CD%\screenshot.png" --prompt "What is shown?" --out "%CD%\inspect-image-result.json" --json
 ```
 
 If a command appears to produce no output, do not switch to OCR or Python. Re-run with:
 
 ```cmd
-inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "What is shown?" --verbose --out "%TEMP%\inspect-image-result.json" --json
-type "%TEMP%\inspect-image-result.json"
+inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "What is shown?" --verbose --out "%CD%\inspect-image-result.json" --json
 ```
+
+Then read `%CD%\inspect-image-result.json` with the file-read tool. Avoid repeated shell probes after the result file exists.
 
 If the command text contains unexpected control characters or the command name appears corrupted, retype the command manually in `cmd` using only plain ASCII characters.
 
@@ -192,7 +202,7 @@ Common errors:
 - `proxy_error`: check `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, and `NO_PROXY`.
 - `response_parse_failed`: use `data.result.raw_text` when present, or report the sanitized parse error.
 - `safety_refusal`: report that the model refused and do not invent missing image details.
-- Empty terminal output: re-run with `--verbose --out <file> --json`, then read the file. Do not switch to OCR or Python.
+- Empty terminal output: re-run with `--verbose --out <workspace-file> --json`, then read the file with the file-read tool. Do not switch to OCR or Python.
 - `inspect-image is not recognized`: run `where inspect-image`, then invoke the exact `.exe` path with double quotes.
 
 ## Security Rules

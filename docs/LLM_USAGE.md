@@ -1,6 +1,7 @@
 # LLM/Agent Usage
 
-- Always use --json for machine-readable output.
+- For agents, default every `jira`, `confluence`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
+- Only omit `--json` when intentionally reading human-oriented `--help` text or when a documented interactive human prompt requires text output.
 - Use --instance when multiple instances are configured.
 - Full Jira/Confluence URLs can auto-select the instance.
 - Use --dry-run before write operations.
@@ -15,7 +16,7 @@
 
 - Always call `browser schema probe --json` before constructing a probe command.
 - Always use `--json`.
-- `browser` is a CLI binary invoked through Bash, not an OpenCode built-in browser tool, MCP tool, or Web UI component.
+- `browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd, not an OpenCode built-in browser tool, MCP tool, or Web UI component.
 - Use `--selector` for a deterministic login-success signal.
 - Use `--clean-profile` when the user wants to distinguish true OS/enterprise SSO from cached browser session.
 - Read `data.files.summary`, `data.files.screenshot`, `data.files.html`, and `data.files.network`.
@@ -29,18 +30,21 @@
 - Use `inspect-image` when you need to understand a local image, screenshot, UI, diagram, chart, or visible text.
 - For image analysis, recognition, screenshot understanding, UI state inspection, diagram interpretation, chart reading, visual error analysis, or visible-text extraction from an image, use `inspect-image` as the only image-analysis path.
 - Do not use OCR tools as the primary path, and do not write Python/OpenCV/Tesseract/image-parser scripts to recognize or interpret image content.
-- `inspect-image` is a CLI binary invoked through Bash, not a Portal tool, runtime built-in tool, MCP tool, or Web UI component.
+- `inspect-image` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd, not a Portal tool, runtime built-in tool, MCP tool, or Web UI component.
+- For agents, `--json` is the default way to use this CLI. Add `--json` to `inspect`, `auth status`, `auth test`, `doctor`, `models`, `commands`, `schema`, `version`, and `help llm`.
+- Only omit `--json` for human-facing interactive output such as asking the user to run `inspect-image auth login` and read the device-code prompt.
 - Always call `inspect-image schema inspect --json` before constructing a complex command.
 - Always use `--json`.
 - Use `inspect-image inspect --image <path> --prompt "<task>" --json`.
-- If terminal stdout capture is unreliable, use `inspect-image inspect --image <path> --prompt "<task>" --out <file> --json` and read the JSON envelope from that file.
+- Stdout is the primary output path. If terminal stdout capture is unreliable, use `inspect-image inspect --image <path> --prompt "<task>" --out <workspace-file> --json`; `--out` writes an additional JSON envelope copy and does not replace stdout.
+- Prefer a result file inside the current workspace or next to the inspected image, then read it with the file-read tool. Use shell commands such as `type` only when no file-read tool is available.
 - Use `--verbose` for non-secret diagnostics when debugging command execution; it reports config load, image validation, auth checks, `/responses` request/response, output file writes, and JSON envelope status.
 - Read `data.result.answer` first.
 - For OCR-like tasks, read `data.result.visible_text`.
 - If `ok=false`, inspect `error.code` and `error.hint`.
 - If `inspect-image auth status --json` returns `token_state=refreshable` or `copilot_token_refreshable=true`, run `inspect-image auth test --json` or retry `inspect-image inspect --json`; do not ask the user to log in again.
 - If `auth_required` or `auth_expired` is not refreshable, ask the user to run `inspect-image auth login`, wait for completion, and then retry `inspect-image inspect --json`; do not fall back to OCR, Python image recognition, or guessing.
-- On Windows `cmd`, use double quotes, `where`, `dir`, `cd`, and `type`; avoid Bash-only commands and use `--out "%TEMP%\inspect-image-result.json"` rather than shell redirection when capture is unreliable.
+- On Windows `cmd`, use double quotes, `where`, `dir`, and `cd`; avoid Bash-only commands such as `pwd`, `command -v`, `cat`, `ls`, `cd "$PWD"`, `$PWD`, and single quotes. If capture is unreliable, use `--out "%CD%\inspect-image-result.json"` rather than shell redirection.
 - For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so this guidance is available during coding sessions.
 
 ## Jira Zephyr Test Management

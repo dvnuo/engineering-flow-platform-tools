@@ -74,7 +74,7 @@ func applyGroupFallback(cmd *cobra.Command, h ProductHelp, key string) {
 		cmd.Short = desc
 	}
 	if strings.TrimSpace(cmd.Long) == "" {
-		cmd.Long = strings.TrimSpace(desc + "\n\nUse `" + commandUsage(cmd) + " --help` to inspect subcommands and flags. For agent workflows, prefer `--json`, inspect `error.code` and `error.hint`, and use `--dry-run` before write operations when available. On Windows cmd, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`.")
+		cmd.Long = strings.TrimSpace(desc + "\n\nUse `" + commandUsage(cmd) + " --help` to inspect subcommands and flags. For agent workflows, treat `--json` as the default for every command and subcommand, inspect `error.code` and `error.hint`, and use `--dry-run` before write operations when available. On Windows cmd, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`.")
 	}
 }
 
@@ -82,7 +82,7 @@ func commandLong(h ProductHelp, meta llm.CommandMeta) string {
 	var b strings.Builder
 	b.WriteString(meta.Description)
 	b.WriteString("\n\nAgent guidance:")
-	b.WriteString("\n- Always use `--json` for machine-readable output.")
+	b.WriteString("\n- Treat `--json` as the default for this command and every subcommand so results and failures use the stable envelope.")
 	if len(meta.Required) > 0 {
 		b.WriteString("\n- Required input: `")
 		b.WriteString(strings.Join(meta.Required, "`, `"))

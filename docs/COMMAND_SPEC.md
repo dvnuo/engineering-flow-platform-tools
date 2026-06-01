@@ -2,6 +2,7 @@
 
 ## Common Conventions
 
+- For agent workflows, default every `jira`, `confluence`, `browser`, and `inspect-image` command and subcommand to `--json`.
 - `--json` returns the stable `ok/data/error` envelope.
 - Command parsing failures return `ok=false` with `error.code=invalid_args` when `--json` is present.
 - `--format table|json|yaml` selects output rendering where supported.
@@ -366,9 +367,10 @@ confluence page get --url <page-url>
 Windows `cmd` agents should use double quotes and cmd-native commands:
 
 ```cmd
-inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error" --out "%TEMP%\inspect-image-result.json" --json
-type "%TEMP%\inspect-image-result.json"
+inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error" --out "%CD%\inspect-image-result.json" --json
 ```
+
+Read `%CD%\inspect-image-result.json` with the file-read tool if stdout capture is unreliable. Use `type "%CD%\inspect-image-result.json"` only when no file-read tool is available.
 
 Optional future/P1:
 

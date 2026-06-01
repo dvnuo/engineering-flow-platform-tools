@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -105,6 +106,8 @@ func TestHelpLLMRequiresInspectImageOnlyForImageAnalysis(t *testing.T) {
 		joined += tip.(string) + "\n"
 	}
 	for _, want := range []string{
+		"For agents, --json is the default",
+		"Always add --json",
 		"only image-analysis path",
 		"Do not use OCR tools as the primary path",
 		"do not write Python",
@@ -112,6 +115,9 @@ func TestHelpLLMRequiresInspectImageOnlyForImageAnalysis(t *testing.T) {
 		"Do not fall back to OCR",
 		"Windows cmd",
 		"--verbose --out",
+		"Stdout is the primary output path",
+		"%CD%\\inspect-image-result.json",
+		"file-read tool",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("help llm tips missing %q\n%s", want, joined)
@@ -359,6 +365,9 @@ func TestInspectOutWritesSuccessEnvelope(t *testing.T) {
 	if fileOut["ok"] != true {
 		t.Fatalf("bad file output: %#v", fileOut)
 	}
+	if !reflect.DeepEqual(out, fileOut) {
+		t.Fatalf("--out should write the same envelope that stdout receives\nstdout=%#v\nfile=%#v", out, fileOut)
+	}
 }
 
 func TestInspectOutWritesErrorEnvelope(t *testing.T) {
@@ -375,6 +384,9 @@ func TestInspectOutWritesErrorEnvelope(t *testing.T) {
 	fileOut := readJSONFile(t, outPath)
 	if fileOut["error"].(map[string]any)["code"] != "auth_required" {
 		t.Fatalf("bad file error: %#v", fileOut)
+	}
+	if !reflect.DeepEqual(out, fileOut) {
+		t.Fatalf("--out should write the same error envelope that stdout receives\nstdout=%#v\nfile=%#v", out, fileOut)
 	}
 }
 

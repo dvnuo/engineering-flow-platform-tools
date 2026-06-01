@@ -33,7 +33,7 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 ### Browser
 
-`browser` is a CLI binary invoked through Bash. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. It uses a dedicated browser profile by default and does not export cookies or tokens.
+`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. It uses a dedicated browser profile by default and does not export cookies or tokens.
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
 
@@ -43,7 +43,7 @@ All CLI binaries return a stable JSON `invalid_args` envelope for command parsin
 
 ### Inspect Image
 
-`inspect-image` is a CLI binary invoked through Bash. It lets text-only agents inspect exactly one local image using a GitHub Copilot plugin backed vision model through `/responses`.
+`inspect-image` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It lets text-only agents inspect exactly one local image using a GitHub Copilot plugin backed vision model through `/responses`.
 
 Examples:
 
@@ -60,7 +60,7 @@ inspect-image help llm
 
 Supported image formats: JPEG, PNG, WEBP, GIF. Max size: 3145728 bytes.
 
-Use `--out <file>` when terminal stdout capture is unreliable; the file receives the full JSON envelope. Use `--verbose` for non-secret stage diagnostics on stderr.
+For agents, `--json` is the default way to use `inspect-image`; human-facing interactive `auth login` prompts can omit it. Stdout is the primary output path. Use `--out <file>` only when terminal stdout capture is unreliable or you want a second JSON envelope copy, preferably inside the current workspace. Use `--verbose` for non-secret stage diagnostics on stderr.
 
 For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so Copilot has durable guidance for when and how to invoke this CLI.
 
@@ -191,7 +191,7 @@ browser schema probe --json
 inspect-image schema inspect --json
 ```
 
-Always use `--json`, inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+For agents, default every `jira`, `confluence`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
 
 For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jira issue. When a user asks to update case `X` in cycle `Y`, prefer `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; use `execution resolve` or `cycle resolve` first when the target is ambiguous, and use `status list` rather than hard-coding numeric status ids.
 

@@ -52,7 +52,7 @@ func NewRootWithClient(client inspect.ResponsesClient) *cobra.Command {
 
 It is invoked from Bash or a terminal. It is not a Portal tool, runtime built-in tool, or MCP server.
 
-The inspect command validates the local image first, then sends the image bytes to the configured GitHub Copilot plugin /responses endpoint. Use --json for agent workflows so callers can read ok, data.result.answer, data.result.visible_text, error.code, and error.hint.
+The inspect command validates the local image first, then sends the image bytes to the configured GitHub Copilot plugin /responses endpoint. For agent workflows, default every command and subcommand to --json so callers can read ok, data.result.answer, data.result.visible_text, error.code, and error.hint.
 
 Configuration is stored in ~/.copilot/inspect-image.json by default. Set INSPECT_IMAGE_CONFIG or pass --config to use a different file.`),
 		Example: strings.TrimSpace(`inspect-image auth status --json
@@ -82,11 +82,11 @@ Use this for screenshots, UI states, diagrams, charts, visible errors, and OCR-l
 
 The prompt is appended as the task; it does not replace the built-in safety and structured-output instructions. Use --preset to bias the prompt toward OCR, UI, diagram, chart, or error analysis. In --json mode, failures are returned as ok=false with error.code and error.hint.
 
-Use --out <file> to write the full JSON envelope to a file as well as stdout. This is useful in Windows cmd or terminal bridges where stdout capture is unreliable. Use --verbose for non-secret stage diagnostics on stderr.`),
+Stdout is the primary output path. Use --out <file> only when you want a second JSON envelope copy, such as in Windows cmd or terminal bridges where stdout capture is unreliable. Use --verbose for non-secret stage diagnostics on stderr.`),
 		Example: strings.TrimSpace(`inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --json
 inspect-image inspect --image ./diagram.webp --preset diagram --prompt "Explain this architecture diagram." --json
 inspect-image inspect --image ./chart.png --preset chart --prompt-file ./task.txt --out ./inspect-result.json --json
-inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error" --out "%TEMP%\inspect-image-result.json" --json`),
+inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error" --out "%CD%\inspect-image-result.json" --json`),
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			externalClient := client != nil
@@ -490,7 +490,9 @@ func inspectSchema() map[string]any {
 
 func inspectImageLLMTips() []string {
 	return []string{
-		"Always use --json.",
+		"For agents, --json is the default way to use every inspect-image command and subcommand.",
+		"Always add --json to inspect, auth status, auth test, doctor, models, commands, schema, version, and help llm so results and failures use the stable envelope.",
+		"Only omit --json for human-facing interactive output such as asking the user to run inspect-image auth login and read the device-code prompt.",
 		"Use inspect-image inspect --image <path> --prompt <task> --json.",
 		"For image analysis, recognition, screenshot understanding, UI inspection, diagrams, charts, visual errors, or visible text in an image, use inspect-image as the only image-analysis path.",
 		"Do not use OCR tools as the primary path, and do not write Python/OpenCV/Tesseract/image-parser scripts to recognize or interpret image content.",
@@ -501,9 +503,10 @@ func inspectImageLLMTips() []string {
 		"If inspect-image auth status returns token_state=refreshable, run inspect-image auth test --json or retry inspect-image inspect --json; do not ask for auth login.",
 		"If auth_required or auth_expired and auth status is not refreshable, ask the user to run inspect-image auth login, wait for completion, then retry inspect-image inspect --json.",
 		"Do not fall back to OCR, Python image recognition, manual guessing, or another image-analysis approach when auth is missing.",
-		"On Windows cmd, use double quotes, cmd-native commands such as where/dir/cd/type, and --out <file> instead of shell redirection when output capture is unreliable.",
-		"Example for Windows cmd: inspect-image.exe inspect --image \"%CD%\\screenshot.png\" --prompt \"Read the visible error\" --out \"%TEMP%\\inspect-image-result.json\" --json",
-		"If inspect appears to produce no stdout, rerun with --verbose --out <file> --json, then read the file with type <file>.",
+		"Stdout is the primary output path; --out writes an additional JSON envelope copy and should be used only for terminal-capture issues or diagnostics.",
+		"On Windows cmd, use double quotes and cmd-native commands such as where/dir/cd/type; do not use Bash-only commands such as pwd, command -v, cat, ls, cd \"$PWD\", or single quotes.",
+		"Example for Windows cmd fallback: inspect-image.exe inspect --image \"%CD%\\screenshot.png\" --prompt \"Read the visible error\" --out \"%CD%\\inspect-image-result.json\" --json",
+		"If inspect appears to produce no stdout, rerun with --verbose --out <workspace-file> --json, then read the file with the file-read tool; use type <file> only when no file-read tool is available.",
 	}
 }
 

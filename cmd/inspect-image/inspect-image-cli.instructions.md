@@ -75,6 +75,14 @@ Inspect one image:
 inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --json
 ```
 
+When stdout capture is unreliable, especially from Windows terminal bridges, write the full JSON envelope to a file:
+
+```bash
+inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --out ./inspect-image-result.json --json
+```
+
+Use `--verbose` for non-secret stage diagnostics on stderr. It reports whether config loaded, the image validated, auth was checked, the `/responses` request was sent, the response was received, and the JSON envelope was written.
+
 Use presets to focus the task:
 
 ```bash
@@ -84,6 +92,41 @@ inspect-image inspect --image ./chart.png --preset chart --prompt "Summarize lab
 inspect-image inspect --image ./error.gif --preset error --prompt "Read the error and suggest the next action." --json
 inspect-image inspect --image ./receipt.jpg --preset ocr --prompt "Extract visible text preserving line breaks." --json
 ```
+
+## Windows cmd Workflow
+
+When Copilot is operating in Windows `cmd`, use cmd-native commands and double quotes. Do not use Bash-only commands such as `pwd`, `ls`, `cat`, or single-quote quoting.
+
+Recommended checks:
+
+```cmd
+where inspect-image
+cd
+dir
+inspect-image auth status --json
+```
+
+Robust inspect command with file output:
+
+```cmd
+inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error and explain the UI state." --out "%TEMP%\inspect-image-result.json" --json
+type "%TEMP%\inspect-image-result.json"
+```
+
+If PATH lookup is unstable or `inspect-image is not recognized` appears after it worked earlier, run `where inspect-image`, then invoke the exact `.exe` path shown by `where`, wrapped in double quotes:
+
+```cmd
+"C:\path\to\inspect-image.exe" inspect --image "%CD%\screenshot.png" --prompt "What is shown?" --out "%TEMP%\inspect-image-result.json" --json
+```
+
+If a command appears to produce no output, do not switch to OCR or Python. Re-run with:
+
+```cmd
+inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "What is shown?" --verbose --out "%TEMP%\inspect-image-result.json" --json
+type "%TEMP%\inspect-image-result.json"
+```
+
+If the command text contains unexpected control characters or the command name appears corrupted, retype the command manually in `cmd` using only plain ASCII characters.
 
 ## Limits
 
@@ -126,6 +169,8 @@ Common errors:
 - `proxy_error`: check `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, and `NO_PROXY`.
 - `response_parse_failed`: use `data.result.raw_text` when present, or report the sanitized parse error.
 - `safety_refusal`: report that the model refused and do not invent missing image details.
+- Empty terminal output: re-run with `--verbose --out <file> --json`, then read the file. Do not switch to OCR or Python.
+- `inspect-image is not recognized`: run `where inspect-image`, then invoke the exact `.exe` path with double quotes.
 
 ## Security Rules
 

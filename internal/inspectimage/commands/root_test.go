@@ -31,6 +31,12 @@ func TestCommandsJSONListsCoreCommands(t *testing.T) {
 			t.Fatalf("missing %s in %s", want, joined)
 		}
 	}
+	for _, item := range commands {
+		cmd := item.(map[string]any)
+		if cmd["name"] == "auth.login" && len(cmd["required"].([]any)) != 0 {
+			t.Fatalf("auth.login should not inherit Atlassian auth requirements: %#v", cmd["required"])
+		}
+	}
 }
 
 func TestSchemaInspectJSON(t *testing.T) {
@@ -40,7 +46,7 @@ func TestSchemaInspectJSON(t *testing.T) {
 		t.Fatalf("bad schema: %#v", data)
 	}
 	props := data["properties"].(map[string]any)
-	if props["image"] == nil || props["prompt"] == nil || props["model"] == nil || props["reasoning"] == nil {
+	if props["image"] == nil || props["prompt"] == nil || props["out"] == nil || props["model"] == nil || props["reasoning"] == nil {
 		t.Fatalf("missing properties: %#v", props)
 	}
 }
@@ -99,6 +105,8 @@ func TestHelpLLMRequiresInspectImageOnlyForImageAnalysis(t *testing.T) {
 		"do not write Python",
 		"auth_required or auth_expired",
 		"Do not fall back to OCR",
+		"Windows cmd",
+		"--verbose --out",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("help llm tips missing %q\n%s", want, joined)
@@ -186,6 +194,78 @@ func TestInspectWithInjectedClient(t *testing.T) {
 	}
 }
 
+func TestInspectOutWritesSuccessEnvelope(t *testing.T) {
+	path := writePNG(t)
+	outPath := filepath.Join(t.TempDir(), "result.json")
+	out := run(t, &fakeClient{}, "inspect", "--image", path, "--prompt", "x", "--out", outPath, "--json")
+	if out["ok"] != true {
+		t.Fatalf("bad inspect: %#v", out)
+	}
+	fileOut := readJSONFile(t, outPath)
+	if fileOut["ok"] != true {
+		t.Fatalf("bad file output: %#v", fileOut)
+	}
+}
+
+func TestInspectOutWritesErrorEnvelope(t *testing.T) {
+	path := writePNG(t)
+	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
+	if err := config.Save(cfgPath, config.Default()); err != nil {
+		t.Fatal(err)
+	}
+	outPath := filepath.Join(t.TempDir(), "error.json")
+	out := run(t, nil, "inspect", "--config", cfgPath, "--image", path, "--prompt", "x", "--out", outPath, "--json")
+	if out["error"].(map[string]any)["code"] != "auth_required" {
+		t.Fatalf("bad stdout error: %#v", out)
+	}
+	fileOut := readJSONFile(t, outPath)
+	if fileOut["error"].(map[string]any)["code"] != "auth_required" {
+		t.Fatalf("bad file error: %#v", fileOut)
+	}
+}
+
+func TestInspectVerboseDiagnostics(t *testing.T) {
+	path := writePNG(t)
+	outPath := filepath.Join(t.TempDir(), "result.json")
+	stdout, stderr := runSplit(t, &fakeClient{}, "inspect", "--image", path, "--prompt", "x", "--out", outPath, "--verbose", "--json")
+	var out map[string]any
+	if err := json.Unmarshal([]byte(stdout), &out); err != nil {
+		t.Fatalf("invalid stdout json: %v out=%s stderr=%s", err, stdout, stderr)
+	}
+	for _, want := range []string{"sending /responses request", "responses response received", "wrote JSON envelope", "process_exit_code=0"} {
+		if !strings.Contains(stderr, want) {
+			t.Fatalf("stderr missing %q\nstdout=%s\nstderr=%s", want, stdout, stderr)
+		}
+	}
+}
+
+func TestExecutePrintsJSONForCobraError(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	code := Execute([]string{"inspect", "--unknown", "--json"}, &stdout, &stderr)
+	if code != 1 {
+		t.Fatalf("exit code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	var out map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &out); err != nil {
+		t.Fatalf("invalid stdout json: %v out=%s stderr=%s", err, stdout.String(), stderr.String())
+	}
+	errData := out["error"].(map[string]any)
+	if errData["code"] != "invalid_args" || !strings.Contains(errData["message"].(string), "unknown flag") {
+		t.Fatalf("bad cobra error envelope: %#v", out)
+	}
+}
+
+func TestExecutePrintsFallbackForBadFormat(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	code := Execute([]string{"models", "--format", "xml"}, &stdout, &stderr)
+	if code != 1 {
+		t.Fatalf("exit code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "invalid_args") || !strings.Contains(stdout.String(), "unknown_output_format") {
+		t.Fatalf("bad fallback output: stdout=%s stderr=%s", stdout.String(), stderr.String())
+	}
+}
+
 func run(t *testing.T, client interface {
 	Responses(context.Context, copilot.ResponsesRequest) (map[string]any, error)
 }, args ...string) map[string]any {
@@ -203,6 +283,21 @@ func run(t *testing.T, client interface {
 	return out
 }
 
+func runSplit(t *testing.T, client interface {
+	Responses(context.Context, copilot.ResponsesRequest) (map[string]any, error)
+}, args ...string) (string, string) {
+	t.Helper()
+	cmd := NewRootWithClient(client)
+	var stdout, stderr bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+	cmd.SetArgs(args)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute failed: %v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
+	}
+	return stdout.String(), stderr.String()
+}
+
 func runText(t *testing.T, client interface {
 	Responses(context.Context, copilot.ResponsesRequest) (map[string]any, error)
 }, args ...string) string {
@@ -216,6 +311,19 @@ func runText(t *testing.T, client interface {
 		t.Fatalf("execute failed: %v out=%s", err, b.String())
 	}
 	return b.String()
+}
+
+func readJSONFile(t *testing.T, path string) map[string]any {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out map[string]any
+	if err := json.Unmarshal(data, &out); err != nil {
+		t.Fatalf("invalid json file err=%v out=%s", err, string(data))
+	}
+	return out
 }
 
 func writePNG(t *testing.T) string {

@@ -48,6 +48,7 @@ Examples:
 ```bash
 inspect-image auth login
 inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --json
+inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --out ./inspect-image-result.json --json
 inspect-image inspect --image ./diagram.webp --preset diagram --prompt "Explain this architecture diagram." --json
 inspect-image commands --json
 inspect-image schema inspect --json
@@ -55,6 +56,8 @@ inspect-image help llm
 ```
 
 Supported image formats: JPEG, PNG, WEBP, GIF. Max size: 3145728 bytes.
+
+Use `--out <file>` when terminal stdout capture is unreliable; the file receives the full JSON envelope. Use `--verbose` for non-secret stage diagnostics on stderr.
 
 For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so Copilot has durable guidance for when and how to invoke this CLI.
 

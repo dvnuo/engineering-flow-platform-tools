@@ -2,10 +2,12 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,6 +30,22 @@ type Opts struct {
 
 func NewRoot() *cobra.Command {
 	return NewRootWithClient(nil)
+}
+
+func Execute(args []string, stdout, stderr io.Writer) int {
+	cmd := NewRoot()
+	if stdout != nil {
+		cmd.SetOut(stdout)
+	}
+	if stderr != nil {
+		cmd.SetErr(stderr)
+	}
+	cmd.SetArgs(args)
+	if err := cmd.Execute(); err != nil {
+		_ = printExecuteError(cmd.OutOrStdout(), args, err)
+		return 1
+	}
+	return 0
 }
 
 func NewRootWithClient(client inspect.ResponsesClient) *cobra.Command {
@@ -61,16 +79,20 @@ inspect-image help llm`),
 
 func inspectCmd(o *Opts, client inspect.ResponsesClient) *cobra.Command {
 	opts := inspect.Options{}
+	var outPath string
 	c := &cobra.Command{Use: "inspect --image <path> --prompt <text>",
 		Short: "Inspect exactly one local image",
 		Long: strings.TrimSpace(`Validate one local JPEG, PNG, WEBP, or GIF image and send it to the GitHub Copilot plugin /responses endpoint for visual inspection.
 
 Use this for screenshots, UI states, diagrams, charts, visible errors, and OCR-like extraction where plain OCR is too narrow. Remote image URLs, PDFs, video, audio, and multiple images are not supported.
 
-The prompt is appended as the task; it does not replace the built-in safety and structured-output instructions. Use --preset to bias the prompt toward OCR, UI, diagram, chart, or error analysis. In --json mode, failures are returned as ok=false with error.code and error.hint.`),
+The prompt is appended as the task; it does not replace the built-in safety and structured-output instructions. Use --preset to bias the prompt toward OCR, UI, diagram, chart, or error analysis. In --json mode, failures are returned as ok=false with error.code and error.hint.
+
+Use --out <file> to write the full JSON envelope to a file as well as stdout. This is useful in Windows cmd or terminal bridges where stdout capture is unreliable. Use --verbose for non-secret stage diagnostics on stderr.`),
 		Example: strings.TrimSpace(`inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --json
 inspect-image inspect --image ./diagram.webp --preset diagram --prompt "Explain this architecture diagram." --json
-inspect-image inspect --image ./chart.png --preset chart --prompt-file ./task.txt --json`),
+inspect-image inspect --image ./chart.png --preset chart --prompt-file ./task.txt --out ./inspect-result.json --json
+inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error" --out "%TEMP%\inspect-image-result.json" --json`),
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 && opts.ImagePath == "" {
@@ -78,36 +100,44 @@ inspect-image inspect --image ./chart.png --preset chart --prompt-file ./task.tx
 			}
 			cfgPath, err := config.ResolvePath(o.ConfigPath)
 			if err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set INSPECT_IMAGE_CONFIG or pass --config.", 500))
+				return printWithOut(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set INSPECT_IMAGE_CONFIG or pass --config.", 500), outPath)
 			}
+			debugf(cmd, o, "config path resolved path=%s", cfgPath)
 			cfg, err := config.LoadOrDefault(cfgPath)
 			if err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix inspect-image.json or pass --config.", 400))
+				return printWithOut(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix inspect-image.json or pass --config.", 400), outPath)
 			}
 			timeout := opts.TimeoutSecond
 			if timeout <= 0 {
 				timeout = cfg.API.TimeoutSeconds
 			}
+			debugf(cmd, o, "config loaded base_url=%s timeout_seconds=%d", cfg.API.BaseURL, timeout)
 			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(timeout)*time.Second)
 			defer cancel()
 			if client == nil {
-				if _, _, err := inspectLocalOnly(cfg, opts); err != nil {
-					return printErr(cmd, o, err)
+				img, warnings, err := inspectLocalOnly(cfg, opts)
+				if err != nil {
+					return printErrWithOut(cmd, o, err, outPath)
 				}
+				debugf(cmd, o, "image validated path=%s mime=%s size_bytes=%d sha256=%s width=%d height=%d animated=%t warnings=%d", img.Path, img.MIMEType, img.SizeBytes, img.SHA256, img.Width, img.Height, img.Animated, len(warnings))
 				var refreshErr error
+				debugf(cmd, o, "checking Copilot auth token")
 				cfg, refreshErr = ensureCopilotToken(cmd.Context(), cfg, cfgPath)
 				if refreshErr != nil {
-					return printErr(cmd, o, refreshErr)
+					return printErrWithOut(cmd, o, refreshErr, outPath)
 				}
+				debugf(cmd, o, "Copilot auth token ready")
 			}
 			if client == nil {
 				client = &copilot.Client{BaseURL: cfg.API.BaseURL, Token: cfg.Auth.CopilotToken, HTTPClient: copilot.NewHTTPClient(time.Duration(timeout) * time.Second)}
 			}
+			client = wrapVerboseClient(cmd, o, client)
 			result, err := inspect.Run(ctx, cfg, client, opts)
 			if err != nil {
-				return printErr(cmd, o, err)
+				return printErrWithOut(cmd, o, err, outPath)
 			}
-			return print(cmd, o, output.Success("", result))
+			debugf(cmd, o, "response parsed successfully")
+			return printWithOut(cmd, o, output.Success("", result), outPath)
 		}}
 	c.Flags().StringVar(&opts.ImagePath, "image", "", "Local image path. Exactly one regular file; remote URLs are rejected.")
 	c.Flags().StringVar(&opts.Prompt, "prompt", "", "Task for the model, such as reading an error, explaining a UI state, or summarizing a diagram.")
@@ -116,6 +146,7 @@ inspect-image inspect --image ./chart.png --preset chart --prompt-file ./task.tx
 	c.Flags().StringVar(&opts.Reasoning, "reasoning", config.DefaultReasoning, "Reasoning effort. Allowed: low, medium, high, xhigh.")
 	c.Flags().StringVar(&opts.Preset, "preset", "general", "Prompt preset: general, ocr, ui, diagram, chart, or error.")
 	c.Flags().IntVar(&opts.TimeoutSecond, "timeout", 0, "Request timeout in seconds. Defaults to config api.timeout_seconds.")
+	c.Flags().StringVar(&outPath, "out", "", "Write the full JSON envelope to this file in addition to stdout.")
 	return c
 }
 
@@ -388,6 +419,7 @@ func inspectSchema() map[string]any {
 		"properties": map[string]any{
 			"image":     map[string]any{"type": "string", "description": "Local image path. Exactly one image."},
 			"prompt":    map[string]any{"type": "string"},
+			"out":       map[string]any{"type": "string", "description": "Optional file path for a JSON envelope copy. Useful when terminal stdout capture is unreliable."},
 			"model":     map[string]any{"type": "string", "enum": config.AllowedModels, "default": config.DefaultModel},
 			"reasoning": map[string]any{"type": "string", "enum": config.AllowedReasoning, "default": config.DefaultReasoning},
 		},
@@ -407,6 +439,9 @@ func inspectImageLLMTips() []string {
 		"If ok=false, inspect error.code and error.hint before retrying.",
 		"If auth_required or auth_expired, ask the user to run inspect-image auth login, wait for completion, then retry inspect-image inspect --json.",
 		"Do not fall back to OCR, Python image recognition, manual guessing, or another image-analysis approach when auth is missing.",
+		"On Windows cmd, use double quotes, cmd-native commands such as where/dir/cd/type, and --out <file> instead of shell redirection when output capture is unreliable.",
+		"Example for Windows cmd: inspect-image.exe inspect --image \"%CD%\\screenshot.png\" --prompt \"Read the visible error\" --out \"%TEMP%\\inspect-image-result.json\" --json",
+		"If inspect appears to produce no stdout, rerun with --verbose --out <file> --json, then read the file with type <file>.",
 	}
 }
 
@@ -422,28 +457,70 @@ func inspectImageLLMMarkdown(tips []string) string {
 }
 
 func printErr(cmd *cobra.Command, o *Opts, err error) error {
+	return print(cmd, o, errEnvelope(err))
+}
+
+func printExecuteError(w io.Writer, args []string, err error) error {
+	return output.Print(w, fallbackFormat(args), fail(
+		"invalid_args",
+		messageWithDetail("inspect-image command could not be executed.", err),
+		"Run inspect-image commands --json or inspect-image schema inspect --json. On Windows cmd, use double quotes and rerun with --out <file> if stdout capture is unreliable.",
+		400,
+	))
+}
+
+func fallbackFormat(args []string) string {
+	for i, arg := range args {
+		switch {
+		case arg == "--json":
+			return "json"
+		case arg == "--format=json" || arg == "-o=json":
+			return "json"
+		case arg == "--format=yaml" || arg == "-o=yaml":
+			return "yaml"
+		case arg == "--format=table" || arg == "-o=table":
+			return "table"
+		case arg == "--format" && i+1 < len(args):
+			switch strings.ToLower(strings.TrimSpace(args[i+1])) {
+			case "json":
+				return "json"
+			case "yaml":
+				return "yaml"
+			case "table":
+				return "table"
+			}
+		}
+	}
+	return "table"
+}
+
+func printErrWithOut(cmd *cobra.Command, o *Opts, err error, outPath string) error {
+	return printWithOut(cmd, o, errEnvelope(err), outPath)
+}
+
+func errEnvelope(err error) output.Envelope {
 	var ie *inspect.InspectError
 	if errors.As(err, &ie) {
-		return print(cmd, o, fail(ie.Code, ie.Message, ie.Hint, ie.Status))
+		return fail(ie.Code, ie.Message, ie.Hint, ie.Status)
 	}
 	var ve *imagecheck.ValidationError
 	if errors.As(err, &ve) {
-		return print(cmd, o, fail(ve.Code, ve.Message, ve.Hint, ve.Status))
+		return fail(ve.Code, ve.Message, ve.Hint, ve.Status)
 	}
 	var ce *copilot.APIError
 	if errors.As(err, &ce) {
-		return print(cmd, o, fail(ce.Code, ce.Message, ce.Hint, ce.Status))
+		return fail(ce.Code, ce.Message, ce.Hint, ce.Status)
 	}
 	var ae *iauth.APIError
 	if errors.As(err, &ae) {
-		return print(cmd, o, fail(ae.Code, ae.Message, ae.Hint, ae.Status))
+		return fail(ae.Code, ae.Message, ae.Hint, ae.Status)
 	}
 	detail := config.RedactString(strings.TrimSpace(err.Error()))
 	message := "inspect-image failed."
 	if detail != "" {
 		message += " " + detail
 	}
-	return print(cmd, o, fail("unknown_error", message, "Retry with --json and inspect error.code.", 500))
+	return fail("unknown_error", message, "Retry with --json and inspect error.code.", 500)
 }
 
 func fail(code, message, hint string, status int) output.Envelope {
@@ -463,6 +540,82 @@ func messageWithDetail(message string, err error) string {
 
 func print(cmd *cobra.Command, o *Opts, env output.Envelope) error {
 	return output.Print(cmd.OutOrStdout(), fmtOut(o), env)
+}
+
+func printWithOut(cmd *cobra.Command, o *Opts, env output.Envelope, outPath string) error {
+	if strings.TrimSpace(outPath) != "" {
+		if err := writeEnvelopeFile(outPath, env); err != nil {
+			failEnv := fail("invalid_args", messageWithDetail("Output file could not be written.", err), "Choose a writable --out path or omit --out.", 400)
+			debugf(cmd, o, "output file write failed path=%s error=%s json_envelope_ok=false process_exit_code=0", outPath, config.RedactString(err.Error()))
+			return print(cmd, o, failEnv)
+		}
+		debugf(cmd, o, "wrote JSON envelope path=%s", filepath.Clean(outPath))
+	}
+	if env.OK {
+		debugf(cmd, o, "json_envelope_ok=true process_exit_code=0")
+	} else if env.Error != nil {
+		debugf(cmd, o, "json_envelope_ok=false error_code=%s status=%d process_exit_code=0", env.Error.Code, env.Error.Status)
+	}
+	return print(cmd, o, env)
+}
+
+func writeEnvelopeFile(path string, env output.Envelope) error {
+	clean := filepath.Clean(path)
+	if dir := filepath.Dir(clean); dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+	}
+	b, err := json.MarshalIndent(env, "", "  ")
+	if err != nil {
+		return err
+	}
+	b = append(b, '\n')
+	if err := os.WriteFile(clean, b, 0o600); err != nil {
+		return err
+	}
+	_ = os.Chmod(clean, 0o600)
+	return nil
+}
+
+func debugf(cmd *cobra.Command, o *Opts, format string, args ...any) {
+	if o == nil || !o.Verbose {
+		return
+	}
+	message := config.RedactString(fmt.Sprintf(format, args...))
+	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "inspect-image verbose: %s\n", message)
+}
+
+type verboseResponsesClient struct {
+	cmd   *cobra.Command
+	opts  *Opts
+	inner inspect.ResponsesClient
+}
+
+func wrapVerboseClient(cmd *cobra.Command, o *Opts, client inspect.ResponsesClient) inspect.ResponsesClient {
+	if o == nil || !o.Verbose || client == nil {
+		return client
+	}
+	return &verboseResponsesClient{cmd: cmd, opts: o, inner: client}
+}
+
+func (v *verboseResponsesClient) Responses(ctx context.Context, req copilot.ResponsesRequest) (map[string]any, error) {
+	debugf(v.cmd, v.opts, "sending /responses request model=%s reasoning=%s content_items=%d", req.Model, req.Reasoning.Effort, countInputContent(req))
+	raw, err := v.inner.Responses(ctx, req)
+	if err != nil {
+		debugf(v.cmd, v.opts, "responses request failed error=%s", err.Error())
+		return raw, err
+	}
+	debugf(v.cmd, v.opts, "responses response received")
+	return raw, nil
+}
+
+func countInputContent(req copilot.ResponsesRequest) int {
+	n := 0
+	for _, input := range req.Input {
+		n += len(input.Content)
+	}
+	return n
 }
 
 func fmtOut(o *Opts) string {

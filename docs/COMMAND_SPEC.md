@@ -343,6 +343,22 @@ confluence page get --url <page-url>
 - inspect-image help llm
 - inspect-image version
 
+### Inspect flags
+- `--image <path>`: exactly one local JPEG, PNG, WEBP, or GIF regular file.
+- `--prompt <text>` or `--prompt-file <path>`: required task text.
+- `--model <model>`: `gpt-5.4`, `gpt-5-mini`, or `gpt-5.4-mini`.
+- `--reasoning <effort>`: `low`, `medium`, `high`, or `xhigh`.
+- `--preset <preset>`: `general`, `ocr`, `ui`, `diagram`, `chart`, or `error`.
+- `--out <file>`: write the full JSON envelope to a file in addition to stdout. Use this when Windows terminal stdout capture is unreliable.
+- `--verbose`: write non-secret diagnostics to stderr for config load, image validation, auth checks, `/responses` request/response, output file writes, and envelope status.
+
+Windows `cmd` agents should use double quotes and cmd-native commands:
+
+```cmd
+inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error" --out "%TEMP%\inspect-image-result.json" --json
+type "%TEMP%\inspect-image-result.json"
+```
+
 Optional future/P1:
 
 - inspect-image prepare

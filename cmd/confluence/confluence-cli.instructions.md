@@ -1,3 +1,7 @@
+--- 
+applyTo: "**" 
+---
+
 # confluence CLI Instructions for VS Code GitHub Copilot
 
 Copy this file into `~/.copilot/instructions/confluence-cli.instructions.md` so VS Code GitHub Copilot has durable guidance for using the local `confluence` CLI.

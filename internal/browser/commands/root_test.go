@@ -121,6 +121,20 @@ func TestHelpIsAnnotatedForVisibleCommands(t *testing.T) {
 	}
 }
 
+func TestHelpLLMIncludesWindowsAndFallbackGuidance(t *testing.T) {
+	out := run(t, &fakeRunner{}, "help", "llm", "--json")
+	tips := out["data"].(map[string]any)["tips"].([]any)
+	joined := ""
+	for _, tip := range tips {
+		joined += tip.(string) + "\n"
+	}
+	for _, want := range []string{"default way to use every browser command", "Command parsing failures", "Windows cmd", "where browser", "file-read tool"} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("help llm missing %q\n%s", want, joined)
+		}
+	}
+}
+
 func TestRequireSelectorFailsWhenRunnerDoesNot(t *testing.T) {
 	fake := &fakeRunner{result: probe.ProbeResult{Selector: ".user", SelectorFound: false}}
 	out := run(t, fake, "probe", "--url", "https://intranet.test", "--selector", ".user", "--require-selector", "--json")

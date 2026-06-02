@@ -8,17 +8,19 @@ Copy this file into `~/.copilot/instructions/jira-cli.instructions.md` so VS Cod
 
 ## What This Tool Is
 
-`jira` is a terminal/Bash-invoked CLI for agents that need stable JSON access to Jira Server/Data Center resources.
+`jira` is a terminal-invoked CLI for agents that need stable JSON access to Jira Server/Data Center resources.
 
 Use it for issues, JQL search, transitions, comments, attachments, projects, users, groups, metadata, filters, dashboards, Agile boards and sprints, raw REST calls, and Zephyr test-management resources. It is not a Portal tool, runtime built-in tool, MCP server, or browser scraper.
 
 ## Always Use JSON
 
-Always add `--json` so results and failures use the stable envelope:
+For agents, `--json` is the default way to use every `jira` command and subcommand. Always add `--json` so results and failures use the stable envelope:
 
 ```bash
 jira issue get <issue-or-url> --json
 ```
+
+Only omit `--json` when intentionally reading human-oriented `--help` text.
 
 Read these fields first:
 
@@ -67,6 +69,36 @@ Use full Jira URLs when they help select the instance:
 jira issue get "https://jira.example.test/browse/PROJ-123" --json
 ```
 
+## Windows cmd Workflow
+
+When Copilot is operating in Windows `cmd`, use cmd-native commands and double quotes. Do not use Bash-only commands such as `pwd`, `command -v`, `ls`, `cat`, `cd "$PWD"`, `$PWD`, or single-quote quoting.
+
+Recommended checks:
+
+```cmd
+where jira
+cd
+dir
+jira version --json
+jira commands --json
+```
+
+Normal read command:
+
+```cmd
+jira.exe issue get "PROJ-123" --json
+```
+
+If PATH lookup is unstable or `jira is not recognized` appears after it worked earlier, run `where jira`, then invoke the exact `.exe` path shown by `where`, wrapped in double quotes.
+
+If command output capture is unreliable, redirect stdout to a workspace file, then read it with the file-read tool. Use `type` only when no file-read tool is available:
+
+```cmd
+jira.exe issue get "PROJ-123" --json > "%CD%\jira-result.json"
+```
+
+Keep using `--json`, then inspect `ok`, `data`, `error.code`, and `error.hint`.
+
 ## Zephyr Test Management
 
 If a Jira URL contains `selectedItem=com.thed.zephyr.je`, treat it as a Zephyr test-management page.
@@ -107,6 +139,7 @@ Common errors:
 - `instance_required`: pass `--instance <name>` or use a full Jira URL that belongs to a configured instance.
 - `instance_url_mismatch`: use a URL under the selected Jira instance.
 - `invalid_args`: call `jira schema <command> --json` and rebuild the command.
+- Command parsing errors also return `invalid_args` JSON when `--json` is present.
 - `auth_failed`: check credentials with `jira auth test --json`.
 - `permission_denied`: report missing Jira permissions.
 - `not_found`: verify the issue, project, attachment, or URL.

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`browser` is a cross-platform Go CLI binary invoked through Bash. It opens an internal URL in Edge/Chrome/Chromium through DevTools and writes diagnostics that help determine whether browser-based enterprise SSO appears to complete.
+`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It opens an internal URL in Edge/Chrome/Chromium through DevTools and writes diagnostics that help determine whether browser-based enterprise SSO appears to complete.
 
 ## What It Verifies
 

@@ -83,6 +83,7 @@ var inspectImageCommands = []string{
 	"inspect-image inspect",
 	"inspect-image auth login",
 	"inspect-image auth status",
+	"inspect-image auth test",
 	"inspect-image auth logout",
 	"inspect-image doctor",
 	"inspect-image models",
@@ -493,9 +494,11 @@ func argumentSpecs(usage string) []ArgumentSpec {
 func meta(product, usage string) llm.CommandMeta {
 	name := dotted(usage)
 	ex := explicit[name]
+	explicitFound := false
 	if product == "inspect-image" {
 		if local, ok := inspectImageExplicit(name); ok {
 			ex = local
+			explicitFound = true
 		}
 	}
 	r := risk(usage)
@@ -541,7 +544,11 @@ func meta(product, usage string) llm.CommandMeta {
 	}
 	req := ex.Required
 	if len(req) == 0 {
-		req = required(name)
+		if product == "inspect-image" && explicitFound {
+			req = []string{}
+		} else {
+			req = required(name)
+		}
 	}
 	return llm.CommandMeta{
 		Name:        name,
@@ -558,11 +565,13 @@ func meta(product, usage string) llm.CommandMeta {
 func inspectImageExplicit(name string) (explicitMeta, bool) {
 	items := map[string]explicitMeta{
 		"inspect": {Description: "Inspect exactly one local image using a GitHub Copilot plugin backed vision model.",
-			Flags: []string{"image", "prompt", "prompt-file", "model", "reasoning", "preset", "timeout", "config", "json", "format", "verbose"}, Required: []string{"image", "prompt"}, Risk: "external_network_data_egress", Example: "inspect-image inspect --image ./screenshot.png --prompt \"Read the error message\" --json"},
+			Flags: []string{"image", "prompt", "prompt-file", "model", "reasoning", "preset", "timeout", "out", "config", "json", "format", "verbose"}, Required: []string{"image", "prompt"}, Risk: "external_network_data_egress", Example: "inspect-image inspect --image ./screenshot.png --prompt \"Read the error message\" --out ./inspect-image-result.json --json"},
 		"auth.login": {Description: "Authenticate inspect-image with GitHub device code flow.",
 			Flags: []string{"config", "json", "format", "verbose"}, Risk: "write", Example: "inspect-image auth login"},
 		"auth.status": {Description: "Show redacted inspect-image authentication status.",
 			Flags: []string{"config", "json", "format", "verbose"}, Risk: "read", Example: "inspect-image auth status --json"},
+		"auth.test": {Description: "Refresh and validate inspect-image authentication without printing tokens.",
+			Flags: []string{"config", "json", "format", "verbose"}, Risk: "read", Example: "inspect-image auth test --json"},
 		"auth.logout": {Description: "Clear inspect-image token fields after explicit confirmation.",
 			Flags: []string{"yes", "config", "json", "format", "verbose"}, Required: []string{"yes"}, Risk: "delete", Example: "inspect-image auth logout --yes --json"},
 		"doctor": {Description: "Check inspect-image config, auth, proxy mode, and model defaults.",
@@ -1255,7 +1264,10 @@ func flagDescription(command, name string) string {
 	case "timeout":
 		return "Overall probe timeout in seconds."
 	case "out":
-		return "Directory for screenshot, HTML, network, and summary artifacts."
+		if command == "probe" {
+			return "Directory for screenshot, HTML, network, and summary artifacts."
+		}
+		return "Path to write a JSON envelope copy."
 	case "profile":
 		return "Dedicated browser user-data-dir for this probe."
 	case "clean-profile":

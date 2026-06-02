@@ -38,7 +38,7 @@ func NewRootWithRunner(r probe.Runner) *cobra.Command {
 		Short:   "Probe browser SSO and page state through Edge/Chrome/Chromium",
 		Long: strings.TrimSpace(`browser is a terminal-invoked CLI for agents that need to open an internal URL, capture page artifacts, and inspect browser SSO indicators through Edge, Chrome, or Chromium DevTools.
 
-It writes non-secret diagnostics such as summary.json, network.json, page.html, and screenshot.png. It does not export cookies or tokens. Always use --json for agent workflows so callers can read ok, data.files, error.code, and error.hint.`),
+It writes non-secret diagnostics such as summary.json, network.json, page.html, and screenshot.png. It does not export cookies or tokens. For agent workflows, default every command and subcommand to --json so callers can read ok, data.files, error.code, and error.hint.`),
 		Examples: []string{
 			`browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json`,
 			`browser schema probe --json`,
@@ -146,8 +146,9 @@ func helpLLMCmd(o *Opts) *cobra.Command {
 
 func browserLLMTips() []string {
 	return []string{
-		"Always use --json.",
-		"browser is a CLI binary invoked through Bash.",
+		"For agents, --json is the default way to use every browser command and subcommand.",
+		"Always add --json so results and failures use the stable ok/data/error envelope; omit it only when intentionally reading human-oriented --help text.",
+		"browser is a terminal-invoked CLI binary.",
 		"It opens Edge/Chrome/Chromium through DevTools.",
 		"It uses a dedicated browser profile by default.",
 		"It does not export cookies or tokens.",
@@ -155,6 +156,9 @@ func browserLLMTips() []string {
 		"Use --clean-profile to distinguish true OS/enterprise SSO from cached browser session.",
 		"Inspect network.json and summary.json.",
 		"Do not treat negotiate_401_seen as proof; it is only an indicator.",
+		"Command parsing failures return an invalid_args JSON envelope when --json is present.",
+		"On Windows cmd, use double quotes and cmd-native commands such as where/dir/cd/type; do not use Bash-only commands such as pwd, command -v, cat, ls, cd \"$PWD\", or single quotes.",
+		"If terminal output capture is unreliable, rerun the exact .exe path from where browser, redirect the JSON envelope to a workspace file, read it with the file-read tool, and inspect artifact files under --out.",
 		"In OpenCode runtime, this command requires a browser executable in the runtime image.",
 	}
 }

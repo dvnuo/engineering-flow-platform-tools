@@ -13,12 +13,15 @@ import (
 
 func TestLLMHelpTips(t *testing.T) {
 	required := []string{
-		"Always use --json for machine-readable output.",
+		"For agents, --json is the default way to use every",
+		"Always add --json",
 		"Use --instance when multiple instances are configured.",
 		"Full Jira/Confluence URLs can auto-select the instance.",
 		"Use --dry-run before write operations.",
 		"Use --yes for destructive operations.",
 		"Inspect error.code and error.hint before retrying.",
+		"Command parsing failures",
+		"On Windows cmd",
 	}
 	for name, root := range map[string]*cobra.Command{"jira": jcmd.NewRoot(), "confluence": ccmd.NewRoot()} {
 		t.Run(name, func(t *testing.T) {

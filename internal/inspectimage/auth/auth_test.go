@@ -94,6 +94,35 @@ func TestNeedsExchangeForOAuthToken(t *testing.T) {
 	}
 }
 
+func TestSummaryTreatsExpiredCopilotTokenAsRefreshable(t *testing.T) {
+	cfg := config.Default()
+	cfg.Auth.GitHubAccessToken = "github-token"
+	cfg.Auth.CopilotToken = "stale-copilot-token"
+	cfg.Auth.CopilotTokenExpiresAt = fixedNow.Add(-time.Hour).Format(time.RFC3339)
+	st := Summarize(cfg, fixedNow)
+	if !st.AuthConfigured || st.CopilotTokenValid || !st.CopilotTokenRefreshable || st.TokenState != "refreshable" {
+		t.Fatalf("bad refreshable summary: %#v", st)
+	}
+	if !GitHubTokenValid(cfg, fixedNow) || !AuthUsable(cfg, fixedNow) {
+		t.Fatalf("github token should make auth usable")
+	}
+}
+
+func TestExpiredGitHubTokenIsNotRefreshable(t *testing.T) {
+	cfg := config.Default()
+	cfg.Auth.GitHubAccessToken = "github-token"
+	cfg.Auth.GitHubAccessTokenExpiresAt = fixedNow.Add(-time.Hour).Format(time.RFC3339)
+	cfg.Auth.CopilotToken = "stale-copilot-token"
+	cfg.Auth.CopilotTokenExpiresAt = fixedNow.Add(-time.Hour).Format(time.RFC3339)
+	st := Summarize(cfg, fixedNow)
+	if st.AuthConfigured || st.GitHubAccessTokenValid || st.CopilotTokenRefreshable || st.TokenState != "github_expired" {
+		t.Fatalf("bad expired github summary: %#v", st)
+	}
+	if AuthUsable(cfg, fixedNow) {
+		t.Fatalf("expired github token should not be usable")
+	}
+}
+
 func TestParseCopilotAPIBaseURL(t *testing.T) {
 	got := ParseCopilotAPIBaseURL("tid=abc;proxy-ep=proxy.enterprise.githubcopilot.com;")
 	if got != "https://api.enterprise.githubcopilot.com" {

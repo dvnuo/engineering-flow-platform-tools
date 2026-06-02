@@ -1,5 +1,16 @@
 # Command Specification
 
+## Common Conventions
+
+- For agent workflows, default every `jira`, `confluence`, `browser`, and `inspect-image` command and subcommand to `--json`.
+- `--json` returns the stable `ok/data/error` envelope.
+- Command parsing failures return `ok=false` with `error.code=invalid_args` when `--json` is present.
+- `--format table|json|yaml` selects output rendering where supported.
+- `--verbose` writes non-secret diagnostics.
+- Destructive commands require `--yes`.
+- Write commands support `--dry-run` unless explicitly documented otherwise.
+- Windows `cmd` agents should use double quotes, `where <binary>`, `dir`, `cd`, and `type` rather than Bash-only commands or single-quote quoting.
+
 ## Jira
 
 ### Basic
@@ -335,6 +346,7 @@ confluence page get --url <page-url>
 - inspect-image inspect
 - inspect-image auth login
 - inspect-image auth status
+- inspect-image auth test
 - inspect-image auth logout
 - inspect-image doctor
 - inspect-image models
@@ -342,6 +354,23 @@ confluence page get --url <page-url>
 - inspect-image schema
 - inspect-image help llm
 - inspect-image version
+
+### Inspect flags
+- `--image <path>`: exactly one local JPEG, PNG, WEBP, or GIF regular file.
+- `--prompt <text>` or `--prompt-file <path>`: required task text.
+- `--model <model>`: `gpt-5.4`, `gpt-5-mini`, or `gpt-5.4-mini`.
+- `--reasoning <effort>`: `low`, `medium`, `high`, or `xhigh`.
+- `--preset <preset>`: `general`, `ocr`, `ui`, `diagram`, `chart`, or `error`.
+- `--out <file>`: write the full JSON envelope to a file in addition to stdout. Use this when Windows terminal stdout capture is unreliable.
+- `--verbose`: write non-secret diagnostics to stderr for config load, image validation, auth checks, `/responses` request/response, output file writes, and envelope status.
+
+Windows `cmd` agents should use double quotes and cmd-native commands:
+
+```cmd
+inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visible error" --out "%CD%\inspect-image-result.json" --json
+```
+
+Read `%CD%\inspect-image-result.json` with the file-read tool if stdout capture is unreliable. Use `type "%CD%\inspect-image-result.json"` only when no file-read tool is available.
 
 Optional future/P1:
 

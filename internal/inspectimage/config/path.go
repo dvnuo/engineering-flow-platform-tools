@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 )
 
-const EnvConfigPath = "INSPECT_IMAGE_CONFIG"
-const EnvCopilotHome = "COPILOT_HOME"
+const EnvConfigPath = "EFP_CONFIG"
+const EnvLegacyConfigPath = "INSPECT_IMAGE_CONFIG"
 
 func ResolvePath(flagPath string) (string, error) {
 	if flagPath != "" {
@@ -15,16 +15,16 @@ func ResolvePath(flagPath string) (string, error) {
 	if p := os.Getenv(EnvConfigPath); p != "" {
 		return p, nil
 	}
+	if p := os.Getenv(EnvLegacyConfigPath); p != "" {
+		return p, nil
+	}
 	return DefaultPath()
 }
 
 func DefaultPath() (string, error) {
-	if home := os.Getenv(EnvCopilotHome); home != "" {
-		return filepath.Join(home, "inspect-image.json"), nil
-	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".copilot", "inspect-image.json"), nil
+	return filepath.Join(home, ".efp", "config.yaml"), nil
 }

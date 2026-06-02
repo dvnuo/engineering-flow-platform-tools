@@ -17,6 +17,7 @@ import (
 	"engineering-flow-platform-tools/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v3"
 )
 
 func setup(t *testing.T, h http.HandlerFunc) (string, *int) {
@@ -439,7 +440,7 @@ func TestJiraStableInstanceErrorCodes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := json.Unmarshal(b, &rootCfg); err != nil {
+	if err := yaml.Unmarshal(b, &rootCfg); err != nil {
 		t.Fatal(err)
 	}
 	rootCfg.Jira.DefaultInstance = ""

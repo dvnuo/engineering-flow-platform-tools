@@ -54,7 +54,7 @@ It is invoked from Bash or a terminal. It is not a Portal tool, runtime built-in
 
 The inspect command validates the local image first, then sends the image bytes to the configured GitHub Copilot plugin /responses endpoint. For agent workflows, default every command and subcommand to --json so callers can read ok, data.result.answer, data.result.visible_text, error.code, and error.hint.
 
-Configuration is stored in ~/.copilot/inspect-image.json by default. Set INSPECT_IMAGE_CONFIG or pass --config to use a different file.`),
+Configuration is stored in ~/.efp/config.yaml by default. Set EFP_CONFIG or pass --config to use a different file.`),
 		Example: strings.TrimSpace(`inspect-image auth status --json
 inspect-image auth login
 inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --json
@@ -66,7 +66,7 @@ inspect-image help llm`),
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "Print a JSON envelope to stdout. Equivalent to --format json.")
 	c.PersistentFlags().StringVar(&o.Format, "format", "table", "Output format: table, json, or yaml.")
 	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "Enable non-secret diagnostics.")
-	c.PersistentFlags().StringVar(&o.ConfigPath, "config", "", "Path to inspect-image config. Overrides INSPECT_IMAGE_CONFIG and COPILOT_HOME.")
+	c.PersistentFlags().StringVar(&o.ConfigPath, "config", "", "Path to EFP config. Overrides EFP_CONFIG.")
 	c.AddCommand(inspectCmd(o, client), authCmd(o), doctorCmd(o), modelsCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
 	return c
 }
@@ -95,12 +95,12 @@ inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visib
 			}
 			cfgPath, err := config.ResolvePath(o.ConfigPath)
 			if err != nil {
-				return printWithOut(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set INSPECT_IMAGE_CONFIG or pass --config.", 500), outPath)
+				return printWithOut(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set EFP_CONFIG or pass --config.", 500), outPath)
 			}
 			debugf(cmd, o, "config path resolved path=%s", cfgPath)
 			cfg, err := config.LoadOrDefault(cfgPath)
 			if err != nil {
-				return printWithOut(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix inspect-image.json or pass --config.", 400), outPath)
+				return printWithOut(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix ~/.efp/config.yaml or pass --config.", 400), outPath)
 			}
 			timeout := opts.TimeoutSecond
 			if timeout <= 0 {
@@ -206,7 +206,7 @@ func refreshCopilotToken(ctx context.Context, cfg config.Config, path string) (c
 	}
 	cfg.Auth.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	if err := config.Save(path, cfg); err != nil {
-		return cfg, &copilot.APIError{Code: "config_error", Message: messageWithDetail("Config file could not be saved.", err), Hint: "Check permissions for ~/.copilot/inspect-image.json.", Status: 500}
+		return cfg, &copilot.APIError{Code: "config_error", Message: messageWithDetail("Config file could not be saved.", err), Hint: "Check permissions for ~/.efp/config.yaml and ~/.efp/tmp/copilot_token.", Status: 500}
 	}
 	return cfg, nil
 }
@@ -244,11 +244,11 @@ inspect-image auth login --json`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path, err := config.ResolvePath(o.ConfigPath)
 			if err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set INSPECT_IMAGE_CONFIG or pass --config.", 500))
+				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set EFP_CONFIG or pass --config.", 500))
 			}
 			cfg, err := config.LoadOrDefault(path)
 			if err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix inspect-image.json or pass --config.", 400))
+				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix ~/.efp/config.yaml or pass --config.", 400))
 			}
 			var humanOut io.Writer
 			if fmtOut(o) != "json" {
@@ -260,7 +260,7 @@ inspect-image auth login --json`),
 				return printErr(cmd, o, err)
 			}
 			if err := config.Save(path, updated); err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be saved.", err), "Check permissions for ~/.copilot/inspect-image.json.", 500))
+				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be saved.", err), "Check permissions for ~/.efp/config.yaml and ~/.efp/tmp/copilot_token.", 500))
 			}
 			return print(cmd, o, output.Success("", result))
 		}}
@@ -277,12 +277,12 @@ This command never prints github_access_token, copilot_token, Authorization head
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path, err := config.ResolvePath(o.ConfigPath)
 			if err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set INSPECT_IMAGE_CONFIG or pass --config.", 500))
+				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set EFP_CONFIG or pass --config.", 500))
 			}
 			cfg, err := config.Load(path)
 			if err != nil {
 				if !errors.Is(err, os.ErrNotExist) {
-					return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix inspect-image.json or pass --config.", 400))
+					return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix ~/.efp/config.yaml or pass --config.", 400))
 				}
 				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
 			}
@@ -343,15 +343,15 @@ This command requires --yes so agents do not accidentally remove credentials dur
 			}
 			path, err := config.ResolvePath(o.ConfigPath)
 			if err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set INSPECT_IMAGE_CONFIG or pass --config.", 500))
+				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set EFP_CONFIG or pass --config.", 500))
 			}
 			cfg, err := config.LoadOrDefault(path)
 			if err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix inspect-image.json or pass --config.", 400))
+				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix ~/.efp/config.yaml or pass --config.", 400))
 			}
 			cfg = iauth.Logout(cfg)
 			if err := config.Save(path, cfg); err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be saved.", err), "Check permissions for ~/.copilot/inspect-image.json.", 500))
+				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be saved.", err), "Check permissions for ~/.efp/config.yaml and ~/.efp/tmp/copilot_token.", 500))
 			}
 			return print(cmd, o, output.Success("", map[string]any{"auth_configured": false, "github_host": cfg.Auth.GitHubHost}))
 		}}
@@ -370,12 +370,12 @@ Doctor does not print tokens. An expired Copilot token is ok when it is refresha
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path, err := config.ResolvePath(o.ConfigPath)
 			if err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set INSPECT_IMAGE_CONFIG or pass --config.", 500))
+				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set EFP_CONFIG or pass --config.", 500))
 			}
 			cfg, err := config.Load(path)
 			if err != nil {
 				if !errors.Is(err, os.ErrNotExist) {
-					return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix inspect-image.json or pass --config.", 400))
+					return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix ~/.efp/config.yaml or pass --config.", 400))
 				}
 				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
 			}

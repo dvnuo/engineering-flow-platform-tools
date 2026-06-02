@@ -124,11 +124,10 @@ Do not hard-code numeric Zephyr status ids. Use `jira zephyr status list --json`
 
 ## Auth And Config
 
-The shared Atlassian config is used:
+The shared EFP config is used:
 
-- Linux/macOS: `~/.config/atlassian/config.json`
-- Windows: `%APPDATA%\atlassian\config.json`
-- Override: `--config <path>` or `ATLASSIAN_CONFIG`
+- Default: `~/.efp/config.yaml`
+- Override: `--config <path>` or `EFP_CONFIG`
 
 Use `--instance <name>` when multiple instances are configured. Auth secrets should be provided through stdin flags such as `--token-stdin`, `--password-stdin`, or `--api-key-stdin`; do not paste secrets into prompts.
 
@@ -136,7 +135,7 @@ Use `--instance <name>` when multiple instances are configured. Auth secrets sho
 
 Common errors:
 
-- `config_missing`: ask the user to configure the Atlassian config file or pass `--config`.
+- `config_missing`: ask the user to configure the EFP config file or pass `--config`.
 - `instance_required`: pass `--instance <name>` or use a full Jira URL that belongs to a configured instance.
 - `instance_url_mismatch`: use a URL under the selected Jira instance.
 - `invalid_args`: call `jira schema <command> --json` and rebuild the command.

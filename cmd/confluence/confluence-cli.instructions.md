@@ -102,11 +102,10 @@ Keep using `--json`, then inspect `ok`, `data`, `error.code`, and `error.hint`.
 
 ## Auth And Config
 
-The shared Atlassian config is used:
+The shared EFP config is used:
 
-- Linux/macOS: `~/.config/atlassian/config.json`
-- Windows: `%APPDATA%\atlassian\config.json`
-- Override: `--config <path>` or `ATLASSIAN_CONFIG`
+- Default: `~/.efp/config.yaml`
+- Override: `--config <path>` or `EFP_CONFIG`
 
 Use `--instance <name>` when multiple instances are configured. Auth secrets should be provided through stdin flags such as `--token-stdin`, `--password-stdin`, or `--api-key-stdin`; do not paste secrets into prompts.
 
@@ -114,7 +113,7 @@ Use `--instance <name>` when multiple instances are configured. Auth secrets sho
 
 Common errors:
 
-- `config_missing`: ask the user to configure the Atlassian config file or pass `--config`.
+- `config_missing`: ask the user to configure the EFP config file or pass `--config`.
 - `instance_required`: pass `--instance <name>` or use a full Confluence URL that belongs to a configured instance.
 - `instance_url_mismatch`: use a URL under the selected Confluence instance.
 - `invalid_args`: call `confluence schema <command> --json` and rebuild the command.

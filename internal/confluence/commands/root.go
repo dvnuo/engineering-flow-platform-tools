@@ -63,7 +63,7 @@ func NewRoot() *cobra.Command {
 
 Use it for pages, spaces, content, blogs, attachments, comments, labels, restrictions, users, groups, long tasks, webhooks, and raw REST calls. For agent workflows, default every command and subcommand to --json. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
 
-Configuration uses the shared Atlassian config file, normally ~/.config/atlassian/config.json on Linux/macOS or %APPDATA%\atlassian\config.json on Windows.`),
+Configuration uses the shared EFP config file, normally ~/.efp/config.yaml.`),
 		Examples: []string{
 			`confluence page get --id 123 --json`,
 			`confluence page update --id 123 --title "Runbook" --body-file page.html --dry-run --json`,
@@ -73,7 +73,7 @@ Configuration uses the shared Atlassian config file, normally ~/.config/atlassia
 		Instructions: "copy cmd/confluence/confluence-cli.instructions.md to ~/.copilot/instructions/confluence-cli.instructions.md.",
 		Groups: map[string]string{
 			"instance":         "Manage configured Confluence instances.",
-			"auth":             "Manage Confluence credentials stored in the Atlassian config.",
+			"auth":             "Manage Confluence credentials stored in the EFP config.",
 			"search":           "Search Confluence content and users.",
 			"space":            "Work with Confluence spaces.",
 			"space.permission": "Inspect Confluence space permissions.",

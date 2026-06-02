@@ -51,7 +51,7 @@ func NewRoot() *cobra.Command {
 
 Use it for issues, search, transitions, comments, attachments, projects, users, groups, metadata, filters, dashboards, Agile boards and sprints, and Zephyr test-management resources. For agent workflows, default every command and subcommand to --json. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
 
-Configuration uses the shared Atlassian config file, normally ~/.config/atlassian/config.json on Linux/macOS or %APPDATA%\atlassian\config.json on Windows.`),
+Configuration uses the shared EFP config file, normally ~/.efp/config.yaml.`),
 		Examples: []string{
 			`jira issue get PROJ-123 --json`,
 			`jira issue search --jql "project = PROJ ORDER BY updated DESC" --json`,
@@ -63,7 +63,7 @@ Configuration uses the shared Atlassian config file, normally ~/.config/atlassia
 		Instructions: "copy cmd/jira/jira-cli.instructions.md to ~/.copilot/instructions/jira-cli.instructions.md.",
 		Groups: map[string]string{
 			"instance":           "Manage configured Jira instances.",
-			"auth":               "Manage Jira credentials stored in the Atlassian config.",
+			"auth":               "Manage Jira credentials stored in the EFP config.",
 			"issue":              "Work with Jira issues by key or URL.",
 			"issue.comment":      "Manage comments on Jira issues.",
 			"issue.attachment":   "Manage attachments on Jira issues.",

@@ -136,6 +136,32 @@ func TestLogInvalidRunDirJSONError(t *testing.T) {
 	}
 }
 
+func TestLogRunBasedCommandsRequireRun(t *testing.T) {
+	cases := [][]string{
+		{"profile", "--json"},
+		{"templates", "--json"},
+		{"entries", "--json"},
+		{"search", "--query", "timeout", "--json"},
+		{"extract", "--kind", "stacktrace", "--json"},
+	}
+	for _, args := range cases {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			_, obj := runLog(t, args...)
+			if obj["ok"] != false {
+				t.Fatalf("expected failure: %#v", obj)
+			}
+			errObj := obj["error"].(map[string]any)
+			if errObj["code"] != "invalid_args" {
+				b, _ := json.Marshal(obj)
+				t.Fatalf("expected invalid_args: %s", string(b))
+			}
+			if !strings.Contains(errObj["message"].(string), "--run is required") {
+				t.Fatalf("expected --run message: %#v", errObj)
+			}
+		})
+	}
+}
+
 func TestLogSourceMissingWindowJSONError(t *testing.T) {
 	dir := t.TempDir()
 	logPath := filepath.Join(dir, "app.log")

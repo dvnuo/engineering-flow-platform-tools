@@ -13,6 +13,9 @@ func entriesCmd(o *Opts) *cobra.Command {
 		Use:   "entries",
 		Short: "List bounded redacted entries from a run",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if missingRunDir(runDir) {
+				return requireRunDir(cmd, o, runDir)
+			}
 			result, err := logtool.Entries(runDir, opts)
 			if err != nil {
 				return printErr(cmd, o, err)

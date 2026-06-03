@@ -11,6 +11,14 @@ import (
 	"time"
 )
 
+const (
+	defaultMaxLinePreviewBytes  int64 = 65536
+	defaultMaxEventPreviewBytes int64 = 4 * 1024 * 1024
+	defaultMaxEventLines        int64 = 10000
+	lineTruncatedMarker               = "...(line truncated)"
+	eventTruncatedMarker              = "...(event truncated)"
+)
+
 var (
 	levelPattern       = regexp.MustCompile(`(?i)(^|[\s\[\]()=:,;\-])(?:trace|debug|info|warn|warning|error|fatal|panic)([\s\]\)[:,;=\-]|$)`)
 	levelExtract       = regexp.MustCompile(`(?i)\b(trace|debug|info|warn|warning|error|fatal|panic)\b`)
@@ -22,16 +30,26 @@ var (
 )
 
 type pendingEvent struct {
-	lines     []string
-	lineStart int64
-	lineEnd   int64
-	byteStart int64
-	byteEnd   int64
+	lines        []string
+	lineStart    int64
+	lineEnd      int64
+	byteStart    int64
+	byteEnd      int64
+	previewBytes int64
+	truncated    bool
+}
+
+type physicalLine struct {
+	Preview   string
+	ByteLen   int64
+	EOF       bool
+	Truncated bool
+	HitLimit  bool
 }
 
 func ParseStream(r io.Reader, sourcePath string, opts ParseOptions, emit func(ParsedEvent) error) (ParseResult, error) {
 	if opts.MaxLineBytes <= 0 {
-		opts.MaxLineBytes = 65536
+		opts.MaxLineBytes = defaultMaxLinePreviewBytes
 	}
 	br := bufio.NewReader(r)
 	var result ParseResult
@@ -39,24 +57,38 @@ func ParseStream(r io.Reader, sourcePath string, opts ParseOptions, emit func(Pa
 	lineNo := int64(0)
 	offset := int64(0)
 	for {
-		line, err := br.ReadString('\n')
+		remaining := int64(0)
+		if opts.MaxBytes > 0 {
+			remaining = opts.MaxBytes - result.Bytes
+			if remaining <= 0 {
+				result.Truncated = true
+				break
+			}
+		}
+		line, err := readPhysicalLineLimited(br, opts.MaxLineBytes, remaining)
 		if err != nil && !errors.Is(err, io.EOF) {
 			return result, err
 		}
-		if line == "" && errors.Is(err, io.EOF) {
+		if errors.Is(err, io.EOF) {
 			break
 		}
-		lineBytes := int64(len([]byte(line)))
-		if opts.MaxBytes > 0 && result.Bytes+lineBytes > opts.MaxBytes {
+		if line.ByteLen == 0 && line.EOF {
+			break
+		}
+		if opts.MaxBytes > 0 && (line.HitLimit || result.Bytes+line.ByteLen > opts.MaxBytes) {
+			result.Bytes += minInt64(line.ByteLen, remaining)
 			result.Truncated = true
 			break
 		}
 		lineNo++
 		result.Lines = lineNo
-		result.Bytes += lineBytes
-		clean := strings.TrimRight(line, "\r\n")
+		result.Bytes += line.ByteLen
+		clean := strings.TrimRight(line.Preview, "\r\n")
+		if line.Truncated {
+			clean += lineTruncatedMarker
+		}
 		lineStartOffset := offset
-		offset += lineBytes
+		offset += line.ByteLen
 		starts := isNewEventLine(clean, opts.FormatHint)
 		if current == nil {
 			current = &pendingEvent{lineStart: lineNo, byteStart: lineStartOffset}
@@ -66,10 +98,10 @@ func ParseStream(r io.Reader, sourcePath string, opts ParseOptions, emit func(Pa
 			}
 			current = &pendingEvent{lineStart: lineNo, byteStart: lineStartOffset}
 		}
-		current.lines = append(current.lines, truncateForPreview(clean, opts.MaxLineBytes))
+		appendEventPreview(current, clean)
 		current.lineEnd = lineNo
 		current.byteEnd = offset
-		if errors.Is(err, io.EOF) {
+		if line.EOF {
 			break
 		}
 	}
@@ -79,6 +111,95 @@ func ParseStream(r io.Reader, sourcePath string, opts ParseOptions, emit func(Pa
 		}
 	}
 	return result, nil
+}
+
+func readPhysicalLine(br *bufio.Reader, maxPreviewBytes int64) (physicalLine, error) {
+	return readPhysicalLineLimited(br, maxPreviewBytes, 0)
+}
+
+func readPhysicalLineLimited(br *bufio.Reader, maxPreviewBytes, maxReadBytes int64) (physicalLine, error) {
+	if maxPreviewBytes <= 0 {
+		maxPreviewBytes = defaultMaxLinePreviewBytes
+	}
+	var out physicalLine
+	var preview bytes.Buffer
+	for {
+		fragment, err := br.ReadSlice('\n')
+		if len(fragment) > 0 {
+			out.ByteLen += int64(len(fragment))
+			if maxReadBytes > 0 && out.ByteLen > maxReadBytes {
+				out.HitLimit = true
+				out.Truncated = true
+			}
+			if int64(preview.Len()) < maxPreviewBytes {
+				remaining := maxPreviewBytes - int64(preview.Len())
+				take := int64(len(fragment))
+				if take > remaining {
+					take = remaining
+					out.Truncated = true
+				}
+				if take > 0 {
+					_, _ = preview.Write(fragment[:take])
+				}
+			} else {
+				out.Truncated = true
+			}
+			if out.HitLimit {
+				out.Preview = preview.String()
+				return out, nil
+			}
+		}
+		switch {
+		case err == nil:
+			out.Preview = preview.String()
+			return out, nil
+		case errors.Is(err, bufio.ErrBufferFull):
+			continue
+		case errors.Is(err, io.EOF):
+			if out.ByteLen == 0 {
+				return physicalLine{EOF: true}, io.EOF
+			}
+			out.EOF = true
+			out.Preview = preview.String()
+			return out, nil
+		default:
+			return out, err
+		}
+	}
+}
+
+func appendEventPreview(p *pendingEvent, line string) {
+	if p.truncated {
+		return
+	}
+	if int64(len(p.lines)) >= defaultMaxEventLines {
+		appendEventTruncationMarker(p)
+		return
+	}
+	lineBytes := int64(len([]byte(line)))
+	separatorBytes := int64(0)
+	if len(p.lines) > 0 {
+		separatorBytes = 1
+	}
+	if p.previewBytes+separatorBytes+lineBytes > defaultMaxEventPreviewBytes {
+		appendEventTruncationMarker(p)
+		return
+	}
+	p.lines = append(p.lines, line)
+	p.previewBytes += separatorBytes + lineBytes
+}
+
+func appendEventTruncationMarker(p *pendingEvent) {
+	if p.truncated {
+		return
+	}
+	separatorBytes := int64(0)
+	if len(p.lines) > 0 {
+		separatorBytes = 1
+	}
+	p.lines = append(p.lines, eventTruncatedMarker)
+	p.previewBytes += separatorBytes + int64(len(eventTruncatedMarker))
+	p.truncated = true
 }
 
 func emitPending(p *pendingEvent, opts ParseOptions, emit func(ParsedEvent) error) error {
@@ -101,21 +222,6 @@ func emitPending(p *pendingEvent, opts ParseOptions, emit func(ParsedEvent) erro
 	})
 }
 
-func truncateForPreview(s string, max int64) string {
-	if max <= 0 {
-		max = 65536
-	}
-	if int64(len([]byte(s))) <= max {
-		return s
-	}
-	b := []byte(s)
-	if int64(len(b)) > max {
-		b = b[:max]
-	}
-	b = bytes.TrimRight(b, "\x00")
-	return string(b) + "...(line truncated)"
-}
-
 func isNewEventLine(line, hint string) bool {
 	trimmed := strings.TrimSpace(line)
 	if trimmed == "" {
@@ -131,6 +237,13 @@ func isNewEventLine(line, hint string) bool {
 		return true
 	}
 	return levelPattern.MatchString(trimmed)
+}
+
+func minInt64(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func parseEventText(raw, hint string) (string, string, string, string) {

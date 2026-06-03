@@ -13,6 +13,9 @@ func searchCmd(o *Opts) *cobra.Command {
 		Use:   "search",
 		Short: "Search redacted log entries with bounded results",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if missingRunDir(runDir) {
+				return requireRunDir(cmd, o, runDir)
+			}
 			if opts.Query == "" {
 				return print(cmd, o, output.Failure("invalid_args", "--query is required.", "Pass --query <text> or run log schema search --json.", 400))
 			}

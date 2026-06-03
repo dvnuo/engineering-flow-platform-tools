@@ -13,6 +13,9 @@ func templatesCmd(o *Opts) *cobra.Command {
 		Use:   "templates",
 		Short: "List recurring redacted log templates from a run",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if missingRunDir(runDir) {
+				return requireRunDir(cmd, o, runDir)
+			}
 			result, err := logtool.Templates(runDir, only, sortBy, limit)
 			if err != nil {
 				return printErr(cmd, o, err)

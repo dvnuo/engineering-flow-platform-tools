@@ -11,7 +11,9 @@ func TestLogSecretsDoNotAppearInOutputsOrRunFiles(t *testing.T) {
 	dir := t.TempDir()
 	logPath := filepath.Join(dir, "app.log")
 	content := strings.Join([]string{
-		`2026-06-03T10:00:00Z ERROR Authorization: Bearer bearersecretshouldnotappear password=secret api_key=xyz token=tok secret=hidden user@example.test timeout after 3000ms`,
+		`2026-06-03T10:00:00Z ERROR timeout after 3000ms Authorization: Bearer bearersecretshouldnotappear Authorization: Basic basicsecretshouldnotappear password=secret api_key=xyz api-key=apihyphenshouldnotappear apikey=apikeyshouldnotappear token=tok secret=hidden access_token=accessshouldnotappear refresh_token=refreshshouldnotappear client_secret=clientsecretshouldnotappear AWS_ACCESS_KEY_ID=akidshouldnotappear AWS_SECRET_ACCESS_KEY=awssecretshouldnotappear AWS_SESSION_TOKEN=awssessionshouldnotappear X-API-Key: xapikeyshouldnotappear Cookie: sessionid=cookieshouldnotappear; csrftoken=csrfshouldnotappear`,
+		`Set-Cookie: sid=setcookieshouldnotappear`,
+		`user@example.test`,
 		"Traceback (most recent call last):",
 		`  File "/srv/app.py", line 10, in main`,
 		"Exception: boom",
@@ -37,7 +39,27 @@ func TestLogSecretsDoNotAppearInOutputsOrRunFiles(t *testing.T) {
 		}
 		combined.Write(b)
 	}
-	for _, leak := range []string{"bearersecretshouldnotappear", "password=secret", "api_key=xyz", "token=tok", "secret=hidden", "user@example.test"} {
+	for _, leak := range []string{
+		"bearersecretshouldnotappear",
+		"basicsecretshouldnotappear",
+		"password=secret",
+		"api_key=xyz",
+		"api-key=apihyphenshouldnotappear",
+		"apikeyshouldnotappear",
+		"token=tok",
+		"secret=hidden",
+		"accessshouldnotappear",
+		"refreshshouldnotappear",
+		"clientsecretshouldnotappear",
+		"akidshouldnotappear",
+		"awssecretshouldnotappear",
+		"awssessionshouldnotappear",
+		"xapikeyshouldnotappear",
+		"cookieshouldnotappear",
+		"csrfshouldnotappear",
+		"setcookieshouldnotappear",
+		"user@example.test",
+	} {
 		assertNoLiteral(t, combined.String(), leak)
 	}
 }

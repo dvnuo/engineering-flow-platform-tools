@@ -195,6 +195,36 @@ func TestVisualOfflineViolationRejected(t *testing.T) {
 	assertErrorCode(t, runVisual(t, "render", "--template", "agent.run_trace", "--template-dir", templateDir, "--input", input, "--out", out, "--json"), "offline_violation")
 }
 
+func TestVisualInspectOutputRejectsProtocolRelativeDataString(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		url  string
+	}{
+		{name: "domain", url: "//example.com/app.js"},
+		{name: "host_path", url: "//cdn/app.js"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out := t.TempDir()
+			mustWrite(t, filepath.Join(out, "index.html"), `<!doctype html><script src="data.js"></script>`)
+			mustWrite(t, filepath.Join(out, "manifest.json"), `{}`)
+			mustWrite(t, filepath.Join(out, "manifest.js"), `window.__EFP_VISUAL_MANIFEST__ = {};`)
+			mustWrite(t, filepath.Join(out, "data.js"), `window.__EFP_VISUAL_DATA__ = {"u":"`+tc.url+`"};`)
+
+			assertErrorCode(t, runVisual(t, "inspect-output", "--out", out, "--json"), "offline_violation")
+		})
+	}
+}
+
+func TestVisualInspectOutputAllowsFileURLText(t *testing.T) {
+	out := t.TempDir()
+	mustWrite(t, filepath.Join(out, "index.html"), `<!doctype html><script src="data.js"></script>`)
+	mustWrite(t, filepath.Join(out, "manifest.json"), `{}`)
+	mustWrite(t, filepath.Join(out, "manifest.js"), `window.__EFP_VISUAL_MANIFEST__ = {};`)
+	mustWrite(t, filepath.Join(out, "data.js"), `window.__EFP_VISUAL_DATA__ = {"u":"file:///tmp/artifact/app.js"};`)
+
+	runVisualOK(t, "inspect-output", "--out", out, "--json")
+}
+
 func TestVisualDataAndManifestJS(t *testing.T) {
 	templateDir := visualTemplateDir()
 	out := filepath.Join(t.TempDir(), "artifact")

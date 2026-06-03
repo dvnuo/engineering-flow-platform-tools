@@ -35,9 +35,8 @@ var offlineTokens = []string{
 }
 
 var (
-	protocolRelativePattern = regexp.MustCompile(`(?i)(src|href)\s*=\s*["']//|url\(\s*["']?//`)
-	moduleScriptPattern     = regexp.MustCompile(`(?i)<script\s+[^>]*type\s*=\s*["']module["']`)
-	rootAssetPattern        = regexp.MustCompile(`(?i)(src|href)\s*=\s*["']/`)
+	moduleScriptPattern = regexp.MustCompile(`(?i)<script\s+[^>]*type\s*=\s*["']module["']`)
+	rootAssetPattern    = regexp.MustCompile(`(?i)(src|href)\s*=\s*["']/`)
 )
 
 func ScanOffline(dir string) error {
@@ -67,7 +66,7 @@ func ScanOffline(dir string) error {
 			violation = violationMessage(rootAbs, path, `<script type="module"`)
 			return filepath.SkipAll
 		}
-		if protocolRelativePattern.MatchString(content) {
+		if containsProtocolRelativeURL(content) {
 			violation = violationMessage(rootAbs, path, "//")
 			return filepath.SkipAll
 		}
@@ -104,4 +103,75 @@ func violationMessage(rootAbs, path, token string) string {
 		rel = path
 	}
 	return "offline violation in " + filepath.ToSlash(rel) + ": " + token
+}
+
+func containsProtocolRelativeURL(content string) bool {
+	for i := 0; i+1 < len(content); i++ {
+		if content[i] != '/' || content[i+1] != '/' {
+			continue
+		}
+		if precededByURLSchemeColon(content, i) {
+			continue
+		}
+		if looksLikeURLAuthority(content, i+2) {
+			return true
+		}
+	}
+	return false
+}
+
+func precededByURLSchemeColon(content string, slash int) bool {
+	runStart := slash
+	for runStart > 0 && content[runStart-1] == '/' {
+		runStart--
+	}
+	if runStart == 0 || content[runStart-1] != ':' {
+		return false
+	}
+	start := runStart - 2
+	for start >= 0 && isURLSchemeChar(content[start]) {
+		start--
+	}
+	start++
+	return start <= runStart-2 && isASCIILetter(content[start])
+}
+
+func looksLikeURLAuthority(content string, start int) bool {
+	if start >= len(content) || !isURLAuthorityStart(content[start]) {
+		return false
+	}
+	for start < len(content) && isURLAuthorityChar(content[start]) {
+		start++
+	}
+	if start >= len(content) {
+		return true
+	}
+	switch content[start] {
+	case '/', '?', '#', '\'', '"', '`', '<', '>', ')', ']', '}', ';', ',':
+		return true
+	case ' ', '\t', '\n', '\r':
+		return true
+	default:
+		return false
+	}
+}
+
+func isURLAuthorityStart(c byte) bool {
+	return isASCIILetter(c) || isASCIIDigit(c) || c == '['
+}
+
+func isURLAuthorityChar(c byte) bool {
+	return isASCIILetter(c) || isASCIIDigit(c) || c == '.' || c == '-' || c == '_' || c == '~' || c == '[' || c == ']'
+}
+
+func isURLSchemeChar(c byte) bool {
+	return isASCIILetter(c) || isASCIIDigit(c) || c == '+' || c == '.' || c == '-'
+}
+
+func isASCIILetter(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
+func isASCIIDigit(c byte) bool {
+	return c >= '0' && c <= '9'
 }

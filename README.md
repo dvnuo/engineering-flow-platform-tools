@@ -7,6 +7,7 @@ This repository hosts cross-platform Go-based CLI tools for agent, runtime, shel
 - `jenkins`
 - `browser`
 - `inspect-image`
+- `log`
 
 Jira and Confluence are the first tool family in this repository. Future tools may be added as separate command binaries under `cmd/<tool-name>`.
 
@@ -46,6 +47,20 @@ For Jira, Confluence, and Jenkins, copy `cmd/jira/jira-cli.instructions.md`, `cm
 
 All CLI binaries return a stable JSON `invalid_args` envelope for command parsing failures when `--json` is present. On Windows `cmd`, use double quotes and `where <binary>` to resolve unstable PATH behavior.
 
+### Log Analysis
+
+`log` is a local-only CLI binary for agent-friendly analysis of large log files, directories, and globs. It streams inputs into a small run directory containing a manifest, redacted entry index, and templates, then supports bounded search, source windows, and stacktrace/error-signature extraction without copying raw logs.
+
+Examples:
+
+```bash
+log analyze --source ./logs/app.log --run ./.log-runs/run_001 --json
+log search --run ./.log-runs/run_001 --query 'ERROR OR timeout' --json
+log window --run ./.log-runs/run_001 --entry-id entry_000001 --before 50 --after 50 --json
+```
+
+See `docs/LOG.md` for the run directory layout, redaction policy, and current P0 limitations.
+
 ### Inspect Image
 
 `inspect-image` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It lets text-only agents inspect exactly one local image using a GitHub Copilot plugin backed vision model through `/responses`.
@@ -71,7 +86,7 @@ For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructio
 
 ## Quick Install
 
-Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` on your `PATH`, then run:
+Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `log` on your `PATH`, then run:
 
 ```bash
 jira version --json
@@ -79,6 +94,7 @@ confluence version --json
 jenkins version --json
 browser version --json
 inspect-image version --json
+log version --json
 ```
 
 ## Config File
@@ -290,7 +306,7 @@ browser schema probe --json
 inspect-image schema inspect --json
 ```
 
-For agents, default every `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+For agents, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `log` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
 
 For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jira issue. When a user asks to update case `X` in cycle `Y`, prefer `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; use `execution resolve` or `cycle resolve` first when the target is ambiguous, and use `status list` rather than hard-coding numeric status ids.
 
@@ -355,4 +371,4 @@ go vet ./...
 
 Tags matching `v*` trigger the release workflow. Release archives are named `engineering-flow-platform-tools_<version>_<goos>_<goarch>`.
 
-Current archives include `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, README, and docs.
+Current archives include `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, `log`, README, and docs.

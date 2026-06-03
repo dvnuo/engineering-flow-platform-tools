@@ -11,6 +11,7 @@ import (
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
 	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
+	lcmd "engineering-flow-platform-tools/internal/logtool/commands"
 	"engineering-flow-platform-tools/internal/testutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -29,6 +30,8 @@ func schemaData(t *testing.T, product, command string) map[string]any {
 		c = bcmd.NewRoot()
 	case "jenkins":
 		c = kcmd.NewRoot()
+	case "log":
+		c = lcmd.NewRoot()
 	default:
 		t.Fatalf("unknown product %s", product)
 	}
@@ -126,6 +129,8 @@ func TestSchemaConcreteFlags(t *testing.T) {
 	requireFlags(t, schemaData(t, "jenkins", "build.log-follow"), "start", "max-rounds", "wait-ms")
 	requireFlags(t, schemaData(t, "jenkins", "artifact.download"), "output")
 	requireRequired(t, schemaData(t, "jenkins", "api.delete"), "path", "yes")
+	requireFlags(t, schemaData(t, "log", "analyze"), "source", "run", "format-hint", "max-bytes", "max-line-bytes", "json", "format", "verbose")
+	requireRequired(t, schemaData(t, "log", "analyze"), "source", "run")
 }
 
 func TestSchemaMatchesCobraFlags(t *testing.T) {
@@ -134,6 +139,7 @@ func TestSchemaMatchesCobraFlags(t *testing.T) {
 		"confluence": ccmd.NewRoot,
 		"browser":    bcmd.NewRoot,
 		"jenkins":    kcmd.NewRoot,
+		"log":        lcmd.NewRoot,
 	}
 	for product, newRoot := range roots {
 		t.Run(product, func(t *testing.T) {

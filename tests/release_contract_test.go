@@ -9,6 +9,7 @@ import (
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
 	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
+	lcmd "engineering-flow-platform-tools/internal/logtool/commands"
 	"engineering-flow-platform-tools/internal/testutil"
 )
 
@@ -38,6 +39,13 @@ func TestVersionJSONContract(t *testing.T) {
 			cmd.SetArgs([]string{"version", "--json"})
 			return cmd.Execute()
 		}},
+		{name: "log", run: func(b *bytes.Buffer) error {
+			cmd := lcmd.NewRoot()
+			cmd.SetOut(b)
+			cmd.SetErr(b)
+			cmd.SetArgs([]string{"version", "--json"})
+			return cmd.Execute()
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var b bytes.Buffer
@@ -62,6 +70,7 @@ func TestDocsAndScriptsExist(t *testing.T) {
 	for _, path := range []string{
 		"../docs/INSTALL.md",
 		"../docs/RELEASE.md",
+		"../docs/LOG.md",
 		"../docs/SECURITY.md",
 		"../docs/TROUBLESHOOTING.md",
 		"../scripts/smoke.sh",
@@ -88,6 +97,9 @@ func TestBuildScriptsListRequiredTargets(t *testing.T) {
 		}
 		if !strings.Contains(s, "-ldflags") || !strings.Contains(s, "internal/version.Version") {
 			t.Fatalf("%s does not inject version ldflags", path)
+		}
+		if !strings.Contains(s, "./cmd/log") {
+			t.Fatalf("%s does not build log", path)
 		}
 	}
 }

@@ -1,13 +1,13 @@
 # LLM/Agent Usage
 
-- For agents, default every `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
+- For agents, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `log` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
 - Only omit `--json` when intentionally reading human-oriented `--help` text or when a documented interactive human prompt requires text output.
 - Use --instance when multiple instances are configured.
 - Full Jira/Confluence URLs can auto-select the instance.
 - Use --dry-run before write operations.
 - Use --yes for destructive operations.
 - Inspect error.code and error.hint before retrying.
-- Command parsing failures across `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` return a JSON `invalid_args` envelope when `--json` is present.
+- Command parsing failures across `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `log` return a JSON `invalid_args` envelope when `--json` is present.
 - On Windows `cmd`, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`; avoid Bash-only quoting and commands.
 - If PATH lookup is unstable, run `where <binary>` and invoke the exact `.exe` path with double quotes.
 - For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
@@ -61,6 +61,16 @@
 - If `auth_required` or `auth_expired` is not refreshable, ask the user to run `inspect-image auth login`, wait for completion, and then retry `inspect-image inspect --json`; do not fall back to OCR, Python image recognition, or guessing.
 - On Windows `cmd`, use double quotes, `where`, `dir`, and `cd`; avoid Bash-only commands such as `pwd`, `command -v`, `cat`, `ls`, `cd "$PWD"`, `$PWD`, and single quotes. If capture is unreliable, use `--out "%CD%\inspect-image-result.json"` rather than shell redirection.
 - For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so this guidance is available during coding sessions.
+
+## Local Log Analysis
+
+- Use `log` when local logs are too large to paste into the conversation.
+- Always start with `log analyze --source <file|dir|glob> --run <run-dir> --json`.
+- Use `log profile`, `log templates`, and `log search` before requesting source windows.
+- Use `log window --entry-id <id>` only for bounded redacted evidence around relevant entries.
+- Use `log extract --kind stacktrace` or `log extract --kind error-signature` for repeated failure patterns.
+- Do not ask `log` to summarize with an LLM, tail in real time, or connect to remote logging backends; P0 is local offline analysis only.
+- Keep the original source files available because `log window` reads them by path and returns `source_missing` if they are gone.
 
 ## Jira Zephyr Test Management
 
@@ -128,6 +138,7 @@ jenkins schema build.status --json
 jenkins schema artifact.download --json
 jenkins schema api.get --json
 inspect-image schema inspect --json
+log schema analyze --json
 ```
 
 The `required` field lists mandatory arguments and flags. The `flags` field includes type and description metadata suitable for tool planning.

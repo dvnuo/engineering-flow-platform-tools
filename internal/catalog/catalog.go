@@ -107,6 +107,20 @@ var inspectImageCommands = []string{
 	"inspect-image version",
 }
 
+var logCommands = []string{
+	"version",
+	"commands",
+	"schema <command>",
+	"help llm",
+	"analyze",
+	"profile",
+	"templates",
+	"entries",
+	"search",
+	"window",
+	"extract",
+}
+
 func Commands(product string) []llm.CommandMeta {
 	var src []string
 	switch product {
@@ -120,11 +134,16 @@ func Commands(product string) []llm.CommandMeta {
 		src = browserCommands
 	case "inspect-image":
 		src = inspectImageCommands
+	case "log":
+		src = logCommands
 	default:
 		return nil
 	}
 	out := make([]llm.CommandMeta, 0, len(src))
 	for _, usage := range src {
+		if product == "log" && !strings.HasPrefix(usage, "log ") {
+			usage = "log " + usage
+		}
 		out = append(out, meta(product, usage))
 	}
 	return out
@@ -172,6 +191,9 @@ func CommandsFromCobra(product string, root *cobra.Command) []llm.CommandMeta {
 		m := meta(product, binding.Usage)
 		m.Flags = cobraFlagNames(binding.Command)
 		m.Examples = examplesForCobra(m, binding.Command)
+		if product == "log" {
+			m.Usage = logCommandUsage(m.Name, m.Usage)
+		}
 		out = append(out, m)
 	}
 	return out
@@ -523,6 +545,12 @@ func meta(product, usage string) llm.CommandMeta {
 			explicitFound = true
 		}
 	}
+	if product == "log" {
+		if local, ok := logExplicit(name); ok {
+			ex = local
+			explicitFound = true
+		}
+	}
 	r := risk(usage)
 	if ex.Risk != "" {
 		r = ex.Risk
@@ -566,7 +594,7 @@ func meta(product, usage string) llm.CommandMeta {
 	}
 	req := ex.Required
 	if len(req) == 0 {
-		if (product == "inspect-image" || product == "jenkins") && explicitFound {
+		if (product == "inspect-image" || product == "jenkins" || product == "log") && explicitFound {
 			req = []string{}
 		} else {
 			req = required(name)
@@ -581,6 +609,65 @@ func meta(product, usage string) llm.CommandMeta {
 		Examples:    []string{example},
 		Flags:       flags,
 		Required:    req,
+	}
+}
+
+func logExplicit(name string) (explicitMeta, bool) {
+	common := []string{"json", "format", "verbose"}
+	items := map[string]explicitMeta{
+		"version": {Description: "Print the log CLI build version, commit, and build date.",
+			Flags: common, Risk: "read", Example: "log version --json"},
+		"commands": {Description: "List available log commands with agent-facing metadata.",
+			Flags: common, Risk: "read", Example: "log commands --json"},
+		"schema": {Description: "Show argument and flag schema for a log command.",
+			Flags: common, Required: []string{"command"}, Risk: "read", Example: "log schema analyze --json"},
+		"help.llm": {Description: "Show log CLI guidance for agents that need bounded local log evidence.",
+			Flags: common, Risk: "read", Example: "log help llm --json"},
+		"analyze": {Description: "Stream local log files into a bounded analysis run directory.",
+			Flags: append([]string{"source", "run", "format-hint", "max-bytes", "max-line-bytes"}, common...), Required: []string{"source", "run"}, Risk: "read", Example: "log analyze --source ./logs/app.log --run ./.log-runs/run_001 --json"},
+		"profile": {Description: "Summarize sources, levels, templates, and time range for an analysis run.",
+			Flags: append([]string{"run"}, common...), Required: []string{"run"}, Risk: "read", Example: "log profile --run ./.log-runs/run_001 --json"},
+		"templates": {Description: "List recurring redacted log templates with counts and representative entries.",
+			Flags: append([]string{"run", "only", "sort", "limit"}, common...), Required: []string{"run"}, Risk: "read", Example: "log templates --run ./.log-runs/run_001 --only non-info --sort count --json"},
+		"entries": {Description: "Page through redacted indexed entries without printing the whole log.",
+			Flags: append([]string{"run", "template-id", "level", "limit", "cursor"}, common...), Required: []string{"run"}, Risk: "read", Example: "log entries --run ./.log-runs/run_001 --level ERROR --limit 20 --json"},
+		"search": {Description: "Search redacted entries by text or regex with bounded cursor pagination.",
+			Flags: append([]string{"run", "query", "regex", "level", "template-id", "since", "until", "limit", "cursor"}, common...), Required: []string{"run", "query"}, Risk: "read", Example: "log search --run ./.log-runs/run_001 --query \"ERROR OR timeout\" --json"},
+		"window": {Description: "Return redacted source lines around an entry id or file and line number.",
+			Flags: append([]string{"run", "entry-id", "file", "line", "before", "after"}, common...), Required: []string{"run", "entry-id|file+line"}, Risk: "read", Example: "log window --run ./.log-runs/run_001 --entry-id entry_000001 --before 50 --after 50 --json"},
+		"extract": {Description: "Extract stacktrace groups or error signatures from redacted indexed entries.",
+			Flags: append([]string{"run", "kind", "limit"}, common...), Required: []string{"run", "kind"}, Risk: "read", Example: "log extract --run ./.log-runs/run_001 --kind stacktrace --json"},
+	}
+	item, ok := items[name]
+	return item, ok
+}
+
+func logCommandUsage(name, fallback string) string {
+	switch name {
+	case "version":
+		return "log version --json"
+	case "commands":
+		return "log commands --json"
+	case "schema":
+		return "log schema <command> --json"
+	case "help.llm":
+		return "log help llm"
+	case "analyze":
+		return "log analyze --source <path> --run <run-dir> [flags]"
+	case "profile":
+		return "log profile --run <run-dir> --json"
+	case "templates":
+		return "log templates --run <run-dir> [flags]"
+	case "entries":
+		return "log entries --run <run-dir> [flags]"
+	case "search":
+		return "log search --run <run-dir> --query <query> [flags]"
+	case "window":
+		return "log window --run <run-dir> (--entry-id <entry-id> OR --file <path> --line <line-number>) [flags]"
+	case "extract":
+		return "log extract --run <run-dir> --kind stacktrace|error-signature [flags]"
+	default:
+		return fallback
 	}
 }
 

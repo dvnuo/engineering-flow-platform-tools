@@ -23,6 +23,7 @@ jobs:
       - run: go build ./cmd/jenkins
       - run: go build ./cmd/browser
       - run: go build ./cmd/inspect-image
+      - run: go build ./cmd/log
       - name: smoke unix
         if: runner.os != 'Windows'
         run: bash scripts/smoke.sh

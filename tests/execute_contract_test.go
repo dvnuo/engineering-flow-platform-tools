@@ -12,6 +12,7 @@ import (
 	icmd "engineering-flow-platform-tools/internal/inspectimage/commands"
 	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
+	lcmd "engineering-flow-platform-tools/internal/logtool/commands"
 	"github.com/spf13/cobra"
 )
 
@@ -22,6 +23,7 @@ func TestExecuteFallbackJSONForAllBinaries(t *testing.T) {
 		"inspect-image": icmd.NewRoot(),
 		"jenkins":       kcmd.NewRoot(),
 		"jira":          jcmd.NewRoot(),
+		"log":           lcmd.NewRoot(),
 	} {
 		t.Run(name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
@@ -48,6 +50,7 @@ func TestExecuteBadFormatFallbackForAllBinaries(t *testing.T) {
 		"inspect-image": icmd.NewRoot(),
 		"jenkins":       kcmd.NewRoot(),
 		"jira":          jcmd.NewRoot(),
+		"log":           lcmd.NewRoot(),
 	} {
 		t.Run(name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer

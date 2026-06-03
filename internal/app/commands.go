@@ -13,3 +13,7 @@ func ConfluenceCommandList() []string {
 func JenkinsCommandList() []string {
 	return catalog.CommandList("jenkins")
 }
+
+func LogCommandList() []string {
+	return catalog.CommandList("log")
+}

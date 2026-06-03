@@ -2,7 +2,7 @@
 
 ## Layers
 
-- `cmd/jira`, `cmd/confluence`, `cmd/jenkins`, `cmd/browser`, and `cmd/inspect-image`: thin binary entrypoints that call the real command roots.
+- `cmd/jira`, `cmd/confluence`, `cmd/jenkins`, `cmd/browser`, `cmd/inspect-image`, and `cmd/log`: thin binary entrypoints that call the real command roots.
 - `internal/jira/commands`, `internal/confluence/commands`, and `internal/jenkins/commands`: Cobra command trees, global flags, argument validation, dry-run output, and REST command mapping.
 - `internal/config`: config path resolution, load/save, auth canonicalization, and redaction.
 - `internal/auth`: Authorization header construction.
@@ -11,6 +11,7 @@
 - `internal/output`: table, JSON, and YAML envelope rendering.
 - `internal/catalog`: command metadata used by `commands --json` and `schema <command> --json`.
 - `internal/inspectimage`: standalone image inspection CLI packages for Copilot auth, one-file image validation, `/responses` calls, and agent-facing command metadata. It does not use the Atlassian `internal/config` schema.
+- `internal/logtool`: standalone local log analysis packages for streaming ingest, redaction, template aggregation, bounded search, source windows, and stacktrace/error-signature extraction. It does not use global credentials or remote backends.
 - `internal/testutil`: mock Jira/Confluence/Jenkins servers and config helpers for tests.
 
 ## REST Coverage
@@ -29,3 +30,4 @@ Jenkins commands for auth test, server info, crumb discovery, jobs, builds, queu
 - Schema metadata must stay aligned with actual command flags.
 - Mock-server tests should cover REST methods, request paths, query parameters, and request bodies.
 - `inspect-image` must validate local image type and size before network egress and must never log tokens or base64 image data.
+- `log` must not copy raw source logs into run directories and must redact secrets in run files, search, window, extract, errors, and verbose output.

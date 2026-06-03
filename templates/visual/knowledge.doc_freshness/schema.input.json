@@ -1,5 +1,126 @@
 {
-  "template": "knowledge.doc_freshness",
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "knowledge.doc_freshness",
   "input_schema_kind": "matrix_v1",
-  "schema": "efp.visual.input.matrix.v1"
+  "json_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "efp.visual.input.matrix.v1",
+    "title": "EFP Visual Matrix Input v1",
+    "description": "Two-axis matrix input for offline visual templates.",
+    "type": "object",
+    "required": [
+      "items"
+    ],
+    "additionalProperties": true,
+    "properties": {
+      "schema": {
+        "type": "string",
+        "const": "efp.visual.input.matrix.v1"
+      },
+      "title": {
+        "type": "string"
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/item"
+        }
+      }
+    },
+    "$defs": {
+      "object": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "item": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string"
+          },
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "kind": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/$defs/object"
+          }
+        }
+      }
+    }
+  },
+  "example": {
+    "schema": "efp.visual.input.matrix.v1",
+    "title": "Document Freshness",
+    "items": [
+      {
+        "id": "doc_arch",
+        "label": "Architecture",
+        "x": 0.86,
+        "y": 0.82,
+        "kind": "doc",
+        "status": "success",
+        "metadata": {
+          "freshness": 0.86,
+          "reliability": 0.82
+        }
+      },
+      {
+        "id": "doc_runbook",
+        "label": "Runbook",
+        "x": 0.58,
+        "y": 0.74,
+        "kind": "doc",
+        "status": "warning",
+        "metadata": {
+          "freshness": 0.58,
+          "reliability": 0.74
+        }
+      },
+      {
+        "id": "doc_api",
+        "label": "API Guide",
+        "x": 0.42,
+        "y": 0.61,
+        "kind": "doc",
+        "status": "warning",
+        "metadata": {
+          "freshness": 0.42,
+          "reliability": 0.61
+        }
+      },
+      {
+        "id": "doc_legacy",
+        "label": "Legacy Notes",
+        "x": 0.18,
+        "y": 0.32,
+        "kind": "doc",
+        "status": "error",
+        "metadata": {
+          "freshness": 0.18,
+          "reliability": 0.32
+        }
+      }
+    ]
+  }
 }

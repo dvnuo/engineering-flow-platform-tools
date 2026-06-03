@@ -2,7 +2,7 @@ id: service.topology
 version: 1.0.0
 title: Service Topology
 description: Map frontend, backend, database, and external service relationships.
-input_schema: graph_v1
+input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:
   contract: offline.graph.v1

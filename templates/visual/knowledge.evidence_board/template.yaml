@@ -2,7 +2,7 @@ id: knowledge.evidence_board
 version: 1.0.0
 title: Knowledge Evidence Board
 description: Render claims, sources, and support or refute relationships.
-input_schema: evidence_v1
+input_schema: schema.input.json
 input_schema_kind: evidence_v1
 renderer:
   contract: offline.evidence.v1

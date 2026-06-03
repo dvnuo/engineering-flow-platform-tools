@@ -1,12 +1,113 @@
 {
-  "id": "evidence_v1",
-  "schema": "efp.visual.input.evidence.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "efp.visual.input.evidence.v1",
+  "title": "EFP Visual Evidence Input v1",
+  "description": "Evidence board input for offline visual templates.",
   "type": "object",
   "required": ["claims", "sources"],
+  "additionalProperties": true,
   "properties": {
-    "title": {"type": "string"},
-    "claims": {"type": "array"},
-    "sources": {"type": "array"},
-    "links": {"type": "array"}
+    "schema": {
+      "type": "string",
+      "const": "efp.visual.input.evidence.v1"
+    },
+    "title": {
+      "type": "string"
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/claim"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/link"
+      }
+    }
+  },
+  "$defs": {
+    "object": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "claim": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "status": {
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/object"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "reliability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "metadata": {
+          "$ref": "#/$defs/object"
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "required": ["claim_id", "source_id"],
+      "additionalProperties": true,
+      "properties": {
+        "claim_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "relation": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "number"
+        }
+      }
+    }
   }
 }

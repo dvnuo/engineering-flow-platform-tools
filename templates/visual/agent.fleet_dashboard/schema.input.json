@@ -1,5 +1,122 @@
 {
-  "template": "agent.fleet_dashboard",
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "agent.fleet_dashboard",
   "input_schema_kind": "matrix_v1",
-  "schema": "efp.visual.input.matrix.v1"
+  "json_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "efp.visual.input.matrix.v1",
+    "title": "EFP Visual Matrix Input v1",
+    "description": "Two-axis matrix input for offline visual templates.",
+    "type": "object",
+    "required": [
+      "items"
+    ],
+    "additionalProperties": true,
+    "properties": {
+      "schema": {
+        "type": "string",
+        "const": "efp.visual.input.matrix.v1"
+      },
+      "title": {
+        "type": "string"
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/item"
+        }
+      }
+    },
+    "$defs": {
+      "object": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "item": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string"
+          },
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "kind": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/$defs/object"
+          }
+        }
+      }
+    }
+  },
+  "example": {
+    "schema": "efp.visual.input.matrix.v1",
+    "title": "Agent Fleet Dashboard",
+    "items": [
+      {
+        "id": "agent_1",
+        "label": "Agent 1",
+        "x": 0.82,
+        "y": 0.88,
+        "kind": "agent",
+        "status": "success",
+        "metadata": {
+          "runtime": "linux"
+        }
+      },
+      {
+        "id": "agent_2",
+        "label": "Agent 2",
+        "x": 0.64,
+        "y": 0.72,
+        "kind": "agent",
+        "status": "busy",
+        "metadata": {
+          "runtime": "linux"
+        }
+      },
+      {
+        "id": "session_1",
+        "label": "Session 1",
+        "x": 0.48,
+        "y": 0.54,
+        "kind": "session",
+        "status": "retry",
+        "metadata": {
+          "attempts": 2
+        }
+      },
+      {
+        "id": "runtime_1",
+        "label": "Runtime 1",
+        "x": 0.26,
+        "y": 0.35,
+        "kind": "runtime",
+        "status": "blocked",
+        "metadata": {
+          "reason": "permission"
+        }
+      }
+    ]
+  }
 }

@@ -2,7 +2,7 @@ id: agent.permission_gate
 version: 1.0.0
 title: Agent Permission Gate
 description: Visualize allow, ask, and deny decisions around guarded commands.
-input_schema: graph_events_v1
+input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:
   contract: offline.graph.v1

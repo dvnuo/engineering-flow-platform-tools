@@ -2,7 +2,7 @@ id: planning.plan_dag
 version: 1.0.0
 title: Planning Plan DAG
 description: Render goals, milestones, tasks, and dependencies as an offline DAG.
-input_schema: graph_v1
+input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:
   contract: offline.graph.v1

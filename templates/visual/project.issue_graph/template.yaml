@@ -2,7 +2,7 @@ id: project.issue_graph
 version: 1.0.0
 title: Project Issue Graph
 description: Map epics, stories, pull requests, and tests.
-input_schema: graph_v1
+input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:
   contract: offline.graph.v1

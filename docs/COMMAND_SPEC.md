@@ -16,6 +16,7 @@
 ### Basic
 - visual template list
 - visual template get <template-id>
+- visual template schema <template-id>
 - visual template doctor
 - visual validate
 - visual render
@@ -24,6 +25,22 @@
 - visual schema <command>
 - visual help llm
 - visual version
+
+### Render Artifact Output
+
+`visual render --json` returns `data.artifact` with these compatibility fields:
+
+- `template_id`
+- `template_version`
+- `title`
+- `out_dir`
+- `out`
+- `entrypoint`
+- `relative_entrypoint`
+- `offline`
+- `file_url_safe`
+- `http_subpath_safe`
+- `files`
 
 ## Jira
 

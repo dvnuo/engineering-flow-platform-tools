@@ -38,8 +38,39 @@ Example:
 ```bash
 visual template list --template-dir ./templates/visual --json
 visual template get agent.run_trace --template-dir ./templates/visual --json
+visual template schema agent.run_trace --template-dir ./templates/visual --json
 visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json
 ```
+
+Each template has a real `schema.input.json` referenced by `template.yaml`:
+
+```json
+{
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "agent.run_trace",
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["nodes"],
+    "properties": {
+      "schema": {"const": "efp.visual.input.graph_events.v1"},
+      "title": {"type": "string"},
+      "nodes": {"type": "array", "items": {"type": "object", "required": ["id"]}},
+      "edges": {"type": "array", "items": {"type": "object", "required": ["from", "to"]}},
+      "events": {"type": "array", "items": {"type": "object", "required": ["id"]}}
+    }
+  },
+  "example": {
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Agent Run Trace",
+    "nodes": [{"id": "tool_1", "label": "Read files"}],
+    "events": [{"id": "e1", "time": "2026-06-03T12:00:00Z", "kind": "tool_started", "node_id": "tool_1"}]
+  }
+}
+```
+
+`json_schema` is expanded in `visual template schema <template-id> --json`; agents should read it before writing input JSON.
 
 Successful render output includes:
 
@@ -50,7 +81,19 @@ Successful render output includes:
 - `assets/runtime/**`
 - `assets/template/style.css`
 
-The JSON response returns `data.artifact.entrypoint`.
+The JSON response returns `data.artifact`:
+
+- `template_id`
+- `template_version`
+- `title`
+- `out_dir`
+- `out`
+- `entrypoint`
+- `relative_entrypoint`
+- `offline`
+- `file_url_safe`
+- `http_subpath_safe`
+- `files`
 
 ## Offline Contract
 
@@ -74,11 +117,11 @@ VS Code or desktop:
 visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --json
 ```
 
-Open `./out/run-trace/index.html` directly. No local server is required.
+Open `./out/run-trace/index.html` directly. No local server is required. The artifact is `file://` safe because `index.html` references only relative `manifest.js`, `data.js`, and `assets/**` files.
 
 Portal/runtime proxy:
 
-Serve the generated output directory as static files at any subpath. Because `index.html` references `manifest.js`, `data.js`, and `assets/**` with relative paths, it works under proxy paths without a fixed base URL.
+Serve the generated output directory as static files at any subpath. Portal/runtime proxy serving also depends only on relative paths, so artifacts do not require a fixed base URL.
 
 ## Validation And Inspection
 
@@ -87,5 +130,7 @@ visual validate --template agent.run_trace --template-dir ./templates/visual --i
 visual template doctor --template-dir ./templates/visual --json
 visual inspect-output --out ./out/run-trace --json
 ```
+
+`visual template doctor` reads `registry.json`, validates every `template.yaml`, validates each `schema.input.json`, validates each `examples/basic.input.json`, renders every basic example into a temporary directory, checks required output files, scans the rendered output for offline violations, and deletes the temporary directory.
 
 Use `--dry-run` on `visual render` to preview `planned_files` without creating `--out`.

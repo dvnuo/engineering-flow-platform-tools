@@ -2,7 +2,7 @@ id: knowledge.doc_freshness
 version: 1.0.0
 title: Knowledge Document Freshness
 description: Plot documents by freshness, reliability, and relevance.
-input_schema: matrix_v1
+input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:
   contract: offline.matrix.v1

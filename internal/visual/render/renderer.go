@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -35,10 +36,61 @@ type Result struct {
 }
 
 type Artifact struct {
-	OutDir     string   `json:"out"`
-	Entrypoint string   `json:"entrypoint"`
-	Files      []string `json:"files"`
-	Offline    bool     `json:"offline"`
+	TemplateID         string   `json:"template_id,omitempty"`
+	TemplateVersion    string   `json:"template_version,omitempty"`
+	Title              string   `json:"title,omitempty"`
+	OutDir             string   `json:"out_dir"`
+	Out                string   `json:"out"`
+	Entrypoint         string   `json:"entrypoint"`
+	RelativeEntrypoint string   `json:"relative_entrypoint"`
+	Offline            bool     `json:"offline"`
+	FileURLSafe        bool     `json:"file_url_safe"`
+	HTTPSubpathSafe    bool     `json:"http_subpath_safe"`
+	Files              []string `json:"files"`
+}
+
+type Inspection struct {
+	Artifact Artifact     `json:"artifact"`
+	Checks   OutputChecks `json:"checks"`
+}
+
+type OutputChecks struct {
+	IndexHTML          bool `json:"index_html"`
+	ManifestJSON       bool `json:"manifest_json"`
+	ManifestJS         bool `json:"manifest_js"`
+	DataJS             bool `json:"data_js"`
+	RuntimeJS          bool `json:"runtime_js"`
+	RuntimeRenderersJS bool `json:"runtime_renderers_js"`
+	RuntimeCSS         bool `json:"runtime_css"`
+	OfflineScan        bool `json:"offline_scan"`
+}
+
+type OutputInvalidError struct {
+	Missing []string
+}
+
+func (e OutputInvalidError) Error() string {
+	return e.Message()
+}
+
+func (e OutputInvalidError) Code() string {
+	return "visual_output_invalid"
+}
+
+func (e OutputInvalidError) Message() string {
+	return "Visual output directory is missing required files."
+}
+
+func (e OutputInvalidError) Hint() string {
+	return "Run visual render again or inspect the template assets."
+}
+
+func (e OutputInvalidError) Status() int {
+	return 400
+}
+
+func (e OutputInvalidError) MissingFiles() []string {
+	return append([]string{}, e.Missing...)
 }
 
 func Render(opts Options) (Result, error) {
@@ -66,7 +118,7 @@ func Render(opts Options) (Result, error) {
 		title = tpl.Title
 	}
 	files := plannedFiles(tpl)
-	artifact := Artifact{OutDir: opts.OutDir, Entrypoint: ToArtifactPath(filepath.Join(opts.OutDir, "index.html")), Files: files, Offline: true}
+	artifact := NewArtifact(tpl.ID, tpl.Version, title, opts.OutDir, files)
 	result := Result{TemplateID: tpl.ID, TemplateDir: opts.TemplateDir, InputSummary: parsed.Summary, Artifact: artifact}
 	if opts.DryRun {
 		result.PlannedFiles = files
@@ -110,28 +162,102 @@ func Render(opts Options) (Result, error) {
 			return Result{}, err
 		}
 	}
+	actualFiles, err := ListOutputFiles(opts.OutDir)
+	if err != nil {
+		return Result{}, err
+	}
+	result.Artifact = NewArtifact(tpl.ID, tpl.Version, title, opts.OutDir, actualFiles)
 	return result, nil
 }
 
-func InspectOutput(outDir string, offlineStrict bool) (Artifact, error) {
-	for _, rel := range []string{"index.html", "manifest.json", "manifest.js", "data.js"} {
+func NewArtifact(templateID, templateVersion, title, outDir string, files []string) Artifact {
+	out := ToArtifactPath(outDir)
+	entrypoint := ToArtifactPath(filepath.Join(outDir, "index.html"))
+	return Artifact{
+		TemplateID:         templateID,
+		TemplateVersion:    templateVersion,
+		Title:              title,
+		OutDir:             out,
+		Out:                out,
+		Entrypoint:         entrypoint,
+		RelativeEntrypoint: "index.html",
+		Offline:            true,
+		FileURLSafe:        true,
+		HTTPSubpathSafe:    true,
+		Files:              files,
+	}
+}
+
+func InspectOutput(outDir string, offlineStrict bool) (Inspection, error) {
+	required := []string{
+		"index.html",
+		"manifest.json",
+		"manifest.js",
+		"data.js",
+		"assets/runtime/efp-visual-runtime.iife.js",
+		"assets/runtime/efp-visual-renderers.iife.js",
+		"assets/runtime/efp-visual-runtime.css",
+	}
+	var missing []string
+	for _, rel := range required {
 		path := filepath.Join(outDir, rel)
 		info, err := os.Stat(path)
 		if err != nil || info.IsDir() {
-			return Artifact{}, metadata.NewError("output_path_invalid", "visual output is missing "+rel+".", "Pass a directory created by visual render.", 404)
+			missing = append(missing, rel)
 		}
+	}
+	if len(missing) > 0 {
+		return Inspection{}, OutputInvalidError{Missing: missing}
 	}
 	if offlineStrict {
 		if err := ScanOffline(outDir); err != nil {
-			return Artifact{}, err
+			return Inspection{}, err
 		}
 	}
-	return Artifact{
-		OutDir:     outDir,
-		Entrypoint: ToArtifactPath(filepath.Join(outDir, "index.html")),
-		Files:      []string{"index.html", "manifest.json", "manifest.js", "data.js"},
-		Offline:    true,
+	files, err := ListOutputFiles(outDir)
+	if err != nil {
+		return Inspection{}, err
+	}
+	return Inspection{
+		Artifact: NewArtifact("", "", "", outDir, files),
+		Checks: OutputChecks{
+			IndexHTML:          true,
+			ManifestJSON:       true,
+			ManifestJS:         true,
+			DataJS:             true,
+			RuntimeJS:          true,
+			RuntimeRenderersJS: true,
+			RuntimeCSS:         true,
+			OfflineScan:        offlineStrict,
+		},
 	}, nil
+}
+
+func ListOutputFiles(outDir string) ([]string, error) {
+	var files []string
+	rootAbs, err := filepath.Abs(outDir)
+	if err != nil {
+		return nil, metadata.NewError("output_path_invalid", "failed to resolve output directory: "+err.Error(), "Pass a valid --out directory.", 400)
+	}
+	err = filepath.WalkDir(rootAbs, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(rootAbs, path)
+		if err != nil {
+			return err
+		}
+		files = append(files, filepath.ToSlash(rel))
+		return nil
+	})
+	if err != nil {
+		return nil, metadata.NewError("output_path_invalid", "failed to list visual output files: "+err.Error(), "Inspect the output directory permissions.", 400)
+	}
+	sort.Strings(files)
+	return files, nil
 }
 
 func loadTemplate(templateDir, templateID string) (manifest.Registry, manifest.RegistryEntry, manifest.TemplateManifest, error) {

@@ -1,5 +1,229 @@
 {
-  "template": "codebase.diff_impact",
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "codebase.diff_impact",
   "input_schema_kind": "graph_events_v1",
-  "schema": "efp.visual.input.graph_events.v1"
+  "json_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "efp.visual.input.graph_events.v1",
+    "title": "EFP Visual Graph Events Input v1",
+    "description": "Graph input with optional event stream for offline visual templates.",
+    "type": "object",
+    "required": [
+      "nodes"
+    ],
+    "additionalProperties": true,
+    "properties": {
+      "schema": {
+        "type": "string",
+        "const": "efp.visual.input.graph_events.v1"
+      },
+      "title": {
+        "type": "string"
+      },
+      "nodes": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/node"
+        }
+      },
+      "edges": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/edge"
+        }
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/event"
+        }
+      }
+    },
+    "$defs": {
+      "object": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "node": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "group": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/$defs/object"
+          },
+          "metrics": {
+            "$ref": "#/$defs/object"
+          }
+        }
+      },
+      "edge": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "metadata": {
+            "$ref": "#/$defs/object"
+          }
+        }
+      },
+      "event": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/$defs/object"
+          }
+        }
+      }
+    }
+  },
+  "example": {
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Diff Impact",
+    "nodes": [
+      {
+        "id": "changed_file",
+        "label": "render.go",
+        "kind": "file",
+        "status": "warning"
+      },
+      {
+        "id": "module_render",
+        "label": "render module",
+        "kind": "module",
+        "status": "warning"
+      },
+      {
+        "id": "module_commands",
+        "label": "commands module",
+        "kind": "module",
+        "status": "info"
+      },
+      {
+        "id": "tests",
+        "label": "visual contract tests",
+        "kind": "test",
+        "status": "pending"
+      },
+      {
+        "id": "release",
+        "label": "release artifact",
+        "kind": "release",
+        "status": "info"
+      }
+    ],
+    "edges": [
+      {
+        "from": "changed_file",
+        "to": "module_render",
+        "kind": "changes"
+      },
+      {
+        "from": "module_render",
+        "to": "module_commands",
+        "kind": "api"
+      },
+      {
+        "from": "module_render",
+        "to": "tests",
+        "kind": "covered_by"
+      },
+      {
+        "from": "module_commands",
+        "to": "release",
+        "kind": "ships"
+      }
+    ],
+    "events": [
+      {
+        "id": "d1",
+        "time": "2026-06-03T13:50:00Z",
+        "kind": "change",
+        "node_id": "changed_file",
+        "summary": "Renderer file changed."
+      },
+      {
+        "id": "d2",
+        "time": "2026-06-03T13:51:00Z",
+        "kind": "impact",
+        "node_id": "module_render",
+        "summary": "Render module impacted."
+      },
+      {
+        "id": "d3",
+        "time": "2026-06-03T13:52:00Z",
+        "kind": "test",
+        "node_id": "tests",
+        "summary": "Contract tests selected."
+      }
+    ]
+  }
 }

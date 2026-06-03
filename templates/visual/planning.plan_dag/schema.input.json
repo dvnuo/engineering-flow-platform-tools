@@ -1,5 +1,170 @@
 {
-  "template": "planning.plan_dag",
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "planning.plan_dag",
   "input_schema_kind": "graph_v1",
-  "schema": "efp.visual.input.graph.v1"
+  "json_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "efp.visual.input.graph.v1",
+    "title": "EFP Visual Graph Input v1",
+    "description": "Graph input for offline visual templates.",
+    "type": "object",
+    "required": [
+      "nodes"
+    ],
+    "additionalProperties": true,
+    "properties": {
+      "schema": {
+        "type": "string",
+        "const": "efp.visual.input.graph.v1"
+      },
+      "title": {
+        "type": "string"
+      },
+      "nodes": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/node"
+        }
+      },
+      "edges": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/edge"
+        }
+      }
+    },
+    "$defs": {
+      "object": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "node": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "group": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/$defs/object"
+          },
+          "metrics": {
+            "$ref": "#/$defs/object"
+          }
+        }
+      },
+      "edge": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "metadata": {
+            "$ref": "#/$defs/object"
+          }
+        }
+      }
+    }
+  },
+  "example": {
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Plan DAG",
+    "nodes": [
+      {
+        "id": "goal",
+        "label": "Goal",
+        "kind": "goal",
+        "status": "success"
+      },
+      {
+        "id": "milestone_a",
+        "label": "Milestone A",
+        "kind": "milestone",
+        "status": "success"
+      },
+      {
+        "id": "milestone_b",
+        "label": "Milestone B",
+        "kind": "milestone",
+        "status": "warning"
+      },
+      {
+        "id": "task_1",
+        "label": "Task 1",
+        "kind": "task",
+        "status": "success"
+      },
+      {
+        "id": "task_2",
+        "label": "Task 2",
+        "kind": "task",
+        "status": "pending"
+      }
+    ],
+    "edges": [
+      {
+        "from": "goal",
+        "to": "milestone_a",
+        "kind": "requires"
+      },
+      {
+        "from": "goal",
+        "to": "milestone_b",
+        "kind": "requires"
+      },
+      {
+        "from": "milestone_a",
+        "to": "task_1",
+        "kind": "contains"
+      },
+      {
+        "from": "milestone_b",
+        "to": "task_2",
+        "kind": "contains"
+      },
+      {
+        "from": "task_1",
+        "to": "task_2",
+        "kind": "dependency"
+      }
+    ]
+  }
 }

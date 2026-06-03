@@ -2,7 +2,7 @@ id: codebase.diff_impact
 version: 1.0.0
 title: Codebase Diff Impact
 description: Show changed files, impacted modules, tests, and release surfaces.
-input_schema: graph_events_v1
+input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:
   contract: offline.graph.v1

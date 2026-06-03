@@ -37,7 +37,7 @@ func TestVisualCommandsJSONContract(t *testing.T) {
 		m := item.(map[string]any)
 		names[m["name"].(string)] = true
 	}
-	for _, name := range []string{"render", "validate", "template.list", "template.get", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
+	for _, name := range []string{"render", "validate", "template.list", "template.get", "template.schema", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
 		if !names[name] {
 			t.Fatalf("missing visual command %s in %#v", name, names)
 		}
@@ -55,6 +55,33 @@ func TestVisualSchemaRenderJSONContract(t *testing.T) {
 	for _, name := range []string{"template", "template-dir", "input", "out", "title", "overwrite", "dry-run", "json"} {
 		if !names[name] {
 			t.Fatalf("missing render flag %s in %#v", name, names)
+		}
+	}
+}
+
+func TestVisualSchemaTemplateSchemaJSONContract(t *testing.T) {
+	obj := runVisualOK(t, "schema", "template.schema", "--json")
+	data := obj["data"].(map[string]any)
+	args := data["argument_details"].([]any)
+	hasTemplateID := false
+	for _, item := range args {
+		m := item.(map[string]any)
+		if m["name"] == "template_id" && m["required"] == true {
+			hasTemplateID = true
+		}
+	}
+	if !hasTemplateID {
+		t.Fatalf("template.schema missing template_id argument: %#v", args)
+	}
+	flags := data["flags"].([]any)
+	names := map[string]bool{}
+	for _, item := range flags {
+		m := item.(map[string]any)
+		names[m["name"].(string)] = true
+	}
+	for _, name := range []string{"template-dir", "json"} {
+		if !names[name] {
+			t.Fatalf("missing template.schema flag %s in %#v", name, names)
 		}
 	}
 }
@@ -78,9 +105,92 @@ func TestVisualTemplateListGetDoctor(t *testing.T) {
 	}
 
 	doctor := runVisualOK(t, "template", "doctor", "--template-dir", templateDir, "--json")
-	checked := doctor["data"].(map[string]any)["checked_templates"].(float64)
+	doctorData := doctor["data"].(map[string]any)
+	checked := doctorData["checked_templates"].(float64)
 	if checked != 20 {
 		t.Fatalf("expected 20 checked templates, got %v", checked)
+	}
+	if doctorData["checked_examples"].(float64) != 20 {
+		t.Fatalf("expected 20 checked examples, got %#v", doctorData)
+	}
+	if doctorData["rendered_examples"].(float64) != 20 {
+		t.Fatalf("expected 20 rendered examples, got %#v", doctorData)
+	}
+	doctorTemplates := doctorData["templates"].([]any)
+	if len(doctorTemplates) != 20 {
+		t.Fatalf("expected 20 doctor template results, got %d", len(doctorTemplates))
+	}
+	for _, item := range doctorTemplates {
+		m := item.(map[string]any)
+		if m["rendered"] != true || strings.TrimSpace(m["example"].(string)) == "" {
+			t.Fatalf("unexpected doctor template result: %#v", m)
+		}
+	}
+}
+
+func TestVisualTemplateSchemaCommand(t *testing.T) {
+	templateDir := visualTemplateDir()
+	obj := runVisualOK(t, "template", "schema", "agent.run_trace", "--template-dir", templateDir, "--json")
+	data := obj["data"].(map[string]any)
+	template := data["template"].(map[string]any)
+	if template["id"] != "agent.run_trace" || template["version"] != "1.0.0" || template["renderer"] != "offline.graph.v1" || template["input_schema_kind"] != "graph_events_v1" {
+		t.Fatalf("unexpected template schema metadata: %#v", template)
+	}
+	if data["schema_file"] != "agent.run_trace/schema.input.json" {
+		t.Fatalf("unexpected schema_file: %#v", data["schema_file"])
+	}
+	jsonSchema, ok := data["json_schema"].(map[string]any)
+	if !ok || len(jsonSchema) <= 3 {
+		t.Fatalf("template schema returned stub json_schema: %#v", data["json_schema"])
+	}
+	props := jsonSchema["properties"].(map[string]any)
+	if _, ok := props["nodes"]; !ok {
+		t.Fatalf("json_schema missing nodes property: %#v", props)
+	}
+	if _, ok := props["events"]; !ok {
+		t.Fatalf("json_schema missing events property: %#v", props)
+	}
+	example, ok := data["example"].(map[string]any)
+	if !ok || len(example) == 0 {
+		t.Fatalf("template schema missing example: %#v", data)
+	}
+	if data["example_file"] != "agent.run_trace/examples/basic.input.json" {
+		t.Fatalf("unexpected example_file: %#v", data["example_file"])
+	}
+}
+
+func TestVisualTemplateInputSchemaFilesAreDiscoverable(t *testing.T) {
+	templateDir := visualTemplateDir()
+	for _, id := range visualTemplateIDs(t) {
+		t.Run(id, func(t *testing.T) {
+			var doc map[string]any
+			b, err := os.ReadFile(filepath.Join(templateDir, id, "schema.input.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal(b, &doc); err != nil {
+				t.Fatal(err)
+			}
+			if doc["template_id"] != id {
+				t.Fatalf("schema.input.json missing template_id: %#v", doc)
+			}
+			if strings.TrimSpace(doc["input_schema_kind"].(string)) == "" {
+				t.Fatalf("schema.input.json missing input_schema_kind: %#v", doc)
+			}
+			jsonSchema, ok := doc["json_schema"].(map[string]any)
+			if !ok || len(jsonSchema) <= 3 {
+				t.Fatalf("schema.input.json missing non-stub json_schema: %#v", doc)
+			}
+			if _, ok := doc["example"].(map[string]any); !ok {
+				t.Fatalf("schema.input.json missing example: %#v", doc)
+			}
+			if len(doc) <= 3 {
+				t.Fatalf("schema.input.json is still a stub: %#v", doc)
+			}
+			if _, old := doc["template"]; old {
+				t.Fatalf("schema.input.json still uses old template field: %#v", doc)
+			}
+		})
 	}
 }
 
@@ -98,7 +208,7 @@ func TestVisualRenderEveryExample(t *testing.T) {
 	for _, id := range visualTemplateIDs(t) {
 		t.Run(id, func(t *testing.T) {
 			out := filepath.Join(t.TempDir(), "artifact")
-			runVisualOK(t, "render", "--template", id, "--template-dir", templateDir, "--input", filepath.Join(templateDir, id, "examples", "basic.input.json"), "--out", out, "--json")
+			obj := runVisualOK(t, "render", "--template", id, "--template-dir", templateDir, "--input", filepath.Join(templateDir, id, "examples", "basic.input.json"), "--out", out, "--json")
 			for _, rel := range []string{"index.html", "manifest.json", "manifest.js", "data.js", "assets/runtime/efp-visual-runtime.css", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js"} {
 				if _, err := os.Stat(filepath.Join(out, rel)); err != nil {
 					t.Fatalf("%s missing: %v", rel, err)
@@ -111,7 +221,56 @@ func TestVisualRenderEveryExample(t *testing.T) {
 				}
 			}
 			assertRelativeHTMLCSSJS(t, out)
+			artifact := obj["data"].(map[string]any)["artifact"].(map[string]any)
+			if artifact["template_version"] != "1.0.0" {
+				t.Fatalf("artifact missing template_version: %#v", artifact)
+			}
+			if strings.TrimSpace(artifact["title"].(string)) == "" {
+				t.Fatalf("artifact missing title: %#v", artifact)
+			}
+			if artifact["out_dir"] != filepath.ToSlash(out) || artifact["out"] != filepath.ToSlash(out) {
+				t.Fatalf("artifact missing out compatibility fields: %#v", artifact)
+			}
+			if artifact["relative_entrypoint"] != "index.html" || artifact["file_url_safe"] != true || artifact["http_subpath_safe"] != true {
+				t.Fatalf("artifact missing compatibility flags: %#v", artifact)
+			}
+			files := stringSetFromAny(artifact["files"].([]any))
+			for _, rel := range []string{"index.html", "manifest.json", "manifest.js", "data.js", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js", "assets/runtime/efp-visual-runtime.css", "assets/template/style.css"} {
+				if !files[rel] {
+					t.Fatalf("artifact files missing %s in %#v", rel, files)
+				}
+			}
 		})
+	}
+}
+
+func TestVisualRenderArtifactAndInspectOutputContract(t *testing.T) {
+	templateDir := visualTemplateDir()
+	input := filepath.Join(templateDir, "agent.run_trace", "examples", "basic.input.json")
+	out := filepath.Join(t.TempDir(), "artifact")
+	rendered := runVisualOK(t, "render", "--template", "agent.run_trace", "--template-dir", templateDir, "--input", input, "--out", out, "--title", "Contract Title", "--json")
+	artifact := rendered["data"].(map[string]any)["artifact"].(map[string]any)
+	if artifact["template_id"] != "agent.run_trace" || artifact["template_version"] != "1.0.0" || artifact["title"] != "Contract Title" {
+		t.Fatalf("unexpected render artifact: %#v", artifact)
+	}
+	if artifact["relative_entrypoint"] != "index.html" || artifact["file_url_safe"] != true || artifact["http_subpath_safe"] != true {
+		t.Fatalf("render artifact missing compatibility fields: %#v", artifact)
+	}
+
+	inspected := runVisualOK(t, "inspect-output", "--out", out, "--json")
+	inspectData := inspected["data"].(map[string]any)
+	inspectArtifact := inspectData["artifact"].(map[string]any)
+	if inspectArtifact["out_dir"] != filepath.ToSlash(out) || inspectArtifact["out"] != filepath.ToSlash(out) {
+		t.Fatalf("inspect artifact missing out compatibility fields: %#v", inspectArtifact)
+	}
+	if inspectArtifact["relative_entrypoint"] != "index.html" || inspectArtifact["offline"] != true || inspectArtifact["file_url_safe"] != true || inspectArtifact["http_subpath_safe"] != true {
+		t.Fatalf("inspect artifact missing compatibility fields: %#v", inspectArtifact)
+	}
+	checks := inspectData["checks"].(map[string]any)
+	for _, name := range []string{"index_html", "manifest_json", "manifest_js", "data_js", "runtime_js", "runtime_renderers_js", "runtime_css", "offline_scan"} {
+		if checks[name] != true {
+			t.Fatalf("inspect check %s was not true: %#v", name, checks)
+		}
 	}
 }
 
@@ -154,14 +313,14 @@ func TestVisualPathTraversalAssetRejected(t *testing.T) {
 		t.Fatal(err)
 	}
 	mustWrite(t, filepath.Join(templateDir, "registry.json"), `{"version":1,"templates":[{"id":"bad","version":"1.0.0","path":"bad/template.yaml","title":"Bad","description":"Bad","input_schema":"graph_v1","renderer":"offline.graph.v1"}]}`)
-	mustWrite(t, filepath.Join(templateDir, "bad", "schema.input.json"), `{}`)
+	mustWrite(t, filepath.Join(templateDir, "bad", "schema.input.json"), `{"schema":"efp.visual.template_input_schema.v1","template_id":"bad","input_schema_kind":"graph_v1","json_schema":{"type":"object","required":["nodes"],"properties":{"nodes":{"type":"array"}}},"example":{"nodes":[{"id":"a"}]}}`)
 	mustWrite(t, filepath.Join(templateDir, "bad", "style.css"), `:root { --accent: #fff; }`)
 	mustWrite(t, filepath.Join(templateDir, "bad", "examples", "basic.input.json"), `{"nodes":[{"id":"a"}]}`)
 	mustWrite(t, filepath.Join(templateDir, "bad", "template.yaml"), `id: bad
 version: 1.0.0
 title: Bad
 description: Bad template
-input_schema: graph_v1
+input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:
   contract: offline.graph.v1
@@ -209,9 +368,26 @@ func TestVisualInspectOutputRejectsProtocolRelativeDataString(t *testing.T) {
 			mustWrite(t, filepath.Join(out, "manifest.json"), `{}`)
 			mustWrite(t, filepath.Join(out, "manifest.js"), `window.__EFP_VISUAL_MANIFEST__ = {};`)
 			mustWrite(t, filepath.Join(out, "data.js"), `window.__EFP_VISUAL_DATA__ = {"u":"`+tc.url+`"};`)
+			writeRequiredRuntimeFiles(t, out)
 
 			assertErrorCode(t, runVisual(t, "inspect-output", "--out", out, "--json"), "offline_violation")
 		})
+	}
+}
+
+func TestVisualInspectOutputMissingFilesContract(t *testing.T) {
+	out := t.TempDir()
+	mustWrite(t, filepath.Join(out, "index.html"), `<!doctype html><script src="data.js"></script>`)
+	mustWrite(t, filepath.Join(out, "manifest.json"), `{}`)
+	mustWrite(t, filepath.Join(out, "manifest.js"), `window.__EFP_VISUAL_MANIFEST__ = {};`)
+	fail := runVisual(t, "inspect-output", "--out", out, "--json")
+	assertErrorCode(t, fail, "visual_output_invalid")
+	errObj := fail["error"].(map[string]any)
+	missing := stringSetFromAny(errObj["missing_files"].([]any))
+	for _, rel := range []string{"data.js", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js", "assets/runtime/efp-visual-runtime.css"} {
+		if !missing[rel] {
+			t.Fatalf("missing_files did not include %s: %#v", rel, missing)
+		}
 	}
 }
 
@@ -221,6 +397,7 @@ func TestVisualInspectOutputAllowsFileURLText(t *testing.T) {
 	mustWrite(t, filepath.Join(out, "manifest.json"), `{}`)
 	mustWrite(t, filepath.Join(out, "manifest.js"), `window.__EFP_VISUAL_MANIFEST__ = {};`)
 	mustWrite(t, filepath.Join(out, "data.js"), `window.__EFP_VISUAL_DATA__ = {"u":"file:///tmp/artifact/app.js"};`)
+	writeRequiredRuntimeFiles(t, out)
 
 	runVisualOK(t, "inspect-output", "--out", out, "--json")
 }
@@ -330,6 +507,23 @@ func assertRelativeHTMLCSSJS(t *testing.T, out string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func stringSetFromAny(items []any) map[string]bool {
+	out := map[string]bool{}
+	for _, item := range items {
+		if s, ok := item.(string); ok {
+			out[s] = true
+		}
+	}
+	return out
+}
+
+func writeRequiredRuntimeFiles(t *testing.T, out string) {
+	t.Helper()
+	mustWrite(t, filepath.Join(out, "assets", "runtime", "efp-visual-runtime.iife.js"), `window.__EFP_VISUAL_RUNTIME__ = {};`)
+	mustWrite(t, filepath.Join(out, "assets", "runtime", "efp-visual-renderers.iife.js"), `window.__EFP_VISUAL_RENDERERS__ = {};`)
+	mustWrite(t, filepath.Join(out, "assets", "runtime", "efp-visual-runtime.css"), `:root { color-scheme: light; }`)
 }
 
 func mustRead(t *testing.T, path string) string {

@@ -27,6 +27,7 @@ go run ./cmd/browser version --json | Out-Null
 go run ./cmd/inspect-image version --json | Out-Null
 go run ./cmd/visual version --json | Out-Null
 go run ./cmd/visual template list --template-dir ./templates/visual --json | Out-Null
+go run ./cmd/visual template schema agent.run_trace --template-dir ./templates/visual --json | Out-Null
 go run ./cmd/visual template doctor --template-dir ./templates/visual --json | Out-Null
 $tmp = New-Item -ItemType Directory -Force -Path (Join-Path ([System.IO.Path]::GetTempPath()) ("visual-" + [System.Guid]::NewGuid().ToString("N")))
 $out = Join-Path $tmp.FullName 'run-trace'

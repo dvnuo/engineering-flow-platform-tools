@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,6 +21,13 @@ func ValidateTemplateManifest(templateDir string, entry RegistryEntry, m *Templa
 	}
 	if !metadata.SupportedRenderers[m.Renderer.Contract] {
 		return metadata.NewError("unsupported_renderer", "visual template renderer is not supported: "+m.Renderer.Contract, "Use offline.graph.v1, offline.timeline.v1, offline.evidence.v1, or offline.matrix.v1.", 400)
+	}
+	if !SupportedInputSchemaKinds[normalizeInputSchemaKind(m.InputSchemaKind)] {
+		return metadata.NewError("template_manifest_invalid", "visual template input_schema_kind is not supported: "+m.InputSchemaKind, "Use graph_v1, graph_events_v1, timeline_v1, evidence_v1, or matrix_v1.", 400)
+	}
+	m.InputSchemaKind = normalizeInputSchemaKind(m.InputSchemaKind)
+	if err := validateInputSchemaFile(templateDir, entry, m.InputSchema); err != nil {
+		return err
 	}
 	if !m.Offline.Required {
 		return metadata.NewError("template_manifest_invalid", "visual template offline.required must be true.", "Set offline.required: true.", 400)
@@ -69,6 +77,18 @@ func ValidateTemplateManifest(templateDir string, entry RegistryEntry, m *Templa
 	return nil
 }
 
+var SupportedInputSchemaKinds = map[string]bool{
+	"graph_v1":        true,
+	"graph_events_v1": true,
+	"timeline_v1":     true,
+	"evidence_v1":     true,
+	"matrix_v1":       true,
+}
+
+func normalizeInputSchemaKind(kind string) string {
+	return strings.TrimSpace(strings.ToLower(kind))
+}
+
 func normalizeDataMode(mode string) string {
 	switch strings.TrimSpace(strings.ToLower(mode)) {
 	case "js_file", "js-file":
@@ -76,6 +96,61 @@ func normalizeDataMode(mode string) string {
 	default:
 		return strings.TrimSpace(strings.ToLower(mode))
 	}
+}
+
+func validateInputSchemaFile(templateDir string, entry RegistryEntry, inputSchema string) error {
+	rel, path, err := resolveTemplateInputSchemaPath(templateDir, entry, inputSchema)
+	if err != nil {
+		return err
+	}
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return metadata.NewError("template_manifest_invalid", "visual template input_schema file was not found: "+rel, "Set input_schema to an existing JSON file such as schema.input.json.", 400)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return metadata.NewError("template_manifest_invalid", "visual template input_schema file could not be read: "+rel, "Check file permissions for "+rel+".", 400)
+	}
+	if !json.Valid(b) {
+		return metadata.NewError("template_manifest_invalid", "visual template input_schema file is not valid JSON: "+rel, "Fix "+rel+" so it contains a JSON object.", 400)
+	}
+	return nil
+}
+
+func resolveTemplateInputSchemaPath(templateDir string, entry RegistryEntry, inputSchema string) (string, string, error) {
+	value := strings.TrimSpace(inputSchema)
+	if value == "" {
+		return "", "", metadata.NewError("template_manifest_invalid", "visual template input_schema is empty.", "Set input_schema: schema.input.json.", 400)
+	}
+	if filepath.IsAbs(value) {
+		return "", "", metadata.NewError("template_manifest_invalid", "visual template input_schema must be relative: "+value, "Use a relative JSON path such as schema.input.json.", 400)
+	}
+	if containsParentPathSegment(value) {
+		return "", "", metadata.NewError("template_manifest_invalid", "visual template input_schema must not contain parent traversal: "+value, "Keep input_schema inside the template directory.", 400)
+	}
+	clean := filepath.Clean(value)
+	if clean == "." {
+		return "", "", metadata.NewError("template_manifest_invalid", "visual template input_schema path is invalid.", "Set input_schema: schema.input.json.", 400)
+	}
+	base := TemplateBaseDir(templateDir, entry)
+	path := filepath.Join(base, clean)
+	rel := filepath.ToSlash(filepath.Join(filepath.Dir(filepath.Clean(entry.Path)), clean))
+	return rel, path, nil
+}
+
+func containsParentPathSegment(value string) bool {
+	for _, part := range strings.FieldsFunc(value, func(r rune) bool {
+		return r == '/' || r == '\\'
+	}) {
+		if part == ".." {
+			return true
+		}
+	}
+	return false
+}
+
+func TemplateBaseDir(templateDir string, entry RegistryEntry) string {
+	return filepath.Dir(filepath.Join(templateDir, filepath.Clean(entry.Path)))
 }
 
 func validateAsset(templateDir, templatePath string, asset AssetSpec) error {

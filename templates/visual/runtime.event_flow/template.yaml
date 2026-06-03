@@ -2,7 +2,7 @@ id: runtime.event_flow
 version: 1.0.0
 title: Runtime Event Flow
 description: Visualize event streaming and snapshot reconciliation paths.
-input_schema: graph_events_v1
+input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:
   contract: offline.graph.v1

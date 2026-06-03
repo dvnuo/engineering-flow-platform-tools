@@ -2,7 +2,7 @@ id: agent.active_run_monitor
 version: 1.0.0
 title: Agent Active Run Monitor
 description: Inspect active agent runs, retries, idle sessions, and blocked work.
-input_schema: graph_events_v1
+input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:
   contract: offline.graph.v1

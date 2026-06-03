@@ -63,14 +63,11 @@ func inspectOutputCmd(o *Opts) *cobra.Command {
 			if outDir == "" {
 				return invalidArgs(cmd, o, "--out is required", "Pass the visual artifact output directory.")
 			}
-			artifact, err := render.InspectOutput(outDir, o.OfflineStrict)
+			inspection, err := render.InspectOutput(outDir, o.OfflineStrict)
 			if err != nil {
 				return print(cmd, o, failureFromError(err, "offline_violation"))
 			}
-			return print(cmd, o, output.Success("", map[string]any{
-				"artifact":       artifact,
-				"offline_strict": o.OfflineStrict,
-			}))
+			return print(cmd, o, output.Success("", inspection))
 		},
 	}
 	c.Flags().StringVar(&outDir, "out", "", "Output directory to inspect")

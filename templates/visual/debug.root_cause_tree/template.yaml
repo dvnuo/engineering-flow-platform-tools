@@ -2,7 +2,7 @@ id: debug.root_cause_tree
 version: 1.0.0
 title: Debug Root Cause Tree
 description: Visualize symptoms, causes, evidence, and fixes as a radial tree.
-input_schema: graph_v1
+input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:
   contract: offline.graph.v1

@@ -27,6 +27,18 @@ type codedError interface {
 	Status() int
 }
 
+type templateIDError interface {
+	TemplateID() string
+}
+
+type fileError interface {
+	File() string
+}
+
+type missingFilesError interface {
+	MissingFiles() []string
+}
+
 func NewRoot() *cobra.Command {
 	cobra.EnableCommandSorting = false
 	o := &Opts{Format: "table", OfflineStrict: true}
@@ -56,6 +68,7 @@ It reads local templates under templates/visual, validates JSON input, copies lo
 			`visual commands --json`,
 			`visual schema render --json`,
 			`visual template list --template-dir ./templates/visual --json`,
+			`visual template schema agent.run_trace --template-dir ./templates/visual --json`,
 			`visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json`,
 		},
 		Instructions: "copy cmd/visual/visual-cli.instructions.md to ~/.copilot/instructions/visual-cli.instructions.md.",
@@ -80,7 +93,20 @@ func print(cmd *cobra.Command, o *Opts, env output.Envelope) error {
 func failureFromError(err error, fallbackCode string) output.Envelope {
 	var ce codedError
 	if errors.As(err, &ce) {
-		return output.Failure(ce.Code(), ce.Message(), ce.Hint(), ce.Status())
+		detail := &output.ErrorDetail{Code: ce.Code(), Message: ce.Message(), Hint: ce.Hint(), Status: ce.Status()}
+		var te templateIDError
+		if errors.As(err, &te) {
+			detail.TemplateID = te.TemplateID()
+		}
+		var fe fileError
+		if errors.As(err, &fe) {
+			detail.File = fe.File()
+		}
+		var me missingFilesError
+		if errors.As(err, &me) {
+			detail.MissingFiles = me.MissingFiles()
+		}
+		return output.Envelope{OK: false, Error: detail}
 	}
 	if fallbackCode == "" {
 		fallbackCode = "output_write_failed"

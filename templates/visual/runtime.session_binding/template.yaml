@@ -2,7 +2,7 @@ id: runtime.session_binding
 version: 1.0.0
 title: Runtime Session Binding
 description: Trace conversation, root session, message, event, and status binding.
-input_schema: graph_v1
+input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:
   contract: offline.graph.v1

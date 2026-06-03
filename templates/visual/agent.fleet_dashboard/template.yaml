@@ -2,7 +2,7 @@ id: agent.fleet_dashboard
 version: 1.0.0
 title: Agent Fleet Dashboard
 description: Plot agents, runtimes, and sessions as a status matrix.
-input_schema: matrix_v1
+input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:
   contract: offline.matrix.v1

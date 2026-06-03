@@ -1,10 +1,63 @@
 {
-  "id": "matrix_v1",
-  "schema": "efp.visual.input.matrix.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "efp.visual.input.matrix.v1",
+  "title": "EFP Visual Matrix Input v1",
+  "description": "Two-axis matrix input for offline visual templates.",
   "type": "object",
   "required": ["items"],
+  "additionalProperties": true,
   "properties": {
-    "title": {"type": "string"},
-    "items": {"type": "array"}
+    "schema": {
+      "type": "string",
+      "const": "efp.visual.input.matrix.v1"
+    },
+    "title": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    }
+  },
+  "$defs": {
+    "object": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "item": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "y": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "#/$defs/object"
+        }
+      }
+    }
   }
 }

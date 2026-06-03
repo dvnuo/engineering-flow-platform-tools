@@ -2,7 +2,7 @@ id: agent.tool_constellation
 version: 1.0.0
 title: Agent Tool Constellation
 description: Map tool usage around an agent run with local SVG rendering.
-input_schema: graph_events_v1
+input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:
   contract: offline.graph.v1

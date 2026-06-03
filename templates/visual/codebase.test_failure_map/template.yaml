@@ -2,7 +2,7 @@ id: codebase.test_failure_map
 version: 1.0.0
 title: Codebase Test Failure Map
 description: Connect failing tests to source modules and recent changes.
-input_schema: graph_events_v1
+input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:
   contract: offline.graph.v1

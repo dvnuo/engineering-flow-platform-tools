@@ -1,5 +1,115 @@
 {
-  "template": "debug.incident_timeline",
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "debug.incident_timeline",
   "input_schema_kind": "timeline_v1",
-  "schema": "efp.visual.input.timeline.v1"
+  "json_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "efp.visual.input.timeline.v1",
+    "title": "EFP Visual Timeline Input v1",
+    "description": "Timeline event input for offline visual templates.",
+    "type": "object",
+    "required": [
+      "events"
+    ],
+    "additionalProperties": true,
+    "properties": {
+      "schema": {
+        "type": "string",
+        "const": "efp.visual.input.timeline.v1"
+      },
+      "title": {
+        "type": "string"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/event"
+        }
+      }
+    },
+    "$defs": {
+      "object": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "event": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/$defs/object"
+          }
+        }
+      }
+    }
+  },
+  "example": {
+    "schema": "efp.visual.input.timeline.v1",
+    "title": "Incident Timeline",
+    "events": [
+      {
+        "id": "i1",
+        "time": "2026-06-03T14:10:00Z",
+        "kind": "deploy",
+        "label": "Deploy",
+        "status": "success",
+        "summary": "New runtime adapter deployed."
+      },
+      {
+        "id": "i2",
+        "time": "2026-06-03T14:20:00Z",
+        "kind": "error_spike",
+        "label": "Error spike",
+        "status": "error",
+        "summary": "Proxy errors increased."
+      },
+      {
+        "id": "i3",
+        "time": "2026-06-03T14:30:00Z",
+        "kind": "investigation",
+        "label": "Investigation",
+        "status": "warning",
+        "summary": "Logs and snapshots inspected."
+      },
+      {
+        "id": "i4",
+        "time": "2026-06-03T14:40:00Z",
+        "kind": "root_cause",
+        "label": "Root cause",
+        "status": "info",
+        "summary": "Relative path assumption found."
+      },
+      {
+        "id": "i5",
+        "time": "2026-06-03T14:50:00Z",
+        "kind": "fix",
+        "label": "Fix",
+        "status": "success",
+        "summary": "Path handling corrected."
+      }
+    ]
+  }
 }

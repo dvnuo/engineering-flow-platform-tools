@@ -611,7 +611,9 @@ func visualExplicit(name string) (explicitMeta, bool) {
 			Flags: common, Risk: "read", Example: "visual template list --template-dir ./templates/visual --json"},
 		"template.get": {Description: "Show one visual template manifest and renderer contract.",
 			Flags: common, Required: []string{"template-id"}, Risk: "read", Example: "visual template get agent.run_trace --template-dir ./templates/visual --json"},
-		"template.doctor": {Description: "Validate template registry, manifests, required files, assets, and offline safety.",
+		"template.schema": {Description: "Show one visual template input JSON schema and basic example.",
+			Flags: common, Required: []string{"template_id"}, Risk: "read", Example: "visual template schema agent.run_trace --template-dir ./templates/visual --json"},
+		"template.doctor": {Description: "Validate template registry, manifests, schemas, examples, rendered outputs, and offline safety.",
 			Flags: common, Risk: "read", Example: "visual template doctor --template-dir ./templates/visual --json"},
 		"inspect-output": {Description: "Inspect a generated visual output directory for required files and offline safety.",
 			Flags: append([]string{"out"}, common...), Required: []string{"out"}, Risk: "read", Example: "visual inspect-output --out ./out/run-trace --json"},
@@ -958,6 +960,10 @@ func argumentDescription(name string) string {
 		return "Jira issue key or full Jira issue URL."
 	case "jira-url":
 		return "Full Jira URL, especially a Zephyr project or test-management URL."
+	case "template_id":
+		return "Visual template id, such as agent.run_trace."
+	case "template-id":
+		return "Visual template id, such as agent.run_trace."
 	case "comment-id":
 		return "Comment id."
 	case "attachment-id":

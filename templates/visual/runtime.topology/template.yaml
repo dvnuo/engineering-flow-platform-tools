@@ -2,7 +2,7 @@ id: runtime.topology
 version: 1.0.0
 title: Runtime Topology
 description: Visualize Portal, runtime adapter, OpenCode server, tools, and workspace topology.
-input_schema: graph_v1
+input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:
   contract: offline.graph.v1

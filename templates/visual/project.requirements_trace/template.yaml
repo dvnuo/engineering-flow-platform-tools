@@ -2,7 +2,7 @@ id: project.requirements_trace
 version: 1.0.0
 title: Project Requirements Trace
 description: Trace requirements through docs, issues, pull requests, files, and tests.
-input_schema: graph_v1
+input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:
   contract: offline.graph.v1

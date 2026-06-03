@@ -2,7 +2,7 @@ id: debug.incident_timeline
 version: 1.0.0
 title: Debug Incident Timeline
 description: Render incident events from deploy through root cause and fix.
-input_schema: timeline_v1
+input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:
   contract: offline.timeline.v1

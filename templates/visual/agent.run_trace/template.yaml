@@ -2,7 +2,7 @@ id: agent.run_trace
 version: 1.0.0
 title: Agent Run Trace
 description: Visualize an agent run as an offline interactive timeline and graph.
-input_schema: graph_events_v1
+input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:
   contract: offline.graph.v1

@@ -2,7 +2,7 @@ id: agent.thinking_timeline
 version: 1.0.0
 title: Agent Thinking Timeline
 description: Show reasoning, tool, permission, and response phases as an offline timeline.
-input_schema: graph_events_v1
+input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:
   contract: offline.timeline.v1

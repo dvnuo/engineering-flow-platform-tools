@@ -1,0 +1,25 @@
+{
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Permission Gate",
+  "nodes": [
+    {"id": "request", "label": "Action request", "kind": "input", "status": "info"},
+    {"id": "policy", "label": "Policy check", "kind": "policy", "status": "success"},
+    {"id": "allow", "label": "Allow", "kind": "gate", "status": "success"},
+    {"id": "ask", "label": "Ask user", "kind": "gate", "status": "warning"},
+    {"id": "deny", "label": "Deny", "kind": "gate", "status": "error"},
+    {"id": "command", "label": "Command", "kind": "tool", "status": "success"}
+  ],
+  "edges": [
+    {"from": "request", "to": "policy", "kind": "evaluate"},
+    {"from": "policy", "to": "allow", "kind": "safe"},
+    {"from": "policy", "to": "ask", "kind": "needs_user"},
+    {"from": "policy", "to": "deny", "kind": "blocked"},
+    {"from": "allow", "to": "command", "kind": "execute"}
+  ],
+  "events": [
+    {"id": "p1", "time": "2026-06-03T13:20:00Z", "kind": "gate", "node_id": "policy", "summary": "Policy evaluated."},
+    {"id": "p2", "time": "2026-06-03T13:21:00Z", "kind": "allow", "node_id": "allow", "summary": "Read-only command allowed."},
+    {"id": "p3", "time": "2026-06-03T13:22:00Z", "kind": "ask", "node_id": "ask", "summary": "Write command would ask."},
+    {"id": "p4", "time": "2026-06-03T13:23:00Z", "kind": "deny", "node_id": "deny", "summary": "Unsafe operation denied."}
+  ]
+}

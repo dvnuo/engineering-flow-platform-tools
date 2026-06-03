@@ -1,0 +1,5 @@
+{
+  "template": "knowledge.doc_freshness",
+  "input_schema_kind": "matrix_v1",
+  "schema": "efp.visual.input.matrix.v1"
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Diff Impact",
+  "nodes": [
+    {"id": "changed_file", "label": "render.go", "kind": "file", "status": "warning"},
+    {"id": "module_render", "label": "render module", "kind": "module", "status": "warning"},
+    {"id": "module_commands", "label": "commands module", "kind": "module", "status": "info"},
+    {"id": "tests", "label": "visual contract tests", "kind": "test", "status": "pending"},
+    {"id": "release", "label": "release artifact", "kind": "release", "status": "info"}
+  ],
+  "edges": [
+    {"from": "changed_file", "to": "module_render", "kind": "changes"},
+    {"from": "module_render", "to": "module_commands", "kind": "api"},
+    {"from": "module_render", "to": "tests", "kind": "covered_by"},
+    {"from": "module_commands", "to": "release", "kind": "ships"}
+  ],
+  "events": [
+    {"id": "d1", "time": "2026-06-03T13:50:00Z", "kind": "change", "node_id": "changed_file", "summary": "Renderer file changed."},
+    {"id": "d2", "time": "2026-06-03T13:51:00Z", "kind": "impact", "node_id": "module_render", "summary": "Render module impacted."},
+    {"id": "d3", "time": "2026-06-03T13:52:00Z", "kind": "test", "node_id": "tests", "summary": "Contract tests selected."}
+  ]
+}

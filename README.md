@@ -7,6 +7,7 @@ This repository hosts cross-platform Go-based CLI tools for agent, runtime, shel
 - `jenkins`
 - `browser`
 - `inspect-image`
+- `visual`
 
 Jira and Confluence are the first tool family in this repository. Future tools may be added as separate command binaries under `cmd/<tool-name>`.
 
@@ -69,9 +70,15 @@ For agents, `--json` is the default way to use `inspect-image`; human-facing int
 
 For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so Copilot has durable guidance for when and how to invoke this CLI.
 
+### Visual
+
+`visual` generates complete offline static visualization artifacts from local templates under `templates/visual`. It validates input JSON, copies local template assets, and writes `index.html`, `manifest.json`, `manifest.js`, `data.js`, and `assets/**` to `--out`. It does not call Portal, MCP, Node/npm, a server, a CDN, or any remote asset.
+
+For VS Code GitHub Copilot, copy `cmd/visual/visual-cli.instructions.md` to `~/.copilot/instructions/visual-cli.instructions.md` so Copilot uses `visual` as a terminal CLI and returns the generated `index.html` path.
+
 ## Quick Install
 
-Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` on your `PATH`, then run:
+Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` on your `PATH`, then run:
 
 ```bash
 jira version --json
@@ -79,6 +86,7 @@ confluence version --json
 jenkins version --json
 browser version --json
 inspect-image version --json
+visual version --json
 ```
 
 ## Config File
@@ -145,6 +153,12 @@ jenkins:
       verify_ssl: true
       ca_cert: ""
 
+visual:
+  template_dir: ./templates/visual
+  defaults:
+    offline_strict: true
+    data_mode: js-file
+
 copilot:
   provider: github_copilot_plugin
   auth:
@@ -193,6 +207,7 @@ Config node ownership:
 - `jenkins`: Jenkins instances, defaults, auth, TLS, and crumb behavior.
 - `copilot`: GitHub/Copilot authentication shared by commands that use Copilot-backed APIs.
 - `inspect_image`: inspect-image API defaults, model defaults, image limits, and privacy settings.
+- `visual`: offline artifact template directory and default render behavior.
 
 ## Jenkins Examples
 
@@ -264,6 +279,13 @@ browser probe --url "https://intranet.example.test/app" --fetch-api "/api/me" --
 
 The current OpenCode runtime image consumes prebuilt binaries copied into `runtime-tools/` by an external pipeline. A future runtime change must place `browser` on `PATH`, and probe execution inside a runtime container also requires Edge/Chrome/Chromium in that image.
 
+## Visual Examples
+
+```bash
+visual template list --template-dir ./templates/visual --json
+visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json
+```
+
 ## URL Instance Routing
 
 Commands that accept Jira issue URLs or Confluence page URLs can select the matching configured instance automatically. Use `--instance` when multiple configured instances could match the same URL.
@@ -278,6 +300,7 @@ confluence commands --json
 jenkins commands --json
 browser commands --json
 inspect-image commands --json
+visual commands --json
 ```
 
 Then inspect the exact schema before calling a command:
@@ -288,9 +311,10 @@ confluence schema page.create --json
 jenkins schema job.build-with-params --json
 browser schema probe --json
 inspect-image schema inspect --json
+visual schema render --json
 ```
 
-For agents, default every `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+For agents, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. For `visual`, run `visual template list --json` and `visual template get <template-id> --json` before render, generate input JSON first, render to a new output directory, and return `data.artifact.entrypoint`. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
 
 For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jira issue. When a user asks to update case `X` in cycle `Y`, prefer `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; use `execution resolve` or `cycle resolve` first when the target is ambiguous, and use `status list` rather than hard-coding numeric status ids.
 
@@ -355,4 +379,4 @@ go vet ./...
 
 Tags matching `v*` trigger the release workflow. Release archives are named `engineering-flow-platform-tools_<version>_<goos>_<goarch>`.
 
-Current archives include `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, README, and docs.
+Current archives include `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, `visual`, `templates/visual/**`, README, and docs.

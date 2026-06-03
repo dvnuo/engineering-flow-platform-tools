@@ -1,0 +1,10 @@
+{
+  "id": "matrix_v1",
+  "schema": "efp.visual.input.matrix.v1",
+  "type": "object",
+  "required": ["items"],
+  "properties": {
+    "title": {"type": "string"},
+    "items": {"type": "array"}
+  }
+}

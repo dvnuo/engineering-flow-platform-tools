@@ -1,0 +1,17 @@
+{
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Runtime Topology",
+  "nodes": [
+    {"id": "portal", "label": "Portal", "kind": "ui", "status": "success", "group": "client"},
+    {"id": "adapter", "label": "Runtime adapter", "kind": "service", "status": "success", "group": "runtime"},
+    {"id": "opencode", "label": "OpenCode server", "kind": "server", "status": "success", "group": "runtime"},
+    {"id": "tools", "label": "Tools", "kind": "tooling", "status": "info", "group": "workspace"},
+    {"id": "workspace", "label": "Workspace", "kind": "filesystem", "status": "success", "group": "workspace"}
+  ],
+  "edges": [
+    {"from": "portal", "to": "adapter", "kind": "proxy", "label": "runtime proxy"},
+    {"from": "adapter", "to": "opencode", "kind": "api", "label": "session"},
+    {"from": "opencode", "to": "tools", "kind": "tool"},
+    {"from": "tools", "to": "workspace", "kind": "file"}
+  ]
+}

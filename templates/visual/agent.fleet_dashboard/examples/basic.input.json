@@ -1,0 +1,10 @@
+{
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Agent Fleet Dashboard",
+  "items": [
+    {"id": "agent_1", "label": "Agent 1", "x": 0.82, "y": 0.88, "kind": "agent", "status": "success", "metadata": {"runtime": "linux"}},
+    {"id": "agent_2", "label": "Agent 2", "x": 0.64, "y": 0.72, "kind": "agent", "status": "busy", "metadata": {"runtime": "linux"}},
+    {"id": "session_1", "label": "Session 1", "x": 0.48, "y": 0.54, "kind": "session", "status": "retry", "metadata": {"attempts": 2}},
+    {"id": "runtime_1", "label": "Runtime 1", "x": 0.26, "y": 0.35, "kind": "runtime", "status": "blocked", "metadata": {"reason": "permission"}}
+  ]
+}

@@ -53,7 +53,10 @@ jobs:
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/jenkins${{ matrix.ext }}" ./cmd/jenkins
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/browser${{ matrix.ext }}" ./cmd/browser
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/inspect-image${{ matrix.ext }}" ./cmd/inspect-image
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/visual${{ matrix.ext }}" ./cmd/visual
           cp README.md docs/*.md "dist/${{ matrix.goos }}-${{ matrix.goarch }}/"
+          mkdir -p "dist/${{ matrix.goos }}-${{ matrix.goarch }}/templates"
+          cp -R templates/visual "dist/${{ matrix.goos }}-${{ matrix.goarch }}/templates/"
           name="engineering-flow-platform-tools_${version}_${{ matrix.goos }}_${{ matrix.goarch }}"
           if [[ "${{ matrix.archive }}" == "zip" ]]; then
             (cd "dist/${{ matrix.goos }}-${{ matrix.goarch }}" && zip -r "../${name}.zip" .)

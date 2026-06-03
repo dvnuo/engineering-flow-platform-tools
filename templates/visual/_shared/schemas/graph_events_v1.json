@@ -1,0 +1,12 @@
+{
+  "id": "graph_events_v1",
+  "schema": "efp.visual.input.graph_events.v1",
+  "type": "object",
+  "required": ["nodes"],
+  "properties": {
+    "title": {"type": "string"},
+    "nodes": {"type": "array"},
+    "edges": {"type": "array"},
+    "events": {"type": "array"}
+  }
+}

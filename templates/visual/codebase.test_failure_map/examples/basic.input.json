@@ -1,0 +1,22 @@
+{
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Test Failure Map",
+  "nodes": [
+    {"id": "test_render", "label": "TestRenderArtifact", "kind": "test", "status": "error"},
+    {"id": "test_offline", "label": "TestOfflineScan", "kind": "test", "status": "warning"},
+    {"id": "render_module", "label": "render package", "kind": "module", "status": "warning"},
+    {"id": "scanner", "label": "offline scanner", "kind": "module", "status": "warning"},
+    {"id": "template", "label": "template assets", "kind": "asset", "status": "info"}
+  ],
+  "edges": [
+    {"from": "test_render", "to": "render_module", "kind": "fails_on"},
+    {"from": "test_offline", "to": "scanner", "kind": "fails_on"},
+    {"from": "render_module", "to": "template", "kind": "reads"},
+    {"from": "scanner", "to": "template", "kind": "scans"}
+  ],
+  "events": [
+    {"id": "tf1", "time": "2026-06-03T14:00:00Z", "kind": "test_failed", "node_id": "test_render", "summary": "Render contract failed."},
+    {"id": "tf2", "time": "2026-06-03T14:01:00Z", "kind": "test_failed", "node_id": "test_offline", "summary": "Offline scan caught a token."},
+    {"id": "tf3", "time": "2026-06-03T14:02:00Z", "kind": "investigate", "node_id": "scanner", "summary": "Scanner token reviewed."}
+  ]
+}

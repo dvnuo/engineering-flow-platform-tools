@@ -1,0 +1,19 @@
+{
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Requirements Trace",
+  "nodes": [
+    {"id": "requirement", "label": "Requirement", "kind": "requirement", "status": "success"},
+    {"id": "doc", "label": "Confluence doc", "kind": "doc", "status": "info"},
+    {"id": "jira", "label": "Jira issue", "kind": "issue", "status": "success"},
+    {"id": "pr", "label": "Pull request", "kind": "pull_request", "status": "pending"},
+    {"id": "files", "label": "Changed files", "kind": "file", "status": "warning"},
+    {"id": "tests", "label": "Tests", "kind": "test", "status": "pending"}
+  ],
+  "edges": [
+    {"from": "requirement", "to": "doc", "kind": "documented_by"},
+    {"from": "doc", "to": "jira", "kind": "tracked_by"},
+    {"from": "jira", "to": "pr", "kind": "implemented_by"},
+    {"from": "pr", "to": "files", "kind": "changes"},
+    {"from": "files", "to": "tests", "kind": "verified_by"}
+  ]
+}

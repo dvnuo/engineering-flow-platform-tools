@@ -2,7 +2,7 @@
 
 ## Common Conventions
 
-- For agent workflows, default every `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` command and subcommand to `--json`.
+- For agent workflows, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json`.
 - `--json` returns the stable `ok/data/error` envelope.
 - Command parsing failures return `ok=false` with `error.code=invalid_args` when `--json` is present.
 - `--format table|json|yaml` selects output rendering where supported.
@@ -10,6 +10,20 @@
 - Destructive commands require `--yes`.
 - Write commands support `--dry-run` unless explicitly documented otherwise.
 - Windows `cmd` agents should use double quotes, `where <binary>`, `dir`, `cd`, and `type` rather than Bash-only commands or single-quote quoting.
+
+## Visual
+
+### Basic
+- visual template list
+- visual template get <template-id>
+- visual template doctor
+- visual validate
+- visual render
+- visual inspect-output
+- visual commands
+- visual schema <command>
+- visual help llm
+- visual version
 
 ## Jira
 

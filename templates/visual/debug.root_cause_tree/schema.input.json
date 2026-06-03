@@ -1,0 +1,5 @@
+{
+  "template": "debug.root_cause_tree",
+  "input_schema_kind": "graph_v1",
+  "schema": "efp.visual.input.graph.v1"
+}

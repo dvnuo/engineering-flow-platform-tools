@@ -1,0 +1,17 @@
+{
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Service Topology",
+  "nodes": [
+    {"id": "frontend", "label": "Frontend", "kind": "web", "status": "success"},
+    {"id": "backend", "label": "Backend API", "kind": "api", "status": "success"},
+    {"id": "database", "label": "Database", "kind": "db", "status": "warning"},
+    {"id": "cache", "label": "Cache", "kind": "infra", "status": "success"},
+    {"id": "external_api", "label": "External API", "kind": "external", "status": "info"}
+  ],
+  "edges": [
+    {"from": "frontend", "to": "backend", "kind": "request"},
+    {"from": "backend", "to": "database", "kind": "query"},
+    {"from": "backend", "to": "cache", "kind": "cache"},
+    {"from": "backend", "to": "external_api", "kind": "integration"}
+  ]
+}

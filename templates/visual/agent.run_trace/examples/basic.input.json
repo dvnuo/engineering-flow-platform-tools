@@ -1,0 +1,24 @@
+{
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Smoke Agent Run Trace",
+  "nodes": [
+    {"id": "request", "label": "User request", "kind": "input", "status": "success", "group": "phase"},
+    {"id": "planning", "label": "Planning", "kind": "agent", "status": "success", "group": "phase"},
+    {"id": "read_files", "label": "Read files", "kind": "tool", "status": "success", "group": "tool"},
+    {"id": "run_tests", "label": "Run tests", "kind": "tool", "status": "warning", "group": "tool"},
+    {"id": "final", "label": "Final answer", "kind": "response", "status": "success", "group": "phase"}
+  ],
+  "edges": [
+    {"from": "request", "to": "planning", "kind": "step", "label": "analyze"},
+    {"from": "planning", "to": "read_files", "kind": "tool", "label": "inspect"},
+    {"from": "read_files", "to": "run_tests", "kind": "tool", "label": "verify"},
+    {"from": "run_tests", "to": "final", "kind": "step", "label": "report"}
+  ],
+  "events": [
+    {"id": "e1", "time": "2026-06-03T12:00:00Z", "kind": "request", "node_id": "request", "summary": "User asked for offline artifact CLI."},
+    {"id": "e2", "time": "2026-06-03T12:02:00Z", "kind": "planning", "node_id": "planning", "summary": "Plan created."},
+    {"id": "e3", "time": "2026-06-03T12:04:00Z", "kind": "tool_started", "node_id": "read_files", "summary": "Repository files inspected."},
+    {"id": "e4", "time": "2026-06-03T12:08:00Z", "kind": "tool_finished", "node_id": "run_tests", "summary": "Tests completed with one warning."},
+    {"id": "e5", "time": "2026-06-03T12:10:00Z", "kind": "response", "node_id": "final", "summary": "Final summary returned."}
+  ]
+}

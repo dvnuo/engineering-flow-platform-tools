@@ -1,0 +1,11 @@
+{
+  "schema": "efp.visual.input.timeline.v1",
+  "title": "Incident Timeline",
+  "events": [
+    {"id": "i1", "time": "2026-06-03T14:10:00Z", "kind": "deploy", "label": "Deploy", "status": "success", "summary": "New runtime adapter deployed."},
+    {"id": "i2", "time": "2026-06-03T14:20:00Z", "kind": "error_spike", "label": "Error spike", "status": "error", "summary": "Proxy errors increased."},
+    {"id": "i3", "time": "2026-06-03T14:30:00Z", "kind": "investigation", "label": "Investigation", "status": "warning", "summary": "Logs and snapshots inspected."},
+    {"id": "i4", "time": "2026-06-03T14:40:00Z", "kind": "root_cause", "label": "Root cause", "status": "info", "summary": "Relative path assumption found."},
+    {"id": "i5", "time": "2026-06-03T14:50:00Z", "kind": "fix", "label": "Fix", "status": "success", "summary": "Path handling corrected."}
+  ]
+}

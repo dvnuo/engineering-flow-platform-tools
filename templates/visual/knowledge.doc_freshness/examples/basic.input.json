@@ -1,0 +1,10 @@
+{
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Document Freshness",
+  "items": [
+    {"id": "doc_arch", "label": "Architecture", "x": 0.86, "y": 0.82, "kind": "doc", "status": "success", "metadata": {"freshness": 0.86, "reliability": 0.82}},
+    {"id": "doc_runbook", "label": "Runbook", "x": 0.58, "y": 0.74, "kind": "doc", "status": "warning", "metadata": {"freshness": 0.58, "reliability": 0.74}},
+    {"id": "doc_api", "label": "API Guide", "x": 0.42, "y": 0.61, "kind": "doc", "status": "warning", "metadata": {"freshness": 0.42, "reliability": 0.61}},
+    {"id": "doc_legacy", "label": "Legacy Notes", "x": 0.18, "y": 0.32, "kind": "doc", "status": "error", "metadata": {"freshness": 0.18, "reliability": 0.32}}
+  ]
+}

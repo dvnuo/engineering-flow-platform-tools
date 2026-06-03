@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "agent.run_trace",
+      "version": "1.0.0",
+      "path": "agent.run_trace/template.yaml",
+      "title": "Agent Run Trace",
+      "description": "Visualize an agent run as an offline interactive timeline and graph.",
+      "input_schema": "graph_events_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "agent.thinking_timeline",
+      "version": "1.0.0",
+      "path": "agent.thinking_timeline/template.yaml",
+      "title": "Agent Thinking Timeline",
+      "description": "Show reasoning, tool, permission, and response phases as an offline timeline.",
+      "input_schema": "graph_events_v1",
+      "renderer": "offline.timeline.v1"
+    },
+    {
+      "id": "agent.tool_constellation",
+      "version": "1.0.0",
+      "path": "agent.tool_constellation/template.yaml",
+      "title": "Agent Tool Constellation",
+      "description": "Map tool usage around an agent run with local SVG rendering.",
+      "input_schema": "graph_events_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "agent.permission_gate",
+      "version": "1.0.0",
+      "path": "agent.permission_gate/template.yaml",
+      "title": "Agent Permission Gate",
+      "description": "Visualize allow, ask, and deny decisions around guarded commands.",
+      "input_schema": "graph_events_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "agent.active_run_monitor",
+      "version": "1.0.0",
+      "path": "agent.active_run_monitor/template.yaml",
+      "title": "Agent Active Run Monitor",
+      "description": "Inspect active agent runs, retries, idle sessions, and blocked work.",
+      "input_schema": "graph_events_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "runtime.topology",
+      "version": "1.0.0",
+      "path": "runtime.topology/template.yaml",
+      "title": "Runtime Topology",
+      "description": "Visualize Portal, runtime adapter, OpenCode server, tools, and workspace topology.",
+      "input_schema": "graph_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "runtime.session_binding",
+      "version": "1.0.0",
+      "path": "runtime.session_binding/template.yaml",
+      "title": "Runtime Session Binding",
+      "description": "Trace conversation, root session, message, event, and status binding.",
+      "input_schema": "graph_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "runtime.event_flow",
+      "version": "1.0.0",
+      "path": "runtime.event_flow/template.yaml",
+      "title": "Runtime Event Flow",
+      "description": "Visualize event streaming and snapshot reconciliation paths.",
+      "input_schema": "graph_events_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "service.topology",
+      "version": "1.0.0",
+      "path": "service.topology/template.yaml",
+      "title": "Service Topology",
+      "description": "Map frontend, backend, database, and external service relationships.",
+      "input_schema": "graph_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "planning.plan_dag",
+      "version": "1.0.0",
+      "path": "planning.plan_dag/template.yaml",
+      "title": "Planning Plan DAG",
+      "description": "Render goals, milestones, tasks, and dependencies as an offline DAG.",
+      "input_schema": "graph_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "codebase.galaxy",
+      "version": "1.0.0",
+      "path": "codebase.galaxy/template.yaml",
+      "title": "Codebase Galaxy",
+      "description": "Render directories, modules, files, and imports as a galaxy graph.",
+      "input_schema": "graph_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "codebase.diff_impact",
+      "version": "1.0.0",
+      "path": "codebase.diff_impact/template.yaml",
+      "title": "Codebase Diff Impact",
+      "description": "Show changed files, impacted modules, tests, and release surfaces.",
+      "input_schema": "graph_events_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "codebase.test_failure_map",
+      "version": "1.0.0",
+      "path": "codebase.test_failure_map/template.yaml",
+      "title": "Codebase Test Failure Map",
+      "description": "Connect failing tests to source modules and recent changes.",
+      "input_schema": "graph_events_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "debug.incident_timeline",
+      "version": "1.0.0",
+      "path": "debug.incident_timeline/template.yaml",
+      "title": "Debug Incident Timeline",
+      "description": "Render incident events from deploy through root cause and fix.",
+      "input_schema": "timeline_v1",
+      "renderer": "offline.timeline.v1"
+    },
+    {
+      "id": "debug.root_cause_tree",
+      "version": "1.0.0",
+      "path": "debug.root_cause_tree/template.yaml",
+      "title": "Debug Root Cause Tree",
+      "description": "Visualize symptoms, causes, evidence, and fixes as a radial tree.",
+      "input_schema": "graph_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "project.issue_graph",
+      "version": "1.0.0",
+      "path": "project.issue_graph/template.yaml",
+      "title": "Project Issue Graph",
+      "description": "Map epics, stories, pull requests, and tests.",
+      "input_schema": "graph_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "project.requirements_trace",
+      "version": "1.0.0",
+      "path": "project.requirements_trace/template.yaml",
+      "title": "Project Requirements Trace",
+      "description": "Trace requirements through docs, issues, pull requests, files, and tests.",
+      "input_schema": "graph_v1",
+      "renderer": "offline.graph.v1"
+    },
+    {
+      "id": "knowledge.evidence_board",
+      "version": "1.0.0",
+      "path": "knowledge.evidence_board/template.yaml",
+      "title": "Knowledge Evidence Board",
+      "description": "Render claims, sources, and support or refute relationships.",
+      "input_schema": "evidence_v1",
+      "renderer": "offline.evidence.v1"
+    },
+    {
+      "id": "agent.fleet_dashboard",
+      "version": "1.0.0",
+      "path": "agent.fleet_dashboard/template.yaml",
+      "title": "Agent Fleet Dashboard",
+      "description": "Plot agents, runtimes, and sessions as a status matrix.",
+      "input_schema": "matrix_v1",
+      "renderer": "offline.matrix.v1"
+    },
+    {
+      "id": "knowledge.doc_freshness",
+      "version": "1.0.0",
+      "path": "knowledge.doc_freshness/template.yaml",
+      "title": "Knowledge Document Freshness",
+      "description": "Plot documents by freshness, reliability, and relevance.",
+      "input_schema": "matrix_v1",
+      "renderer": "offline.matrix.v1"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Tool Constellation",
+  "nodes": [
+    {"id": "agent", "label": "Agent", "kind": "agent", "status": "success"},
+    {"id": "bash", "label": "Bash", "kind": "tool", "status": "success"},
+    {"id": "read", "label": "Read files", "kind": "tool", "status": "success"},
+    {"id": "write", "label": "Write files", "kind": "tool", "status": "warning"},
+    {"id": "browser", "label": "Browser probe", "kind": "tool", "status": "info"},
+    {"id": "visual", "label": "Visual render", "kind": "tool", "status": "success"}
+  ],
+  "edges": [
+    {"from": "agent", "to": "bash", "kind": "exec"},
+    {"from": "agent", "to": "read", "kind": "inspect"},
+    {"from": "agent", "to": "write", "kind": "edit"},
+    {"from": "agent", "to": "browser", "kind": "probe"},
+    {"from": "agent", "to": "visual", "kind": "render"}
+  ],
+  "events": [
+    {"id": "c1", "time": "2026-06-03T13:10:00Z", "kind": "tool_started", "node_id": "bash", "summary": "Listed files."},
+    {"id": "c2", "time": "2026-06-03T13:11:00Z", "kind": "tool_started", "node_id": "read", "summary": "Read source."},
+    {"id": "c3", "time": "2026-06-03T13:12:00Z", "kind": "tool_started", "node_id": "write", "summary": "Applied patch."},
+    {"id": "c4", "time": "2026-06-03T13:13:00Z", "kind": "tool_finished", "node_id": "visual", "summary": "Rendered artifact."}
+  ]
+}

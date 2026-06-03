@@ -1,0 +1,17 @@
+{
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Root Cause Tree",
+  "nodes": [
+    {"id": "symptom", "label": "Symptom", "kind": "symptom", "status": "error", "group": "0"},
+    {"id": "cause_a", "label": "Stale manifest", "kind": "cause", "status": "warning", "group": "1"},
+    {"id": "cause_b", "label": "Bad path", "kind": "cause", "status": "warning", "group": "1"},
+    {"id": "evidence", "label": "Scanner evidence", "kind": "evidence", "status": "info", "group": "2"},
+    {"id": "fix", "label": "Fix path join", "kind": "fix", "status": "success", "group": "3"}
+  ],
+  "edges": [
+    {"from": "symptom", "to": "cause_a", "kind": "caused_by"},
+    {"from": "symptom", "to": "cause_b", "kind": "caused_by"},
+    {"from": "cause_b", "to": "evidence", "kind": "supported_by"},
+    {"from": "evidence", "to": "fix", "kind": "resolved_by"}
+  ]
+}

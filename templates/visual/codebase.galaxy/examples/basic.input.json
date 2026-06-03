@@ -1,0 +1,17 @@
+{
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Codebase Galaxy",
+  "nodes": [
+    {"id": "cmd", "label": "cmd", "kind": "directory", "status": "success", "group": "root"},
+    {"id": "internal", "label": "internal", "kind": "directory", "status": "success", "group": "root"},
+    {"id": "visual_commands", "label": "visual commands", "kind": "module", "status": "success", "group": "visual"},
+    {"id": "visual_render", "label": "visual render", "kind": "module", "status": "success", "group": "visual"},
+    {"id": "output", "label": "output", "kind": "module", "status": "info", "group": "shared"}
+  ],
+  "edges": [
+    {"from": "cmd", "to": "visual_commands", "kind": "imports"},
+    {"from": "visual_commands", "to": "visual_render", "kind": "calls"},
+    {"from": "visual_commands", "to": "output", "kind": "uses"},
+    {"from": "internal", "to": "visual_render", "kind": "contains"}
+  ]
+}

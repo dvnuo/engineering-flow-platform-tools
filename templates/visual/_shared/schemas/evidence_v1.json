@@ -1,0 +1,12 @@
+{
+  "id": "evidence_v1",
+  "schema": "efp.visual.input.evidence.v1",
+  "type": "object",
+  "required": ["claims", "sources"],
+  "properties": {
+    "title": {"type": "string"},
+    "claims": {"type": "array"},
+    "sources": {"type": "array"},
+    "links": {"type": "array"}
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "template": "agent.permission_gate",
+  "input_schema_kind": "graph_events_v1",
+  "schema": "efp.visual.input.graph_events.v1"
+}

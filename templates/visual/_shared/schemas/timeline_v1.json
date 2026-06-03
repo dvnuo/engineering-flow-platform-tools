@@ -1,0 +1,10 @@
+{
+  "id": "timeline_v1",
+  "schema": "efp.visual.input.timeline.v1",
+  "type": "object",
+  "required": ["events"],
+  "properties": {
+    "title": {"type": "string"},
+    "events": {"type": "array"}
+  }
+}

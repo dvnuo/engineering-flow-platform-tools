@@ -1,0 +1,11 @@
+{
+  "id": "graph_v1",
+  "schema": "efp.visual.input.graph.v1",
+  "type": "object",
+  "required": ["nodes"],
+  "properties": {
+    "title": {"type": "string"},
+    "nodes": {"type": "array"},
+    "edges": {"type": "array"}
+  }
+}

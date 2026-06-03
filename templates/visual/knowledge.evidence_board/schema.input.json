@@ -1,0 +1,5 @@
+{
+  "template": "knowledge.evidence_board",
+  "input_schema_kind": "evidence_v1",
+  "schema": "efp.visual.input.evidence.v1"
+}

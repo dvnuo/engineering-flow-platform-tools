@@ -1,0 +1,19 @@
+{
+  "schema": "efp.visual.input.evidence.v1",
+  "title": "Evidence Board",
+  "claims": [
+    {"id": "claim_1", "text": "Artifacts can open offline.", "confidence": 0.92, "status": "supported"},
+    {"id": "claim_2", "text": "Remote assets are required.", "confidence": 0.12, "status": "refuted"},
+    {"id": "claim_3", "text": "Relative paths support proxy subpaths.", "confidence": 0.84, "status": "supported"}
+  ],
+  "sources": [
+    {"id": "source_1", "title": "Offline scanner", "kind": "test", "reliability": 0.9},
+    {"id": "source_2", "title": "Rendered manifest", "kind": "artifact", "reliability": 0.86},
+    {"id": "source_3", "title": "Template contract", "kind": "spec", "reliability": 0.82}
+  ],
+  "links": [
+    {"claim_id": "claim_1", "source_id": "source_1", "relation": "supports"},
+    {"claim_id": "claim_2", "source_id": "source_3", "relation": "refutes"},
+    {"claim_id": "claim_3", "source_id": "source_2", "relation": "supports"}
+  ]
+}

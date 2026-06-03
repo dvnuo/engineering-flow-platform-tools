@@ -1,0 +1,17 @@
+{
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Issue Graph",
+  "nodes": [
+    {"id": "epic", "label": "Epic VIS-1", "kind": "epic", "status": "success"},
+    {"id": "story_a", "label": "Story VIS-2", "kind": "story", "status": "success"},
+    {"id": "story_b", "label": "Story VIS-3", "kind": "story", "status": "warning"},
+    {"id": "pr", "label": "PR 42", "kind": "pull_request", "status": "pending"},
+    {"id": "tests", "label": "Contract tests", "kind": "test", "status": "pending"}
+  ],
+  "edges": [
+    {"from": "epic", "to": "story_a", "kind": "contains"},
+    {"from": "epic", "to": "story_b", "kind": "contains"},
+    {"from": "story_a", "to": "pr", "kind": "implemented_by"},
+    {"from": "pr", "to": "tests", "kind": "verified_by"}
+  ]
+}

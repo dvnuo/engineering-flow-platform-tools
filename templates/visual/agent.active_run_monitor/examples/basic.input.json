@@ -1,0 +1,23 @@
+{
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Active Run Monitor",
+  "nodes": [
+    {"id": "queue", "label": "Run queue", "kind": "queue", "status": "info"},
+    {"id": "run_busy", "label": "Busy run", "kind": "run", "status": "busy"},
+    {"id": "run_retry", "label": "Retrying run", "kind": "run", "status": "retry"},
+    {"id": "run_idle", "label": "Idle run", "kind": "run", "status": "idle"},
+    {"id": "run_blocked", "label": "Blocked run", "kind": "run", "status": "blocked"}
+  ],
+  "edges": [
+    {"from": "queue", "to": "run_busy", "kind": "assigned"},
+    {"from": "queue", "to": "run_retry", "kind": "retry"},
+    {"from": "queue", "to": "run_idle", "kind": "parked"},
+    {"from": "queue", "to": "run_blocked", "kind": "needs_input"}
+  ],
+  "events": [
+    {"id": "m1", "time": "2026-06-03T13:30:00Z", "kind": "busy", "node_id": "run_busy", "summary": "Tool execution in progress."},
+    {"id": "m2", "time": "2026-06-03T13:31:00Z", "kind": "retry", "node_id": "run_retry", "summary": "Retry scheduled."},
+    {"id": "m3", "time": "2026-06-03T13:32:00Z", "kind": "idle", "node_id": "run_idle", "summary": "No pending task."},
+    {"id": "m4", "time": "2026-06-03T13:33:00Z", "kind": "blocked", "node_id": "run_blocked", "summary": "Waiting for user input."}
+  ]
+}

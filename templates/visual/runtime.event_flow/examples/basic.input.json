@@ -1,0 +1,22 @@
+{
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Runtime Event Flow",
+  "nodes": [
+    {"id": "client", "label": "Client", "kind": "client", "status": "success"},
+    {"id": "event_sse", "label": "Event SSE", "kind": "stream", "status": "success"},
+    {"id": "message_part", "label": "message.part.updated", "kind": "event", "status": "info"},
+    {"id": "snapshot", "label": "Snapshot reconcile", "kind": "state", "status": "warning"},
+    {"id": "view", "label": "Rendered view", "kind": "ui", "status": "success"}
+  ],
+  "edges": [
+    {"from": "client", "to": "event_sse", "kind": "subscribe"},
+    {"from": "event_sse", "to": "message_part", "kind": "emit"},
+    {"from": "message_part", "to": "snapshot", "kind": "merge"},
+    {"from": "snapshot", "to": "view", "kind": "paint"}
+  ],
+  "events": [
+    {"id": "f1", "time": "2026-06-03T13:40:00Z", "kind": "event_open", "node_id": "event_sse", "summary": "SSE stream opened."},
+    {"id": "f2", "time": "2026-06-03T13:41:00Z", "kind": "message.part.updated", "node_id": "message_part", "summary": "Message part updated."},
+    {"id": "f3", "time": "2026-06-03T13:42:00Z", "kind": "snapshot", "node_id": "snapshot", "summary": "Snapshot reconciled."}
+  ]
+}

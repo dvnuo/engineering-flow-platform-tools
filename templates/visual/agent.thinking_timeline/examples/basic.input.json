@@ -1,0 +1,24 @@
+{
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Thinking Timeline",
+  "nodes": [
+    {"id": "reasoning", "label": "Reasoning", "kind": "reasoning", "status": "success"},
+    {"id": "tool", "label": "Tool call", "kind": "tool", "status": "success"},
+    {"id": "permission", "label": "Permission", "kind": "permission", "status": "warning"},
+    {"id": "text", "label": "Text update", "kind": "text", "status": "info"},
+    {"id": "finish", "label": "Step finish", "kind": "finish", "status": "success"}
+  ],
+  "edges": [
+    {"from": "reasoning", "to": "tool", "kind": "sequence"},
+    {"from": "tool", "to": "permission", "kind": "guard"},
+    {"from": "permission", "to": "text", "kind": "resume"},
+    {"from": "text", "to": "finish", "kind": "sequence"}
+  ],
+  "events": [
+    {"id": "t1", "time": "2026-06-03T13:00:00Z", "kind": "reasoning", "node_id": "reasoning", "label": "Reasoning phase", "status": "success", "summary": "Approach selected."},
+    {"id": "t2", "time": "2026-06-03T13:01:00Z", "kind": "tool", "node_id": "tool", "label": "Tool call", "status": "success", "summary": "Read repository files."},
+    {"id": "t3", "time": "2026-06-03T13:02:00Z", "kind": "permission", "node_id": "permission", "label": "Permission gate", "status": "warning", "summary": "Checked write boundary."},
+    {"id": "t4", "time": "2026-06-03T13:03:00Z", "kind": "text", "node_id": "text", "label": "User update", "status": "info", "summary": "Progress reported."},
+    {"id": "t5", "time": "2026-06-03T13:04:00Z", "kind": "step_finish", "node_id": "finish", "label": "Step finished", "status": "success", "summary": "Phase completed."}
+  ]
+}

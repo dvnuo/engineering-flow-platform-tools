@@ -1,0 +1,5 @@
+{
+  "template": "debug.incident_timeline",
+  "input_schema_kind": "timeline_v1",
+  "schema": "efp.visual.input.timeline.v1"
+}

@@ -21,6 +21,7 @@ function Build-One($goos, $goarch, $exe) {
   go build -ldflags "$Ldflags" -o "$outdir/jenkins$exe" ./cmd/jenkins
   go build -ldflags "$Ldflags" -o "$outdir/browser$exe" ./cmd/browser
   go build -ldflags "$Ldflags" -o "$outdir/inspect-image$exe" ./cmd/inspect-image
+  go build -ldflags "$Ldflags" -o "$outdir/visual$exe" ./cmd/visual
 }
 
 Build-One 'linux' 'amd64' ''

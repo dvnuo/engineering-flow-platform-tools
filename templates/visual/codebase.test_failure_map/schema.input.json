@@ -1,0 +1,5 @@
+{
+  "template": "codebase.test_failure_map",
+  "input_schema_kind": "graph_events_v1",
+  "schema": "efp.visual.input.graph_events.v1"
+}

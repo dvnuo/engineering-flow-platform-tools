@@ -1,0 +1,17 @@
+{
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Runtime Session Binding",
+  "nodes": [
+    {"id": "conversation", "label": "Portal conversation", "kind": "conversation", "status": "success"},
+    {"id": "root_session", "label": "OpenCode root session", "kind": "session", "status": "success"},
+    {"id": "messages", "label": "Messages", "kind": "stream", "status": "info"},
+    {"id": "events", "label": "Events", "kind": "stream", "status": "info"},
+    {"id": "status", "label": "Status", "kind": "state", "status": "success"}
+  ],
+  "edges": [
+    {"from": "conversation", "to": "root_session", "kind": "bind"},
+    {"from": "root_session", "to": "messages", "kind": "append"},
+    {"from": "root_session", "to": "events", "kind": "emit"},
+    {"from": "events", "to": "status", "kind": "derive"}
+  ]
+}

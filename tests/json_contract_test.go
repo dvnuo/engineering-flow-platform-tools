@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
+	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
 	"engineering-flow-platform-tools/internal/testutil"
 )
@@ -21,6 +22,9 @@ func TestJSONContractSmoke(t *testing.T) {
 		{"confluence", []string{"commands", "--json"}},
 		{"confluence", []string{"help", "llm", "--json"}},
 		{"confluence", []string{"schema", "page.create", "--json"}},
+		{"jenkins", []string{"commands", "--json"}},
+		{"jenkins", []string{"help", "llm", "--json"}},
+		{"jenkins", []string{"schema", "job.build", "--json"}},
 	}
 	for _, c := range checks {
 		var b bytes.Buffer
@@ -30,8 +34,14 @@ func TestJSONContractSmoke(t *testing.T) {
 			cmd.SetErr(&b)
 			cmd.SetArgs(c.args)
 			_ = cmd.Execute()
-		} else {
+		} else if c.root == "confluence" {
 			cmd := ccmd.NewRoot()
+			cmd.SetOut(&b)
+			cmd.SetErr(&b)
+			cmd.SetArgs(c.args)
+			_ = cmd.Execute()
+		} else {
+			cmd := kcmd.NewRoot()
 			cmd.SetOut(&b)
 			cmd.SetErr(&b)
 			cmd.SetArgs(c.args)

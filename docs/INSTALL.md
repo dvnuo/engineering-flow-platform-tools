@@ -1,12 +1,13 @@
 # Install
 
-Download the release archive for your operating system and CPU architecture, extract it, and place `jira`, `confluence`, `browser`, and `inspect-image` on your `PATH`.
+Download the release archive for your operating system and CPU architecture, extract it, and place `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` on your `PATH`.
 
 Verify the install:
 
 ```bash
 jira version --json
 confluence version --json
+jenkins version --json
 browser version --json
 inspect-image version --json
 ```

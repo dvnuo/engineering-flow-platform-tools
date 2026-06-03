@@ -6,6 +6,7 @@ type RootConfig struct {
 	Version    int           `json:"version" yaml:"version"`
 	Jira       ProductConfig `json:"jira" yaml:"jira"`
 	Confluence ProductConfig `json:"confluence" yaml:"confluence"`
+	Jenkins    ProductConfig `json:"jenkins" yaml:"jenkins"`
 }
 
 type ProductConfig struct {
@@ -23,6 +24,7 @@ type InstanceConfig struct {
 	DefaultSpace   string       `json:"default_space,omitempty" yaml:"default_space,omitempty"`
 	VerifySSL      *bool        `json:"verify_ssl,omitempty" yaml:"verify_ssl,omitempty"`
 	CACert         string       `json:"ca_cert,omitempty" yaml:"ca_cert,omitempty"`
+	CrumbMode      string       `json:"crumb_mode,omitempty" yaml:"crumb_mode,omitempty"`
 	Zephyr         ZephyrConfig `json:"zephyr,omitempty" yaml:"zephyr,omitempty"`
 }
 
@@ -51,6 +53,7 @@ func (c *RootConfig) Normalize() {
 	}
 	norm(&c.Jira)
 	norm(&c.Confluence)
+	norm(&c.Jenkins)
 }
 
 func (a *AuthConfig) NormalizeType() {

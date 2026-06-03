@@ -7,6 +7,9 @@ func RedactRoot(c RootConfig) RootConfig {
 	for i := range c.Confluence.Instances {
 		c.Confluence.Instances[i].Auth = RedactAuth(c.Confluence.Instances[i].Auth)
 	}
+	for i := range c.Jenkins.Instances {
+		c.Jenkins.Instances[i].Auth = RedactAuth(c.Jenkins.Instances[i].Auth)
+	}
 	return c
 }
 

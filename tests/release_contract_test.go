@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
+	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
 	"engineering-flow-platform-tools/internal/testutil"
 )
@@ -25,6 +26,13 @@ func TestVersionJSONContract(t *testing.T) {
 		}},
 		{name: "confluence", run: func(b *bytes.Buffer) error {
 			cmd := ccmd.NewRoot()
+			cmd.SetOut(b)
+			cmd.SetErr(b)
+			cmd.SetArgs([]string{"version", "--json"})
+			return cmd.Execute()
+		}},
+		{name: "jenkins", run: func(b *bytes.Buffer) error {
+			cmd := kcmd.NewRoot()
 			cmd.SetOut(b)
 			cmd.SetErr(b)
 			cmd.SetArgs([]string{"version", "--json"})

@@ -9,6 +9,13 @@
 - Tests: use mock servers and fake credentials only.
 - Vulnerability reports: report suspected credential leaks or unsafe URL handling through the repository security reporting process.
 
+## Jenkins
+
+- Jenkins credentials live under the `jenkins` node in `~/.efp/config.yaml` and must be redacted in instance, dry-run, verbose, and error output.
+- Jenkins crumbs are requested through `/crumbIssuer/api/json` for state-changing requests when `crumb_mode` is `auto` or `always`.
+- Artifact downloads write binary content to local files and must not print artifact bytes into JSON envelopes.
+- Raw `jenkins api` calls use the same off-instance URL guard as other instance-backed tools.
+
 ## Inspect Image
 
 - `inspect-image` sends local image bytes to the configured GitHub Copilot plugin `/responses` endpoint.

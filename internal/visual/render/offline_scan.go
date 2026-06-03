@@ -15,6 +15,8 @@ var scannedExtensions = map[string]bool{
 	".css":  true,
 	".svg":  true,
 	".json": true,
+	".yaml": true,
+	".yml":  true,
 }
 
 var offlineTokens = []string{

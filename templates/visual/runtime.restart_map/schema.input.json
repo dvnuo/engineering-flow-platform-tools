@@ -1,0 +1,463 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "runtime-restart-map-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "runtime-restart-map-node-2",
+        "weight": 2
+      },
+      {
+        "from": "runtime-restart-map-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "runtime-restart-map-node-3",
+        "weight": 3
+      },
+      {
+        "from": "runtime-restart-map-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "runtime-restart-map-node-4",
+        "weight": 2
+      },
+      {
+        "from": "runtime-restart-map-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "runtime-restart-map-node-5",
+        "weight": 4
+      },
+      {
+        "from": "runtime-restart-map-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "runtime-restart-map-node-6",
+        "weight": 2
+      },
+      {
+        "from": "runtime-restart-map-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "runtime-restart-map-node-6",
+        "weight": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "runtime-restart-map-event-1",
+        "kind": "start",
+        "label": "Restart Map Opened",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "runtime.restart_map"
+        },
+        "node_id": "runtime-restart-map-node-1",
+        "status": "running",
+        "summary": "Restart Map event 1 references Restart Map Intake.",
+        "time": "2026-06-03T12:33:00Z"
+      },
+      {
+        "id": "runtime-restart-map-event-2",
+        "kind": "tool",
+        "label": "Restart Map Triaged",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "runtime.restart_map"
+        },
+        "node_id": "runtime-restart-map-node-2",
+        "status": "success",
+        "summary": "Restart Map event 2 references Map Restart Core.",
+        "time": "2026-06-03T12:44:00Z"
+      },
+      {
+        "id": "runtime-restart-map-event-3",
+        "kind": "checkpoint",
+        "label": "Restart Map Mapped",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "runtime.restart_map"
+        },
+        "node_id": "runtime-restart-map-node-3",
+        "status": "warning",
+        "summary": "Restart Map event 3 references Restart Map Policy.",
+        "time": "2026-06-03T12:55:00Z"
+      },
+      {
+        "id": "runtime-restart-map-event-4",
+        "kind": "decision",
+        "label": "Restart Map Acted",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "runtime.restart_map"
+        },
+        "node_id": "runtime-restart-map-node-4",
+        "status": "running",
+        "summary": "Restart Map event 4 references Map Restart Execution.",
+        "time": "2026-06-03T13:06:00Z"
+      },
+      {
+        "id": "runtime-restart-map-event-5",
+        "kind": "recovery",
+        "label": "Restart Map Checked",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "runtime.restart_map"
+        },
+        "node_id": "runtime-restart-map-node-5",
+        "status": "error",
+        "summary": "Restart Map event 5 references Restart Map Risk.",
+        "time": "2026-06-03T13:17:00Z"
+      },
+      {
+        "id": "runtime-restart-map-event-6",
+        "kind": "finish",
+        "label": "Restart Map Recovered",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "runtime.restart_map"
+        },
+        "node_id": "runtime-restart-map-node-6",
+        "status": "success",
+        "summary": "Restart Map event 6 references Map Restart Outcome.",
+        "time": "2026-06-03T13:28:00Z"
+      }
+    ],
+    "nodes": [
+      {
+        "group": "edge",
+        "id": "runtime-restart-map-node-1",
+        "kind": "restart",
+        "label": "Restart Map Intake",
+        "metadata": {
+          "detail": "Restart Map signal 1",
+          "owner": "edge",
+          "template_id": "runtime.restart_map"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "success"
+      },
+      {
+        "group": "adapter",
+        "id": "runtime-restart-map-node-2",
+        "kind": "map",
+        "label": "Map Restart Core",
+        "metadata": {
+          "detail": "Restart Map signal 2",
+          "owner": "adapter",
+          "template_id": "runtime.restart_map"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "service",
+        "id": "runtime-restart-map-node-3",
+        "kind": "service",
+        "label": "Restart Map Policy",
+        "metadata": {
+          "detail": "Restart Map signal 3",
+          "owner": "service",
+          "template_id": "runtime.restart_map"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "error"
+      },
+      {
+        "group": "edge",
+        "id": "runtime-restart-map-node-4",
+        "kind": "edge",
+        "label": "Map Restart Execution",
+        "metadata": {
+          "detail": "Restart Map signal 4",
+          "owner": "edge",
+          "template_id": "runtime.restart_map"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "running"
+      },
+      {
+        "group": "adapter",
+        "id": "runtime-restart-map-node-5",
+        "kind": "restart",
+        "label": "Restart Map Risk",
+        "metadata": {
+          "detail": "Restart Map signal 5",
+          "owner": "adapter",
+          "template_id": "runtime.restart_map"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "ok"
+      },
+      {
+        "group": "service",
+        "id": "runtime-restart-map-node-6",
+        "kind": "map",
+        "label": "Map Restart Outcome",
+        "metadata": {
+          "detail": "Restart Map signal 6",
+          "owner": "service",
+          "template_id": "runtime.restart_map"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "warning"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Restart Map Example"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "runtime.restart_map"
+}

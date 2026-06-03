@@ -3,6 +3,7 @@ package manifest
 type TemplateManifest struct {
 	ID              string       `yaml:"id" json:"id"`
 	Version         string       `yaml:"version" json:"version"`
+	Category        string       `yaml:"category" json:"category"`
 	Title           string       `yaml:"title" json:"title"`
 	Description     string       `yaml:"description" json:"description"`
 	InputSchema     string       `yaml:"input_schema" json:"input_schema"`
@@ -15,6 +16,7 @@ type TemplateManifest struct {
 	Scripts         []string     `yaml:"scripts" json:"scripts"`
 	Interactions    []string     `yaml:"interactions" json:"interactions"`
 	Limits          LimitsSpec   `yaml:"limits" json:"limits"`
+	Tags            []string     `yaml:"tags" json:"tags"`
 }
 
 type RendererSpec struct {
@@ -41,6 +43,7 @@ type LimitsSpec struct {
 	MaxNodes  int `yaml:"max_nodes" json:"max_nodes"`
 	MaxEdges  int `yaml:"max_edges" json:"max_edges"`
 	MaxEvents int `yaml:"max_events" json:"max_events"`
+	MaxItems  int `yaml:"max_items" json:"max_items"`
 }
 
 type OutputManifest struct {

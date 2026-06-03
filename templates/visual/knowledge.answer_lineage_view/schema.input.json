@@ -1,0 +1,335 @@
+{
+  "example": {
+    "claims": [
+      {
+        "confidence": 0.82,
+        "id": "knowledge-answer-lineage-view-claim-1",
+        "status": "supported",
+        "text": "Answer Lineage is supported by current artifacts"
+      },
+      {
+        "confidence": 0.61,
+        "id": "knowledge-answer-lineage-view-claim-2",
+        "status": "warning",
+        "text": "Lineage View has a known gap"
+      },
+      {
+        "confidence": 0.44,
+        "id": "knowledge-answer-lineage-view-claim-3",
+        "status": "refuted",
+        "text": "View Answer conflicts with stale assumptions"
+      },
+      {
+        "confidence": 0.76,
+        "id": "knowledge-answer-lineage-view-claim-4",
+        "status": "success",
+        "text": "Answer Lineage is ready for review"
+      }
+    ],
+    "links": [
+      {
+        "claim_id": "knowledge-answer-lineage-view-claim-1",
+        "relation": "supports",
+        "source_id": "knowledge-answer-lineage-view-source-1",
+        "weight": 0.9
+      },
+      {
+        "claim_id": "knowledge-answer-lineage-view-claim-1",
+        "relation": "mentions",
+        "source_id": "knowledge-answer-lineage-view-source-2",
+        "weight": 0.5
+      },
+      {
+        "claim_id": "knowledge-answer-lineage-view-claim-2",
+        "relation": "supports",
+        "source_id": "knowledge-answer-lineage-view-source-3",
+        "weight": 0.6
+      },
+      {
+        "claim_id": "knowledge-answer-lineage-view-claim-3",
+        "relation": "refutes",
+        "source_id": "knowledge-answer-lineage-view-source-4",
+        "weight": 0.7
+      },
+      {
+        "claim_id": "knowledge-answer-lineage-view-claim-4",
+        "relation": "supports",
+        "source_id": "knowledge-answer-lineage-view-source-5",
+        "weight": 0.8
+      },
+      {
+        "claim_id": "knowledge-answer-lineage-view-claim-2",
+        "relation": "mentions",
+        "source_id": "knowledge-answer-lineage-view-source-5",
+        "weight": 0.4
+      }
+    ],
+    "schema": "efp.visual.input.evidence.v1",
+    "sources": [
+      {
+        "id": "knowledge-answer-lineage-view-source-1",
+        "kind": "document",
+        "reliability": 0.87,
+        "title": "Answer Lineage design note"
+      },
+      {
+        "id": "knowledge-answer-lineage-view-source-2",
+        "kind": "log",
+        "reliability": 0.72,
+        "title": "Lineage View run log"
+      },
+      {
+        "id": "knowledge-answer-lineage-view-source-3",
+        "kind": "review",
+        "reliability": 0.66,
+        "title": "View Answer review thread"
+      },
+      {
+        "id": "knowledge-answer-lineage-view-source-4",
+        "kind": "metric",
+        "reliability": 0.79,
+        "title": "Answer Lineage benchmark"
+      },
+      {
+        "id": "knowledge-answer-lineage-view-source-5",
+        "kind": "record",
+        "reliability": 0.91,
+        "title": "Lineage View decision record"
+      }
+    ],
+    "title": "Answer Lineage View Example"
+  },
+  "input_schema_kind": "evidence_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "claims": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "text"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "links": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "claim_id",
+            "source_id",
+            "relation"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.evidence.v1",
+        "type": "string"
+      },
+      "sources": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "title"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "claims",
+      "sources",
+      "links"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "knowledge.answer_lineage_view"
+}

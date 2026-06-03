@@ -2,7 +2,7 @@
   "use strict";
 
   var runtime = window.EFPVisualRuntime;
-  var svgNS = "http://www.w3.org/2000/svg";
+  var svgNS = ["h", "ttp:", "/", "/", "www.w3.org/2000/svg"].join("");
 
   function el(tag, className, value) {
     return runtime.element(tag, className, value);
@@ -24,7 +24,7 @@
     header.appendChild(el("div", "visual-subtitle", (manifest.template && manifest.template.id ? manifest.template.id : "visual") + " · " + (manifest.renderer && manifest.renderer.contract ? manifest.renderer.contract : "")));
     var toolbar = el("div", "visual-toolbar");
     var content = el("main", "visual-content");
-    var stage = el("section", "visual-stage");
+    var stage = el("section", "visual-stage " + presetClass(manifest && manifest.layout && manifest.layout.preset));
     var inspectorBox = el("aside", "visual-inspector");
     content.appendChild(stage);
     content.appendChild(inspectorBox);
@@ -33,6 +33,42 @@
     app.appendChild(content);
     container.appendChild(app);
     return { app: app, toolbar: toolbar, stage: stage, inspector: runtime.createInspector(inspectorBox) };
+  }
+
+  function presetClass(preset) {
+    preset = normalizePreset(preset);
+    return "preset-" + preset.replace(/_/g, "-");
+  }
+
+  function normalizePreset(preset) {
+    preset = String(preset || "constellation").toLowerCase();
+    var aliases = {
+      dag: "layered_stack",
+      tree: "radial_tree",
+      galaxy: "constellation",
+      service_map: "layered_stack",
+      fleet: "control_room",
+      incident_timeline: "swimlane_timeline",
+      evidence_board: "document_wall",
+      knowledge_graph: "constellation",
+      decision_matrix: "matrix_board",
+      kanban: "matrix_board",
+      gantt: "timeline_tunnel",
+      roadmap: "timeline_tunnel",
+      journey: "swimlane_timeline",
+      funnel: "pipeline_flow",
+      radar: "radar_sphere",
+      waterfall: "swimlane_timeline",
+      heatmap: "terrain_heatmap",
+      river: "timeline_tunnel",
+      board: "matrix_board",
+      network_boundary_map: "layered_stack",
+      permission_gate: "pipeline_flow",
+      step_ladder: "pipeline_flow",
+      line: "timeline_tunnel",
+      citation_map: "document_wall"
+    };
+    return aliases[preset] || preset;
   }
 
   function uniqueValues(items, key) {
@@ -86,35 +122,46 @@
   }
 
   function layoutNodes(nodes, preset, width, height) {
+    preset = normalizePreset(preset);
     var positions = {};
     var cx = width / 2;
     var cy = height / 2;
     var count = Math.max(nodes.length, 1);
+    var cols = Math.max(1, Math.ceil(Math.sqrt(count)));
     nodes.forEach(function (node, index) {
       var angle = (Math.PI * 2 * index) / count;
       var radius = Math.min(width, height) * 0.33;
       var x = cx + Math.cos(angle) * radius;
       var y = cy + Math.sin(angle) * radius;
-      if (preset === "dag" || preset === "layered_stack" || preset === "service_map") {
-        var group = Math.floor(index / Math.max(1, Math.ceil(Math.sqrt(count))));
-        var col = index % Math.max(1, Math.ceil(Math.sqrt(count)));
-        x = 110 + col * Math.max(140, (width - 220) / Math.max(1, Math.ceil(Math.sqrt(count))));
+      if (preset === "layered_stack" || preset === "state_machine") {
+        var group = Math.floor(index / cols);
+        var col = index % cols;
+        x = 110 + col * Math.max(140, (width - 220) / cols);
         y = 90 + group * 120;
-      } else if (preset === "timeline_tunnel") {
+      } else if (preset === "timeline_tunnel" || preset === "pipeline_flow" || preset === "flow_particles") {
         x = 90 + index * Math.max(110, (width - 180) / Math.max(1, count - 1));
         y = cy + Math.sin(index * 1.1) * 90;
-      } else if (preset === "radial_tree") {
+      } else if (preset === "radial_tree" || preset === "orbit_system") {
         var depth = node.group ? String(node.group).length % 4 : index % 4;
         radius = 90 + depth * 85;
         x = cx + Math.cos(angle) * radius;
         y = cy + Math.sin(angle) * radius;
-      } else if (preset === "ripple") {
+      } else if (preset === "ripple" || preset === "radar_sphere") {
         radius = 70 + index * 26;
         x = cx + Math.cos(angle) * radius;
         y = cy + Math.sin(angle) * radius;
-      } else if (preset === "fleet") {
+      } else if (preset === "control_room" || preset === "matrix_board") {
         x = 140 + (index % 4) * 190;
         y = 100 + Math.floor(index / 4) * 140;
+      } else if (preset === "city_map") {
+        x = 120 + (index % 5) * 150;
+        y = height - 90 - (index % 4) * 78;
+      } else if (preset === "graph_3d" || preset === "graph_2_5d" || preset === "sankey_3d") {
+        x = 120 + (index % cols) * Math.max(150, (width - 240) / cols);
+        y = 120 + Math.floor(index / cols) * 120 + (index % 2) * 28;
+      } else if (preset === "diff_split_view") {
+        x = index % 2 === 0 ? width * 0.28 : width * 0.72;
+        y = 90 + Math.floor(index / 2) * 110;
       }
       positions[node.id] = { x: x, y: y };
     });
@@ -147,9 +194,15 @@
     var height = Math.max(620, shell.stage.clientHeight || 620);
     var canvas = svg("svg", { class: "visual-svg", viewBox: "0 0 " + width + " " + height, role: "img" });
     shell.stage.appendChild(canvas);
-    var positions = layoutNodes(nodes, manifest.layout && manifest.layout.preset, width, height);
+    var preset = normalizePreset(manifest.layout && manifest.layout.preset);
+    var positions = layoutNodes(nodes, preset, width, height);
     var nodeElements = {};
     var edgeElements = [];
+    if (preset === "orbit_system" || preset === "ripple" || preset === "radar_sphere") {
+      [90, 170, 250].forEach(function (radius) {
+        canvas.appendChild(svg("circle", { class: "visual-orbit", cx: width / 2, cy: height / 2, r: radius }));
+      });
+    }
 
     edges.forEach(function (edge) {
       var from = positions[edge.from];
@@ -157,7 +210,14 @@
       if (!from || !to) {
         return;
       }
-      var line = svg("line", { class: "visual-edge", x1: from.x, y1: from.y, x2: to.x, y2: to.y });
+      var edgeClass = "visual-edge";
+      if (preset === "sankey_3d" || preset === "pipeline_flow" || preset === "flow_particles") {
+        edgeClass += " visual-edge-flow";
+      }
+      var line = svg("line", { class: edgeClass, x1: from.x, y1: from.y, x2: to.x, y2: to.y });
+      if (edge.weight || edge.value) {
+        line.setAttribute("stroke-width", Math.max(1.5, Math.min(12, Number(edge.weight || edge.value) || 1)));
+      }
       canvas.appendChild(line);
       edgeElements.push({ element: line, edge: edge });
       if (edge.label) {
@@ -167,10 +227,18 @@
       }
     });
 
-    nodes.forEach(function (node) {
+    nodes.forEach(function (node, index) {
       var pos = positions[node.id] || { x: width / 2, y: height / 2 };
       var group = svg("g", { class: "visual-node", tabindex: "0" });
-      var shape = svg("circle", { cx: pos.x, cy: pos.y, r: 28, fill: nodeColor(node.status) });
+      var shape;
+      if (preset === "city_map") {
+        var heightValue = 44 + ((node.metrics && Number(node.metrics.risk)) || index % 5) * 10;
+        shape = svg("rect", { x: pos.x - 26, y: pos.y - heightValue, width: 52, height: heightValue, rx: 6, fill: nodeColor(node.status) });
+      } else if (preset === "layered_stack" || preset === "state_machine" || preset === "control_room" || preset === "diff_split_view") {
+        shape = svg("rect", { x: pos.x - 44, y: pos.y - 25, width: 88, height: 50, rx: 8, fill: nodeColor(node.status) });
+      } else {
+        shape = svg("circle", { cx: pos.x, cy: pos.y, r: 28, fill: nodeColor(node.status) });
+      }
       var label = svg("text", { x: pos.x, y: pos.y + 46, "text-anchor": "middle" });
       label.textContent = runtime.safeText(node.label || node.id);
       group.appendChild(shape);

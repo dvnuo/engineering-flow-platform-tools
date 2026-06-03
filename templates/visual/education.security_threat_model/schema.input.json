@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "education-security-threat-model-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "education-security-threat-model-node-2",
+        "weight": 2
+      },
+      {
+        "from": "education-security-threat-model-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "education-security-threat-model-node-3",
+        "weight": 3
+      },
+      {
+        "from": "education-security-threat-model-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "education-security-threat-model-node-4",
+        "weight": 2
+      },
+      {
+        "from": "education-security-threat-model-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "education-security-threat-model-node-5",
+        "weight": 4
+      },
+      {
+        "from": "education-security-threat-model-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "education-security-threat-model-node-6",
+        "weight": 2
+      },
+      {
+        "from": "education-security-threat-model-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "education-security-threat-model-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "concept",
+        "id": "education-security-threat-model-node-1",
+        "kind": "security",
+        "label": "Security Threat Intake",
+        "metadata": {
+          "detail": "Security Threat Model signal 1",
+          "owner": "concept",
+          "template_id": "education.security_threat_model"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "step",
+        "id": "education-security-threat-model-node-2",
+        "kind": "threat",
+        "label": "Threat Model Core",
+        "metadata": {
+          "detail": "Security Threat Model signal 2",
+          "owner": "step",
+          "template_id": "education.security_threat_model"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "assessment",
+        "id": "education-security-threat-model-node-3",
+        "kind": "model",
+        "label": "Model Security Policy",
+        "metadata": {
+          "detail": "Security Threat Model signal 3",
+          "owner": "assessment",
+          "template_id": "education.security_threat_model"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "concept",
+        "id": "education-security-threat-model-node-4",
+        "kind": "concept",
+        "label": "Security Threat Execution",
+        "metadata": {
+          "detail": "Security Threat Model signal 4",
+          "owner": "concept",
+          "template_id": "education.security_threat_model"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "step",
+        "id": "education-security-threat-model-node-5",
+        "kind": "security",
+        "label": "Threat Model Risk",
+        "metadata": {
+          "detail": "Security Threat Model signal 5",
+          "owner": "step",
+          "template_id": "education.security_threat_model"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "assessment",
+        "id": "education-security-threat-model-node-6",
+        "kind": "threat",
+        "label": "Model Security Outcome",
+        "metadata": {
+          "detail": "Security Threat Model signal 6",
+          "owner": "assessment",
+          "template_id": "education.security_threat_model"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Security Threat Model Example"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "education.security_threat_model"
+}

@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "codebase-diff-impact-ripple-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "codebase-diff-impact-ripple-node-2",
+      "weight": 2
+    },
+    {
+      "from": "codebase-diff-impact-ripple-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "codebase-diff-impact-ripple-node-3",
+      "weight": 3
+    },
+    {
+      "from": "codebase-diff-impact-ripple-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "codebase-diff-impact-ripple-node-4",
+      "weight": 2
+    },
+    {
+      "from": "codebase-diff-impact-ripple-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "codebase-diff-impact-ripple-node-5",
+      "weight": 4
+    },
+    {
+      "from": "codebase-diff-impact-ripple-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "codebase-diff-impact-ripple-node-6",
+      "weight": 2
+    },
+    {
+      "from": "codebase-diff-impact-ripple-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "codebase-diff-impact-ripple-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "codebase-diff-impact-ripple-event-1",
+      "kind": "start",
+      "label": "Diff Impact Ripple Opened",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "node_id": "codebase-diff-impact-ripple-node-1",
+      "status": "running",
+      "summary": "Diff Impact Ripple event 1 references Diff Impact Intake.",
+      "time": "2026-06-03T11:10:00Z"
+    },
+    {
+      "id": "codebase-diff-impact-ripple-event-2",
+      "kind": "tool",
+      "label": "Diff Impact Ripple Triaged",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "node_id": "codebase-diff-impact-ripple-node-2",
+      "status": "success",
+      "summary": "Diff Impact Ripple event 2 references Impact Ripple Core.",
+      "time": "2026-06-03T11:21:00Z"
+    },
+    {
+      "id": "codebase-diff-impact-ripple-event-3",
+      "kind": "checkpoint",
+      "label": "Diff Impact Ripple Mapped",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "node_id": "codebase-diff-impact-ripple-node-3",
+      "status": "warning",
+      "summary": "Diff Impact Ripple event 3 references Ripple Diff Policy.",
+      "time": "2026-06-03T11:32:00Z"
+    },
+    {
+      "id": "codebase-diff-impact-ripple-event-4",
+      "kind": "decision",
+      "label": "Diff Impact Ripple Acted",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "node_id": "codebase-diff-impact-ripple-node-4",
+      "status": "running",
+      "summary": "Diff Impact Ripple event 4 references Diff Impact Execution.",
+      "time": "2026-06-03T11:43:00Z"
+    },
+    {
+      "id": "codebase-diff-impact-ripple-event-5",
+      "kind": "recovery",
+      "label": "Diff Impact Ripple Checked",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "node_id": "codebase-diff-impact-ripple-node-5",
+      "status": "error",
+      "summary": "Diff Impact Ripple event 5 references Impact Ripple Risk.",
+      "time": "2026-06-03T11:54:00Z"
+    },
+    {
+      "id": "codebase-diff-impact-ripple-event-6",
+      "kind": "finish",
+      "label": "Diff Impact Ripple Recovered",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "node_id": "codebase-diff-impact-ripple-node-6",
+      "status": "success",
+      "summary": "Diff Impact Ripple event 6 references Ripple Diff Outcome.",
+      "time": "2026-06-03T12:05:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "source",
+      "id": "codebase-diff-impact-ripple-node-1",
+      "kind": "diff",
+      "label": "Diff Impact Intake",
+      "metadata": {
+        "detail": "Diff Impact Ripple signal 1",
+        "owner": "source",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "test",
+      "id": "codebase-diff-impact-ripple-node-2",
+      "kind": "impact",
+      "label": "Impact Ripple Core",
+      "metadata": {
+        "detail": "Diff Impact Ripple signal 2",
+        "owner": "test",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "release",
+      "id": "codebase-diff-impact-ripple-node-3",
+      "kind": "ripple",
+      "label": "Ripple Diff Policy",
+      "metadata": {
+        "detail": "Diff Impact Ripple signal 3",
+        "owner": "release",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "source",
+      "id": "codebase-diff-impact-ripple-node-4",
+      "kind": "source",
+      "label": "Diff Impact Execution",
+      "metadata": {
+        "detail": "Diff Impact Ripple signal 4",
+        "owner": "source",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "test",
+      "id": "codebase-diff-impact-ripple-node-5",
+      "kind": "diff",
+      "label": "Impact Ripple Risk",
+      "metadata": {
+        "detail": "Diff Impact Ripple signal 5",
+        "owner": "test",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "release",
+      "id": "codebase-diff-impact-ripple-node-6",
+      "kind": "impact",
+      "label": "Ripple Diff Outcome",
+      "metadata": {
+        "detail": "Diff Impact Ripple signal 6",
+        "owner": "release",
+        "template_id": "codebase.diff_impact_ripple"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Diff Impact Ripple Example"
+}

@@ -162,9 +162,56 @@ select {
   opacity: 0.7;
 }
 
+.visual-edge-flow {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 8 7;
+  animation: visual-flow 1.8s linear infinite;
+}
+
 .visual-edge-label {
   fill: var(--muted);
   font-size: 11px;
+}
+
+.visual-orbit {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.preset-graph-3d .visual-svg,
+.preset-graph-2-5d .visual-svg,
+.preset-sankey-3d .visual-svg {
+  filter: drop-shadow(18px 22px 0 #07090d);
+  transform: perspective(900px) rotateX(7deg);
+  transform-origin: center;
+}
+
+.preset-city-map .visual-svg {
+  background: linear-gradient(180deg, #10161c 0%, #151b22 100%);
+}
+
+.preset-terrain-heatmap .matrix-stage,
+.preset-heatmap .matrix-stage {
+  background:
+    radial-gradient(circle at 18% 24%, #243342 0, transparent 24%),
+    radial-gradient(circle at 72% 70%, #2e273b 0, transparent 28%),
+    #10161c;
+}
+
+.preset-control-room .matrix-stage,
+.preset-matrix-board .matrix-stage {
+  display: grid;
+}
+
+.preset-document-wall .visual-svg {
+  background: repeating-linear-gradient(90deg, #10161c, #10161c 130px, #121b24 131px, #121b24 132px);
+}
+
+.preset-flow-particles .visual-svg {
+  background: radial-gradient(circle at center, #19232d, #10161c 62%);
 }
 
 .visual-hidden {
@@ -304,6 +351,16 @@ select {
   width: 170px;
   min-height: 68px;
   transform: translate(-50%, -50%);
+}
+
+@keyframes visual-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: -30;
+  }
 }
 
 .fatal {

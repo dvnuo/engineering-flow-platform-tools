@@ -1,23 +1,226 @@
 {
-  "schema": "efp.visual.input.graph_events.v1",
-  "title": "Active Run Monitor",
-  "nodes": [
-    {"id": "queue", "label": "Run queue", "kind": "queue", "status": "info"},
-    {"id": "run_busy", "label": "Busy run", "kind": "run", "status": "busy"},
-    {"id": "run_retry", "label": "Retrying run", "kind": "run", "status": "retry"},
-    {"id": "run_idle", "label": "Idle run", "kind": "run", "status": "idle"},
-    {"id": "run_blocked", "label": "Blocked run", "kind": "run", "status": "blocked"}
-  ],
   "edges": [
-    {"from": "queue", "to": "run_busy", "kind": "assigned"},
-    {"from": "queue", "to": "run_retry", "kind": "retry"},
-    {"from": "queue", "to": "run_idle", "kind": "parked"},
-    {"from": "queue", "to": "run_blocked", "kind": "needs_input"}
+    {
+      "from": "agent-active-run-monitor-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "agent-active-run-monitor-node-2",
+      "weight": 2
+    },
+    {
+      "from": "agent-active-run-monitor-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "agent-active-run-monitor-node-3",
+      "weight": 3
+    },
+    {
+      "from": "agent-active-run-monitor-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "agent-active-run-monitor-node-4",
+      "weight": 2
+    },
+    {
+      "from": "agent-active-run-monitor-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "agent-active-run-monitor-node-5",
+      "weight": 4
+    },
+    {
+      "from": "agent-active-run-monitor-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "agent-active-run-monitor-node-6",
+      "weight": 2
+    },
+    {
+      "from": "agent-active-run-monitor-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "agent-active-run-monitor-node-6",
+      "weight": 1
+    }
   ],
   "events": [
-    {"id": "m1", "time": "2026-06-03T13:30:00Z", "kind": "busy", "node_id": "run_busy", "summary": "Tool execution in progress."},
-    {"id": "m2", "time": "2026-06-03T13:31:00Z", "kind": "retry", "node_id": "run_retry", "summary": "Retry scheduled."},
-    {"id": "m3", "time": "2026-06-03T13:32:00Z", "kind": "idle", "node_id": "run_idle", "summary": "No pending task."},
-    {"id": "m4", "time": "2026-06-03T13:33:00Z", "kind": "blocked", "node_id": "run_blocked", "summary": "Waiting for user input."}
-  ]
+    {
+      "id": "agent-active-run-monitor-event-1",
+      "kind": "start",
+      "label": "Active Run Monitor Opened",
+      "metadata": {
+        "layout": "fleet",
+        "template_id": "agent.active_run_monitor"
+      },
+      "node_id": "agent-active-run-monitor-node-1",
+      "status": "running",
+      "summary": "Active Run Monitor event 1 references Active Run Intake.",
+      "time": "2026-06-03T13:23:00Z"
+    },
+    {
+      "id": "agent-active-run-monitor-event-2",
+      "kind": "tool",
+      "label": "Active Run Monitor Triaged",
+      "metadata": {
+        "layout": "fleet",
+        "template_id": "agent.active_run_monitor"
+      },
+      "node_id": "agent-active-run-monitor-node-2",
+      "status": "success",
+      "summary": "Active Run Monitor event 2 references Run Monitor Core.",
+      "time": "2026-06-03T13:34:00Z"
+    },
+    {
+      "id": "agent-active-run-monitor-event-3",
+      "kind": "checkpoint",
+      "label": "Active Run Monitor Mapped",
+      "metadata": {
+        "layout": "fleet",
+        "template_id": "agent.active_run_monitor"
+      },
+      "node_id": "agent-active-run-monitor-node-3",
+      "status": "warning",
+      "summary": "Active Run Monitor event 3 references Monitor Active Policy.",
+      "time": "2026-06-03T13:45:00Z"
+    },
+    {
+      "id": "agent-active-run-monitor-event-4",
+      "kind": "decision",
+      "label": "Active Run Monitor Acted",
+      "metadata": {
+        "layout": "fleet",
+        "template_id": "agent.active_run_monitor"
+      },
+      "node_id": "agent-active-run-monitor-node-4",
+      "status": "running",
+      "summary": "Active Run Monitor event 4 references Active Run Execution.",
+      "time": "2026-06-03T13:56:00Z"
+    },
+    {
+      "id": "agent-active-run-monitor-event-5",
+      "kind": "recovery",
+      "label": "Active Run Monitor Checked",
+      "metadata": {
+        "layout": "fleet",
+        "template_id": "agent.active_run_monitor"
+      },
+      "node_id": "agent-active-run-monitor-node-5",
+      "status": "error",
+      "summary": "Active Run Monitor event 5 references Run Monitor Risk.",
+      "time": "2026-06-03T14:07:00Z"
+    },
+    {
+      "id": "agent-active-run-monitor-event-6",
+      "kind": "finish",
+      "label": "Active Run Monitor Recovered",
+      "metadata": {
+        "layout": "fleet",
+        "template_id": "agent.active_run_monitor"
+      },
+      "node_id": "agent-active-run-monitor-node-6",
+      "status": "success",
+      "summary": "Active Run Monitor event 6 references Monitor Active Outcome.",
+      "time": "2026-06-03T14:18:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "reasoning",
+      "id": "agent-active-run-monitor-node-1",
+      "kind": "active",
+      "label": "Active Run Intake",
+      "metadata": {
+        "detail": "Active Run Monitor signal 1",
+        "owner": "reasoning",
+        "template_id": "agent.active_run_monitor"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "tooling",
+      "id": "agent-active-run-monitor-node-2",
+      "kind": "run",
+      "label": "Run Monitor Core",
+      "metadata": {
+        "detail": "Active Run Monitor signal 2",
+        "owner": "tooling",
+        "template_id": "agent.active_run_monitor"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "response",
+      "id": "agent-active-run-monitor-node-3",
+      "kind": "monitor",
+      "label": "Monitor Active Policy",
+      "metadata": {
+        "detail": "Active Run Monitor signal 3",
+        "owner": "response",
+        "template_id": "agent.active_run_monitor"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "reasoning",
+      "id": "agent-active-run-monitor-node-4",
+      "kind": "reasoning",
+      "label": "Active Run Execution",
+      "metadata": {
+        "detail": "Active Run Monitor signal 4",
+        "owner": "reasoning",
+        "template_id": "agent.active_run_monitor"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "tooling",
+      "id": "agent-active-run-monitor-node-5",
+      "kind": "active",
+      "label": "Run Monitor Risk",
+      "metadata": {
+        "detail": "Active Run Monitor signal 5",
+        "owner": "tooling",
+        "template_id": "agent.active_run_monitor"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "response",
+      "id": "agent-active-run-monitor-node-6",
+      "kind": "run",
+      "label": "Monitor Active Outcome",
+      "metadata": {
+        "detail": "Active Run Monitor signal 6",
+        "owner": "response",
+        "template_id": "agent.active_run_monitor"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Active Run Monitor Example"
 }

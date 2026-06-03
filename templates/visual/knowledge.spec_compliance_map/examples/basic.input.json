@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "knowledge-spec-compliance-map-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "knowledge-spec-compliance-map-node-2",
+      "weight": 2
+    },
+    {
+      "from": "knowledge-spec-compliance-map-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "knowledge-spec-compliance-map-node-3",
+      "weight": 3
+    },
+    {
+      "from": "knowledge-spec-compliance-map-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "knowledge-spec-compliance-map-node-4",
+      "weight": 2
+    },
+    {
+      "from": "knowledge-spec-compliance-map-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "knowledge-spec-compliance-map-node-5",
+      "weight": 4
+    },
+    {
+      "from": "knowledge-spec-compliance-map-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "knowledge-spec-compliance-map-node-6",
+      "weight": 2
+    },
+    {
+      "from": "knowledge-spec-compliance-map-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "knowledge-spec-compliance-map-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "claim",
+      "id": "knowledge-spec-compliance-map-node-1",
+      "kind": "spec",
+      "label": "Spec Compliance Intake",
+      "metadata": {
+        "detail": "Spec Compliance Map signal 1",
+        "owner": "claim",
+        "template_id": "knowledge.spec_compliance_map"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "source",
+      "id": "knowledge-spec-compliance-map-node-2",
+      "kind": "compliance",
+      "label": "Compliance Map Core",
+      "metadata": {
+        "detail": "Spec Compliance Map signal 2",
+        "owner": "source",
+        "template_id": "knowledge.spec_compliance_map"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "decision",
+      "id": "knowledge-spec-compliance-map-node-3",
+      "kind": "map",
+      "label": "Map Spec Policy",
+      "metadata": {
+        "detail": "Spec Compliance Map signal 3",
+        "owner": "decision",
+        "template_id": "knowledge.spec_compliance_map"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "claim",
+      "id": "knowledge-spec-compliance-map-node-4",
+      "kind": "claim",
+      "label": "Spec Compliance Execution",
+      "metadata": {
+        "detail": "Spec Compliance Map signal 4",
+        "owner": "claim",
+        "template_id": "knowledge.spec_compliance_map"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "source",
+      "id": "knowledge-spec-compliance-map-node-5",
+      "kind": "spec",
+      "label": "Compliance Map Risk",
+      "metadata": {
+        "detail": "Spec Compliance Map signal 5",
+        "owner": "source",
+        "template_id": "knowledge.spec_compliance_map"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "decision",
+      "id": "knowledge-spec-compliance-map-node-6",
+      "kind": "compliance",
+      "label": "Map Spec Outcome",
+      "metadata": {
+        "detail": "Spec Compliance Map signal 6",
+        "owner": "decision",
+        "template_id": "knowledge.spec_compliance_map"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Spec Compliance Map Example"
+}

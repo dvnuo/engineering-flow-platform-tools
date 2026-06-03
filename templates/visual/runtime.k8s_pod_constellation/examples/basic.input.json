@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "runtime-k8s-pod-constellation-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "runtime-k8s-pod-constellation-node-2",
+      "weight": 2
+    },
+    {
+      "from": "runtime-k8s-pod-constellation-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "runtime-k8s-pod-constellation-node-3",
+      "weight": 3
+    },
+    {
+      "from": "runtime-k8s-pod-constellation-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "runtime-k8s-pod-constellation-node-4",
+      "weight": 2
+    },
+    {
+      "from": "runtime-k8s-pod-constellation-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "runtime-k8s-pod-constellation-node-5",
+      "weight": 4
+    },
+    {
+      "from": "runtime-k8s-pod-constellation-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "runtime-k8s-pod-constellation-node-6",
+      "weight": 2
+    },
+    {
+      "from": "runtime-k8s-pod-constellation-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "runtime-k8s-pod-constellation-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "edge",
+      "id": "runtime-k8s-pod-constellation-node-1",
+      "kind": "k8s",
+      "label": "K8s Pod Intake",
+      "metadata": {
+        "detail": "K8s Pod Constellation signal 1",
+        "owner": "edge",
+        "template_id": "runtime.k8s_pod_constellation"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-k8s-pod-constellation-node-2",
+      "kind": "pod",
+      "label": "Pod Constellation Core",
+      "metadata": {
+        "detail": "K8s Pod Constellation signal 2",
+        "owner": "adapter",
+        "template_id": "runtime.k8s_pod_constellation"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "service",
+      "id": "runtime-k8s-pod-constellation-node-3",
+      "kind": "constellation",
+      "label": "Constellation K8s Policy",
+      "metadata": {
+        "detail": "K8s Pod Constellation signal 3",
+        "owner": "service",
+        "template_id": "runtime.k8s_pod_constellation"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "edge",
+      "id": "runtime-k8s-pod-constellation-node-4",
+      "kind": "edge",
+      "label": "K8s Pod Execution",
+      "metadata": {
+        "detail": "K8s Pod Constellation signal 4",
+        "owner": "edge",
+        "template_id": "runtime.k8s_pod_constellation"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-k8s-pod-constellation-node-5",
+      "kind": "k8s",
+      "label": "Pod Constellation Risk",
+      "metadata": {
+        "detail": "K8s Pod Constellation signal 5",
+        "owner": "adapter",
+        "template_id": "runtime.k8s_pod_constellation"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "service",
+      "id": "runtime-k8s-pod-constellation-node-6",
+      "kind": "pod",
+      "label": "Constellation K8s Outcome",
+      "metadata": {
+        "detail": "K8s Pod Constellation signal 6",
+        "owner": "service",
+        "template_id": "runtime.k8s_pod_constellation"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "K8s Pod Constellation Example"
+}

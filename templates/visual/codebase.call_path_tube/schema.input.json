@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "codebase-call-path-tube-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "codebase-call-path-tube-node-2",
+        "weight": 2
+      },
+      {
+        "from": "codebase-call-path-tube-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "codebase-call-path-tube-node-3",
+        "weight": 3
+      },
+      {
+        "from": "codebase-call-path-tube-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "codebase-call-path-tube-node-4",
+        "weight": 2
+      },
+      {
+        "from": "codebase-call-path-tube-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "codebase-call-path-tube-node-5",
+        "weight": 4
+      },
+      {
+        "from": "codebase-call-path-tube-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "codebase-call-path-tube-node-6",
+        "weight": 2
+      },
+      {
+        "from": "codebase-call-path-tube-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "codebase-call-path-tube-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "source",
+        "id": "codebase-call-path-tube-node-1",
+        "kind": "call",
+        "label": "Call Path Intake",
+        "metadata": {
+          "detail": "Call Path Tube signal 1",
+          "owner": "source",
+          "template_id": "codebase.call_path_tube"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "test",
+        "id": "codebase-call-path-tube-node-2",
+        "kind": "path",
+        "label": "Path Tube Core",
+        "metadata": {
+          "detail": "Call Path Tube signal 2",
+          "owner": "test",
+          "template_id": "codebase.call_path_tube"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "release",
+        "id": "codebase-call-path-tube-node-3",
+        "kind": "tube",
+        "label": "Tube Call Policy",
+        "metadata": {
+          "detail": "Call Path Tube signal 3",
+          "owner": "release",
+          "template_id": "codebase.call_path_tube"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "source",
+        "id": "codebase-call-path-tube-node-4",
+        "kind": "source",
+        "label": "Call Path Execution",
+        "metadata": {
+          "detail": "Call Path Tube signal 4",
+          "owner": "source",
+          "template_id": "codebase.call_path_tube"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "test",
+        "id": "codebase-call-path-tube-node-5",
+        "kind": "call",
+        "label": "Path Tube Risk",
+        "metadata": {
+          "detail": "Call Path Tube signal 5",
+          "owner": "test",
+          "template_id": "codebase.call_path_tube"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "release",
+        "id": "codebase-call-path-tube-node-6",
+        "kind": "path",
+        "label": "Tube Call Outcome",
+        "metadata": {
+          "detail": "Call Path Tube signal 6",
+          "owner": "release",
+          "template_id": "codebase.call_path_tube"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Call Path Tube Example"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "codebase.call_path_tube"
+}

@@ -1,0 +1,463 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "planning-task-swarm-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "planning-task-swarm-node-2",
+        "weight": 2
+      },
+      {
+        "from": "planning-task-swarm-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "planning-task-swarm-node-3",
+        "weight": 3
+      },
+      {
+        "from": "planning-task-swarm-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "planning-task-swarm-node-4",
+        "weight": 2
+      },
+      {
+        "from": "planning-task-swarm-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "planning-task-swarm-node-5",
+        "weight": 4
+      },
+      {
+        "from": "planning-task-swarm-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "planning-task-swarm-node-6",
+        "weight": 2
+      },
+      {
+        "from": "planning-task-swarm-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "planning-task-swarm-node-6",
+        "weight": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "planning-task-swarm-event-1",
+        "kind": "start",
+        "label": "Task Swarm Opened",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "planning.task_swarm"
+        },
+        "node_id": "planning-task-swarm-node-1",
+        "status": "running",
+        "summary": "Task Swarm event 1 references Task Swarm Intake.",
+        "time": "2026-06-03T12:35:00Z"
+      },
+      {
+        "id": "planning-task-swarm-event-2",
+        "kind": "tool",
+        "label": "Task Swarm Triaged",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "planning.task_swarm"
+        },
+        "node_id": "planning-task-swarm-node-2",
+        "status": "success",
+        "summary": "Task Swarm event 2 references Swarm Task Core.",
+        "time": "2026-06-03T12:46:00Z"
+      },
+      {
+        "id": "planning-task-swarm-event-3",
+        "kind": "checkpoint",
+        "label": "Task Swarm Mapped",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "planning.task_swarm"
+        },
+        "node_id": "planning-task-swarm-node-3",
+        "status": "warning",
+        "summary": "Task Swarm event 3 references Task Swarm Policy.",
+        "time": "2026-06-03T12:57:00Z"
+      },
+      {
+        "id": "planning-task-swarm-event-4",
+        "kind": "decision",
+        "label": "Task Swarm Acted",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "planning.task_swarm"
+        },
+        "node_id": "planning-task-swarm-node-4",
+        "status": "running",
+        "summary": "Task Swarm event 4 references Swarm Task Execution.",
+        "time": "2026-06-03T13:08:00Z"
+      },
+      {
+        "id": "planning-task-swarm-event-5",
+        "kind": "recovery",
+        "label": "Task Swarm Checked",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "planning.task_swarm"
+        },
+        "node_id": "planning-task-swarm-node-5",
+        "status": "error",
+        "summary": "Task Swarm event 5 references Task Swarm Risk.",
+        "time": "2026-06-03T13:19:00Z"
+      },
+      {
+        "id": "planning-task-swarm-event-6",
+        "kind": "finish",
+        "label": "Task Swarm Recovered",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "planning.task_swarm"
+        },
+        "node_id": "planning-task-swarm-node-6",
+        "status": "success",
+        "summary": "Task Swarm event 6 references Swarm Task Outcome.",
+        "time": "2026-06-03T13:30:00Z"
+      }
+    ],
+    "nodes": [
+      {
+        "group": "goal",
+        "id": "planning-task-swarm-node-1",
+        "kind": "task",
+        "label": "Task Swarm Intake",
+        "metadata": {
+          "detail": "Task Swarm signal 1",
+          "owner": "goal",
+          "template_id": "planning.task_swarm"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "success"
+      },
+      {
+        "group": "task",
+        "id": "planning-task-swarm-node-2",
+        "kind": "swarm",
+        "label": "Swarm Task Core",
+        "metadata": {
+          "detail": "Task Swarm signal 2",
+          "owner": "task",
+          "template_id": "planning.task_swarm"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "automation",
+        "id": "planning-task-swarm-node-3",
+        "kind": "automation",
+        "label": "Task Swarm Policy",
+        "metadata": {
+          "detail": "Task Swarm signal 3",
+          "owner": "automation",
+          "template_id": "planning.task_swarm"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "error"
+      },
+      {
+        "group": "goal",
+        "id": "planning-task-swarm-node-4",
+        "kind": "goal",
+        "label": "Swarm Task Execution",
+        "metadata": {
+          "detail": "Task Swarm signal 4",
+          "owner": "goal",
+          "template_id": "planning.task_swarm"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "running"
+      },
+      {
+        "group": "task",
+        "id": "planning-task-swarm-node-5",
+        "kind": "task",
+        "label": "Task Swarm Risk",
+        "metadata": {
+          "detail": "Task Swarm signal 5",
+          "owner": "task",
+          "template_id": "planning.task_swarm"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "ok"
+      },
+      {
+        "group": "automation",
+        "id": "planning-task-swarm-node-6",
+        "kind": "swarm",
+        "label": "Swarm Task Outcome",
+        "metadata": {
+          "detail": "Task Swarm signal 6",
+          "owner": "automation",
+          "template_id": "planning.task_swarm"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "warning"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Task Swarm Example"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "planning.task_swarm"
+}

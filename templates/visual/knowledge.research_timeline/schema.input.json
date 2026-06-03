@@ -1,0 +1,193 @@
+{
+  "example": {
+    "events": [
+      {
+        "id": "knowledge-research-timeline-event-1",
+        "kind": "intake",
+        "label": "Research Timeline Opened",
+        "lane": "claim",
+        "metadata": {
+          "sequence": 1,
+          "template_id": "knowledge.research_timeline"
+        },
+        "status": "success",
+        "summary": "Research Timeline advanced through intake with timeline_tunnel context.",
+        "time": "2026-06-03T12:57:00Z"
+      },
+      {
+        "id": "knowledge-research-timeline-event-2",
+        "kind": "analysis",
+        "label": "Timeline Research Triaged",
+        "lane": "source",
+        "metadata": {
+          "sequence": 2,
+          "template_id": "knowledge.research_timeline"
+        },
+        "status": "running",
+        "summary": "Research Timeline advanced through analysis with timeline_tunnel context.",
+        "time": "2026-06-03T13:14:00Z"
+      },
+      {
+        "id": "knowledge-research-timeline-event-3",
+        "kind": "decision",
+        "label": "Research Timeline Mapped",
+        "lane": "decision",
+        "metadata": {
+          "sequence": 3,
+          "template_id": "knowledge.research_timeline"
+        },
+        "status": "warning",
+        "summary": "Research Timeline advanced through decision with timeline_tunnel context.",
+        "time": "2026-06-03T13:31:00Z"
+      },
+      {
+        "id": "knowledge-research-timeline-event-4",
+        "kind": "execution",
+        "label": "Timeline Research Acted",
+        "lane": "claim",
+        "metadata": {
+          "sequence": 4,
+          "template_id": "knowledge.research_timeline"
+        },
+        "status": "success",
+        "summary": "Research Timeline advanced through execution with timeline_tunnel context.",
+        "time": "2026-06-03T13:48:00Z"
+      },
+      {
+        "id": "knowledge-research-timeline-event-5",
+        "kind": "verification",
+        "label": "Research Timeline Checked",
+        "lane": "source",
+        "metadata": {
+          "sequence": 5,
+          "template_id": "knowledge.research_timeline"
+        },
+        "status": "error",
+        "summary": "Research Timeline advanced through verification with timeline_tunnel context.",
+        "time": "2026-06-03T14:05:00Z"
+      },
+      {
+        "id": "knowledge-research-timeline-event-6",
+        "kind": "handoff",
+        "label": "Timeline Research Recovered",
+        "lane": "decision",
+        "metadata": {
+          "sequence": 6,
+          "template_id": "knowledge.research_timeline"
+        },
+        "status": "blocked",
+        "summary": "Research Timeline advanced through handoff with timeline_tunnel context.",
+        "time": "2026-06-03T14:22:00Z"
+      },
+      {
+        "id": "knowledge-research-timeline-event-7",
+        "kind": "closeout",
+        "label": "Research Timeline Closed",
+        "lane": "claim",
+        "metadata": {
+          "sequence": 7,
+          "template_id": "knowledge.research_timeline"
+        },
+        "status": "success",
+        "summary": "Research Timeline advanced through closeout with timeline_tunnel context.",
+        "time": "2026-06-03T14:39:00Z"
+      }
+    ],
+    "schema": "efp.visual.input.timeline.v1",
+    "title": "Research Timeline Example"
+  },
+  "input_schema_kind": "timeline_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.timeline.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "knowledge.research_timeline"
+}

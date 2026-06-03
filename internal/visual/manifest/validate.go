@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"engineering-flow-platform-tools/internal/visual/metadata"
@@ -16,8 +17,21 @@ func ValidateTemplateManifest(templateDir string, entry RegistryEntry, m *Templa
 	if strings.TrimSpace(m.ID) != entry.ID {
 		return metadata.NewError("template_manifest_invalid", "visual template manifest id does not match registry id.", "Set template.yaml id to "+entry.ID+".", 400)
 	}
-	if strings.TrimSpace(m.Version) == "" || strings.TrimSpace(m.Title) == "" || strings.TrimSpace(m.Description) == "" || strings.TrimSpace(m.InputSchema) == "" || strings.TrimSpace(m.InputSchemaKind) == "" || strings.TrimSpace(m.Renderer.Contract) == "" {
-		return metadata.NewError("template_manifest_invalid", "visual template manifest is missing required fields.", "Set version, title, description, input_schema, input_schema_kind, and renderer.contract.", 400)
+	if filepath.Base(filepath.Dir(filepath.ToSlash(filepath.Clean(entry.Path)))) != entry.ID {
+		return metadata.NewError("template_manifest_invalid", "visual template registry path directory must equal template id.", "Use "+entry.ID+"/template.yaml as the registry path.", 400)
+	}
+	if strings.TrimSpace(m.Version) == "" || strings.TrimSpace(m.Category) == "" || strings.TrimSpace(m.Title) == "" || strings.TrimSpace(m.Description) == "" || strings.TrimSpace(m.InputSchema) == "" || strings.TrimSpace(m.InputSchemaKind) == "" || strings.TrimSpace(m.Renderer.Contract) == "" || strings.TrimSpace(m.Layout.Preset) == "" {
+		return metadata.NewError("template_manifest_invalid", "visual template manifest is missing required fields.", "Set version, category, title, description, input_schema, input_schema_kind, renderer.contract, and layout.preset.", 400)
+	}
+	m.Category = normalizeManifestValue(m.Category)
+	if !SupportedCategories[m.Category] {
+		return metadata.NewError("template_manifest_invalid", "visual template category is not supported: "+m.Category, "Use one of: "+strings.Join(SupportedCategoryOrder, ", ")+".", 400)
+	}
+	if strings.TrimSpace(entry.Category) != "" && normalizeManifestValue(entry.Category) != m.Category {
+		return metadata.NewError("template_manifest_invalid", "visual template category does not match registry category.", "Set template.yaml category and registry category to "+m.Category+".", 400)
+	}
+	if filepath.ToSlash(filepath.Clean(m.InputSchema)) != "schema.input.json" {
+		return metadata.NewError("template_manifest_invalid", "visual template input_schema must be schema.input.json.", "Set input_schema: schema.input.json.", 400)
 	}
 	if !metadata.SupportedRenderers[m.Renderer.Contract] {
 		return metadata.NewError("unsupported_renderer", "visual template renderer is not supported: "+m.Renderer.Contract, "Use offline.graph.v1, offline.timeline.v1, offline.evidence.v1, or offline.matrix.v1.", 400)
@@ -26,6 +40,19 @@ func ValidateTemplateManifest(templateDir string, entry RegistryEntry, m *Templa
 		return metadata.NewError("template_manifest_invalid", "visual template input_schema_kind is not supported: "+m.InputSchemaKind, "Use graph_v1, graph_events_v1, timeline_v1, evidence_v1, or matrix_v1.", 400)
 	}
 	m.InputSchemaKind = normalizeInputSchemaKind(m.InputSchemaKind)
+	if strings.TrimSpace(entry.InputSchemaKind) != "" && normalizeInputSchemaKind(entry.InputSchemaKind) != m.InputSchemaKind {
+		return metadata.NewError("template_manifest_invalid", "visual template input_schema_kind does not match registry entry.", "Set registry input_schema_kind to "+m.InputSchemaKind+".", 400)
+	}
+	if strings.TrimSpace(entry.Renderer) != "" && strings.TrimSpace(entry.Renderer) != m.Renderer.Contract {
+		return metadata.NewError("template_manifest_invalid", "visual template renderer does not match registry entry.", "Set registry renderer to "+m.Renderer.Contract+".", 400)
+	}
+	m.Layout.Preset = normalizeManifestValue(m.Layout.Preset)
+	if !SupportedLayoutPresets[m.Layout.Preset] {
+		return metadata.NewError("template_manifest_invalid", "visual template layout.preset is not supported: "+m.Layout.Preset, "Use a supported offline layout preset.", 400)
+	}
+	if strings.TrimSpace(entry.LayoutPreset) != "" && normalizeManifestValue(entry.LayoutPreset) != m.Layout.Preset {
+		return metadata.NewError("template_manifest_invalid", "visual template layout.preset does not match registry entry.", "Set registry layout_preset to "+m.Layout.Preset+".", 400)
+	}
 	if err := validateInputSchemaFile(templateDir, entry, m.InputSchema); err != nil {
 		return err
 	}
@@ -49,6 +76,9 @@ func ValidateTemplateManifest(templateDir string, entry RegistryEntry, m *Templa
 	if m.Limits.MaxEvents == 0 {
 		m.Limits.MaxEvents = 5000
 	}
+	if m.Limits.MaxItems == 0 {
+		m.Limits.MaxItems = 2000
+	}
 	for _, asset := range m.Assets {
 		if err := validateAsset(templateDir, entry.Path, asset); err != nil {
 			return err
@@ -69,12 +99,80 @@ func ValidateTemplateManifest(templateDir string, entry RegistryEntry, m *Templa
 			return metadata.NewError("template_manifest_invalid", "visual template scripts are missing "+required+".", "Include manifest.js, data.js, and the shared runtime scripts.", 400)
 		}
 	}
-	for _, required := range []string{"assets/runtime/efp-visual-runtime.css", "assets/template/style.css"} {
-		if !containsSlashPath(m.Styles, required) {
-			return metadata.NewError("template_manifest_invalid", "visual template styles are missing "+required+".", "Include the shared runtime CSS and template CSS.", 400)
+	if !containsSlashPath(m.Styles, "assets/runtime/efp-visual-runtime.css") {
+		return metadata.NewError("template_manifest_invalid", "visual template styles are missing assets/runtime/efp-visual-runtime.css.", "Include the shared runtime CSS.", 400)
+	}
+	templateStyle := "assets/templates/" + m.ID + "/style.css"
+	if !containsSlashPath(m.Styles, templateStyle) && !containsSlashPath(m.Styles, "assets/template/style.css") {
+		return metadata.NewError("template_manifest_invalid", "visual template styles are missing template style.css.", "Include "+templateStyle+".", 400)
+	}
+	return nil
+}
+
+func ValidateRegistry(r Registry) error {
+	ids := map[string]bool{}
+	for _, entry := range r.Templates {
+		id := strings.TrimSpace(entry.ID)
+		if id == "" {
+			return metadata.NewError("template_registry_invalid", "visual template registry contains an empty id.", "Set every registry template id.", 400)
+		}
+		if ids[id] {
+			return metadata.NewError("template_registry_invalid", "visual template registry contains duplicate id: "+id, "Remove duplicate canonical template ids.", 400)
+		}
+		ids[id] = true
+		if !SupportedCategories[normalizeManifestValue(entry.Category)] {
+			return metadata.NewError("template_registry_invalid", "visual template registry contains unsupported category for "+id+": "+entry.Category, "Use one of: "+strings.Join(SupportedCategoryOrder, ", ")+".", 400)
+		}
+	}
+	aliases := map[string]string{}
+	for _, entry := range r.Templates {
+		id := strings.TrimSpace(entry.ID)
+		for _, alias := range entry.Aliases {
+			alias = strings.TrimSpace(alias)
+			if alias == "" {
+				return metadata.NewError("template_registry_invalid", "visual template registry contains an empty alias for "+id+".", "Remove empty aliases.", 400)
+			}
+			if ids[alias] {
+				return metadata.NewError("template_registry_invalid", "visual template alias conflicts with canonical id: "+alias, "Aliases must not match canonical ids.", 400)
+			}
+			if owner, ok := aliases[alias]; ok && owner != id {
+				return metadata.NewError("template_registry_invalid", "visual template alias is duplicated: "+alias, "Alias "+alias+" is already assigned to "+owner+".", 400)
+			}
+			aliases[alias] = id
 		}
 	}
 	return nil
+}
+
+func ValidateExpectedCategoryCounts(counts map[string]int) error {
+	for _, category := range SupportedCategoryOrder {
+		expected := ExpectedCategoryCounts[category]
+		if counts[category] != expected {
+			return metadata.NewError("template_registry_invalid", "visual template category "+category+" has unexpected count.", "Expected "+category+"="+itoa(expected)+".", 400)
+		}
+	}
+	for category, count := range counts {
+		if count > 0 && !SupportedCategories[category] {
+			return metadata.NewError("template_registry_invalid", "visual template category is not supported: "+category, "Use one of: "+strings.Join(SupportedCategoryOrder, ", ")+".", 400)
+		}
+	}
+	return nil
+}
+
+func SortedCategoryCounts(counts map[string]int) []CategoryCount {
+	out := make([]CategoryCount, 0, len(SupportedCategoryOrder))
+	for _, category := range SupportedCategoryOrder {
+		if count := counts[category]; count > 0 {
+			out = append(out, CategoryCount{ID: category, Count: count})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+type CategoryCount struct {
+	ID    string `json:"id"`
+	Count int    `json:"count"`
 }
 
 var SupportedInputSchemaKinds = map[string]bool{
@@ -85,8 +183,99 @@ var SupportedInputSchemaKinds = map[string]bool{
 	"matrix_v1":       true,
 }
 
+var SupportedCategoryOrder = []string{
+	"foundation",
+	"agent",
+	"codebase",
+	"runtime",
+	"debug",
+	"project",
+	"knowledge",
+	"planning",
+	"business",
+	"education",
+}
+
+var SupportedCategories = map[string]bool{
+	"foundation": true,
+	"agent":      true,
+	"codebase":   true,
+	"runtime":    true,
+	"debug":      true,
+	"project":    true,
+	"knowledge":  true,
+	"planning":   true,
+	"business":   true,
+	"education":  true,
+}
+
+var ExpectedCategoryCounts = map[string]int{
+	"foundation": 20,
+	"agent":      15,
+	"codebase":   20,
+	"runtime":    20,
+	"debug":      20,
+	"project":    20,
+	"knowledge":  20,
+	"planning":   20,
+	"business":   20,
+	"education":  20,
+}
+
+var SupportedLayoutPresets = map[string]bool{
+	"graph_3d":             true,
+	"graph_2_5d":           true,
+	"timeline_tunnel":      true,
+	"swimlane_timeline":    true,
+	"radial_tree":          true,
+	"layered_stack":        true,
+	"pipeline_flow":        true,
+	"constellation":        true,
+	"city_map":             true,
+	"terrain_heatmap":      true,
+	"matrix_board":         true,
+	"sankey_3d":            true,
+	"radar_sphere":         true,
+	"diff_split_view":      true,
+	"replay_stage":         true,
+	"orbit_system":         true,
+	"control_room":         true,
+	"document_wall":        true,
+	"flow_particles":       true,
+	"state_machine":        true,
+	"dag":                  true,
+	"galaxy":               true,
+	"ripple":               true,
+	"service_map":          true,
+	"fleet":                true,
+	"incident_timeline":    true,
+	"evidence_board":       true,
+	"knowledge_graph":      true,
+	"decision_matrix":      true,
+	"kanban":               true,
+	"gantt":                true,
+	"roadmap":              true,
+	"journey":              true,
+	"funnel":               true,
+	"radar":                true,
+	"waterfall":            true,
+	"heatmap":              true,
+	"tree":                 true,
+	"river":                true,
+	"board":                true,
+	"network_boundary_map": true,
+	"permission_gate":      true,
+	"step_ladder":          true,
+	"line":                 true,
+	"citation_map":         true,
+}
+
 func normalizeInputSchemaKind(kind string) string {
 	return strings.TrimSpace(strings.ToLower(kind))
+}
+
+func normalizeManifestValue(value string) string {
+	return strings.TrimSpace(strings.ToLower(value))
 }
 
 func normalizeDataMode(mode string) string {
@@ -157,6 +346,9 @@ func validateAsset(templateDir, templatePath string, asset AssetSpec) error {
 	if strings.TrimSpace(asset.From) == "" {
 		return metadata.NewError("template_asset_missing", "visual template asset.from is empty.", "Set asset.from to a file under templates/visual.", 400)
 	}
+	if err := validateOfflineReference("asset source", asset.From); err != nil {
+		return err
+	}
 	if err := validateRelativeReference("asset target", asset.To); err != nil {
 		return err
 	}
@@ -179,12 +371,25 @@ func validateRelativeReference(kind, value string) error {
 	if value == "" {
 		return metadata.NewError("template_asset_target_invalid", "visual template "+kind+" path is empty.", "Use a relative path without parent traversal.", 400)
 	}
+	if err := validateOfflineReference(kind, value); err != nil {
+		return err
+	}
 	if filepath.IsAbs(value) {
 		return metadata.NewError("template_asset_target_invalid", "visual template "+kind+" path must be relative: "+value, "Use relative paths so artifacts work under file:// and proxy subpaths.", 400)
 	}
 	clean := filepath.Clean(value)
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
 		return metadata.NewError("template_asset_target_invalid", "visual template "+kind+" path is unsafe: "+value, "Remove parent traversal from the path.", 400)
+	}
+	return nil
+}
+
+func validateOfflineReference(kind, value string) error {
+	lower := strings.ToLower(value)
+	for _, token := range []string{"http://", "https://", "//", "unpkg", "cdnjs", "jsdelivr", "fonts.googleapis.com", "fonts.gstatic.com"} {
+		if strings.Contains(lower, token) {
+			return metadata.NewError("template_asset_target_invalid", "visual template "+kind+" path contains forbidden remote token: "+token, "Use local relative paths only.", 400)
+		}
 	}
 	return nil
 }
@@ -209,4 +414,18 @@ func withinPath(rootAbs, candidateAbs string) bool {
 		return false
 	}
 	return rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+func itoa(value int) string {
+	if value == 0 {
+		return "0"
+	}
+	var digits [20]byte
+	i := len(digits)
+	for value > 0 {
+		i--
+		digits[i] = byte('0' + value%10)
+		value /= 10
+	}
+	return string(digits[i:])
 }

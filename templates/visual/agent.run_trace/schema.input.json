@@ -1,252 +1,463 @@
 {
-  "schema": "efp.visual.template_input_schema.v1",
-  "template_id": "agent.run_trace",
-  "input_schema_kind": "graph_events_v1",
-  "json_schema": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "efp.visual.input.graph_events.v1",
-    "title": "EFP Visual Graph Events Input v1",
-    "description": "Graph input with optional event stream for offline visual templates.",
-    "type": "object",
-    "required": [
-      "nodes"
-    ],
-    "additionalProperties": true,
-    "properties": {
-      "schema": {
-        "type": "string",
-        "const": "efp.visual.input.graph_events.v1"
-      },
-      "title": {
-        "type": "string"
-      },
-      "nodes": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/node"
-        }
-      },
-      "edges": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/edge"
-        }
-      },
-      "events": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/event"
-        }
-      }
-    },
-    "$defs": {
-      "object": {
-        "type": "object",
-        "additionalProperties": true
-      },
-      "node": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "label": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "group": {
-            "type": "string"
-          },
-          "metadata": {
-            "$ref": "#/$defs/object"
-          },
-          "metrics": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      },
-      "edge": {
-        "type": "object",
-        "required": [
-          "from",
-          "to"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "from": {
-            "type": "string",
-            "minLength": 1
-          },
-          "to": {
-            "type": "string",
-            "minLength": 1
-          },
-          "kind": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "weight": {
-            "type": "number"
-          },
-          "metadata": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      },
-      "event": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "time": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "node_id": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "summary": {
-            "type": "string"
-          },
-          "payload": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      }
-    }
-  },
   "example": {
-    "schema": "efp.visual.input.graph_events.v1",
-    "title": "Smoke Agent Run Trace",
-    "nodes": [
-      {
-        "id": "request",
-        "label": "User request",
-        "kind": "input",
-        "status": "success",
-        "group": "phase"
-      },
-      {
-        "id": "planning",
-        "label": "Planning",
-        "kind": "agent",
-        "status": "success",
-        "group": "phase"
-      },
-      {
-        "id": "read_files",
-        "label": "Read files",
-        "kind": "tool",
-        "status": "success",
-        "group": "tool"
-      },
-      {
-        "id": "run_tests",
-        "label": "Run tests",
-        "kind": "tool",
-        "status": "warning",
-        "group": "tool"
-      },
-      {
-        "id": "final",
-        "label": "Final answer",
-        "kind": "response",
-        "status": "success",
-        "group": "phase"
-      }
-    ],
     "edges": [
       {
-        "from": "request",
-        "to": "planning",
-        "kind": "step",
-        "label": "analyze"
+        "from": "agent-run-trace-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "agent-run-trace-node-2",
+        "weight": 2
       },
       {
-        "from": "planning",
-        "to": "read_files",
-        "kind": "tool",
-        "label": "inspect"
+        "from": "agent-run-trace-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "agent-run-trace-node-3",
+        "weight": 3
       },
       {
-        "from": "read_files",
-        "to": "run_tests",
-        "kind": "tool",
-        "label": "verify"
+        "from": "agent-run-trace-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "agent-run-trace-node-4",
+        "weight": 2
       },
       {
-        "from": "run_tests",
-        "to": "final",
-        "kind": "step",
-        "label": "report"
+        "from": "agent-run-trace-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "agent-run-trace-node-5",
+        "weight": 4
+      },
+      {
+        "from": "agent-run-trace-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "agent-run-trace-node-6",
+        "weight": 2
+      },
+      {
+        "from": "agent-run-trace-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "agent-run-trace-node-6",
+        "weight": 1
       }
     ],
     "events": [
       {
-        "id": "e1",
-        "time": "2026-06-03T12:00:00Z",
-        "kind": "request",
-        "node_id": "request",
-        "summary": "User asked for offline artifact CLI."
+        "id": "agent-run-trace-event-1",
+        "kind": "start",
+        "label": "Run Trace Opened",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "agent.run_trace"
+        },
+        "node_id": "agent-run-trace-node-1",
+        "status": "running",
+        "summary": "Run Trace event 1 references Run Trace Intake.",
+        "time": "2026-06-03T10:34:00Z"
       },
       {
-        "id": "e2",
-        "time": "2026-06-03T12:02:00Z",
-        "kind": "planning",
-        "node_id": "planning",
-        "summary": "Plan created."
+        "id": "agent-run-trace-event-2",
+        "kind": "tool",
+        "label": "Run Trace Triaged",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "agent.run_trace"
+        },
+        "node_id": "agent-run-trace-node-2",
+        "status": "success",
+        "summary": "Run Trace event 2 references Trace Run Core.",
+        "time": "2026-06-03T10:45:00Z"
       },
       {
-        "id": "e3",
-        "time": "2026-06-03T12:04:00Z",
-        "kind": "tool_started",
-        "node_id": "read_files",
-        "summary": "Repository files inspected."
+        "id": "agent-run-trace-event-3",
+        "kind": "checkpoint",
+        "label": "Run Trace Mapped",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "agent.run_trace"
+        },
+        "node_id": "agent-run-trace-node-3",
+        "status": "warning",
+        "summary": "Run Trace event 3 references Run Trace Policy.",
+        "time": "2026-06-03T10:56:00Z"
       },
       {
-        "id": "e4",
-        "time": "2026-06-03T12:08:00Z",
-        "kind": "tool_finished",
-        "node_id": "run_tests",
-        "summary": "Tests completed with one warning."
+        "id": "agent-run-trace-event-4",
+        "kind": "decision",
+        "label": "Run Trace Acted",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "agent.run_trace"
+        },
+        "node_id": "agent-run-trace-node-4",
+        "status": "running",
+        "summary": "Run Trace event 4 references Trace Run Execution.",
+        "time": "2026-06-03T11:07:00Z"
       },
       {
-        "id": "e5",
-        "time": "2026-06-03T12:10:00Z",
-        "kind": "response",
-        "node_id": "final",
-        "summary": "Final summary returned."
+        "id": "agent-run-trace-event-5",
+        "kind": "recovery",
+        "label": "Run Trace Checked",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "agent.run_trace"
+        },
+        "node_id": "agent-run-trace-node-5",
+        "status": "error",
+        "summary": "Run Trace event 5 references Run Trace Risk.",
+        "time": "2026-06-03T11:18:00Z"
+      },
+      {
+        "id": "agent-run-trace-event-6",
+        "kind": "finish",
+        "label": "Run Trace Recovered",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "agent.run_trace"
+        },
+        "node_id": "agent-run-trace-node-6",
+        "status": "success",
+        "summary": "Run Trace event 6 references Trace Run Outcome.",
+        "time": "2026-06-03T11:29:00Z"
       }
-    ]
-  }
+    ],
+    "nodes": [
+      {
+        "group": "reasoning",
+        "id": "agent-run-trace-node-1",
+        "kind": "run",
+        "label": "Run Trace Intake",
+        "metadata": {
+          "detail": "Run Trace signal 1",
+          "owner": "reasoning",
+          "template_id": "agent.run_trace"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "success"
+      },
+      {
+        "group": "tooling",
+        "id": "agent-run-trace-node-2",
+        "kind": "trace",
+        "label": "Trace Run Core",
+        "metadata": {
+          "detail": "Run Trace signal 2",
+          "owner": "tooling",
+          "template_id": "agent.run_trace"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "response",
+        "id": "agent-run-trace-node-3",
+        "kind": "response",
+        "label": "Run Trace Policy",
+        "metadata": {
+          "detail": "Run Trace signal 3",
+          "owner": "response",
+          "template_id": "agent.run_trace"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "error"
+      },
+      {
+        "group": "reasoning",
+        "id": "agent-run-trace-node-4",
+        "kind": "reasoning",
+        "label": "Trace Run Execution",
+        "metadata": {
+          "detail": "Run Trace signal 4",
+          "owner": "reasoning",
+          "template_id": "agent.run_trace"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "running"
+      },
+      {
+        "group": "tooling",
+        "id": "agent-run-trace-node-5",
+        "kind": "run",
+        "label": "Run Trace Risk",
+        "metadata": {
+          "detail": "Run Trace signal 5",
+          "owner": "tooling",
+          "template_id": "agent.run_trace"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "ok"
+      },
+      {
+        "group": "response",
+        "id": "agent-run-trace-node-6",
+        "kind": "trace",
+        "label": "Trace Run Outcome",
+        "metadata": {
+          "detail": "Run Trace signal 6",
+          "owner": "response",
+          "template_id": "agent.run_trace"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "warning"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Run Trace Example"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "agent.run_trace"
 }

@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "business-customer-segment-constellation-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "business-customer-segment-constellation-node-2",
+      "weight": 2
+    },
+    {
+      "from": "business-customer-segment-constellation-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "business-customer-segment-constellation-node-3",
+      "weight": 3
+    },
+    {
+      "from": "business-customer-segment-constellation-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "business-customer-segment-constellation-node-4",
+      "weight": 2
+    },
+    {
+      "from": "business-customer-segment-constellation-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "business-customer-segment-constellation-node-5",
+      "weight": 4
+    },
+    {
+      "from": "business-customer-segment-constellation-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "business-customer-segment-constellation-node-6",
+      "weight": 2
+    },
+    {
+      "from": "business-customer-segment-constellation-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "business-customer-segment-constellation-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "customer",
+      "id": "business-customer-segment-constellation-node-1",
+      "kind": "customer",
+      "label": "Customer Segment Intake",
+      "metadata": {
+        "detail": "Customer Segment Constellation signal 1",
+        "owner": "customer",
+        "template_id": "business.customer_segment_constellation"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "revenue",
+      "id": "business-customer-segment-constellation-node-2",
+      "kind": "segment",
+      "label": "Segment Constellation Core",
+      "metadata": {
+        "detail": "Customer Segment Constellation signal 2",
+        "owner": "revenue",
+        "template_id": "business.customer_segment_constellation"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "operation",
+      "id": "business-customer-segment-constellation-node-3",
+      "kind": "constellation",
+      "label": "Constellation Customer Policy",
+      "metadata": {
+        "detail": "Customer Segment Constellation signal 3",
+        "owner": "operation",
+        "template_id": "business.customer_segment_constellation"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "customer",
+      "id": "business-customer-segment-constellation-node-4",
+      "kind": "customer",
+      "label": "Customer Segment Execution",
+      "metadata": {
+        "detail": "Customer Segment Constellation signal 4",
+        "owner": "customer",
+        "template_id": "business.customer_segment_constellation"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "revenue",
+      "id": "business-customer-segment-constellation-node-5",
+      "kind": "customer",
+      "label": "Segment Constellation Risk",
+      "metadata": {
+        "detail": "Customer Segment Constellation signal 5",
+        "owner": "revenue",
+        "template_id": "business.customer_segment_constellation"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "operation",
+      "id": "business-customer-segment-constellation-node-6",
+      "kind": "segment",
+      "label": "Constellation Customer Outcome",
+      "metadata": {
+        "detail": "Customer Segment Constellation signal 6",
+        "owner": "operation",
+        "template_id": "business.customer_segment_constellation"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Customer Segment Constellation Example"
+}

@@ -1,0 +1,97 @@
+{
+  "events": [
+    {
+      "id": "education-api-lifecycle-view-event-1",
+      "kind": "intake",
+      "label": "Api Lifecycle Opened",
+      "lane": "concept",
+      "metadata": {
+        "sequence": 1,
+        "template_id": "education.api_lifecycle_view"
+      },
+      "status": "success",
+      "summary": "API Lifecycle View advanced through intake with pipeline_flow context.",
+      "time": "2026-06-03T13:52:00Z"
+    },
+    {
+      "id": "education-api-lifecycle-view-event-2",
+      "kind": "analysis",
+      "label": "Lifecycle View Triaged",
+      "lane": "step",
+      "metadata": {
+        "sequence": 2,
+        "template_id": "education.api_lifecycle_view"
+      },
+      "status": "running",
+      "summary": "API Lifecycle View advanced through analysis with pipeline_flow context.",
+      "time": "2026-06-03T14:09:00Z"
+    },
+    {
+      "id": "education-api-lifecycle-view-event-3",
+      "kind": "decision",
+      "label": "View Api Mapped",
+      "lane": "assessment",
+      "metadata": {
+        "sequence": 3,
+        "template_id": "education.api_lifecycle_view"
+      },
+      "status": "warning",
+      "summary": "API Lifecycle View advanced through decision with pipeline_flow context.",
+      "time": "2026-06-03T14:26:00Z"
+    },
+    {
+      "id": "education-api-lifecycle-view-event-4",
+      "kind": "execution",
+      "label": "Api Lifecycle Acted",
+      "lane": "concept",
+      "metadata": {
+        "sequence": 4,
+        "template_id": "education.api_lifecycle_view"
+      },
+      "status": "success",
+      "summary": "API Lifecycle View advanced through execution with pipeline_flow context.",
+      "time": "2026-06-03T14:43:00Z"
+    },
+    {
+      "id": "education-api-lifecycle-view-event-5",
+      "kind": "verification",
+      "label": "Lifecycle View Checked",
+      "lane": "step",
+      "metadata": {
+        "sequence": 5,
+        "template_id": "education.api_lifecycle_view"
+      },
+      "status": "error",
+      "summary": "API Lifecycle View advanced through verification with pipeline_flow context.",
+      "time": "2026-06-03T15:00:00Z"
+    },
+    {
+      "id": "education-api-lifecycle-view-event-6",
+      "kind": "handoff",
+      "label": "View Api Recovered",
+      "lane": "assessment",
+      "metadata": {
+        "sequence": 6,
+        "template_id": "education.api_lifecycle_view"
+      },
+      "status": "blocked",
+      "summary": "API Lifecycle View advanced through handoff with pipeline_flow context.",
+      "time": "2026-06-03T15:17:00Z"
+    },
+    {
+      "id": "education-api-lifecycle-view-event-7",
+      "kind": "closeout",
+      "label": "Api Lifecycle Closed",
+      "lane": "concept",
+      "metadata": {
+        "sequence": 7,
+        "template_id": "education.api_lifecycle_view"
+      },
+      "status": "success",
+      "summary": "API Lifecycle View advanced through closeout with pipeline_flow context.",
+      "time": "2026-06-03T15:34:00Z"
+    }
+  ],
+  "schema": "efp.visual.input.timeline.v1",
+  "title": "API Lifecycle View Example"
+}

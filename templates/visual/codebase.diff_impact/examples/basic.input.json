@@ -1,22 +1,226 @@
 {
-  "schema": "efp.visual.input.graph_events.v1",
-  "title": "Diff Impact",
-  "nodes": [
-    {"id": "changed_file", "label": "render.go", "kind": "file", "status": "warning"},
-    {"id": "module_render", "label": "render module", "kind": "module", "status": "warning"},
-    {"id": "module_commands", "label": "commands module", "kind": "module", "status": "info"},
-    {"id": "tests", "label": "visual contract tests", "kind": "test", "status": "pending"},
-    {"id": "release", "label": "release artifact", "kind": "release", "status": "info"}
-  ],
   "edges": [
-    {"from": "changed_file", "to": "module_render", "kind": "changes"},
-    {"from": "module_render", "to": "module_commands", "kind": "api"},
-    {"from": "module_render", "to": "tests", "kind": "covered_by"},
-    {"from": "module_commands", "to": "release", "kind": "ships"}
+    {
+      "from": "codebase-diff-impact-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "codebase-diff-impact-node-2",
+      "weight": 2
+    },
+    {
+      "from": "codebase-diff-impact-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "codebase-diff-impact-node-3",
+      "weight": 3
+    },
+    {
+      "from": "codebase-diff-impact-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "codebase-diff-impact-node-4",
+      "weight": 2
+    },
+    {
+      "from": "codebase-diff-impact-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "codebase-diff-impact-node-5",
+      "weight": 4
+    },
+    {
+      "from": "codebase-diff-impact-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "codebase-diff-impact-node-6",
+      "weight": 2
+    },
+    {
+      "from": "codebase-diff-impact-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "codebase-diff-impact-node-6",
+      "weight": 1
+    }
   ],
   "events": [
-    {"id": "d1", "time": "2026-06-03T13:50:00Z", "kind": "change", "node_id": "changed_file", "summary": "Renderer file changed."},
-    {"id": "d2", "time": "2026-06-03T13:51:00Z", "kind": "impact", "node_id": "module_render", "summary": "Render module impacted."},
-    {"id": "d3", "time": "2026-06-03T13:52:00Z", "kind": "test", "node_id": "tests", "summary": "Contract tests selected."}
-  ]
+    {
+      "id": "codebase-diff-impact-event-1",
+      "kind": "start",
+      "label": "Diff Impact Opened",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact"
+      },
+      "node_id": "codebase-diff-impact-node-1",
+      "status": "running",
+      "summary": "Diff Impact event 1 references Diff Impact Intake.",
+      "time": "2026-06-03T14:57:00Z"
+    },
+    {
+      "id": "codebase-diff-impact-event-2",
+      "kind": "tool",
+      "label": "Diff Impact Triaged",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact"
+      },
+      "node_id": "codebase-diff-impact-node-2",
+      "status": "success",
+      "summary": "Diff Impact event 2 references Impact Diff Core.",
+      "time": "2026-06-03T15:08:00Z"
+    },
+    {
+      "id": "codebase-diff-impact-event-3",
+      "kind": "checkpoint",
+      "label": "Diff Impact Mapped",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact"
+      },
+      "node_id": "codebase-diff-impact-node-3",
+      "status": "warning",
+      "summary": "Diff Impact event 3 references Diff Impact Policy.",
+      "time": "2026-06-03T15:19:00Z"
+    },
+    {
+      "id": "codebase-diff-impact-event-4",
+      "kind": "decision",
+      "label": "Diff Impact Acted",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact"
+      },
+      "node_id": "codebase-diff-impact-node-4",
+      "status": "running",
+      "summary": "Diff Impact event 4 references Impact Diff Execution.",
+      "time": "2026-06-03T15:30:00Z"
+    },
+    {
+      "id": "codebase-diff-impact-event-5",
+      "kind": "recovery",
+      "label": "Diff Impact Checked",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact"
+      },
+      "node_id": "codebase-diff-impact-node-5",
+      "status": "error",
+      "summary": "Diff Impact event 5 references Diff Impact Risk.",
+      "time": "2026-06-03T15:41:00Z"
+    },
+    {
+      "id": "codebase-diff-impact-event-6",
+      "kind": "finish",
+      "label": "Diff Impact Recovered",
+      "metadata": {
+        "layout": "ripple",
+        "template_id": "codebase.diff_impact"
+      },
+      "node_id": "codebase-diff-impact-node-6",
+      "status": "success",
+      "summary": "Diff Impact event 6 references Impact Diff Outcome.",
+      "time": "2026-06-03T15:52:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "source",
+      "id": "codebase-diff-impact-node-1",
+      "kind": "diff",
+      "label": "Diff Impact Intake",
+      "metadata": {
+        "detail": "Diff Impact signal 1",
+        "owner": "source",
+        "template_id": "codebase.diff_impact"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "test",
+      "id": "codebase-diff-impact-node-2",
+      "kind": "impact",
+      "label": "Impact Diff Core",
+      "metadata": {
+        "detail": "Diff Impact signal 2",
+        "owner": "test",
+        "template_id": "codebase.diff_impact"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "release",
+      "id": "codebase-diff-impact-node-3",
+      "kind": "release",
+      "label": "Diff Impact Policy",
+      "metadata": {
+        "detail": "Diff Impact signal 3",
+        "owner": "release",
+        "template_id": "codebase.diff_impact"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "source",
+      "id": "codebase-diff-impact-node-4",
+      "kind": "source",
+      "label": "Impact Diff Execution",
+      "metadata": {
+        "detail": "Diff Impact signal 4",
+        "owner": "source",
+        "template_id": "codebase.diff_impact"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "test",
+      "id": "codebase-diff-impact-node-5",
+      "kind": "diff",
+      "label": "Diff Impact Risk",
+      "metadata": {
+        "detail": "Diff Impact signal 5",
+        "owner": "test",
+        "template_id": "codebase.diff_impact"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "release",
+      "id": "codebase-diff-impact-node-6",
+      "kind": "impact",
+      "label": "Impact Diff Outcome",
+      "metadata": {
+        "detail": "Diff Impact signal 6",
+        "owner": "release",
+        "template_id": "codebase.diff_impact"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Diff Impact Example"
 }

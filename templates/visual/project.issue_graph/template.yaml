@@ -1,14 +1,15 @@
 id: project.issue_graph
 version: 1.0.0
-title: Project Issue Graph
-description: Map epics, stories, pull requests, and tests.
+category: project
+title: Issue Graph
+description: Visualize Issue Graph as a complete offline graph view for project workflows using the graph_2_5d layout.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:
   contract: offline.graph.v1
 layout:
-  preset: dag
-  group_by: issue_type
+  preset: graph_2_5d
+  group_by: group
 offline:
   required: true
   forbid_network: true
@@ -21,20 +22,30 @@ assets:
   - from: ../_shared/runtime/efp-visual-runtime.css
     to: assets/runtime/efp-visual-runtime.css
   - from: style.css
-    to: assets/template/style.css
+    to: assets/templates/project.issue_graph/style.css
 styles:
   - assets/runtime/efp-visual-runtime.css
-  - assets/template/style.css
+  - assets/templates/project.issue_graph/style.css
 scripts:
   - manifest.js
   - data.js
   - assets/runtime/efp-visual-runtime.iife.js
   - assets/runtime/efp-visual-renderers.iife.js
 interactions:
-  - inspect
-  - filter
-  - search
+  - hover_tooltip
+  - click_inspect
+  - search_node
+  - filter_by_type
+  - filter_by_status
+  - focus_path
+  - export_json
 limits:
   max_nodes: 1000
   max_edges: 3000
   max_events: 5000
+  max_items: 2000
+tags:
+  - graph
+  - graph_2_5d
+  - issue
+  - project

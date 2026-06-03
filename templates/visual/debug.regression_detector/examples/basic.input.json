@@ -1,0 +1,97 @@
+{
+  "events": [
+    {
+      "id": "debug-regression-detector-event-1",
+      "kind": "intake",
+      "label": "Regression Detector Opened",
+      "lane": "symptom",
+      "metadata": {
+        "sequence": 1,
+        "template_id": "debug.regression_detector"
+      },
+      "status": "success",
+      "summary": "Regression Detector advanced through intake with river context.",
+      "time": "2026-06-03T10:18:00Z"
+    },
+    {
+      "id": "debug-regression-detector-event-2",
+      "kind": "analysis",
+      "label": "Detector Regression Triaged",
+      "lane": "cause",
+      "metadata": {
+        "sequence": 2,
+        "template_id": "debug.regression_detector"
+      },
+      "status": "running",
+      "summary": "Regression Detector advanced through analysis with river context.",
+      "time": "2026-06-03T10:35:00Z"
+    },
+    {
+      "id": "debug-regression-detector-event-3",
+      "kind": "decision",
+      "label": "Regression Detector Mapped",
+      "lane": "mitigation",
+      "metadata": {
+        "sequence": 3,
+        "template_id": "debug.regression_detector"
+      },
+      "status": "warning",
+      "summary": "Regression Detector advanced through decision with river context.",
+      "time": "2026-06-03T10:52:00Z"
+    },
+    {
+      "id": "debug-regression-detector-event-4",
+      "kind": "execution",
+      "label": "Detector Regression Acted",
+      "lane": "symptom",
+      "metadata": {
+        "sequence": 4,
+        "template_id": "debug.regression_detector"
+      },
+      "status": "success",
+      "summary": "Regression Detector advanced through execution with river context.",
+      "time": "2026-06-03T11:09:00Z"
+    },
+    {
+      "id": "debug-regression-detector-event-5",
+      "kind": "verification",
+      "label": "Regression Detector Checked",
+      "lane": "cause",
+      "metadata": {
+        "sequence": 5,
+        "template_id": "debug.regression_detector"
+      },
+      "status": "error",
+      "summary": "Regression Detector advanced through verification with river context.",
+      "time": "2026-06-03T11:26:00Z"
+    },
+    {
+      "id": "debug-regression-detector-event-6",
+      "kind": "handoff",
+      "label": "Detector Regression Recovered",
+      "lane": "mitigation",
+      "metadata": {
+        "sequence": 6,
+        "template_id": "debug.regression_detector"
+      },
+      "status": "blocked",
+      "summary": "Regression Detector advanced through handoff with river context.",
+      "time": "2026-06-03T11:43:00Z"
+    },
+    {
+      "id": "debug-regression-detector-event-7",
+      "kind": "closeout",
+      "label": "Regression Detector Closed",
+      "lane": "symptom",
+      "metadata": {
+        "sequence": 7,
+        "template_id": "debug.regression_detector"
+      },
+      "status": "success",
+      "summary": "Regression Detector advanced through closeout with river context.",
+      "time": "2026-06-03T12:00:00Z"
+    }
+  ],
+  "schema": "efp.visual.input.timeline.v1",
+  "title": "Regression Detector Example"
+}

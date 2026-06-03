@@ -1,189 +1,335 @@
 {
-  "schema": "efp.visual.template_input_schema.v1",
-  "template_id": "knowledge.evidence_board",
-  "input_schema_kind": "evidence_v1",
-  "json_schema": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "efp.visual.input.evidence.v1",
-    "title": "EFP Visual Evidence Input v1",
-    "description": "Evidence board input for offline visual templates.",
-    "type": "object",
-    "required": [
-      "claims",
-      "sources"
-    ],
-    "additionalProperties": true,
-    "properties": {
-      "schema": {
-        "type": "string",
-        "const": "efp.visual.input.evidence.v1"
-      },
-      "title": {
-        "type": "string"
-      },
-      "claims": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/claim"
-        }
-      },
-      "sources": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/source"
-        }
-      },
-      "links": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/link"
-        }
-      }
-    },
-    "$defs": {
-      "object": {
-        "type": "object",
-        "additionalProperties": true
-      },
-      "claim": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "text": {
-            "type": "string"
-          },
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "status": {
-            "type": "string"
-          },
-          "metadata": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      },
-      "source": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "title": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "reliability": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "metadata": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      },
-      "link": {
-        "type": "object",
-        "required": [
-          "claim_id",
-          "source_id"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "claim_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "source_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "relation": {
-            "type": "string"
-          },
-          "weight": {
-            "type": "number"
-          }
-        }
-      }
-    }
-  },
   "example": {
-    "schema": "efp.visual.input.evidence.v1",
-    "title": "Evidence Board",
     "claims": [
       {
-        "id": "claim_1",
-        "text": "Artifacts can open offline.",
-        "confidence": 0.92,
-        "status": "supported"
+        "confidence": 0.82,
+        "id": "knowledge-evidence-board-claim-1",
+        "status": "supported",
+        "text": "Evidence Board is supported by current artifacts"
       },
       {
-        "id": "claim_2",
-        "text": "Remote assets are required.",
-        "confidence": 0.12,
-        "status": "refuted"
+        "confidence": 0.61,
+        "id": "knowledge-evidence-board-claim-2",
+        "status": "warning",
+        "text": "Board Evidence has a known gap"
       },
       {
-        "id": "claim_3",
-        "text": "Relative paths support proxy subpaths.",
-        "confidence": 0.84,
-        "status": "supported"
-      }
-    ],
-    "sources": [
-      {
-        "id": "source_1",
-        "title": "Offline scanner",
-        "kind": "test",
-        "reliability": 0.9
+        "confidence": 0.44,
+        "id": "knowledge-evidence-board-claim-3",
+        "status": "refuted",
+        "text": "Evidence Board conflicts with stale assumptions"
       },
       {
-        "id": "source_2",
-        "title": "Rendered manifest",
-        "kind": "artifact",
-        "reliability": 0.86
-      },
-      {
-        "id": "source_3",
-        "title": "Template contract",
-        "kind": "spec",
-        "reliability": 0.82
+        "confidence": 0.76,
+        "id": "knowledge-evidence-board-claim-4",
+        "status": "success",
+        "text": "Board Evidence is ready for review"
       }
     ],
     "links": [
       {
-        "claim_id": "claim_1",
-        "source_id": "source_1",
-        "relation": "supports"
+        "claim_id": "knowledge-evidence-board-claim-1",
+        "relation": "supports",
+        "source_id": "knowledge-evidence-board-source-1",
+        "weight": 0.9
       },
       {
-        "claim_id": "claim_2",
-        "source_id": "source_3",
-        "relation": "refutes"
+        "claim_id": "knowledge-evidence-board-claim-1",
+        "relation": "mentions",
+        "source_id": "knowledge-evidence-board-source-2",
+        "weight": 0.5
       },
       {
-        "claim_id": "claim_3",
-        "source_id": "source_2",
-        "relation": "supports"
+        "claim_id": "knowledge-evidence-board-claim-2",
+        "relation": "supports",
+        "source_id": "knowledge-evidence-board-source-3",
+        "weight": 0.6
+      },
+      {
+        "claim_id": "knowledge-evidence-board-claim-3",
+        "relation": "refutes",
+        "source_id": "knowledge-evidence-board-source-4",
+        "weight": 0.7
+      },
+      {
+        "claim_id": "knowledge-evidence-board-claim-4",
+        "relation": "supports",
+        "source_id": "knowledge-evidence-board-source-5",
+        "weight": 0.8
+      },
+      {
+        "claim_id": "knowledge-evidence-board-claim-2",
+        "relation": "mentions",
+        "source_id": "knowledge-evidence-board-source-5",
+        "weight": 0.4
       }
-    ]
-  }
+    ],
+    "schema": "efp.visual.input.evidence.v1",
+    "sources": [
+      {
+        "id": "knowledge-evidence-board-source-1",
+        "kind": "document",
+        "reliability": 0.87,
+        "title": "Evidence Board design note"
+      },
+      {
+        "id": "knowledge-evidence-board-source-2",
+        "kind": "log",
+        "reliability": 0.72,
+        "title": "Board Evidence run log"
+      },
+      {
+        "id": "knowledge-evidence-board-source-3",
+        "kind": "review",
+        "reliability": 0.66,
+        "title": "Evidence Board review thread"
+      },
+      {
+        "id": "knowledge-evidence-board-source-4",
+        "kind": "metric",
+        "reliability": 0.79,
+        "title": "Board Evidence benchmark"
+      },
+      {
+        "id": "knowledge-evidence-board-source-5",
+        "kind": "record",
+        "reliability": 0.91,
+        "title": "Evidence Board decision record"
+      }
+    ],
+    "title": "Evidence Board Example"
+  },
+  "input_schema_kind": "evidence_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "claims": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "text"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "links": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "claim_id",
+            "source_id",
+            "relation"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.evidence.v1",
+        "type": "string"
+      },
+      "sources": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "title"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "claims",
+      "sources",
+      "links"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "knowledge.evidence_board"
 }

@@ -1,9 +1,12 @@
 package commands
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"engineering-flow-platform-tools/internal/output"
@@ -19,12 +22,39 @@ func templateCmd(o *Opts) *cobra.Command {
 		Use:   "template",
 		Short: "Inspect local visual templates",
 	}
-	c.AddCommand(templateListCmd(o), templateGetCmd(o), templateSchemaCmd(o), templateDoctorCmd(o))
+	c.AddCommand(templateCategoriesCmd(o), templateListCmd(o), templateGetCmd(o), templateSchemaCmd(o), templateDoctorCmd(o))
 	return c
 }
 
-func templateListCmd(o *Opts) *cobra.Command {
+func templateCategoriesCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{
+		Use:   "categories",
+		Short: "List visual template categories and canonical counts",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			templateDir, err := visualconfig.ResolveTemplateDir(o.TemplateDir, o.Config)
+			if err != nil {
+				return print(cmd, o, failureFromError(err, "template_dir_missing"))
+			}
+			registry, err := manifest.LoadRegistry(templateDir)
+			if err != nil {
+				return print(cmd, o, failureFromError(err, "template_registry_missing"))
+			}
+			counts := registry.CategoryCounts()
+			return print(cmd, o, output.Success("", map[string]any{
+				"template_dir":     templateDir,
+				"categories":       manifest.SortedCategoryCounts(counts),
+				"canonical_count":  registry.CanonicalCount(),
+				"total_count":      registry.TotalCount(),
+				"alias_count":      registry.AliasCount(),
+				"registry_version": registry.Version,
+			}))
+		},
+	}
+}
+
+func templateListCmd(o *Opts) *cobra.Command {
+	var category, query, renderer, schemaKind string
+	c := &cobra.Command{
 		Use:   "list",
 		Short: "List visual templates from registry.json",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -36,13 +66,30 @@ func templateListCmd(o *Opts) *cobra.Command {
 			if err != nil {
 				return print(cmd, o, failureFromError(err, "template_registry_missing"))
 			}
+			templates := filterRegistryTemplates(registry.Templates, templateListFilter{
+				Category:   category,
+				Query:      query,
+				Renderer:   renderer,
+				SchemaKind: schemaKind,
+			})
 			return print(cmd, o, output.Success("", map[string]any{
-				"template_dir": templateDir,
-				"version":      registry.Version,
-				"templates":    registry.Templates,
+				"template_dir":    templateDir,
+				"version":         registry.Version,
+				"canonical_count": registry.CanonicalCount(),
+				"total_count":     registry.TotalCount(),
+				"alias_count":     registry.AliasCount(),
+				"matched_count":   len(templates),
+				"categories":      manifest.SortedCategoryCounts(registry.CategoryCounts()),
+				"filters":         normalizedTemplateListFilter(category, query, renderer, schemaKind),
+				"templates":       templates,
 			}))
 		},
 	}
+	c.Flags().StringVar(&category, "category", "", "Filter templates by category")
+	c.Flags().StringVar(&query, "query", "", "Filter templates by id, title, description, or tag")
+	c.Flags().StringVar(&renderer, "renderer", "", "Filter templates by renderer contract")
+	c.Flags().StringVar(&schemaKind, "schema-kind", "", "Filter templates by input schema kind")
+	return c
 }
 
 func templateGetCmd(o *Opts) *cobra.Command {
@@ -59,7 +106,7 @@ func templateGetCmd(o *Opts) *cobra.Command {
 			if err != nil {
 				return print(cmd, o, failureFromError(err, "template_registry_missing"))
 			}
-			entry, ok := registry.Find(args[0])
+			entry, requestedID, ok := registry.Resolve(args[0])
 			if !ok {
 				return print(cmd, o, output.Failure("template_not_found", "visual template was not found: "+args[0], "Run visual template list --json and choose one of the returned ids.", 404))
 			}
@@ -70,14 +117,30 @@ func templateGetCmd(o *Opts) *cobra.Command {
 			if err := manifest.ValidateTemplateManifest(templateDir, entry, &tpl); err != nil {
 				return print(cmd, o, failureFromError(err, "template_manifest_invalid"))
 			}
+			_, schemaFile, err := manifest.LoadTemplateInputSchema(templateDir, entry, tpl)
+			if err != nil {
+				return print(cmd, o, failureFromError(err, "template_manifest_invalid"))
+			}
 			return print(cmd, o, output.Success("", map[string]any{
 				"template_dir":      templateDir,
+				"requested_id":      requestedID,
+				"canonical_id":      tpl.ID,
 				"registry":          entry,
 				"template":          tpl,
 				"id":                tpl.ID,
+				"title":             tpl.Title,
+				"category":          tpl.Category,
+				"description":       tpl.Description,
 				"version":           tpl.Version,
 				"renderer":          tpl.Renderer,
+				"layout":            tpl.Layout,
 				"input_schema_kind": tpl.InputSchemaKind,
+				"tags":              tpl.Tags,
+				"interactions":      tpl.Interactions,
+				"limits":            tpl.Limits,
+				"schema_file":       schemaFile,
+				"example_file":      templateExampleRel(entry),
+				"aliases":           entry.Aliases,
 			}))
 		},
 	}
@@ -97,7 +160,7 @@ func templateSchemaCmd(o *Opts) *cobra.Command {
 			if err != nil {
 				return print(cmd, o, failureFromError(err, "template_registry_missing"))
 			}
-			entry, ok := registry.Find(args[0])
+			entry, requestedID, ok := registry.Resolve(args[0])
 			if !ok {
 				return print(cmd, o, output.Failure("template_not_found", "Template "+args[0]+" was not found.", "Run visual template list --template-dir "+templateDir+" --json.", 404))
 			}
@@ -114,11 +177,18 @@ func templateSchemaCmd(o *Opts) *cobra.Command {
 			}
 			return print(cmd, o, output.Success("", map[string]any{
 				"template": map[string]any{
+					"requested_id":      requestedID,
+					"canonical_id":      tpl.ID,
 					"id":                tpl.ID,
 					"version":           tpl.Version,
+					"category":          tpl.Category,
 					"title":             tpl.Title,
+					"description":       tpl.Description,
 					"renderer":          tpl.Renderer.Contract,
+					"layout":            tpl.Layout,
 					"input_schema_kind": tpl.InputSchemaKind,
+					"tags":              tpl.Tags,
+					"aliases":           entry.Aliases,
 				},
 				"schema_file":  schemaFile,
 				"json_schema":  doc.JSONSchema,
@@ -142,59 +212,95 @@ func templateDoctorCmd(o *Opts) *cobra.Command {
 			if err != nil {
 				return print(cmd, o, failureFromError(err, "template_registry_missing"))
 			}
+			if err := render.ScanOffline(templateDir); err != nil {
+				return print(cmd, o, doctorFailure(err, "", templateDir))
+			}
 			var checked []doctorTemplateResult
 			checkedExamples := 0
 			renderedExamples := 0
+			exampleHashes := map[string]string{}
 			for _, entry := range registry.Templates {
+				if err := checkTemplateRequiredFiles(templateDir, entry); err != nil {
+					return print(cmd, o, doctorFailure(err, entry.ID, filepath.ToSlash(entry.Path)))
+				}
 				tpl, err := manifest.LoadTemplateManifest(templateDir, entry)
 				if err != nil {
-					return print(cmd, o, failureFromError(withTemplateContext(err, entry.ID, filepath.ToSlash(entry.Path)), "template_manifest_invalid"))
+					return print(cmd, o, doctorFailure(err, entry.ID, filepath.ToSlash(entry.Path)))
 				}
 				if err := manifest.ValidateTemplateManifest(templateDir, entry, &tpl); err != nil {
-					return print(cmd, o, failureFromError(withTemplateContext(err, entry.ID, filepath.ToSlash(entry.Path)), "template_manifest_invalid"))
+					return print(cmd, o, doctorFailure(err, entry.ID, filepath.ToSlash(entry.Path)))
 				}
 				_, schemaFile, err := manifest.LoadTemplateInputSchema(templateDir, entry, tpl)
 				if err != nil {
-					return print(cmd, o, failureFromError(withTemplateContext(err, entry.ID, schemaFile), "template_manifest_invalid"))
+					return print(cmd, o, doctorFailure(err, entry.ID, schemaFile))
 				}
 				examplePath := templateExamplePath(templateDir, entry)
 				exampleRel := templateExampleRel(entry)
 				raw, err := os.ReadFile(examplePath)
 				if err != nil {
-					return print(cmd, o, failureFromError(visualCommandError{
-						code:       "template_manifest_invalid",
+					return print(cmd, o, doctorFailure(visualCommandError{
+						code:       "template_doctor_failed",
 						message:    "visual template example was not found: " + exampleRel,
 						hint:       "Add examples/basic.input.json for " + entry.ID + ".",
 						status:     400,
 						templateID: entry.ID,
 						file:       exampleRel,
-					}, "template_manifest_invalid"))
+					}, entry.ID, exampleRel))
 				}
 				if _, err := visualschema.ValidateInput(tpl.InputSchemaKind, raw, tpl.Limits); err != nil {
-					return print(cmd, o, failureFromError(withTemplateContext(err, entry.ID, exampleRel), "template_input_invalid"))
+					return print(cmd, o, doctorFailure(err, entry.ID, exampleRel))
 				}
 				checkedExamples++
+				exampleHashes[hashBytes(raw)] = entry.ID
 				if err := renderDoctorExample(templateDir, entry, examplePath); err != nil {
-					return print(cmd, o, failureFromError(withTemplateContext(err, entry.ID, exampleRel), "output_write_failed"))
+					return print(cmd, o, doctorFailure(err, entry.ID, exampleRel))
 				}
 				renderedExamples++
 				checked = append(checked, doctorTemplateResult{
 					ID:              tpl.ID,
 					Version:         tpl.Version,
+					Category:        tpl.Category,
 					InputSchemaKind: tpl.InputSchemaKind,
 					Example:         exampleRel,
 					Rendered:        true,
 				})
 			}
+			if registry.CanonicalCount() != 195 {
+				return print(cmd, o, doctorFailure(visualCommandError{
+					code:    "template_doctor_failed",
+					message: "visual template registry has unexpected canonical count.",
+					hint:    "Expected 195 canonical templates in templates/visual/registry.json.",
+					status:  400,
+					file:    filepath.Join(templateDir, "registry.json"),
+				}, "", filepath.Join(templateDir, "registry.json")))
+			}
+			counts := registry.CategoryCounts()
+			if err := manifest.ValidateExpectedCategoryCounts(counts); err != nil {
+				return print(cmd, o, doctorFailure(err, "", filepath.Join(templateDir, "registry.json")))
+			}
+			if len(exampleHashes) < minInt(190, len(registry.Templates)) {
+				return print(cmd, o, doctorFailure(visualCommandError{
+					code:    "template_doctor_failed",
+					message: "visual template examples are not sufficiently unique.",
+					hint:    "Provide semantic examples; at least 190 examples/basic.input.json files must have unique content hashes.",
+					status:  400,
+				}, "", templateDir))
+			}
 			return print(cmd, o, output.Success("", map[string]any{
-				"template_dir":      templateDir,
-				"registry_version":  registry.Version,
-				"checked_templates": len(checked),
-				"checked_examples":  checkedExamples,
-				"rendered_examples": renderedExamples,
-				"offline":           true,
-				"offline_strict":    o.OfflineStrict,
-				"templates":         checked,
+				"template_dir":          templateDir,
+				"registry_version":      registry.Version,
+				"canonical_templates":   registry.CanonicalCount(),
+				"total_templates":       registry.TotalCount(),
+				"alias_count":           registry.AliasCount(),
+				"categories":            counts,
+				"category_list":         manifest.SortedCategoryCounts(counts),
+				"checked_templates":     len(checked),
+				"checked_examples":      checkedExamples,
+				"rendered_examples":     renderedExamples,
+				"unique_example_hashes": len(exampleHashes),
+				"offline":               true,
+				"offline_strict":        o.OfflineStrict,
+				"templates":             checked,
 			}))
 		},
 	}
@@ -203,9 +309,63 @@ func templateDoctorCmd(o *Opts) *cobra.Command {
 type doctorTemplateResult struct {
 	ID              string `json:"id"`
 	Version         string `json:"version"`
+	Category        string `json:"category"`
 	InputSchemaKind string `json:"input_schema_kind"`
 	Example         string `json:"example"`
 	Rendered        bool   `json:"rendered"`
+}
+
+type templateListFilter struct {
+	Category   string
+	Query      string
+	Renderer   string
+	SchemaKind string
+}
+
+func filterRegistryTemplates(entries []manifest.RegistryEntry, filter templateListFilter) []manifest.RegistryEntry {
+	filter.Category = strings.ToLower(strings.TrimSpace(filter.Category))
+	filter.Query = strings.ToLower(strings.TrimSpace(filter.Query))
+	filter.Renderer = strings.TrimSpace(filter.Renderer)
+	filter.SchemaKind = strings.ToLower(strings.TrimSpace(filter.SchemaKind))
+	var out []manifest.RegistryEntry
+	for _, entry := range entries {
+		if filter.Category != "" && strings.ToLower(entry.Category) != filter.Category {
+			continue
+		}
+		if filter.Renderer != "" && entry.Renderer != filter.Renderer {
+			continue
+		}
+		if filter.SchemaKind != "" && strings.ToLower(entry.InputSchemaKind) != filter.SchemaKind {
+			continue
+		}
+		if filter.Query != "" && !entryMatchesQuery(entry, filter.Query) {
+			continue
+		}
+		out = append(out, entry)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+func entryMatchesQuery(entry manifest.RegistryEntry, query string) bool {
+	fields := []string{entry.ID, entry.Title, entry.Description, entry.Category, entry.Renderer, entry.InputSchemaKind, entry.LayoutPreset}
+	fields = append(fields, entry.Tags...)
+	fields = append(fields, entry.Aliases...)
+	for _, field := range fields {
+		if strings.Contains(strings.ToLower(field), query) {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizedTemplateListFilter(category, query, renderer, schemaKind string) map[string]string {
+	return map[string]string{
+		"category":    strings.ToLower(strings.TrimSpace(category)),
+		"query":       strings.TrimSpace(query),
+		"renderer":    strings.TrimSpace(renderer),
+		"schema_kind": strings.ToLower(strings.TrimSpace(schemaKind)),
+	}
 }
 
 func checkTemplateRequiredFiles(templateDir string, entry manifest.RegistryEntry) error {
@@ -241,6 +401,45 @@ func renderDoctorExample(templateDir string, entry manifest.RegistryEntry, examp
 		return err
 	}
 	return render.ScanOffline(outDir)
+}
+
+func doctorFailure(err error, templateID, file string) output.Envelope {
+	message := "visual template doctor failed."
+	hint := "Fix this template and rerun visual template doctor --template-dir ./templates/visual --json."
+	status := 400
+	var missing []string
+	var ce codedError
+	if errors.As(err, &ce) {
+		message = ce.Message()
+		if strings.TrimSpace(ce.Hint()) != "" {
+			hint = ce.Hint()
+		}
+		status = ce.Status()
+		missing = missingFilesFromError(err)
+	} else if err != nil {
+		message = err.Error()
+	}
+	if templateID == "" {
+		var te templateIDError
+		if errors.As(err, &te) {
+			templateID = te.TemplateID()
+		}
+	}
+	if file == "" {
+		var fe fileError
+		if errors.As(err, &fe) {
+			file = fe.File()
+		}
+	}
+	return failureFromError(visualCommandError{
+		code:         "template_doctor_failed",
+		message:      message,
+		hint:         hint,
+		status:       status,
+		templateID:   templateID,
+		file:         file,
+		missingFiles: missing,
+	}, "template_doctor_failed")
 }
 
 func checkRenderedOutputFiles(outDir string) error {
@@ -293,6 +492,18 @@ func safeTempName(value string) string {
 		return "template"
 	}
 	return b.String()
+}
+
+func hashBytes(raw []byte) string {
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func outputFileError(code, message, hint string) error {

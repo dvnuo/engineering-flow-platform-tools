@@ -1,17 +1,146 @@
 {
-  "schema": "efp.visual.input.graph.v1",
-  "title": "Service Topology",
-  "nodes": [
-    {"id": "frontend", "label": "Frontend", "kind": "web", "status": "success"},
-    {"id": "backend", "label": "Backend API", "kind": "api", "status": "success"},
-    {"id": "database", "label": "Database", "kind": "db", "status": "warning"},
-    {"id": "cache", "label": "Cache", "kind": "infra", "status": "success"},
-    {"id": "external_api", "label": "External API", "kind": "external", "status": "info"}
-  ],
   "edges": [
-    {"from": "frontend", "to": "backend", "kind": "request"},
-    {"from": "backend", "to": "database", "kind": "query"},
-    {"from": "backend", "to": "cache", "kind": "cache"},
-    {"from": "backend", "to": "external_api", "kind": "integration"}
-  ]
+    {
+      "from": "service-topology-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "service-topology-node-2",
+      "weight": 2
+    },
+    {
+      "from": "service-topology-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "service-topology-node-3",
+      "weight": 3
+    },
+    {
+      "from": "service-topology-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "service-topology-node-4",
+      "weight": 2
+    },
+    {
+      "from": "service-topology-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "service-topology-node-5",
+      "weight": 4
+    },
+    {
+      "from": "service-topology-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "service-topology-node-6",
+      "weight": 2
+    },
+    {
+      "from": "service-topology-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "service-topology-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "input",
+      "id": "service-topology-node-1",
+      "kind": "topology",
+      "label": "Topology Topology Intake",
+      "metadata": {
+        "detail": "Topology signal 1",
+        "owner": "input",
+        "template_id": "service.topology"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "warning"
+    },
+    {
+      "group": "layout",
+      "id": "service-topology-node-2",
+      "kind": "layout",
+      "label": "Topology Topology Core",
+      "metadata": {
+        "detail": "Topology signal 2",
+        "owner": "layout",
+        "template_id": "service.topology"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "success"
+    },
+    {
+      "group": "output",
+      "id": "service-topology-node-3",
+      "kind": "output",
+      "label": "Topology Topology Policy",
+      "metadata": {
+        "detail": "Topology signal 3",
+        "owner": "output",
+        "template_id": "service.topology"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "input",
+      "id": "service-topology-node-4",
+      "kind": "input",
+      "label": "Topology Topology Execution",
+      "metadata": {
+        "detail": "Topology signal 4",
+        "owner": "input",
+        "template_id": "service.topology"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "error"
+    },
+    {
+      "group": "layout",
+      "id": "service-topology-node-5",
+      "kind": "topology",
+      "label": "Topology Topology Risk",
+      "metadata": {
+        "detail": "Topology signal 5",
+        "owner": "layout",
+        "template_id": "service.topology"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "running"
+    },
+    {
+      "group": "output",
+      "id": "service-topology-node-6",
+      "kind": "layout",
+      "label": "Topology Topology Outcome",
+      "metadata": {
+        "detail": "Topology signal 6",
+        "owner": "output",
+        "template_id": "service.topology"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "ok"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Topology Example"
 }

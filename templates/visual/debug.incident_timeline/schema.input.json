@@ -1,115 +1,193 @@
 {
-  "schema": "efp.visual.template_input_schema.v1",
-  "template_id": "debug.incident_timeline",
+  "example": {
+    "events": [
+      {
+        "id": "debug-incident-timeline-event-1",
+        "kind": "intake",
+        "label": "Incident Timeline Opened",
+        "lane": "symptom",
+        "metadata": {
+          "sequence": 1,
+          "template_id": "debug.incident_timeline"
+        },
+        "status": "success",
+        "summary": "Incident Timeline advanced through intake with incident_timeline context.",
+        "time": "2026-06-03T11:47:00Z"
+      },
+      {
+        "id": "debug-incident-timeline-event-2",
+        "kind": "analysis",
+        "label": "Timeline Incident Triaged",
+        "lane": "cause",
+        "metadata": {
+          "sequence": 2,
+          "template_id": "debug.incident_timeline"
+        },
+        "status": "running",
+        "summary": "Incident Timeline advanced through analysis with incident_timeline context.",
+        "time": "2026-06-03T12:04:00Z"
+      },
+      {
+        "id": "debug-incident-timeline-event-3",
+        "kind": "decision",
+        "label": "Incident Timeline Mapped",
+        "lane": "mitigation",
+        "metadata": {
+          "sequence": 3,
+          "template_id": "debug.incident_timeline"
+        },
+        "status": "warning",
+        "summary": "Incident Timeline advanced through decision with incident_timeline context.",
+        "time": "2026-06-03T12:21:00Z"
+      },
+      {
+        "id": "debug-incident-timeline-event-4",
+        "kind": "execution",
+        "label": "Timeline Incident Acted",
+        "lane": "symptom",
+        "metadata": {
+          "sequence": 4,
+          "template_id": "debug.incident_timeline"
+        },
+        "status": "success",
+        "summary": "Incident Timeline advanced through execution with incident_timeline context.",
+        "time": "2026-06-03T12:38:00Z"
+      },
+      {
+        "id": "debug-incident-timeline-event-5",
+        "kind": "verification",
+        "label": "Incident Timeline Checked",
+        "lane": "cause",
+        "metadata": {
+          "sequence": 5,
+          "template_id": "debug.incident_timeline"
+        },
+        "status": "error",
+        "summary": "Incident Timeline advanced through verification with incident_timeline context.",
+        "time": "2026-06-03T12:55:00Z"
+      },
+      {
+        "id": "debug-incident-timeline-event-6",
+        "kind": "handoff",
+        "label": "Timeline Incident Recovered",
+        "lane": "mitigation",
+        "metadata": {
+          "sequence": 6,
+          "template_id": "debug.incident_timeline"
+        },
+        "status": "blocked",
+        "summary": "Incident Timeline advanced through handoff with incident_timeline context.",
+        "time": "2026-06-03T13:12:00Z"
+      },
+      {
+        "id": "debug-incident-timeline-event-7",
+        "kind": "closeout",
+        "label": "Incident Timeline Closed",
+        "lane": "symptom",
+        "metadata": {
+          "sequence": 7,
+          "template_id": "debug.incident_timeline"
+        },
+        "status": "success",
+        "summary": "Incident Timeline advanced through closeout with incident_timeline context.",
+        "time": "2026-06-03T13:29:00Z"
+      }
+    ],
+    "schema": "efp.visual.input.timeline.v1",
+    "title": "Incident Timeline Example"
+  },
   "input_schema_kind": "timeline_v1",
   "json_schema": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "efp.visual.input.timeline.v1",
-    "title": "EFP Visual Timeline Input v1",
-    "description": "Timeline event input for offline visual templates.",
-    "type": "object",
-    "required": [
-      "events"
-    ],
+    "$schema": "efp.visual.local.schema",
     "additionalProperties": true,
     "properties": {
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
       "schema": {
-        "type": "string",
-        "const": "efp.visual.input.timeline.v1"
+        "const": "efp.visual.input.timeline.v1",
+        "type": "string"
       },
       "title": {
         "type": "string"
-      },
-      "events": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/event"
-        }
       }
     },
-    "$defs": {
-      "object": {
-        "type": "object",
-        "additionalProperties": true
-      },
-      "event": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "time": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "summary": {
-            "type": "string"
-          },
-          "metadata": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      }
-    }
+    "required": [
+      "events"
+    ],
+    "type": "object"
   },
-  "example": {
-    "schema": "efp.visual.input.timeline.v1",
-    "title": "Incident Timeline",
-    "events": [
-      {
-        "id": "i1",
-        "time": "2026-06-03T14:10:00Z",
-        "kind": "deploy",
-        "label": "Deploy",
-        "status": "success",
-        "summary": "New runtime adapter deployed."
-      },
-      {
-        "id": "i2",
-        "time": "2026-06-03T14:20:00Z",
-        "kind": "error_spike",
-        "label": "Error spike",
-        "status": "error",
-        "summary": "Proxy errors increased."
-      },
-      {
-        "id": "i3",
-        "time": "2026-06-03T14:30:00Z",
-        "kind": "investigation",
-        "label": "Investigation",
-        "status": "warning",
-        "summary": "Logs and snapshots inspected."
-      },
-      {
-        "id": "i4",
-        "time": "2026-06-03T14:40:00Z",
-        "kind": "root_cause",
-        "label": "Root cause",
-        "status": "info",
-        "summary": "Relative path assumption found."
-      },
-      {
-        "id": "i5",
-        "time": "2026-06-03T14:50:00Z",
-        "kind": "fix",
-        "label": "Fix",
-        "status": "success",
-        "summary": "Path handling corrected."
-      }
-    ]
-  }
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "debug.incident_timeline"
 }

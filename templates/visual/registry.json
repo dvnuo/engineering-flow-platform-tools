@@ -1,185 +1,3815 @@
 {
-  "version": 1,
+  "version": 2,
   "templates": [
     {
-      "id": "agent.run_trace",
+      "id": "foundation.city_map",
       "version": "1.0.0",
-      "path": "agent.run_trace/template.yaml",
-      "title": "Agent Run Trace",
-      "description": "Visualize an agent run as an offline interactive timeline and graph.",
-      "input_schema": "graph_events_v1",
-      "renderer": "offline.graph.v1"
+      "category": "foundation",
+      "path": "foundation.city_map/template.yaml",
+      "title": "City Map",
+      "description": "Visualize City Map as a complete offline graph view for foundation workflows using the city_map layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "city_map",
+      "tags": [
+        "city",
+        "city_map",
+        "foundation",
+        "graph",
+        "map"
+      ],
+      "aliases": []
     },
     {
-      "id": "agent.thinking_timeline",
+      "id": "foundation.constellation",
       "version": "1.0.0",
-      "path": "agent.thinking_timeline/template.yaml",
-      "title": "Agent Thinking Timeline",
-      "description": "Show reasoning, tool, permission, and response phases as an offline timeline.",
-      "input_schema": "graph_events_v1",
-      "renderer": "offline.timeline.v1"
+      "category": "foundation",
+      "path": "foundation.constellation/template.yaml",
+      "title": "Constellation",
+      "description": "Visualize Constellation as a complete offline graph view for foundation workflows using the constellation layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "constellation",
+        "foundation",
+        "graph"
+      ],
+      "aliases": []
     },
     {
-      "id": "agent.tool_constellation",
+      "id": "foundation.control_room",
       "version": "1.0.0",
-      "path": "agent.tool_constellation/template.yaml",
-      "title": "Agent Tool Constellation",
-      "description": "Map tool usage around an agent run with local SVG rendering.",
-      "input_schema": "graph_events_v1",
-      "renderer": "offline.graph.v1"
+      "category": "foundation",
+      "path": "foundation.control_room/template.yaml",
+      "title": "Control Room",
+      "description": "Visualize Control Room as a complete offline matrix view for foundation workflows using the control_room layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "control",
+        "control_room",
+        "foundation",
+        "matrix",
+        "room"
+      ],
+      "aliases": []
     },
     {
-      "id": "agent.permission_gate",
+      "id": "foundation.diff_split_view",
       "version": "1.0.0",
-      "path": "agent.permission_gate/template.yaml",
-      "title": "Agent Permission Gate",
-      "description": "Visualize allow, ask, and deny decisions around guarded commands.",
-      "input_schema": "graph_events_v1",
-      "renderer": "offline.graph.v1"
+      "category": "foundation",
+      "path": "foundation.diff_split_view/template.yaml",
+      "title": "Diff Split View",
+      "description": "Visualize Diff Split View as a complete offline graph_events view for foundation workflows using the diff_split_view layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "diff",
+        "diff_split_view",
+        "foundation",
+        "graph_events",
+        "split",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.document_wall",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.document_wall/template.yaml",
+      "title": "Document Wall",
+      "description": "Visualize Document Wall as a complete offline evidence view for foundation workflows using the document_wall layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "document_wall",
+      "tags": [
+        "document",
+        "document_wall",
+        "evidence",
+        "foundation",
+        "wall"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.flow_particles",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.flow_particles/template.yaml",
+      "title": "Flow Particles",
+      "description": "Visualize Flow Particles as a complete offline graph_events view for foundation workflows using the flow_particles layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "flow",
+        "flow_particles",
+        "foundation",
+        "graph_events",
+        "particles"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.graph_2_5d",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.graph_2_5d/template.yaml",
+      "title": "Graph 2 5D",
+      "description": "Visualize Graph 2 5D as a complete offline graph view for foundation workflows using the graph_2_5d layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "2",
+        "5d",
+        "foundation",
+        "graph",
+        "graph_2_5d"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.graph_3d",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.graph_3d/template.yaml",
+      "title": "Graph 3D",
+      "description": "Visualize Graph 3D as a complete offline graph view for foundation workflows using the graph_3d layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_3d",
+      "tags": [
+        "3d",
+        "foundation",
+        "graph",
+        "graph_3d"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.layered_stack",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.layered_stack/template.yaml",
+      "title": "Layered Stack",
+      "description": "Visualize Layered Stack as a complete offline graph view for foundation workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "foundation",
+        "graph",
+        "layered",
+        "layered_stack",
+        "stack"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.matrix_board",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.matrix_board/template.yaml",
+      "title": "Matrix Board",
+      "description": "Visualize Matrix Board as a complete offline matrix view for foundation workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "board",
+        "foundation",
+        "matrix",
+        "matrix_board"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.orbit_system",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.orbit_system/template.yaml",
+      "title": "Orbit System",
+      "description": "Visualize Orbit System as a complete offline graph view for foundation workflows using the orbit_system layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "orbit_system",
+      "tags": [
+        "foundation",
+        "graph",
+        "orbit",
+        "orbit_system",
+        "system"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.pipeline_flow",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.pipeline_flow/template.yaml",
+      "title": "Pipeline Flow",
+      "description": "Visualize Pipeline Flow as a complete offline graph view for foundation workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "flow",
+        "foundation",
+        "graph",
+        "pipeline",
+        "pipeline_flow"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.radar_sphere",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.radar_sphere/template.yaml",
+      "title": "Radar Sphere",
+      "description": "Visualize Radar Sphere as a complete offline matrix view for foundation workflows using the radar_sphere layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "foundation",
+        "matrix",
+        "radar",
+        "radar_sphere",
+        "sphere"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.radial_tree",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.radial_tree/template.yaml",
+      "title": "Radial Tree",
+      "description": "Visualize Radial Tree as a complete offline graph view for foundation workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "foundation",
+        "graph",
+        "radial",
+        "radial_tree",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.replay_stage",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.replay_stage/template.yaml",
+      "title": "Replay Stage",
+      "description": "Visualize Replay Stage as a complete offline graph_events view for foundation workflows using the replay_stage layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "replay_stage",
+      "tags": [
+        "foundation",
+        "graph_events",
+        "replay",
+        "replay_stage",
+        "stage"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.sankey_3d",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.sankey_3d/template.yaml",
+      "title": "Sankey 3D",
+      "description": "Visualize Sankey 3D as a complete offline graph view for foundation workflows using the sankey_3d layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "sankey_3d",
+      "tags": [
+        "3d",
+        "foundation",
+        "graph",
+        "sankey",
+        "sankey_3d"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.state_machine",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.state_machine/template.yaml",
+      "title": "State Machine",
+      "description": "Visualize State Machine as a complete offline graph view for foundation workflows using the state_machine layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "state_machine",
+      "tags": [
+        "foundation",
+        "graph",
+        "machine",
+        "state",
+        "state_machine"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.swimlane_timeline",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.swimlane_timeline/template.yaml",
+      "title": "Swimlane Timeline",
+      "description": "Visualize Swimlane Timeline as a complete offline timeline view for foundation workflows using the swimlane_timeline layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "swimlane_timeline",
+      "tags": [
+        "foundation",
+        "swimlane",
+        "swimlane_timeline",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.terrain_heatmap",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.terrain_heatmap/template.yaml",
+      "title": "Terrain Heatmap",
+      "description": "Visualize Terrain Heatmap as a complete offline matrix view for foundation workflows using the terrain_heatmap layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "foundation",
+        "heatmap",
+        "matrix",
+        "terrain",
+        "terrain_heatmap"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.timeline_tunnel",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.timeline_tunnel/template.yaml",
+      "title": "Timeline Tunnel",
+      "description": "Visualize Timeline Tunnel as a complete offline timeline view for foundation workflows using the timeline_tunnel layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "timeline_tunnel",
+      "tags": [
+        "foundation",
+        "timeline",
+        "timeline_tunnel",
+        "tunnel"
+      ],
+      "aliases": []
     },
     {
       "id": "agent.active_run_monitor",
       "version": "1.0.0",
+      "category": "agent",
       "path": "agent.active_run_monitor/template.yaml",
-      "title": "Agent Active Run Monitor",
-      "description": "Inspect active agent runs, retries, idle sessions, and blocked work.",
-      "input_schema": "graph_events_v1",
-      "renderer": "offline.graph.v1"
+      "title": "Active Run Monitor",
+      "description": "Visualize Active Run Monitor as a complete offline graph_events view for agent workflows using the fleet layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "fleet",
+      "tags": [
+        "active",
+        "agent",
+        "fleet",
+        "graph_events",
+        "monitor",
+        "run"
+      ],
+      "aliases": []
     },
     {
-      "id": "runtime.topology",
+      "id": "agent.confidence_map",
       "version": "1.0.0",
-      "path": "runtime.topology/template.yaml",
-      "title": "Runtime Topology",
-      "description": "Visualize Portal, runtime adapter, OpenCode server, tools, and workspace topology.",
-      "input_schema": "graph_v1",
-      "renderer": "offline.graph.v1"
+      "category": "agent",
+      "path": "agent.confidence_map/template.yaml",
+      "title": "Confidence Map",
+      "description": "Visualize Confidence Map as a complete offline evidence view for agent workflows using the evidence_board layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "evidence_board",
+      "tags": [
+        "agent",
+        "confidence",
+        "evidence",
+        "evidence_board",
+        "map"
+      ],
+      "aliases": []
     },
     {
-      "id": "runtime.session_binding",
+      "id": "agent.context_window_map",
       "version": "1.0.0",
-      "path": "runtime.session_binding/template.yaml",
-      "title": "Runtime Session Binding",
-      "description": "Trace conversation, root session, message, event, and status binding.",
-      "input_schema": "graph_v1",
-      "renderer": "offline.graph.v1"
+      "category": "agent",
+      "path": "agent.context_window_map/template.yaml",
+      "title": "Context Window Map",
+      "description": "Visualize Context Window Map as a complete offline matrix view for agent workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "agent",
+        "context",
+        "map",
+        "matrix",
+        "matrix_board",
+        "window"
+      ],
+      "aliases": []
     },
     {
-      "id": "runtime.event_flow",
+      "id": "agent.debug_blackbox",
       "version": "1.0.0",
-      "path": "runtime.event_flow/template.yaml",
-      "title": "Runtime Event Flow",
-      "description": "Visualize event streaming and snapshot reconciliation paths.",
-      "input_schema": "graph_events_v1",
-      "renderer": "offline.graph.v1"
+      "category": "agent",
+      "path": "agent.debug_blackbox/template.yaml",
+      "title": "Debug Blackbox",
+      "description": "Visualize Debug Blackbox as a complete offline graph_events view for agent workflows using the control_room layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "agent",
+        "blackbox",
+        "control_room",
+        "debug",
+        "graph_events"
+      ],
+      "aliases": []
     },
     {
-      "id": "service.topology",
+      "id": "agent.failure_recovery_tree",
       "version": "1.0.0",
-      "path": "service.topology/template.yaml",
-      "title": "Service Topology",
-      "description": "Map frontend, backend, database, and external service relationships.",
-      "input_schema": "graph_v1",
-      "renderer": "offline.graph.v1"
+      "category": "agent",
+      "path": "agent.failure_recovery_tree/template.yaml",
+      "title": "Failure Recovery Tree",
+      "description": "Visualize Failure Recovery Tree as a complete offline graph_events view for agent workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "agent",
+        "failure",
+        "graph_events",
+        "radial_tree",
+        "recovery",
+        "tree"
+      ],
+      "aliases": []
     },
     {
-      "id": "planning.plan_dag",
+      "id": "agent.permission_gate_map",
       "version": "1.0.0",
-      "path": "planning.plan_dag/template.yaml",
-      "title": "Planning Plan DAG",
-      "description": "Render goals, milestones, tasks, and dependencies as an offline DAG.",
-      "input_schema": "graph_v1",
-      "renderer": "offline.graph.v1"
+      "category": "agent",
+      "path": "agent.permission_gate_map/template.yaml",
+      "title": "Permission Gate Map",
+      "description": "Visualize Permission Gate Map as a complete offline graph_events view for agent workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "agent",
+        "gate",
+        "graph_events",
+        "layered_stack",
+        "map",
+        "permission"
+      ],
+      "aliases": [
+        "agent.permission_gate"
+      ]
+    },
+    {
+      "id": "agent.react_loop_replay",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.react_loop_replay/template.yaml",
+      "title": "React Loop Replay",
+      "description": "Visualize React Loop Replay as a complete offline graph_events view for agent workflows using the replay_stage layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "replay_stage",
+      "tags": [
+        "agent",
+        "graph_events",
+        "loop",
+        "react",
+        "replay",
+        "replay_stage"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.run_replay_timeline",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.run_replay_timeline/template.yaml",
+      "title": "Run Replay Timeline",
+      "description": "Visualize Run Replay Timeline as a complete offline graph_events view for agent workflows using the replay_stage layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "replay_stage",
+      "tags": [
+        "agent",
+        "graph_events",
+        "replay",
+        "replay_stage",
+        "run",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.run_trace",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.run_trace/template.yaml",
+      "title": "Run Trace",
+      "description": "Visualize Run Trace as a complete offline graph_events view for agent workflows using the timeline_tunnel layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "timeline_tunnel",
+      "tags": [
+        "agent",
+        "graph_events",
+        "run",
+        "timeline_tunnel",
+        "trace"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.session_state_panel",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.session_state_panel/template.yaml",
+      "title": "Session State Panel",
+      "description": "Visualize Session State Panel as a complete offline matrix view for agent workflows using the control_room layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "agent",
+        "control_room",
+        "matrix",
+        "panel",
+        "session",
+        "state"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.step_ladder",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.step_ladder/template.yaml",
+      "title": "Step Ladder",
+      "description": "Visualize Step Ladder as a complete offline graph_events view for agent workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "agent",
+        "graph_events",
+        "ladder",
+        "pipeline_flow",
+        "step"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.subagent_swarm",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.subagent_swarm/template.yaml",
+      "title": "Subagent Swarm",
+      "description": "Visualize Subagent Swarm as a complete offline graph_events view for agent workflows using the constellation layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "agent",
+        "constellation",
+        "graph_events",
+        "subagent",
+        "swarm"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.thinking_timeline",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.thinking_timeline/template.yaml",
+      "title": "Thinking Timeline",
+      "description": "Visualize Thinking Timeline as a complete offline graph_events view for agent workflows using the swimlane_timeline layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "swimlane_timeline",
+      "tags": [
+        "agent",
+        "graph_events",
+        "swimlane_timeline",
+        "thinking",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.tool_call_constellation",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.tool_call_constellation/template.yaml",
+      "title": "Tool Call Constellation",
+      "description": "Visualize Tool Call Constellation as a complete offline graph_events view for agent workflows using the constellation layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "agent",
+        "call",
+        "constellation",
+        "graph_events",
+        "tool"
+      ],
+      "aliases": [
+        "agent.tool_constellation"
+      ]
+    },
+    {
+      "id": "agent.tool_io_inspector",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.tool_io_inspector/template.yaml",
+      "title": "Tool Io Inspector",
+      "description": "Visualize Tool Io Inspector as a complete offline graph_events view for agent workflows using the diff_split_view layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "agent",
+        "diff_split_view",
+        "graph_events",
+        "inspector",
+        "io",
+        "tool"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.api_surface_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.api_surface_map/template.yaml",
+      "title": "API Surface Map",
+      "description": "Visualize API Surface Map as a complete offline graph view for codebase workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "api",
+        "codebase",
+        "graph",
+        "layered_stack",
+        "map",
+        "surface"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.bug_localization_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.bug_localization_map/template.yaml",
+      "title": "Bug Localization Map",
+      "description": "Visualize Bug Localization Map as a complete offline graph_events view for codebase workflows using the heatmap layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "bug",
+        "codebase",
+        "graph_events",
+        "heatmap",
+        "localization",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.call_path_tube",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.call_path_tube/template.yaml",
+      "title": "Call Path Tube",
+      "description": "Visualize Call Path Tube as a complete offline graph view for codebase workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "call",
+        "codebase",
+        "graph",
+        "path",
+        "pipeline_flow",
+        "tube"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.config_dependency_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.config_dependency_map/template.yaml",
+      "title": "Config Dependency Map",
+      "description": "Visualize Config Dependency Map as a complete offline graph view for codebase workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "codebase",
+        "config",
+        "dependency",
+        "graph",
+        "map",
+        "radial_tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.coverage_terrain",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.coverage_terrain/template.yaml",
+      "title": "Coverage Terrain",
+      "description": "Visualize Coverage Terrain as a complete offline matrix view for codebase workflows using the terrain_heatmap layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "codebase",
+        "coverage",
+        "matrix",
+        "terrain",
+        "terrain_heatmap"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.dead_code_detector",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.dead_code_detector/template.yaml",
+      "title": "Dead Code Detector",
+      "description": "Visualize Dead Code Detector as a complete offline graph view for codebase workflows using the constellation layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "code",
+        "codebase",
+        "constellation",
+        "dead",
+        "detector",
+        "graph"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.dependency_upgrade_risk",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.dependency_upgrade_risk/template.yaml",
+      "title": "Dependency Upgrade Risk",
+      "description": "Visualize Dependency Upgrade Risk as a complete offline graph view for codebase workflows using the radar_sphere layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "codebase",
+        "dependency",
+        "graph",
+        "radar_sphere",
+        "risk",
+        "upgrade"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.diff_impact_ripple",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.diff_impact_ripple/template.yaml",
+      "title": "Diff Impact Ripple",
+      "description": "Visualize Diff Impact Ripple as a complete offline graph_events view for codebase workflows using the ripple layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "ripple",
+      "tags": [
+        "codebase",
+        "diff",
+        "graph_events",
+        "impact",
+        "ripple"
+      ],
+      "aliases": [
+        "codebase.diff_impact"
+      ]
     },
     {
       "id": "codebase.galaxy",
       "version": "1.0.0",
+      "category": "codebase",
       "path": "codebase.galaxy/template.yaml",
-      "title": "Codebase Galaxy",
-      "description": "Render directories, modules, files, and imports as a galaxy graph.",
-      "input_schema": "graph_v1",
-      "renderer": "offline.graph.v1"
+      "title": "Galaxy",
+      "description": "Visualize Galaxy as a complete offline graph view for codebase workflows using the galaxy layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "galaxy",
+      "tags": [
+        "codebase",
+        "galaxy",
+        "graph"
+      ],
+      "aliases": []
     },
     {
-      "id": "codebase.diff_impact",
+      "id": "codebase.git_history_river",
       "version": "1.0.0",
-      "path": "codebase.diff_impact/template.yaml",
-      "title": "Codebase Diff Impact",
-      "description": "Show changed files, impacted modules, tests, and release surfaces.",
-      "input_schema": "graph_events_v1",
-      "renderer": "offline.graph.v1"
+      "category": "codebase",
+      "path": "codebase.git_history_river/template.yaml",
+      "title": "Git History River",
+      "description": "Visualize Git History River as a complete offline timeline view for codebase workflows using the river layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "river",
+      "tags": [
+        "codebase",
+        "git",
+        "history",
+        "river",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.hotspot_city",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.hotspot_city/template.yaml",
+      "title": "Hotspot City",
+      "description": "Visualize Hotspot City as a complete offline graph view for codebase workflows using the city_map layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "city_map",
+      "tags": [
+        "city",
+        "city_map",
+        "codebase",
+        "graph",
+        "hotspot"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.migration_progress_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.migration_progress_map/template.yaml",
+      "title": "Migration Progress Map",
+      "description": "Visualize Migration Progress Map as a complete offline graph_events view for codebase workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "codebase",
+        "graph_events",
+        "map",
+        "migration",
+        "pipeline_flow",
+        "progress"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.module_dependency_graph",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.module_dependency_graph/template.yaml",
+      "title": "Module Dependency Graph",
+      "description": "Visualize Module Dependency Graph as a complete offline graph view for codebase workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "codebase",
+        "dependency",
+        "graph",
+        "layered_stack",
+        "module"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.monorepo_workspace_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.monorepo_workspace_map/template.yaml",
+      "title": "Monorepo Workspace Map",
+      "description": "Visualize Monorepo Workspace Map as a complete offline graph view for codebase workflows using the city_map layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "city_map",
+      "tags": [
+        "city_map",
+        "codebase",
+        "graph",
+        "map",
+        "monorepo",
+        "workspace"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.ownership_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.ownership_map/template.yaml",
+      "title": "Ownership Map",
+      "description": "Visualize Ownership Map as a complete offline graph view for codebase workflows using the matrix_board layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "codebase",
+        "graph",
+        "map",
+        "matrix_board",
+        "ownership"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.pr_diff_impact_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.pr_diff_impact_map/template.yaml",
+      "title": "PR Diff Impact Map",
+      "description": "Visualize PR Diff Impact Map as a complete offline graph_events view for codebase workflows using the ripple layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "ripple",
+      "tags": [
+        "codebase",
+        "diff",
+        "graph_events",
+        "impact",
+        "map",
+        "pr",
+        "ripple"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.refactor_plan_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.refactor_plan_map/template.yaml",
+      "title": "Refactor Plan Map",
+      "description": "Visualize Refactor Plan Map as a complete offline graph view for codebase workflows using the diff_split_view layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "codebase",
+        "diff_split_view",
+        "graph",
+        "map",
+        "plan",
+        "refactor"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.security_sensitive_files_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.security_sensitive_files_map/template.yaml",
+      "title": "Security Sensitive Files Map",
+      "description": "Visualize Security Sensitive Files Map as a complete offline graph view for codebase workflows using the network_boundary_map layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "network_boundary_map",
+      "tags": [
+        "codebase",
+        "files",
+        "graph",
+        "map",
+        "network_boundary_map",
+        "security",
+        "sensitive"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.symbol_graph",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.symbol_graph/template.yaml",
+      "title": "Symbol Graph",
+      "description": "Visualize Symbol Graph as a complete offline graph view for codebase workflows using the graph_2_5d layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "codebase",
+        "graph",
+        "graph_2_5d",
+        "symbol"
+      ],
+      "aliases": []
     },
     {
       "id": "codebase.test_failure_map",
       "version": "1.0.0",
+      "category": "codebase",
       "path": "codebase.test_failure_map/template.yaml",
-      "title": "Codebase Test Failure Map",
-      "description": "Connect failing tests to source modules and recent changes.",
-      "input_schema": "graph_events_v1",
-      "renderer": "offline.graph.v1"
+      "title": "Test Failure Map",
+      "description": "Visualize Test Failure Map as a complete offline graph_events view for codebase workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "codebase",
+        "failure",
+        "graph_events",
+        "layered_stack",
+        "map",
+        "test"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.adapter_proxy_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.adapter_proxy_map/template.yaml",
+      "title": "Adapter Proxy Map",
+      "description": "Visualize Adapter Proxy Map as a complete offline graph view for runtime workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "adapter",
+        "graph",
+        "map",
+        "pipeline_flow",
+        "proxy",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.agent_fleet_dashboard",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.agent_fleet_dashboard/template.yaml",
+      "title": "Agent Fleet Dashboard",
+      "description": "Visualize Agent Fleet Dashboard as a complete offline matrix view for runtime workflows using the control_room layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "agent",
+        "control_room",
+        "dashboard",
+        "fleet",
+        "matrix",
+        "runtime"
+      ],
+      "aliases": [
+        "agent.fleet_dashboard"
+      ]
+    },
+    {
+      "id": "runtime.api_contract_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.api_contract_map/template.yaml",
+      "title": "API Contract Map",
+      "description": "Visualize API Contract Map as a complete offline graph view for runtime workflows using the matrix_board layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "api",
+        "contract",
+        "graph",
+        "map",
+        "matrix_board",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.capability_matrix",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.capability_matrix/template.yaml",
+      "title": "Capability Matrix",
+      "description": "Visualize Capability Matrix as a complete offline matrix view for runtime workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "capability",
+        "matrix",
+        "matrix_board",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.config_overlay_view",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.config_overlay_view/template.yaml",
+      "title": "Config Overlay View",
+      "description": "Visualize Config Overlay View as a complete offline graph view for runtime workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "config",
+        "graph",
+        "layered_stack",
+        "overlay",
+        "runtime",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.deployment_pipeline_3d",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.deployment_pipeline_3d/template.yaml",
+      "title": "Deployment Pipeline 3D",
+      "description": "Visualize Deployment Pipeline 3D as a complete offline graph_events view for runtime workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "3d",
+        "deployment",
+        "graph_events",
+        "pipeline",
+        "pipeline_flow",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.event_bus_flow",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.event_bus_flow/template.yaml",
+      "title": "Event Bus Flow",
+      "description": "Visualize Event Bus Flow as a complete offline graph_events view for runtime workflows using the flow_particles layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "bus",
+        "event",
+        "flow",
+        "flow_particles",
+        "graph_events",
+        "runtime"
+      ],
+      "aliases": [
+        "runtime.event_flow"
+      ]
+    },
+    {
+      "id": "runtime.event_reconcile_loop",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.event_reconcile_loop/template.yaml",
+      "title": "Event Reconcile Loop",
+      "description": "Visualize Event Reconcile Loop as a complete offline graph_events view for runtime workflows using the state_machine layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "state_machine",
+      "tags": [
+        "event",
+        "graph_events",
+        "loop",
+        "reconcile",
+        "runtime",
+        "state_machine"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.health_radar",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.health_radar/template.yaml",
+      "title": "Health Radar",
+      "description": "Visualize Health Radar as a complete offline matrix view for runtime workflows using the radar_sphere layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "health",
+        "matrix",
+        "radar",
+        "radar_sphere",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.k8s_pod_constellation",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.k8s_pod_constellation/template.yaml",
+      "title": "K8s Pod Constellation",
+      "description": "Visualize K8s Pod Constellation as a complete offline graph view for runtime workflows using the constellation layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "constellation",
+        "graph",
+        "k8s",
+        "pod",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.mcp_server_status_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.mcp_server_status_map/template.yaml",
+      "title": "MCP Server Status Map",
+      "description": "Visualize MCP Server Status Map as a complete offline matrix view for runtime workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "map",
+        "matrix",
+        "matrix_board",
+        "mcp",
+        "runtime",
+        "server",
+        "status"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.network_boundary_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.network_boundary_map/template.yaml",
+      "title": "Network Boundary Map",
+      "description": "Visualize Network Boundary Map as a complete offline graph view for runtime workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "boundary",
+        "graph",
+        "layered_stack",
+        "map",
+        "network",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.permission_boundary_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.permission_boundary_map/template.yaml",
+      "title": "Permission Boundary Map",
+      "description": "Visualize Permission Boundary Map as a complete offline graph view for runtime workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "boundary",
+        "graph",
+        "layered_stack",
+        "map",
+        "permission",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.restart_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.restart_map/template.yaml",
+      "title": "Restart Map",
+      "description": "Visualize Restart Map as a complete offline graph_events view for runtime workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "graph_events",
+        "map",
+        "radial_tree",
+        "restart",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.sandbox_layer_stack",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.sandbox_layer_stack/template.yaml",
+      "title": "Sandbox Layer Stack",
+      "description": "Visualize Sandbox Layer Stack as a complete offline graph view for runtime workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "graph",
+        "layer",
+        "layered_stack",
+        "runtime",
+        "sandbox",
+        "stack"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.secret_flow_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.secret_flow_map/template.yaml",
+      "title": "Secret Flow Map",
+      "description": "Visualize Secret Flow Map as a complete offline graph view for runtime workflows using the network_boundary_map layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "network_boundary_map",
+      "tags": [
+        "flow",
+        "graph",
+        "map",
+        "network_boundary_map",
+        "runtime",
+        "secret"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.service_topology",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.service_topology/template.yaml",
+      "title": "Service Topology",
+      "description": "Visualize Service Topology as a complete offline graph view for runtime workflows using the service_map layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "service_map",
+      "tags": [
+        "graph",
+        "runtime",
+        "service",
+        "service_map",
+        "topology"
+      ],
+      "aliases": [
+        "service.topology"
+      ]
+    },
+    {
+      "id": "runtime.session_binding_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.session_binding_map/template.yaml",
+      "title": "Session Binding Map",
+      "description": "Visualize Session Binding Map as a complete offline graph view for runtime workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "binding",
+        "graph",
+        "layered_stack",
+        "map",
+        "runtime",
+        "session"
+      ],
+      "aliases": [
+        "runtime.session_binding"
+      ]
+    },
+    {
+      "id": "runtime.tool_registry_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.tool_registry_map/template.yaml",
+      "title": "Tool Registry Map",
+      "description": "Visualize Tool Registry Map as a complete offline graph view for runtime workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "graph",
+        "map",
+        "radial_tree",
+        "registry",
+        "runtime",
+        "tool"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.topology",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.topology/template.yaml",
+      "title": "Topology",
+      "description": "Visualize Topology as a complete offline graph view for runtime workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "graph",
+        "layered_stack",
+        "runtime",
+        "topology"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.alert_correlation_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.alert_correlation_map/template.yaml",
+      "title": "Alert Correlation Map",
+      "description": "Visualize Alert Correlation Map as a complete offline graph view for debug workflows using the constellation layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "alert",
+        "constellation",
+        "correlation",
+        "debug",
+        "graph",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.before_after_compare",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.before_after_compare/template.yaml",
+      "title": "Before After Compare",
+      "description": "Visualize Before After Compare as a complete offline graph_events view for debug workflows using the diff_split_view layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "after",
+        "before",
+        "compare",
+        "debug",
+        "diff_split_view",
+        "graph_events"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.blast_radius_sphere",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.blast_radius_sphere/template.yaml",
+      "title": "Blast Radius Sphere",
+      "description": "Visualize Blast Radius Sphere as a complete offline graph view for debug workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "blast",
+        "debug",
+        "graph",
+        "radial_tree",
+        "radius",
+        "sphere"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.ci_failure_timeline",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.ci_failure_timeline/template.yaml",
+      "title": "CI Failure Timeline",
+      "description": "Visualize CI Failure Timeline as a complete offline timeline view for debug workflows using the swimlane_timeline layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "swimlane_timeline",
+      "tags": [
+        "ci",
+        "debug",
+        "failure",
+        "swimlane_timeline",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.config_drift_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.config_drift_map/template.yaml",
+      "title": "Config Drift Map",
+      "description": "Visualize Config Drift Map as a complete offline matrix view for debug workflows using the diff_split_view layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "config",
+        "debug",
+        "diff_split_view",
+        "drift",
+        "map",
+        "matrix"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.dependency_failure_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.dependency_failure_map/template.yaml",
+      "title": "Dependency Failure Map",
+      "description": "Visualize Dependency Failure Map as a complete offline graph view for debug workflows using the service_map layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "service_map",
+      "tags": [
+        "debug",
+        "dependency",
+        "failure",
+        "graph",
+        "map",
+        "service_map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.dependency_version_conflict",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.dependency_version_conflict/template.yaml",
+      "title": "Dependency Version Conflict",
+      "description": "Visualize Dependency Version Conflict as a complete offline graph view for debug workflows using the graph_2_5d layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "conflict",
+        "debug",
+        "dependency",
+        "graph",
+        "graph_2_5d",
+        "version"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.error_budget_burn",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.error_budget_burn/template.yaml",
+      "title": "Error Budget Burn",
+      "description": "Visualize Error Budget Burn as a complete offline timeline view for debug workflows using the funnel layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "funnel",
+      "tags": [
+        "budget",
+        "burn",
+        "debug",
+        "error",
+        "funnel",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.error_spike_field",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.error_spike_field/template.yaml",
+      "title": "Error Spike Field",
+      "description": "Visualize Error Spike Field as a complete offline timeline view for debug workflows using the terrain_heatmap layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "debug",
+        "error",
+        "field",
+        "spike",
+        "terrain_heatmap",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.flaky_test_radar",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.flaky_test_radar/template.yaml",
+      "title": "Flaky Test Radar",
+      "description": "Visualize Flaky Test Radar as a complete offline matrix view for debug workflows using the radar_sphere layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "debug",
+        "flaky",
+        "matrix",
+        "radar",
+        "radar_sphere",
+        "test"
+      ],
+      "aliases": []
     },
     {
       "id": "debug.incident_timeline",
       "version": "1.0.0",
+      "category": "debug",
       "path": "debug.incident_timeline/template.yaml",
-      "title": "Debug Incident Timeline",
-      "description": "Render incident events from deploy through root cause and fix.",
-      "input_schema": "timeline_v1",
-      "renderer": "offline.timeline.v1"
+      "title": "Incident Timeline",
+      "description": "Visualize Incident Timeline as a complete offline timeline view for debug workflows using the incident_timeline layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "incident_timeline",
+      "tags": [
+        "debug",
+        "incident",
+        "incident_timeline",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.latency_heatmap",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.latency_heatmap/template.yaml",
+      "title": "Latency Heatmap",
+      "description": "Visualize Latency Heatmap as a complete offline matrix view for debug workflows using the heatmap layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "debug",
+        "heatmap",
+        "latency",
+        "matrix"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.log_cluster_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.log_cluster_map/template.yaml",
+      "title": "Log Cluster Map",
+      "description": "Visualize Log Cluster Map as a complete offline graph view for debug workflows using the constellation layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "cluster",
+        "constellation",
+        "debug",
+        "graph",
+        "log",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.queue_backlog_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.queue_backlog_map/template.yaml",
+      "title": "Queue Backlog Map",
+      "description": "Visualize Queue Backlog Map as a complete offline matrix view for debug workflows using the control_room layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "backlog",
+        "control_room",
+        "debug",
+        "map",
+        "matrix",
+        "queue"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.recovery_playbook_view",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.recovery_playbook_view/template.yaml",
+      "title": "Recovery Playbook View",
+      "description": "Visualize Recovery Playbook View as a complete offline graph_events view for debug workflows using the step_ladder layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "step_ladder",
+      "tags": [
+        "debug",
+        "graph_events",
+        "playbook",
+        "recovery",
+        "step_ladder",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.regression_detector",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.regression_detector/template.yaml",
+      "title": "Regression Detector",
+      "description": "Visualize Regression Detector as a complete offline timeline view for debug workflows using the river layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "river",
+      "tags": [
+        "debug",
+        "detector",
+        "regression",
+        "river",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.resource_pressure_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.resource_pressure_map/template.yaml",
+      "title": "Resource Pressure Map",
+      "description": "Visualize Resource Pressure Map as a complete offline matrix view for debug workflows using the radar_sphere layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "debug",
+        "map",
+        "matrix",
+        "pressure",
+        "radar_sphere",
+        "resource"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.retry_storm_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.retry_storm_map/template.yaml",
+      "title": "Retry Storm Map",
+      "description": "Visualize Retry Storm Map as a complete offline graph_events view for debug workflows using the flow_particles layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "debug",
+        "flow_particles",
+        "graph_events",
+        "map",
+        "retry",
+        "storm"
+      ],
+      "aliases": []
     },
     {
       "id": "debug.root_cause_tree",
       "version": "1.0.0",
+      "category": "debug",
       "path": "debug.root_cause_tree/template.yaml",
-      "title": "Debug Root Cause Tree",
-      "description": "Visualize symptoms, causes, evidence, and fixes as a radial tree.",
-      "input_schema": "graph_v1",
-      "renderer": "offline.graph.v1"
+      "title": "Root Cause Tree",
+      "description": "Visualize Root Cause Tree as a complete offline graph view for debug workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "cause",
+        "debug",
+        "graph",
+        "radial_tree",
+        "root",
+        "tree"
+      ],
+      "aliases": []
     },
     {
-      "id": "project.issue_graph",
+      "id": "debug.trace_waterfall_3d",
       "version": "1.0.0",
-      "path": "project.issue_graph/template.yaml",
-      "title": "Project Issue Graph",
-      "description": "Map epics, stories, pull requests, and tests.",
-      "input_schema": "graph_v1",
-      "renderer": "offline.graph.v1"
+      "category": "debug",
+      "path": "debug.trace_waterfall_3d/template.yaml",
+      "title": "Trace Waterfall 3D",
+      "description": "Visualize Trace Waterfall 3D as a complete offline timeline view for debug workflows using the waterfall layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "waterfall",
+      "tags": [
+        "3d",
+        "debug",
+        "timeline",
+        "trace",
+        "waterfall"
+      ],
+      "aliases": []
     },
     {
-      "id": "project.requirements_trace",
+      "id": "project.blocker_funnel",
       "version": "1.0.0",
-      "path": "project.requirements_trace/template.yaml",
-      "title": "Project Requirements Trace",
-      "description": "Trace requirements through docs, issues, pull requests, files, and tests.",
-      "input_schema": "graph_v1",
-      "renderer": "offline.graph.v1"
+      "category": "project",
+      "path": "project.blocker_funnel/template.yaml",
+      "title": "Blocker Funnel",
+      "description": "Visualize Blocker Funnel as a complete offline graph view for project workflows using the funnel layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "funnel",
+      "tags": [
+        "blocker",
+        "funnel",
+        "graph",
+        "project"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.bug_triage_board",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.bug_triage_board/template.yaml",
+      "title": "Bug Triage Board",
+      "description": "Visualize Bug Triage Board as a complete offline matrix view for project workflows using the kanban layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "kanban",
+      "tags": [
+        "board",
+        "bug",
+        "kanban",
+        "matrix",
+        "project",
+        "triage"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.confluence_space_map",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.confluence_space_map/template.yaml",
+      "title": "Confluence Space Map",
+      "description": "Visualize Confluence Space Map as a complete offline graph view for project workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "confluence",
+        "graph",
+        "map",
+        "project",
+        "radial_tree",
+        "space"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.cross_doc_citation_graph",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.cross_doc_citation_graph/template.yaml",
+      "title": "Cross Doc Citation Graph",
+      "description": "Visualize Cross Doc Citation Graph as a complete offline evidence view for project workflows using the citation_map layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "citation_map",
+      "tags": [
+        "citation",
+        "citation_map",
+        "cross",
+        "doc",
+        "evidence",
+        "graph",
+        "project"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.decision_record_wall",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.decision_record_wall/template.yaml",
+      "title": "Decision Record Wall",
+      "description": "Visualize Decision Record Wall as a complete offline evidence view for project workflows using the document_wall layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "document_wall",
+      "tags": [
+        "decision",
+        "document_wall",
+        "evidence",
+        "project",
+        "record",
+        "wall"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.doc_freshness_map",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.doc_freshness_map/template.yaml",
+      "title": "Doc Freshness Map",
+      "description": "Visualize Doc Freshness Map as a complete offline matrix view for project workflows using the heatmap layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "doc",
+        "freshness",
+        "heatmap",
+        "map",
+        "matrix",
+        "project"
+      ],
+      "aliases": [
+        "knowledge.doc_freshness"
+      ]
+    },
+    {
+      "id": "project.epic_story_map",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.epic_story_map/template.yaml",
+      "title": "Epic Story Map",
+      "description": "Visualize Epic Story Map as a complete offline graph view for project workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "epic",
+        "graph",
+        "layered_stack",
+        "map",
+        "project",
+        "story"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.issue_age_heatmap",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.issue_age_heatmap/template.yaml",
+      "title": "Issue Age Heatmap",
+      "description": "Visualize Issue Age Heatmap as a complete offline matrix view for project workflows using the heatmap layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "age",
+        "heatmap",
+        "issue",
+        "matrix",
+        "project"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.issue_dependency_graph",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.issue_dependency_graph/template.yaml",
+      "title": "Issue Dependency Graph",
+      "description": "Visualize Issue Dependency Graph as a complete offline graph view for project workflows using the graph_2_5d layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "dependency",
+        "graph",
+        "graph_2_5d",
+        "issue",
+        "project"
+      ],
+      "aliases": [
+        "project.issue_graph"
+      ]
+    },
+    {
+      "id": "project.pr_review_map",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.pr_review_map/template.yaml",
+      "title": "PR Review Map",
+      "description": "Visualize PR Review Map as a complete offline graph view for project workflows using the graph_2_5d layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "graph",
+        "graph_2_5d",
+        "map",
+        "pr",
+        "project",
+        "review"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.release_readiness_dashboard",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.release_readiness_dashboard/template.yaml",
+      "title": "Release Readiness Dashboard",
+      "description": "Visualize Release Readiness Dashboard as a complete offline matrix view for project workflows using the control_room layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "control_room",
+        "dashboard",
+        "matrix",
+        "project",
+        "readiness",
+        "release"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.release_train",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.release_train/template.yaml",
+      "title": "Release Train",
+      "description": "Visualize Release Train as a complete offline graph_events view for project workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "graph_events",
+        "pipeline_flow",
+        "project",
+        "release",
+        "train"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.requirements_to_code_trace",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.requirements_to_code_trace/template.yaml",
+      "title": "Requirements To Code Trace",
+      "description": "Visualize Requirements To Code Trace as a complete offline graph view for project workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "code",
+        "graph",
+        "layered_stack",
+        "project",
+        "requirements",
+        "to",
+        "trace"
+      ],
+      "aliases": [
+        "project.requirements_trace"
+      ]
+    },
+    {
+      "id": "project.review_bottleneck_map",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.review_bottleneck_map/template.yaml",
+      "title": "Review Bottleneck Map",
+      "description": "Visualize Review Bottleneck Map as a complete offline matrix view for project workflows using the control_room layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "bottleneck",
+        "control_room",
+        "map",
+        "matrix",
+        "project",
+        "review"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.risk_matrix",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.risk_matrix/template.yaml",
+      "title": "Risk Matrix",
+      "description": "Visualize Risk Matrix as a complete offline matrix view for project workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "matrix",
+        "matrix_board",
+        "project",
+        "risk"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.roadmap_milestone_path",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.roadmap_milestone_path/template.yaml",
+      "title": "Roadmap Milestone Path",
+      "description": "Visualize Roadmap Milestone Path as a complete offline timeline view for project workflows using the roadmap layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "roadmap",
+      "tags": [
+        "milestone",
+        "path",
+        "project",
+        "roadmap",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.sprint_board_3d",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.sprint_board_3d/template.yaml",
+      "title": "Sprint Board 3D",
+      "description": "Visualize Sprint Board 3D as a complete offline matrix view for project workflows using the kanban layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "kanban",
+      "tags": [
+        "3d",
+        "board",
+        "kanban",
+        "matrix",
+        "project",
+        "sprint"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.stakeholder_network",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.stakeholder_network/template.yaml",
+      "title": "Stakeholder Network",
+      "description": "Visualize Stakeholder Network as a complete offline graph view for project workflows using the constellation layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "constellation",
+        "graph",
+        "network",
+        "project",
+        "stakeholder"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.support_escalation_graph",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.support_escalation_graph/template.yaml",
+      "title": "Support Escalation Graph",
+      "description": "Visualize Support Escalation Graph as a complete offline graph view for project workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "escalation",
+        "graph",
+        "layered_stack",
+        "project",
+        "support"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.velocity_flow",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.velocity_flow/template.yaml",
+      "title": "Velocity Flow",
+      "description": "Visualize Velocity Flow as a complete offline graph_events view for project workflows using the flow_particles layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "flow",
+        "flow_particles",
+        "graph_events",
+        "project",
+        "velocity"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.answer_lineage_view",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.answer_lineage_view/template.yaml",
+      "title": "Answer Lineage View",
+      "description": "Visualize Answer Lineage View as a complete offline evidence view for knowledge workflows using the radial_tree layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "answer",
+        "evidence",
+        "knowledge",
+        "lineage",
+        "radial_tree",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.argument_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.argument_map/template.yaml",
+      "title": "Argument Map",
+      "description": "Visualize Argument Map as a complete offline evidence view for knowledge workflows using the graph_2_5d layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "argument",
+        "evidence",
+        "graph_2_5d",
+        "knowledge",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.citation_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.citation_map/template.yaml",
+      "title": "Citation Map",
+      "description": "Visualize Citation Map as a complete offline evidence view for knowledge workflows using the citation_map layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "citation_map",
+      "tags": [
+        "citation",
+        "citation_map",
+        "evidence",
+        "knowledge",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.claim_evidence_tree",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.claim_evidence_tree/template.yaml",
+      "title": "Claim Evidence Tree",
+      "description": "Visualize Claim Evidence Tree as a complete offline evidence view for knowledge workflows using the radial_tree layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "claim",
+        "evidence",
+        "knowledge",
+        "radial_tree",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.comparison_table_3d",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.comparison_table_3d/template.yaml",
+      "title": "Comparison Table 3D",
+      "description": "Visualize Comparison Table 3D as a complete offline matrix view for knowledge workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "3d",
+        "comparison",
+        "knowledge",
+        "matrix",
+        "matrix_board",
+        "table"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.concept_dependency_tree",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.concept_dependency_tree/template.yaml",
+      "title": "Concept Dependency Tree",
+      "description": "Visualize Concept Dependency Tree as a complete offline graph view for knowledge workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "concept",
+        "dependency",
+        "graph",
+        "knowledge",
+        "radial_tree",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.decision_matrix",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.decision_matrix/template.yaml",
+      "title": "Decision Matrix",
+      "description": "Visualize Decision Matrix as a complete offline matrix view for knowledge workflows using the decision_matrix layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "decision_matrix",
+      "tags": [
+        "decision",
+        "decision_matrix",
+        "knowledge",
+        "matrix"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.design_tradeoff_radar",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.design_tradeoff_radar/template.yaml",
+      "title": "Design Tradeoff Radar",
+      "description": "Visualize Design Tradeoff Radar as a complete offline matrix view for knowledge workflows using the radar_sphere layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "design",
+        "knowledge",
+        "matrix",
+        "radar",
+        "radar_sphere",
+        "tradeoff"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.document_cluster_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.document_cluster_map/template.yaml",
+      "title": "Document Cluster Map",
+      "description": "Visualize Document Cluster Map as a complete offline evidence view for knowledge workflows using the constellation layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "cluster",
+        "constellation",
+        "document",
+        "evidence",
+        "knowledge",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.document_diff_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.document_diff_map/template.yaml",
+      "title": "Document Diff Map",
+      "description": "Visualize Document Diff Map as a complete offline evidence view for knowledge workflows using the diff_split_view layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "diff",
+        "diff_split_view",
+        "document",
+        "evidence",
+        "knowledge",
+        "map"
+      ],
+      "aliases": []
     },
     {
       "id": "knowledge.evidence_board",
       "version": "1.0.0",
+      "category": "knowledge",
       "path": "knowledge.evidence_board/template.yaml",
-      "title": "Knowledge Evidence Board",
-      "description": "Render claims, sources, and support or refute relationships.",
-      "input_schema": "evidence_v1",
-      "renderer": "offline.evidence.v1"
+      "title": "Evidence Board",
+      "description": "Visualize Evidence Board as a complete offline evidence view for knowledge workflows using the evidence_board layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "evidence_board",
+      "tags": [
+        "board",
+        "evidence",
+        "evidence_board",
+        "knowledge"
+      ],
+      "aliases": []
     },
     {
-      "id": "agent.fleet_dashboard",
+      "id": "knowledge.faq_constellation",
       "version": "1.0.0",
-      "path": "agent.fleet_dashboard/template.yaml",
-      "title": "Agent Fleet Dashboard",
-      "description": "Plot agents, runtimes, and sessions as a status matrix.",
-      "input_schema": "matrix_v1",
-      "renderer": "offline.matrix.v1"
+      "category": "knowledge",
+      "path": "knowledge.faq_constellation/template.yaml",
+      "title": "Faq Constellation",
+      "description": "Visualize Faq Constellation as a complete offline graph view for knowledge workflows using the constellation layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "constellation",
+        "faq",
+        "graph",
+        "knowledge"
+      ],
+      "aliases": []
     },
     {
-      "id": "knowledge.doc_freshness",
+      "id": "knowledge.graph",
       "version": "1.0.0",
-      "path": "knowledge.doc_freshness/template.yaml",
-      "title": "Knowledge Document Freshness",
-      "description": "Plot documents by freshness, reliability, and relevance.",
-      "input_schema": "matrix_v1",
-      "renderer": "offline.matrix.v1"
+      "category": "knowledge",
+      "path": "knowledge.graph/template.yaml",
+      "title": "Graph",
+      "description": "Visualize Graph as a complete offline graph view for knowledge workflows using the knowledge_graph layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "knowledge_graph",
+      "tags": [
+        "graph",
+        "knowledge",
+        "knowledge_graph"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.research_timeline",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.research_timeline/template.yaml",
+      "title": "Research Timeline",
+      "description": "Visualize Research Timeline as a complete offline timeline view for knowledge workflows using the timeline_tunnel layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "timeline_tunnel",
+      "tags": [
+        "knowledge",
+        "research",
+        "timeline",
+        "timeline_tunnel"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.semantic_search_landscape",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.semantic_search_landscape/template.yaml",
+      "title": "Semantic Search Landscape",
+      "description": "Visualize Semantic Search Landscape as a complete offline matrix view for knowledge workflows using the terrain_heatmap layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "knowledge",
+        "landscape",
+        "matrix",
+        "search",
+        "semantic",
+        "terrain_heatmap"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.source_gap_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.source_gap_map/template.yaml",
+      "title": "Source Gap Map",
+      "description": "Visualize Source Gap Map as a complete offline evidence view for knowledge workflows using the heatmap layout.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "evidence",
+        "gap",
+        "heatmap",
+        "knowledge",
+        "map",
+        "source"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.source_reliability_matrix",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.source_reliability_matrix/template.yaml",
+      "title": "Source Reliability Matrix",
+      "description": "Visualize Source Reliability Matrix as a complete offline matrix view for knowledge workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "knowledge",
+        "matrix",
+        "matrix_board",
+        "reliability",
+        "source"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.spec_compliance_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.spec_compliance_map/template.yaml",
+      "title": "Spec Compliance Map",
+      "description": "Visualize Spec Compliance Map as a complete offline graph view for knowledge workflows using the matrix_board layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "compliance",
+        "graph",
+        "knowledge",
+        "map",
+        "matrix_board",
+        "spec"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.topic_landscape",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.topic_landscape/template.yaml",
+      "title": "Topic Landscape",
+      "description": "Visualize Topic Landscape as a complete offline matrix view for knowledge workflows using the terrain_heatmap layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "knowledge",
+        "landscape",
+        "matrix",
+        "terrain_heatmap",
+        "topic"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.unknowns_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.unknowns_map/template.yaml",
+      "title": "Unknowns Map",
+      "description": "Visualize Unknowns Map as a complete offline matrix view for knowledge workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "knowledge",
+        "map",
+        "matrix",
+        "matrix_board",
+        "unknowns"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.approval_workflow",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.approval_workflow/template.yaml",
+      "title": "Approval Workflow",
+      "description": "Visualize Approval Workflow as a complete offline graph_events view for planning workflows using the permission_gate layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "permission_gate",
+      "tags": [
+        "approval",
+        "graph_events",
+        "permission_gate",
+        "planning",
+        "workflow"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.automation_flow",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.automation_flow/template.yaml",
+      "title": "Automation Flow",
+      "description": "Visualize Automation Flow as a complete offline graph view for planning workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "automation",
+        "flow",
+        "graph",
+        "pipeline_flow",
+        "planning"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.automation_run_replay",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.automation_run_replay/template.yaml",
+      "title": "Automation Run Replay",
+      "description": "Visualize Automation Run Replay as a complete offline graph_events view for planning workflows using the replay_stage layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "replay_stage",
+      "tags": [
+        "automation",
+        "graph_events",
+        "planning",
+        "replay",
+        "replay_stage",
+        "run"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.checklist_progress_orbit",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.checklist_progress_orbit/template.yaml",
+      "title": "Checklist Progress Orbit",
+      "description": "Visualize Checklist Progress Orbit as a complete offline graph view for planning workflows using the orbit_system layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "orbit_system",
+      "tags": [
+        "checklist",
+        "graph",
+        "orbit",
+        "orbit_system",
+        "planning",
+        "progress"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.critical_path_view",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.critical_path_view/template.yaml",
+      "title": "Critical Path View",
+      "description": "Visualize Critical Path View as a complete offline graph view for planning workflows using the dag layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "dag",
+      "tags": [
+        "critical",
+        "dag",
+        "graph",
+        "path",
+        "planning",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.decision_tree",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.decision_tree/template.yaml",
+      "title": "Decision Tree",
+      "description": "Visualize Decision Tree as a complete offline graph view for planning workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "decision",
+        "graph",
+        "planning",
+        "radial_tree",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.dependency_radar",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.dependency_radar/template.yaml",
+      "title": "Dependency Radar",
+      "description": "Visualize Dependency Radar as a complete offline graph view for planning workflows using the radar_sphere layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "dependency",
+        "graph",
+        "planning",
+        "radar",
+        "radar_sphere"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.gantt_tunnel",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.gantt_tunnel/template.yaml",
+      "title": "Gantt Tunnel",
+      "description": "Visualize Gantt Tunnel as a complete offline timeline view for planning workflows using the gantt layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "gantt",
+      "tags": [
+        "gantt",
+        "planning",
+        "timeline",
+        "tunnel"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.goal_breakdown_tree",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.goal_breakdown_tree/template.yaml",
+      "title": "Goal Breakdown Tree",
+      "description": "Visualize Goal Breakdown Tree as a complete offline graph view for planning workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "breakdown",
+        "goal",
+        "graph",
+        "planning",
+        "radial_tree",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.handoff_map",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.handoff_map/template.yaml",
+      "title": "Handoff Map",
+      "description": "Visualize Handoff Map as a complete offline graph_events view for planning workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "graph_events",
+        "handoff",
+        "map",
+        "pipeline_flow",
+        "planning"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.kanban_3d",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.kanban_3d/template.yaml",
+      "title": "Kanban 3D",
+      "description": "Visualize Kanban 3D as a complete offline matrix view for planning workflows using the kanban layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "kanban",
+      "tags": [
+        "3d",
+        "kanban",
+        "matrix",
+        "planning"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.milestone_road",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.milestone_road/template.yaml",
+      "title": "Milestone Road",
+      "description": "Visualize Milestone Road as a complete offline timeline view for planning workflows using the roadmap layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "roadmap",
+      "tags": [
+        "milestone",
+        "planning",
+        "road",
+        "roadmap",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.parallel_sessions_map",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.parallel_sessions_map/template.yaml",
+      "title": "Parallel Sessions Map",
+      "description": "Visualize Parallel Sessions Map as a complete offline graph_events view for planning workflows using the swimlane_timeline layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "swimlane_timeline",
+      "tags": [
+        "graph_events",
+        "map",
+        "parallel",
+        "planning",
+        "sessions",
+        "swimlane_timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.plan_dag",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.plan_dag/template.yaml",
+      "title": "Plan Dag",
+      "description": "Visualize Plan Dag as a complete offline graph view for planning workflows using the dag layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "dag",
+      "tags": [
+        "dag",
+        "graph",
+        "plan",
+        "planning"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.queue_scheduler_view",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.queue_scheduler_view/template.yaml",
+      "title": "Queue Scheduler View",
+      "description": "Visualize Queue Scheduler View as a complete offline matrix view for planning workflows using the kanban layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "kanban",
+      "tags": [
+        "kanban",
+        "matrix",
+        "planning",
+        "queue",
+        "scheduler",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.resource_allocation_board",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.resource_allocation_board/template.yaml",
+      "title": "Resource Allocation Board",
+      "description": "Visualize Resource Allocation Board as a complete offline matrix view for planning workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "allocation",
+        "board",
+        "matrix",
+        "matrix_board",
+        "planning",
+        "resource"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.risk_burndown",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.risk_burndown/template.yaml",
+      "title": "Risk Burndown",
+      "description": "Visualize Risk Burndown as a complete offline timeline view for planning workflows using the line layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "line",
+      "tags": [
+        "burndown",
+        "line",
+        "planning",
+        "risk",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.runbook_execution_map",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.runbook_execution_map/template.yaml",
+      "title": "Runbook Execution Map",
+      "description": "Visualize Runbook Execution Map as a complete offline graph_events view for planning workflows using the step_ladder layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "step_ladder",
+      "tags": [
+        "execution",
+        "graph_events",
+        "map",
+        "planning",
+        "runbook",
+        "step_ladder"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.task_failure_fork",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.task_failure_fork/template.yaml",
+      "title": "Task Failure Fork",
+      "description": "Visualize Task Failure Fork as a complete offline graph_events view for planning workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "failure",
+        "fork",
+        "graph_events",
+        "planning",
+        "radial_tree",
+        "task"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.task_swarm",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.task_swarm/template.yaml",
+      "title": "Task Swarm",
+      "description": "Visualize Task Swarm as a complete offline graph_events view for planning workflows using the constellation layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "constellation",
+        "graph_events",
+        "planning",
+        "swarm",
+        "task"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.capacity_planning_map",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.capacity_planning_map/template.yaml",
+      "title": "Capacity Planning Map",
+      "description": "Visualize Capacity Planning Map as a complete offline matrix view for business workflows using the control_room layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "business",
+        "capacity",
+        "control_room",
+        "map",
+        "matrix",
+        "planning"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.churn_signal_radar",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.churn_signal_radar/template.yaml",
+      "title": "Churn Signal Radar",
+      "description": "Visualize Churn Signal Radar as a complete offline matrix view for business workflows using the radar_sphere layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "business",
+        "churn",
+        "matrix",
+        "radar",
+        "radar_sphere",
+        "signal"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.cohort_timeline",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.cohort_timeline/template.yaml",
+      "title": "Cohort Timeline",
+      "description": "Visualize Cohort Timeline as a complete offline timeline view for business workflows using the swimlane_timeline layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "swimlane_timeline",
+      "tags": [
+        "business",
+        "cohort",
+        "swimlane_timeline",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.cost_cloud",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.cost_cloud/template.yaml",
+      "title": "Cost Cloud",
+      "description": "Visualize Cost Cloud as a complete offline graph view for business workflows using the constellation layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "business",
+        "cloud",
+        "constellation",
+        "cost",
+        "graph"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.customer_journey_map",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.customer_journey_map/template.yaml",
+      "title": "Customer Journey Map",
+      "description": "Visualize Customer Journey Map as a complete offline timeline view for business workflows using the journey layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "journey",
+      "tags": [
+        "business",
+        "customer",
+        "journey",
+        "map",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.customer_segment_constellation",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.customer_segment_constellation/template.yaml",
+      "title": "Customer Segment Constellation",
+      "description": "Visualize Customer Segment Constellation as a complete offline graph view for business workflows using the constellation layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "business",
+        "constellation",
+        "customer",
+        "graph",
+        "segment"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.experiment_result_view",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.experiment_result_view/template.yaml",
+      "title": "Experiment Result View",
+      "description": "Visualize Experiment Result View as a complete offline matrix view for business workflows using the diff_split_view layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "business",
+        "diff_split_view",
+        "experiment",
+        "matrix",
+        "result",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.feature_adoption_map",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.feature_adoption_map/template.yaml",
+      "title": "Feature Adoption Map",
+      "description": "Visualize Feature Adoption Map as a complete offline matrix view for business workflows using the heatmap layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "adoption",
+        "business",
+        "feature",
+        "heatmap",
+        "map",
+        "matrix"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.funnel_flow_3d",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.funnel_flow_3d/template.yaml",
+      "title": "Funnel Flow 3D",
+      "description": "Visualize Funnel Flow 3D as a complete offline graph view for business workflows using the funnel layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "funnel",
+      "tags": [
+        "3d",
+        "business",
+        "flow",
+        "funnel",
+        "graph"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.kpi_control_room",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.kpi_control_room/template.yaml",
+      "title": "KPI Control Room",
+      "description": "Visualize KPI Control Room as a complete offline matrix view for business workflows using the control_room layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "business",
+        "control",
+        "control_room",
+        "kpi",
+        "matrix",
+        "room"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.market_map",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.market_map/template.yaml",
+      "title": "Market Map",
+      "description": "Visualize Market Map as a complete offline matrix view for business workflows using the terrain_heatmap layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "business",
+        "map",
+        "market",
+        "matrix",
+        "terrain_heatmap"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.opportunity_landscape",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.opportunity_landscape/template.yaml",
+      "title": "Opportunity Landscape",
+      "description": "Visualize Opportunity Landscape as a complete offline matrix view for business workflows using the terrain_heatmap layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "business",
+        "landscape",
+        "matrix",
+        "opportunity",
+        "terrain_heatmap"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.ops_shift_overview",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.ops_shift_overview/template.yaml",
+      "title": "Ops Shift Overview",
+      "description": "Visualize Ops Shift Overview as a complete offline matrix view for business workflows using the control_room layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "business",
+        "control_room",
+        "matrix",
+        "ops",
+        "overview",
+        "shift"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.portfolio_matrix",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.portfolio_matrix/template.yaml",
+      "title": "Portfolio Matrix",
+      "description": "Visualize Portfolio Matrix as a complete offline matrix view for business workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "business",
+        "matrix",
+        "matrix_board",
+        "portfolio"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.revenue_stream_map",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.revenue_stream_map/template.yaml",
+      "title": "Revenue Stream Map",
+      "description": "Visualize Revenue Stream Map as a complete offline graph view for business workflows using the sankey_3d layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "sankey_3d",
+      "tags": [
+        "business",
+        "graph",
+        "map",
+        "revenue",
+        "sankey_3d",
+        "stream"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.risk_matrix_3d",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.risk_matrix_3d/template.yaml",
+      "title": "Risk Matrix 3D",
+      "description": "Visualize Risk Matrix 3D as a complete offline matrix view for business workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "3d",
+        "business",
+        "matrix",
+        "matrix_board",
+        "risk"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.sales_pipeline_3d",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.sales_pipeline_3d/template.yaml",
+      "title": "Sales Pipeline 3D",
+      "description": "Visualize Sales Pipeline 3D as a complete offline graph view for business workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "3d",
+        "business",
+        "graph",
+        "pipeline",
+        "pipeline_flow",
+        "sales"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.sla_dashboard",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.sla_dashboard/template.yaml",
+      "title": "SLA Dashboard",
+      "description": "Visualize SLA Dashboard as a complete offline matrix view for business workflows using the control_room layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "business",
+        "control_room",
+        "dashboard",
+        "matrix",
+        "sla"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.support_ticket_heatmap",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.support_ticket_heatmap/template.yaml",
+      "title": "Support Ticket Heatmap",
+      "description": "Visualize Support Ticket Heatmap as a complete offline matrix view for business workflows using the heatmap layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "business",
+        "heatmap",
+        "matrix",
+        "support",
+        "ticket"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.team_load_balance",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.team_load_balance/template.yaml",
+      "title": "Team Load Balance",
+      "description": "Visualize Team Load Balance as a complete offline matrix view for business workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "balance",
+        "business",
+        "load",
+        "matrix",
+        "matrix_board",
+        "team"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.api_lifecycle_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.api_lifecycle_view/template.yaml",
+      "title": "API Lifecycle View",
+      "description": "Visualize API Lifecycle View as a complete offline timeline view for education workflows using the pipeline_flow layout.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "api",
+        "education",
+        "lifecycle",
+        "pipeline_flow",
+        "timeline",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.auth_flow_animation",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.auth_flow_animation/template.yaml",
+      "title": "Auth Flow Animation",
+      "description": "Visualize Auth Flow Animation as a complete offline graph_events view for education workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "animation",
+        "auth",
+        "education",
+        "flow",
+        "graph_events",
+        "pipeline_flow"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.cache_behavior_sim",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.cache_behavior_sim/template.yaml",
+      "title": "Cache Behavior Sim",
+      "description": "Visualize Cache Behavior Sim as a complete offline graph_events view for education workflows using the state_machine layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "state_machine",
+      "tags": [
+        "behavior",
+        "cache",
+        "education",
+        "graph_events",
+        "sim",
+        "state_machine"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.compiler_pipeline_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.compiler_pipeline_view/template.yaml",
+      "title": "Compiler Pipeline View",
+      "description": "Visualize Compiler Pipeline View as a complete offline graph view for education workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "compiler",
+        "education",
+        "graph",
+        "pipeline",
+        "pipeline_flow",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.data_lifecycle_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.data_lifecycle_view/template.yaml",
+      "title": "Data Lifecycle View",
+      "description": "Visualize Data Lifecycle View as a complete offline graph_events view for education workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "data",
+        "education",
+        "graph_events",
+        "lifecycle",
+        "pipeline_flow",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.database_query_plan",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.database_query_plan/template.yaml",
+      "title": "Database Query Plan",
+      "description": "Visualize Database Query Plan as a complete offline graph view for education workflows using the radial_tree layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "database",
+        "education",
+        "graph",
+        "plan",
+        "query",
+        "radial_tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.distributed_consensus_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.distributed_consensus_view/template.yaml",
+      "title": "Distributed Consensus View",
+      "description": "Visualize Distributed Consensus View as a complete offline graph_events view for education workflows using the constellation layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "consensus",
+        "constellation",
+        "distributed",
+        "education",
+        "graph_events",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.event_sourcing_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.event_sourcing_view/template.yaml",
+      "title": "Event Sourcing View",
+      "description": "Visualize Event Sourcing View as a complete offline graph_events view for education workflows using the timeline_tunnel layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "timeline_tunnel",
+      "tags": [
+        "education",
+        "event",
+        "graph_events",
+        "sourcing",
+        "timeline_tunnel",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.exploded_architecture_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.exploded_architecture_view/template.yaml",
+      "title": "Exploded Architecture View",
+      "description": "Visualize Exploded Architecture View as a complete offline graph view for education workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "architecture",
+        "education",
+        "exploded",
+        "graph",
+        "layered_stack",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.memory_layout_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.memory_layout_view/template.yaml",
+      "title": "Memory Layout View",
+      "description": "Visualize Memory Layout View as a complete offline graph view for education workflows using the layered_stack layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "education",
+        "graph",
+        "layered_stack",
+        "layout",
+        "memory",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.migration_strategy_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.migration_strategy_view/template.yaml",
+      "title": "Migration Strategy View",
+      "description": "Visualize Migration Strategy View as a complete offline graph_events view for education workflows using the diff_split_view layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "diff_split_view",
+        "education",
+        "graph_events",
+        "migration",
+        "strategy",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.ml_pipeline_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.ml_pipeline_view/template.yaml",
+      "title": "ML Pipeline View",
+      "description": "Visualize ML Pipeline View as a complete offline graph view for education workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "education",
+        "graph",
+        "ml",
+        "pipeline",
+        "pipeline_flow",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.network_packet_path",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.network_packet_path/template.yaml",
+      "title": "Network Packet Path",
+      "description": "Visualize Network Packet Path as a complete offline graph_events view for education workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "education",
+        "graph_events",
+        "network",
+        "packet",
+        "path",
+        "pipeline_flow"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.payment_flow_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.payment_flow_view/template.yaml",
+      "title": "Payment Flow View",
+      "description": "Visualize Payment Flow View as a complete offline graph_events view for education workflows using the pipeline_flow layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "education",
+        "flow",
+        "graph_events",
+        "payment",
+        "pipeline_flow",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.permission_model_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.permission_model_view/template.yaml",
+      "title": "Permission Model View",
+      "description": "Visualize Permission Model View as a complete offline matrix view for education workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "education",
+        "matrix",
+        "matrix_board",
+        "model",
+        "permission",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.process_animation",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.process_animation/template.yaml",
+      "title": "Process Animation",
+      "description": "Visualize Process Animation as a complete offline graph_events view for education workflows using the flow_particles layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "animation",
+        "education",
+        "flow_particles",
+        "graph_events",
+        "process"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.queue_processing_sim",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.queue_processing_sim/template.yaml",
+      "title": "Queue Processing Sim",
+      "description": "Visualize Queue Processing Sim as a complete offline graph_events view for education workflows using the flow_particles layout.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "education",
+        "flow_particles",
+        "graph_events",
+        "processing",
+        "queue",
+        "sim"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.security_threat_model",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.security_threat_model/template.yaml",
+      "title": "Security Threat Model",
+      "description": "Visualize Security Threat Model as a complete offline graph view for education workflows using the network_boundary_map layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "network_boundary_map",
+      "tags": [
+        "education",
+        "graph",
+        "model",
+        "network_boundary_map",
+        "security",
+        "threat"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.state_transition_tutorial",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.state_transition_tutorial/template.yaml",
+      "title": "State Transition Tutorial",
+      "description": "Visualize State Transition Tutorial as a complete offline graph view for education workflows using the state_machine layout.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "state_machine",
+      "tags": [
+        "education",
+        "graph",
+        "state",
+        "state_machine",
+        "transition",
+        "tutorial"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.tradeoff_stage",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.tradeoff_stage/template.yaml",
+      "title": "Tradeoff Stage",
+      "description": "Visualize Tradeoff Stage as a complete offline matrix view for education workflows using the matrix_board layout.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "education",
+        "matrix",
+        "matrix_board",
+        "stage",
+        "tradeoff"
+      ],
+      "aliases": []
     }
   ]
 }

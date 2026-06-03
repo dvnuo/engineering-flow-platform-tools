@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "project-requirements-to-code-trace-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "project-requirements-to-code-trace-node-2",
+        "weight": 2
+      },
+      {
+        "from": "project-requirements-to-code-trace-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "project-requirements-to-code-trace-node-3",
+        "weight": 3
+      },
+      {
+        "from": "project-requirements-to-code-trace-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "project-requirements-to-code-trace-node-4",
+        "weight": 2
+      },
+      {
+        "from": "project-requirements-to-code-trace-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "project-requirements-to-code-trace-node-5",
+        "weight": 4
+      },
+      {
+        "from": "project-requirements-to-code-trace-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "project-requirements-to-code-trace-node-6",
+        "weight": 2
+      },
+      {
+        "from": "project-requirements-to-code-trace-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "project-requirements-to-code-trace-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "planning",
+        "id": "project-requirements-to-code-trace-node-1",
+        "kind": "requirements",
+        "label": "Requirements To Intake",
+        "metadata": {
+          "detail": "Requirements To Code Trace signal 1",
+          "owner": "planning",
+          "template_id": "project.requirements_to_code_trace"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "error"
+      },
+      {
+        "group": "review",
+        "id": "project-requirements-to-code-trace-node-2",
+        "kind": "to",
+        "label": "To Code Core",
+        "metadata": {
+          "detail": "Requirements To Code Trace signal 2",
+          "owner": "review",
+          "template_id": "project.requirements_to_code_trace"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "running"
+      },
+      {
+        "group": "delivery",
+        "id": "project-requirements-to-code-trace-node-3",
+        "kind": "code",
+        "label": "Code Trace Policy",
+        "metadata": {
+          "detail": "Requirements To Code Trace signal 3",
+          "owner": "delivery",
+          "template_id": "project.requirements_to_code_trace"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "ok"
+      },
+      {
+        "group": "planning",
+        "id": "project-requirements-to-code-trace-node-4",
+        "kind": "planning",
+        "label": "Trace Requirements Execution",
+        "metadata": {
+          "detail": "Requirements To Code Trace signal 4",
+          "owner": "planning",
+          "template_id": "project.requirements_to_code_trace"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "warning"
+      },
+      {
+        "group": "review",
+        "id": "project-requirements-to-code-trace-node-5",
+        "kind": "requirements",
+        "label": "Requirements To Risk",
+        "metadata": {
+          "detail": "Requirements To Code Trace signal 5",
+          "owner": "review",
+          "template_id": "project.requirements_to_code_trace"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "success"
+      },
+      {
+        "group": "delivery",
+        "id": "project-requirements-to-code-trace-node-6",
+        "kind": "to",
+        "label": "To Code Outcome",
+        "metadata": {
+          "detail": "Requirements To Code Trace signal 6",
+          "owner": "delivery",
+          "template_id": "project.requirements_to_code_trace"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Requirements To Code Trace Example"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "project.requirements_to_code_trace"
+}

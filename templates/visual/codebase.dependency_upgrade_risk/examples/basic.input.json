@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "codebase-dependency-upgrade-risk-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "codebase-dependency-upgrade-risk-node-2",
+      "weight": 2
+    },
+    {
+      "from": "codebase-dependency-upgrade-risk-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "codebase-dependency-upgrade-risk-node-3",
+      "weight": 3
+    },
+    {
+      "from": "codebase-dependency-upgrade-risk-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "codebase-dependency-upgrade-risk-node-4",
+      "weight": 2
+    },
+    {
+      "from": "codebase-dependency-upgrade-risk-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "codebase-dependency-upgrade-risk-node-5",
+      "weight": 4
+    },
+    {
+      "from": "codebase-dependency-upgrade-risk-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "codebase-dependency-upgrade-risk-node-6",
+      "weight": 2
+    },
+    {
+      "from": "codebase-dependency-upgrade-risk-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "codebase-dependency-upgrade-risk-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "source",
+      "id": "codebase-dependency-upgrade-risk-node-1",
+      "kind": "dependency",
+      "label": "Dependency Upgrade Intake",
+      "metadata": {
+        "detail": "Dependency Upgrade Risk signal 1",
+        "owner": "source",
+        "template_id": "codebase.dependency_upgrade_risk"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "test",
+      "id": "codebase-dependency-upgrade-risk-node-2",
+      "kind": "upgrade",
+      "label": "Upgrade Risk Core",
+      "metadata": {
+        "detail": "Dependency Upgrade Risk signal 2",
+        "owner": "test",
+        "template_id": "codebase.dependency_upgrade_risk"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "release",
+      "id": "codebase-dependency-upgrade-risk-node-3",
+      "kind": "risk",
+      "label": "Risk Dependency Policy",
+      "metadata": {
+        "detail": "Dependency Upgrade Risk signal 3",
+        "owner": "release",
+        "template_id": "codebase.dependency_upgrade_risk"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "source",
+      "id": "codebase-dependency-upgrade-risk-node-4",
+      "kind": "source",
+      "label": "Dependency Upgrade Execution",
+      "metadata": {
+        "detail": "Dependency Upgrade Risk signal 4",
+        "owner": "source",
+        "template_id": "codebase.dependency_upgrade_risk"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "test",
+      "id": "codebase-dependency-upgrade-risk-node-5",
+      "kind": "dependency",
+      "label": "Upgrade Risk Risk",
+      "metadata": {
+        "detail": "Dependency Upgrade Risk signal 5",
+        "owner": "test",
+        "template_id": "codebase.dependency_upgrade_risk"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "release",
+      "id": "codebase-dependency-upgrade-risk-node-6",
+      "kind": "upgrade",
+      "label": "Risk Dependency Outcome",
+      "metadata": {
+        "detail": "Dependency Upgrade Risk signal 6",
+        "owner": "release",
+        "template_id": "codebase.dependency_upgrade_risk"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Dependency Upgrade Risk Example"
+}

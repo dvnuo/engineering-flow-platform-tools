@@ -1,10 +1,168 @@
 {
-  "schema": "efp.visual.input.matrix.v1",
-  "title": "Agent Fleet Dashboard",
   "items": [
-    {"id": "agent_1", "label": "Agent 1", "x": 0.82, "y": 0.88, "kind": "agent", "status": "success", "metadata": {"runtime": "linux"}},
-    {"id": "agent_2", "label": "Agent 2", "x": 0.64, "y": 0.72, "kind": "agent", "status": "busy", "metadata": {"runtime": "linux"}},
-    {"id": "session_1", "label": "Session 1", "x": 0.48, "y": 0.54, "kind": "session", "status": "retry", "metadata": {"attempts": 2}},
-    {"id": "runtime_1", "label": "Runtime 1", "x": 0.26, "y": 0.35, "kind": "runtime", "status": "blocked", "metadata": {"reason": "permission"}}
-  ]
+    {
+      "group": "reasoning",
+      "id": "agent-fleet-dashboard-item-1",
+      "kind": "fleet",
+      "label": "Fleet Dashboard North",
+      "metadata": {
+        "note": "Fleet Dashboard matrix cell 1",
+        "quadrant": "q1",
+        "template_id": "agent.fleet_dashboard"
+      },
+      "metrics": {
+        "confidence": 0.55,
+        "impact": 0.4
+      },
+      "status": "ok",
+      "x": 0.17,
+      "y": 0.29
+    },
+    {
+      "group": "tooling",
+      "id": "agent-fleet-dashboard-item-2",
+      "kind": "dashboard",
+      "label": "Dashboard Fleet East",
+      "metadata": {
+        "note": "Fleet Dashboard matrix cell 2",
+        "quadrant": "q2",
+        "template_id": "agent.fleet_dashboard"
+      },
+      "metrics": {
+        "confidence": 0.59,
+        "impact": 0.46
+      },
+      "status": "warning",
+      "x": 0.4,
+      "y": 0.6
+    },
+    {
+      "group": "response",
+      "id": "agent-fleet-dashboard-item-3",
+      "kind": "response",
+      "label": "Fleet Dashboard South",
+      "metadata": {
+        "note": "Fleet Dashboard matrix cell 3",
+        "quadrant": "q3",
+        "template_id": "agent.fleet_dashboard"
+      },
+      "metrics": {
+        "confidence": 0.63,
+        "impact": 0.52
+      },
+      "status": "success",
+      "x": 0.63,
+      "y": 0.02
+    },
+    {
+      "group": "reasoning",
+      "id": "agent-fleet-dashboard-item-4",
+      "kind": "reasoning",
+      "label": "Dashboard Fleet West",
+      "metadata": {
+        "note": "Fleet Dashboard matrix cell 4",
+        "quadrant": "q4",
+        "template_id": "agent.fleet_dashboard"
+      },
+      "metrics": {
+        "confidence": 0.67,
+        "impact": 0.58
+      },
+      "status": "blocked",
+      "x": 0.86,
+      "y": 0.33
+    },
+    {
+      "group": "tooling",
+      "id": "agent-fleet-dashboard-item-5",
+      "kind": "fleet",
+      "label": "Fleet Dashboard Signal",
+      "metadata": {
+        "note": "Fleet Dashboard matrix cell 5",
+        "quadrant": "q1",
+        "template_id": "agent.fleet_dashboard"
+      },
+      "metrics": {
+        "confidence": 0.71,
+        "impact": 0.64
+      },
+      "status": "error",
+      "x": 0.18,
+      "y": 0.64
+    },
+    {
+      "group": "response",
+      "id": "agent-fleet-dashboard-item-6",
+      "kind": "dashboard",
+      "label": "Dashboard Fleet Review",
+      "metadata": {
+        "note": "Fleet Dashboard matrix cell 6",
+        "quadrant": "q2",
+        "template_id": "agent.fleet_dashboard"
+      },
+      "metrics": {
+        "confidence": 0.75,
+        "impact": 0.7
+      },
+      "status": "running",
+      "x": 0.41,
+      "y": 0.06
+    },
+    {
+      "group": "reasoning",
+      "id": "agent-fleet-dashboard-item-7",
+      "kind": "response",
+      "label": "Fleet Dashboard Ready",
+      "metadata": {
+        "note": "Fleet Dashboard matrix cell 7",
+        "quadrant": "q3",
+        "template_id": "agent.fleet_dashboard"
+      },
+      "metrics": {
+        "confidence": 0.79,
+        "impact": 0.76
+      },
+      "status": "idle",
+      "x": 0.64,
+      "y": 0.37
+    },
+    {
+      "group": "tooling",
+      "id": "agent-fleet-dashboard-item-8",
+      "kind": "reasoning",
+      "label": "Dashboard Fleet Watch",
+      "metadata": {
+        "note": "Fleet Dashboard matrix cell 8",
+        "quadrant": "q4",
+        "template_id": "agent.fleet_dashboard"
+      },
+      "metrics": {
+        "confidence": 0.83,
+        "impact": 0.82
+      },
+      "status": "ok",
+      "x": 0.87,
+      "y": 0.68
+    },
+    {
+      "group": "response",
+      "id": "agent-fleet-dashboard-item-9",
+      "kind": "fleet",
+      "label": "Fleet Dashboard Owner",
+      "metadata": {
+        "note": "Fleet Dashboard matrix cell 9",
+        "quadrant": "q1",
+        "template_id": "agent.fleet_dashboard"
+      },
+      "metrics": {
+        "confidence": 0.87,
+        "impact": 0.88
+      },
+      "status": "warning",
+      "x": 0.19,
+      "y": 0.1
+    }
+  ],
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Fleet Dashboard Example"
 }

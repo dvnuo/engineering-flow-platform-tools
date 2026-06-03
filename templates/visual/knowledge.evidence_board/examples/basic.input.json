@@ -1,19 +1,100 @@
 {
-  "schema": "efp.visual.input.evidence.v1",
-  "title": "Evidence Board",
   "claims": [
-    {"id": "claim_1", "text": "Artifacts can open offline.", "confidence": 0.92, "status": "supported"},
-    {"id": "claim_2", "text": "Remote assets are required.", "confidence": 0.12, "status": "refuted"},
-    {"id": "claim_3", "text": "Relative paths support proxy subpaths.", "confidence": 0.84, "status": "supported"}
-  ],
-  "sources": [
-    {"id": "source_1", "title": "Offline scanner", "kind": "test", "reliability": 0.9},
-    {"id": "source_2", "title": "Rendered manifest", "kind": "artifact", "reliability": 0.86},
-    {"id": "source_3", "title": "Template contract", "kind": "spec", "reliability": 0.82}
+    {
+      "confidence": 0.82,
+      "id": "knowledge-evidence-board-claim-1",
+      "status": "supported",
+      "text": "Evidence Board is supported by current artifacts"
+    },
+    {
+      "confidence": 0.61,
+      "id": "knowledge-evidence-board-claim-2",
+      "status": "warning",
+      "text": "Board Evidence has a known gap"
+    },
+    {
+      "confidence": 0.44,
+      "id": "knowledge-evidence-board-claim-3",
+      "status": "refuted",
+      "text": "Evidence Board conflicts with stale assumptions"
+    },
+    {
+      "confidence": 0.76,
+      "id": "knowledge-evidence-board-claim-4",
+      "status": "success",
+      "text": "Board Evidence is ready for review"
+    }
   ],
   "links": [
-    {"claim_id": "claim_1", "source_id": "source_1", "relation": "supports"},
-    {"claim_id": "claim_2", "source_id": "source_3", "relation": "refutes"},
-    {"claim_id": "claim_3", "source_id": "source_2", "relation": "supports"}
-  ]
+    {
+      "claim_id": "knowledge-evidence-board-claim-1",
+      "relation": "supports",
+      "source_id": "knowledge-evidence-board-source-1",
+      "weight": 0.9
+    },
+    {
+      "claim_id": "knowledge-evidence-board-claim-1",
+      "relation": "mentions",
+      "source_id": "knowledge-evidence-board-source-2",
+      "weight": 0.5
+    },
+    {
+      "claim_id": "knowledge-evidence-board-claim-2",
+      "relation": "supports",
+      "source_id": "knowledge-evidence-board-source-3",
+      "weight": 0.6
+    },
+    {
+      "claim_id": "knowledge-evidence-board-claim-3",
+      "relation": "refutes",
+      "source_id": "knowledge-evidence-board-source-4",
+      "weight": 0.7
+    },
+    {
+      "claim_id": "knowledge-evidence-board-claim-4",
+      "relation": "supports",
+      "source_id": "knowledge-evidence-board-source-5",
+      "weight": 0.8
+    },
+    {
+      "claim_id": "knowledge-evidence-board-claim-2",
+      "relation": "mentions",
+      "source_id": "knowledge-evidence-board-source-5",
+      "weight": 0.4
+    }
+  ],
+  "schema": "efp.visual.input.evidence.v1",
+  "sources": [
+    {
+      "id": "knowledge-evidence-board-source-1",
+      "kind": "document",
+      "reliability": 0.87,
+      "title": "Evidence Board design note"
+    },
+    {
+      "id": "knowledge-evidence-board-source-2",
+      "kind": "log",
+      "reliability": 0.72,
+      "title": "Board Evidence run log"
+    },
+    {
+      "id": "knowledge-evidence-board-source-3",
+      "kind": "review",
+      "reliability": 0.66,
+      "title": "Evidence Board review thread"
+    },
+    {
+      "id": "knowledge-evidence-board-source-4",
+      "kind": "metric",
+      "reliability": 0.79,
+      "title": "Board Evidence benchmark"
+    },
+    {
+      "id": "knowledge-evidence-board-source-5",
+      "kind": "record",
+      "reliability": 0.91,
+      "title": "Evidence Board decision record"
+    }
+  ],
+  "title": "Evidence Board Example"
 }

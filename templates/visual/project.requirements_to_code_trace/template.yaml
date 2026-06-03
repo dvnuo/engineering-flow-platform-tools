@@ -1,0 +1,54 @@
+id: project.requirements_to_code_trace
+version: 1.0.0
+category: project
+title: Requirements To Code Trace
+description: Visualize Requirements To Code Trace as a complete offline graph view for project workflows using the layered_stack layout.
+input_schema: schema.input.json
+input_schema_kind: graph_v1
+renderer:
+  contract: offline.graph.v1
+layout:
+  preset: layered_stack
+  group_by: group
+offline:
+  required: true
+  forbid_network: true
+  data_mode: js-file
+assets:
+  - from: ../_shared/runtime/efp-visual-runtime.iife.js
+    to: assets/runtime/efp-visual-runtime.iife.js
+  - from: ../_shared/runtime/efp-visual-renderers.iife.js
+    to: assets/runtime/efp-visual-renderers.iife.js
+  - from: ../_shared/runtime/efp-visual-runtime.css
+    to: assets/runtime/efp-visual-runtime.css
+  - from: style.css
+    to: assets/templates/project.requirements_to_code_trace/style.css
+styles:
+  - assets/runtime/efp-visual-runtime.css
+  - assets/templates/project.requirements_to_code_trace/style.css
+scripts:
+  - manifest.js
+  - data.js
+  - assets/runtime/efp-visual-runtime.iife.js
+  - assets/runtime/efp-visual-renderers.iife.js
+interactions:
+  - hover_tooltip
+  - click_inspect
+  - search_node
+  - filter_by_type
+  - filter_by_status
+  - focus_path
+  - export_json
+limits:
+  max_nodes: 1000
+  max_edges: 3000
+  max_events: 5000
+  max_items: 2000
+tags:
+  - code
+  - graph
+  - layered_stack
+  - project
+  - requirements
+  - to
+  - trace

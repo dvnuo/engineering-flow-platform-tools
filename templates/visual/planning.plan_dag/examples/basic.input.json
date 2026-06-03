@@ -1,18 +1,146 @@
 {
-  "schema": "efp.visual.input.graph.v1",
-  "title": "Plan DAG",
-  "nodes": [
-    {"id": "goal", "label": "Goal", "kind": "goal", "status": "success"},
-    {"id": "milestone_a", "label": "Milestone A", "kind": "milestone", "status": "success"},
-    {"id": "milestone_b", "label": "Milestone B", "kind": "milestone", "status": "warning"},
-    {"id": "task_1", "label": "Task 1", "kind": "task", "status": "success"},
-    {"id": "task_2", "label": "Task 2", "kind": "task", "status": "pending"}
-  ],
   "edges": [
-    {"from": "goal", "to": "milestone_a", "kind": "requires"},
-    {"from": "goal", "to": "milestone_b", "kind": "requires"},
-    {"from": "milestone_a", "to": "task_1", "kind": "contains"},
-    {"from": "milestone_b", "to": "task_2", "kind": "contains"},
-    {"from": "task_1", "to": "task_2", "kind": "dependency"}
-  ]
+    {
+      "from": "planning-plan-dag-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "planning-plan-dag-node-2",
+      "weight": 2
+    },
+    {
+      "from": "planning-plan-dag-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "planning-plan-dag-node-3",
+      "weight": 3
+    },
+    {
+      "from": "planning-plan-dag-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "planning-plan-dag-node-4",
+      "weight": 2
+    },
+    {
+      "from": "planning-plan-dag-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "planning-plan-dag-node-5",
+      "weight": 4
+    },
+    {
+      "from": "planning-plan-dag-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "planning-plan-dag-node-6",
+      "weight": 2
+    },
+    {
+      "from": "planning-plan-dag-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "planning-plan-dag-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "goal",
+      "id": "planning-plan-dag-node-1",
+      "kind": "plan",
+      "label": "Plan Dag Intake",
+      "metadata": {
+        "detail": "Plan Dag signal 1",
+        "owner": "goal",
+        "template_id": "planning.plan_dag"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "task",
+      "id": "planning-plan-dag-node-2",
+      "kind": "dag",
+      "label": "Dag Plan Core",
+      "metadata": {
+        "detail": "Plan Dag signal 2",
+        "owner": "task",
+        "template_id": "planning.plan_dag"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "automation",
+      "id": "planning-plan-dag-node-3",
+      "kind": "automation",
+      "label": "Plan Dag Policy",
+      "metadata": {
+        "detail": "Plan Dag signal 3",
+        "owner": "automation",
+        "template_id": "planning.plan_dag"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "goal",
+      "id": "planning-plan-dag-node-4",
+      "kind": "goal",
+      "label": "Dag Plan Execution",
+      "metadata": {
+        "detail": "Plan Dag signal 4",
+        "owner": "goal",
+        "template_id": "planning.plan_dag"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "task",
+      "id": "planning-plan-dag-node-5",
+      "kind": "plan",
+      "label": "Plan Dag Risk",
+      "metadata": {
+        "detail": "Plan Dag signal 5",
+        "owner": "task",
+        "template_id": "planning.plan_dag"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "automation",
+      "id": "planning-plan-dag-node-6",
+      "kind": "dag",
+      "label": "Dag Plan Outcome",
+      "metadata": {
+        "detail": "Plan Dag signal 6",
+        "owner": "automation",
+        "template_id": "planning.plan_dag"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Plan Dag Example"
 }

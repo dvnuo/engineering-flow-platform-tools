@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "education-database-query-plan-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "education-database-query-plan-node-2",
+        "weight": 2
+      },
+      {
+        "from": "education-database-query-plan-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "education-database-query-plan-node-3",
+        "weight": 3
+      },
+      {
+        "from": "education-database-query-plan-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "education-database-query-plan-node-4",
+        "weight": 2
+      },
+      {
+        "from": "education-database-query-plan-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "education-database-query-plan-node-5",
+        "weight": 4
+      },
+      {
+        "from": "education-database-query-plan-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "education-database-query-plan-node-6",
+        "weight": 2
+      },
+      {
+        "from": "education-database-query-plan-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "education-database-query-plan-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "concept",
+        "id": "education-database-query-plan-node-1",
+        "kind": "database",
+        "label": "Database Query Intake",
+        "metadata": {
+          "detail": "Database Query Plan signal 1",
+          "owner": "concept",
+          "template_id": "education.database_query_plan"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "step",
+        "id": "education-database-query-plan-node-2",
+        "kind": "query",
+        "label": "Query Plan Core",
+        "metadata": {
+          "detail": "Database Query Plan signal 2",
+          "owner": "step",
+          "template_id": "education.database_query_plan"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "assessment",
+        "id": "education-database-query-plan-node-3",
+        "kind": "plan",
+        "label": "Plan Database Policy",
+        "metadata": {
+          "detail": "Database Query Plan signal 3",
+          "owner": "assessment",
+          "template_id": "education.database_query_plan"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "concept",
+        "id": "education-database-query-plan-node-4",
+        "kind": "concept",
+        "label": "Database Query Execution",
+        "metadata": {
+          "detail": "Database Query Plan signal 4",
+          "owner": "concept",
+          "template_id": "education.database_query_plan"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "step",
+        "id": "education-database-query-plan-node-5",
+        "kind": "database",
+        "label": "Query Plan Risk",
+        "metadata": {
+          "detail": "Database Query Plan signal 5",
+          "owner": "step",
+          "template_id": "education.database_query_plan"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "assessment",
+        "id": "education-database-query-plan-node-6",
+        "kind": "query",
+        "label": "Plan Database Outcome",
+        "metadata": {
+          "detail": "Database Query Plan signal 6",
+          "owner": "assessment",
+          "template_id": "education.database_query_plan"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Database Query Plan Example"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "education.database_query_plan"
+}

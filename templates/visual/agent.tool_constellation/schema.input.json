@@ -1,247 +1,463 @@
 {
-  "schema": "efp.visual.template_input_schema.v1",
-  "template_id": "agent.tool_constellation",
-  "input_schema_kind": "graph_events_v1",
-  "json_schema": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "efp.visual.input.graph_events.v1",
-    "title": "EFP Visual Graph Events Input v1",
-    "description": "Graph input with optional event stream for offline visual templates.",
-    "type": "object",
-    "required": [
-      "nodes"
-    ],
-    "additionalProperties": true,
-    "properties": {
-      "schema": {
-        "type": "string",
-        "const": "efp.visual.input.graph_events.v1"
-      },
-      "title": {
-        "type": "string"
-      },
-      "nodes": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/node"
-        }
-      },
-      "edges": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/edge"
-        }
-      },
-      "events": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/event"
-        }
-      }
-    },
-    "$defs": {
-      "object": {
-        "type": "object",
-        "additionalProperties": true
-      },
-      "node": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "label": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "group": {
-            "type": "string"
-          },
-          "metadata": {
-            "$ref": "#/$defs/object"
-          },
-          "metrics": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      },
-      "edge": {
-        "type": "object",
-        "required": [
-          "from",
-          "to"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "from": {
-            "type": "string",
-            "minLength": 1
-          },
-          "to": {
-            "type": "string",
-            "minLength": 1
-          },
-          "kind": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "weight": {
-            "type": "number"
-          },
-          "metadata": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      },
-      "event": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "time": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "node_id": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "summary": {
-            "type": "string"
-          },
-          "payload": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      }
-    }
-  },
   "example": {
-    "schema": "efp.visual.input.graph_events.v1",
-    "title": "Tool Constellation",
-    "nodes": [
-      {
-        "id": "agent",
-        "label": "Agent",
-        "kind": "agent",
-        "status": "success"
-      },
-      {
-        "id": "bash",
-        "label": "Bash",
-        "kind": "tool",
-        "status": "success"
-      },
-      {
-        "id": "read",
-        "label": "Read files",
-        "kind": "tool",
-        "status": "success"
-      },
-      {
-        "id": "write",
-        "label": "Write files",
-        "kind": "tool",
-        "status": "warning"
-      },
-      {
-        "id": "browser",
-        "label": "Browser probe",
-        "kind": "tool",
-        "status": "info"
-      },
-      {
-        "id": "visual",
-        "label": "Visual render",
-        "kind": "tool",
-        "status": "success"
-      }
-    ],
     "edges": [
       {
-        "from": "agent",
-        "to": "bash",
-        "kind": "exec"
+        "from": "agent-tool-constellation-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "agent-tool-constellation-node-2",
+        "weight": 2
       },
       {
-        "from": "agent",
-        "to": "read",
-        "kind": "inspect"
+        "from": "agent-tool-constellation-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "agent-tool-constellation-node-3",
+        "weight": 3
       },
       {
-        "from": "agent",
-        "to": "write",
-        "kind": "edit"
+        "from": "agent-tool-constellation-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "agent-tool-constellation-node-4",
+        "weight": 2
       },
       {
-        "from": "agent",
-        "to": "browser",
-        "kind": "probe"
+        "from": "agent-tool-constellation-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "agent-tool-constellation-node-5",
+        "weight": 4
       },
       {
-        "from": "agent",
-        "to": "visual",
-        "kind": "render"
+        "from": "agent-tool-constellation-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "agent-tool-constellation-node-6",
+        "weight": 2
+      },
+      {
+        "from": "agent-tool-constellation-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "agent-tool-constellation-node-6",
+        "weight": 1
       }
     ],
     "events": [
       {
-        "id": "c1",
-        "time": "2026-06-03T13:10:00Z",
-        "kind": "tool_started",
-        "node_id": "bash",
-        "summary": "Listed files."
+        "id": "agent-tool-constellation-event-1",
+        "kind": "start",
+        "label": "Tool Constellation Opened",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "agent.tool_constellation"
+        },
+        "node_id": "agent-tool-constellation-node-1",
+        "status": "running",
+        "summary": "Tool Constellation event 1 references Tool Constellation Intake.",
+        "time": "2026-06-03T14:55:00Z"
       },
       {
-        "id": "c2",
-        "time": "2026-06-03T13:11:00Z",
-        "kind": "tool_started",
-        "node_id": "read",
-        "summary": "Read source."
+        "id": "agent-tool-constellation-event-2",
+        "kind": "tool",
+        "label": "Tool Constellation Triaged",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "agent.tool_constellation"
+        },
+        "node_id": "agent-tool-constellation-node-2",
+        "status": "success",
+        "summary": "Tool Constellation event 2 references Constellation Tool Core.",
+        "time": "2026-06-03T15:06:00Z"
       },
       {
-        "id": "c3",
-        "time": "2026-06-03T13:12:00Z",
-        "kind": "tool_started",
-        "node_id": "write",
-        "summary": "Applied patch."
+        "id": "agent-tool-constellation-event-3",
+        "kind": "checkpoint",
+        "label": "Tool Constellation Mapped",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "agent.tool_constellation"
+        },
+        "node_id": "agent-tool-constellation-node-3",
+        "status": "warning",
+        "summary": "Tool Constellation event 3 references Tool Constellation Policy.",
+        "time": "2026-06-03T15:17:00Z"
       },
       {
-        "id": "c4",
-        "time": "2026-06-03T13:13:00Z",
-        "kind": "tool_finished",
-        "node_id": "visual",
-        "summary": "Rendered artifact."
+        "id": "agent-tool-constellation-event-4",
+        "kind": "decision",
+        "label": "Tool Constellation Acted",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "agent.tool_constellation"
+        },
+        "node_id": "agent-tool-constellation-node-4",
+        "status": "running",
+        "summary": "Tool Constellation event 4 references Constellation Tool Execution.",
+        "time": "2026-06-03T15:28:00Z"
+      },
+      {
+        "id": "agent-tool-constellation-event-5",
+        "kind": "recovery",
+        "label": "Tool Constellation Checked",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "agent.tool_constellation"
+        },
+        "node_id": "agent-tool-constellation-node-5",
+        "status": "error",
+        "summary": "Tool Constellation event 5 references Tool Constellation Risk.",
+        "time": "2026-06-03T15:39:00Z"
+      },
+      {
+        "id": "agent-tool-constellation-event-6",
+        "kind": "finish",
+        "label": "Tool Constellation Recovered",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "agent.tool_constellation"
+        },
+        "node_id": "agent-tool-constellation-node-6",
+        "status": "success",
+        "summary": "Tool Constellation event 6 references Constellation Tool Outcome.",
+        "time": "2026-06-03T15:50:00Z"
       }
-    ]
-  }
+    ],
+    "nodes": [
+      {
+        "group": "reasoning",
+        "id": "agent-tool-constellation-node-1",
+        "kind": "tool",
+        "label": "Tool Constellation Intake",
+        "metadata": {
+          "detail": "Tool Constellation signal 1",
+          "owner": "reasoning",
+          "template_id": "agent.tool_constellation"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "success"
+      },
+      {
+        "group": "tooling",
+        "id": "agent-tool-constellation-node-2",
+        "kind": "constellation",
+        "label": "Constellation Tool Core",
+        "metadata": {
+          "detail": "Tool Constellation signal 2",
+          "owner": "tooling",
+          "template_id": "agent.tool_constellation"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "response",
+        "id": "agent-tool-constellation-node-3",
+        "kind": "response",
+        "label": "Tool Constellation Policy",
+        "metadata": {
+          "detail": "Tool Constellation signal 3",
+          "owner": "response",
+          "template_id": "agent.tool_constellation"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "error"
+      },
+      {
+        "group": "reasoning",
+        "id": "agent-tool-constellation-node-4",
+        "kind": "reasoning",
+        "label": "Constellation Tool Execution",
+        "metadata": {
+          "detail": "Tool Constellation signal 4",
+          "owner": "reasoning",
+          "template_id": "agent.tool_constellation"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "running"
+      },
+      {
+        "group": "tooling",
+        "id": "agent-tool-constellation-node-5",
+        "kind": "tool",
+        "label": "Tool Constellation Risk",
+        "metadata": {
+          "detail": "Tool Constellation signal 5",
+          "owner": "tooling",
+          "template_id": "agent.tool_constellation"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "ok"
+      },
+      {
+        "group": "response",
+        "id": "agent-tool-constellation-node-6",
+        "kind": "constellation",
+        "label": "Constellation Tool Outcome",
+        "metadata": {
+          "detail": "Tool Constellation signal 6",
+          "owner": "response",
+          "template_id": "agent.tool_constellation"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "warning"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Tool Constellation Example"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "agent.tool_constellation"
 }

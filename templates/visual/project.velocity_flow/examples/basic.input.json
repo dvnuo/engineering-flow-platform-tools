@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "project-velocity-flow-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "project-velocity-flow-node-2",
+      "weight": 2
+    },
+    {
+      "from": "project-velocity-flow-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "project-velocity-flow-node-3",
+      "weight": 3
+    },
+    {
+      "from": "project-velocity-flow-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "project-velocity-flow-node-4",
+      "weight": 2
+    },
+    {
+      "from": "project-velocity-flow-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "project-velocity-flow-node-5",
+      "weight": 4
+    },
+    {
+      "from": "project-velocity-flow-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "project-velocity-flow-node-6",
+      "weight": 2
+    },
+    {
+      "from": "project-velocity-flow-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "project-velocity-flow-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "project-velocity-flow-event-1",
+      "kind": "start",
+      "label": "Velocity Flow Opened",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "project.velocity_flow"
+      },
+      "node_id": "project-velocity-flow-node-1",
+      "status": "running",
+      "summary": "Velocity Flow event 1 references Velocity Flow Intake.",
+      "time": "2026-06-03T14:38:00Z"
+    },
+    {
+      "id": "project-velocity-flow-event-2",
+      "kind": "tool",
+      "label": "Velocity Flow Triaged",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "project.velocity_flow"
+      },
+      "node_id": "project-velocity-flow-node-2",
+      "status": "success",
+      "summary": "Velocity Flow event 2 references Flow Velocity Core.",
+      "time": "2026-06-03T14:49:00Z"
+    },
+    {
+      "id": "project-velocity-flow-event-3",
+      "kind": "checkpoint",
+      "label": "Velocity Flow Mapped",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "project.velocity_flow"
+      },
+      "node_id": "project-velocity-flow-node-3",
+      "status": "warning",
+      "summary": "Velocity Flow event 3 references Velocity Flow Policy.",
+      "time": "2026-06-03T15:00:00Z"
+    },
+    {
+      "id": "project-velocity-flow-event-4",
+      "kind": "decision",
+      "label": "Velocity Flow Acted",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "project.velocity_flow"
+      },
+      "node_id": "project-velocity-flow-node-4",
+      "status": "running",
+      "summary": "Velocity Flow event 4 references Flow Velocity Execution.",
+      "time": "2026-06-03T15:11:00Z"
+    },
+    {
+      "id": "project-velocity-flow-event-5",
+      "kind": "recovery",
+      "label": "Velocity Flow Checked",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "project.velocity_flow"
+      },
+      "node_id": "project-velocity-flow-node-5",
+      "status": "error",
+      "summary": "Velocity Flow event 5 references Velocity Flow Risk.",
+      "time": "2026-06-03T15:22:00Z"
+    },
+    {
+      "id": "project-velocity-flow-event-6",
+      "kind": "finish",
+      "label": "Velocity Flow Recovered",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "project.velocity_flow"
+      },
+      "node_id": "project-velocity-flow-node-6",
+      "status": "success",
+      "summary": "Velocity Flow event 6 references Flow Velocity Outcome.",
+      "time": "2026-06-03T15:33:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "planning",
+      "id": "project-velocity-flow-node-1",
+      "kind": "velocity",
+      "label": "Velocity Flow Intake",
+      "metadata": {
+        "detail": "Velocity Flow signal 1",
+        "owner": "planning",
+        "template_id": "project.velocity_flow"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "review",
+      "id": "project-velocity-flow-node-2",
+      "kind": "flow",
+      "label": "Flow Velocity Core",
+      "metadata": {
+        "detail": "Velocity Flow signal 2",
+        "owner": "review",
+        "template_id": "project.velocity_flow"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "delivery",
+      "id": "project-velocity-flow-node-3",
+      "kind": "delivery",
+      "label": "Velocity Flow Policy",
+      "metadata": {
+        "detail": "Velocity Flow signal 3",
+        "owner": "delivery",
+        "template_id": "project.velocity_flow"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "planning",
+      "id": "project-velocity-flow-node-4",
+      "kind": "planning",
+      "label": "Flow Velocity Execution",
+      "metadata": {
+        "detail": "Velocity Flow signal 4",
+        "owner": "planning",
+        "template_id": "project.velocity_flow"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "review",
+      "id": "project-velocity-flow-node-5",
+      "kind": "velocity",
+      "label": "Velocity Flow Risk",
+      "metadata": {
+        "detail": "Velocity Flow signal 5",
+        "owner": "review",
+        "template_id": "project.velocity_flow"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "delivery",
+      "id": "project-velocity-flow-node-6",
+      "kind": "flow",
+      "label": "Flow Velocity Outcome",
+      "metadata": {
+        "detail": "Velocity Flow signal 6",
+        "owner": "delivery",
+        "template_id": "project.velocity_flow"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Velocity Flow Example"
+}

@@ -1,14 +1,15 @@
 id: codebase.diff_impact
 version: 1.0.0
-title: Codebase Diff Impact
-description: Show changed files, impacted modules, tests, and release surfaces.
+category: codebase
+title: Diff Impact
+description: Visualize Diff Impact as a complete offline graph_events view for codebase workflows using the ripple layout.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:
   contract: offline.graph.v1
 layout:
   preset: ripple
-  group_by: impact
+  group_by: group
 offline:
   required: true
   forbid_network: true
@@ -21,21 +22,31 @@ assets:
   - from: ../_shared/runtime/efp-visual-runtime.css
     to: assets/runtime/efp-visual-runtime.css
   - from: style.css
-    to: assets/template/style.css
+    to: assets/templates/codebase.diff_impact/style.css
 styles:
   - assets/runtime/efp-visual-runtime.css
-  - assets/template/style.css
+  - assets/templates/codebase.diff_impact/style.css
 scripts:
   - manifest.js
   - data.js
   - assets/runtime/efp-visual-runtime.iife.js
   - assets/runtime/efp-visual-renderers.iife.js
 interactions:
-  - inspect
-  - filter
-  - search
-  - replay
+  - hover_tooltip
+  - click_inspect
+  - search_node
+  - filter_by_type
+  - filter_by_status
+  - focus_path
+  - export_json
 limits:
   max_nodes: 1000
   max_edges: 3000
   max_events: 5000
+  max_items: 2000
+tags:
+  - codebase
+  - diff
+  - graph_events
+  - impact
+  - ripple

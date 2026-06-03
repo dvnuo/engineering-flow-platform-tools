@@ -1,0 +1,97 @@
+{
+  "events": [
+    {
+      "id": "codebase-git-history-river-event-1",
+      "kind": "intake",
+      "label": "Git History Opened",
+      "lane": "source",
+      "metadata": {
+        "sequence": 1,
+        "template_id": "codebase.git_history_river"
+      },
+      "status": "success",
+      "summary": "Git History River advanced through intake with river context.",
+      "time": "2026-06-03T12:50:00Z"
+    },
+    {
+      "id": "codebase-git-history-river-event-2",
+      "kind": "analysis",
+      "label": "History River Triaged",
+      "lane": "test",
+      "metadata": {
+        "sequence": 2,
+        "template_id": "codebase.git_history_river"
+      },
+      "status": "running",
+      "summary": "Git History River advanced through analysis with river context.",
+      "time": "2026-06-03T13:07:00Z"
+    },
+    {
+      "id": "codebase-git-history-river-event-3",
+      "kind": "decision",
+      "label": "River Git Mapped",
+      "lane": "release",
+      "metadata": {
+        "sequence": 3,
+        "template_id": "codebase.git_history_river"
+      },
+      "status": "warning",
+      "summary": "Git History River advanced through decision with river context.",
+      "time": "2026-06-03T13:24:00Z"
+    },
+    {
+      "id": "codebase-git-history-river-event-4",
+      "kind": "execution",
+      "label": "Git History Acted",
+      "lane": "source",
+      "metadata": {
+        "sequence": 4,
+        "template_id": "codebase.git_history_river"
+      },
+      "status": "success",
+      "summary": "Git History River advanced through execution with river context.",
+      "time": "2026-06-03T13:41:00Z"
+    },
+    {
+      "id": "codebase-git-history-river-event-5",
+      "kind": "verification",
+      "label": "History River Checked",
+      "lane": "test",
+      "metadata": {
+        "sequence": 5,
+        "template_id": "codebase.git_history_river"
+      },
+      "status": "error",
+      "summary": "Git History River advanced through verification with river context.",
+      "time": "2026-06-03T13:58:00Z"
+    },
+    {
+      "id": "codebase-git-history-river-event-6",
+      "kind": "handoff",
+      "label": "River Git Recovered",
+      "lane": "release",
+      "metadata": {
+        "sequence": 6,
+        "template_id": "codebase.git_history_river"
+      },
+      "status": "blocked",
+      "summary": "Git History River advanced through handoff with river context.",
+      "time": "2026-06-03T14:15:00Z"
+    },
+    {
+      "id": "codebase-git-history-river-event-7",
+      "kind": "closeout",
+      "label": "Git History Closed",
+      "lane": "source",
+      "metadata": {
+        "sequence": 7,
+        "template_id": "codebase.git_history_river"
+      },
+      "status": "success",
+      "summary": "Git History River advanced through closeout with river context.",
+      "time": "2026-06-03T14:32:00Z"
+    }
+  ],
+  "schema": "efp.visual.input.timeline.v1",
+  "title": "Git History River Example"
+}

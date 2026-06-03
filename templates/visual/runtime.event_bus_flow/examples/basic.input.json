@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "runtime-event-bus-flow-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "runtime-event-bus-flow-node-2",
+      "weight": 2
+    },
+    {
+      "from": "runtime-event-bus-flow-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "runtime-event-bus-flow-node-3",
+      "weight": 3
+    },
+    {
+      "from": "runtime-event-bus-flow-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "runtime-event-bus-flow-node-4",
+      "weight": 2
+    },
+    {
+      "from": "runtime-event-bus-flow-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "runtime-event-bus-flow-node-5",
+      "weight": 4
+    },
+    {
+      "from": "runtime-event-bus-flow-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "runtime-event-bus-flow-node-6",
+      "weight": 2
+    },
+    {
+      "from": "runtime-event-bus-flow-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "runtime-event-bus-flow-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "runtime-event-bus-flow-event-1",
+      "kind": "start",
+      "label": "Event Bus Flow Opened",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "node_id": "runtime-event-bus-flow-node-1",
+      "status": "running",
+      "summary": "Event Bus Flow event 1 references Event Bus Intake.",
+      "time": "2026-06-03T16:23:00Z"
+    },
+    {
+      "id": "runtime-event-bus-flow-event-2",
+      "kind": "tool",
+      "label": "Event Bus Flow Triaged",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "node_id": "runtime-event-bus-flow-node-2",
+      "status": "success",
+      "summary": "Event Bus Flow event 2 references Bus Flow Core.",
+      "time": "2026-06-03T16:34:00Z"
+    },
+    {
+      "id": "runtime-event-bus-flow-event-3",
+      "kind": "checkpoint",
+      "label": "Event Bus Flow Mapped",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "node_id": "runtime-event-bus-flow-node-3",
+      "status": "warning",
+      "summary": "Event Bus Flow event 3 references Flow Event Policy.",
+      "time": "2026-06-03T16:45:00Z"
+    },
+    {
+      "id": "runtime-event-bus-flow-event-4",
+      "kind": "decision",
+      "label": "Event Bus Flow Acted",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "node_id": "runtime-event-bus-flow-node-4",
+      "status": "running",
+      "summary": "Event Bus Flow event 4 references Event Bus Execution.",
+      "time": "2026-06-03T16:56:00Z"
+    },
+    {
+      "id": "runtime-event-bus-flow-event-5",
+      "kind": "recovery",
+      "label": "Event Bus Flow Checked",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "node_id": "runtime-event-bus-flow-node-5",
+      "status": "error",
+      "summary": "Event Bus Flow event 5 references Bus Flow Risk.",
+      "time": "2026-06-03T17:07:00Z"
+    },
+    {
+      "id": "runtime-event-bus-flow-event-6",
+      "kind": "finish",
+      "label": "Event Bus Flow Recovered",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "node_id": "runtime-event-bus-flow-node-6",
+      "status": "success",
+      "summary": "Event Bus Flow event 6 references Flow Event Outcome.",
+      "time": "2026-06-03T17:18:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "edge",
+      "id": "runtime-event-bus-flow-node-1",
+      "kind": "event",
+      "label": "Event Bus Intake",
+      "metadata": {
+        "detail": "Event Bus Flow signal 1",
+        "owner": "edge",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-event-bus-flow-node-2",
+      "kind": "bus",
+      "label": "Bus Flow Core",
+      "metadata": {
+        "detail": "Event Bus Flow signal 2",
+        "owner": "adapter",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "service",
+      "id": "runtime-event-bus-flow-node-3",
+      "kind": "flow",
+      "label": "Flow Event Policy",
+      "metadata": {
+        "detail": "Event Bus Flow signal 3",
+        "owner": "service",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "edge",
+      "id": "runtime-event-bus-flow-node-4",
+      "kind": "edge",
+      "label": "Event Bus Execution",
+      "metadata": {
+        "detail": "Event Bus Flow signal 4",
+        "owner": "edge",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-event-bus-flow-node-5",
+      "kind": "event",
+      "label": "Bus Flow Risk",
+      "metadata": {
+        "detail": "Event Bus Flow signal 5",
+        "owner": "adapter",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "service",
+      "id": "runtime-event-bus-flow-node-6",
+      "kind": "bus",
+      "label": "Flow Event Outcome",
+      "metadata": {
+        "detail": "Event Bus Flow signal 6",
+        "owner": "service",
+        "template_id": "runtime.event_bus_flow"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Event Bus Flow Example"
+}

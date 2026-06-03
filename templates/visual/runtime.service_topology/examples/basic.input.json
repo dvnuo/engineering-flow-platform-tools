@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "runtime-service-topology-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "runtime-service-topology-node-2",
+      "weight": 2
+    },
+    {
+      "from": "runtime-service-topology-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "runtime-service-topology-node-3",
+      "weight": 3
+    },
+    {
+      "from": "runtime-service-topology-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "runtime-service-topology-node-4",
+      "weight": 2
+    },
+    {
+      "from": "runtime-service-topology-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "runtime-service-topology-node-5",
+      "weight": 4
+    },
+    {
+      "from": "runtime-service-topology-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "runtime-service-topology-node-6",
+      "weight": 2
+    },
+    {
+      "from": "runtime-service-topology-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "runtime-service-topology-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "edge",
+      "id": "runtime-service-topology-node-1",
+      "kind": "service",
+      "label": "Service Topology Intake",
+      "metadata": {
+        "detail": "Service Topology signal 1",
+        "owner": "edge",
+        "template_id": "runtime.service_topology"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-service-topology-node-2",
+      "kind": "topology",
+      "label": "Topology Service Core",
+      "metadata": {
+        "detail": "Service Topology signal 2",
+        "owner": "adapter",
+        "template_id": "runtime.service_topology"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "service",
+      "id": "runtime-service-topology-node-3",
+      "kind": "service",
+      "label": "Service Topology Policy",
+      "metadata": {
+        "detail": "Service Topology signal 3",
+        "owner": "service",
+        "template_id": "runtime.service_topology"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "edge",
+      "id": "runtime-service-topology-node-4",
+      "kind": "edge",
+      "label": "Topology Service Execution",
+      "metadata": {
+        "detail": "Service Topology signal 4",
+        "owner": "edge",
+        "template_id": "runtime.service_topology"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-service-topology-node-5",
+      "kind": "service",
+      "label": "Service Topology Risk",
+      "metadata": {
+        "detail": "Service Topology signal 5",
+        "owner": "adapter",
+        "template_id": "runtime.service_topology"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "service",
+      "id": "runtime-service-topology-node-6",
+      "kind": "topology",
+      "label": "Topology Service Outcome",
+      "metadata": {
+        "detail": "Service Topology signal 6",
+        "owner": "service",
+        "template_id": "runtime.service_topology"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Service Topology Example"
+}

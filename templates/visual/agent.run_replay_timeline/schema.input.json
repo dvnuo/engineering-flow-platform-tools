@@ -1,0 +1,463 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "agent-run-replay-timeline-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "agent-run-replay-timeline-node-2",
+        "weight": 2
+      },
+      {
+        "from": "agent-run-replay-timeline-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "agent-run-replay-timeline-node-3",
+        "weight": 3
+      },
+      {
+        "from": "agent-run-replay-timeline-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "agent-run-replay-timeline-node-4",
+        "weight": 2
+      },
+      {
+        "from": "agent-run-replay-timeline-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "agent-run-replay-timeline-node-5",
+        "weight": 4
+      },
+      {
+        "from": "agent-run-replay-timeline-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "agent-run-replay-timeline-node-6",
+        "weight": 2
+      },
+      {
+        "from": "agent-run-replay-timeline-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "agent-run-replay-timeline-node-6",
+        "weight": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "agent-run-replay-timeline-event-1",
+        "kind": "start",
+        "label": "Run Replay Timeline Opened",
+        "metadata": {
+          "layout": "replay_stage",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "node_id": "agent-run-replay-timeline-node-1",
+        "status": "running",
+        "summary": "Run Replay Timeline event 1 references Run Replay Intake.",
+        "time": "2026-06-03T11:34:00Z"
+      },
+      {
+        "id": "agent-run-replay-timeline-event-2",
+        "kind": "tool",
+        "label": "Run Replay Timeline Triaged",
+        "metadata": {
+          "layout": "replay_stage",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "node_id": "agent-run-replay-timeline-node-2",
+        "status": "success",
+        "summary": "Run Replay Timeline event 2 references Replay Timeline Core.",
+        "time": "2026-06-03T11:45:00Z"
+      },
+      {
+        "id": "agent-run-replay-timeline-event-3",
+        "kind": "checkpoint",
+        "label": "Run Replay Timeline Mapped",
+        "metadata": {
+          "layout": "replay_stage",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "node_id": "agent-run-replay-timeline-node-3",
+        "status": "warning",
+        "summary": "Run Replay Timeline event 3 references Timeline Run Policy.",
+        "time": "2026-06-03T11:56:00Z"
+      },
+      {
+        "id": "agent-run-replay-timeline-event-4",
+        "kind": "decision",
+        "label": "Run Replay Timeline Acted",
+        "metadata": {
+          "layout": "replay_stage",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "node_id": "agent-run-replay-timeline-node-4",
+        "status": "running",
+        "summary": "Run Replay Timeline event 4 references Run Replay Execution.",
+        "time": "2026-06-03T12:07:00Z"
+      },
+      {
+        "id": "agent-run-replay-timeline-event-5",
+        "kind": "recovery",
+        "label": "Run Replay Timeline Checked",
+        "metadata": {
+          "layout": "replay_stage",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "node_id": "agent-run-replay-timeline-node-5",
+        "status": "error",
+        "summary": "Run Replay Timeline event 5 references Replay Timeline Risk.",
+        "time": "2026-06-03T12:18:00Z"
+      },
+      {
+        "id": "agent-run-replay-timeline-event-6",
+        "kind": "finish",
+        "label": "Run Replay Timeline Recovered",
+        "metadata": {
+          "layout": "replay_stage",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "node_id": "agent-run-replay-timeline-node-6",
+        "status": "success",
+        "summary": "Run Replay Timeline event 6 references Timeline Run Outcome.",
+        "time": "2026-06-03T12:29:00Z"
+      }
+    ],
+    "nodes": [
+      {
+        "group": "reasoning",
+        "id": "agent-run-replay-timeline-node-1",
+        "kind": "run",
+        "label": "Run Replay Intake",
+        "metadata": {
+          "detail": "Run Replay Timeline signal 1",
+          "owner": "reasoning",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "tooling",
+        "id": "agent-run-replay-timeline-node-2",
+        "kind": "replay",
+        "label": "Replay Timeline Core",
+        "metadata": {
+          "detail": "Run Replay Timeline signal 2",
+          "owner": "tooling",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "response",
+        "id": "agent-run-replay-timeline-node-3",
+        "kind": "timeline",
+        "label": "Timeline Run Policy",
+        "metadata": {
+          "detail": "Run Replay Timeline signal 3",
+          "owner": "response",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "reasoning",
+        "id": "agent-run-replay-timeline-node-4",
+        "kind": "reasoning",
+        "label": "Run Replay Execution",
+        "metadata": {
+          "detail": "Run Replay Timeline signal 4",
+          "owner": "reasoning",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "tooling",
+        "id": "agent-run-replay-timeline-node-5",
+        "kind": "run",
+        "label": "Replay Timeline Risk",
+        "metadata": {
+          "detail": "Run Replay Timeline signal 5",
+          "owner": "tooling",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "response",
+        "id": "agent-run-replay-timeline-node-6",
+        "kind": "replay",
+        "label": "Timeline Run Outcome",
+        "metadata": {
+          "detail": "Run Replay Timeline signal 6",
+          "owner": "response",
+          "template_id": "agent.run_replay_timeline"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Run Replay Timeline Example"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "agent.run_replay_timeline"
+}

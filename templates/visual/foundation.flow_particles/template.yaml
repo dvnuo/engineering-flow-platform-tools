@@ -1,0 +1,52 @@
+id: foundation.flow_particles
+version: 1.0.0
+category: foundation
+title: Flow Particles
+description: Visualize Flow Particles as a complete offline graph_events view for foundation workflows using the flow_particles layout.
+input_schema: schema.input.json
+input_schema_kind: graph_events_v1
+renderer:
+  contract: offline.graph.v1
+layout:
+  preset: flow_particles
+  group_by: group
+offline:
+  required: true
+  forbid_network: true
+  data_mode: js-file
+assets:
+  - from: ../_shared/runtime/efp-visual-runtime.iife.js
+    to: assets/runtime/efp-visual-runtime.iife.js
+  - from: ../_shared/runtime/efp-visual-renderers.iife.js
+    to: assets/runtime/efp-visual-renderers.iife.js
+  - from: ../_shared/runtime/efp-visual-runtime.css
+    to: assets/runtime/efp-visual-runtime.css
+  - from: style.css
+    to: assets/templates/foundation.flow_particles/style.css
+styles:
+  - assets/runtime/efp-visual-runtime.css
+  - assets/templates/foundation.flow_particles/style.css
+scripts:
+  - manifest.js
+  - data.js
+  - assets/runtime/efp-visual-runtime.iife.js
+  - assets/runtime/efp-visual-renderers.iife.js
+interactions:
+  - hover_tooltip
+  - click_inspect
+  - search_node
+  - filter_by_type
+  - filter_by_status
+  - focus_path
+  - export_json
+limits:
+  max_nodes: 1000
+  max_edges: 3000
+  max_events: 5000
+  max_items: 2000
+tags:
+  - flow
+  - flow_particles
+  - foundation
+  - graph_events
+  - particles

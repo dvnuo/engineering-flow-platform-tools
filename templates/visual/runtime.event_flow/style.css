@@ -1,4 +1,19 @@
 :root {
-  --accent: #63a9ff;
-  --accent-2: #e2b84f;
+  --efp-template-accent: #f59e0b;
+  --efp-template-secondary: #22c55e;
+  --efp-template-surface: #111827;
+}
+
+.visual-root {
+  --accent: var(--efp-template-accent);
+  --accent-2: var(--efp-template-secondary);
+}
+
+.visual-header {
+  border-bottom-color: var(--efp-template-accent);
+}
+
+.visual-card,
+.visual-inspector pre {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--efp-template-accent) 18%, transparent);
 }

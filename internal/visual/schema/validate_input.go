@@ -91,8 +91,8 @@ func ValidateInput(kind string, raw []byte, limits manifest.LimitsSpec) (ParsedI
 		if err != nil {
 			return ParsedInput{}, err
 		}
-		if len(items) > limitOrDefault(limits.MaxNodes, 1000) {
-			return ParsedInput{}, invalid("visual input has too many matrix items.", "Reduce items or raise template max_nodes.")
+		if len(items) > limitOrDefault(limits.MaxItems, limitOrDefault(limits.MaxNodes, 1000)) {
+			return ParsedInput{}, invalid("visual input has too many matrix items.", "Reduce items or raise template max_items.")
 		}
 		if err := validateMatrixItems(items); err != nil {
 			return ParsedInput{}, err

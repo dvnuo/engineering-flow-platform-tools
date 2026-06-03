@@ -72,7 +72,7 @@ For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructio
 
 ### Visual
 
-`visual` generates complete offline static visualization artifacts from local templates under `templates/visual`. It validates input JSON, copies local template assets, and writes `index.html`, `manifest.json`, `manifest.js`, `data.js`, and `assets/**` to `--out`. It does not call Portal, MCP, Node/npm, a server, a CDN, or any remote asset.
+`visual` generates complete offline static visualization artifacts from 195 canonical local templates under `templates/visual`. It validates input JSON, copies local template assets, and writes `index.html`, `manifest.json`, `manifest.js`, `data.js`, and `assets/**` to `--out`. It does not call Portal, MCP, Node/npm, a server, a CDN, or any remote asset.
 
 For VS Code GitHub Copilot, copy `cmd/visual/visual-cli.instructions.md` to `~/.copilot/instructions/visual-cli.instructions.md` so Copilot uses `visual` as a terminal CLI and returns the generated `index.html` path.
 
@@ -282,7 +282,9 @@ The current OpenCode runtime image consumes prebuilt binaries copied into `runti
 ## Visual Examples
 
 ```bash
+visual template categories --template-dir ./templates/visual --json
 visual template list --template-dir ./templates/visual --json
+visual template list --template-dir ./templates/visual --category codebase --json
 visual template schema agent.run_trace --template-dir ./templates/visual --json
 visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json
 ```
@@ -315,7 +317,7 @@ inspect-image schema inspect --json
 visual schema render --json
 ```
 
-For agents, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. For `visual`, run `visual template list --json`, `visual template get <template-id> --json`, and `visual template schema <template-id> --json` before render, generate input JSON from the template schema, render to a new output directory, and return `data.artifact.entrypoint`. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+For agents, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. For `visual`, run `visual template categories --json`, `visual template list --category <category> --json`, `visual template get <template-id> --json`, and `visual template schema <template-id> --json` before render. Generate input JSON from the template schema, validate it, render to a new output directory, and return `data.artifact.entrypoint`. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
 
 For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jira issue. When a user asks to update case `X` in cycle `Y`, prefer `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; use `execution resolve` or `cycle resolve` first when the target is ambiguous, and use `status list` rather than hard-coding numeric status ids.
 

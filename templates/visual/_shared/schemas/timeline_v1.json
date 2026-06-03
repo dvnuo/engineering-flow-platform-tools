@@ -1,60 +1,7 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "efp.visual.input.timeline.v1",
-  "title": "EFP Visual Timeline Input v1",
-  "description": "Timeline event input for offline visual templates.",
-  "type": "object",
-  "required": ["events"],
-  "additionalProperties": true,
-  "properties": {
-    "schema": {
-      "type": "string",
-      "const": "efp.visual.input.timeline.v1"
-    },
-    "title": {
-      "type": "string"
-    },
-    "events": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/event"
-      }
-    }
-  },
-  "$defs": {
-    "object": {
-      "type": "object",
-      "additionalProperties": true
-    },
-    "event": {
-      "type": "object",
-      "required": ["id"],
-      "additionalProperties": true,
-      "properties": {
-        "id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "time": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "kind": {
-          "type": "string"
-        },
-        "label": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "summary": {
-          "type": "string"
-        },
-        "metadata": {
-          "$ref": "#/$defs/object"
-        }
-      }
-    }
-  }
+  "$schema": "efp.visual.local.schema",
+  "kind": "timeline_v1",
+  "offline": true,
+  "schema": "efp.visual.shared_input_schema.timeline_v1",
+  "type": "object"
 }

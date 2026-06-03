@@ -1,24 +1,226 @@
 {
-  "schema": "efp.visual.input.graph_events.v1",
-  "title": "Thinking Timeline",
-  "nodes": [
-    {"id": "reasoning", "label": "Reasoning", "kind": "reasoning", "status": "success"},
-    {"id": "tool", "label": "Tool call", "kind": "tool", "status": "success"},
-    {"id": "permission", "label": "Permission", "kind": "permission", "status": "warning"},
-    {"id": "text", "label": "Text update", "kind": "text", "status": "info"},
-    {"id": "finish", "label": "Step finish", "kind": "finish", "status": "success"}
-  ],
   "edges": [
-    {"from": "reasoning", "to": "tool", "kind": "sequence"},
-    {"from": "tool", "to": "permission", "kind": "guard"},
-    {"from": "permission", "to": "text", "kind": "resume"},
-    {"from": "text", "to": "finish", "kind": "sequence"}
+    {
+      "from": "agent-thinking-timeline-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "agent-thinking-timeline-node-2",
+      "weight": 2
+    },
+    {
+      "from": "agent-thinking-timeline-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "agent-thinking-timeline-node-3",
+      "weight": 3
+    },
+    {
+      "from": "agent-thinking-timeline-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "agent-thinking-timeline-node-4",
+      "weight": 2
+    },
+    {
+      "from": "agent-thinking-timeline-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "agent-thinking-timeline-node-5",
+      "weight": 4
+    },
+    {
+      "from": "agent-thinking-timeline-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "agent-thinking-timeline-node-6",
+      "weight": 2
+    },
+    {
+      "from": "agent-thinking-timeline-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "agent-thinking-timeline-node-6",
+      "weight": 1
+    }
   ],
   "events": [
-    {"id": "t1", "time": "2026-06-03T13:00:00Z", "kind": "reasoning", "node_id": "reasoning", "label": "Reasoning phase", "status": "success", "summary": "Approach selected."},
-    {"id": "t2", "time": "2026-06-03T13:01:00Z", "kind": "tool", "node_id": "tool", "label": "Tool call", "status": "success", "summary": "Read repository files."},
-    {"id": "t3", "time": "2026-06-03T13:02:00Z", "kind": "permission", "node_id": "permission", "label": "Permission gate", "status": "warning", "summary": "Checked write boundary."},
-    {"id": "t4", "time": "2026-06-03T13:03:00Z", "kind": "text", "node_id": "text", "label": "User update", "status": "info", "summary": "Progress reported."},
-    {"id": "t5", "time": "2026-06-03T13:04:00Z", "kind": "step_finish", "node_id": "finish", "label": "Step finished", "status": "success", "summary": "Phase completed."}
-  ]
+    {
+      "id": "agent-thinking-timeline-event-1",
+      "kind": "start",
+      "label": "Thinking Timeline Opened",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "agent.thinking_timeline"
+      },
+      "node_id": "agent-thinking-timeline-node-1",
+      "status": "running",
+      "summary": "Thinking Timeline event 1 references Thinking Timeline Intake.",
+      "time": "2026-06-03T15:20:00Z"
+    },
+    {
+      "id": "agent-thinking-timeline-event-2",
+      "kind": "tool",
+      "label": "Thinking Timeline Triaged",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "agent.thinking_timeline"
+      },
+      "node_id": "agent-thinking-timeline-node-2",
+      "status": "success",
+      "summary": "Thinking Timeline event 2 references Timeline Thinking Core.",
+      "time": "2026-06-03T15:31:00Z"
+    },
+    {
+      "id": "agent-thinking-timeline-event-3",
+      "kind": "checkpoint",
+      "label": "Thinking Timeline Mapped",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "agent.thinking_timeline"
+      },
+      "node_id": "agent-thinking-timeline-node-3",
+      "status": "warning",
+      "summary": "Thinking Timeline event 3 references Thinking Timeline Policy.",
+      "time": "2026-06-03T15:42:00Z"
+    },
+    {
+      "id": "agent-thinking-timeline-event-4",
+      "kind": "decision",
+      "label": "Thinking Timeline Acted",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "agent.thinking_timeline"
+      },
+      "node_id": "agent-thinking-timeline-node-4",
+      "status": "running",
+      "summary": "Thinking Timeline event 4 references Timeline Thinking Execution.",
+      "time": "2026-06-03T15:53:00Z"
+    },
+    {
+      "id": "agent-thinking-timeline-event-5",
+      "kind": "recovery",
+      "label": "Thinking Timeline Checked",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "agent.thinking_timeline"
+      },
+      "node_id": "agent-thinking-timeline-node-5",
+      "status": "error",
+      "summary": "Thinking Timeline event 5 references Thinking Timeline Risk.",
+      "time": "2026-06-03T16:04:00Z"
+    },
+    {
+      "id": "agent-thinking-timeline-event-6",
+      "kind": "finish",
+      "label": "Thinking Timeline Recovered",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "agent.thinking_timeline"
+      },
+      "node_id": "agent-thinking-timeline-node-6",
+      "status": "success",
+      "summary": "Thinking Timeline event 6 references Timeline Thinking Outcome.",
+      "time": "2026-06-03T16:15:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "reasoning",
+      "id": "agent-thinking-timeline-node-1",
+      "kind": "thinking",
+      "label": "Thinking Timeline Intake",
+      "metadata": {
+        "detail": "Thinking Timeline signal 1",
+        "owner": "reasoning",
+        "template_id": "agent.thinking_timeline"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "tooling",
+      "id": "agent-thinking-timeline-node-2",
+      "kind": "timeline",
+      "label": "Timeline Thinking Core",
+      "metadata": {
+        "detail": "Thinking Timeline signal 2",
+        "owner": "tooling",
+        "template_id": "agent.thinking_timeline"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "response",
+      "id": "agent-thinking-timeline-node-3",
+      "kind": "response",
+      "label": "Thinking Timeline Policy",
+      "metadata": {
+        "detail": "Thinking Timeline signal 3",
+        "owner": "response",
+        "template_id": "agent.thinking_timeline"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "reasoning",
+      "id": "agent-thinking-timeline-node-4",
+      "kind": "reasoning",
+      "label": "Timeline Thinking Execution",
+      "metadata": {
+        "detail": "Thinking Timeline signal 4",
+        "owner": "reasoning",
+        "template_id": "agent.thinking_timeline"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "tooling",
+      "id": "agent-thinking-timeline-node-5",
+      "kind": "thinking",
+      "label": "Thinking Timeline Risk",
+      "metadata": {
+        "detail": "Thinking Timeline signal 5",
+        "owner": "tooling",
+        "template_id": "agent.thinking_timeline"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "response",
+      "id": "agent-thinking-timeline-node-6",
+      "kind": "timeline",
+      "label": "Timeline Thinking Outcome",
+      "metadata": {
+        "detail": "Thinking Timeline signal 6",
+        "owner": "response",
+        "template_id": "agent.thinking_timeline"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Thinking Timeline Example"
 }

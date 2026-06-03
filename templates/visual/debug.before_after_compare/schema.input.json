@@ -1,0 +1,463 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "debug-before-after-compare-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "debug-before-after-compare-node-2",
+        "weight": 2
+      },
+      {
+        "from": "debug-before-after-compare-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "debug-before-after-compare-node-3",
+        "weight": 3
+      },
+      {
+        "from": "debug-before-after-compare-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "debug-before-after-compare-node-4",
+        "weight": 2
+      },
+      {
+        "from": "debug-before-after-compare-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "debug-before-after-compare-node-5",
+        "weight": 4
+      },
+      {
+        "from": "debug-before-after-compare-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "debug-before-after-compare-node-6",
+        "weight": 2
+      },
+      {
+        "from": "debug-before-after-compare-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "debug-before-after-compare-node-6",
+        "weight": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "debug-before-after-compare-event-1",
+        "kind": "start",
+        "label": "Before After Compare Opened",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "debug.before_after_compare"
+        },
+        "node_id": "debug-before-after-compare-node-1",
+        "status": "running",
+        "summary": "Before After Compare event 1 references Before After Intake.",
+        "time": "2026-06-03T15:54:00Z"
+      },
+      {
+        "id": "debug-before-after-compare-event-2",
+        "kind": "tool",
+        "label": "Before After Compare Triaged",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "debug.before_after_compare"
+        },
+        "node_id": "debug-before-after-compare-node-2",
+        "status": "success",
+        "summary": "Before After Compare event 2 references After Compare Core.",
+        "time": "2026-06-03T16:05:00Z"
+      },
+      {
+        "id": "debug-before-after-compare-event-3",
+        "kind": "checkpoint",
+        "label": "Before After Compare Mapped",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "debug.before_after_compare"
+        },
+        "node_id": "debug-before-after-compare-node-3",
+        "status": "warning",
+        "summary": "Before After Compare event 3 references Compare Before Policy.",
+        "time": "2026-06-03T16:16:00Z"
+      },
+      {
+        "id": "debug-before-after-compare-event-4",
+        "kind": "decision",
+        "label": "Before After Compare Acted",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "debug.before_after_compare"
+        },
+        "node_id": "debug-before-after-compare-node-4",
+        "status": "running",
+        "summary": "Before After Compare event 4 references Before After Execution.",
+        "time": "2026-06-03T16:27:00Z"
+      },
+      {
+        "id": "debug-before-after-compare-event-5",
+        "kind": "recovery",
+        "label": "Before After Compare Checked",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "debug.before_after_compare"
+        },
+        "node_id": "debug-before-after-compare-node-5",
+        "status": "error",
+        "summary": "Before After Compare event 5 references After Compare Risk.",
+        "time": "2026-06-03T16:38:00Z"
+      },
+      {
+        "id": "debug-before-after-compare-event-6",
+        "kind": "finish",
+        "label": "Before After Compare Recovered",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "debug.before_after_compare"
+        },
+        "node_id": "debug-before-after-compare-node-6",
+        "status": "success",
+        "summary": "Before After Compare event 6 references Compare Before Outcome.",
+        "time": "2026-06-03T16:49:00Z"
+      }
+    ],
+    "nodes": [
+      {
+        "group": "symptom",
+        "id": "debug-before-after-compare-node-1",
+        "kind": "before",
+        "label": "Before After Intake",
+        "metadata": {
+          "detail": "Before After Compare signal 1",
+          "owner": "symptom",
+          "template_id": "debug.before_after_compare"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "cause",
+        "id": "debug-before-after-compare-node-2",
+        "kind": "after",
+        "label": "After Compare Core",
+        "metadata": {
+          "detail": "Before After Compare signal 2",
+          "owner": "cause",
+          "template_id": "debug.before_after_compare"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "mitigation",
+        "id": "debug-before-after-compare-node-3",
+        "kind": "compare",
+        "label": "Compare Before Policy",
+        "metadata": {
+          "detail": "Before After Compare signal 3",
+          "owner": "mitigation",
+          "template_id": "debug.before_after_compare"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "symptom",
+        "id": "debug-before-after-compare-node-4",
+        "kind": "symptom",
+        "label": "Before After Execution",
+        "metadata": {
+          "detail": "Before After Compare signal 4",
+          "owner": "symptom",
+          "template_id": "debug.before_after_compare"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "cause",
+        "id": "debug-before-after-compare-node-5",
+        "kind": "before",
+        "label": "After Compare Risk",
+        "metadata": {
+          "detail": "Before After Compare signal 5",
+          "owner": "cause",
+          "template_id": "debug.before_after_compare"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "mitigation",
+        "id": "debug-before-after-compare-node-6",
+        "kind": "after",
+        "label": "Compare Before Outcome",
+        "metadata": {
+          "detail": "Before After Compare signal 6",
+          "owner": "mitigation",
+          "template_id": "debug.before_after_compare"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Before After Compare Example"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "debug.before_after_compare"
+}

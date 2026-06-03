@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "planning-task-failure-fork-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "planning-task-failure-fork-node-2",
+      "weight": 2
+    },
+    {
+      "from": "planning-task-failure-fork-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "planning-task-failure-fork-node-3",
+      "weight": 3
+    },
+    {
+      "from": "planning-task-failure-fork-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "planning-task-failure-fork-node-4",
+      "weight": 2
+    },
+    {
+      "from": "planning-task-failure-fork-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "planning-task-failure-fork-node-5",
+      "weight": 4
+    },
+    {
+      "from": "planning-task-failure-fork-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "planning-task-failure-fork-node-6",
+      "weight": 2
+    },
+    {
+      "from": "planning-task-failure-fork-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "planning-task-failure-fork-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "planning-task-failure-fork-event-1",
+      "kind": "start",
+      "label": "Task Failure Fork Opened",
+      "metadata": {
+        "layout": "radial_tree",
+        "template_id": "planning.task_failure_fork"
+      },
+      "node_id": "planning-task-failure-fork-node-1",
+      "status": "running",
+      "summary": "Task Failure Fork event 1 references Task Failure Intake.",
+      "time": "2026-06-03T11:22:00Z"
+    },
+    {
+      "id": "planning-task-failure-fork-event-2",
+      "kind": "tool",
+      "label": "Task Failure Fork Triaged",
+      "metadata": {
+        "layout": "radial_tree",
+        "template_id": "planning.task_failure_fork"
+      },
+      "node_id": "planning-task-failure-fork-node-2",
+      "status": "success",
+      "summary": "Task Failure Fork event 2 references Failure Fork Core.",
+      "time": "2026-06-03T11:33:00Z"
+    },
+    {
+      "id": "planning-task-failure-fork-event-3",
+      "kind": "checkpoint",
+      "label": "Task Failure Fork Mapped",
+      "metadata": {
+        "layout": "radial_tree",
+        "template_id": "planning.task_failure_fork"
+      },
+      "node_id": "planning-task-failure-fork-node-3",
+      "status": "warning",
+      "summary": "Task Failure Fork event 3 references Fork Task Policy.",
+      "time": "2026-06-03T11:44:00Z"
+    },
+    {
+      "id": "planning-task-failure-fork-event-4",
+      "kind": "decision",
+      "label": "Task Failure Fork Acted",
+      "metadata": {
+        "layout": "radial_tree",
+        "template_id": "planning.task_failure_fork"
+      },
+      "node_id": "planning-task-failure-fork-node-4",
+      "status": "running",
+      "summary": "Task Failure Fork event 4 references Task Failure Execution.",
+      "time": "2026-06-03T11:55:00Z"
+    },
+    {
+      "id": "planning-task-failure-fork-event-5",
+      "kind": "recovery",
+      "label": "Task Failure Fork Checked",
+      "metadata": {
+        "layout": "radial_tree",
+        "template_id": "planning.task_failure_fork"
+      },
+      "node_id": "planning-task-failure-fork-node-5",
+      "status": "error",
+      "summary": "Task Failure Fork event 5 references Failure Fork Risk.",
+      "time": "2026-06-03T12:06:00Z"
+    },
+    {
+      "id": "planning-task-failure-fork-event-6",
+      "kind": "finish",
+      "label": "Task Failure Fork Recovered",
+      "metadata": {
+        "layout": "radial_tree",
+        "template_id": "planning.task_failure_fork"
+      },
+      "node_id": "planning-task-failure-fork-node-6",
+      "status": "success",
+      "summary": "Task Failure Fork event 6 references Fork Task Outcome.",
+      "time": "2026-06-03T12:17:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "goal",
+      "id": "planning-task-failure-fork-node-1",
+      "kind": "task",
+      "label": "Task Failure Intake",
+      "metadata": {
+        "detail": "Task Failure Fork signal 1",
+        "owner": "goal",
+        "template_id": "planning.task_failure_fork"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "task",
+      "id": "planning-task-failure-fork-node-2",
+      "kind": "failure",
+      "label": "Failure Fork Core",
+      "metadata": {
+        "detail": "Task Failure Fork signal 2",
+        "owner": "task",
+        "template_id": "planning.task_failure_fork"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "automation",
+      "id": "planning-task-failure-fork-node-3",
+      "kind": "fork",
+      "label": "Fork Task Policy",
+      "metadata": {
+        "detail": "Task Failure Fork signal 3",
+        "owner": "automation",
+        "template_id": "planning.task_failure_fork"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "goal",
+      "id": "planning-task-failure-fork-node-4",
+      "kind": "goal",
+      "label": "Task Failure Execution",
+      "metadata": {
+        "detail": "Task Failure Fork signal 4",
+        "owner": "goal",
+        "template_id": "planning.task_failure_fork"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "task",
+      "id": "planning-task-failure-fork-node-5",
+      "kind": "task",
+      "label": "Failure Fork Risk",
+      "metadata": {
+        "detail": "Task Failure Fork signal 5",
+        "owner": "task",
+        "template_id": "planning.task_failure_fork"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "automation",
+      "id": "planning-task-failure-fork-node-6",
+      "kind": "failure",
+      "label": "Fork Task Outcome",
+      "metadata": {
+        "detail": "Task Failure Fork signal 6",
+        "owner": "automation",
+        "template_id": "planning.task_failure_fork"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Task Failure Fork Example"
+}

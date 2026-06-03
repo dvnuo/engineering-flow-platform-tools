@@ -1,0 +1,463 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "runtime-event-reconcile-loop-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "runtime-event-reconcile-loop-node-2",
+        "weight": 2
+      },
+      {
+        "from": "runtime-event-reconcile-loop-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "runtime-event-reconcile-loop-node-3",
+        "weight": 3
+      },
+      {
+        "from": "runtime-event-reconcile-loop-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "runtime-event-reconcile-loop-node-4",
+        "weight": 2
+      },
+      {
+        "from": "runtime-event-reconcile-loop-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "runtime-event-reconcile-loop-node-5",
+        "weight": 4
+      },
+      {
+        "from": "runtime-event-reconcile-loop-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "runtime-event-reconcile-loop-node-6",
+        "weight": 2
+      },
+      {
+        "from": "runtime-event-reconcile-loop-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "runtime-event-reconcile-loop-node-6",
+        "weight": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "runtime-event-reconcile-loop-event-1",
+        "kind": "start",
+        "label": "Event Reconcile Loop Opened",
+        "metadata": {
+          "layout": "state_machine",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "node_id": "runtime-event-reconcile-loop-node-1",
+        "status": "running",
+        "summary": "Event Reconcile Loop event 1 references Event Reconcile Intake.",
+        "time": "2026-06-03T13:39:00Z"
+      },
+      {
+        "id": "runtime-event-reconcile-loop-event-2",
+        "kind": "tool",
+        "label": "Event Reconcile Loop Triaged",
+        "metadata": {
+          "layout": "state_machine",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "node_id": "runtime-event-reconcile-loop-node-2",
+        "status": "success",
+        "summary": "Event Reconcile Loop event 2 references Reconcile Loop Core.",
+        "time": "2026-06-03T13:50:00Z"
+      },
+      {
+        "id": "runtime-event-reconcile-loop-event-3",
+        "kind": "checkpoint",
+        "label": "Event Reconcile Loop Mapped",
+        "metadata": {
+          "layout": "state_machine",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "node_id": "runtime-event-reconcile-loop-node-3",
+        "status": "warning",
+        "summary": "Event Reconcile Loop event 3 references Loop Event Policy.",
+        "time": "2026-06-03T14:01:00Z"
+      },
+      {
+        "id": "runtime-event-reconcile-loop-event-4",
+        "kind": "decision",
+        "label": "Event Reconcile Loop Acted",
+        "metadata": {
+          "layout": "state_machine",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "node_id": "runtime-event-reconcile-loop-node-4",
+        "status": "running",
+        "summary": "Event Reconcile Loop event 4 references Event Reconcile Execution.",
+        "time": "2026-06-03T14:12:00Z"
+      },
+      {
+        "id": "runtime-event-reconcile-loop-event-5",
+        "kind": "recovery",
+        "label": "Event Reconcile Loop Checked",
+        "metadata": {
+          "layout": "state_machine",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "node_id": "runtime-event-reconcile-loop-node-5",
+        "status": "error",
+        "summary": "Event Reconcile Loop event 5 references Reconcile Loop Risk.",
+        "time": "2026-06-03T14:23:00Z"
+      },
+      {
+        "id": "runtime-event-reconcile-loop-event-6",
+        "kind": "finish",
+        "label": "Event Reconcile Loop Recovered",
+        "metadata": {
+          "layout": "state_machine",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "node_id": "runtime-event-reconcile-loop-node-6",
+        "status": "success",
+        "summary": "Event Reconcile Loop event 6 references Loop Event Outcome.",
+        "time": "2026-06-03T14:34:00Z"
+      }
+    ],
+    "nodes": [
+      {
+        "group": "edge",
+        "id": "runtime-event-reconcile-loop-node-1",
+        "kind": "event",
+        "label": "Event Reconcile Intake",
+        "metadata": {
+          "detail": "Event Reconcile Loop signal 1",
+          "owner": "edge",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "adapter",
+        "id": "runtime-event-reconcile-loop-node-2",
+        "kind": "reconcile",
+        "label": "Reconcile Loop Core",
+        "metadata": {
+          "detail": "Event Reconcile Loop signal 2",
+          "owner": "adapter",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "service",
+        "id": "runtime-event-reconcile-loop-node-3",
+        "kind": "loop",
+        "label": "Loop Event Policy",
+        "metadata": {
+          "detail": "Event Reconcile Loop signal 3",
+          "owner": "service",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "edge",
+        "id": "runtime-event-reconcile-loop-node-4",
+        "kind": "edge",
+        "label": "Event Reconcile Execution",
+        "metadata": {
+          "detail": "Event Reconcile Loop signal 4",
+          "owner": "edge",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "adapter",
+        "id": "runtime-event-reconcile-loop-node-5",
+        "kind": "event",
+        "label": "Reconcile Loop Risk",
+        "metadata": {
+          "detail": "Event Reconcile Loop signal 5",
+          "owner": "adapter",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "service",
+        "id": "runtime-event-reconcile-loop-node-6",
+        "kind": "reconcile",
+        "label": "Loop Event Outcome",
+        "metadata": {
+          "detail": "Event Reconcile Loop signal 6",
+          "owner": "service",
+          "template_id": "runtime.event_reconcile_loop"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Event Reconcile Loop Example"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "runtime.event_reconcile_loop"
+}

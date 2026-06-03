@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "foundation-flow-particles-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "foundation-flow-particles-node-2",
+      "weight": 2
+    },
+    {
+      "from": "foundation-flow-particles-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "foundation-flow-particles-node-3",
+      "weight": 3
+    },
+    {
+      "from": "foundation-flow-particles-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "foundation-flow-particles-node-4",
+      "weight": 2
+    },
+    {
+      "from": "foundation-flow-particles-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "foundation-flow-particles-node-5",
+      "weight": 4
+    },
+    {
+      "from": "foundation-flow-particles-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "foundation-flow-particles-node-6",
+      "weight": 2
+    },
+    {
+      "from": "foundation-flow-particles-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "foundation-flow-particles-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "foundation-flow-particles-event-1",
+      "kind": "start",
+      "label": "Flow Particles Opened",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "foundation.flow_particles"
+      },
+      "node_id": "foundation-flow-particles-node-1",
+      "status": "running",
+      "summary": "Flow Particles event 1 references Flow Particles Intake.",
+      "time": "2026-06-03T11:40:00Z"
+    },
+    {
+      "id": "foundation-flow-particles-event-2",
+      "kind": "tool",
+      "label": "Flow Particles Triaged",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "foundation.flow_particles"
+      },
+      "node_id": "foundation-flow-particles-node-2",
+      "status": "success",
+      "summary": "Flow Particles event 2 references Particles Flow Core.",
+      "time": "2026-06-03T11:51:00Z"
+    },
+    {
+      "id": "foundation-flow-particles-event-3",
+      "kind": "checkpoint",
+      "label": "Flow Particles Mapped",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "foundation.flow_particles"
+      },
+      "node_id": "foundation-flow-particles-node-3",
+      "status": "warning",
+      "summary": "Flow Particles event 3 references Flow Particles Policy.",
+      "time": "2026-06-03T12:02:00Z"
+    },
+    {
+      "id": "foundation-flow-particles-event-4",
+      "kind": "decision",
+      "label": "Flow Particles Acted",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "foundation.flow_particles"
+      },
+      "node_id": "foundation-flow-particles-node-4",
+      "status": "running",
+      "summary": "Flow Particles event 4 references Particles Flow Execution.",
+      "time": "2026-06-03T12:13:00Z"
+    },
+    {
+      "id": "foundation-flow-particles-event-5",
+      "kind": "recovery",
+      "label": "Flow Particles Checked",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "foundation.flow_particles"
+      },
+      "node_id": "foundation-flow-particles-node-5",
+      "status": "error",
+      "summary": "Flow Particles event 5 references Flow Particles Risk.",
+      "time": "2026-06-03T12:24:00Z"
+    },
+    {
+      "id": "foundation-flow-particles-event-6",
+      "kind": "finish",
+      "label": "Flow Particles Recovered",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "foundation.flow_particles"
+      },
+      "node_id": "foundation-flow-particles-node-6",
+      "status": "success",
+      "summary": "Flow Particles event 6 references Particles Flow Outcome.",
+      "time": "2026-06-03T12:35:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "input",
+      "id": "foundation-flow-particles-node-1",
+      "kind": "flow",
+      "label": "Flow Particles Intake",
+      "metadata": {
+        "detail": "Flow Particles signal 1",
+        "owner": "input",
+        "template_id": "foundation.flow_particles"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "layout",
+      "id": "foundation-flow-particles-node-2",
+      "kind": "particles",
+      "label": "Particles Flow Core",
+      "metadata": {
+        "detail": "Flow Particles signal 2",
+        "owner": "layout",
+        "template_id": "foundation.flow_particles"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "output",
+      "id": "foundation-flow-particles-node-3",
+      "kind": "output",
+      "label": "Flow Particles Policy",
+      "metadata": {
+        "detail": "Flow Particles signal 3",
+        "owner": "output",
+        "template_id": "foundation.flow_particles"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "input",
+      "id": "foundation-flow-particles-node-4",
+      "kind": "input",
+      "label": "Particles Flow Execution",
+      "metadata": {
+        "detail": "Flow Particles signal 4",
+        "owner": "input",
+        "template_id": "foundation.flow_particles"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "layout",
+      "id": "foundation-flow-particles-node-5",
+      "kind": "flow",
+      "label": "Flow Particles Risk",
+      "metadata": {
+        "detail": "Flow Particles signal 5",
+        "owner": "layout",
+        "template_id": "foundation.flow_particles"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "output",
+      "id": "foundation-flow-particles-node-6",
+      "kind": "particles",
+      "label": "Particles Flow Outcome",
+      "metadata": {
+        "detail": "Flow Particles signal 6",
+        "owner": "output",
+        "template_id": "foundation.flow_particles"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Flow Particles Example"
+}

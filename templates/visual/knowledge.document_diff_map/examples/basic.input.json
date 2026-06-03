@@ -1,0 +1,100 @@
+{
+  "claims": [
+    {
+      "confidence": 0.82,
+      "id": "knowledge-document-diff-map-claim-1",
+      "status": "supported",
+      "text": "Document Diff is supported by current artifacts"
+    },
+    {
+      "confidence": 0.61,
+      "id": "knowledge-document-diff-map-claim-2",
+      "status": "warning",
+      "text": "Diff Map has a known gap"
+    },
+    {
+      "confidence": 0.44,
+      "id": "knowledge-document-diff-map-claim-3",
+      "status": "refuted",
+      "text": "Map Document conflicts with stale assumptions"
+    },
+    {
+      "confidence": 0.76,
+      "id": "knowledge-document-diff-map-claim-4",
+      "status": "success",
+      "text": "Document Diff is ready for review"
+    }
+  ],
+  "links": [
+    {
+      "claim_id": "knowledge-document-diff-map-claim-1",
+      "relation": "supports",
+      "source_id": "knowledge-document-diff-map-source-1",
+      "weight": 0.9
+    },
+    {
+      "claim_id": "knowledge-document-diff-map-claim-1",
+      "relation": "mentions",
+      "source_id": "knowledge-document-diff-map-source-2",
+      "weight": 0.5
+    },
+    {
+      "claim_id": "knowledge-document-diff-map-claim-2",
+      "relation": "supports",
+      "source_id": "knowledge-document-diff-map-source-3",
+      "weight": 0.6
+    },
+    {
+      "claim_id": "knowledge-document-diff-map-claim-3",
+      "relation": "refutes",
+      "source_id": "knowledge-document-diff-map-source-4",
+      "weight": 0.7
+    },
+    {
+      "claim_id": "knowledge-document-diff-map-claim-4",
+      "relation": "supports",
+      "source_id": "knowledge-document-diff-map-source-5",
+      "weight": 0.8
+    },
+    {
+      "claim_id": "knowledge-document-diff-map-claim-2",
+      "relation": "mentions",
+      "source_id": "knowledge-document-diff-map-source-5",
+      "weight": 0.4
+    }
+  ],
+  "schema": "efp.visual.input.evidence.v1",
+  "sources": [
+    {
+      "id": "knowledge-document-diff-map-source-1",
+      "kind": "document",
+      "reliability": 0.87,
+      "title": "Document Diff design note"
+    },
+    {
+      "id": "knowledge-document-diff-map-source-2",
+      "kind": "log",
+      "reliability": 0.72,
+      "title": "Diff Map run log"
+    },
+    {
+      "id": "knowledge-document-diff-map-source-3",
+      "kind": "review",
+      "reliability": 0.66,
+      "title": "Map Document review thread"
+    },
+    {
+      "id": "knowledge-document-diff-map-source-4",
+      "kind": "metric",
+      "reliability": 0.79,
+      "title": "Document Diff benchmark"
+    },
+    {
+      "id": "knowledge-document-diff-map-source-5",
+      "kind": "record",
+      "reliability": 0.91,
+      "title": "Diff Map decision record"
+    }
+  ],
+  "title": "Document Diff Map Example"
+}

@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "agent-debug-blackbox-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "agent-debug-blackbox-node-2",
+      "weight": 2
+    },
+    {
+      "from": "agent-debug-blackbox-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "agent-debug-blackbox-node-3",
+      "weight": 3
+    },
+    {
+      "from": "agent-debug-blackbox-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "agent-debug-blackbox-node-4",
+      "weight": 2
+    },
+    {
+      "from": "agent-debug-blackbox-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "agent-debug-blackbox-node-5",
+      "weight": 4
+    },
+    {
+      "from": "agent-debug-blackbox-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "agent-debug-blackbox-node-6",
+      "weight": 2
+    },
+    {
+      "from": "agent-debug-blackbox-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "agent-debug-blackbox-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "agent-debug-blackbox-event-1",
+      "kind": "start",
+      "label": "Debug Blackbox Opened",
+      "metadata": {
+        "layout": "control_room",
+        "template_id": "agent.debug_blackbox"
+      },
+      "node_id": "agent-debug-blackbox-node-1",
+      "status": "running",
+      "summary": "Debug Blackbox event 1 references Debug Blackbox Intake.",
+      "time": "2026-06-03T13:13:00Z"
+    },
+    {
+      "id": "agent-debug-blackbox-event-2",
+      "kind": "tool",
+      "label": "Debug Blackbox Triaged",
+      "metadata": {
+        "layout": "control_room",
+        "template_id": "agent.debug_blackbox"
+      },
+      "node_id": "agent-debug-blackbox-node-2",
+      "status": "success",
+      "summary": "Debug Blackbox event 2 references Blackbox Debug Core.",
+      "time": "2026-06-03T13:24:00Z"
+    },
+    {
+      "id": "agent-debug-blackbox-event-3",
+      "kind": "checkpoint",
+      "label": "Debug Blackbox Mapped",
+      "metadata": {
+        "layout": "control_room",
+        "template_id": "agent.debug_blackbox"
+      },
+      "node_id": "agent-debug-blackbox-node-3",
+      "status": "warning",
+      "summary": "Debug Blackbox event 3 references Debug Blackbox Policy.",
+      "time": "2026-06-03T13:35:00Z"
+    },
+    {
+      "id": "agent-debug-blackbox-event-4",
+      "kind": "decision",
+      "label": "Debug Blackbox Acted",
+      "metadata": {
+        "layout": "control_room",
+        "template_id": "agent.debug_blackbox"
+      },
+      "node_id": "agent-debug-blackbox-node-4",
+      "status": "running",
+      "summary": "Debug Blackbox event 4 references Blackbox Debug Execution.",
+      "time": "2026-06-03T13:46:00Z"
+    },
+    {
+      "id": "agent-debug-blackbox-event-5",
+      "kind": "recovery",
+      "label": "Debug Blackbox Checked",
+      "metadata": {
+        "layout": "control_room",
+        "template_id": "agent.debug_blackbox"
+      },
+      "node_id": "agent-debug-blackbox-node-5",
+      "status": "error",
+      "summary": "Debug Blackbox event 5 references Debug Blackbox Risk.",
+      "time": "2026-06-03T13:57:00Z"
+    },
+    {
+      "id": "agent-debug-blackbox-event-6",
+      "kind": "finish",
+      "label": "Debug Blackbox Recovered",
+      "metadata": {
+        "layout": "control_room",
+        "template_id": "agent.debug_blackbox"
+      },
+      "node_id": "agent-debug-blackbox-node-6",
+      "status": "success",
+      "summary": "Debug Blackbox event 6 references Blackbox Debug Outcome.",
+      "time": "2026-06-03T14:08:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "reasoning",
+      "id": "agent-debug-blackbox-node-1",
+      "kind": "debug",
+      "label": "Debug Blackbox Intake",
+      "metadata": {
+        "detail": "Debug Blackbox signal 1",
+        "owner": "reasoning",
+        "template_id": "agent.debug_blackbox"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "tooling",
+      "id": "agent-debug-blackbox-node-2",
+      "kind": "blackbox",
+      "label": "Blackbox Debug Core",
+      "metadata": {
+        "detail": "Debug Blackbox signal 2",
+        "owner": "tooling",
+        "template_id": "agent.debug_blackbox"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "response",
+      "id": "agent-debug-blackbox-node-3",
+      "kind": "response",
+      "label": "Debug Blackbox Policy",
+      "metadata": {
+        "detail": "Debug Blackbox signal 3",
+        "owner": "response",
+        "template_id": "agent.debug_blackbox"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "reasoning",
+      "id": "agent-debug-blackbox-node-4",
+      "kind": "reasoning",
+      "label": "Blackbox Debug Execution",
+      "metadata": {
+        "detail": "Debug Blackbox signal 4",
+        "owner": "reasoning",
+        "template_id": "agent.debug_blackbox"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "tooling",
+      "id": "agent-debug-blackbox-node-5",
+      "kind": "debug",
+      "label": "Debug Blackbox Risk",
+      "metadata": {
+        "detail": "Debug Blackbox signal 5",
+        "owner": "tooling",
+        "template_id": "agent.debug_blackbox"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "response",
+      "id": "agent-debug-blackbox-node-6",
+      "kind": "blackbox",
+      "label": "Blackbox Debug Outcome",
+      "metadata": {
+        "detail": "Debug Blackbox signal 6",
+        "owner": "response",
+        "template_id": "agent.debug_blackbox"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Debug Blackbox Example"
+}

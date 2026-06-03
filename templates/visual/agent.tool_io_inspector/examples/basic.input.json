@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "agent-tool-io-inspector-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "agent-tool-io-inspector-node-2",
+      "weight": 2
+    },
+    {
+      "from": "agent-tool-io-inspector-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "agent-tool-io-inspector-node-3",
+      "weight": 3
+    },
+    {
+      "from": "agent-tool-io-inspector-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "agent-tool-io-inspector-node-4",
+      "weight": 2
+    },
+    {
+      "from": "agent-tool-io-inspector-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "agent-tool-io-inspector-node-5",
+      "weight": 4
+    },
+    {
+      "from": "agent-tool-io-inspector-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "agent-tool-io-inspector-node-6",
+      "weight": 2
+    },
+    {
+      "from": "agent-tool-io-inspector-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "agent-tool-io-inspector-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "agent-tool-io-inspector-event-1",
+      "kind": "start",
+      "label": "Tool Io Inspector Opened",
+      "metadata": {
+        "layout": "diff_split_view",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "node_id": "agent-tool-io-inspector-node-1",
+      "status": "running",
+      "summary": "Tool Io Inspector event 1 references Tool Io Intake.",
+      "time": "2026-06-03T13:45:00Z"
+    },
+    {
+      "id": "agent-tool-io-inspector-event-2",
+      "kind": "tool",
+      "label": "Tool Io Inspector Triaged",
+      "metadata": {
+        "layout": "diff_split_view",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "node_id": "agent-tool-io-inspector-node-2",
+      "status": "success",
+      "summary": "Tool Io Inspector event 2 references Io Inspector Core.",
+      "time": "2026-06-03T13:56:00Z"
+    },
+    {
+      "id": "agent-tool-io-inspector-event-3",
+      "kind": "checkpoint",
+      "label": "Tool Io Inspector Mapped",
+      "metadata": {
+        "layout": "diff_split_view",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "node_id": "agent-tool-io-inspector-node-3",
+      "status": "warning",
+      "summary": "Tool Io Inspector event 3 references Inspector Tool Policy.",
+      "time": "2026-06-03T14:07:00Z"
+    },
+    {
+      "id": "agent-tool-io-inspector-event-4",
+      "kind": "decision",
+      "label": "Tool Io Inspector Acted",
+      "metadata": {
+        "layout": "diff_split_view",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "node_id": "agent-tool-io-inspector-node-4",
+      "status": "running",
+      "summary": "Tool Io Inspector event 4 references Tool Io Execution.",
+      "time": "2026-06-03T14:18:00Z"
+    },
+    {
+      "id": "agent-tool-io-inspector-event-5",
+      "kind": "recovery",
+      "label": "Tool Io Inspector Checked",
+      "metadata": {
+        "layout": "diff_split_view",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "node_id": "agent-tool-io-inspector-node-5",
+      "status": "error",
+      "summary": "Tool Io Inspector event 5 references Io Inspector Risk.",
+      "time": "2026-06-03T14:29:00Z"
+    },
+    {
+      "id": "agent-tool-io-inspector-event-6",
+      "kind": "finish",
+      "label": "Tool Io Inspector Recovered",
+      "metadata": {
+        "layout": "diff_split_view",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "node_id": "agent-tool-io-inspector-node-6",
+      "status": "success",
+      "summary": "Tool Io Inspector event 6 references Inspector Tool Outcome.",
+      "time": "2026-06-03T14:40:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "reasoning",
+      "id": "agent-tool-io-inspector-node-1",
+      "kind": "tool",
+      "label": "Tool Io Intake",
+      "metadata": {
+        "detail": "Tool Io Inspector signal 1",
+        "owner": "reasoning",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "tooling",
+      "id": "agent-tool-io-inspector-node-2",
+      "kind": "io",
+      "label": "Io Inspector Core",
+      "metadata": {
+        "detail": "Tool Io Inspector signal 2",
+        "owner": "tooling",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "response",
+      "id": "agent-tool-io-inspector-node-3",
+      "kind": "inspector",
+      "label": "Inspector Tool Policy",
+      "metadata": {
+        "detail": "Tool Io Inspector signal 3",
+        "owner": "response",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "reasoning",
+      "id": "agent-tool-io-inspector-node-4",
+      "kind": "reasoning",
+      "label": "Tool Io Execution",
+      "metadata": {
+        "detail": "Tool Io Inspector signal 4",
+        "owner": "reasoning",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "tooling",
+      "id": "agent-tool-io-inspector-node-5",
+      "kind": "tool",
+      "label": "Io Inspector Risk",
+      "metadata": {
+        "detail": "Tool Io Inspector signal 5",
+        "owner": "tooling",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "response",
+      "id": "agent-tool-io-inspector-node-6",
+      "kind": "io",
+      "label": "Inspector Tool Outcome",
+      "metadata": {
+        "detail": "Tool Io Inspector signal 6",
+        "owner": "response",
+        "template_id": "agent.tool_io_inspector"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Tool Io Inspector Example"
+}

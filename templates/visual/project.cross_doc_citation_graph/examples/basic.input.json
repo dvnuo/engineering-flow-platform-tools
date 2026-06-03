@@ -1,0 +1,100 @@
+{
+  "claims": [
+    {
+      "confidence": 0.82,
+      "id": "project-cross-doc-citation-graph-claim-1",
+      "status": "supported",
+      "text": "Cross Doc is supported by current artifacts"
+    },
+    {
+      "confidence": 0.61,
+      "id": "project-cross-doc-citation-graph-claim-2",
+      "status": "warning",
+      "text": "Doc Citation has a known gap"
+    },
+    {
+      "confidence": 0.44,
+      "id": "project-cross-doc-citation-graph-claim-3",
+      "status": "refuted",
+      "text": "Citation Graph conflicts with stale assumptions"
+    },
+    {
+      "confidence": 0.76,
+      "id": "project-cross-doc-citation-graph-claim-4",
+      "status": "success",
+      "text": "Graph Cross is ready for review"
+    }
+  ],
+  "links": [
+    {
+      "claim_id": "project-cross-doc-citation-graph-claim-1",
+      "relation": "supports",
+      "source_id": "project-cross-doc-citation-graph-source-1",
+      "weight": 0.9
+    },
+    {
+      "claim_id": "project-cross-doc-citation-graph-claim-1",
+      "relation": "mentions",
+      "source_id": "project-cross-doc-citation-graph-source-2",
+      "weight": 0.5
+    },
+    {
+      "claim_id": "project-cross-doc-citation-graph-claim-2",
+      "relation": "supports",
+      "source_id": "project-cross-doc-citation-graph-source-3",
+      "weight": 0.6
+    },
+    {
+      "claim_id": "project-cross-doc-citation-graph-claim-3",
+      "relation": "refutes",
+      "source_id": "project-cross-doc-citation-graph-source-4",
+      "weight": 0.7
+    },
+    {
+      "claim_id": "project-cross-doc-citation-graph-claim-4",
+      "relation": "supports",
+      "source_id": "project-cross-doc-citation-graph-source-5",
+      "weight": 0.8
+    },
+    {
+      "claim_id": "project-cross-doc-citation-graph-claim-2",
+      "relation": "mentions",
+      "source_id": "project-cross-doc-citation-graph-source-5",
+      "weight": 0.4
+    }
+  ],
+  "schema": "efp.visual.input.evidence.v1",
+  "sources": [
+    {
+      "id": "project-cross-doc-citation-graph-source-1",
+      "kind": "document",
+      "reliability": 0.87,
+      "title": "Cross Doc design note"
+    },
+    {
+      "id": "project-cross-doc-citation-graph-source-2",
+      "kind": "log",
+      "reliability": 0.72,
+      "title": "Doc Citation run log"
+    },
+    {
+      "id": "project-cross-doc-citation-graph-source-3",
+      "kind": "review",
+      "reliability": 0.66,
+      "title": "Citation Graph review thread"
+    },
+    {
+      "id": "project-cross-doc-citation-graph-source-4",
+      "kind": "metric",
+      "reliability": 0.79,
+      "title": "Graph Cross benchmark"
+    },
+    {
+      "id": "project-cross-doc-citation-graph-source-5",
+      "kind": "record",
+      "reliability": 0.91,
+      "title": "Cross Doc decision record"
+    }
+  ],
+  "title": "Cross Doc Citation Graph Example"
+}

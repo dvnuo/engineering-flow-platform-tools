@@ -1,0 +1,463 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "education-migration-strategy-view-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "education-migration-strategy-view-node-2",
+        "weight": 2
+      },
+      {
+        "from": "education-migration-strategy-view-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "education-migration-strategy-view-node-3",
+        "weight": 3
+      },
+      {
+        "from": "education-migration-strategy-view-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "education-migration-strategy-view-node-4",
+        "weight": 2
+      },
+      {
+        "from": "education-migration-strategy-view-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "education-migration-strategy-view-node-5",
+        "weight": 4
+      },
+      {
+        "from": "education-migration-strategy-view-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "education-migration-strategy-view-node-6",
+        "weight": 2
+      },
+      {
+        "from": "education-migration-strategy-view-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "education-migration-strategy-view-node-6",
+        "weight": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "education-migration-strategy-view-event-1",
+        "kind": "start",
+        "label": "Migration Strategy View Opened",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "education.migration_strategy_view"
+        },
+        "node_id": "education-migration-strategy-view-node-1",
+        "status": "running",
+        "summary": "Migration Strategy View event 1 references Migration Strategy Intake.",
+        "time": "2026-06-03T12:32:00Z"
+      },
+      {
+        "id": "education-migration-strategy-view-event-2",
+        "kind": "tool",
+        "label": "Migration Strategy View Triaged",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "education.migration_strategy_view"
+        },
+        "node_id": "education-migration-strategy-view-node-2",
+        "status": "success",
+        "summary": "Migration Strategy View event 2 references Strategy View Core.",
+        "time": "2026-06-03T12:43:00Z"
+      },
+      {
+        "id": "education-migration-strategy-view-event-3",
+        "kind": "checkpoint",
+        "label": "Migration Strategy View Mapped",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "education.migration_strategy_view"
+        },
+        "node_id": "education-migration-strategy-view-node-3",
+        "status": "warning",
+        "summary": "Migration Strategy View event 3 references View Migration Policy.",
+        "time": "2026-06-03T12:54:00Z"
+      },
+      {
+        "id": "education-migration-strategy-view-event-4",
+        "kind": "decision",
+        "label": "Migration Strategy View Acted",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "education.migration_strategy_view"
+        },
+        "node_id": "education-migration-strategy-view-node-4",
+        "status": "running",
+        "summary": "Migration Strategy View event 4 references Migration Strategy Execution.",
+        "time": "2026-06-03T13:05:00Z"
+      },
+      {
+        "id": "education-migration-strategy-view-event-5",
+        "kind": "recovery",
+        "label": "Migration Strategy View Checked",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "education.migration_strategy_view"
+        },
+        "node_id": "education-migration-strategy-view-node-5",
+        "status": "error",
+        "summary": "Migration Strategy View event 5 references Strategy View Risk.",
+        "time": "2026-06-03T13:16:00Z"
+      },
+      {
+        "id": "education-migration-strategy-view-event-6",
+        "kind": "finish",
+        "label": "Migration Strategy View Recovered",
+        "metadata": {
+          "layout": "diff_split_view",
+          "template_id": "education.migration_strategy_view"
+        },
+        "node_id": "education-migration-strategy-view-node-6",
+        "status": "success",
+        "summary": "Migration Strategy View event 6 references View Migration Outcome.",
+        "time": "2026-06-03T13:27:00Z"
+      }
+    ],
+    "nodes": [
+      {
+        "group": "concept",
+        "id": "education-migration-strategy-view-node-1",
+        "kind": "migration",
+        "label": "Migration Strategy Intake",
+        "metadata": {
+          "detail": "Migration Strategy View signal 1",
+          "owner": "concept",
+          "template_id": "education.migration_strategy_view"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "step",
+        "id": "education-migration-strategy-view-node-2",
+        "kind": "strategy",
+        "label": "Strategy View Core",
+        "metadata": {
+          "detail": "Migration Strategy View signal 2",
+          "owner": "step",
+          "template_id": "education.migration_strategy_view"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "assessment",
+        "id": "education-migration-strategy-view-node-3",
+        "kind": "view",
+        "label": "View Migration Policy",
+        "metadata": {
+          "detail": "Migration Strategy View signal 3",
+          "owner": "assessment",
+          "template_id": "education.migration_strategy_view"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "concept",
+        "id": "education-migration-strategy-view-node-4",
+        "kind": "concept",
+        "label": "Migration Strategy Execution",
+        "metadata": {
+          "detail": "Migration Strategy View signal 4",
+          "owner": "concept",
+          "template_id": "education.migration_strategy_view"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "step",
+        "id": "education-migration-strategy-view-node-5",
+        "kind": "migration",
+        "label": "Strategy View Risk",
+        "metadata": {
+          "detail": "Migration Strategy View signal 5",
+          "owner": "step",
+          "template_id": "education.migration_strategy_view"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "assessment",
+        "id": "education-migration-strategy-view-node-6",
+        "kind": "strategy",
+        "label": "View Migration Outcome",
+        "metadata": {
+          "detail": "Migration Strategy View signal 6",
+          "owner": "assessment",
+          "template_id": "education.migration_strategy_view"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Migration Strategy View Example"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "education.migration_strategy_view"
+}

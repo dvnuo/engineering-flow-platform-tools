@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "education-cache-behavior-sim-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "education-cache-behavior-sim-node-2",
+      "weight": 2
+    },
+    {
+      "from": "education-cache-behavior-sim-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "education-cache-behavior-sim-node-3",
+      "weight": 3
+    },
+    {
+      "from": "education-cache-behavior-sim-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "education-cache-behavior-sim-node-4",
+      "weight": 2
+    },
+    {
+      "from": "education-cache-behavior-sim-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "education-cache-behavior-sim-node-5",
+      "weight": 4
+    },
+    {
+      "from": "education-cache-behavior-sim-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "education-cache-behavior-sim-node-6",
+      "weight": 2
+    },
+    {
+      "from": "education-cache-behavior-sim-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "education-cache-behavior-sim-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "education-cache-behavior-sim-event-1",
+      "kind": "start",
+      "label": "Cache Behavior Sim Opened",
+      "metadata": {
+        "layout": "state_machine",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "node_id": "education-cache-behavior-sim-node-1",
+      "status": "running",
+      "summary": "Cache Behavior Sim event 1 references Cache Behavior Intake.",
+      "time": "2026-06-03T12:58:00Z"
+    },
+    {
+      "id": "education-cache-behavior-sim-event-2",
+      "kind": "tool",
+      "label": "Cache Behavior Sim Triaged",
+      "metadata": {
+        "layout": "state_machine",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "node_id": "education-cache-behavior-sim-node-2",
+      "status": "success",
+      "summary": "Cache Behavior Sim event 2 references Behavior Sim Core.",
+      "time": "2026-06-03T13:09:00Z"
+    },
+    {
+      "id": "education-cache-behavior-sim-event-3",
+      "kind": "checkpoint",
+      "label": "Cache Behavior Sim Mapped",
+      "metadata": {
+        "layout": "state_machine",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "node_id": "education-cache-behavior-sim-node-3",
+      "status": "warning",
+      "summary": "Cache Behavior Sim event 3 references Sim Cache Policy.",
+      "time": "2026-06-03T13:20:00Z"
+    },
+    {
+      "id": "education-cache-behavior-sim-event-4",
+      "kind": "decision",
+      "label": "Cache Behavior Sim Acted",
+      "metadata": {
+        "layout": "state_machine",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "node_id": "education-cache-behavior-sim-node-4",
+      "status": "running",
+      "summary": "Cache Behavior Sim event 4 references Cache Behavior Execution.",
+      "time": "2026-06-03T13:31:00Z"
+    },
+    {
+      "id": "education-cache-behavior-sim-event-5",
+      "kind": "recovery",
+      "label": "Cache Behavior Sim Checked",
+      "metadata": {
+        "layout": "state_machine",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "node_id": "education-cache-behavior-sim-node-5",
+      "status": "error",
+      "summary": "Cache Behavior Sim event 5 references Behavior Sim Risk.",
+      "time": "2026-06-03T13:42:00Z"
+    },
+    {
+      "id": "education-cache-behavior-sim-event-6",
+      "kind": "finish",
+      "label": "Cache Behavior Sim Recovered",
+      "metadata": {
+        "layout": "state_machine",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "node_id": "education-cache-behavior-sim-node-6",
+      "status": "success",
+      "summary": "Cache Behavior Sim event 6 references Sim Cache Outcome.",
+      "time": "2026-06-03T13:53:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "concept",
+      "id": "education-cache-behavior-sim-node-1",
+      "kind": "cache",
+      "label": "Cache Behavior Intake",
+      "metadata": {
+        "detail": "Cache Behavior Sim signal 1",
+        "owner": "concept",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "step",
+      "id": "education-cache-behavior-sim-node-2",
+      "kind": "behavior",
+      "label": "Behavior Sim Core",
+      "metadata": {
+        "detail": "Cache Behavior Sim signal 2",
+        "owner": "step",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "assessment",
+      "id": "education-cache-behavior-sim-node-3",
+      "kind": "sim",
+      "label": "Sim Cache Policy",
+      "metadata": {
+        "detail": "Cache Behavior Sim signal 3",
+        "owner": "assessment",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "concept",
+      "id": "education-cache-behavior-sim-node-4",
+      "kind": "concept",
+      "label": "Cache Behavior Execution",
+      "metadata": {
+        "detail": "Cache Behavior Sim signal 4",
+        "owner": "concept",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "step",
+      "id": "education-cache-behavior-sim-node-5",
+      "kind": "cache",
+      "label": "Behavior Sim Risk",
+      "metadata": {
+        "detail": "Cache Behavior Sim signal 5",
+        "owner": "step",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "assessment",
+      "id": "education-cache-behavior-sim-node-6",
+      "kind": "behavior",
+      "label": "Sim Cache Outcome",
+      "metadata": {
+        "detail": "Cache Behavior Sim signal 6",
+        "owner": "assessment",
+        "template_id": "education.cache_behavior_sim"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Cache Behavior Sim Example"
+}

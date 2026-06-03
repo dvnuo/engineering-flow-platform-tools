@@ -1,0 +1,463 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "education-distributed-consensus-view-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "education-distributed-consensus-view-node-2",
+        "weight": 2
+      },
+      {
+        "from": "education-distributed-consensus-view-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "education-distributed-consensus-view-node-3",
+        "weight": 3
+      },
+      {
+        "from": "education-distributed-consensus-view-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "education-distributed-consensus-view-node-4",
+        "weight": 2
+      },
+      {
+        "from": "education-distributed-consensus-view-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "education-distributed-consensus-view-node-5",
+        "weight": 4
+      },
+      {
+        "from": "education-distributed-consensus-view-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "education-distributed-consensus-view-node-6",
+        "weight": 2
+      },
+      {
+        "from": "education-distributed-consensus-view-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "education-distributed-consensus-view-node-6",
+        "weight": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "education-distributed-consensus-view-event-1",
+        "kind": "start",
+        "label": "Distributed Consensus View Opened",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "node_id": "education-distributed-consensus-view-node-1",
+        "status": "running",
+        "summary": "Distributed Consensus View event 1 references Distributed Consensus Intake.",
+        "time": "2026-06-03T13:12:00Z"
+      },
+      {
+        "id": "education-distributed-consensus-view-event-2",
+        "kind": "tool",
+        "label": "Distributed Consensus View Triaged",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "node_id": "education-distributed-consensus-view-node-2",
+        "status": "success",
+        "summary": "Distributed Consensus View event 2 references Consensus View Core.",
+        "time": "2026-06-03T13:23:00Z"
+      },
+      {
+        "id": "education-distributed-consensus-view-event-3",
+        "kind": "checkpoint",
+        "label": "Distributed Consensus View Mapped",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "node_id": "education-distributed-consensus-view-node-3",
+        "status": "warning",
+        "summary": "Distributed Consensus View event 3 references View Distributed Policy.",
+        "time": "2026-06-03T13:34:00Z"
+      },
+      {
+        "id": "education-distributed-consensus-view-event-4",
+        "kind": "decision",
+        "label": "Distributed Consensus View Acted",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "node_id": "education-distributed-consensus-view-node-4",
+        "status": "running",
+        "summary": "Distributed Consensus View event 4 references Distributed Consensus Execution.",
+        "time": "2026-06-03T13:45:00Z"
+      },
+      {
+        "id": "education-distributed-consensus-view-event-5",
+        "kind": "recovery",
+        "label": "Distributed Consensus View Checked",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "node_id": "education-distributed-consensus-view-node-5",
+        "status": "error",
+        "summary": "Distributed Consensus View event 5 references Consensus View Risk.",
+        "time": "2026-06-03T13:56:00Z"
+      },
+      {
+        "id": "education-distributed-consensus-view-event-6",
+        "kind": "finish",
+        "label": "Distributed Consensus View Recovered",
+        "metadata": {
+          "layout": "constellation",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "node_id": "education-distributed-consensus-view-node-6",
+        "status": "success",
+        "summary": "Distributed Consensus View event 6 references View Distributed Outcome.",
+        "time": "2026-06-03T14:07:00Z"
+      }
+    ],
+    "nodes": [
+      {
+        "group": "concept",
+        "id": "education-distributed-consensus-view-node-1",
+        "kind": "distributed",
+        "label": "Distributed Consensus Intake",
+        "metadata": {
+          "detail": "Distributed Consensus View signal 1",
+          "owner": "concept",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "step",
+        "id": "education-distributed-consensus-view-node-2",
+        "kind": "consensus",
+        "label": "Consensus View Core",
+        "metadata": {
+          "detail": "Distributed Consensus View signal 2",
+          "owner": "step",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "assessment",
+        "id": "education-distributed-consensus-view-node-3",
+        "kind": "view",
+        "label": "View Distributed Policy",
+        "metadata": {
+          "detail": "Distributed Consensus View signal 3",
+          "owner": "assessment",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "concept",
+        "id": "education-distributed-consensus-view-node-4",
+        "kind": "concept",
+        "label": "Distributed Consensus Execution",
+        "metadata": {
+          "detail": "Distributed Consensus View signal 4",
+          "owner": "concept",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "step",
+        "id": "education-distributed-consensus-view-node-5",
+        "kind": "distributed",
+        "label": "Consensus View Risk",
+        "metadata": {
+          "detail": "Distributed Consensus View signal 5",
+          "owner": "step",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "assessment",
+        "id": "education-distributed-consensus-view-node-6",
+        "kind": "consensus",
+        "label": "View Distributed Outcome",
+        "metadata": {
+          "detail": "Distributed Consensus View signal 6",
+          "owner": "assessment",
+          "template_id": "education.distributed_consensus_view"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Distributed Consensus View Example"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "education.distributed_consensus_view"
+}

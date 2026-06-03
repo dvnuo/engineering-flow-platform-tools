@@ -1,170 +1,308 @@
 {
-  "schema": "efp.visual.template_input_schema.v1",
-  "template_id": "codebase.galaxy",
+  "example": {
+    "edges": [
+      {
+        "from": "codebase-galaxy-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "codebase-galaxy-node-2",
+        "weight": 2
+      },
+      {
+        "from": "codebase-galaxy-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "codebase-galaxy-node-3",
+        "weight": 3
+      },
+      {
+        "from": "codebase-galaxy-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "codebase-galaxy-node-4",
+        "weight": 2
+      },
+      {
+        "from": "codebase-galaxy-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "codebase-galaxy-node-5",
+        "weight": 4
+      },
+      {
+        "from": "codebase-galaxy-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "codebase-galaxy-node-6",
+        "weight": 2
+      },
+      {
+        "from": "codebase-galaxy-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "codebase-galaxy-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "source",
+        "id": "codebase-galaxy-node-1",
+        "kind": "galaxy",
+        "label": "Galaxy Galaxy Intake",
+        "metadata": {
+          "detail": "Galaxy signal 1",
+          "owner": "source",
+          "template_id": "codebase.galaxy"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "warning"
+      },
+      {
+        "group": "test",
+        "id": "codebase-galaxy-node-2",
+        "kind": "test",
+        "label": "Galaxy Galaxy Core",
+        "metadata": {
+          "detail": "Galaxy signal 2",
+          "owner": "test",
+          "template_id": "codebase.galaxy"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "success"
+      },
+      {
+        "group": "release",
+        "id": "codebase-galaxy-node-3",
+        "kind": "release",
+        "label": "Galaxy Galaxy Policy",
+        "metadata": {
+          "detail": "Galaxy signal 3",
+          "owner": "release",
+          "template_id": "codebase.galaxy"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "source",
+        "id": "codebase-galaxy-node-4",
+        "kind": "source",
+        "label": "Galaxy Galaxy Execution",
+        "metadata": {
+          "detail": "Galaxy signal 4",
+          "owner": "source",
+          "template_id": "codebase.galaxy"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "error"
+      },
+      {
+        "group": "test",
+        "id": "codebase-galaxy-node-5",
+        "kind": "galaxy",
+        "label": "Galaxy Galaxy Risk",
+        "metadata": {
+          "detail": "Galaxy signal 5",
+          "owner": "test",
+          "template_id": "codebase.galaxy"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "running"
+      },
+      {
+        "group": "release",
+        "id": "codebase-galaxy-node-6",
+        "kind": "test",
+        "label": "Galaxy Galaxy Outcome",
+        "metadata": {
+          "detail": "Galaxy signal 6",
+          "owner": "release",
+          "template_id": "codebase.galaxy"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "ok"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Galaxy Example"
+  },
   "input_schema_kind": "graph_v1",
   "json_schema": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "efp.visual.input.graph.v1",
-    "title": "EFP Visual Graph Input v1",
-    "description": "Graph input for offline visual templates.",
-    "type": "object",
-    "required": [
-      "nodes"
-    ],
+    "$schema": "efp.visual.local.schema",
     "additionalProperties": true,
     "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
       "schema": {
-        "type": "string",
-        "const": "efp.visual.input.graph.v1"
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
       },
       "title": {
         "type": "string"
-      },
-      "nodes": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/node"
-        }
-      },
-      "edges": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/edge"
-        }
       }
     },
-    "$defs": {
-      "object": {
-        "type": "object",
-        "additionalProperties": true
-      },
-      "node": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "label": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "group": {
-            "type": "string"
-          },
-          "metadata": {
-            "$ref": "#/$defs/object"
-          },
-          "metrics": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      },
-      "edge": {
-        "type": "object",
-        "required": [
-          "from",
-          "to"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "from": {
-            "type": "string",
-            "minLength": 1
-          },
-          "to": {
-            "type": "string",
-            "minLength": 1
-          },
-          "kind": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "weight": {
-            "type": "number"
-          },
-          "metadata": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      }
-    }
-  },
-  "example": {
-    "schema": "efp.visual.input.graph.v1",
-    "title": "Codebase Galaxy",
-    "nodes": [
-      {
-        "id": "cmd",
-        "label": "cmd",
-        "kind": "directory",
-        "status": "success",
-        "group": "root"
-      },
-      {
-        "id": "internal",
-        "label": "internal",
-        "kind": "directory",
-        "status": "success",
-        "group": "root"
-      },
-      {
-        "id": "visual_commands",
-        "label": "visual commands",
-        "kind": "module",
-        "status": "success",
-        "group": "visual"
-      },
-      {
-        "id": "visual_render",
-        "label": "visual render",
-        "kind": "module",
-        "status": "success",
-        "group": "visual"
-      },
-      {
-        "id": "output",
-        "label": "output",
-        "kind": "module",
-        "status": "info",
-        "group": "shared"
-      }
+    "required": [
+      "nodes",
+      "edges"
     ],
-    "edges": [
-      {
-        "from": "cmd",
-        "to": "visual_commands",
-        "kind": "imports"
-      },
-      {
-        "from": "visual_commands",
-        "to": "visual_render",
-        "kind": "calls"
-      },
-      {
-        "from": "visual_commands",
-        "to": "output",
-        "kind": "uses"
-      },
-      {
-        "from": "internal",
-        "to": "visual_render",
-        "kind": "contains"
-      }
-    ]
-  }
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "codebase.galaxy"
 }

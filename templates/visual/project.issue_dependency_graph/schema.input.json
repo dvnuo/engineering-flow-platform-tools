@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "project-issue-dependency-graph-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "project-issue-dependency-graph-node-2",
+        "weight": 2
+      },
+      {
+        "from": "project-issue-dependency-graph-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "project-issue-dependency-graph-node-3",
+        "weight": 3
+      },
+      {
+        "from": "project-issue-dependency-graph-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "project-issue-dependency-graph-node-4",
+        "weight": 2
+      },
+      {
+        "from": "project-issue-dependency-graph-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "project-issue-dependency-graph-node-5",
+        "weight": 4
+      },
+      {
+        "from": "project-issue-dependency-graph-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "project-issue-dependency-graph-node-6",
+        "weight": 2
+      },
+      {
+        "from": "project-issue-dependency-graph-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "project-issue-dependency-graph-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "planning",
+        "id": "project-issue-dependency-graph-node-1",
+        "kind": "issue",
+        "label": "Issue Dependency Intake",
+        "metadata": {
+          "detail": "Issue Dependency Graph signal 1",
+          "owner": "planning",
+          "template_id": "project.issue_dependency_graph"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "review",
+        "id": "project-issue-dependency-graph-node-2",
+        "kind": "dependency",
+        "label": "Dependency Graph Core",
+        "metadata": {
+          "detail": "Issue Dependency Graph signal 2",
+          "owner": "review",
+          "template_id": "project.issue_dependency_graph"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "delivery",
+        "id": "project-issue-dependency-graph-node-3",
+        "kind": "graph",
+        "label": "Graph Issue Policy",
+        "metadata": {
+          "detail": "Issue Dependency Graph signal 3",
+          "owner": "delivery",
+          "template_id": "project.issue_dependency_graph"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "planning",
+        "id": "project-issue-dependency-graph-node-4",
+        "kind": "planning",
+        "label": "Issue Dependency Execution",
+        "metadata": {
+          "detail": "Issue Dependency Graph signal 4",
+          "owner": "planning",
+          "template_id": "project.issue_dependency_graph"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "review",
+        "id": "project-issue-dependency-graph-node-5",
+        "kind": "issue",
+        "label": "Dependency Graph Risk",
+        "metadata": {
+          "detail": "Issue Dependency Graph signal 5",
+          "owner": "review",
+          "template_id": "project.issue_dependency_graph"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "delivery",
+        "id": "project-issue-dependency-graph-node-6",
+        "kind": "dependency",
+        "label": "Graph Issue Outcome",
+        "metadata": {
+          "detail": "Issue Dependency Graph signal 6",
+          "owner": "delivery",
+          "template_id": "project.issue_dependency_graph"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Issue Dependency Graph Example"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "project.issue_dependency_graph"
+}

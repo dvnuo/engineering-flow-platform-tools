@@ -37,6 +37,9 @@ func LoadRegistry(templateDir string) (Registry, error) {
 			400,
 		)
 	}
+	if err := ValidateRegistry(registry); err != nil {
+		return registry, err
+	}
 	return registry, nil
 }
 

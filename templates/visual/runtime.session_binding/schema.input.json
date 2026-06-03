@@ -1,165 +1,308 @@
 {
-  "schema": "efp.visual.template_input_schema.v1",
-  "template_id": "runtime.session_binding",
+  "example": {
+    "edges": [
+      {
+        "from": "runtime-session-binding-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "runtime-session-binding-node-2",
+        "weight": 2
+      },
+      {
+        "from": "runtime-session-binding-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "runtime-session-binding-node-3",
+        "weight": 3
+      },
+      {
+        "from": "runtime-session-binding-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "runtime-session-binding-node-4",
+        "weight": 2
+      },
+      {
+        "from": "runtime-session-binding-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "runtime-session-binding-node-5",
+        "weight": 4
+      },
+      {
+        "from": "runtime-session-binding-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "runtime-session-binding-node-6",
+        "weight": 2
+      },
+      {
+        "from": "runtime-session-binding-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "runtime-session-binding-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "edge",
+        "id": "runtime-session-binding-node-1",
+        "kind": "session",
+        "label": "Session Binding Intake",
+        "metadata": {
+          "detail": "Session Binding signal 1",
+          "owner": "edge",
+          "template_id": "runtime.session_binding"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "success"
+      },
+      {
+        "group": "adapter",
+        "id": "runtime-session-binding-node-2",
+        "kind": "binding",
+        "label": "Binding Session Core",
+        "metadata": {
+          "detail": "Session Binding signal 2",
+          "owner": "adapter",
+          "template_id": "runtime.session_binding"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "service",
+        "id": "runtime-session-binding-node-3",
+        "kind": "service",
+        "label": "Session Binding Policy",
+        "metadata": {
+          "detail": "Session Binding signal 3",
+          "owner": "service",
+          "template_id": "runtime.session_binding"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "error"
+      },
+      {
+        "group": "edge",
+        "id": "runtime-session-binding-node-4",
+        "kind": "edge",
+        "label": "Binding Session Execution",
+        "metadata": {
+          "detail": "Session Binding signal 4",
+          "owner": "edge",
+          "template_id": "runtime.session_binding"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "running"
+      },
+      {
+        "group": "adapter",
+        "id": "runtime-session-binding-node-5",
+        "kind": "session",
+        "label": "Session Binding Risk",
+        "metadata": {
+          "detail": "Session Binding signal 5",
+          "owner": "adapter",
+          "template_id": "runtime.session_binding"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "ok"
+      },
+      {
+        "group": "service",
+        "id": "runtime-session-binding-node-6",
+        "kind": "binding",
+        "label": "Binding Session Outcome",
+        "metadata": {
+          "detail": "Session Binding signal 6",
+          "owner": "service",
+          "template_id": "runtime.session_binding"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "warning"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Session Binding Example"
+  },
   "input_schema_kind": "graph_v1",
   "json_schema": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "efp.visual.input.graph.v1",
-    "title": "EFP Visual Graph Input v1",
-    "description": "Graph input for offline visual templates.",
-    "type": "object",
-    "required": [
-      "nodes"
-    ],
+    "$schema": "efp.visual.local.schema",
     "additionalProperties": true,
     "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
       "schema": {
-        "type": "string",
-        "const": "efp.visual.input.graph.v1"
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
       },
       "title": {
         "type": "string"
-      },
-      "nodes": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/node"
-        }
-      },
-      "edges": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/edge"
-        }
       }
     },
-    "$defs": {
-      "object": {
-        "type": "object",
-        "additionalProperties": true
-      },
-      "node": {
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "label": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "group": {
-            "type": "string"
-          },
-          "metadata": {
-            "$ref": "#/$defs/object"
-          },
-          "metrics": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      },
-      "edge": {
-        "type": "object",
-        "required": [
-          "from",
-          "to"
-        ],
-        "additionalProperties": true,
-        "properties": {
-          "from": {
-            "type": "string",
-            "minLength": 1
-          },
-          "to": {
-            "type": "string",
-            "minLength": 1
-          },
-          "kind": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "weight": {
-            "type": "number"
-          },
-          "metadata": {
-            "$ref": "#/$defs/object"
-          }
-        }
-      }
-    }
-  },
-  "example": {
-    "schema": "efp.visual.input.graph.v1",
-    "title": "Runtime Session Binding",
-    "nodes": [
-      {
-        "id": "conversation",
-        "label": "Portal conversation",
-        "kind": "conversation",
-        "status": "success"
-      },
-      {
-        "id": "root_session",
-        "label": "OpenCode root session",
-        "kind": "session",
-        "status": "success"
-      },
-      {
-        "id": "messages",
-        "label": "Messages",
-        "kind": "stream",
-        "status": "info"
-      },
-      {
-        "id": "events",
-        "label": "Events",
-        "kind": "stream",
-        "status": "info"
-      },
-      {
-        "id": "status",
-        "label": "Status",
-        "kind": "state",
-        "status": "success"
-      }
+    "required": [
+      "nodes",
+      "edges"
     ],
-    "edges": [
-      {
-        "from": "conversation",
-        "to": "root_session",
-        "kind": "bind"
-      },
-      {
-        "from": "root_session",
-        "to": "messages",
-        "kind": "append"
-      },
-      {
-        "from": "root_session",
-        "to": "events",
-        "kind": "emit"
-      },
-      {
-        "from": "events",
-        "to": "status",
-        "kind": "derive"
-      }
-    ]
-  }
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "runtime.session_binding"
 }

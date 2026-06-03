@@ -4,6 +4,8 @@
 
 It does not call Portal, MCP, Node/npm, a browser runtime, a CDN, or a network service.
 
+The built-in catalog contains 195 canonical templates across 10 categories. See [VISUAL_TEMPLATES.md](VISUAL_TEMPLATES.md) for the full index, category guidance, schema kinds, layout presets, and template authoring rules.
+
 ## Template Directory
 
 Template directory resolution order:
@@ -14,7 +16,7 @@ Template directory resolution order:
 4. `./templates/visual`
 5. executable-adjacent release paths
 
-The directory must contain `registry.json`, `_shared/**`, and template directories such as `agent.run_trace`.
+The directory must contain `registry.json`, `_shared/**`, and flat template directories such as `agent.run_trace` and `codebase.module_dependency_graph`.
 
 ## Render Contract
 
@@ -36,7 +38,9 @@ Supported input schema kinds:
 Example:
 
 ```bash
+visual template categories --template-dir ./templates/visual --json
 visual template list --template-dir ./templates/visual --json
+visual template list --template-dir ./templates/visual --category codebase --json
 visual template get agent.run_trace --template-dir ./templates/visual --json
 visual template schema agent.run_trace --template-dir ./templates/visual --json
 visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json
@@ -50,7 +54,7 @@ Each template has a real `schema.input.json` referenced by `template.yaml`:
   "template_id": "agent.run_trace",
   "input_schema_kind": "graph_events_v1",
   "json_schema": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$schema": "efp.visual.local.schema",
     "type": "object",
     "required": ["nodes"],
     "properties": {
@@ -79,7 +83,7 @@ Successful render output includes:
 - `manifest.js`
 - `data.js`
 - `assets/runtime/**`
-- `assets/template/style.css`
+- `assets/templates/<template-id>/style.css`
 
 The JSON response returns `data.artifact`:
 
@@ -132,5 +136,7 @@ visual inspect-output --out ./out/run-trace --json
 ```
 
 `visual template doctor` reads `registry.json`, validates every `template.yaml`, validates each `schema.input.json`, validates each `examples/basic.input.json`, renders every basic example into a temporary directory, checks required output files, scans the rendered output for offline violations, and deletes the temporary directory.
+
+For the built-in catalog, doctor also checks `canonical_templates=195`, the exact category counts, template tree offline safety, non-empty template styles, rendered example output inspection, and at least 190 unique example hashes.
 
 Use `--dry-run` on `visual render` to preview `planned_files` without creating `--out`.

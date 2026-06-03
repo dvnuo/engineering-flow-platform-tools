@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "codebase-refactor-plan-map-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "codebase-refactor-plan-map-node-2",
+      "weight": 2
+    },
+    {
+      "from": "codebase-refactor-plan-map-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "codebase-refactor-plan-map-node-3",
+      "weight": 3
+    },
+    {
+      "from": "codebase-refactor-plan-map-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "codebase-refactor-plan-map-node-4",
+      "weight": 2
+    },
+    {
+      "from": "codebase-refactor-plan-map-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "codebase-refactor-plan-map-node-5",
+      "weight": 4
+    },
+    {
+      "from": "codebase-refactor-plan-map-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "codebase-refactor-plan-map-node-6",
+      "weight": 2
+    },
+    {
+      "from": "codebase-refactor-plan-map-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "codebase-refactor-plan-map-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "source",
+      "id": "codebase-refactor-plan-map-node-1",
+      "kind": "refactor",
+      "label": "Refactor Plan Intake",
+      "metadata": {
+        "detail": "Refactor Plan Map signal 1",
+        "owner": "source",
+        "template_id": "codebase.refactor_plan_map"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "test",
+      "id": "codebase-refactor-plan-map-node-2",
+      "kind": "plan",
+      "label": "Plan Map Core",
+      "metadata": {
+        "detail": "Refactor Plan Map signal 2",
+        "owner": "test",
+        "template_id": "codebase.refactor_plan_map"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "release",
+      "id": "codebase-refactor-plan-map-node-3",
+      "kind": "map",
+      "label": "Map Refactor Policy",
+      "metadata": {
+        "detail": "Refactor Plan Map signal 3",
+        "owner": "release",
+        "template_id": "codebase.refactor_plan_map"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "source",
+      "id": "codebase-refactor-plan-map-node-4",
+      "kind": "source",
+      "label": "Refactor Plan Execution",
+      "metadata": {
+        "detail": "Refactor Plan Map signal 4",
+        "owner": "source",
+        "template_id": "codebase.refactor_plan_map"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "test",
+      "id": "codebase-refactor-plan-map-node-5",
+      "kind": "refactor",
+      "label": "Plan Map Risk",
+      "metadata": {
+        "detail": "Refactor Plan Map signal 5",
+        "owner": "test",
+        "template_id": "codebase.refactor_plan_map"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "release",
+      "id": "codebase-refactor-plan-map-node-6",
+      "kind": "plan",
+      "label": "Map Refactor Outcome",
+      "metadata": {
+        "detail": "Refactor Plan Map signal 6",
+        "owner": "release",
+        "template_id": "codebase.refactor_plan_map"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Refactor Plan Map Example"
+}

@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "runtime-session-binding-map-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "runtime-session-binding-map-node-2",
+      "weight": 2
+    },
+    {
+      "from": "runtime-session-binding-map-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "runtime-session-binding-map-node-3",
+      "weight": 3
+    },
+    {
+      "from": "runtime-session-binding-map-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "runtime-session-binding-map-node-4",
+      "weight": 2
+    },
+    {
+      "from": "runtime-session-binding-map-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "runtime-session-binding-map-node-5",
+      "weight": 4
+    },
+    {
+      "from": "runtime-session-binding-map-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "runtime-session-binding-map-node-6",
+      "weight": 2
+    },
+    {
+      "from": "runtime-session-binding-map-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "runtime-session-binding-map-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "edge",
+      "id": "runtime-session-binding-map-node-1",
+      "kind": "session",
+      "label": "Session Binding Intake",
+      "metadata": {
+        "detail": "Session Binding Map signal 1",
+        "owner": "edge",
+        "template_id": "runtime.session_binding_map"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-session-binding-map-node-2",
+      "kind": "binding",
+      "label": "Binding Map Core",
+      "metadata": {
+        "detail": "Session Binding Map signal 2",
+        "owner": "adapter",
+        "template_id": "runtime.session_binding_map"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "service",
+      "id": "runtime-session-binding-map-node-3",
+      "kind": "map",
+      "label": "Map Session Policy",
+      "metadata": {
+        "detail": "Session Binding Map signal 3",
+        "owner": "service",
+        "template_id": "runtime.session_binding_map"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "edge",
+      "id": "runtime-session-binding-map-node-4",
+      "kind": "edge",
+      "label": "Session Binding Execution",
+      "metadata": {
+        "detail": "Session Binding Map signal 4",
+        "owner": "edge",
+        "template_id": "runtime.session_binding_map"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-session-binding-map-node-5",
+      "kind": "session",
+      "label": "Binding Map Risk",
+      "metadata": {
+        "detail": "Session Binding Map signal 5",
+        "owner": "adapter",
+        "template_id": "runtime.session_binding_map"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "service",
+      "id": "runtime-session-binding-map-node-6",
+      "kind": "binding",
+      "label": "Map Session Outcome",
+      "metadata": {
+        "detail": "Session Binding Map signal 6",
+        "owner": "service",
+        "template_id": "runtime.session_binding_map"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Session Binding Map Example"
+}

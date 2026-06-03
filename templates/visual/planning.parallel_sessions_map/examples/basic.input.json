@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "planning-parallel-sessions-map-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "planning-parallel-sessions-map-node-2",
+      "weight": 2
+    },
+    {
+      "from": "planning-parallel-sessions-map-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "planning-parallel-sessions-map-node-3",
+      "weight": 3
+    },
+    {
+      "from": "planning-parallel-sessions-map-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "planning-parallel-sessions-map-node-4",
+      "weight": 2
+    },
+    {
+      "from": "planning-parallel-sessions-map-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "planning-parallel-sessions-map-node-5",
+      "weight": 4
+    },
+    {
+      "from": "planning-parallel-sessions-map-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "planning-parallel-sessions-map-node-6",
+      "weight": 2
+    },
+    {
+      "from": "planning-parallel-sessions-map-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "planning-parallel-sessions-map-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "planning-parallel-sessions-map-event-1",
+      "kind": "start",
+      "label": "Parallel Sessions Map Opened",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "node_id": "planning-parallel-sessions-map-node-1",
+      "status": "running",
+      "summary": "Parallel Sessions Map event 1 references Parallel Sessions Intake.",
+      "time": "2026-06-03T14:40:00Z"
+    },
+    {
+      "id": "planning-parallel-sessions-map-event-2",
+      "kind": "tool",
+      "label": "Parallel Sessions Map Triaged",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "node_id": "planning-parallel-sessions-map-node-2",
+      "status": "success",
+      "summary": "Parallel Sessions Map event 2 references Sessions Map Core.",
+      "time": "2026-06-03T14:51:00Z"
+    },
+    {
+      "id": "planning-parallel-sessions-map-event-3",
+      "kind": "checkpoint",
+      "label": "Parallel Sessions Map Mapped",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "node_id": "planning-parallel-sessions-map-node-3",
+      "status": "warning",
+      "summary": "Parallel Sessions Map event 3 references Map Parallel Policy.",
+      "time": "2026-06-03T15:02:00Z"
+    },
+    {
+      "id": "planning-parallel-sessions-map-event-4",
+      "kind": "decision",
+      "label": "Parallel Sessions Map Acted",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "node_id": "planning-parallel-sessions-map-node-4",
+      "status": "running",
+      "summary": "Parallel Sessions Map event 4 references Parallel Sessions Execution.",
+      "time": "2026-06-03T15:13:00Z"
+    },
+    {
+      "id": "planning-parallel-sessions-map-event-5",
+      "kind": "recovery",
+      "label": "Parallel Sessions Map Checked",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "node_id": "planning-parallel-sessions-map-node-5",
+      "status": "error",
+      "summary": "Parallel Sessions Map event 5 references Sessions Map Risk.",
+      "time": "2026-06-03T15:24:00Z"
+    },
+    {
+      "id": "planning-parallel-sessions-map-event-6",
+      "kind": "finish",
+      "label": "Parallel Sessions Map Recovered",
+      "metadata": {
+        "layout": "swimlane_timeline",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "node_id": "planning-parallel-sessions-map-node-6",
+      "status": "success",
+      "summary": "Parallel Sessions Map event 6 references Map Parallel Outcome.",
+      "time": "2026-06-03T15:35:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "goal",
+      "id": "planning-parallel-sessions-map-node-1",
+      "kind": "parallel",
+      "label": "Parallel Sessions Intake",
+      "metadata": {
+        "detail": "Parallel Sessions Map signal 1",
+        "owner": "goal",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "task",
+      "id": "planning-parallel-sessions-map-node-2",
+      "kind": "sessions",
+      "label": "Sessions Map Core",
+      "metadata": {
+        "detail": "Parallel Sessions Map signal 2",
+        "owner": "task",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "automation",
+      "id": "planning-parallel-sessions-map-node-3",
+      "kind": "map",
+      "label": "Map Parallel Policy",
+      "metadata": {
+        "detail": "Parallel Sessions Map signal 3",
+        "owner": "automation",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "goal",
+      "id": "planning-parallel-sessions-map-node-4",
+      "kind": "goal",
+      "label": "Parallel Sessions Execution",
+      "metadata": {
+        "detail": "Parallel Sessions Map signal 4",
+        "owner": "goal",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "task",
+      "id": "planning-parallel-sessions-map-node-5",
+      "kind": "parallel",
+      "label": "Sessions Map Risk",
+      "metadata": {
+        "detail": "Parallel Sessions Map signal 5",
+        "owner": "task",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "automation",
+      "id": "planning-parallel-sessions-map-node-6",
+      "kind": "sessions",
+      "label": "Map Parallel Outcome",
+      "metadata": {
+        "detail": "Parallel Sessions Map signal 6",
+        "owner": "automation",
+        "template_id": "planning.parallel_sessions_map"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Parallel Sessions Map Example"
+}

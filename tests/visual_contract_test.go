@@ -2,21 +2,90 @@ package tests
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
 	"engineering-flow-platform-tools/internal/testutil"
 	vcmd "engineering-flow-platform-tools/internal/visual/commands"
+	"gopkg.in/yaml.v3"
 )
 
 type visualRegistry struct {
-	Templates []struct {
-		ID string `json:"id"`
-	} `json:"templates"`
+	Version   int                   `json:"version"`
+	Templates []visualRegistryEntry `json:"templates"`
+}
+
+type visualRegistryEntry struct {
+	ID              string   `json:"id"`
+	Version         string   `json:"version"`
+	Category        string   `json:"category"`
+	Path            string   `json:"path"`
+	Title           string   `json:"title"`
+	Description     string   `json:"description"`
+	InputSchemaKind string   `json:"input_schema_kind"`
+	Renderer        string   `json:"renderer"`
+	LayoutPreset    string   `json:"layout_preset"`
+	Tags            []string `json:"tags"`
+	Aliases         []string `json:"aliases"`
+}
+
+type visualTemplateManifest struct {
+	ID              string `yaml:"id"`
+	Version         string `yaml:"version"`
+	Category        string `yaml:"category"`
+	Title           string `yaml:"title"`
+	Description     string `yaml:"description"`
+	InputSchema     string `yaml:"input_schema"`
+	InputSchemaKind string `yaml:"input_schema_kind"`
+	Renderer        struct {
+		Contract string `yaml:"contract"`
+	} `yaml:"renderer"`
+	Layout struct {
+		Preset string `yaml:"preset"`
+	} `yaml:"layout"`
+	Offline struct {
+		Required      bool   `yaml:"required"`
+		ForbidNetwork bool   `yaml:"forbid_network"`
+		DataMode      string `yaml:"data_mode"`
+	} `yaml:"offline"`
+	Styles  []string `yaml:"styles"`
+	Scripts []string `yaml:"scripts"`
+	Tags    []string `yaml:"tags"`
+}
+
+var expectedVisualCategoryCounts = map[string]int{
+	"foundation": 20,
+	"agent":      15,
+	"codebase":   20,
+	"runtime":    20,
+	"debug":      20,
+	"project":    20,
+	"knowledge":  20,
+	"planning":   20,
+	"business":   20,
+	"education":  20,
+}
+
+var allowedVisualSchemaKinds = map[string]bool{
+	"graph_v1":        true,
+	"graph_events_v1": true,
+	"timeline_v1":     true,
+	"evidence_v1":     true,
+	"matrix_v1":       true,
+}
+
+var allowedVisualRenderers = map[string]bool{
+	"offline.graph.v1":    true,
+	"offline.timeline.v1": true,
+	"offline.evidence.v1": true,
+	"offline.matrix.v1":   true,
 }
 
 func TestVisualVersionJSONContract(t *testing.T) {
@@ -37,7 +106,7 @@ func TestVisualCommandsJSONContract(t *testing.T) {
 		m := item.(map[string]any)
 		names[m["name"].(string)] = true
 	}
-	for _, name := range []string{"render", "validate", "template.list", "template.get", "template.schema", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
+	for _, name := range []string{"render", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
 		if !names[name] {
 			t.Fatalf("missing visual command %s in %#v", name, names)
 		}
@@ -86,43 +155,110 @@ func TestVisualSchemaTemplateSchemaJSONContract(t *testing.T) {
 	}
 }
 
+func TestVisualSchemaTemplateListJSONContract(t *testing.T) {
+	obj := runVisualOK(t, "schema", "template.list", "--json")
+	data := obj["data"].(map[string]any)
+	flags := data["flags"].([]any)
+	names := map[string]bool{}
+	for _, item := range flags {
+		m := item.(map[string]any)
+		names[m["name"].(string)] = true
+	}
+	for _, name := range []string{"template-dir", "category", "query", "renderer", "schema-kind", "json"} {
+		if !names[name] {
+			t.Fatalf("missing template.list flag %s in %#v", name, names)
+		}
+	}
+}
+
 func TestVisualTemplateListGetDoctor(t *testing.T) {
 	templateDir := visualTemplateDir()
 	list := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--json")
-	templates := list["data"].(map[string]any)["templates"].([]any)
-	if len(templates) != 20 {
-		t.Fatalf("expected 20 templates, got %d", len(templates))
+	listData := list["data"].(map[string]any)
+	templates := listData["templates"].([]any)
+	if len(templates) != 195 || listData["canonical_count"].(float64) != 195 {
+		t.Fatalf("expected 195 canonical templates, got len=%d data=%#v", len(templates), listData)
+	}
+	if listData["total_count"].(float64) < 195 {
+		t.Fatalf("total_count should include canonical templates and aliases: %#v", listData)
+	}
+
+	categories := runVisualOK(t, "template", "categories", "--template-dir", templateDir, "--json")
+	categoryData := categories["data"].(map[string]any)
+	if categoryData["canonical_count"].(float64) != 195 {
+		t.Fatalf("unexpected category canonical_count: %#v", categoryData)
+	}
+	categoryCounts := map[string]int{}
+	for _, item := range categoryData["categories"].([]any) {
+		m := item.(map[string]any)
+		categoryCounts[m["id"].(string)] = int(m["count"].(float64))
+	}
+	if len(categoryCounts) != 10 {
+		t.Fatalf("expected 10 categories, got %#v", categoryCounts)
+	}
+	for category, expected := range expectedVisualCategoryCounts {
+		if categoryCounts[category] != expected {
+			t.Fatalf("category %s expected %d, got %#v", category, expected, categoryCounts)
+		}
+	}
+
+	agentList := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--category", "agent", "--json")
+	if agentList["data"].(map[string]any)["matched_count"].(float64) != 15 {
+		t.Fatalf("agent category filter failed: %#v", agentList)
+	}
+	dependencyList := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--query", "dependency", "--json")
+	if dependencyList["data"].(map[string]any)["matched_count"].(float64) == 0 {
+		t.Fatalf("query filter returned no templates: %#v", dependencyList)
+	}
+	graphList := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--renderer", "offline.graph.v1", "--schema-kind", "graph_v1", "--json")
+	if graphList["data"].(map[string]any)["matched_count"].(float64) == 0 {
+		t.Fatalf("renderer/schema-kind filter returned no templates: %#v", graphList)
 	}
 
 	got := runVisualOK(t, "template", "get", "agent.run_trace", "--template-dir", templateDir, "--json")
 	data := got["data"].(map[string]any)
-	if data["id"] != "agent.run_trace" || data["version"] == "" || data["input_schema_kind"] != "graph_events_v1" {
+	if data["id"] != "agent.run_trace" || data["canonical_id"] != "agent.run_trace" || data["category"] != "agent" || data["version"] == "" || data["input_schema_kind"] != "graph_events_v1" {
 		t.Fatalf("unexpected template get data: %#v", data)
 	}
 	renderer := data["renderer"].(map[string]any)
 	if renderer["contract"] != "offline.graph.v1" {
 		t.Fatalf("unexpected renderer: %#v", renderer)
 	}
+	if strings.TrimSpace(data["schema_file"].(string)) == "" || strings.TrimSpace(data["example_file"].(string)) == "" {
+		t.Fatalf("template get missing schema/example files: %#v", data)
+	}
+
+	aliasGot := runVisualOK(t, "template", "get", "agent.tool_constellation", "--template-dir", templateDir, "--json")
+	aliasData := aliasGot["data"].(map[string]any)
+	if aliasData["requested_id"] != "agent.tool_constellation" || aliasData["canonical_id"] != "agent.tool_call_constellation" {
+		t.Fatalf("alias get did not resolve canonical template: %#v", aliasData)
+	}
 
 	doctor := runVisualOK(t, "template", "doctor", "--template-dir", templateDir, "--json")
 	doctorData := doctor["data"].(map[string]any)
 	checked := doctorData["checked_templates"].(float64)
-	if checked != 20 {
-		t.Fatalf("expected 20 checked templates, got %v", checked)
+	if checked != 195 || doctorData["canonical_templates"].(float64) != 195 {
+		t.Fatalf("expected 195 checked templates, got %#v", doctorData)
 	}
-	if doctorData["checked_examples"].(float64) != 20 {
-		t.Fatalf("expected 20 checked examples, got %#v", doctorData)
+	if doctorData["checked_examples"].(float64) != 195 {
+		t.Fatalf("expected 195 checked examples, got %#v", doctorData)
 	}
-	if doctorData["rendered_examples"].(float64) != 20 {
-		t.Fatalf("expected 20 rendered examples, got %#v", doctorData)
+	if doctorData["rendered_examples"].(float64) != 195 {
+		t.Fatalf("expected 195 rendered examples, got %#v", doctorData)
+	}
+	if doctorData["offline"] != true {
+		t.Fatalf("doctor did not report offline: %#v", doctorData)
+	}
+	if doctorData["unique_example_hashes"].(float64) < 190 {
+		t.Fatalf("doctor did not report enough unique examples: %#v", doctorData)
 	}
 	doctorTemplates := doctorData["templates"].([]any)
-	if len(doctorTemplates) != 20 {
-		t.Fatalf("expected 20 doctor template results, got %d", len(doctorTemplates))
+	if len(doctorTemplates) != 195 {
+		t.Fatalf("expected 195 doctor template results, got %d", len(doctorTemplates))
 	}
 	for _, item := range doctorTemplates {
 		m := item.(map[string]any)
-		if m["rendered"] != true || strings.TrimSpace(m["example"].(string)) == "" {
+		if m["rendered"] != true || strings.TrimSpace(m["example"].(string)) == "" || strings.TrimSpace(m["category"].(string)) == "" {
 			t.Fatalf("unexpected doctor template result: %#v", m)
 		}
 	}
@@ -133,7 +269,7 @@ func TestVisualTemplateSchemaCommand(t *testing.T) {
 	obj := runVisualOK(t, "template", "schema", "agent.run_trace", "--template-dir", templateDir, "--json")
 	data := obj["data"].(map[string]any)
 	template := data["template"].(map[string]any)
-	if template["id"] != "agent.run_trace" || template["version"] != "1.0.0" || template["renderer"] != "offline.graph.v1" || template["input_schema_kind"] != "graph_events_v1" {
+	if template["id"] != "agent.run_trace" || template["canonical_id"] != "agent.run_trace" || template["category"] != "agent" || template["version"] != "1.0.0" || template["renderer"] != "offline.graph.v1" || template["input_schema_kind"] != "graph_events_v1" {
 		t.Fatalf("unexpected template schema metadata: %#v", template)
 	}
 	if data["schema_file"] != "agent.run_trace/schema.input.json" {
@@ -159,6 +295,88 @@ func TestVisualTemplateSchemaCommand(t *testing.T) {
 	}
 }
 
+func TestVisualRegistryAndTemplateManifests(t *testing.T) {
+	templateDir := visualTemplateDir()
+	registry := visualRegistryData(t)
+	if registry.Version != 2 {
+		t.Fatalf("expected registry version 2, got %d", registry.Version)
+	}
+	if len(registry.Templates) != 195 {
+		t.Fatalf("expected 195 registry templates, got %d", len(registry.Templates))
+	}
+	ids := map[string]bool{}
+	aliases := map[string]string{}
+	counts := map[string]int{}
+	for _, entry := range registry.Templates {
+		if ids[entry.ID] {
+			t.Fatalf("duplicate registry id %s", entry.ID)
+		}
+		ids[entry.ID] = true
+		counts[entry.Category]++
+		if entry.Path != filepath.ToSlash(filepath.Join(entry.ID, "template.yaml")) {
+			t.Fatalf("registry path for %s is not flat id/template.yaml: %s", entry.ID, entry.Path)
+		}
+		if _, err := os.Stat(filepath.Join(templateDir, filepath.FromSlash(entry.Path))); err != nil {
+			t.Fatalf("registry path missing for %s: %v", entry.ID, err)
+		}
+		for _, alias := range entry.Aliases {
+			if ids[alias] {
+				t.Fatalf("alias %s conflicts with canonical id", alias)
+			}
+			if owner, exists := aliases[alias]; exists && owner != entry.ID {
+				t.Fatalf("alias %s owned by both %s and %s", alias, owner, entry.ID)
+			}
+			aliases[alias] = entry.ID
+		}
+		var manifest visualTemplateManifest
+		raw := mustRead(t, filepath.Join(templateDir, entry.ID, "template.yaml"))
+		if err := yaml.Unmarshal([]byte(raw), &manifest); err != nil {
+			t.Fatalf("template.yaml invalid for %s: %v", entry.ID, err)
+		}
+		if manifest.ID != entry.ID {
+			t.Fatalf("%s manifest id mismatch: %#v", entry.ID, manifest)
+		}
+		if manifest.Category != entry.Category || expectedVisualCategoryCounts[manifest.Category] == 0 {
+			t.Fatalf("%s has invalid category: manifest=%s registry=%s", entry.ID, manifest.Category, entry.Category)
+		}
+		if manifest.InputSchema != "schema.input.json" {
+			t.Fatalf("%s input_schema should be schema.input.json, got %s", entry.ID, manifest.InputSchema)
+		}
+		if manifest.InputSchemaKind != entry.InputSchemaKind || !allowedVisualSchemaKinds[manifest.InputSchemaKind] {
+			t.Fatalf("%s invalid schema kind: manifest=%s registry=%s", entry.ID, manifest.InputSchemaKind, entry.InputSchemaKind)
+		}
+		if manifest.Renderer.Contract != entry.Renderer || !allowedVisualRenderers[manifest.Renderer.Contract] {
+			t.Fatalf("%s invalid renderer: manifest=%s registry=%s", entry.ID, manifest.Renderer.Contract, entry.Renderer)
+		}
+		if strings.TrimSpace(manifest.Layout.Preset) == "" || manifest.Layout.Preset != entry.LayoutPreset {
+			t.Fatalf("%s invalid layout preset: manifest=%s registry=%s", entry.ID, manifest.Layout.Preset, entry.LayoutPreset)
+		}
+		if strings.TrimSpace(manifest.Description) == "" || strings.Contains(strings.ToLower(manifest.Description), "basic example") {
+			t.Fatalf("%s has generic/empty description: %q", entry.ID, manifest.Description)
+		}
+		if !manifest.Offline.Required || !manifest.Offline.ForbidNetwork || manifest.Offline.DataMode != "js-file" {
+			t.Fatalf("%s offline contract invalid: %#v", entry.ID, manifest.Offline)
+		}
+		if !stringSliceContains(manifest.Scripts, "manifest.js") || !stringSliceContains(manifest.Scripts, "data.js") {
+			t.Fatalf("%s missing manifest.js/data.js scripts: %#v", entry.ID, manifest.Scripts)
+		}
+		if !stringSliceContains(manifest.Styles, "assets/runtime/efp-visual-runtime.css") || !stringSliceContains(manifest.Styles, filepath.ToSlash(filepath.Join("assets", "templates", entry.ID, "style.css"))) {
+			t.Fatalf("%s missing required styles: %#v", entry.ID, manifest.Styles)
+		}
+		if len(manifest.Tags) == 0 || len(entry.Tags) == 0 {
+			t.Fatalf("%s missing tags", entry.ID)
+		}
+	}
+	if len(aliases) != 10 {
+		t.Fatalf("expected 10 aliases, got %#v", aliases)
+	}
+	for category, expected := range expectedVisualCategoryCounts {
+		if counts[category] != expected {
+			t.Fatalf("category %s expected %d, got %#v", category, expected, counts)
+		}
+	}
+}
+
 func TestVisualTemplateInputSchemaFilesAreDiscoverable(t *testing.T) {
 	templateDir := visualTemplateDir()
 	for _, id := range visualTemplateIDs(t) {
@@ -181,6 +399,9 @@ func TestVisualTemplateInputSchemaFilesAreDiscoverable(t *testing.T) {
 			if !ok || len(jsonSchema) <= 3 {
 				t.Fatalf("schema.input.json missing non-stub json_schema: %#v", doc)
 			}
+			if schemaURI, _ := jsonSchema["$schema"].(string); strings.Contains(schemaURI, "http://") || strings.Contains(schemaURI, "https://") {
+				t.Fatalf("schema.input.json uses remote schema uri: %#v", doc)
+			}
 			if _, ok := doc["example"].(map[string]any); !ok {
 				t.Fatalf("schema.input.json missing example: %#v", doc)
 			}
@@ -191,6 +412,102 @@ func TestVisualTemplateInputSchemaFilesAreDiscoverable(t *testing.T) {
 				t.Fatalf("schema.input.json still uses old template field: %#v", doc)
 			}
 		})
+	}
+}
+
+func TestVisualExamplesHaveRequiredShapeAndUniqueContent(t *testing.T) {
+	templateDir := visualTemplateDir()
+	hashes := map[string]string{}
+	for _, entry := range visualRegistryData(t).Templates {
+		t.Run(entry.ID, func(t *testing.T) {
+			path := filepath.Join(templateDir, entry.ID, "examples", "basic.input.json")
+			raw := []byte(mustRead(t, path))
+			hashes[hashString(raw)] = entry.ID
+			var data map[string]any
+			if err := json.Unmarshal(raw, &data); err != nil {
+				t.Fatal(err)
+			}
+			title, _ := data["title"].(string)
+			if strings.TrimSpace(title) == "" || strings.EqualFold(title, "Basic Example") {
+				t.Fatalf("%s has generic title: %#v", entry.ID, data["title"])
+			}
+			switch entry.InputSchemaKind {
+			case "graph_v1":
+				assertGraphShape(t, data, false)
+			case "graph_events_v1":
+				assertGraphShape(t, data, true)
+			case "timeline_v1":
+				events := anySlice(t, data["events"])
+				if len(events) < 6 {
+					t.Fatalf("timeline example needs at least 6 events, got %d", len(events))
+				}
+				previousTime := ""
+				for i, item := range events {
+					m := objectMap(t, item)
+					for _, field := range []string{"id", "time", "kind", "label", "status", "summary"} {
+						if strings.TrimSpace(fmt.Sprint(m[field])) == "" {
+							t.Fatalf("timeline event %d missing %s: %#v", i, field, m)
+						}
+					}
+					currentTime := fmt.Sprint(m["time"])
+					if previousTime != "" && currentTime <= previousTime {
+						t.Fatalf("timeline event times are not increasing: previous=%s current=%s", previousTime, currentTime)
+					}
+					previousTime = currentTime
+				}
+			case "evidence_v1":
+				claims := anySlice(t, data["claims"])
+				sources := anySlice(t, data["sources"])
+				links := anySlice(t, data["links"])
+				if len(claims) < 3 || len(sources) < 4 || len(links) < 5 {
+					t.Fatalf("evidence example too small: claims=%d sources=%d links=%d", len(claims), len(sources), len(links))
+				}
+				relations := map[string]bool{}
+				for _, item := range links {
+					m := objectMap(t, item)
+					relations[fmt.Sprint(m["relation"])] = true
+				}
+				needed := 0
+				for _, relation := range []string{"supports", "refutes", "mentions"} {
+					if relations[relation] {
+						needed++
+					}
+				}
+				if needed < 2 {
+					t.Fatalf("evidence links need at least two relation types, got %#v", relations)
+				}
+			case "matrix_v1":
+				items := anySlice(t, data["items"])
+				if len(items) < 8 {
+					t.Fatalf("matrix example needs at least 8 items, got %d", len(items))
+				}
+				kinds := map[string]bool{}
+				statuses := map[string]bool{}
+				hasMetadata := false
+				for _, item := range items {
+					m := objectMap(t, item)
+					if _, ok := m["x"].(float64); !ok {
+						t.Fatalf("matrix item missing numeric x: %#v", m)
+					}
+					if _, ok := m["y"].(float64); !ok {
+						t.Fatalf("matrix item missing numeric y: %#v", m)
+					}
+					kinds[fmt.Sprint(m["kind"])] = true
+					statuses[fmt.Sprint(m["status"])] = true
+					if _, ok := m["metadata"].(map[string]any); ok {
+						hasMetadata = true
+					}
+				}
+				if len(kinds) < 3 || len(statuses) < 2 || !hasMetadata {
+					t.Fatalf("matrix example lacks kind/status/metadata variety: kinds=%#v statuses=%#v metadata=%v", kinds, statuses, hasMetadata)
+				}
+			default:
+				t.Fatalf("unsupported schema kind %s", entry.InputSchemaKind)
+			}
+		})
+	}
+	if len(hashes) < 190 {
+		t.Fatalf("expected at least 190 unique example hashes, got %d", len(hashes))
 	}
 }
 
@@ -235,7 +552,8 @@ func TestVisualRenderEveryExample(t *testing.T) {
 				t.Fatalf("artifact missing compatibility flags: %#v", artifact)
 			}
 			files := stringSetFromAny(artifact["files"].([]any))
-			for _, rel := range []string{"index.html", "manifest.json", "manifest.js", "data.js", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js", "assets/runtime/efp-visual-runtime.css", "assets/template/style.css"} {
+			templateStyle := filepath.ToSlash(filepath.Join("assets", "templates", id, "style.css"))
+			for _, rel := range []string{"index.html", "manifest.json", "manifest.js", "data.js", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js", "assets/runtime/efp-visual-runtime.css", templateStyle} {
 				if !files[rel] {
 					t.Fatalf("artifact files missing %s in %#v", rel, files)
 				}
@@ -312,12 +630,13 @@ func TestVisualPathTraversalAssetRejected(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(templateDir, "bad", "examples"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	mustWrite(t, filepath.Join(templateDir, "registry.json"), `{"version":1,"templates":[{"id":"bad","version":"1.0.0","path":"bad/template.yaml","title":"Bad","description":"Bad","input_schema":"graph_v1","renderer":"offline.graph.v1"}]}`)
+	mustWrite(t, filepath.Join(templateDir, "registry.json"), `{"version":2,"templates":[{"id":"bad","version":"1.0.0","category":"agent","path":"bad/template.yaml","title":"Bad","description":"Bad","input_schema_kind":"graph_v1","renderer":"offline.graph.v1","layout_preset":"dag","tags":["bad"],"aliases":[]}]}`)
 	mustWrite(t, filepath.Join(templateDir, "bad", "schema.input.json"), `{"schema":"efp.visual.template_input_schema.v1","template_id":"bad","input_schema_kind":"graph_v1","json_schema":{"type":"object","required":["nodes"],"properties":{"nodes":{"type":"array"}}},"example":{"nodes":[{"id":"a"}]}}`)
 	mustWrite(t, filepath.Join(templateDir, "bad", "style.css"), `:root { --accent: #fff; }`)
 	mustWrite(t, filepath.Join(templateDir, "bad", "examples", "basic.input.json"), `{"nodes":[{"id":"a"}]}`)
 	mustWrite(t, filepath.Join(templateDir, "bad", "template.yaml"), `id: bad
 version: 1.0.0
+category: agent
 title: Bad
 description: Bad template
 input_schema: schema.input.json
@@ -342,7 +661,7 @@ scripts:
   - assets/runtime/efp-visual-runtime.iife.js
   - assets/runtime/efp-visual-renderers.iife.js
 `)
-	assertErrorCode(t, runVisual(t, "template", "doctor", "--template-dir", templateDir, "--json"), "template_asset_outside_root")
+	assertErrorCode(t, runVisual(t, "template", "doctor", "--template-dir", templateDir, "--json"), "template_doctor_failed")
 }
 
 func TestVisualOfflineViolationRejected(t *testing.T) {
@@ -431,6 +750,53 @@ func TestVisualNoGoEmbed(t *testing.T) {
 	}
 }
 
+func TestVisualTemplateTreeOfflineAndStyles(t *testing.T) {
+	forbidden := []string{
+		"http://",
+		"https://",
+		"//",
+		"unpkg",
+		"cdnjs",
+		"jsdelivr",
+		"fonts.googleapis.com",
+		"fonts.gstatic.com",
+		"@import",
+		"fetch(",
+		"XMLHttpRequest",
+		"WebSocket",
+		"EventSource",
+		"navigator.sendBeacon",
+		"import(",
+		`<script type="module`,
+		`src="/`,
+		`href="/`,
+	}
+	err := filepath.WalkDir(visualTemplateDir(), func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		switch strings.ToLower(filepath.Ext(path)) {
+		case ".html", ".js", ".css", ".json", ".yaml", ".yml":
+		default:
+			return nil
+		}
+		content := mustRead(t, path)
+		lower := strings.ToLower(content)
+		for _, token := range forbidden {
+			if strings.Contains(lower, strings.ToLower(token)) {
+				t.Fatalf("%s contains forbidden offline token %s", path, token)
+			}
+		}
+		if filepath.Base(path) == "style.css" && strings.TrimSpace(content) == "" {
+			t.Fatalf("%s is empty", path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func runVisualOK(t *testing.T, args ...string) map[string]any {
 	t.Helper()
 	obj := runVisual(t, args...)
@@ -470,6 +836,17 @@ func visualTemplateDir() string {
 
 func visualTemplateIDs(t *testing.T) []string {
 	t.Helper()
+	registry := visualRegistryData(t)
+	var ids []string
+	for _, item := range registry.Templates {
+		ids = append(ids, item.ID)
+	}
+	sort.Strings(ids)
+	return ids
+}
+
+func visualRegistryData(t *testing.T) visualRegistry {
+	t.Helper()
 	var registry visualRegistry
 	b, err := os.ReadFile(filepath.Join(visualTemplateDir(), "registry.json"))
 	if err != nil {
@@ -478,11 +855,103 @@ func visualTemplateIDs(t *testing.T) []string {
 	if err := json.Unmarshal(b, &registry); err != nil {
 		t.Fatal(err)
 	}
-	var ids []string
-	for _, item := range registry.Templates {
-		ids = append(ids, item.ID)
+	return registry
+}
+
+func assertGraphShape(t *testing.T, data map[string]any, withEvents bool) {
+	t.Helper()
+	nodes := anySlice(t, data["nodes"])
+	edges := anySlice(t, data["edges"])
+	if len(nodes) < 5 || len(edges) < 4 {
+		t.Fatalf("graph example too small: nodes=%d edges=%d", len(nodes), len(edges))
 	}
-	return ids
+	nodeIDs := map[string]bool{}
+	kinds := map[string]bool{}
+	groups := map[string]bool{}
+	statuses := map[string]bool{}
+	hasMetadata := false
+	for _, item := range nodes {
+		m := objectMap(t, item)
+		id := fmt.Sprint(m["id"])
+		if strings.TrimSpace(id) == "" {
+			t.Fatalf("graph node missing id: %#v", m)
+		}
+		nodeIDs[id] = true
+		kinds[fmt.Sprint(m["kind"])] = true
+		groups[fmt.Sprint(m["group"])] = true
+		statuses[fmt.Sprint(m["status"])] = true
+		if _, ok := m["metadata"].(map[string]any); ok {
+			hasMetadata = true
+		}
+	}
+	if len(kinds) < 3 || len(groups) < 3 || len(statuses) < 2 || !hasMetadata {
+		t.Fatalf("graph example lacks kind/group/status/metadata variety: kinds=%#v groups=%#v statuses=%#v metadata=%v", kinds, groups, statuses, hasMetadata)
+	}
+	for i, item := range edges {
+		m := objectMap(t, item)
+		from := fmt.Sprint(m["from"])
+		to := fmt.Sprint(m["to"])
+		if !nodeIDs[from] || !nodeIDs[to] {
+			t.Fatalf("edge %d references unknown node: %#v", i, m)
+		}
+	}
+	if !withEvents {
+		return
+	}
+	events := anySlice(t, data["events"])
+	if len(events) < 5 {
+		t.Fatalf("graph_events example needs at least 5 events, got %d", len(events))
+	}
+	eventStatuses := map[string]bool{}
+	for i, item := range events {
+		m := objectMap(t, item)
+		nodeID := fmt.Sprint(m["node_id"])
+		if !nodeIDs[nodeID] {
+			t.Fatalf("event %d references unknown node_id: %#v", i, m)
+		}
+		eventStatuses[fmt.Sprint(m["status"])] = true
+	}
+	requiredStatusVariety := 0
+	for _, status := range []string{"running", "success", "error", "warning"} {
+		if eventStatuses[status] {
+			requiredStatusVariety++
+		}
+	}
+	if requiredStatusVariety < 2 {
+		t.Fatalf("graph_events needs at least two key statuses, got %#v", eventStatuses)
+	}
+}
+
+func anySlice(t *testing.T, value any) []any {
+	t.Helper()
+	items, ok := value.([]any)
+	if !ok {
+		t.Fatalf("expected JSON array, got %#v", value)
+	}
+	return items
+}
+
+func objectMap(t *testing.T, value any) map[string]any {
+	t.Helper()
+	m, ok := value.(map[string]any)
+	if !ok {
+		t.Fatalf("expected JSON object, got %#v", value)
+	}
+	return m
+}
+
+func hashString(raw []byte) string {
+	sum := sha256.Sum256(raw)
+	return fmt.Sprintf("%x", sum[:])
+}
+
+func stringSliceContains(items []string, want string) bool {
+	for _, item := range items {
+		if filepath.ToSlash(filepath.Clean(item)) == filepath.ToSlash(filepath.Clean(want)) {
+			return true
+		}
+	}
+	return false
 }
 
 func assertRelativeHTMLCSSJS(t *testing.T, out string) {

@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "planning-critical-path-view-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "planning-critical-path-view-node-2",
+        "weight": 2
+      },
+      {
+        "from": "planning-critical-path-view-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "planning-critical-path-view-node-3",
+        "weight": 3
+      },
+      {
+        "from": "planning-critical-path-view-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "planning-critical-path-view-node-4",
+        "weight": 2
+      },
+      {
+        "from": "planning-critical-path-view-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "planning-critical-path-view-node-5",
+        "weight": 4
+      },
+      {
+        "from": "planning-critical-path-view-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "planning-critical-path-view-node-6",
+        "weight": 2
+      },
+      {
+        "from": "planning-critical-path-view-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "planning-critical-path-view-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "goal",
+        "id": "planning-critical-path-view-node-1",
+        "kind": "critical",
+        "label": "Critical Path Intake",
+        "metadata": {
+          "detail": "Critical Path View signal 1",
+          "owner": "goal",
+          "template_id": "planning.critical_path_view"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "task",
+        "id": "planning-critical-path-view-node-2",
+        "kind": "path",
+        "label": "Path View Core",
+        "metadata": {
+          "detail": "Critical Path View signal 2",
+          "owner": "task",
+          "template_id": "planning.critical_path_view"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "automation",
+        "id": "planning-critical-path-view-node-3",
+        "kind": "view",
+        "label": "View Critical Policy",
+        "metadata": {
+          "detail": "Critical Path View signal 3",
+          "owner": "automation",
+          "template_id": "planning.critical_path_view"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "goal",
+        "id": "planning-critical-path-view-node-4",
+        "kind": "goal",
+        "label": "Critical Path Execution",
+        "metadata": {
+          "detail": "Critical Path View signal 4",
+          "owner": "goal",
+          "template_id": "planning.critical_path_view"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "task",
+        "id": "planning-critical-path-view-node-5",
+        "kind": "critical",
+        "label": "Path View Risk",
+        "metadata": {
+          "detail": "Critical Path View signal 5",
+          "owner": "task",
+          "template_id": "planning.critical_path_view"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "automation",
+        "id": "planning-critical-path-view-node-6",
+        "kind": "path",
+        "label": "View Critical Outcome",
+        "metadata": {
+          "detail": "Critical Path View signal 6",
+          "owner": "automation",
+          "template_id": "planning.critical_path_view"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Critical Path View Example"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "planning.critical_path_view"
+}

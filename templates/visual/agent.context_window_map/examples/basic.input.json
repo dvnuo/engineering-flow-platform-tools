@@ -1,0 +1,168 @@
+{
+  "items": [
+    {
+      "group": "reasoning",
+      "id": "agent-context-window-map-item-1",
+      "kind": "context",
+      "label": "Context Window North",
+      "metadata": {
+        "note": "Context Window Map matrix cell 1",
+        "quadrant": "q1",
+        "template_id": "agent.context_window_map"
+      },
+      "metrics": {
+        "confidence": 0.55,
+        "impact": 0.4
+      },
+      "status": "ok",
+      "x": 0.17,
+      "y": 0.29
+    },
+    {
+      "group": "tooling",
+      "id": "agent-context-window-map-item-2",
+      "kind": "window",
+      "label": "Window Map East",
+      "metadata": {
+        "note": "Context Window Map matrix cell 2",
+        "quadrant": "q2",
+        "template_id": "agent.context_window_map"
+      },
+      "metrics": {
+        "confidence": 0.59,
+        "impact": 0.46
+      },
+      "status": "warning",
+      "x": 0.4,
+      "y": 0.6
+    },
+    {
+      "group": "response",
+      "id": "agent-context-window-map-item-3",
+      "kind": "map",
+      "label": "Map Context South",
+      "metadata": {
+        "note": "Context Window Map matrix cell 3",
+        "quadrant": "q3",
+        "template_id": "agent.context_window_map"
+      },
+      "metrics": {
+        "confidence": 0.63,
+        "impact": 0.52
+      },
+      "status": "success",
+      "x": 0.63,
+      "y": 0.02
+    },
+    {
+      "group": "reasoning",
+      "id": "agent-context-window-map-item-4",
+      "kind": "reasoning",
+      "label": "Context Window West",
+      "metadata": {
+        "note": "Context Window Map matrix cell 4",
+        "quadrant": "q4",
+        "template_id": "agent.context_window_map"
+      },
+      "metrics": {
+        "confidence": 0.67,
+        "impact": 0.58
+      },
+      "status": "blocked",
+      "x": 0.86,
+      "y": 0.33
+    },
+    {
+      "group": "tooling",
+      "id": "agent-context-window-map-item-5",
+      "kind": "context",
+      "label": "Window Map Signal",
+      "metadata": {
+        "note": "Context Window Map matrix cell 5",
+        "quadrant": "q1",
+        "template_id": "agent.context_window_map"
+      },
+      "metrics": {
+        "confidence": 0.71,
+        "impact": 0.64
+      },
+      "status": "error",
+      "x": 0.18,
+      "y": 0.64
+    },
+    {
+      "group": "response",
+      "id": "agent-context-window-map-item-6",
+      "kind": "window",
+      "label": "Map Context Review",
+      "metadata": {
+        "note": "Context Window Map matrix cell 6",
+        "quadrant": "q2",
+        "template_id": "agent.context_window_map"
+      },
+      "metrics": {
+        "confidence": 0.75,
+        "impact": 0.7
+      },
+      "status": "running",
+      "x": 0.41,
+      "y": 0.06
+    },
+    {
+      "group": "reasoning",
+      "id": "agent-context-window-map-item-7",
+      "kind": "map",
+      "label": "Context Window Ready",
+      "metadata": {
+        "note": "Context Window Map matrix cell 7",
+        "quadrant": "q3",
+        "template_id": "agent.context_window_map"
+      },
+      "metrics": {
+        "confidence": 0.79,
+        "impact": 0.76
+      },
+      "status": "idle",
+      "x": 0.64,
+      "y": 0.37
+    },
+    {
+      "group": "tooling",
+      "id": "agent-context-window-map-item-8",
+      "kind": "reasoning",
+      "label": "Window Map Watch",
+      "metadata": {
+        "note": "Context Window Map matrix cell 8",
+        "quadrant": "q4",
+        "template_id": "agent.context_window_map"
+      },
+      "metrics": {
+        "confidence": 0.83,
+        "impact": 0.82
+      },
+      "status": "ok",
+      "x": 0.87,
+      "y": 0.68
+    },
+    {
+      "group": "response",
+      "id": "agent-context-window-map-item-9",
+      "kind": "context",
+      "label": "Map Context Owner",
+      "metadata": {
+        "note": "Context Window Map matrix cell 9",
+        "quadrant": "q1",
+        "template_id": "agent.context_window_map"
+      },
+      "metrics": {
+        "confidence": 0.87,
+        "impact": 0.88
+      },
+      "status": "warning",
+      "x": 0.19,
+      "y": 0.1
+    }
+  ],
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Context Window Map Example"
+}

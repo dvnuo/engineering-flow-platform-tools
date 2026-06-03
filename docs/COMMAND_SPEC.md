@@ -14,7 +14,12 @@
 ## Visual
 
 ### Basic
+- visual template categories
 - visual template list
+- visual template list --category <category>
+- visual template list --query <text>
+- visual template list --renderer <renderer-contract>
+- visual template list --schema-kind <input-schema-kind>
 - visual template get <template-id>
 - visual template schema <template-id>
 - visual template doctor
@@ -25,6 +30,16 @@
 - visual schema <command>
 - visual help llm
 - visual version
+
+### Template Discovery
+
+`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`.
+
+`visual template list --json` returns 195 canonical templates from `templates/visual/registry.json`. Use `--category`, `--query`, `--renderer`, and `--schema-kind` to narrow discovery before reading template details.
+
+`visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, aliases, `schema_file`, and `example_file`. Alias ids resolve to the canonical template and include `requested_id` and `canonical_id`.
+
+`visual template schema <template-id> --json` returns the template metadata, full local `json_schema`, and example object agents should mirror when writing input JSON.
 
 ### Render Artifact Output
 

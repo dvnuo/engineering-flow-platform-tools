@@ -16,7 +16,9 @@
 
 - Always use `--json`.
 - Always use `--template-dir` when templates are in the workspace or release artifact.
-- Run `visual template list --template-dir ./templates/visual --json`.
+- Do not read all 195 template details up front.
+- Run `visual template categories --template-dir ./templates/visual --json`.
+- Run `visual template list --template-dir ./templates/visual --category <category> --json`.
 - Run `visual template get <template-id> --template-dir ./templates/visual --json`.
 - Run `visual template schema <template-id> --template-dir ./templates/visual --json`.
 - Write input JSON that follows `data.json_schema`; do not invent the input shape and do not generate JavaScript code.
@@ -26,6 +28,17 @@
 - Do not use remote assets, CDN URLs, Node/npm, or network APIs.
 - Use `--dry-run` to preview planned files before writing.
 - The generated `index.html` is safe for `file://` and for Portal/runtime static proxy subpaths because asset paths are relative.
+
+Recommended template categories:
+
+- `agent` or `debug` for agent runs, failures, incidents, traces, and recovery.
+- `codebase` for repo, code, diff, dependency, test, coverage, and migration work.
+- `runtime` for infra, service, adapter, session, event, sandbox, and capability maps.
+- `project` for Jira, GitHub, Confluence, requirements, releases, and reviews.
+- `knowledge` for evidence, research, citation, source, and answer lineage.
+- `planning` for plans, tasks, workflows, automation, approvals, and goals.
+- `business` for KPI, funnel, customer, revenue, support, capacity, and ops views.
+- `education` for explanations, tutorials, lifecycle, process, and tradeoff visuals.
 
 ## Jenkins Automation
 

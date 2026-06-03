@@ -1,14 +1,15 @@
 id: knowledge.doc_freshness
 version: 1.0.0
-title: Knowledge Document Freshness
-description: Plot documents by freshness, reliability, and relevance.
+category: knowledge
+title: Doc Freshness
+description: Visualize Doc Freshness as a complete offline matrix view for knowledge workflows using the heatmap layout.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:
   contract: offline.matrix.v1
 layout:
-  preset: freshness_matrix
-  group_by: owner
+  preset: heatmap
+  group_by: group
 offline:
   required: true
   forbid_network: true
@@ -21,19 +22,31 @@ assets:
   - from: ../_shared/runtime/efp-visual-runtime.css
     to: assets/runtime/efp-visual-runtime.css
   - from: style.css
-    to: assets/template/style.css
+    to: assets/templates/knowledge.doc_freshness/style.css
 styles:
   - assets/runtime/efp-visual-runtime.css
-  - assets/template/style.css
+  - assets/templates/knowledge.doc_freshness/style.css
 scripts:
   - manifest.js
   - data.js
   - assets/runtime/efp-visual-runtime.iife.js
   - assets/runtime/efp-visual-renderers.iife.js
 interactions:
-  - inspect
-  - export
+  - hover_tooltip
+  - click_inspect
+  - search_node
+  - filter_by_type
+  - filter_by_status
+  - focus_path
+  - export_json
 limits:
   max_nodes: 1000
   max_edges: 3000
   max_events: 5000
+  max_items: 2000
+tags:
+  - doc
+  - freshness
+  - heatmap
+  - knowledge
+  - matrix

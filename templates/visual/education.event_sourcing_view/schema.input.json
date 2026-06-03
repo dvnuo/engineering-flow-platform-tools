@@ -1,0 +1,463 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "education-event-sourcing-view-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "education-event-sourcing-view-node-2",
+        "weight": 2
+      },
+      {
+        "from": "education-event-sourcing-view-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "education-event-sourcing-view-node-3",
+        "weight": 3
+      },
+      {
+        "from": "education-event-sourcing-view-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "education-event-sourcing-view-node-4",
+        "weight": 2
+      },
+      {
+        "from": "education-event-sourcing-view-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "education-event-sourcing-view-node-5",
+        "weight": 4
+      },
+      {
+        "from": "education-event-sourcing-view-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "education-event-sourcing-view-node-6",
+        "weight": 2
+      },
+      {
+        "from": "education-event-sourcing-view-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "education-event-sourcing-view-node-6",
+        "weight": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "education-event-sourcing-view-event-1",
+        "kind": "start",
+        "label": "Event Sourcing View Opened",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "education.event_sourcing_view"
+        },
+        "node_id": "education-event-sourcing-view-node-1",
+        "status": "running",
+        "summary": "Event Sourcing View event 1 references Event Sourcing Intake.",
+        "time": "2026-06-03T12:13:00Z"
+      },
+      {
+        "id": "education-event-sourcing-view-event-2",
+        "kind": "tool",
+        "label": "Event Sourcing View Triaged",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "education.event_sourcing_view"
+        },
+        "node_id": "education-event-sourcing-view-node-2",
+        "status": "success",
+        "summary": "Event Sourcing View event 2 references Sourcing View Core.",
+        "time": "2026-06-03T12:24:00Z"
+      },
+      {
+        "id": "education-event-sourcing-view-event-3",
+        "kind": "checkpoint",
+        "label": "Event Sourcing View Mapped",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "education.event_sourcing_view"
+        },
+        "node_id": "education-event-sourcing-view-node-3",
+        "status": "warning",
+        "summary": "Event Sourcing View event 3 references View Event Policy.",
+        "time": "2026-06-03T12:35:00Z"
+      },
+      {
+        "id": "education-event-sourcing-view-event-4",
+        "kind": "decision",
+        "label": "Event Sourcing View Acted",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "education.event_sourcing_view"
+        },
+        "node_id": "education-event-sourcing-view-node-4",
+        "status": "running",
+        "summary": "Event Sourcing View event 4 references Event Sourcing Execution.",
+        "time": "2026-06-03T12:46:00Z"
+      },
+      {
+        "id": "education-event-sourcing-view-event-5",
+        "kind": "recovery",
+        "label": "Event Sourcing View Checked",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "education.event_sourcing_view"
+        },
+        "node_id": "education-event-sourcing-view-node-5",
+        "status": "error",
+        "summary": "Event Sourcing View event 5 references Sourcing View Risk.",
+        "time": "2026-06-03T12:57:00Z"
+      },
+      {
+        "id": "education-event-sourcing-view-event-6",
+        "kind": "finish",
+        "label": "Event Sourcing View Recovered",
+        "metadata": {
+          "layout": "timeline_tunnel",
+          "template_id": "education.event_sourcing_view"
+        },
+        "node_id": "education-event-sourcing-view-node-6",
+        "status": "success",
+        "summary": "Event Sourcing View event 6 references View Event Outcome.",
+        "time": "2026-06-03T13:08:00Z"
+      }
+    ],
+    "nodes": [
+      {
+        "group": "concept",
+        "id": "education-event-sourcing-view-node-1",
+        "kind": "event",
+        "label": "Event Sourcing Intake",
+        "metadata": {
+          "detail": "Event Sourcing View signal 1",
+          "owner": "concept",
+          "template_id": "education.event_sourcing_view"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "step",
+        "id": "education-event-sourcing-view-node-2",
+        "kind": "sourcing",
+        "label": "Sourcing View Core",
+        "metadata": {
+          "detail": "Event Sourcing View signal 2",
+          "owner": "step",
+          "template_id": "education.event_sourcing_view"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "assessment",
+        "id": "education-event-sourcing-view-node-3",
+        "kind": "view",
+        "label": "View Event Policy",
+        "metadata": {
+          "detail": "Event Sourcing View signal 3",
+          "owner": "assessment",
+          "template_id": "education.event_sourcing_view"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "concept",
+        "id": "education-event-sourcing-view-node-4",
+        "kind": "concept",
+        "label": "Event Sourcing Execution",
+        "metadata": {
+          "detail": "Event Sourcing View signal 4",
+          "owner": "concept",
+          "template_id": "education.event_sourcing_view"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "step",
+        "id": "education-event-sourcing-view-node-5",
+        "kind": "event",
+        "label": "Sourcing View Risk",
+        "metadata": {
+          "detail": "Event Sourcing View signal 5",
+          "owner": "step",
+          "template_id": "education.event_sourcing_view"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "assessment",
+        "id": "education-event-sourcing-view-node-6",
+        "kind": "sourcing",
+        "label": "View Event Outcome",
+        "metadata": {
+          "detail": "Event Sourcing View signal 6",
+          "owner": "assessment",
+          "template_id": "education.event_sourcing_view"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Event Sourcing View Example"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "education.event_sourcing_view"
+}

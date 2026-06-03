@@ -2,7 +2,7 @@
 
 ## Common Conventions
 
-- For agent workflows, default every `jira`, `confluence`, `browser`, and `inspect-image` command and subcommand to `--json`.
+- For agent workflows, default every `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` command and subcommand to `--json`.
 - `--json` returns the stable `ok/data/error` envelope.
 - Command parsing failures return `ok=false` with `error.code=invalid_args` when `--json` is present.
 - `--format table|json|yaml` selects output rendering where supported.
@@ -339,6 +339,85 @@ confluence page get --url <page-url>
 - confluence api post <path>
 - confluence api put <path>
 - confluence api delete <path>
+
+## Jenkins
+
+### Basic
+- jenkins instance list
+- jenkins instance get <name>
+- jenkins instance add <name>
+- jenkins instance update <name>
+- jenkins instance remove <name>
+- jenkins instance default [name]
+- jenkins auth login
+- jenkins auth logout
+- jenkins auth test
+- jenkins whoami
+- jenkins server-info
+- jenkins crumb get
+- jenkins commands
+- jenkins schema <command>
+- jenkins help llm
+- jenkins version
+
+### Job
+- jenkins job list
+- jenkins job get <job>
+- jenkins job config get <job>
+- jenkins job config update <job>
+- jenkins job create <job>
+- jenkins job copy <source> <target>
+- jenkins job delete <job>
+- jenkins job enable <job>
+- jenkins job disable <job>
+- jenkins job build <job>
+- jenkins job build-with-params <job>
+
+### Queue
+- jenkins queue list
+- jenkins queue get <queue-id>
+- jenkins queue cancel <queue-id>
+
+### Build
+- jenkins build get <job> <build>
+- jenkins build status <job> <build>
+- jenkins build log <job> <build>
+- jenkins build log-follow <job> <build>
+- jenkins build stop <job> <build>
+- jenkins build artifacts <job> <build>
+
+### Artifact
+- jenkins artifact download <job> <build> <path>
+
+### Pipeline REST API
+- jenkins pipeline runs <job>
+- jenkins pipeline run <job> <run-id>
+- jenkins pipeline stages <job> <run-id>
+- jenkins pipeline node-log <job> <run-id> <node-id>
+- jenkins pipeline artifacts <job> <run-id>
+
+### View
+- jenkins view list
+- jenkins view get <view>
+- jenkins view create <view>
+- jenkins view delete <view>
+- jenkins view config get <view>
+- jenkins view config update <view>
+
+### Node / plugin
+- jenkins node list
+- jenkins node get <node>
+- jenkins plugin list
+- jenkins plugin get <plugin>
+
+### System / raw API
+- jenkins system quiet-down
+- jenkins system cancel-quiet-down
+- jenkins system safe-restart
+- jenkins api get <path>
+- jenkins api post <path>
+- jenkins api put <path>
+- jenkins api delete <path>
 
 ## Inspect Image
 

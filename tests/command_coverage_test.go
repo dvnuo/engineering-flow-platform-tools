@@ -9,6 +9,7 @@ import (
 
 	"engineering-flow-platform-tools/internal/catalog"
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
+	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
 	"github.com/spf13/cobra"
 )
@@ -31,6 +32,9 @@ func readSpecCommands(t *testing.T, prefix string) []string {
 			continue
 		case "## Confluence":
 			sec = "confluence"
+			continue
+		case "## Jenkins":
+			sec = "jenkins"
 			continue
 		}
 		if strings.HasPrefix(l, "## ") {
@@ -107,11 +111,14 @@ func diff(a, b []string) []string {
 func TestCommandCoverage(t *testing.T) {
 	jiraSpec := readSpecCommands(t, "jira")
 	confSpec := readSpecCommands(t, "confluence")
+	jenkinsSpec := readSpecCommands(t, "jenkins")
 	assertSame(t, "jira cobra/docs", WalkCobraCommands(jcmd.NewRoot()), jiraSpec)
 	assertSame(t, "confluence cobra/docs", WalkCobraCommands(ccmd.NewRoot()), confSpec)
+	assertSame(t, "jenkins cobra/docs", WalkCobraCommands(kcmd.NewRoot()), jenkinsSpec)
 	assertSame(t, "jira catalog/docs", catalog.SortedUsages("jira"), jiraSpec)
 	assertSame(t, "confluence catalog/docs", catalog.SortedUsages("confluence"), confSpec)
-	for _, product := range []string{"jira", "confluence"} {
+	assertSame(t, "jenkins catalog/docs", catalog.SortedUsages("jenkins"), jenkinsSpec)
+	for _, product := range []string{"jira", "confluence", "jenkins"} {
 		for _, item := range catalog.Commands(product) {
 			if item.Risk != "read" && item.Risk != "write" && item.Risk != "write_requires_confirmation" && item.Risk != "delete" && item.Risk != "admin" {
 				t.Fatalf("%s has invalid risk %q", item.Usage, item.Risk)

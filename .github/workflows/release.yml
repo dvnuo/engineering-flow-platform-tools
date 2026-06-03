@@ -50,6 +50,7 @@ jobs:
           ldflags="-X engineering-flow-platform-tools/internal/version.Version=${version} -X engineering-flow-platform-tools/internal/version.Commit=${GITHUB_SHA} -X engineering-flow-platform-tools/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/jira${{ matrix.ext }}" ./cmd/jira
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/confluence${{ matrix.ext }}" ./cmd/confluence
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/jenkins${{ matrix.ext }}" ./cmd/jenkins
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/browser${{ matrix.ext }}" ./cmd/browser
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/inspect-image${{ matrix.ext }}" ./cmd/inspect-image
           cp README.md docs/*.md "dist/${{ matrix.goos }}-${{ matrix.goarch }}/"

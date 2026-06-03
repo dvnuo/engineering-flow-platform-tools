@@ -84,6 +84,8 @@ func TestTextFormatContracts(t *testing.T) {
 		"confluence content get <content-id>",
 		"confluence page get --id",
 		"confluence page get --url",
+		"jenkins job build <job>",
+		"jenkins artifact download <job> <build> <path>",
 	} {
 		if !strings.Contains(spec, literal) {
 			t.Fatalf("COMMAND_SPEC.md missing literal %q", literal)

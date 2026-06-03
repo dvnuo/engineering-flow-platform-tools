@@ -4,6 +4,7 @@ This repository hosts cross-platform Go-based CLI tools for agent, runtime, shel
 
 - `jira`
 - `confluence`
+- `jenkins`
 - `browser`
 - `inspect-image`
 
@@ -29,7 +30,11 @@ The Atlassian product integrations currently include:
 - `jira`: Jira Server/Data Center automation
 - `confluence`: Confluence Server/Data Center automation
 
-Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squad test-management resources on the same Jira instance, including cycles, executions, semantic execution resolution, server status discovery, test steps, folders, attachments, defects, ZQL metadata/search, conservative summaries, and raw ZAPI catalog/access. Jira, Confluence, and inspect-image share `EFP_CONFIG` and `~/.efp/config.yaml`; each command owns its own YAML node so product settings do not interfere with one another.
+Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squad test-management resources on the same Jira instance, including cycles, executions, semantic execution resolution, server status discovery, test steps, folders, attachments, defects, ZQL metadata/search, conservative summaries, and raw ZAPI catalog/access. Jira, Confluence, Jenkins, and inspect-image share `EFP_CONFIG` and `~/.efp/config.yaml`; each command owns its own YAML node so product settings do not interfere with one another.
+
+### Jenkins
+
+`jenkins` provides Jenkins controller automation for jobs, builds, queues, console logs, artifacts, Pipeline REST API resources, views, nodes, plugins, selected controller actions, and raw Jenkins API calls. It supports multiple Jenkins instances under the `jenkins` YAML node and handles Jenkins crumbs for state-changing requests.
 
 ### Browser
 
@@ -37,7 +42,7 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
 
-For Jira and Confluence, copy `cmd/jira/jira-cli.instructions.md` and `cmd/confluence/confluence-cli.instructions.md` into `~/.copilot/instructions/` so Copilot understands the JSON envelope, `--dry-run`, `--yes`, instance selection, and error recovery conventions.
+For Jira, Confluence, and Jenkins, copy `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, and `cmd/jenkins/jenkins-cli.instructions.md` into `~/.copilot/instructions/` so Copilot understands the JSON envelope, `--dry-run`, `--yes`, instance selection, and error recovery conventions.
 
 All CLI binaries return a stable JSON `invalid_args` envelope for command parsing failures when `--json` is present. On Windows `cmd`, use double quotes and `where <binary>` to resolve unstable PATH behavior.
 
@@ -66,11 +71,12 @@ For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructio
 
 ## Quick Install
 
-Download a release artifact for your platform, place `jira`, `confluence`, `browser`, and `inspect-image` on your `PATH`, then run:
+Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` on your `PATH`, then run:
 
 ```bash
 jira version --json
 confluence version --json
+jenkins version --json
 browser version --json
 inspect-image version --json
 ```
@@ -125,6 +131,20 @@ confluence:
       verify_ssl: true
       ca_cert: ""
 
+jenkins:
+  default_instance: ci
+  instances:
+    - name: ci
+      base_url: https://jenkins.example.test
+      rest_path: ""
+      crumb_mode: auto
+      auth:
+        type: basic_api_key
+        username: user@example.test
+        api_key: redacted
+      verify_ssl: true
+      ca_cert: ""
+
 copilot:
   provider: github_copilot_plugin
   auth:
@@ -170,8 +190,28 @@ Config node ownership:
 
 - `jira`: Jira instances, defaults, auth, TLS, and Zephyr settings.
 - `confluence`: Confluence instances, defaults, auth, and TLS settings.
+- `jenkins`: Jenkins instances, defaults, auth, TLS, and crumb behavior.
 - `copilot`: GitHub/Copilot authentication shared by commands that use Copilot-backed APIs.
 - `inspect_image`: inspect-image API defaults, model defaults, image limits, and privacy settings.
+
+## Jenkins Examples
+
+```bash
+jenkins auth test --instance ci --json
+jenkins job list --depth 2 --json
+jenkins job get folder/app-main --json
+jenkins job build folder/app-main --json
+jenkins job build-with-params folder/app-main --param BRANCH=main --json
+jenkins queue get 123 --json
+jenkins build status folder/app-main lastBuild --json
+jenkins build log folder/app-main 42 --json
+jenkins build log-follow folder/app-main 42 --max-rounds 3 --json
+jenkins build artifacts folder/app-main 42 --json
+jenkins artifact download folder/app-main 42 target/app.jar --output app.jar --json
+jenkins pipeline runs folder/app-main --json
+jenkins api get /api/json --query depth=1 --json
+jenkins version --json
+```
 
 ## Jira Examples
 
@@ -235,6 +275,7 @@ Agents should first inspect available commands:
 ```bash
 jira commands --json
 confluence commands --json
+jenkins commands --json
 browser commands --json
 inspect-image commands --json
 ```
@@ -244,11 +285,12 @@ Then inspect the exact schema before calling a command:
 ```bash
 jira schema issue.create --json
 confluence schema page.create --json
+jenkins schema job.build-with-params --json
 browser schema probe --json
 inspect-image schema inspect --json
 ```
 
-For agents, default every `jira`, `confluence`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+For agents, default every `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
 
 For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jira issue. When a user asks to update case `X` in cycle `Y`, prefer `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; use `execution resolve` or `cycle resolve` first when the target is ambiguous, and use `status list` rather than hard-coding numeric status ids.
 
@@ -313,4 +355,4 @@ go vet ./...
 
 Tags matching `v*` trigger the release workflow. Release archives are named `engineering-flow-platform-tools_<version>_<goos>_<goarch>`.
 
-Current archives include `jira`, `confluence`, `browser`, `inspect-image`, README, and docs.
+Current archives include `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, README, and docs.

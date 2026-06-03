@@ -43,6 +43,9 @@ func Save(path string, c RootConfig) error {
 	if err := setMappingValue(root, "confluence", c.Confluence); err != nil {
 		return err
 	}
+	if err := setMappingValue(root, "jenkins", c.Jenkins); err != nil {
+		return err
+	}
 	b, err := yaml.Marshal(doc)
 	if err != nil {
 		return err

@@ -71,6 +71,20 @@ var confluenceCommands = []string{
 	"confluence longtask list", "confluence longtask get <task-id>", "confluence webhook list", "confluence webhook get <webhook-id>", "confluence webhook create", "confluence webhook delete <webhook-id>", "confluence api get <path>", "confluence api post <path>", "confluence api put <path>", "confluence api delete <path>",
 }
 
+var jenkinsCommands = []string{
+	"jenkins instance list", "jenkins instance get <name>", "jenkins instance add <name>", "jenkins instance update <name>", "jenkins instance remove <name>", "jenkins instance default [name]",
+	"jenkins auth login", "jenkins auth logout", "jenkins auth test", "jenkins whoami", "jenkins server-info", "jenkins crumb get", "jenkins commands", "jenkins schema <command>", "jenkins help llm", "jenkins version",
+	"jenkins job list", "jenkins job get <job>", "jenkins job config get <job>", "jenkins job config update <job>", "jenkins job create <job>", "jenkins job copy <source> <target>", "jenkins job delete <job>", "jenkins job enable <job>", "jenkins job disable <job>", "jenkins job build <job>", "jenkins job build-with-params <job>",
+	"jenkins queue list", "jenkins queue get <queue-id>", "jenkins queue cancel <queue-id>",
+	"jenkins build get <job> <build>", "jenkins build status <job> <build>", "jenkins build log <job> <build>", "jenkins build log-follow <job> <build>", "jenkins build stop <job> <build>", "jenkins build artifacts <job> <build>",
+	"jenkins artifact download <job> <build> <path>",
+	"jenkins pipeline runs <job>", "jenkins pipeline run <job> <run-id>", "jenkins pipeline stages <job> <run-id>", "jenkins pipeline node-log <job> <run-id> <node-id>", "jenkins pipeline artifacts <job> <run-id>",
+	"jenkins view list", "jenkins view get <view>", "jenkins view create <view>", "jenkins view delete <view>", "jenkins view config get <view>", "jenkins view config update <view>",
+	"jenkins node list", "jenkins node get <node>", "jenkins plugin list", "jenkins plugin get <plugin>",
+	"jenkins system quiet-down", "jenkins system cancel-quiet-down", "jenkins system safe-restart",
+	"jenkins api get <path>", "jenkins api post <path>", "jenkins api put <path>", "jenkins api delete <path>",
+}
+
 var browserCommands = []string{
 	"browser probe",
 	"browser commands",
@@ -100,6 +114,8 @@ func Commands(product string) []llm.CommandMeta {
 		src = jiraCommands
 	case "confluence":
 		src = confluenceCommands
+	case "jenkins":
+		src = jenkinsCommands
 	case "browser":
 		src = browserCommands
 	case "inspect-image":
@@ -501,6 +517,12 @@ func meta(product, usage string) llm.CommandMeta {
 			explicitFound = true
 		}
 	}
+	if product == "jenkins" {
+		if local, ok := jenkinsExplicit(name); ok {
+			ex = local
+			explicitFound = true
+		}
+	}
 	r := risk(usage)
 	if ex.Risk != "" {
 		r = ex.Risk
@@ -544,7 +566,7 @@ func meta(product, usage string) llm.CommandMeta {
 	}
 	req := ex.Required
 	if len(req) == 0 {
-		if product == "inspect-image" && explicitFound {
+		if (product == "inspect-image" || product == "jenkins") && explicitFound {
 			req = []string{}
 		} else {
 			req = required(name)
@@ -586,6 +608,84 @@ func inspectImageExplicit(name string) (explicitMeta, bool) {
 			Flags: []string{"json", "format", "verbose", "config"}, Risk: "read", Example: "inspect-image help llm --json"},
 		"version": {Description: "Print CLI version, commit, and build date.",
 			Flags: []string{"json", "format", "verbose", "config"}, Risk: "read", Example: "inspect-image version --json"},
+	}
+	item, ok := items[name]
+	return item, ok
+}
+
+func jenkinsExplicit(name string) (explicitMeta, bool) {
+	common := []string{"instance", "config", "json", "format", "verbose"}
+	write := append(append([]string{}, common...), "dry-run")
+	del := append([]string{"yes"}, common...)
+	delDry := append(append([]string{"yes"}, common...), "dry-run")
+	bodyWrite := append([]string{"body", "body-file", "body-stdin"}, write...)
+	items := map[string]explicitMeta{
+		"instance.list":    {Description: "List configured Jenkins instances with credentials redacted.", Flags: common, Risk: "read", Example: "jenkins instance list --json"},
+		"instance.get":     {Description: "Show one configured Jenkins instance with credentials redacted.", Flags: common, Required: []string{"name"}, Risk: "read", Example: "jenkins instance get ci --json"},
+		"instance.add":     {Description: "Add a Jenkins instance to the shared EFP YAML config.", Flags: []string{"base-url", "rest-path", "crumb-mode", "username", "auth-type", "password-stdin", "api-key-stdin", "token-stdin", "default", "config", "json", "format", "verbose"}, Required: []string{"name", "base-url", "username+api-key-stdin|username+password-stdin|token-stdin"}, Risk: "write", Example: "jenkins instance add ci --base-url https://jenkins.example.test --username user@example.test --api-key-stdin --default --json"},
+		"instance.update":  {Description: "Update Jenkins instance URL or crumb behavior in the EFP config.", Flags: []string{"base-url", "rest-path", "crumb-mode", "config", "json", "format", "verbose"}, Required: []string{"name", "base-url|rest-path|crumb-mode"}, Risk: "write", Example: "jenkins instance update ci --crumb-mode auto --json"},
+		"instance.remove":  {Description: "Remove a Jenkins instance from the EFP config after confirmation.", Flags: del, Required: []string{"name", "yes"}, Risk: "delete", Example: "jenkins instance remove ci --yes --json"},
+		"instance.default": {Description: "Read or set the default Jenkins instance.", Flags: common, Risk: "write", Example: "jenkins instance default ci --json"},
+		"auth.login":       {Description: "Store Jenkins credentials for the selected instance.", Flags: []string{"username", "auth-type", "password-stdin", "api-key-stdin", "token-stdin", "instance", "config", "json", "format", "verbose"}, Required: []string{"username+api-key-stdin|username+password-stdin|token-stdin"}, Risk: "write", Example: "jenkins auth login --instance ci --username user@example.test --api-key-stdin --json"},
+		"auth.logout":      {Description: "Clear Jenkins credentials for the selected instance after confirmation.", Flags: del, Required: []string{"yes"}, Risk: "delete", Example: "jenkins auth logout --instance ci --yes --json"},
+		"auth.test":        {Description: "Verify Jenkins credentials against the whoAmI endpoint.", Flags: common, Risk: "read", Example: "jenkins auth test --json"},
+		"whoami":           {Description: "Fetch Jenkins identity and permission summary from whoAmI.", Flags: common, Risk: "read", Example: "jenkins whoami --json"},
+		"server-info":      {Description: "Read Jenkins controller top-level JSON API metadata.", Flags: []string{"depth", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jenkins server-info --depth 1 --json"},
+		"crumb.get":        {Description: "Fetch the Jenkins CSRF crumb for the selected instance when crumb issuer is enabled.", Flags: common, Risk: "read", Example: "jenkins crumb get --json"},
+		"commands":         {Description: "List available Jenkins commands with metadata.", Flags: []string{"json", "format", "verbose"}, Risk: "read", Example: "jenkins commands --json"},
+		"schema":           {Description: "Show argument and flag schema for a Jenkins command.", Flags: []string{"json", "format", "verbose"}, Required: []string{"command"}, Risk: "read", Example: "jenkins schema job.build --json"},
+		"help.llm":         {Description: "Show Jenkins CLI usage guidance for LLM agents.", Flags: []string{"json", "format", "verbose"}, Risk: "read", Example: "jenkins help llm --json"},
+		"version":          {Description: "Print Jenkins CLI version, commit, and build date.", Flags: common, Risk: "read", Example: "jenkins version --json"},
+
+		"job.list":              {Description: "List Jenkins jobs from the controller root.", Flags: []string{"depth", "tree", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jenkins job list --depth 2 --json"},
+		"job.get":               {Description: "Fetch Jenkins job metadata by slash folder path.", Flags: []string{"depth", "tree", "instance", "config", "json", "format", "verbose"}, Required: []string{"job"}, Risk: "read", Example: "jenkins job get folder/app-main --json"},
+		"job.config.get":        {Description: "Fetch Jenkins job config.xml.", Flags: common, Required: []string{"job"}, Risk: "admin", Example: "jenkins job config get folder/app-main --json"},
+		"job.config.update":     {Description: "Update Jenkins job config.xml.", Flags: bodyWrite, Required: []string{"job", "body|body-file|body-stdin"}, Risk: "write", Example: "jenkins job config update folder/app-main --body-file config.xml --dry-run --json"},
+		"job.create":            {Description: "Create a Jenkins job from config.xml.", Flags: append([]string{"folder"}, bodyWrite...), Required: []string{"job", "body|body-file|body-stdin"}, Risk: "write", Example: "jenkins job create app-main --folder folder --body-file config.xml --dry-run --json"},
+		"job.copy":              {Description: "Copy an existing Jenkins job to a new job name.", Flags: append([]string{"folder"}, write...), Required: []string{"source", "target"}, Risk: "write", Example: "jenkins job copy folder/template app-main --folder folder --dry-run --json"},
+		"job.delete":            {Description: "Delete a Jenkins job after confirmation.", Flags: delDry, Required: []string{"job", "yes"}, Risk: "delete", Example: "jenkins job delete folder/app-main --yes --dry-run --json"},
+		"job.enable":            {Description: "Enable a Jenkins job.", Flags: write, Required: []string{"job"}, Risk: "write", Example: "jenkins job enable folder/app-main --dry-run --json"},
+		"job.disable":           {Description: "Disable a Jenkins job.", Flags: write, Required: []string{"job"}, Risk: "write", Example: "jenkins job disable folder/app-main --dry-run --json"},
+		"job.build":             {Description: "Trigger a Jenkins job build and return the queue item location.", Flags: append([]string{"delay"}, write...), Required: []string{"job"}, Risk: "write", Example: "jenkins job build folder/app-main --delay 0sec --dry-run --json"},
+		"job.build-with-params": {Description: "Trigger a Jenkins parameterized job build.", Flags: append([]string{"param", "delay"}, write...), Required: []string{"job"}, Risk: "write", Example: "jenkins job build-with-params folder/app-main --param BRANCH=main --dry-run --json"},
+
+		"queue.list":   {Description: "List Jenkins queue items.", Flags: common, Risk: "read", Example: "jenkins queue list --json"},
+		"queue.get":    {Description: "Fetch one Jenkins queue item by id.", Flags: common, Required: []string{"queue-id"}, Risk: "read", Example: "jenkins queue get 123 --json"},
+		"queue.cancel": {Description: "Cancel a Jenkins queue item after confirmation.", Flags: delDry, Required: []string{"queue-id", "yes"}, Risk: "delete", Example: "jenkins queue cancel 123 --yes --dry-run --json"},
+
+		"build.get":        {Description: "Fetch Jenkins build metadata.", Flags: []string{"tree", "depth", "instance", "config", "json", "format", "verbose"}, Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build get folder/app-main 42 --json"},
+		"build.status":     {Description: "Fetch compact Jenkins build status and result.", Flags: common, Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build status folder/app-main lastBuild --json"},
+		"build.log":        {Description: "Read Jenkins build console log or one progressive log chunk.", Flags: []string{"start", "instance", "config", "json", "format", "verbose"}, Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build log folder/app-main 42 --json"},
+		"build.log-follow": {Description: "Poll Jenkins progressive build log and return accumulated text.", Flags: []string{"start", "max-rounds", "wait-ms", "instance", "config", "json", "format", "verbose"}, Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build log-follow folder/app-main 42 --max-rounds 3 --json"},
+		"build.stop":       {Description: "Stop a Jenkins build after confirmation.", Flags: delDry, Required: []string{"job", "build", "yes"}, Risk: "write_requires_confirmation", Example: "jenkins build stop folder/app-main 42 --yes --dry-run --json"},
+		"build.artifacts":  {Description: "List artifacts archived by a Jenkins build.", Flags: common, Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build artifacts folder/app-main 42 --json"},
+		"artifact.download": {Description: "Download a Jenkins build artifact to a local file.",
+			Flags: append([]string{"output"}, write...), Required: []string{"job", "build", "path"}, Risk: "read", Example: "jenkins artifact download folder/app-main 42 target/app.jar --output app.jar --json"},
+
+		"pipeline.runs":      {Description: "List Pipeline REST API runs for a Jenkins job.", Flags: common, Required: []string{"job"}, Risk: "read", Example: "jenkins pipeline runs folder/app-main --json"},
+		"pipeline.run":       {Description: "Fetch Pipeline REST API details for one run.", Flags: common, Required: []string{"job", "run-id"}, Risk: "read", Example: "jenkins pipeline run folder/app-main 42 --json"},
+		"pipeline.stages":    {Description: "Fetch Pipeline REST API stage details for one run.", Flags: common, Required: []string{"job", "run-id"}, Risk: "read", Example: "jenkins pipeline stages folder/app-main 42 --json"},
+		"pipeline.node-log":  {Description: "Read Pipeline REST API node log text.", Flags: common, Required: []string{"job", "run-id", "node-id"}, Risk: "read", Example: "jenkins pipeline node-log folder/app-main 42 6 --json"},
+		"pipeline.artifacts": {Description: "List Pipeline REST API artifacts for one run.", Flags: common, Required: []string{"job", "run-id"}, Risk: "read", Example: "jenkins pipeline artifacts folder/app-main 42 --json"},
+
+		"view.list":          {Description: "List Jenkins views.", Flags: common, Risk: "read", Example: "jenkins view list --json"},
+		"view.get":           {Description: "Fetch Jenkins view metadata.", Flags: common, Required: []string{"view"}, Risk: "read", Example: "jenkins view get All --json"},
+		"view.create":        {Description: "Create a Jenkins view from config XML.", Flags: bodyWrite, Required: []string{"view", "body|body-file|body-stdin"}, Risk: "write", Example: "jenkins view create Release --body-file view.xml --dry-run --json"},
+		"view.delete":        {Description: "Delete a Jenkins view after confirmation.", Flags: delDry, Required: []string{"view", "yes"}, Risk: "delete", Example: "jenkins view delete Release --yes --dry-run --json"},
+		"view.config.get":    {Description: "Fetch Jenkins view config.xml.", Flags: common, Required: []string{"view"}, Risk: "admin", Example: "jenkins view config get All --json"},
+		"view.config.update": {Description: "Update Jenkins view config.xml.", Flags: bodyWrite, Required: []string{"view", "body|body-file|body-stdin"}, Risk: "write", Example: "jenkins view config update All --body-file view.xml --dry-run --json"},
+		"node.list":          {Description: "List Jenkins controller and agent nodes.", Flags: common, Risk: "read", Example: "jenkins node list --json"},
+		"node.get":           {Description: "Fetch Jenkins node metadata.", Flags: common, Required: []string{"node"}, Risk: "read", Example: "jenkins node get built-in --json"},
+		"plugin.list":        {Description: "List installed Jenkins plugins.", Flags: common, Risk: "read", Example: "jenkins plugin list --json"},
+		"plugin.get":         {Description: "Fetch one installed Jenkins plugin by short name.", Flags: common, Required: []string{"plugin"}, Risk: "read", Example: "jenkins plugin get workflow-job --json"},
+
+		"system.quiet-down":        {Description: "Put Jenkins into quiet-down mode.", Flags: append([]string{"reason", "block"}, write...), Risk: "admin", Example: "jenkins system quiet-down --reason Maintenance --dry-run --json"},
+		"system.cancel-quiet-down": {Description: "Cancel Jenkins quiet-down mode.", Flags: write, Risk: "admin", Example: "jenkins system cancel-quiet-down --dry-run --json"},
+		"system.safe-restart":      {Description: "Request a Jenkins safe restart after confirmation.", Flags: delDry, Required: []string{"yes"}, Risk: "write_requires_confirmation", Example: "jenkins system safe-restart --yes --dry-run --json"},
+		"api.get":                  {Description: "Call a raw Jenkins GET API path on the selected instance.", Flags: append([]string{"query"}, common...), Required: []string{"path"}, Risk: "read", Example: "jenkins api get /api/json --query depth=1 --json"},
+		"api.post":                 {Description: "Call a raw Jenkins POST API path on the selected instance.", Flags: append([]string{"query", "body", "body-file", "body-stdin", "content-type"}, write...), Required: []string{"path"}, Risk: "write", Example: "jenkins api post /quietDown --body '{}' --dry-run --json"},
+		"api.put":                  {Description: "Call a raw Jenkins PUT API path on the selected instance.", Flags: append([]string{"query", "body", "body-file", "body-stdin", "content-type"}, write...), Required: []string{"path"}, Risk: "write", Example: "jenkins api put /job/app/config.xml --body-file config.xml --dry-run --json"},
+		"api.delete":               {Description: "Call a raw Jenkins DELETE API path after confirmation.", Flags: delDry, Required: []string{"path", "yes"}, Risk: "delete", Example: "jenkins api delete /job/app --yes --dry-run --json"},
 	}
 	item, ok := items[name]
 	return item, ok

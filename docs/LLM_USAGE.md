@@ -1,16 +1,31 @@
 # LLM/Agent Usage
 
-- For agents, default every `jira`, `confluence`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
+- For agents, default every `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
 - Only omit `--json` when intentionally reading human-oriented `--help` text or when a documented interactive human prompt requires text output.
 - Use --instance when multiple instances are configured.
 - Full Jira/Confluence URLs can auto-select the instance.
 - Use --dry-run before write operations.
 - Use --yes for destructive operations.
 - Inspect error.code and error.hint before retrying.
-- Command parsing failures across `jira`, `confluence`, `browser`, and `inspect-image` return a JSON `invalid_args` envelope when `--json` is present.
+- Command parsing failures across `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` return a JSON `invalid_args` envelope when `--json` is present.
 - On Windows `cmd`, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`; avoid Bash-only quoting and commands.
 - If PATH lookup is unstable, run `where <binary>` and invoke the exact `.exe` path with double quotes.
-- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
+- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
+
+## Jenkins Automation
+
+- Use `jenkins` for Jenkins jobs, queues, builds, console logs, artifacts, Pipeline REST API data, nodes, plugins, views, selected controller actions, and raw Jenkins API calls.
+- Jenkins instances are configured under `jenkins.instances` in `~/.efp/config.yaml`.
+- Use slash job paths for folders, for example `folder/app-main`.
+- Trigger simple builds with `jenkins job build <job> --json`.
+- Trigger parameterized builds with `jenkins job build-with-params <job> --param NAME=value --json`.
+- After triggering, inspect `data.queue_id` and run `jenkins queue get <queue-id> --json` to find the executable build number.
+- Use `jenkins build status <job> <build> --json` for current state and result.
+- Use `jenkins build log <job> <build> --json` for full console text, or `jenkins build log-follow <job> <build> --json` for progressive text.
+- Use `jenkins build artifacts <job> <build> --json` to list artifacts, then `jenkins artifact download <job> <build> <path> --output <file> --json` to download binary content.
+- Use Pipeline commands only when the Jenkins Pipeline REST API plugin is installed.
+- `build stop`, `queue cancel`, `job delete`, `view delete`, `system safe-restart`, and raw `api delete` require `--yes`.
+- Use `--dry-run` before Jenkins write operations.
 
 ## Browser SSO Diagnostics
 
@@ -83,7 +98,7 @@
 
 ## Recommended Workflow
 
-1. Discover commands with `jira commands --json`, `confluence commands --json`, or `browser commands --json`.
+1. Discover commands with `jira commands --json`, `confluence commands --json`, `jenkins commands --json`, or `browser commands --json`.
 2. Inspect the exact command schema before constructing arguments.
 3. Prefer full Jira issue URLs or Confluence page URLs when the user provides them.
 4. Add `--instance` when the URL is ambiguous across configured instances.
@@ -108,6 +123,10 @@ jira schema zephyr.execution.bulk-update-status --json
 confluence schema page.create --json
 confluence schema page.update --json
 browser schema probe --json
+jenkins schema job.build-with-params --json
+jenkins schema build.status --json
+jenkins schema artifact.download --json
+jenkins schema api.get --json
 inspect-image schema inspect --json
 ```
 

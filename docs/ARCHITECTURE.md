@@ -2,8 +2,8 @@
 
 ## Layers
 
-- `cmd/jira`, `cmd/confluence`, `cmd/browser`, and `cmd/inspect-image`: thin binary entrypoints that call the real command roots.
-- `internal/jira/commands` and `internal/confluence/commands`: Cobra command trees, global flags, argument validation, dry-run output, and REST command mapping.
+- `cmd/jira`, `cmd/confluence`, `cmd/jenkins`, `cmd/browser`, and `cmd/inspect-image`: thin binary entrypoints that call the real command roots.
+- `internal/jira/commands`, `internal/confluence/commands`, and `internal/jenkins/commands`: Cobra command trees, global flags, argument validation, dry-run output, and REST command mapping.
 - `internal/config`: config path resolution, load/save, auth canonicalization, and redaction.
 - `internal/auth`: Authorization header construction.
 - `internal/instance`: explicit, default, and URL-based instance resolution.
@@ -11,13 +11,15 @@
 - `internal/output`: table, JSON, and YAML envelope rendering.
 - `internal/catalog`: command metadata used by `commands --json` and `schema <command> --json`.
 - `internal/inspectimage`: standalone image inspection CLI packages for Copilot auth, one-file image validation, `/responses` calls, and agent-facing command metadata. It does not use the Atlassian `internal/config` schema.
-- `internal/testutil`: mock Jira/Confluence servers and config helpers for tests.
+- `internal/testutil`: mock Jira/Confluence/Jenkins servers and config helpers for tests.
 
 ## REST Coverage
 
 Jira commands for auth test, server info, issue read/write flows, comments, worklogs, attachments, projects, metadata, raw API, filters, dashboards, and agile resources call REST endpoints.
 
 Confluence commands for auth test, server info, search/CQL, spaces, pages, content, blogs, attachments, comments, labels, restrictions, watchers, users, groups, long tasks, webhooks, and raw API call REST endpoints.
+
+Jenkins commands for auth test, server info, crumb discovery, jobs, builds, queues, console logs, artifacts, Pipeline REST API resources, views, nodes, plugins, selected controller actions, and raw API call Jenkins endpoints.
 
 ## Risk Areas
 

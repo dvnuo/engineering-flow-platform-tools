@@ -9,3 +9,7 @@ func JiraCommandList() []string {
 func ConfluenceCommandList() []string {
 	return catalog.CommandList("confluence")
 }
+
+func JenkinsCommandList() []string {
+	return catalog.CommandList("jenkins")
+}

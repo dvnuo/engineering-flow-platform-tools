@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	bcmd "engineering-flow-platform-tools/internal/browser/commands"
+	"engineering-flow-platform-tools/internal/catalog"
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
+	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
 	"engineering-flow-platform-tools/internal/testutil"
 	"github.com/spf13/cobra"
@@ -25,6 +27,8 @@ func schemaData(t *testing.T, product, command string) map[string]any {
 		c = ccmd.NewRoot()
 	case "browser":
 		c = bcmd.NewRoot()
+	case "jenkins":
+		c = kcmd.NewRoot()
 	default:
 		t.Fatalf("unknown product %s", product)
 	}
@@ -72,6 +76,28 @@ func requireRequired(t *testing.T, data map[string]any, names ...string) {
 	}
 }
 
+func schemaFlagMap(data map[string]any) map[string]map[string]any {
+	out := map[string]map[string]any{}
+	switch flags := data["flags"].(type) {
+	case []any:
+		for _, raw := range flags {
+			flag := raw.(map[string]any)
+			name, _ := flag["name"].(string)
+			out[name] = flag
+		}
+	case []catalog.FlagSpec:
+		for _, flag := range flags {
+			out[flag.Name] = map[string]any{
+				"name":        flag.Name,
+				"type":        flag.Type,
+				"description": flag.Description,
+				"required":    flag.Required,
+			}
+		}
+	}
+	return out
+}
+
 func TestSchemaConcreteFlags(t *testing.T) {
 	requireFlags(t, schemaData(t, "jira", "issue.create"), "project", "type", "summary", "description", "field", "json-body", "json-body-file", "dry-run")
 	requireFlags(t, schemaData(t, "jira", "issue.transition"), "to", "transition-id", "comment", "field")
@@ -96,6 +122,10 @@ func TestSchemaConcreteFlags(t *testing.T) {
 	requireRequired(t, schemaData(t, "confluence", "page.get-by-title"), "space", "title")
 	requireFlags(t, schemaData(t, "confluence", "search"), "cql", "limit", "start", "expand")
 	requireFlags(t, schemaData(t, "browser", "probe"), "url", "selector", "wait", "timeout", "out", "browser", "json")
+	requireFlags(t, schemaData(t, "jenkins", "job.build-with-params"), "param", "delay", "dry-run", "json", "instance", "config")
+	requireFlags(t, schemaData(t, "jenkins", "build.log-follow"), "start", "max-rounds", "wait-ms")
+	requireFlags(t, schemaData(t, "jenkins", "artifact.download"), "output")
+	requireRequired(t, schemaData(t, "jenkins", "api.delete"), "path", "yes")
 }
 
 func TestSchemaMatchesCobraFlags(t *testing.T) {
@@ -103,16 +133,17 @@ func TestSchemaMatchesCobraFlags(t *testing.T) {
 		"jira":       jcmd.NewRoot,
 		"confluence": ccmd.NewRoot,
 		"browser":    bcmd.NewRoot,
+		"jenkins":    kcmd.NewRoot,
 	}
 	for product, newRoot := range roots {
 		t.Run(product, func(t *testing.T) {
-			for _, binding := range commandBindings(newRoot()) {
-				data := schemaData(t, product, binding.name)
-				schemaFlags := map[string]map[string]any{}
-				for _, raw := range data["flags"].([]any) {
-					flag := raw.(map[string]any)
-					schemaFlags[flag["name"].(string)] = flag
+			root := newRoot()
+			for _, binding := range commandBindings(root) {
+				data, ok := catalog.SchemaFromCobra(product, binding.name, root)
+				if !ok {
+					t.Fatalf("missing schema for %s", binding.name)
 				}
+				schemaFlags := schemaFlagMap(data)
 				visitRealFlags(binding.cmd, func(flag *pflag.Flag) {
 					got, ok := schemaFlags[flag.Name]
 					if !ok {

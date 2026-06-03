@@ -22,6 +22,10 @@ confluence:
   default_instance: confluence-main
   instances: []
 
+jenkins:
+  default_instance: ci
+  instances: []
+
 copilot:
   provider: github_copilot_plugin
   auth:
@@ -82,6 +86,22 @@ inspect_image:
 - `default_space`
 - `verify_ssl`
 - `ca_cert`
+
+## Jenkins Instance Fields
+
+- `name`
+- `base_url`
+- `rest_path`: normally empty for Jenkins
+- `auth.type`: `basic_password | basic_api_key | bearer_token`
+- `auth.username`
+- `auth.password`
+- `auth.api_key`
+- `auth.token`
+- `crumb_mode`: `auto | always | never`
+- `verify_ssl`
+- `ca_cert`
+
+`crumb_mode=auto` fetches `/crumbIssuer/api/json` for state-changing requests and tolerates a missing crumb issuer. Use `always` when the controller requires crumbs and you want crumb failures to be explicit. Use `never` only for controllers where CSRF crumbs are disabled or handled outside this CLI.
 
 ## Copilot Auth
 

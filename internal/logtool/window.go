@@ -14,12 +14,13 @@ func WindowByEntry(runDir string, entryID string, before, after int) (WindowResu
 	if strings.TrimSpace(entryID) == "" {
 		return WindowResult{}, NewError("invalid_args", "--entry-id is required.", "Pass --entry-id from search or entries output.", 400)
 	}
-	if _, err := ReadManifest(runDir); err != nil {
+	manifest, err := ReadManifest(runDir)
+	if err != nil {
 		return WindowResult{}, err
 	}
 	var found Entry
 	errStop := errors.New("found")
-	err := ReadEntries(runDir, func(entry Entry) error {
+	err = ReadEntries(runDir, func(entry Entry) error {
 		if entry.EntryID == entryID {
 			found = entry
 			return errStop
@@ -32,7 +33,14 @@ func WindowByEntry(runDir string, entryID string, before, after int) (WindowResu
 	if found.EntryID == "" {
 		return WindowResult{}, NewError("not_found", "Entry was not found in this run.", "Run log entries --run <run-dir> --json to list entry ids.", 404)
 	}
-	result, err := readWindow(found.SourcePath, found.LineStart, found.LineEnd, before, after)
+	sourceRef, ok := sourceRefForEntry(manifest, found)
+	if !ok {
+		return WindowResult{}, NewError("entry_source_not_in_run", "Entry source is not part of this log run.", "Re-run log analyze or use an entry id from this run.", 409)
+	}
+	if found.LineStart < 1 || found.LineEnd < found.LineStart || (sourceRef.Lines > 0 && found.LineEnd > sourceRef.Lines) {
+		return WindowResult{}, NewError("entry_outside_run_source_range", "Entry line range is outside the analyzed source range.", "Re-run log analyze; the run index may be stale or corrupted.", 409)
+	}
+	result, err := readWindow(sourceRef.Path, found.LineStart, found.LineEnd, before, after)
 	if err != nil {
 		return WindowResult{}, err
 	}
@@ -51,11 +59,14 @@ func WindowByFileLineInRun(runDir string, path string, line int, before, after i
 	if err != nil {
 		return WindowResult{}, err
 	}
-	sourcePath, ok := sourcePathInManifest(manifest, path)
+	sourceRef, ok := sourceRefInManifest(manifest, path)
 	if !ok {
 		return WindowResult{}, NewError("source_not_in_run", "The requested source file is not part of this log run.", "Use log analyze on that source first, or call log window with an entry_id from this run.", 403)
 	}
-	return readWindow(sourcePath, int64(line), int64(line), before, after)
+	if sourceRef.Lines > 0 && int64(line) > sourceRef.Lines {
+		return WindowResult{}, NewError("line_outside_run_source_range", "Requested line is outside the analyzed source range.", "Run log analyze again if the source log changed.", 400)
+	}
+	return readWindow(sourceRef.Path, int64(line), int64(line), before, after)
 }
 
 func readWindow(path string, targetStart, targetEnd int64, before, after int) (WindowResult, error) {
@@ -112,20 +123,40 @@ func readWindow(path string, targetStart, targetEnd int64, before, after int) (W
 	}, nil
 }
 
-func sourcePathInManifest(manifest Manifest, requested string) (string, bool) {
+func sourceRefInManifest(manifest Manifest, requested string) (SourceRef, bool) {
 	requestedKeys := comparablePathKeys(requested)
 	if len(requestedKeys) == 0 {
-		return "", false
+		return SourceRef{}, false
 	}
 	for _, source := range manifest.Sources {
 		sourceKeys := comparablePathKeys(source.Path)
 		for key := range requestedKeys {
 			if sourceKeys[key] {
-				return source.Path, true
+				return source, true
 			}
 		}
 	}
-	return "", false
+	return SourceRef{}, false
+}
+
+func sourceRefForEntry(manifest Manifest, entry Entry) (SourceRef, bool) {
+	if strings.TrimSpace(entry.SourceID) != "" {
+		for _, source := range manifest.Sources {
+			if source.SourceID == entry.SourceID {
+				if strings.TrimSpace(entry.SourcePath) == "" {
+					return source, true
+				}
+				if _, ok := sourceRefInManifest(Manifest{Sources: []SourceRef{source}}, entry.SourcePath); ok {
+					return source, true
+				}
+				return SourceRef{}, false
+			}
+		}
+	}
+	if strings.TrimSpace(entry.SourcePath) != "" {
+		return sourceRefInManifest(manifest, entry.SourcePath)
+	}
+	return SourceRef{}, false
 }
 
 func comparablePathKeys(path string) map[string]bool {

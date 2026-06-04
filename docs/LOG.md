@@ -98,6 +98,7 @@ If a value might be secret, prefer redaction over preserving the original text.
 - P0 only supports local files, directories, and globs.
 - P0 search scans the redacted `entries.jsonl` run artifact and returns bounded results; it is not yet a full-text or columnar indexed backend.
 - For TB-scale persistent analytics, add an indexed store/backend in a later PR.
+- `log window` only reads source files and line ranges recorded during `log analyze`; append-only changes require re-running `log analyze` before direct line windows can inspect newly added lines.
 - No Loki, ClickHouse, Elasticsearch, Kubernetes, Docker, `journalctl`, or other remote backends.
 - No real-time tailing or service mode.
 - No LLM summarization.

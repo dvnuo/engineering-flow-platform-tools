@@ -1,0 +1,247 @@
+{
+  "schema": "efp.visual.input.uml.sequence.v1",
+  "title": "Checkout Authorization Sequence",
+  "participants": [
+    {
+      "id": "browser",
+      "label": "User Browser",
+      "kind": "actor",
+      "group": "client",
+      "metadata": {
+        "role": "starts checkout"
+      }
+    },
+    {
+      "id": "portal",
+      "label": "Portal UI",
+      "kind": "boundary",
+      "group": "frontend",
+      "metadata": {
+        "route": "checkout confirmation"
+      }
+    },
+    {
+      "id": "api",
+      "label": "Order API",
+      "kind": "service",
+      "group": "backend",
+      "metrics": {
+        "latency_ms": 84
+      }
+    },
+    {
+      "id": "payment",
+      "label": "Payment Gateway",
+      "kind": "external",
+      "group": "provider",
+      "metadata": {
+        "sla": "high"
+      }
+    },
+    {
+      "id": "inventory",
+      "label": "Inventory Service",
+      "kind": "service",
+      "group": "backend"
+    },
+    {
+      "id": "audit",
+      "label": "Audit Stream",
+      "kind": "event-log",
+      "group": "observability"
+    }
+  ],
+  "phases": [
+    {
+      "id": "request",
+      "label": "Request",
+      "status": "running"
+    },
+    {
+      "id": "authorize",
+      "label": "Authorize",
+      "status": "warning"
+    },
+    {
+      "id": "commit",
+      "label": "Commit",
+      "status": "success"
+    },
+    {
+      "id": "notify",
+      "label": "Notify",
+      "status": "success"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "order": 1,
+      "from": "browser",
+      "to": "portal",
+      "label": "submitCheckout()",
+      "kind": "sync",
+      "phase": "request",
+      "status": "running"
+    },
+    {
+      "id": "m2",
+      "order": 2,
+      "from": "portal",
+      "to": "api",
+      "label": "POST order intent",
+      "kind": "sync",
+      "phase": "request",
+      "status": "running"
+    },
+    {
+      "id": "m3",
+      "order": 3,
+      "from": "api",
+      "to": "inventory",
+      "label": "reserveItems(orderId)",
+      "kind": "sync",
+      "phase": "authorize",
+      "status": "warning"
+    },
+    {
+      "id": "m4",
+      "order": 4,
+      "from": "inventory",
+      "to": "api",
+      "label": "reservation token",
+      "kind": "return",
+      "phase": "authorize",
+      "status": "success"
+    },
+    {
+      "id": "m5",
+      "order": 5,
+      "from": "api",
+      "to": "payment",
+      "label": "authorizePayment()",
+      "kind": "sync",
+      "phase": "authorize",
+      "status": "warning"
+    },
+    {
+      "id": "m6",
+      "order": 6,
+      "from": "payment",
+      "to": "api",
+      "label": "auth approved",
+      "kind": "return",
+      "phase": "authorize",
+      "status": "success"
+    },
+    {
+      "id": "m7",
+      "order": 7,
+      "from": "api",
+      "to": "inventory",
+      "label": "commitReservation()",
+      "kind": "sync",
+      "phase": "commit",
+      "status": "success"
+    },
+    {
+      "id": "m8",
+      "order": 8,
+      "from": "api",
+      "to": "audit",
+      "label": "emit order.authorized",
+      "kind": "async",
+      "phase": "notify",
+      "status": "success"
+    },
+    {
+      "id": "m9",
+      "order": 9,
+      "from": "api",
+      "to": "portal",
+      "label": "201 order confirmed",
+      "kind": "return",
+      "phase": "commit",
+      "status": "success"
+    },
+    {
+      "id": "m10",
+      "order": 10,
+      "from": "portal",
+      "to": "browser",
+      "label": "render receipt",
+      "kind": "return",
+      "phase": "notify",
+      "status": "success"
+    },
+    {
+      "id": "m11",
+      "order": 11,
+      "from": "audit",
+      "to": "api",
+      "label": "ack event offset",
+      "kind": "async",
+      "phase": "notify",
+      "status": "success"
+    },
+    {
+      "id": "m12",
+      "order": 12,
+      "from": "portal",
+      "to": "portal",
+      "label": "cache recent order",
+      "kind": "self",
+      "phase": "notify",
+      "status": "success",
+      "self": true
+    }
+  ],
+  "activations": [
+    {
+      "participant_id": "portal",
+      "start_order": 1,
+      "end_order": 10,
+      "label": "checkout screen active",
+      "phase": "request"
+    },
+    {
+      "participant_id": "api",
+      "start_order": 2,
+      "end_order": 9,
+      "label": "order transaction",
+      "phase": "authorize"
+    },
+    {
+      "participant_id": "payment",
+      "start_order": 5,
+      "end_order": 6,
+      "label": "payment authorization",
+      "phase": "authorize"
+    },
+    {
+      "participant_id": "inventory",
+      "start_order": 3,
+      "end_order": 7,
+      "label": "inventory reservation",
+      "phase": "commit"
+    }
+  ],
+  "fragments": [
+    {
+      "kind": "alt",
+      "condition": "payment approved vs declined",
+      "start_order": 5,
+      "end_order": 9
+    },
+    {
+      "kind": "loop",
+      "condition": "audit retry until ack",
+      "start_order": 8,
+      "end_order": 11
+    }
+  ],
+  "notes": [
+    "Use order to control vertical time placement.",
+    "Use fragments for loops, alternatives, and parallel regions."
+  ]
+}

@@ -1,10 +1,8 @@
 # Visual Offline Artifacts
 
-`visual` is a terminal-invoked Go CLI for generating offline static visualization artifacts. It reads local templates from `~/.efp/template/visual` by default, validates input JSON, copies local assets, and writes a complete site to `--out`.
+`visual` is a terminal-invoked Go CLI for generating complete offline static visualization artifacts. It reads local templates from `~/.efp/template/visual` by default, validates input JSON, copies local assets, and writes a self-contained site to `--out`.
 
-It does not call Portal, MCP, Node/npm, a browser runtime, a CDN, or a network service.
-
-The built-in catalog contains 195 canonical templates across 10 categories. See [VISUAL_TEMPLATES.md](VISUAL_TEMPLATES.md) for the full index, category guidance, backward compatibility aliases, schema kinds, layout presets, and template authoring rules.
+The built-in catalog is now a semantic catalog: 33 canonical templates across 8 categories. It intentionally does not keep legacy aliases or duplicate legacy directories. Discover templates through the CLI, not by guessing file paths.
 
 ## Template Directory
 
@@ -17,11 +15,20 @@ Template directory resolution order:
 5. `./templates/visual`
 6. executable-adjacent release paths
 
-The directory must contain `registry.json`, `_shared/**`, and flat canonical template directories such as `agent.run_trace` and `codebase.module_dependency_graph`. Old template IDs are aliases in `registry.json`, not duplicate template directories.
+The directory must contain `registry.json`, `_shared/**`, and one direct directory per canonical template. Every direct directory except `_shared` must be registered.
 
-Paths beginning with `~/` are expanded for `--template-dir`, `EFP_VISUAL_TEMPLATE_DIR`, and `visual.template_dir`.
+## Categories
 
-## Render Contract
+- `uml`: UML sequence, class, state machine, activity, and component/deployment diagrams.
+- `relationship`: dependency, topology, lineage, and issue relationship maps.
+- `temporal`: timelines, event traces, automation replay, and release history.
+- `flow`: pipeline, approval, data flow, and customer journey views.
+- `hierarchy`: layered architecture, repository trees, ownership, and containment.
+- `evidence`: claim/source boards, root-cause evidence, risk decisions, and documentation freshness.
+- `matrix`: capability, KPI, risk, and resource allocation matrices.
+- `spatial`: service cities, codebase galaxies, agent fleets, and control-room spaces.
+
+## Renderer Contracts
 
 Supported renderer contracts:
 
@@ -29,16 +36,15 @@ Supported renderer contracts:
 - `offline.timeline.v1`
 - `offline.evidence.v1`
 - `offline.matrix.v1`
+- `offline.uml.sequence.3d.v1`
+- `offline.uml.class.2_5d.v1`
+- `offline.uml.state.3d.v1`
+- `offline.uml.activity.3d.v1`
+- `offline.uml.component.3d.v1`
 
-## 3D And Interaction Effects
+## Input Schema Kinds
 
-Each canonical template declares an `effects` block that describes its intended Three.js scene: camera mode, particle system, material family, motion profile, interactions, and postprocess-style treatment. For graph templates, the shared renderer treats local `three.v1` as the primary renderer instead of drawing a decorative Three.js background behind a separate SVG graph. The runtime creates one local `THREE.WebGLRenderer` scene with 3D meshes, relationship lines, raycast picking, particles, HTML labels, and an inspector. SVG/HTML rendering remains only the fallback when WebGL or module loading is unavailable.
-
-Graph nodes are draggable on a camera-facing plane so movement tracks the pointer without changing the camera. A simple click inspects or expands a node without orbiting or zooming the scene. User interaction freezes automatic overview rotation, connected neighbors are gently nudged during drag, relationship lines update live, and collapsed groups expand from the clicked parent position into their child layout. Group labels show the hidden child count in readable text such as `4 items hidden` rather than opaque `+4` badges.
-
-The generated artifact copies a vendored local Three.js bridge module to `assets/vendor/three/efp-three.module.min.js` and loads it with a relative `<script type="module">`. It does not use CDN URLs, remote modules, runtime npm, `fetch`, generated JavaScript from user input, or network access. If WebGL or module loading is unavailable, the existing SVG/HTML renderer still renders the data.
-
-Supported input schema kinds:
+Reusable visual schema kinds:
 
 - `graph_v1`
 - `graph_events_v1`
@@ -46,68 +52,45 @@ Supported input schema kinds:
 - `evidence_v1`
 - `matrix_v1`
 
-Example:
+UML semantic schema kinds:
+
+- `uml_sequence_v1`
+- `uml_class_v1`
+- `uml_state_machine_v1`
+- `uml_activity_v1`
+- `uml_component_deployment_v1`
+
+UML templates are not just graph templates with looser names. For example, `uml.sequence_3d` requires `participants`, ordered `messages`, optional `phases`, `activations`, and `fragments`. The runtime can then draw 3D lifelines, directional arrows, labels, and replay/phase controls.
+
+## Agent Workflow
 
 ```bash
 visual template categories --template-dir ./templates/visual --json
-visual template list --template-dir ./templates/visual --json
-visual template list --template-dir ./templates/visual --category codebase --json
-visual template get agent.run_trace --template-dir ./templates/visual --json
-visual template schema agent.run_trace --template-dir ./templates/visual --json
-visual inspect-input --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --json
-visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json
+visual template list --template-dir ./templates/visual --category uml --json
+visual template get uml.sequence_3d --template-dir ./templates/visual --json
+visual template schema uml.sequence_3d --template-dir ./templates/visual --json
+visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json
+visual render --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --out ./out/sequence --title "Checkout Sequence" --json
 ```
 
-Canonical IDs are preferred, but compatibility aliases also work. For example, `visual template get service.topology --template-dir ./templates/visual --json` resolves to `runtime.service_topology`, and `visual render --template service.topology ...` renders with the canonical template. These old IDs are registry aliases, not duplicate templates in the file tree.
-
-Count fields distinguish registry entries from compatibility aliases:
-
-- `canonical_count`: canonical templates in `registry.json`
-- `alias_count`: compatibility aliases
-- `total_count`: canonical templates plus aliases
-
-Each template has a real `schema.input.json` referenced by `template.yaml`:
-
-```json
-{
-  "schema": "efp.visual.template_input_schema.v1",
-  "template_id": "agent.run_trace",
-  "input_schema_kind": "graph_events_v1",
-  "json_schema": {
-    "$schema": "efp.visual.local.schema",
-    "type": "object",
-    "required": ["nodes"],
-    "properties": {
-      "schema": {"const": "efp.visual.input.graph_events.v1"},
-      "title": {"type": "string"},
-      "nodes": {"type": "array", "items": {"type": "object", "required": ["id"]}},
-      "edges": {"type": "array", "items": {"type": "object", "required": ["from", "to"]}},
-      "events": {"type": "array", "items": {"type": "object", "required": ["id"]}}
-    }
-  },
-  "example": {
-    "schema": "efp.visual.input.graph_events.v1",
-    "title": "Agent Run Trace",
-    "nodes": [{"id": "tool_1", "label": "Read files"}],
-    "events": [{"id": "e1", "time": "2026-06-03T12:00:00Z", "kind": "tool_started", "node_id": "tool_1"}]
-  }
-}
-```
-
-`json_schema` is expanded in `visual template schema <template-id> --json`; agents should read it before writing input JSON.
+Agents must read `visual template schema <id> --json` before writing input JSON. Do not invent JSON shape. Do not infer templates from directories.
 
 ## Visual Design Guidance
 
-Template schema output also includes `data.template.visual_design`. This is a compact design contract for agents:
+Each template declares `visual_design` in `template.yaml`. The schema command returns this guidance so agents can create readable inputs:
 
-- `initial_view` describes the first screen goal, usually `overview`
-- `max_initial_nodes` and `max_initial_edges` cap what should be visible before user interaction
-- `default_collapse_depth` tells graph renderers to start from collapsed groups
-- `group_by` lists the preferred grouping keys for large graph inputs
-- `supports` lists renderer interactions such as `expand_collapse`, `edge_type_filter`, `search`, `label_lod`, and `export_json`
-- `agent_guidance` gives scenario-specific authoring hints
+- `initial_view`: first screen intent, usually `overview`
+- `max_initial_nodes` and `max_initial_edges`: first-view budget
+- `default_collapse_depth`: whether grouped graph data starts collapsed
+- `group_by`: preferred grouping keys
+- `supports`: expected interactions
+- `agent_guidance`: template-specific input authoring rules
 
-For large graph inputs, do not dump every file, class, method, and import into the first view. Add short node `label` or `name` values, put full class names or paths in `metadata`, add `groups` or node `parent_id`/`group_id`/`group` fields, keep summary relationships visible, and mark noisy detail edges with `visibility: "detail"` or `visibility: "hidden"`. The shared graph renderer can then show collapsed group nodes first and let users expand, drag, search, filter by edge type, and inspect focused details without losing the spatial relationship context.
+For large graph-like inputs, use short display labels, put full names and paths in `metadata`, add groups or `parent_id`/`group_id`/`group`, keep overview relationships visible, and mark noisy detail edges with `visibility: "detail"` or `visibility: "hidden"`.
+
+For UML sequence inputs, provide participants as semantic lifelines, use unique numeric `messages[].order`, add concise message labels, define phases when a flow has stages, and use fragments for `alt`, `loop`, `opt`, or `par` regions.
+
+## Render Output Contract
 
 Successful render output includes:
 
@@ -115,7 +98,10 @@ Successful render output includes:
 - `manifest.json`
 - `manifest.js`
 - `data.js`
-- `assets/runtime/**`
+- `assets/runtime/efp-visual-runtime.iife.js`
+- `assets/runtime/efp-visual-renderers.iife.js`
+- `assets/runtime/efp-visual-runtime.css`
+- `assets/vendor/three/efp-three.module.min.js` when the renderer uses Three.js
 - `assets/templates/<template-id>/style.css`
 
 The JSON response returns `data.artifact`:
@@ -138,41 +124,31 @@ Artifacts must be fully offline:
 
 - all asset links are relative paths
 - no CDN or remote URL
-- no local `data.json` fetch
-- no network APIs
-- local module scripts are allowed only for vendored relative assets such as the Three.js bridge
+- no runtime `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, or beacon APIs
 - no generated JavaScript from user input
+- no Node/npm requirement
 - no `go:embed` template packaging
 
 `manifest.js` assigns `window.__EFP_VISUAL_MANIFEST__`. `data.js` assigns `window.__EFP_VISUAL_DATA__`. The runtime reads those globals and renders with local Three.js, SVG, HTML, and CSS.
 
-## Opening Artifacts
-
-VS Code or desktop:
-
-```bash
-visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --json
-```
-
-Open `./out/run-trace/index.html` directly. No local server is required. The artifact is `file://` safe because `index.html` references only relative `manifest.js`, `data.js`, and `assets/**` files.
-
-Portal/runtime proxy:
-
-Serve the generated output directory as static files at any subpath. Portal/runtime proxy serving also depends only on relative paths, so artifacts do not require a fixed base URL.
-
 ## Validation And Inspection
 
 ```bash
-visual validate --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --json
-visual inspect-input --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --json
+visual validate --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json
+visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json
 visual template doctor --template-dir ./templates/visual --json
-visual inspect-output --out ./out/run-trace --json
+visual inspect-output --out ./out/sequence --json
 ```
 
-`visual template doctor` reads `registry.json`, validates registry expected counts, checks for unregistered direct directories under `templates/visual`, validates every `template.yaml`, validates each `schema.input.json`, validates each `examples/basic.input.json`, renders every basic example into a temporary directory, checks required output files, scans the rendered output for offline violations, and deletes the temporary directory.
+`visual template doctor` reads `registry.json`, validates registry expected counts, checks for unregistered direct directories, validates every manifest/schema/example, renders every example into a temporary output directory, checks required output files, scans rendered output for offline violations, and deletes the temporary directory.
 
-`visual inspect-input` validates the selected template input, then returns `quality_score`, `summary`, `warnings`, and `recommendations`. Use it before rendering large or dense inputs. For graph inputs, the summary includes visual readability signals such as `relation_coverage`, `orphan_node_count`, `orphan_nodes`, `missing_labels`, `fallback_id_labels`, `dominant_edge_kinds`, `long_labels`, `largest_group_size`, `large_groups`, `generic_groups`, `event_node_coverage`, `events_without_node_id`, `events_without_known_node`, `missing_importance`, and `missing_visibility`. Warnings such as `missing_groups`, `visible_nodes_high`, `graph_density_high`, `relation_coverage_low`, `orphan_nodes_high`, `groups_too_coarse`, `generic_group_labels`, `event_node_coverage_low`, `missing_display_labels`, `relation_semantics_flat`, `labels_too_long`, and `missing_edge_visibility` mean the input should be grouped, connected, collapsed, filtered, relabeled, event-bound, or simplified before rendering.
+For the built-in semantic catalog, doctor must report:
 
-For the built-in catalog, doctor checks `registry.expected` from `templates/visual/registry.json`, the exact category counts, `canonical_template_dirs: 195`, `orphan_template_dirs: []`, template tree offline safety, non-empty template styles, rendered example output inspection, and at least 190 unique example hashes.
+- `checked_templates: 33`
+- `checked_examples: 33`
+- `rendered_examples: 33`
+- `canonical_template_dirs: 33`
+- `orphan_template_dirs: []`
+- `offline: true`
 
 Use `--dry-run` on `visual render` to preview `planned_files` without creating `--out`.

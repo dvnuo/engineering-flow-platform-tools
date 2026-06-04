@@ -72,9 +72,10 @@ It reads local templates from ~/.efp/template/visual by default, with checkout a
 			`visual commands --json`,
 			`visual schema render --json`,
 			`visual template list --template-dir ./templates/visual --json`,
-			`visual template schema agent.run_trace --template-dir ./templates/visual --json`,
-			`visual inspect-input --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --json`,
-			`visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json`,
+			`visual template list --template-dir ./templates/visual --category uml --json`,
+			`visual template schema uml.sequence_3d --template-dir ./templates/visual --json`,
+			`visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json`,
+			`visual render --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --out ./out/sequence --title "Checkout Sequence" --json`,
 		},
 		Instructions: "copy cmd/visual/visual-cli.instructions.md to ~/.copilot/instructions/visual-cli.instructions.md.",
 	})

@@ -1,0 +1,115 @@
+{
+  "schema": "efp.visual.input.uml.class.v1",
+  "title": "Visual Rendering Class Structure",
+  "classes": [
+    {
+      "id": "renderer",
+      "name": "VisualRenderer",
+      "stereotype": "service",
+      "package": "render",
+      "attributes": [
+        "registry: RendererRegistry",
+        "runtime: RuntimeAssets"
+      ],
+      "operations": [
+        "render(input)",
+        "inspectOutput()"
+      ],
+      "responsibility": "Coordinates template rendering",
+      "metrics": {
+        "importance": 0.9
+      }
+    },
+    {
+      "id": "template",
+      "name": "TemplateManifest",
+      "stereotype": "entity",
+      "package": "manifest",
+      "attributes": [
+        "id",
+        "renderer",
+        "inputSchemaKind"
+      ],
+      "operations": [
+        "validate()"
+      ],
+      "responsibility": "Declares template contract"
+    },
+    {
+      "id": "schema",
+      "name": "InputSchema",
+      "stereotype": "value",
+      "package": "schema",
+      "attributes": [
+        "kind",
+        "jsonSchema",
+        "example"
+      ],
+      "operations": [
+        "describe()"
+      ],
+      "responsibility": "Guides agents before input generation"
+    },
+    {
+      "id": "artifact",
+      "name": "VisualArtifact",
+      "stereotype": "entity",
+      "package": "render",
+      "attributes": [
+        "entrypoint",
+        "files",
+        "offline"
+      ],
+      "operations": [
+        "listFiles()"
+      ],
+      "responsibility": "Captures output contract"
+    },
+    {
+      "id": "doctor",
+      "name": "TemplateDoctor",
+      "stereotype": "service",
+      "package": "quality",
+      "attributes": [
+        "expectedCounts"
+      ],
+      "operations": [
+        "checkRegistry()",
+        "renderExamples()"
+      ],
+      "responsibility": "Verifies every template"
+    }
+  ],
+  "relationships": [
+    {
+      "from": "renderer",
+      "to": "template",
+      "kind": "uses",
+      "label": "loads manifest"
+    },
+    {
+      "from": "template",
+      "to": "schema",
+      "kind": "composes",
+      "label": "input contract"
+    },
+    {
+      "from": "renderer",
+      "to": "artifact",
+      "kind": "creates",
+      "label": "offline artifact"
+    },
+    {
+      "from": "doctor",
+      "to": "template",
+      "kind": "validates",
+      "label": "manifest and example"
+    },
+    {
+      "from": "doctor",
+      "to": "artifact",
+      "kind": "verifies",
+      "label": "required files"
+    }
+  ]
+}

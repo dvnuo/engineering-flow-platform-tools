@@ -219,6 +219,94 @@ select {
   font-weight: 700;
 }
 
+.visual-uml-sequence-stage {
+  background:
+    radial-gradient(circle at 50% 18%, rgb(99 169 255 / 0.18), transparent 30%),
+    radial-gradient(circle at 50% 100%, rgb(53 194 161 / 0.12), transparent 44%),
+    linear-gradient(180deg, #080d14 0%, #10151d 100%);
+}
+
+.visual-uml-sequence-layer {
+  background:
+    linear-gradient(90deg, transparent 0%, rgb(99 169 255 / 0.05) 50%, transparent 100%),
+    radial-gradient(ellipse at center, rgb(99 169 255 / 0.08), transparent 62%);
+}
+
+.visual-uml-label-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.visual-uml-label {
+  position: absolute;
+  max-width: min(260px, 24vw);
+  transform: translate(-50%, -50%);
+  padding: 5px 8px;
+  border: 1px solid rgb(148 163 184 / 0.34);
+  border-radius: 6px;
+  background: rgb(9 14 22 / 0.78);
+  color: #eef6ff;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.55);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.32), 0 0 18px rgb(99 169 255 / 0.12);
+}
+
+.visual-uml-participant-label {
+  border-color: rgb(125 211 252 / 0.58);
+  background: rgb(15 23 42 / 0.84);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.visual-uml-message-label {
+  border-color: rgb(53 194 161 / 0.32);
+  background: rgb(12 18 27 / 0.72);
+  color: #e9f9f4;
+}
+
+.visual-uml-fragment-label {
+  border-style: dashed;
+  border-color: rgb(226 184 79 / 0.48);
+  color: #ffe6a6;
+}
+
+.visual-uml-fallback {
+  z-index: 1;
+}
+
+.visual-uml-svg-label,
+.visual-uml-svg-message-label {
+  fill: #eef3f7;
+  font-size: 13px;
+  paint-order: stroke;
+  stroke: rgb(8 13 18 / 0.86);
+  stroke-width: 4px;
+}
+
+.visual-uml-svg-message-label {
+  font-size: 12px;
+}
+
+.visual-uml-svg-lifeline {
+  stroke: rgb(125 211 252 / 0.55);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.visual-uml-svg-message {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 10px rgb(99 169 255 / 0.22));
+}
+
 .visual-three-label[data-selected] {
   border-color: var(--accent);
   box-shadow: 0 0 22px rgb(53 194 161 / 0.26);

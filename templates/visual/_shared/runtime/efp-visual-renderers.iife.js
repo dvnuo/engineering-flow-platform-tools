@@ -68,7 +68,12 @@
       permission_gate: "pipeline_flow",
       step_ladder: "pipeline_flow",
       line: "timeline_tunnel",
-      citation_map: "document_wall"
+      citation_map: "document_wall",
+      sequence: "sequence_lifelines",
+      sequence_3d: "sequence_lifelines",
+      class_diagram: "class_cards",
+      activity: "activity_swimlanes",
+      component: "component_deployment"
     };
     return aliases[preset] || preset;
   }
@@ -109,6 +114,8 @@
     } else if (preset === "matrix_board" || preset === "control_room") {
       profile.key = "matrix";
       profile.matrix = true;
+    } else if (preset === "sequence_lifelines" || preset === "class_cards" || preset === "activity_swimlanes" || preset === "component_deployment") {
+      profile.key = "space";
     } else if (preset === "graph_3d" || preset === "graph_2_5d" || preset === "constellation") {
       profile.key = "space";
     }
@@ -147,7 +154,7 @@
   }
 
   function countDataItems(data) {
-    return ["nodes", "edges", "events", "claims", "sources", "links", "items"].reduce(function (sum, key) {
+    return ["nodes", "edges", "events", "claims", "sources", "links", "items", "participants", "messages", "classes", "relationships", "states", "transitions", "actions", "flows", "components", "deployments"].reduce(function (sum, key) {
       return sum + (Array.isArray(data && data[key]) ? data[key].length : 0);
     }, 0);
   }
@@ -2024,8 +2031,627 @@
     shell.stage.appendChild(board);
   }
 
+  function orderedItems(items) {
+    return (Array.isArray(items) ? items.slice() : []).sort(function (a, b) {
+      var ao = Number(a && (a.order !== undefined ? a.order : a.index));
+      var bo = Number(b && (b.order !== undefined ? b.order : b.index));
+      if (!Number.isFinite(ao)) {
+        ao = 0;
+      }
+      if (!Number.isFinite(bo)) {
+        bo = 0;
+      }
+      if (ao === bo) {
+        return itemLabel(a).localeCompare(itemLabel(b));
+      }
+      return ao - bo;
+    });
+  }
+
+  function phaseColor(phase, index) {
+    var colors = [0x63a9ff, 0x35c2a1, 0xa77cff, 0xe5a84c, 0xee6b73, 0xcbd5e1];
+    if (!phase) {
+      return colors[index % colors.length];
+    }
+    var text = String(phase);
+    var hash = 0;
+    for (var i = 0; i < text.length; i += 1) {
+      hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+    }
+    return colors[hash % colors.length];
+  }
+
+  function colorStringFromHex(value) {
+    return "#" + ("000000" + value.toString(16)).slice(-6);
+  }
+
+  function sequenceOrderBounds(messages, activations, fragments) {
+    var min = Infinity;
+    var max = -Infinity;
+    function read(value) {
+      var n = Number(value);
+      if (Number.isFinite(n)) {
+        min = Math.min(min, n);
+        max = Math.max(max, n);
+      }
+    }
+    messages.forEach(function (message, index) {
+      read(message.order !== undefined ? message.order : index + 1);
+    });
+    activations.forEach(function (activation) {
+      read(activation.start_order);
+      read(activation.end_order);
+    });
+    fragments.forEach(function (fragment) {
+      read(fragment.start_order);
+      read(fragment.end_order);
+    });
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+      return { min: 1, max: Math.max(2, messages.length || 2) };
+    }
+    return { min: min, max: Math.max(min + 1, max) };
+  }
+
+  function renderUMLSequenceFallback(ctx, shell) {
+    var data = ctx.data || {};
+    var participants = Array.isArray(data.participants) ? data.participants : [];
+    var messages = orderedItems(data.messages);
+    var bounds = sequenceOrderBounds(messages, data.activations || [], data.fragments || []);
+    var width = 1180;
+    var height = 720;
+    var canvas = svg("svg", { class: "visual-svg visual-uml-fallback", viewBox: "0 0 " + width + " " + height, role: "img" });
+    var xStep = width / Math.max(2, participants.length + 1);
+    var yForOrder = function (order) {
+      return 94 + ((Number(order) - bounds.min) / Math.max(1, bounds.max - bounds.min)) * (height - 160);
+    };
+    var positions = {};
+    participants.forEach(function (participant, index) {
+      var x = xStep * (index + 1);
+      positions[participant.id] = x;
+      var label = svg("text", { x: x, y: 42, "text-anchor": "middle", class: "visual-uml-svg-label" });
+      label.textContent = runtime.safeText(participant.label || participant.name || participant.id);
+      canvas.appendChild(label);
+      canvas.appendChild(svg("line", { x1: x, y1: 70, x2: x, y2: height - 52, class: "visual-uml-svg-lifeline" }));
+    });
+    messages.forEach(function (message, index) {
+      var from = positions[message.from];
+      var to = positions[message.to];
+      if (!from || !to) {
+        return;
+      }
+      var y = yForOrder(message.order !== undefined ? message.order : index + 1);
+      var color = colorStringFromHex(phaseColor(message.phase || message.kind, index));
+      var path = svg("path", { d: "M " + from + " " + y + " C " + ((from + to) / 2) + " " + (y - 28) + " " + ((from + to) / 2) + " " + (y + 28) + " " + to + " " + y, class: "visual-uml-svg-message", stroke: color });
+      canvas.appendChild(path);
+      var text = svg("text", { x: (from + to) / 2, y: y - 9, "text-anchor": "middle", class: "visual-uml-svg-message-label" });
+      text.textContent = runtime.safeText((message.order ? message.order + ". " : "") + (message.label || message.name || message.id));
+      canvas.appendChild(text);
+    });
+    shell.stage.appendChild(canvas);
+  }
+
+  function renderUMLSequence(ctx) {
+    var data = ctx.data || {};
+    var manifest = ctx.manifest || {};
+    var shell = appShell(ctx.container, manifest);
+    var preset = normalizePreset(manifest.layout && manifest.layout.preset);
+    decorateStage(shell.stage, manifest, data, preset);
+
+    var participants = Array.isArray(data.participants) ? data.participants : [];
+    var messages = orderedItems(data.messages);
+    var activations = Array.isArray(data.activations) ? data.activations : [];
+    var fragments = Array.isArray(data.fragments) ? data.fragments : [];
+    var phases = Array.isArray(data.phases) ? data.phases : [];
+    var phaseSelect = selectControl("All phases", phases.map(function (phase) {
+      return phase.id || phase.label || phase.name || "";
+    }).filter(Boolean));
+    var resetBtn = document.createElement("button");
+    resetBtn.textContent = "Reset";
+    var replayBtn = document.createElement("button");
+    replayBtn.textContent = "Replay";
+    var exportBtn = document.createElement("button");
+    exportBtn.textContent = "Export";
+    shell.toolbar.appendChild(phaseSelect);
+    shell.toolbar.appendChild(resetBtn);
+    shell.toolbar.appendChild(replayBtn);
+    shell.toolbar.appendChild(exportBtn);
+
+    var THREE = window.THREE;
+    if (!THREE || !THREE.WebGLRenderer) {
+      renderUMLSequenceFallback(ctx, shell);
+      return;
+    }
+
+    try {
+      shell.stage.classList.add("visual-three-primary", "visual-uml-sequence-stage");
+      var layer = el("div", "visual-three-layer visual-three-primary-layer visual-uml-sequence-layer");
+      layer.setAttribute("role", "application");
+      layer.setAttribute("aria-label", "Interactive 3D UML sequence diagram. Drag to orbit, wheel to zoom, click lifelines or messages to inspect details.");
+      shell.stage.appendChild(layer);
+      var width = Math.max(760, shell.stage.clientWidth || 1000);
+      var height = Math.max(560, shell.stage.clientHeight || 680);
+      var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer.setClearColor(0x000000, 0);
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      renderer.setSize(width, height, false);
+      if (THREE.SRGBColorSpace) {
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+      }
+      layer.appendChild(renderer.domElement);
+      var labelLayer = el("div", "visual-uml-label-layer");
+      layer.appendChild(labelLayer);
+
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(44, width / height, 0.1, 160);
+      var orbit = { theta: -0.18, phi: 1.08, radius: 10.5, target: new THREE.Vector3(0, 0, 0) };
+      scene.add(new THREE.AmbientLight(0xffffff, 0.56));
+      var key = new THREE.DirectionalLight(0xa5dcff, 1.35);
+      key.position.set(3.5, 6.5, 5.4);
+      scene.add(key);
+      var fill = new THREE.DirectionalLight(0x35c2a1, 0.7);
+      fill.position.set(-5, 0.5, -3.5);
+      scene.add(fill);
+      var root = new THREE.Group();
+      scene.add(root);
+      var grid = new THREE.GridHelper(10, 18, 0x2d4254, 0x172434);
+      grid.position.y = -3.1;
+      root.add(grid);
+
+      var bounds = sequenceOrderBounds(messages, activations, fragments);
+      var participantPositions = {};
+      var labels = [];
+      var objects = [];
+      var pickables = [];
+      var basePickables = [];
+      var participantCount = Math.max(1, participants.length);
+      var xSpacing = Math.min(1.72, Math.max(0.92, 9 / Math.max(4, participantCount)));
+      var sequenceHeight = 5.6;
+
+      function yForOrder(order) {
+        var n = Number(order);
+        if (!Number.isFinite(n)) {
+          n = bounds.min;
+        }
+        return 2.7 - ((n - bounds.min) / Math.max(1, bounds.max - bounds.min)) * sequenceHeight;
+      }
+
+      function addHTMLLabel(text, world, className, payload) {
+        var label = el("div", "visual-uml-label " + (className || ""), text);
+        labelLayer.appendChild(label);
+        labels.push({ node: label, world: world.clone(), payload: payload });
+        return label;
+      }
+
+      function participantPosition(index) {
+        var center = (participantCount - 1) / 2;
+        var x = (index - center) * xSpacing;
+        var z = ((index % 3) - 1) * 0.58 + (index % 2 ? 0.22 : -0.12);
+        return new THREE.Vector3(x, 0, z);
+      }
+
+      participants.forEach(function (participant, index) {
+        var pos = participantPosition(index);
+        participantPositions[participant.id] = pos;
+        var color = phaseColor(participant.kind || participant.group || participant.id, index);
+        var geometry = new THREE.CylinderGeometry(0.065, 0.065, sequenceHeight + 0.85, 18);
+        var material = new THREE.MeshPhysicalMaterial({
+          color: color,
+          emissive: color,
+          emissiveIntensity: 0.22,
+          metalness: 0.2,
+          roughness: 0.32,
+          transparent: true,
+          opacity: 0.88,
+          clearcoat: 0.42
+        });
+        var mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(pos.x, 0, pos.z);
+        mesh.userData = { label: participant.label || participant.name || participant.id, payload: participant };
+        root.add(mesh);
+        objects.push(mesh);
+        pickables.push(mesh);
+        basePickables.push(mesh);
+        addHTMLLabel(participant.label || participant.name || participant.id, new THREE.Vector3(pos.x, 3.15, pos.z), "visual-uml-participant-label", { __static_label: true, payload: participant });
+      });
+
+      activations.forEach(function (activation, index) {
+        var base = participantPositions[activation.participant_id];
+        if (!base) {
+          return;
+        }
+        var startY = yForOrder(activation.start_order);
+        var endY = yForOrder(activation.end_order);
+        var length = Math.max(0.22, Math.abs(endY - startY));
+        var color = phaseColor(activation.phase || activation.kind || activation.participant_id, index);
+        var box = new THREE.Mesh(new THREE.BoxGeometry(0.18, length, 0.13), new THREE.MeshPhysicalMaterial({
+          color: color,
+          emissive: color,
+          emissiveIntensity: 0.25,
+          roughness: 0.3,
+          transparent: true,
+          opacity: 0.72
+        }));
+        box.position.set(base.x + 0.12, (startY + endY) / 2, base.z + 0.04);
+        box.userData = { label: activation.label || activation.id || "activation", payload: activation };
+        root.add(box);
+        pickables.push(box);
+        basePickables.push(box);
+      });
+
+      var messageRoot = new THREE.Group();
+      root.add(messageRoot);
+      var selectedPhase = "";
+      function rebuildMessages(replayProgress) {
+        messageRoot.children.slice().forEach(function (child) {
+          messageRoot.remove(child);
+          disposeThreeObject(child);
+        });
+        pickables = basePickables.slice();
+        labels = labels.filter(function (label) {
+          var payload = label.payload || {};
+          var keep = payload.__static_label === true || payload.type === "fragment";
+          if (!keep && label.node.parentNode) {
+            label.node.parentNode.removeChild(label.node);
+          }
+          return keep;
+        });
+        messages.forEach(function (message, index) {
+          if (selectedPhase && String(message.phase || "") !== selectedPhase) {
+            return;
+          }
+          if (replayProgress !== undefined && index > replayProgress) {
+            return;
+          }
+          var from = participantPositions[message.from];
+          var to = participantPositions[message.to];
+          if (!from || !to) {
+            return;
+          }
+          var order = message.order !== undefined ? message.order : index + 1;
+          var y = yForOrder(order);
+          var color = phaseColor(message.phase || message.kind || message.status, index);
+          var a = new THREE.Vector3(from.x, y, from.z);
+          var b = new THREE.Vector3(to.x, y, to.z);
+          if (message.self === true || message.from === message.to) {
+            b = new THREE.Vector3(from.x + 0.62, y - 0.28, from.z + 0.45);
+          }
+          var mid = a.clone().lerp(b, 0.5);
+          mid.y += message.kind === "return" ? -0.1 : 0.22;
+          var geometry = new THREE.BufferGeometry();
+          geometry.setFromPoints([a, mid, b]);
+          var line = new THREE.Line(geometry, new THREE.LineBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: message.kind === "return" ? 0.58 : 0.88,
+            linewidth: 2
+          }));
+          line.userData = { label: message.label || message.name || message.id, payload: message };
+          messageRoot.add(line);
+          pickables.push(line);
+          var direction = b.clone().sub(mid).normalize();
+          var coneGeometry = THREE.ConeGeometry ? new THREE.ConeGeometry(0.08, 0.24, 18) : new THREE.IcosahedronGeometry(0.08, 1);
+          var cone = new THREE.Mesh(coneGeometry, new THREE.MeshBasicMaterial({ color: color }));
+          cone.position.copy(b);
+          cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+          cone.userData = line.userData;
+          messageRoot.add(cone);
+          pickables.push(cone);
+          addHTMLLabel((message.order ? message.order + ". " : "") + (message.label || message.name || message.id), mid, "visual-uml-message-label", message);
+        });
+      }
+
+      fragments.forEach(function (fragment, index) {
+        var y = (yForOrder(fragment.start_order) + yForOrder(fragment.end_order)) / 2;
+        var x = -((participantCount - 1) * xSpacing) / 2 - 0.42;
+        var color = phaseColor(fragment.kind || fragment.label || fragment.id, index);
+        addHTMLLabel((fragment.kind || "fragment") + (fragment.condition ? " · " + fragment.condition : ""), new THREE.Vector3(x, y, -1.05), "visual-uml-fragment-label", { __static_label: true, type: "fragment", payload: fragment });
+        var band = new THREE.Mesh(new THREE.BoxGeometry(participantCount * xSpacing + 0.9, 0.035, 1.05), new THREE.MeshBasicMaterial({
+          color: color,
+          transparent: true,
+          opacity: 0.12
+        }));
+        band.position.set(0, y, -0.7);
+        root.add(band);
+      });
+
+      rebuildMessages();
+
+      var pointer = new THREE.Vector2();
+      var raycaster = new THREE.Raycaster();
+      raycaster.params.Line = { threshold: 0.14 };
+      var dragging = false;
+      var lastX = 0;
+      var lastY = 0;
+      function updateCamera() {
+        orbit.phi = Math.max(0.24, Math.min(Math.PI - 0.2, orbit.phi));
+        orbit.radius = Math.max(5.2, Math.min(24, orbit.radius));
+        var sinPhi = Math.sin(orbit.phi);
+        camera.position.set(
+          orbit.target.x + orbit.radius * sinPhi * Math.sin(orbit.theta),
+          orbit.target.y + orbit.radius * Math.cos(orbit.phi),
+          orbit.target.z + orbit.radius * sinPhi * Math.cos(orbit.theta)
+        );
+        camera.lookAt(orbit.target);
+      }
+      function updateLabels() {
+        labels.forEach(function (label) {
+          var p = label.world.clone();
+          p.applyMatrix4(root.matrixWorld);
+          p.project(camera);
+          var visible = p.z >= -1 && p.z <= 1;
+          label.node.style.display = visible ? "block" : "none";
+          label.node.style.left = ((p.x * 0.5 + 0.5) * width).toFixed(1) + "px";
+          label.node.style.top = ((-p.y * 0.5 + 0.5) * height).toFixed(1) + "px";
+        });
+      }
+      function resize() {
+        width = Math.max(760, shell.stage.clientWidth || width);
+        height = Math.max(560, shell.stage.clientHeight || height);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height, false);
+      }
+      renderer.domElement.addEventListener("pointerdown", function (event) {
+        dragging = true;
+        lastX = event.clientX;
+        lastY = event.clientY;
+        renderer.domElement.setPointerCapture(event.pointerId);
+      });
+      renderer.domElement.addEventListener("pointermove", function (event) {
+        if (!dragging) {
+          return;
+        }
+        var dx = event.clientX - lastX;
+        var dy = event.clientY - lastY;
+        lastX = event.clientX;
+        lastY = event.clientY;
+        orbit.theta -= dx * 0.006;
+        orbit.phi += dy * 0.005;
+      });
+      renderer.domElement.addEventListener("pointerup", function (event) {
+        dragging = false;
+        try {
+          renderer.domElement.releasePointerCapture(event.pointerId);
+        } catch (ignore) {
+        }
+      });
+      renderer.domElement.addEventListener("wheel", function (event) {
+        event.preventDefault();
+        orbit.radius *= event.deltaY > 0 ? 1.08 : 0.92;
+      }, { passive: false });
+      renderer.domElement.addEventListener("click", function (event) {
+        var rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        var hits = raycaster.intersectObjects(pickables, false);
+        if (hits.length && hits[0].object && hits[0].object.userData) {
+          shell.inspector.show(hits[0].object.userData.label, hits[0].object.userData.payload);
+        }
+      });
+      var observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
+      if (observer) {
+        observer.observe(shell.stage);
+      }
+      var replayIndex = null;
+      replayBtn.addEventListener("click", function () {
+        replayIndex = 0;
+        rebuildMessages(replayIndex);
+      });
+      resetBtn.addEventListener("click", function () {
+        orbit.theta = -0.18;
+        orbit.phi = 1.08;
+        orbit.radius = 10.5;
+        replayIndex = null;
+        rebuildMessages();
+      });
+      phaseSelect.addEventListener("change", function () {
+        selectedPhase = phaseSelect.value;
+        replayIndex = null;
+        rebuildMessages();
+      });
+      exportBtn.addEventListener("click", function () {
+        runtime.exportJSON(data, "visual-data.json");
+      });
+      var start = Date.now();
+      function animate() {
+        if (!document.body.contains(shell.stage)) {
+          if (observer) {
+            observer.disconnect();
+          }
+          renderer.dispose();
+          return;
+        }
+        if (replayIndex !== null) {
+          var elapsed = (Date.now() - start) / 520;
+          var next = Math.min(messages.length - 1, Math.floor(elapsed));
+          if (next !== replayIndex) {
+            replayIndex = next;
+            rebuildMessages(replayIndex);
+          }
+          if (replayIndex >= messages.length - 1) {
+            replayIndex = null;
+          }
+        }
+        updateCamera();
+        var t = (Date.now() - start) / 1000;
+        root.rotation.y += (Math.sin(t * 0.18) * 0.03 - root.rotation.y) * 0.02;
+        renderer.render(scene, camera);
+        updateLabels();
+        window.requestAnimationFrame(animate);
+      }
+      animate();
+    } catch (err) {
+      shell.stage.setAttribute("data-three-error", err && err.message ? err.message : String(err));
+      renderUMLSequenceFallback(ctx, shell);
+    }
+  }
+
+  function cloneManifestWith(manifest, renderer, preset) {
+    var copy = JSON.parse(JSON.stringify(manifest || {}));
+    copy.renderer = copy.renderer || {};
+    copy.renderer.contract = renderer;
+    copy.layout = copy.layout || {};
+    copy.layout.preset = preset;
+    copy.effects = copy.effects || {};
+    copy.effects.engine = "three.v1";
+    copy.effects.scene = copy.effects.scene || preset;
+    copy.effects.camera = copy.effects.camera || "orbit";
+    copy.effects.particles = copy.effects.particles || "ambient_dust";
+    copy.effects.material = copy.effects.material || "holographic";
+    copy.effects.motion = copy.effects.motion || "slow_orbit";
+    copy.visual_design = copy.visual_design || {};
+    copy.visual_design.default_collapse_depth = copy.visual_design.default_collapse_depth || 0;
+    copy.visual_design.max_initial_nodes = copy.visual_design.max_initial_nodes || 80;
+    copy.visual_design.max_initial_edges = copy.visual_design.max_initial_edges || 160;
+    return copy;
+  }
+
+  function graphFromUMLClass(data) {
+    var nodes = (Array.isArray(data.classes) ? data.classes : []).map(function (klass) {
+      return {
+        id: klass.id,
+        label: klass.name || klass.label || klass.id,
+        kind: klass.stereotype || "class",
+        status: klass.status || "ok",
+        group: klass.package || klass.module || "classes",
+        metadata: { attributes: klass.attributes || [], operations: klass.operations || [], responsibility: klass.responsibility || "" },
+        metrics: { members: (klass.attributes || []).length + (klass.operations || []).length, importance: klass.importance || 0.5 }
+      };
+    });
+    var edges = (Array.isArray(data.relationships) ? data.relationships : []).map(function (rel) {
+      return {
+        from: rel.from,
+        to: rel.to,
+        kind: rel.kind || "relationship",
+        label: rel.label || rel.kind || "",
+        status: rel.status || "ok",
+        weight: rel.weight || 1,
+        metadata: rel.metadata || {}
+      };
+    });
+    return { schema: "efp.visual.input.graph.v1", title: data.title, nodes: nodes, edges: edges };
+  }
+
+  function graphFromUMLState(data) {
+    var nodes = (Array.isArray(data.states) ? data.states : []).map(function (state) {
+      return {
+        id: state.id,
+        label: state.label || state.name || state.id,
+        kind: state.kind || "state",
+        status: state.status || "ok",
+        group: state.region || "state-machine",
+        metadata: { entry: state.entry || "", exit: state.exit || "" },
+        metrics: state.metrics || {}
+      };
+    });
+    var edges = (Array.isArray(data.transitions) ? data.transitions : []).map(function (transition) {
+      return {
+        from: transition.from,
+        to: transition.to,
+        kind: transition.kind || "transition",
+        label: transition.trigger || transition.label || "",
+        status: transition.status || "ok",
+        weight: transition.weight || 1,
+        metadata: { guard: transition.guard || "", action: transition.action || "" }
+      };
+    });
+    return { schema: "efp.visual.input.graph.v1", title: data.title, nodes: nodes, edges: edges };
+  }
+
+  function graphFromUMLActivity(data) {
+    var laneByID = {};
+    (Array.isArray(data.lanes) ? data.lanes : []).forEach(function (lane) {
+      laneByID[lane.id] = lane;
+    });
+    var nodes = (Array.isArray(data.actions) ? data.actions : []).map(function (action) {
+      var lane = laneByID[action.lane_id] || {};
+      return {
+        id: action.id,
+        label: action.label || action.name || action.id,
+        kind: action.kind || "action",
+        status: action.status || "ok",
+        group: lane.label || lane.name || action.lane_id || "activity",
+        metadata: action.metadata || {},
+        metrics: action.metrics || {}
+      };
+    });
+    var edges = (Array.isArray(data.flows) ? data.flows : []).map(function (flow) {
+      return {
+        from: flow.from,
+        to: flow.to,
+        kind: flow.kind || "flow",
+        label: flow.label || flow.condition || "",
+        status: flow.status || "ok",
+        weight: flow.weight || 1,
+        metadata: flow.metadata || {}
+      };
+    });
+    return { schema: "efp.visual.input.graph.v1", title: data.title, nodes: nodes, edges: edges };
+  }
+
+  function graphFromUMLComponent(data) {
+    var nodes = [];
+    (Array.isArray(data.deployments) ? data.deployments : []).forEach(function (deployment) {
+      nodes.push({
+        id: deployment.id,
+        label: deployment.label || deployment.name || deployment.id,
+        kind: deployment.kind || "deployment",
+        status: deployment.status || "ok",
+        group: "deployments",
+        metadata: deployment.metadata || {},
+        metrics: deployment.metrics || {}
+      });
+    });
+    (Array.isArray(data.components) ? data.components : []).forEach(function (component) {
+      nodes.push({
+        id: component.id,
+        label: component.label || component.name || component.id,
+        kind: component.kind || "component",
+        status: component.status || "ok",
+        group: component.deployment_id || component.layer || "components",
+        parent_id: component.deployment_id || "",
+        metadata: { interfaces: component.interfaces || [], responsibilities: component.responsibilities || [] },
+        metrics: component.metrics || {}
+      });
+    });
+    var edges = (Array.isArray(data.links) ? data.links : []).map(function (link) {
+      return {
+        from: link.from,
+        to: link.to,
+        kind: link.kind || "link",
+        label: link.label || link.protocol || link.kind || "",
+        status: link.status || "ok",
+        weight: link.weight || 1,
+        metadata: link.metadata || {}
+      };
+    });
+    return { schema: "efp.visual.input.graph.v1", title: data.title, nodes: nodes, edges: edges };
+  }
+
+  function renderUMLClass(ctx) {
+    renderGraph({ container: ctx.container, manifest: cloneManifestWith(ctx.manifest, "offline.graph.v1", "class_cards"), data: graphFromUMLClass(ctx.data || {}) });
+  }
+
+  function renderUMLState(ctx) {
+    renderGraph({ container: ctx.container, manifest: cloneManifestWith(ctx.manifest, "offline.graph.v1", "state_machine"), data: graphFromUMLState(ctx.data || {}) });
+  }
+
+  function renderUMLActivity(ctx) {
+    renderGraph({ container: ctx.container, manifest: cloneManifestWith(ctx.manifest, "offline.graph.v1", "activity_swimlanes"), data: graphFromUMLActivity(ctx.data || {}) });
+  }
+
+  function renderUMLComponent(ctx) {
+    renderGraph({ container: ctx.container, manifest: cloneManifestWith(ctx.manifest, "offline.graph.v1", "component_deployment"), data: graphFromUMLComponent(ctx.data || {}) });
+  }
+
   runtime.registerRenderer("offline.graph.v1", { render: renderGraph });
   runtime.registerRenderer("offline.timeline.v1", { render: renderTimeline });
   runtime.registerRenderer("offline.evidence.v1", { render: renderEvidence });
   runtime.registerRenderer("offline.matrix.v1", { render: renderMatrix });
+  runtime.registerRenderer("offline.uml.sequence.3d.v1", { render: renderUMLSequence });
+  runtime.registerRenderer("offline.uml.class.2_5d.v1", { render: renderUMLClass });
+  runtime.registerRenderer("offline.uml.state.3d.v1", { render: renderUMLState });
+  runtime.registerRenderer("offline.uml.activity.3d.v1", { render: renderUMLActivity });
+  runtime.registerRenderer("offline.uml.component.3d.v1", { render: renderUMLComponent });
 }());

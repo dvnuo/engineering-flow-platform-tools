@@ -3,14 +3,16 @@
 - `visual` is a terminal-invoked CLI, not a browser UI, Portal tool, runtime built-in, MCP tool, or HTTP server.
 - Always use `--json` for agent workflows.
 - Installed templates default to `~/.efp/template/visual`; use `--template-dir <templates/visual>` only when the catalog lives in a workspace or release artifact.
-- First inspect categories with `visual template categories --json`; do not load all 195 template details up front and do not infer templates from the file tree.
+- First inspect categories with `visual template categories --json`; do not infer templates from the file tree.
 - Select a category, then run `visual template list --category <category> --json`, `visual template get <template-id> --json`, and `visual template schema <template-id> --json`.
-- Backward compatibility aliases work for `template get`, `template schema`, `validate`, and `render`, but they live only in the registry; prefer the returned `canonical_id` for new work.
-- Do not invent template paths and do not point inputs at alias directories.
-- Template selection strategy: agent/debug/run work uses `agent` or `debug`; repo/code/diff/test work uses `codebase`; runtime/infra/service/session work uses `runtime`; Jira/GitHub/Confluence/project work uses `project`; evidence/research/citation work uses `knowledge`; plan/task/workflow work uses `planning`; KPI/business/ops work uses `business`; explain/tutorial/process work uses `education`.
+- The built-in semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, `evidence`, `matrix`, and `spatial`.
+- Do not invent template paths.
+- Template selection strategy: UML sequence/class/state/activity/component work uses `uml`; dependency/topology/lineage work uses `relationship`; replay/timeline/history work uses `temporal`; process/pipeline/approval/data movement work uses `flow`; layered/tree/ownership/containment work uses `hierarchy`; claim/source/root-cause/decision work uses `evidence`; KPI/risk/capability/allocation work uses `matrix`; 3D landscape/codebase/service/agent-fleet work uses `spatial`.
 - Each template has a declared `effects` contract for its local Three.js scene, including camera, particles, material, motion, and interactions. Prefer selecting the right template and input data over generating custom JavaScript.
 - Each template also returns `visual_design` guidance. For large graph inputs, give every node a short `label` or `name`, use groups or node `parent_id`/`group_id`/`group`, give groups scenario-specific labels, start with an overview, and put noisy class/method/import edges behind `visibility: "detail"` or `visibility: "hidden"`.
 - For graph event inputs, bind every meaningful event to an existing node with `events[].node_id` so replay and timeline views explain what changed in the 3D graph.
+- For `uml.sequence_3d`, provide semantic `participants`, unique numeric `messages[].order`, short `messages[].label`, and optional `phases`, `activations`, and `fragments`. Do not convert a sequence diagram into generic graph nodes.
+- For other UML templates, use the declared semantic fields: `classes`/`relationships`, `states`/`transitions`, `actions`/`flows`, or `components`/`deployments`/`links`.
 - Do not invent the JSON shape. Always run `visual template schema <id> --json` before writing input JSON and again before each render if the selected id changed.
 - Before render, run `visual inspect-input --template <template-id> --input <input.json> --json`. If it reports `missing_groups`, `missing_display_labels`, high `orphan_node_count`, high label pressure, high edge density, low `relation_coverage`, `groups_too_coarse`, `generic_group_labels`, low `event_node_coverage`, repetitive `dominant_edge_kinds`, long labels, missing `importance`, or missing edge `visibility`, revise the input before rendering.
 - Render to a workspace path with `visual render --template <template-id> --input <input.json> --out <workspace-output-dir> --json`.

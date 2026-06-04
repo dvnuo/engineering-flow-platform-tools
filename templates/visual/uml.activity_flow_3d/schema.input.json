@@ -1,0 +1,223 @@
+{
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "uml.activity_flow_3d",
+  "input_schema_kind": "uml_activity_v1",
+  "json_schema": {
+    "$schema": "json-schema-draft-2020-12",
+    "type": "object",
+    "required": [
+      "schema",
+      "actions"
+    ],
+    "properties": {
+      "schema": {
+        "const": "efp.visual.input.uml.activity.v1"
+      },
+      "title": {
+        "type": "string"
+      },
+      "notes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "lanes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "owner": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "actions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "lane_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "flows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "from",
+            "to"
+          ],
+          "properties": {
+            "from": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "condition": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  },
+  "example": {
+    "schema": "efp.visual.input.uml.activity.v1",
+    "title": "Patch Review Activity Flow",
+    "lanes": [
+      {
+        "id": "agent",
+        "label": "Codex Agent",
+        "owner": "automation"
+      },
+      {
+        "id": "reviewer",
+        "label": "Reviewer",
+        "owner": "human"
+      },
+      {
+        "id": "ci",
+        "label": "CI",
+        "owner": "platform"
+      }
+    ],
+    "actions": [
+      {
+        "id": "start",
+        "label": "Receive improvement request",
+        "kind": "start",
+        "lane_id": "reviewer",
+        "status": "success"
+      },
+      {
+        "id": "inspect",
+        "label": "Inspect current source",
+        "kind": "action",
+        "lane_id": "agent",
+        "status": "success",
+        "metadata": {
+          "focus": "latest branch"
+        }
+      },
+      {
+        "id": "patch",
+        "label": "Apply scoped patch",
+        "kind": "action",
+        "lane_id": "agent",
+        "status": "running"
+      },
+      {
+        "id": "test",
+        "label": "Run unit and smoke checks",
+        "kind": "action",
+        "lane_id": "ci",
+        "status": "warning"
+      },
+      {
+        "id": "decide",
+        "label": "Checks pass?",
+        "kind": "decision",
+        "lane_id": "ci",
+        "status": "warning"
+      },
+      {
+        "id": "fix",
+        "label": "Fix failed contract",
+        "kind": "action",
+        "lane_id": "agent",
+        "status": "running"
+      },
+      {
+        "id": "report",
+        "label": "Report verified result",
+        "kind": "end",
+        "lane_id": "agent",
+        "status": "success"
+      }
+    ],
+    "flows": [
+      {
+        "from": "start",
+        "to": "inspect",
+        "label": "handoff"
+      },
+      {
+        "from": "inspect",
+        "to": "patch",
+        "label": "source understood"
+      },
+      {
+        "from": "patch",
+        "to": "test",
+        "label": "candidate patch"
+      },
+      {
+        "from": "test",
+        "to": "decide",
+        "label": "results"
+      },
+      {
+        "from": "decide",
+        "to": "fix",
+        "condition": "failed"
+      },
+      {
+        "from": "fix",
+        "to": "test",
+        "label": "retry"
+      },
+      {
+        "from": "decide",
+        "to": "report",
+        "condition": "passed"
+      }
+    ]
+  }
+}

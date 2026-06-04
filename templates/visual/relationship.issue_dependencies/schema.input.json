@@ -1,0 +1,424 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "node-01",
+        "kind": "depends_on",
+        "label": "depends on",
+        "to": "node-02",
+        "weight": 1
+      },
+      {
+        "from": "node-02",
+        "kind": "emits",
+        "label": "emits",
+        "to": "node-03",
+        "weight": 2
+      },
+      {
+        "from": "node-03",
+        "kind": "validates",
+        "label": "validates",
+        "to": "node-04",
+        "weight": 3
+      },
+      {
+        "from": "node-04",
+        "kind": "hands_off",
+        "label": "hands off",
+        "to": "node-05",
+        "weight": 4
+      },
+      {
+        "from": "node-05",
+        "kind": "reports",
+        "label": "reports",
+        "to": "node-06",
+        "weight": 5
+      },
+      {
+        "from": "node-02",
+        "kind": "observes",
+        "label": "observes downstream",
+        "to": "node-06",
+        "weight": 2
+      }
+    ],
+    "nodes": [
+      {
+        "group": "epic",
+        "id": "node-01",
+        "kind": "jira",
+        "label": "Jira epic VIS-42",
+        "metadata": {
+          "owner": "epic",
+          "review_date": "2026-06-03",
+          "scenario": "Issue Dependency Graph"
+        },
+        "metrics": {
+          "confidence": 0.68,
+          "risk": 0.48
+        },
+        "status": "running"
+      },
+      {
+        "group": "backend",
+        "id": "node-02",
+        "kind": "backend",
+        "label": "Backend story VIS-51",
+        "metadata": {
+          "owner": "backend",
+          "review_date": "2026-06-03",
+          "scenario": "Issue Dependency Graph"
+        },
+        "metrics": {
+          "confidence": 0.72,
+          "risk": 0.61
+        },
+        "status": "success"
+      },
+      {
+        "group": "frontend",
+        "id": "node-03",
+        "kind": "frontend",
+        "label": "Frontend story VIS-52",
+        "metadata": {
+          "owner": "frontend",
+          "review_date": "2026-06-03",
+          "scenario": "Issue Dependency Graph"
+        },
+        "metrics": {
+          "confidence": 0.76,
+          "risk": 0.74
+        },
+        "status": "warning"
+      },
+      {
+        "group": "qa",
+        "id": "node-04",
+        "kind": "qa",
+        "label": "QA regression task",
+        "metadata": {
+          "owner": "qa",
+          "review_date": "2026-06-03",
+          "scenario": "Issue Dependency Graph"
+        },
+        "metrics": {
+          "confidence": 0.8,
+          "risk": 0.22
+        },
+        "status": "ok"
+      },
+      {
+        "group": "blocker",
+        "id": "node-05",
+        "kind": "release",
+        "label": "Release blocker",
+        "metadata": {
+          "owner": "blocker",
+          "review_date": "2026-06-03",
+          "scenario": "Issue Dependency Graph"
+        },
+        "metrics": {
+          "confidence": 0.84,
+          "risk": 0.35
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "approval",
+        "id": "node-06",
+        "kind": "product",
+        "label": "Product owner approval",
+        "metadata": {
+          "owner": "approval",
+          "review_date": "2026-06-03",
+          "scenario": "Issue Dependency Graph"
+        },
+        "metrics": {
+          "confidence": 0.88,
+          "risk": 0.48
+        },
+        "status": "error"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Issue Dependency Relationship Map Scenario",
+    "initial_view": {
+      "mode": "overview",
+      "collapse_groups": true,
+      "max_nodes": 70,
+      "max_edges": 140
+    }
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "json-schema-draft-2020-12",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "importance": {
+              "description": "0..1 priority used when the renderer caps the initial edge count.",
+              "type": "number"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "visibility": {
+              "description": "Use detail for noisy class/method/import edges that should stay hidden until search or focus.",
+              "enum": [
+                "overview",
+                "detail",
+                "hidden"
+              ],
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "groups": {
+        "description": "Optional logical containers for large graphs. Nodes can reference a group by parent_id, group_id, group, module, or package. Collapsed groups form the initial overview.",
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "collapsed": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "importance": {
+              "type": "number"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "initial_view": {
+        "additionalProperties": true,
+        "description": "Optional first-view guidance for agents. Use overview and collapsed groups for large inputs.",
+        "properties": {
+          "collapse_groups": {
+            "type": "boolean"
+          },
+          "focus_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "hide_edge_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "max_edges": {
+            "type": "number"
+          },
+          "max_nodes": {
+            "type": "number"
+          },
+          "mode": {
+            "enum": [
+              "overview",
+              "detail",
+              "focus"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "group_id": {
+              "description": "Alias for parent_id.",
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "importance": {
+              "description": "0..1 priority used for label LOD and large-graph sampling.",
+              "type": "number"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "module": {
+              "description": "Module grouping hint used when parent_id/group_id is absent.",
+              "type": "string"
+            },
+            "package": {
+              "description": "Package grouping hint used when parent_id/group_id is absent.",
+              "type": "string"
+            },
+            "parent_id": {
+              "description": "Logical group id for collapsed overview rendering.",
+              "type": "string"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "visible": {
+              "description": "Set false for low-value detail nodes in the initial overview.",
+              "type": "boolean"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "relationship.issue_dependencies"
+}

@@ -1,426 +1,139 @@
 # Visual Templates
 
-The visual CLI is an offline static site generator. It reads templates from `templates/visual`, validates one local input JSON file, copies local runtime assets, writes `manifest.js` and `data.js`, and produces a directory that can be opened through `file://` or served as static files under a Portal/runtime proxy subpath.
-
-## Design Principles
-
-- Templates live in git as plain files and are not embedded into the executable.
-- Template output uses only relative paths and never fetches `data.json` or `manifest.json`.
-- Shared renderers are reused across the catalog; templates choose schema kind, layout preset, and a scenario-specific `effects` contract.
-- The `effects` block selects the local Three.js scene design: camera mode, particle system, material family, motion profile, raycast/orbit interactions, and postprocess-style treatment. Improve shared runtime behavior instead of copying custom JS into individual templates.
-- The `visual_design` block selects the first-view readability contract: overview budget, grouping keys, default collapse depth, supported interactions, and agent guidance.
-- Inputs use a small set of reusable contracts: `graph_v1`, `graph_events_v1`, `timeline_v1`, `evidence_v1`, and `matrix_v1`.
-- Template files and generated artifacts must not reference remote assets, network APIs, remote modules, or root-relative resources. Local relative module scripts are allowed for vendored runtime assets such as the Three.js bridge.
-
-## Categories
-
-- `foundation`: base visual forms used by higher-level templates
-- `agent`: agent execution, tool use, replay, confidence, and session state
-- `codebase`: repository structure, dependencies, diffs, tests, ownership, and migration
-- `runtime`: service, adapter, session, sandbox, event, secret, and deployment topology
-- `debug`: incidents, traces, logs, failures, resource pressure, and recovery
-- `project`: Jira, GitHub, Confluence, release, review, and stakeholder workflows
-- `knowledge`: research, evidence, citation, decision, source, and answer lineage
-- `planning`: plans, tasks, automation, approvals, scheduling, handoff, and goals
-- `business`: product, KPI, customer, revenue, support, capacity, and ops views
-- `education`: tutorial, architecture, process, lifecycle, and tradeoff explanations
-
-## Input Schema Kinds
-
-- `graph_v1`: nodes and edges for dependency, topology, tree, state, and flow views.
-- `graph_events_v1`: graph plus ordered events for traces, replays, recoveries, and animated flows.
-- `timeline_v1`: ordered events for incident, roadmap, history, cohort, and lifecycle views.
-- `evidence_v1`: claims, sources, and evidence links for research and decision views.
-- `matrix_v1`: positioned items for boards, dashboards, heatmaps, radars, and portfolio views.
+The visual template catalog is a compact semantic catalog. It contains 33 canonical templates across 8 categories and intentionally does not maintain compatibility aliases. Template discovery must use `visual template categories`, `visual template list`, `visual template get`, and `visual template schema`.
 
 ## Registry Expected Counts
 
-`templates/visual/registry.json` contains an `expected` block that defines the accepted canonical template count and per-category counts. `visual template doctor` reads these values from the registry instead of using command code constants. When adding or removing canonical templates, update `registry.expected.canonical_count`, `registry.expected.categories`, the registry entries, and tests together.
+`templates/visual/registry.json` owns the expected catalog shape:
 
-Aliases do not count as canonical templates. `canonical_count` is the number of registry template entries, `alias_count` is the number of compatibility aliases, and `total_count` is canonical templates plus aliases.
+```json
+{
+  "version": 3,
+  "expected": {
+    "canonical_count": 33,
+    "categories": {
+      "uml": 5,
+      "relationship": 4,
+      "temporal": 4,
+      "flow": 4,
+      "hierarchy": 4,
+      "evidence": 4,
+      "matrix": 4,
+      "spatial": 4
+    }
+  }
+}
+```
 
-## Backward Compatibility Aliases
-
-Aliases let older template IDs resolve to the current canonical template without adding duplicate canonical entries or duplicate directories. Alias definitions are maintained only in `templates/visual/registry.json`. `visual template get <alias>`, `visual template schema <alias>`, `visual validate --template <alias>`, and `visual render --template <alias>` all use the canonical template and return canonical metadata.
-
-Legacy template IDs remain supported as aliases, but their old directories are intentionally removed. Do not add a directory for an alias; add or update the alias on the canonical registry entry instead.
-
-| Alias | Canonical ID |
-|---|---|
-| `service.topology` | `runtime.service_topology` |
-| `runtime.session_binding` | `runtime.session_binding_map` |
-| `runtime.event_flow` | `runtime.event_bus_flow` |
-| `project.issue_graph` | `project.issue_dependency_graph` |
-| `project.requirements_trace` | `project.requirements_to_code_trace` |
-| `knowledge.doc_freshness` | `project.doc_freshness_map` |
-| `agent.fleet_dashboard` | `runtime.agent_fleet_dashboard` |
-| `agent.permission_gate` | `agent.permission_gate_map` |
-| `agent.tool_constellation` | `agent.tool_call_constellation` |
-| `codebase.diff_impact` | `codebase.diff_impact_ripple` |
+`visual template doctor` uses this metadata. When adding or removing templates, update `registry.expected`, the registry entries, template directories, smoke scripts, and tests together.
 
 ## Directory Consistency
 
-Every direct directory under `templates/visual`, except `_shared`, must correspond to a canonical template entry in `registry.json`. The canonical directory is the dirname of `registry.templates[].path`, for example `runtime.service_topology/template.yaml` maps to `templates/visual/runtime.service_topology`.
+Every direct directory under `templates/visual`, except `_shared`, must correspond to a canonical template entry in `registry.json`. The canonical directory is the dirname of `registry.templates[].path`.
 
-`visual template doctor --template-dir ./templates/visual --json` reports `canonical_template_dirs` and `orphan_template_dirs`. The built-in catalog must report `canonical_template_dirs: 195` and `orphan_template_dirs: []`.
+The built-in catalog must report:
+
+- `canonical_template_dirs: 33`
+- `orphan_template_dirs: []`
+
+Do not add unregistered examples, legacy alias directories, or ad-hoc template folders.
 
 ## Template Quality Bar
 
-- Descriptions must be scenario-specific and must explain the real workflow the template supports.
-- Example titles must be meaningful and must not be `Basic Example`, `Example`, or `<Template Title> Example`.
-- Examples must use domain data for the template scenario, not only generic `Intake`, `Core`, `Policy`, `Risk`, and `Review` labels.
-- Each template needs at least three tags, a supported category, a layout preset, a complete `effects` block, a complete `visual_design` block, a non-empty `style.css`, and a `schema.input.json` with both `json_schema` and `example`.
+- `title` and `description` must be scenario-specific.
+- `description` must not be a generic "visualize X as an offline view" sentence.
+- `schema.input.json` must contain `template_id`, `input_schema_kind`, `json_schema`, and `example`.
+- `examples/basic.input.json` must have a meaningful title.
+- `style.css` must be non-empty.
+- `template.yaml` must declare `effects.engine: three.v1`, a scene id, `visual_design`, local assets, and offline settings.
+- Large graph-like examples should include groups, readable labels, relationship types, metadata, and visibility/importance hints.
+- UML examples must use the UML semantic schema, not generic graph nodes.
 
-## Effects Contract
+## Categories
 
-Every canonical template declares a local Three.js effect contract:
+- `uml`: structured UML diagrams with dedicated semantic schema.
+- `relationship`: general relationship maps and dependency topology.
+- `temporal`: time-ordered traces, timelines, replay, and history.
+- `flow`: process, approval, data, and journey flow.
+- `hierarchy`: layered, tree, ownership, and containment views.
+- `evidence`: claims, sources, decisions, and root-cause reasoning.
+- `matrix`: positioned items for capability, KPI, risk, and allocation.
+- `spatial`: 3D spatial maps for large operational or codebase landscapes.
 
-```yaml
-effects:
-  engine: three.v1
-  scene: agent_run_trace
-  camera: dolly_tunnel
-  particles: event_stream
-  material: emissive_network
-  motion: timeline_replay
-  interaction:
-    - orbit_drag
-    - raycast_inspect
-    - focus_path
-  postprocess:
-    - emissive_glow
-    - depth_fog
-```
+## UML Templates
 
-`scene` is unique per canonical template. The other fields describe how the shared runtime should map the template data into real Three.js meshes, lines, points, and raycast interactions. Templates must not add their own JavaScript; they express intent through `effects`, input data, schema kind, and layout preset.
+`uml.sequence_3d` uses `uml_sequence_v1`:
 
-## Visual Design Contract
+- `participants`: lifelines with `id`, `label`, `kind`, `group`, and optional metadata/metrics.
+- `messages`: ordered arrows with unique numeric `order`, `from`, `to`, `label`, `kind`, `phase`, and status.
+- `phases`: stage filter metadata.
+- `activations`: lifeline activity bars with `participant_id`, `start_order`, and `end_order`.
+- `fragments`: `alt`, `loop`, `opt`, or `par` regions.
 
-Every canonical template declares a first-view design contract:
+The sequence renderer draws 3D lifelines, activation bars, directional message lines, labels, phase filtering, replay, reset, raycast inspection, and orbit controls.
 
-```yaml
-visual_design:
-  initial_view: overview
-  max_initial_nodes: 45
-  max_initial_edges: 90
-  default_collapse_depth: 1
-  group_by:
-    - module
-    - package
-    - group
-  supports:
-    - expand_collapse
-    - edge_type_filter
-    - search
-    - focus_path
-    - label_lod
-    - export_json
-  agent_guidance:
-    - Group classes and files under module or package groups.
-    - Show module-level overview first; keep class and method detail collapsed.
-    - Mark noisy method_call/import edges visibility=detail unless they explain the current focus.
-```
+Other UML templates use semantic inputs and transform them into the shared 3D graph runtime:
 
-Graph templates must support grouped overview rendering. Large graph inputs should provide `groups` or node `parent_id`/`group_id`/`group` fields, use `initial_view.mode: overview`, keep only summary edges visible, and push noisy edges to `visibility: detail` or `visibility: hidden`. The shared graph renderer uses this information for expand/collapse, edge type filtering, label LOD, and first-view sampling.
-
-Run `visual inspect-input --template <template-id> --input <input.json> --json` before render when the input is large, dense, or generated by an agent. Warnings such as `missing_groups`, `visible_nodes_high`, `graph_density_high`, `relation_coverage_low`, `relation_semantics_flat`, `labels_too_long`, `missing_importance`, `missing_edge_visibility`, and `high_fanout_nodes` should be fixed in the input JSON, not by adding template-specific JavaScript. Use short display labels, put full paths in metadata, add `importance` to key nodes/edges, and distinguish relationship types instead of emitting one repeated edge kind such as `contains`.
-
-## Layout Presets
-
-- `citation_map`
-- `city_map`
-- `constellation`
-- `control_room`
-- `dag`
-- `decision_matrix`
-- `diff_split_view`
-- `document_wall`
-- `evidence_board`
-- `fleet`
-- `flow_particles`
-- `funnel`
-- `galaxy`
-- `gantt`
-- `graph_2_5d`
-- `graph_3d`
-- `heatmap`
-- `incident_timeline`
-- `journey`
-- `kanban`
-- `knowledge_graph`
-- `layered_stack`
-- `line`
-- `matrix_board`
-- `network_boundary_map`
-- `orbit_system`
-- `permission_gate`
-- `pipeline_flow`
-- `radar_sphere`
-- `radial_tree`
-- `replay_stage`
-- `ripple`
-- `river`
-- `roadmap`
-- `sankey_3d`
-- `service_map`
-- `state_machine`
-- `step_ladder`
-- `swimlane_timeline`
-- `terrain_heatmap`
-- `timeline_tunnel`
-- `waterfall`
+- `uml.class_structure_2_5d`: `classes` plus `relationships`
+- `uml.state_machine_3d`: `states` plus `transitions`
+- `uml.activity_flow_3d`: `lanes`, `actions`, and `flows`
+- `uml.component_deployment_3d`: `deployments`, `components`, and `links`
 
 ## Complete Index
 
-### Foundation
+### UML
 
-- `foundation.city_map`: City Map (`graph_v1`, `city_map`)
-- `foundation.constellation`: Constellation (`graph_v1`, `constellation`)
-- `foundation.control_room`: Control Room (`matrix_v1`, `control_room`)
-- `foundation.diff_split_view`: Diff Split View (`graph_events_v1`, `diff_split_view`)
-- `foundation.document_wall`: Document Wall (`evidence_v1`, `document_wall`)
-- `foundation.flow_particles`: Flow Particles (`graph_events_v1`, `flow_particles`)
-- `foundation.graph_2_5d`: Graph 2 5D (`graph_v1`, `graph_2_5d`)
-- `foundation.graph_3d`: Graph 3D (`graph_v1`, `graph_3d`)
-- `foundation.layered_stack`: Layered Stack (`graph_v1`, `layered_stack`)
-- `foundation.matrix_board`: Matrix Board (`matrix_v1`, `matrix_board`)
-- `foundation.orbit_system`: Orbit System (`graph_v1`, `orbit_system`)
-- `foundation.pipeline_flow`: Pipeline Flow (`graph_v1`, `pipeline_flow`)
-- `foundation.radar_sphere`: Radar Sphere (`matrix_v1`, `radar_sphere`)
-- `foundation.radial_tree`: Radial Tree (`graph_v1`, `radial_tree`)
-- `foundation.replay_stage`: Replay Stage (`graph_events_v1`, `replay_stage`)
-- `foundation.sankey_3d`: Sankey 3D (`graph_v1`, `sankey_3d`)
-- `foundation.state_machine`: State Machine (`graph_v1`, `state_machine`)
-- `foundation.swimlane_timeline`: Swimlane Timeline (`timeline_v1`, `swimlane_timeline`)
-- `foundation.terrain_heatmap`: Terrain Heatmap (`matrix_v1`, `terrain_heatmap`)
-- `foundation.timeline_tunnel`: Timeline Tunnel (`timeline_v1`, `timeline_tunnel`)
+- `uml.activity_flow_3d`: UML Activity Flow 3D (`uml_activity_v1`, `offline.uml.activity.3d.v1`)
+- `uml.class_structure_2_5d`: UML Class Structure 2.5D (`uml_class_v1`, `offline.uml.class.2_5d.v1`)
+- `uml.component_deployment_3d`: UML Component Deployment 3D (`uml_component_deployment_v1`, `offline.uml.component.3d.v1`)
+- `uml.sequence_3d`: UML Sequence 3D (`uml_sequence_v1`, `offline.uml.sequence.3d.v1`)
+- `uml.state_machine_3d`: UML State Machine 3D (`uml_state_machine_v1`, `offline.uml.state.3d.v1`)
 
-### Agent
+### Relationship
 
-- `agent.active_run_monitor`: Active Run Monitor (`graph_events_v1`, `fleet`)
-- `agent.confidence_map`: Confidence Map (`evidence_v1`, `evidence_board`)
-- `agent.context_window_map`: Context Window Map (`matrix_v1`, `matrix_board`)
-- `agent.debug_blackbox`: Debug Blackbox (`graph_events_v1`, `control_room`)
-- `agent.failure_recovery_tree`: Failure Recovery Tree (`graph_events_v1`, `radial_tree`)
-- `agent.permission_gate_map`: Permission Gate Map (`graph_events_v1`, `layered_stack`)
-- `agent.react_loop_replay`: React Loop Replay (`graph_events_v1`, `replay_stage`)
-- `agent.run_replay_timeline`: Run Replay Timeline (`graph_events_v1`, `replay_stage`)
-- `agent.run_trace`: Run Trace (`graph_events_v1`, `timeline_tunnel`)
-- `agent.session_state_panel`: Session State Panel (`matrix_v1`, `control_room`)
-- `agent.step_ladder`: Step Ladder (`graph_events_v1`, `pipeline_flow`)
-- `agent.subagent_swarm`: Subagent Swarm (`graph_events_v1`, `constellation`)
-- `agent.thinking_timeline`: Thinking Timeline (`graph_events_v1`, `swimlane_timeline`)
-- `agent.tool_call_constellation`: Tool Call Constellation (`graph_events_v1`, `constellation`)
-- `agent.tool_io_inspector`: Tool Io Inspector (`graph_events_v1`, `diff_split_view`)
+- `relationship.dependency_graph`: Dependency Relationship Graph
+- `relationship.issue_dependencies`: Issue Dependency Relationship Map
+- `relationship.knowledge_lineage`: Knowledge Lineage Relationship Map
+- `relationship.service_topology`: Service Topology Relationship Map
 
-### Codebase
+### Temporal
 
-- `codebase.api_surface_map`: API Surface Map (`graph_v1`, `layered_stack`)
-- `codebase.bug_localization_map`: Bug Localization Map (`graph_events_v1`, `heatmap`)
-- `codebase.call_path_tube`: Call Path Tube (`graph_v1`, `pipeline_flow`)
-- `codebase.config_dependency_map`: Config Dependency Map (`graph_v1`, `radial_tree`)
-- `codebase.coverage_terrain`: Coverage Terrain (`matrix_v1`, `terrain_heatmap`)
-- `codebase.dead_code_detector`: Dead Code Detector (`graph_v1`, `constellation`)
-- `codebase.dependency_upgrade_risk`: Dependency Upgrade Risk (`graph_v1`, `radar_sphere`)
-- `codebase.diff_impact_ripple`: Diff Impact Ripple (`graph_events_v1`, `ripple`)
-- `codebase.galaxy`: Galaxy (`graph_v1`, `galaxy`)
-- `codebase.git_history_river`: Git History River (`timeline_v1`, `river`)
-- `codebase.hotspot_city`: Hotspot City (`graph_v1`, `city_map`)
-- `codebase.migration_progress_map`: Migration Progress Map (`graph_events_v1`, `pipeline_flow`)
-- `codebase.module_dependency_graph`: Module Dependency Graph (`graph_v1`, `layered_stack`)
-- `codebase.monorepo_workspace_map`: Monorepo Workspace Map (`graph_v1`, `city_map`)
-- `codebase.ownership_map`: Ownership Map (`graph_v1`, `matrix_board`)
-- `codebase.pr_diff_impact_map`: PR Diff Impact Map (`graph_events_v1`, `ripple`)
-- `codebase.refactor_plan_map`: Refactor Plan Map (`graph_v1`, `diff_split_view`)
-- `codebase.security_sensitive_files_map`: Security Sensitive Files Map (`graph_v1`, `network_boundary_map`)
-- `codebase.symbol_graph`: Symbol Graph (`graph_v1`, `graph_2_5d`)
-- `codebase.test_failure_map`: Test Failure Map (`graph_events_v1`, `layered_stack`)
+- `temporal.automation_replay`: Automation Run Replay
+- `temporal.event_trace`: Agent Event Trace
+- `temporal.incident_timeline`: Incident Timeline
+- `temporal.release_history`: Release History Timeline
 
-### Runtime
+### Flow
 
-- `runtime.adapter_proxy_map`: Adapter Proxy Map (`graph_v1`, `pipeline_flow`)
-- `runtime.agent_fleet_dashboard`: Agent Fleet Dashboard (`matrix_v1`, `control_room`)
-- `runtime.api_contract_map`: API Contract Map (`graph_v1`, `matrix_board`)
-- `runtime.capability_matrix`: Capability Matrix (`matrix_v1`, `matrix_board`)
-- `runtime.config_overlay_view`: Config Overlay View (`graph_v1`, `layered_stack`)
-- `runtime.deployment_pipeline_3d`: Deployment Pipeline 3D (`graph_events_v1`, `pipeline_flow`)
-- `runtime.event_bus_flow`: Event Bus Flow (`graph_events_v1`, `flow_particles`)
-- `runtime.event_reconcile_loop`: Event Reconcile Loop (`graph_events_v1`, `state_machine`)
-- `runtime.health_radar`: Health Radar (`matrix_v1`, `radar_sphere`)
-- `runtime.k8s_pod_constellation`: K8s Pod Constellation (`graph_v1`, `constellation`)
-- `runtime.mcp_server_status_map`: MCP Server Status Map (`matrix_v1`, `matrix_board`)
-- `runtime.network_boundary_map`: Network Boundary Map (`graph_v1`, `layered_stack`)
-- `runtime.permission_boundary_map`: Permission Boundary Map (`graph_v1`, `layered_stack`)
-- `runtime.restart_map`: Restart Map (`graph_events_v1`, `radial_tree`)
-- `runtime.sandbox_layer_stack`: Sandbox Layer Stack (`graph_v1`, `layered_stack`)
-- `runtime.secret_flow_map`: Secret Flow Map (`graph_v1`, `network_boundary_map`)
-- `runtime.service_topology`: Service Topology (`graph_v1`, `service_map`)
-- `runtime.session_binding_map`: Session Binding Map (`graph_v1`, `layered_stack`)
-- `runtime.tool_registry_map`: Tool Registry Map (`graph_v1`, `radial_tree`)
-- `runtime.topology`: Topology (`graph_v1`, `layered_stack`)
+- `flow.approval`: Approval Flow
+- `flow.customer_journey`: Customer Journey Flow
+- `flow.data_flow`: Runtime Data Flow
+- `flow.pipeline`: Pipeline Flow
 
-### Debug
+### Hierarchy
 
-- `debug.alert_correlation_map`: Alert Correlation Map (`graph_v1`, `constellation`)
-- `debug.before_after_compare`: Before After Compare (`graph_events_v1`, `diff_split_view`)
-- `debug.blast_radius_sphere`: Blast Radius Sphere (`graph_v1`, `radial_tree`)
-- `debug.ci_failure_timeline`: CI Failure Timeline (`timeline_v1`, `swimlane_timeline`)
-- `debug.config_drift_map`: Config Drift Map (`matrix_v1`, `diff_split_view`)
-- `debug.dependency_failure_map`: Dependency Failure Map (`graph_v1`, `service_map`)
-- `debug.dependency_version_conflict`: Dependency Version Conflict (`graph_v1`, `graph_2_5d`)
-- `debug.error_budget_burn`: Error Budget Burn (`timeline_v1`, `funnel`)
-- `debug.error_spike_field`: Error Spike Field (`timeline_v1`, `terrain_heatmap`)
-- `debug.flaky_test_radar`: Flaky Test Radar (`matrix_v1`, `radar_sphere`)
-- `debug.incident_timeline`: Incident Timeline (`timeline_v1`, `incident_timeline`)
-- `debug.latency_heatmap`: Latency Heatmap (`matrix_v1`, `heatmap`)
-- `debug.log_cluster_map`: Log Cluster Map (`graph_v1`, `constellation`)
-- `debug.queue_backlog_map`: Queue Backlog Map (`matrix_v1`, `control_room`)
-- `debug.recovery_playbook_view`: Recovery Playbook View (`graph_events_v1`, `step_ladder`)
-- `debug.regression_detector`: Regression Detector (`timeline_v1`, `river`)
-- `debug.resource_pressure_map`: Resource Pressure Map (`matrix_v1`, `radar_sphere`)
-- `debug.retry_storm_map`: Retry Storm Map (`graph_events_v1`, `flow_particles`)
-- `debug.root_cause_tree`: Root Cause Tree (`graph_v1`, `radial_tree`)
-- `debug.trace_waterfall_3d`: Trace Waterfall 3D (`timeline_v1`, `waterfall`)
+- `hierarchy.layered_architecture`: Layered Architecture Hierarchy
+- `hierarchy.ownership_map`: Ownership Hierarchy Map
+- `hierarchy.package_containment`: Package Containment Hierarchy
+- `hierarchy.repository_tree`: Repository Workspace Tree
 
-### Project
+### Evidence
 
-- `project.blocker_funnel`: Blocker Funnel (`graph_v1`, `funnel`)
-- `project.bug_triage_board`: Bug Triage Board (`matrix_v1`, `kanban`)
-- `project.confluence_space_map`: Confluence Space Map (`graph_v1`, `radial_tree`)
-- `project.cross_doc_citation_graph`: Cross Doc Citation Graph (`evidence_v1`, `citation_map`)
-- `project.decision_record_wall`: Decision Record Wall (`evidence_v1`, `document_wall`)
-- `project.doc_freshness_map`: Doc Freshness Map (`matrix_v1`, `heatmap`)
-- `project.epic_story_map`: Epic Story Map (`graph_v1`, `layered_stack`)
-- `project.issue_age_heatmap`: Issue Age Heatmap (`matrix_v1`, `heatmap`)
-- `project.issue_dependency_graph`: Issue Dependency Graph (`graph_v1`, `graph_2_5d`)
-- `project.pr_review_map`: PR Review Map (`graph_v1`, `graph_2_5d`)
-- `project.release_readiness_dashboard`: Release Readiness Dashboard (`matrix_v1`, `control_room`)
-- `project.release_train`: Release Train (`graph_events_v1`, `pipeline_flow`)
-- `project.requirements_to_code_trace`: Requirements To Code Trace (`graph_v1`, `layered_stack`)
-- `project.review_bottleneck_map`: Review Bottleneck Map (`matrix_v1`, `control_room`)
-- `project.risk_matrix`: Risk Matrix (`matrix_v1`, `matrix_board`)
-- `project.roadmap_milestone_path`: Roadmap Milestone Path (`timeline_v1`, `roadmap`)
-- `project.sprint_board_3d`: Sprint Board 3D (`matrix_v1`, `kanban`)
-- `project.stakeholder_network`: Stakeholder Network (`graph_v1`, `constellation`)
-- `project.support_escalation_graph`: Support Escalation Graph (`graph_v1`, `layered_stack`)
-- `project.velocity_flow`: Velocity Flow (`graph_events_v1`, `flow_particles`)
+- `evidence.claim_source_board`: Claim Source Evidence Board
+- `evidence.doc_freshness`: Documentation Freshness Evidence Map
+- `evidence.risk_decision`: Risk Decision Evidence Matrix
+- `evidence.root_cause_tree`: Root Cause Evidence Tree
 
-### Knowledge
+### Matrix
 
-- `knowledge.answer_lineage_view`: Answer Lineage View (`evidence_v1`, `radial_tree`)
-- `knowledge.argument_map`: Argument Map (`evidence_v1`, `graph_2_5d`)
-- `knowledge.citation_map`: Citation Map (`evidence_v1`, `citation_map`)
-- `knowledge.claim_evidence_tree`: Claim Evidence Tree (`evidence_v1`, `radial_tree`)
-- `knowledge.comparison_table_3d`: Comparison Table 3D (`matrix_v1`, `matrix_board`)
-- `knowledge.concept_dependency_tree`: Concept Dependency Tree (`graph_v1`, `radial_tree`)
-- `knowledge.decision_matrix`: Decision Matrix (`matrix_v1`, `decision_matrix`)
-- `knowledge.design_tradeoff_radar`: Design Tradeoff Radar (`matrix_v1`, `radar_sphere`)
-- `knowledge.document_cluster_map`: Document Cluster Map (`evidence_v1`, `constellation`)
-- `knowledge.document_diff_map`: Document Diff Map (`evidence_v1`, `diff_split_view`)
-- `knowledge.evidence_board`: Evidence Board (`evidence_v1`, `evidence_board`)
-- `knowledge.faq_constellation`: Faq Constellation (`graph_v1`, `constellation`)
-- `knowledge.graph`: Graph (`graph_v1`, `knowledge_graph`)
-- `knowledge.research_timeline`: Research Timeline (`timeline_v1`, `timeline_tunnel`)
-- `knowledge.semantic_search_landscape`: Semantic Search Landscape (`matrix_v1`, `terrain_heatmap`)
-- `knowledge.source_gap_map`: Source Gap Map (`evidence_v1`, `heatmap`)
-- `knowledge.source_reliability_matrix`: Source Reliability Matrix (`matrix_v1`, `matrix_board`)
-- `knowledge.spec_compliance_map`: Spec Compliance Map (`graph_v1`, `matrix_board`)
-- `knowledge.topic_landscape`: Topic Landscape (`matrix_v1`, `terrain_heatmap`)
-- `knowledge.unknowns_map`: Unknowns Map (`matrix_v1`, `matrix_board`)
+- `matrix.capability`: Capability Matrix
+- `matrix.kpi_control`: KPI Control Matrix
+- `matrix.resource_allocation`: Resource Allocation Matrix
+- `matrix.risk`: Project Risk Matrix
 
-### Planning
+### Spatial
 
-- `planning.approval_workflow`: Approval Workflow (`graph_events_v1`, `permission_gate`)
-- `planning.automation_flow`: Automation Flow (`graph_v1`, `pipeline_flow`)
-- `planning.automation_run_replay`: Automation Run Replay (`graph_events_v1`, `replay_stage`)
-- `planning.checklist_progress_orbit`: Checklist Progress Orbit (`graph_v1`, `orbit_system`)
-- `planning.critical_path_view`: Critical Path View (`graph_v1`, `dag`)
-- `planning.decision_tree`: Decision Tree (`graph_v1`, `radial_tree`)
-- `planning.dependency_radar`: Dependency Radar (`graph_v1`, `radar_sphere`)
-- `planning.gantt_tunnel`: Gantt Tunnel (`timeline_v1`, `gantt`)
-- `planning.goal_breakdown_tree`: Goal Breakdown Tree (`graph_v1`, `radial_tree`)
-- `planning.handoff_map`: Handoff Map (`graph_events_v1`, `pipeline_flow`)
-- `planning.kanban_3d`: Kanban 3D (`matrix_v1`, `kanban`)
-- `planning.milestone_road`: Milestone Road (`timeline_v1`, `roadmap`)
-- `planning.parallel_sessions_map`: Parallel Sessions Map (`graph_events_v1`, `swimlane_timeline`)
-- `planning.plan_dag`: Plan Dag (`graph_v1`, `dag`)
-- `planning.queue_scheduler_view`: Queue Scheduler View (`matrix_v1`, `kanban`)
-- `planning.resource_allocation_board`: Resource Allocation Board (`matrix_v1`, `matrix_board`)
-- `planning.risk_burndown`: Risk Burndown (`timeline_v1`, `line`)
-- `planning.runbook_execution_map`: Runbook Execution Map (`graph_events_v1`, `step_ladder`)
-- `planning.task_failure_fork`: Task Failure Fork (`graph_events_v1`, `radial_tree`)
-- `planning.task_swarm`: Task Swarm (`graph_events_v1`, `constellation`)
-
-### Business
-
-- `business.capacity_planning_map`: Capacity Planning Map (`matrix_v1`, `control_room`)
-- `business.churn_signal_radar`: Churn Signal Radar (`matrix_v1`, `radar_sphere`)
-- `business.cohort_timeline`: Cohort Timeline (`timeline_v1`, `swimlane_timeline`)
-- `business.cost_cloud`: Cost Cloud (`graph_v1`, `constellation`)
-- `business.customer_journey_map`: Customer Journey Map (`timeline_v1`, `journey`)
-- `business.customer_segment_constellation`: Customer Segment Constellation (`graph_v1`, `constellation`)
-- `business.experiment_result_view`: Experiment Result View (`matrix_v1`, `diff_split_view`)
-- `business.feature_adoption_map`: Feature Adoption Map (`matrix_v1`, `heatmap`)
-- `business.funnel_flow_3d`: Funnel Flow 3D (`graph_v1`, `funnel`)
-- `business.kpi_control_room`: KPI Control Room (`matrix_v1`, `control_room`)
-- `business.market_map`: Market Map (`matrix_v1`, `terrain_heatmap`)
-- `business.opportunity_landscape`: Opportunity Landscape (`matrix_v1`, `terrain_heatmap`)
-- `business.ops_shift_overview`: Ops Shift Overview (`matrix_v1`, `control_room`)
-- `business.portfolio_matrix`: Portfolio Matrix (`matrix_v1`, `matrix_board`)
-- `business.revenue_stream_map`: Revenue Stream Map (`graph_v1`, `sankey_3d`)
-- `business.risk_matrix_3d`: Risk Matrix 3D (`matrix_v1`, `matrix_board`)
-- `business.sales_pipeline_3d`: Sales Pipeline 3D (`graph_v1`, `pipeline_flow`)
-- `business.sla_dashboard`: SLA Dashboard (`matrix_v1`, `control_room`)
-- `business.support_ticket_heatmap`: Support Ticket Heatmap (`matrix_v1`, `heatmap`)
-- `business.team_load_balance`: Team Load Balance (`matrix_v1`, `matrix_board`)
-
-### Education
-
-- `education.api_lifecycle_view`: API Lifecycle View (`timeline_v1`, `pipeline_flow`)
-- `education.auth_flow_animation`: Auth Flow Animation (`graph_events_v1`, `pipeline_flow`)
-- `education.cache_behavior_sim`: Cache Behavior Sim (`graph_events_v1`, `state_machine`)
-- `education.compiler_pipeline_view`: Compiler Pipeline View (`graph_v1`, `pipeline_flow`)
-- `education.data_lifecycle_view`: Data Lifecycle View (`graph_events_v1`, `pipeline_flow`)
-- `education.database_query_plan`: Database Query Plan (`graph_v1`, `radial_tree`)
-- `education.distributed_consensus_view`: Distributed Consensus View (`graph_events_v1`, `constellation`)
-- `education.event_sourcing_view`: Event Sourcing View (`graph_events_v1`, `timeline_tunnel`)
-- `education.exploded_architecture_view`: Exploded Architecture View (`graph_v1`, `layered_stack`)
-- `education.memory_layout_view`: Memory Layout View (`graph_v1`, `layered_stack`)
-- `education.migration_strategy_view`: Migration Strategy View (`graph_events_v1`, `diff_split_view`)
-- `education.ml_pipeline_view`: ML Pipeline View (`graph_v1`, `pipeline_flow`)
-- `education.network_packet_path`: Network Packet Path (`graph_events_v1`, `pipeline_flow`)
-- `education.payment_flow_view`: Payment Flow View (`graph_events_v1`, `pipeline_flow`)
-- `education.permission_model_view`: Permission Model View (`matrix_v1`, `matrix_board`)
-- `education.process_animation`: Process Animation (`graph_events_v1`, `flow_particles`)
-- `education.queue_processing_sim`: Queue Processing Sim (`graph_events_v1`, `flow_particles`)
-- `education.security_threat_model`: Security Threat Model (`graph_v1`, `network_boundary_map`)
-- `education.state_transition_tutorial`: State Transition Tutorial (`graph_v1`, `state_machine`)
-- `education.tradeoff_stage`: Tradeoff Stage (`matrix_v1`, `matrix_board`)
-
-## Choosing A Template
-
-Use `agent` or `debug` for agent runs, incidents, traces, and recovery views. Use `codebase` for repository, diff, test, dependency, ownership, and migration work. Use `runtime` for service, infra, adapter, sandbox, capability, and session topology. Use `project` for Jira, GitHub, Confluence, release, and review workflows. Use `knowledge` for evidence, research, citation, claims, and source quality. Use `planning` for tasks, goals, workflow, schedules, and automation. Use `business` for KPI, funnel, revenue, support, capacity, and ops. Use `education` for tutorial, process, lifecycle, and explanatory visuals.
-
-## Commands
-
-```bash
-visual template categories --template-dir ./templates/visual --json
-visual template list --template-dir ./templates/visual --category codebase --json
-visual template get codebase.module_dependency_graph --template-dir ./templates/visual --json
-visual template schema codebase.module_dependency_graph --template-dir ./templates/visual --json
-visual inspect-input --template codebase.module_dependency_graph --template-dir ./templates/visual --input input.json --json
-visual validate --template codebase.module_dependency_graph --template-dir ./templates/visual --input input.json --json
-visual render --template codebase.module_dependency_graph --template-dir ./templates/visual --input input.json --out ./out/module-map --json
-```
-
-## Opening Output
-
-The render result includes `relative_entrypoint: index.html`, `file_url_safe: true`, and `http_subpath_safe: true`. In VS Code, open the rendered `index.html` file directly. A Portal/runtime proxy can serve the output directory as static files under any subpath because all resources are relative.
-
-## Adding Template 196
-
-Create `templates/visual/<template-id>/template.yaml`, `schema.input.json`, `style.css`, and `examples/basic.input.json`. Add one registry entry with a unique id, legal category, supported schema kind, supported renderer, supported layout preset, tags, and any aliases. Update `registry.expected.canonical_count` and the relevant `registry.expected.categories` value at the same time. Reuse shared runtime assets, keep `offline.required` and `offline.forbid_network` true, use `data_mode: js-file`, and run doctor before committing.
-
-## Doctor Acceptance
-
-`visual template doctor --template-dir ./templates/visual --json` checks the registry, expected counts from `registry.json`, directory consistency, manifests, schemas, examples, rendering, output inspection, offline scanning, style file presence, external URL absence, and example uniqueness. The catalog passes when `expected_canonical_templates`, `canonical_templates`, `canonical_template_dirs`, `checked_templates`, `checked_examples`, and `rendered_examples` agree with registry metadata, `orphan_template_dirs` is empty, and `offline: true`.
+- `spatial.agent_fleet`: Agent Fleet Space
+- `spatial.codebase_galaxy`: Codebase Galaxy
+- `spatial.control_room`: Control Room Space
+- `spatial.service_city`: Service City Map

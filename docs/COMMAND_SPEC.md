@@ -34,15 +34,17 @@
 
 ### Template Discovery
 
-`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`. `canonical_count` is the number of canonical registry entries, `alias_count` is compatibility aliases, and `total_count` is both combined.
+`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`. In the built-in semantic catalog, `canonical_count=33`, `total_count=33`, and `alias_count=0`.
 
-`visual template list --json` returns 195 canonical templates from `templates/visual/registry.json`. Use `--category`, `--query`, `--renderer`, and `--schema-kind` to narrow discovery before reading template details. The response includes normalized `filters`, `matched_count`, `canonical_count`, `total_count`, and `alias_count`.
+`visual template list --json` returns canonical templates from `templates/visual/registry.json`. Use `--category`, `--query`, `--renderer`, and `--schema-kind` to narrow discovery before reading template details. The response includes normalized `filters`, `matched_count`, `canonical_count`, `total_count`, and `alias_count`.
 
-`visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, aliases, `schema_file`, and `example_file`. Alias ids resolve to the canonical template and include `requested_id` and `canonical_id`.
+`visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, `schema_file`, and `example_file`.
 
-`visual template schema <template-id> --json` returns the template metadata, `visual_design`, full local `json_schema`, and example object agents should mirror when writing input JSON. Alias ids resolve the same way as `template get`; the template metadata includes `requested_id`, `canonical_id`, and aliases.
+`visual template schema <template-id> --json` returns the template metadata, `visual_design`, full local `json_schema`, and example object agents should mirror when writing input JSON.
 
-Agents must not discover templates by listing `templates/visual` directories or inventing template paths. Use `template categories`, `template list`, `template get`, and `template schema` only. Old IDs are registry aliases, not duplicate directories; prefer the returned `canonical_id` for new inputs.
+Agents must not discover templates by listing `templates/visual` directories or inventing template paths. Use `template categories`, `template list`, `template get`, and `template schema` only.
+
+Semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, `evidence`, `matrix`, and `spatial`. UML schema kinds are `uml_sequence_v1`, `uml_class_v1`, `uml_state_machine_v1`, `uml_activity_v1`, and `uml_component_deployment_v1`.
 
 ### Input Inspection
 

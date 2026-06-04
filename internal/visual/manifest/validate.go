@@ -34,10 +34,10 @@ func ValidateTemplateManifest(templateDir string, entry RegistryEntry, m *Templa
 		return metadata.NewError("template_manifest_invalid", "visual template input_schema must be schema.input.json.", "Set input_schema: schema.input.json.", 400)
 	}
 	if !metadata.SupportedRenderers[m.Renderer.Contract] {
-		return metadata.NewError("unsupported_renderer", "visual template renderer is not supported: "+m.Renderer.Contract, "Use offline.graph.v1, offline.timeline.v1, offline.evidence.v1, or offline.matrix.v1.", 400)
+		return metadata.NewError("unsupported_renderer", "visual template renderer is not supported: "+m.Renderer.Contract, "Use a supported offline visual renderer contract.", 400)
 	}
 	if !SupportedInputSchemaKinds[normalizeInputSchemaKind(m.InputSchemaKind)] {
-		return metadata.NewError("template_manifest_invalid", "visual template input_schema_kind is not supported: "+m.InputSchemaKind, "Use graph_v1, graph_events_v1, timeline_v1, evidence_v1, or matrix_v1.", 400)
+		return metadata.NewError("template_manifest_invalid", "visual template input_schema_kind is not supported: "+m.InputSchemaKind, "Use a supported semantic visual input schema kind.", 400)
 	}
 	m.InputSchemaKind = normalizeInputSchemaKind(m.InputSchemaKind)
 	if strings.TrimSpace(entry.InputSchemaKind) != "" && normalizeInputSchemaKind(entry.InputSchemaKind) != m.InputSchemaKind {
@@ -188,56 +188,55 @@ type CategoryCount struct {
 }
 
 var SupportedInputSchemaKinds = map[string]bool{
-	"graph_v1":        true,
-	"graph_events_v1": true,
-	"timeline_v1":     true,
-	"evidence_v1":     true,
-	"matrix_v1":       true,
+	"graph_v1":                    true,
+	"graph_events_v1":             true,
+	"timeline_v1":                 true,
+	"evidence_v1":                 true,
+	"matrix_v1":                   true,
+	"uml_sequence_v1":             true,
+	"uml_class_v1":                true,
+	"uml_state_machine_v1":        true,
+	"uml_activity_v1":             true,
+	"uml_component_deployment_v1": true,
 }
 
 var SupportedCategoryOrder = []string{
-	"foundation",
-	"agent",
-	"codebase",
-	"runtime",
-	"debug",
-	"project",
-	"knowledge",
-	"planning",
-	"business",
-	"education",
+	"uml",
+	"relationship",
+	"temporal",
+	"flow",
+	"hierarchy",
+	"evidence",
+	"matrix",
+	"spatial",
 }
 
 var SupportedCategories = map[string]bool{
-	"foundation": true,
-	"agent":      true,
-	"codebase":   true,
-	"runtime":    true,
-	"debug":      true,
-	"project":    true,
-	"knowledge":  true,
-	"planning":   true,
-	"business":   true,
-	"education":  true,
+	"uml":          true,
+	"relationship": true,
+	"temporal":     true,
+	"flow":         true,
+	"hierarchy":    true,
+	"evidence":     true,
+	"matrix":       true,
+	"spatial":      true,
 }
 
 var SupportedEffectEngines = map[string]bool{
 	"three.v1": true,
 }
 
-const DefaultExpectedCanonicalCount = 195
+const DefaultExpectedCanonicalCount = 33
 
 var ExpectedCategoryCounts = map[string]int{
-	"foundation": 20,
-	"agent":      15,
-	"codebase":   20,
-	"runtime":    20,
-	"debug":      20,
-	"project":    20,
-	"knowledge":  20,
-	"planning":   20,
-	"business":   20,
-	"education":  20,
+	"uml":          5,
+	"relationship": 4,
+	"temporal":     4,
+	"flow":         4,
+	"hierarchy":    4,
+	"evidence":     4,
+	"matrix":       4,
+	"spatial":      4,
 }
 
 var SupportedLayoutPresets = map[string]bool{
@@ -286,6 +285,10 @@ var SupportedLayoutPresets = map[string]bool{
 	"step_ladder":          true,
 	"line":                 true,
 	"citation_map":         true,
+	"sequence_lifelines":   true,
+	"class_cards":          true,
+	"activity_swimlanes":   true,
+	"component_deployment": true,
 }
 
 func normalizeInputSchemaKind(kind string) string {

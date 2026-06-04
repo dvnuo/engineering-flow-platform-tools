@@ -1,0 +1,152 @@
+{
+  "edges": [
+    {
+      "from": "foundation-radial-tree-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "foundation-radial-tree-node-2",
+      "weight": 2
+    },
+    {
+      "from": "foundation-radial-tree-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "foundation-radial-tree-node-3",
+      "weight": 3
+    },
+    {
+      "from": "foundation-radial-tree-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "foundation-radial-tree-node-4",
+      "weight": 2
+    },
+    {
+      "from": "foundation-radial-tree-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "foundation-radial-tree-node-5",
+      "weight": 4
+    },
+    {
+      "from": "foundation-radial-tree-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "foundation-radial-tree-node-6",
+      "weight": 2
+    },
+    {
+      "from": "foundation-radial-tree-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "foundation-radial-tree-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "input",
+      "id": "foundation-radial-tree-node-1",
+      "kind": "radial",
+      "label": "Radial Tree Intake",
+      "metadata": {
+        "detail": "Radial Tree signal 1",
+        "owner": "input",
+        "template_id": "foundation.radial_tree"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "layout",
+      "id": "foundation-radial-tree-node-2",
+      "kind": "tree",
+      "label": "Tree Radial Core",
+      "metadata": {
+        "detail": "Radial Tree signal 2",
+        "owner": "layout",
+        "template_id": "foundation.radial_tree"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "output",
+      "id": "foundation-radial-tree-node-3",
+      "kind": "output",
+      "label": "Radial Tree Policy",
+      "metadata": {
+        "detail": "Radial Tree signal 3",
+        "owner": "output",
+        "template_id": "foundation.radial_tree"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "input",
+      "id": "foundation-radial-tree-node-4",
+      "kind": "input",
+      "label": "Tree Radial Execution",
+      "metadata": {
+        "detail": "Radial Tree signal 4",
+        "owner": "input",
+        "template_id": "foundation.radial_tree"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "layout",
+      "id": "foundation-radial-tree-node-5",
+      "kind": "radial",
+      "label": "Radial Tree Risk",
+      "metadata": {
+        "detail": "Radial Tree signal 5",
+        "owner": "layout",
+        "template_id": "foundation.radial_tree"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "output",
+      "id": "foundation-radial-tree-node-6",
+      "kind": "tree",
+      "label": "Tree Radial Outcome",
+      "metadata": {
+        "detail": "Radial Tree signal 6",
+        "owner": "output",
+        "template_id": "foundation.radial_tree"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Package Containment Hierarchy Scenario",
+  "initial_view": {
+    "mode": "overview",
+    "collapse_groups": true,
+    "max_nodes": 70,
+    "max_edges": 140
+  }
+}

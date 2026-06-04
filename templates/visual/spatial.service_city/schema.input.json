@@ -1,0 +1,424 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "foundation-city-map-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "foundation-city-map-node-2",
+        "weight": 2
+      },
+      {
+        "from": "foundation-city-map-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "foundation-city-map-node-3",
+        "weight": 3
+      },
+      {
+        "from": "foundation-city-map-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "foundation-city-map-node-4",
+        "weight": 2
+      },
+      {
+        "from": "foundation-city-map-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "foundation-city-map-node-5",
+        "weight": 4
+      },
+      {
+        "from": "foundation-city-map-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "foundation-city-map-node-6",
+        "weight": 2
+      },
+      {
+        "from": "foundation-city-map-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "foundation-city-map-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "input",
+        "id": "foundation-city-map-node-1",
+        "kind": "city",
+        "label": "City Map Intake",
+        "metadata": {
+          "detail": "City Map signal 1",
+          "owner": "input",
+          "template_id": "foundation.city_map"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "success"
+      },
+      {
+        "group": "layout",
+        "id": "foundation-city-map-node-2",
+        "kind": "map",
+        "label": "Map City Core",
+        "metadata": {
+          "detail": "City Map signal 2",
+          "owner": "layout",
+          "template_id": "foundation.city_map"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "output",
+        "id": "foundation-city-map-node-3",
+        "kind": "output",
+        "label": "City Map Policy",
+        "metadata": {
+          "detail": "City Map signal 3",
+          "owner": "output",
+          "template_id": "foundation.city_map"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "error"
+      },
+      {
+        "group": "input",
+        "id": "foundation-city-map-node-4",
+        "kind": "input",
+        "label": "Map City Execution",
+        "metadata": {
+          "detail": "City Map signal 4",
+          "owner": "input",
+          "template_id": "foundation.city_map"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "running"
+      },
+      {
+        "group": "layout",
+        "id": "foundation-city-map-node-5",
+        "kind": "city",
+        "label": "City Map Risk",
+        "metadata": {
+          "detail": "City Map signal 5",
+          "owner": "layout",
+          "template_id": "foundation.city_map"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "ok"
+      },
+      {
+        "group": "output",
+        "id": "foundation-city-map-node-6",
+        "kind": "map",
+        "label": "Map City Outcome",
+        "metadata": {
+          "detail": "City Map signal 6",
+          "owner": "output",
+          "template_id": "foundation.city_map"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "warning"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Service City Map Scenario",
+    "initial_view": {
+      "mode": "overview",
+      "collapse_groups": true,
+      "max_nodes": 70,
+      "max_edges": 140
+    }
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "json-schema-draft-2020-12",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "importance": {
+              "description": "0..1 priority used when the renderer caps the initial edge count.",
+              "type": "number"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "visibility": {
+              "description": "Use detail for noisy class/method/import edges that should stay hidden until search or focus.",
+              "enum": [
+                "overview",
+                "detail",
+                "hidden"
+              ],
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "groups": {
+        "description": "Optional logical containers for large graphs. Nodes can reference a group by parent_id, group_id, group, module, or package. Collapsed groups form the initial overview.",
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "collapsed": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "importance": {
+              "type": "number"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "initial_view": {
+        "additionalProperties": true,
+        "description": "Optional first-view guidance for agents. Use overview and collapsed groups for large inputs.",
+        "properties": {
+          "collapse_groups": {
+            "type": "boolean"
+          },
+          "focus_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "hide_edge_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "max_edges": {
+            "type": "number"
+          },
+          "max_nodes": {
+            "type": "number"
+          },
+          "mode": {
+            "enum": [
+              "overview",
+              "detail",
+              "focus"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "group_id": {
+              "description": "Alias for parent_id.",
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "importance": {
+              "description": "0..1 priority used for label LOD and large-graph sampling.",
+              "type": "number"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "module": {
+              "description": "Module grouping hint used when parent_id/group_id is absent.",
+              "type": "string"
+            },
+            "package": {
+              "description": "Package grouping hint used when parent_id/group_id is absent.",
+              "type": "string"
+            },
+            "parent_id": {
+              "description": "Logical group id for collapsed overview rendering.",
+              "type": "string"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "visible": {
+              "description": "Set false for low-value detail nodes in the initial overview.",
+              "type": "boolean"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "spatial.service_city"
+}

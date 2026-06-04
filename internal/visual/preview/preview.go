@@ -38,6 +38,19 @@ type Summary struct {
 	VisibleNodes           int      `json:"visible_nodes,omitempty"`
 	VisibleEdges           int      `json:"visible_edges,omitempty"`
 	Events                 int      `json:"events,omitempty"`
+	Participants           int      `json:"participants,omitempty"`
+	Messages               int      `json:"messages,omitempty"`
+	Phases                 int      `json:"phases,omitempty"`
+	Activations            int      `json:"activations,omitempty"`
+	Fragments              int      `json:"fragments,omitempty"`
+	Classes                int      `json:"classes,omitempty"`
+	Relationships          int      `json:"relationships,omitempty"`
+	States                 int      `json:"states,omitempty"`
+	Transitions            int      `json:"transitions,omitempty"`
+	Actions                int      `json:"actions,omitempty"`
+	Flows                  int      `json:"flows,omitempty"`
+	Components             int      `json:"components,omitempty"`
+	Deployments            int      `json:"deployments,omitempty"`
 	Claims                 int      `json:"claims,omitempty"`
 	Sources                int      `json:"sources,omitempty"`
 	Links                  int      `json:"links,omitempty"`
@@ -60,6 +73,8 @@ type Summary struct {
 	EventsWithoutNodeID    int      `json:"events_without_node_id,omitempty"`
 	EventsWithoutKnownNode int      `json:"events_without_known_node,omitempty"`
 	EventNodeCoverage      float64  `json:"event_node_coverage,omitempty"`
+	MessagesWithoutPhase   int      `json:"messages_without_phase,omitempty"`
+	ParticipantFanout      []string `json:"participant_fanout,omitempty"`
 	MissingImportance      int      `json:"missing_importance,omitempty"`
 	MissingVisibility      int      `json:"missing_visibility,omitempty"`
 	HighFanoutNodes        []string `json:"high_fanout_nodes,omitempty"`
@@ -179,11 +194,117 @@ func Analyze(tpl manifest.TemplateManifest, data map[string]any) (int, Summary, 
 			quality -= 20
 			warnings = append(warnings, Warning{Code: "matrix_items_high", Message: "Matrix has more items than the recommended initial view.", Hint: "Use filters, categories, or high-importance items for the first view."})
 		}
+	case "uml_sequence_v1":
+		quality = analyzeUMLSequence(data, design, &summary, &warnings, &recommendations)
+	case "uml_class_v1":
+		quality = analyzeSemanticCount(data, design, &summary, &warnings, "classes", "relationships", "uml_class_dense", "Class diagram has more classes or relationships than the recommended first view.")
+	case "uml_state_machine_v1":
+		quality = analyzeSemanticCount(data, design, &summary, &warnings, "states", "transitions", "uml_state_machine_dense", "State machine has more states or transitions than the recommended first view.")
+	case "uml_activity_v1":
+		quality = analyzeSemanticCount(data, design, &summary, &warnings, "actions", "flows", "uml_activity_dense", "Activity diagram has more actions or flows than the recommended first view.")
+	case "uml_component_deployment_v1":
+		quality = analyzeSemanticCount(data, design, &summary, &warnings, "components", "links", "uml_component_dense", "Component deployment diagram has more components or links than the recommended first view.")
 	}
 	if quality < 0 {
 		quality = 0
 	}
 	return quality, summary, warnings, recommendations
+}
+
+func analyzeUMLSequence(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
+	participants := objectArray(data, "participants")
+	messages := objectArray(data, "messages")
+	phases := objectArray(data, "phases")
+	activations := objectArray(data, "activations")
+	fragments := objectArray(data, "fragments")
+	summary.Participants = len(participants)
+	summary.Messages = len(messages)
+	summary.Phases = len(phases)
+	summary.Activations = len(activations)
+	summary.Fragments = len(fragments)
+	quality := 100
+	if len(participants) > 10 {
+		quality -= 18
+		*warnings = append(*warnings, Warning{Code: "uml_participants_high", Severity: "warning", Message: "Sequence diagram has more participants than a readable 3D overview.", Hint: "Merge low-level classes into subsystem participants or split the flow into multiple sequence scenes."})
+	}
+	if len(messages) > design.MaxInitialEdges {
+		quality -= 20
+		*warnings = append(*warnings, Warning{Code: "uml_messages_high", Severity: "warning", Message: "Sequence diagram has more messages than the recommended initial view.", Hint: "Use fragments for loops/retries and keep only important calls in the first scene."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "fragments[]")
+	}
+	phaseIDs := map[string]bool{}
+	for _, phase := range phases {
+		if id := stringField(phase, "id"); id != "" {
+			phaseIDs[id] = true
+		}
+	}
+	fanout := map[string]int{}
+	longLabels := []string{}
+	for _, message := range messages {
+		from := stringField(message, "from")
+		to := stringField(message, "to")
+		fanout[from]++
+		fanout[to]++
+		label := displayLabelField(message)
+		if len(label) > 48 {
+			longLabels = appendCapped(longLabels, label, 8)
+		}
+		if len(phaseIDs) > 0 && stringField(message, "phase") == "" {
+			summary.MessagesWithoutPhase++
+		}
+	}
+	if summary.MessagesWithoutPhase > 0 {
+		quality -= minInt(16, 5+summary.MessagesWithoutPhase)
+		*warnings = append(*warnings, Warning{Code: "uml_messages_missing_phase", Severity: "warning", Message: "Some sequence messages are not assigned to a phase.", Hint: "Set messages[].phase so the renderer can color the flow and build a meaningful legend."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "messages[].phase")
+	}
+	if len(activations) == 0 && len(messages) >= 6 {
+		quality -= 12
+		*warnings = append(*warnings, Warning{Code: "uml_activations_missing", Severity: "warning", Message: "Sequence input does not declare activations, so execution spans are less clear.", Hint: "Add activations with participant_id, start_order, and end_order for important execution windows."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "activations[]")
+	}
+	if len(fragments) == 0 && len(messages) >= 12 {
+		quality -= 8
+		*warnings = append(*warnings, Warning{Code: "uml_fragments_missing", Severity: "info", Message: "Long sequence input has no loop/alt/opt fragments.", Hint: "Use fragments to summarize loops, retries, alternatives, and parallel sections instead of expanding every repeated message."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "fragments[]")
+	}
+	if len(longLabels) > 0 {
+		quality -= 8
+		summary.LongLabels = longLabels
+		*warnings = append(*warnings, Warning{Code: "uml_message_labels_too_long", Severity: "warning", Message: "Some sequence message labels are too long for 3D billboards.", Hint: "Use short method/event labels and move full signatures, files, or code references into metadata.", Details: longLabels})
+		recommendations.RewriteLabels = append(recommendations.RewriteLabels, longLabels...)
+	}
+	summary.ParticipantFanout = highFanoutNodes(fanout, 12)
+	if len(summary.ParticipantFanout) > 0 {
+		quality -= 6
+		*warnings = append(*warnings, Warning{Code: "uml_participant_fanout_high", Severity: "info", Message: "Some participants receive many messages and may become visual bottlenecks.", Hint: "Use phases, focus scenes, or split high-fanout participants into clearer subsystem roles.", Details: summary.ParticipantFanout})
+	}
+	return quality
+}
+
+func analyzeSemanticCount(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, primaryField, edgeField, code, message string) int {
+	primary := len(array(data, primaryField))
+	edges := len(array(data, edgeField))
+	switch primaryField {
+	case "classes":
+		summary.Classes = primary
+		summary.Relationships = edges
+	case "states":
+		summary.States = primary
+		summary.Transitions = edges
+	case "actions":
+		summary.Actions = primary
+		summary.Flows = edges
+	case "components":
+		summary.Components = primary
+		summary.Links = edges
+		summary.Deployments = len(array(data, "deployments"))
+	}
+	if primary > design.MaxInitialNodes || edges > design.MaxInitialEdges {
+		*warnings = append(*warnings, Warning{Code: code, Severity: "warning", Message: message, Hint: "Split the diagram into focused scenes or hide low-importance details from the initial view."})
+		return 78
+	}
+	return 100
 }
 
 func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {

@@ -72,7 +72,7 @@ For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructio
 
 ### Visual
 
-`visual` generates complete offline static visualization artifacts from 195 canonical local templates. Installed templates default to `~/.efp/template/visual`; source checkouts and release archives can still pass `--template-dir ./templates/visual`. It validates input JSON, copies local template assets, and writes `index.html`, `manifest.json`, `manifest.js`, `data.js`, and `assets/**` to `--out`. It does not call Portal, MCP, Node/npm, a server, a CDN, or any remote asset.
+`visual` generates complete offline static visualization artifacts from 33 semantic local templates, including dedicated UML templates. Installed templates default to `~/.efp/template/visual`; source checkouts and release archives can still pass `--template-dir ./templates/visual`. It validates input JSON, copies local template assets, and writes `index.html`, `manifest.json`, `manifest.js`, `data.js`, and `assets/**` to `--out`. It does not call Portal, MCP, Node/npm, a server, a CDN, or any remote asset.
 
 For VS Code GitHub Copilot, copy `cmd/visual/visual-cli.instructions.md` to `~/.copilot/instructions/visual-cli.instructions.md` so Copilot uses `visual` as a terminal CLI and returns the generated `index.html` path.
 
@@ -284,10 +284,10 @@ The current OpenCode runtime image consumes prebuilt binaries copied into `runti
 ```bash
 visual template categories --template-dir ./templates/visual --json
 visual template list --template-dir ./templates/visual --json
-visual template list --template-dir ./templates/visual --category codebase --json
-visual template schema agent.run_trace --template-dir ./templates/visual --json
-visual inspect-input --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --json
-visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json
+visual template list --template-dir ./templates/visual --category uml --json
+visual template schema uml.sequence_3d --template-dir ./templates/visual --json
+visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json
+visual render --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --out ./out/sequence --title "Checkout Sequence" --json
 ```
 
 ## URL Instance Routing

@@ -1,0 +1,194 @@
+{
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "uml.state_machine_3d",
+  "input_schema_kind": "uml_state_machine_v1",
+  "json_schema": {
+    "$schema": "json-schema-draft-2020-12",
+    "type": "object",
+    "required": [
+      "schema",
+      "states",
+      "transitions"
+    ],
+    "properties": {
+      "schema": {
+        "const": "efp.visual.input.uml.state_machine.v1"
+      },
+      "title": {
+        "type": "string"
+      },
+      "notes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "states": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "region": {
+              "type": "string"
+            },
+            "entry": {
+              "type": "string"
+            },
+            "exit": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "transitions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "from",
+            "to",
+            "trigger"
+          ],
+          "properties": {
+            "from": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "trigger": {
+              "type": "string"
+            },
+            "guard": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  },
+  "example": {
+    "schema": "efp.visual.input.uml.state_machine.v1",
+    "title": "Agent Run State Machine",
+    "states": [
+      {
+        "id": "queued",
+        "label": "Queued",
+        "kind": "initial",
+        "region": "run",
+        "entry": "reserve worker",
+        "status": "ok"
+      },
+      {
+        "id": "planning",
+        "label": "Planning",
+        "kind": "state",
+        "region": "run",
+        "entry": "read prompt",
+        "status": "running"
+      },
+      {
+        "id": "editing",
+        "label": "Editing",
+        "kind": "state",
+        "region": "run",
+        "entry": "modify files",
+        "status": "running"
+      },
+      {
+        "id": "verifying",
+        "label": "Verifying",
+        "kind": "state",
+        "region": "run",
+        "entry": "run tests",
+        "status": "warning"
+      },
+      {
+        "id": "blocked",
+        "label": "Blocked",
+        "kind": "state",
+        "region": "exception",
+        "entry": "request missing input",
+        "status": "blocked"
+      },
+      {
+        "id": "complete",
+        "label": "Complete",
+        "kind": "final",
+        "region": "run",
+        "entry": "report artifact",
+        "status": "success"
+      }
+    ],
+    "transitions": [
+      {
+        "from": "queued",
+        "to": "planning",
+        "trigger": "worker assigned",
+        "action": "load workspace",
+        "status": "success"
+      },
+      {
+        "from": "planning",
+        "to": "editing",
+        "trigger": "plan accepted",
+        "guard": "context complete",
+        "status": "success"
+      },
+      {
+        "from": "editing",
+        "to": "verifying",
+        "trigger": "files changed",
+        "action": "run go test",
+        "status": "running"
+      },
+      {
+        "from": "verifying",
+        "to": "editing",
+        "trigger": "test failure",
+        "guard": "fixable",
+        "status": "warning"
+      },
+      {
+        "from": "verifying",
+        "to": "complete",
+        "trigger": "all checks pass",
+        "status": "success"
+      },
+      {
+        "from": "planning",
+        "to": "blocked",
+        "trigger": "missing repo access",
+        "status": "blocked"
+      }
+    ]
+  }
+}

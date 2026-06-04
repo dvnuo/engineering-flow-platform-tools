@@ -1,0 +1,212 @@
+{
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "uml.class_structure_2_5d",
+  "input_schema_kind": "uml_class_v1",
+  "json_schema": {
+    "$schema": "json-schema-draft-2020-12",
+    "type": "object",
+    "required": [
+      "schema",
+      "classes"
+    ],
+    "properties": {
+      "schema": {
+        "const": "efp.visual.input.uml.class.v1"
+      },
+      "title": {
+        "type": "string"
+      },
+      "notes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "classes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "id",
+            "name"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "stereotype": {
+              "type": "string"
+            },
+            "package": {
+              "type": "string"
+            },
+            "attributes": {
+              "type": "array"
+            },
+            "operations": {
+              "type": "array"
+            },
+            "responsibility": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "relationships": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "from",
+            "to",
+            "kind"
+          ],
+          "properties": {
+            "from": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "multiplicity": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  },
+  "example": {
+    "schema": "efp.visual.input.uml.class.v1",
+    "title": "Visual Rendering Class Structure",
+    "classes": [
+      {
+        "id": "renderer",
+        "name": "VisualRenderer",
+        "stereotype": "service",
+        "package": "render",
+        "attributes": [
+          "registry: RendererRegistry",
+          "runtime: RuntimeAssets"
+        ],
+        "operations": [
+          "render(input)",
+          "inspectOutput()"
+        ],
+        "responsibility": "Coordinates template rendering",
+        "metrics": {
+          "importance": 0.9
+        }
+      },
+      {
+        "id": "template",
+        "name": "TemplateManifest",
+        "stereotype": "entity",
+        "package": "manifest",
+        "attributes": [
+          "id",
+          "renderer",
+          "inputSchemaKind"
+        ],
+        "operations": [
+          "validate()"
+        ],
+        "responsibility": "Declares template contract"
+      },
+      {
+        "id": "schema",
+        "name": "InputSchema",
+        "stereotype": "value",
+        "package": "schema",
+        "attributes": [
+          "kind",
+          "jsonSchema",
+          "example"
+        ],
+        "operations": [
+          "describe()"
+        ],
+        "responsibility": "Guides agents before input generation"
+      },
+      {
+        "id": "artifact",
+        "name": "VisualArtifact",
+        "stereotype": "entity",
+        "package": "render",
+        "attributes": [
+          "entrypoint",
+          "files",
+          "offline"
+        ],
+        "operations": [
+          "listFiles()"
+        ],
+        "responsibility": "Captures output contract"
+      },
+      {
+        "id": "doctor",
+        "name": "TemplateDoctor",
+        "stereotype": "service",
+        "package": "quality",
+        "attributes": [
+          "expectedCounts"
+        ],
+        "operations": [
+          "checkRegistry()",
+          "renderExamples()"
+        ],
+        "responsibility": "Verifies every template"
+      }
+    ],
+    "relationships": [
+      {
+        "from": "renderer",
+        "to": "template",
+        "kind": "uses",
+        "label": "loads manifest"
+      },
+      {
+        "from": "template",
+        "to": "schema",
+        "kind": "composes",
+        "label": "input contract"
+      },
+      {
+        "from": "renderer",
+        "to": "artifact",
+        "kind": "creates",
+        "label": "offline artifact"
+      },
+      {
+        "from": "doctor",
+        "to": "template",
+        "kind": "validates",
+        "label": "manifest and example"
+      },
+      {
+        "from": "doctor",
+        "to": "artifact",
+        "kind": "verifies",
+        "label": "required files"
+      }
+    ]
+  }
+}

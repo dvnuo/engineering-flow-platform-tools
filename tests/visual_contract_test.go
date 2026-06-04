@@ -420,6 +420,28 @@ func TestVisualSmokeScriptsUseSemanticTemplates(t *testing.T) {
 	}
 }
 
+func TestVisualGraphInteractionKeepsCameraStableForNodeDragAndExpand(t *testing.T) {
+	root := repoRoot(t)
+	renderer := mustRead(t, filepath.Join(root, "templates", "visual", "_shared", "runtime", "efp-visual-renderers.iife.js"))
+	for _, want := range []string{
+		"function anchorExpandedLayout(positions)",
+		"anchorExpandedLayout(positions);",
+		`} else if (dragMode === "pendingNode") {`,
+		`dragMode = "idle";`,
+		`} else if (dragMode === "orbit") {`,
+	} {
+		if !strings.Contains(renderer, want) {
+			t.Fatalf("visual 3D graph interaction contract missing %q", want)
+		}
+	}
+	if strings.Contains(renderer, `} else {
+            orbit.theta -= dx * 0.006;
+            orbit.phi -= dy * 0.005;
+          }`) {
+		t.Fatal("node drag fallback can still fall through into orbit camera movement")
+	}
+}
+
 func assertRegistryEntryQuality(t *testing.T, entry visualRegistryEntry) {
 	t.Helper()
 	if entry.Title == "" || entry.Description == "" {

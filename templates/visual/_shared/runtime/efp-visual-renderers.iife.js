@@ -1030,6 +1030,34 @@
         return target.clone().multiplyScalar(0.16);
       }
 
+      function anchorExpandedLayout(positions) {
+        if (!lastExpandOrigin || !lastExpandOrigin.id || !lastExpandOrigin.position) {
+          return;
+        }
+        var anchor = positions[lastExpandOrigin.id] ? positions[lastExpandOrigin.id].clone() : null;
+        if (!anchor) {
+          var group = state.groups[lastExpandOrigin.id];
+          var sum = new THREE.Vector3();
+          var hits = 0;
+          (group && group.children ? group.children : []).forEach(function (child) {
+            if (child && positions[child.id]) {
+              sum.add(positions[child.id]);
+              hits += 1;
+            }
+          });
+          if (hits > 0) {
+            anchor = sum.multiplyScalar(1 / hits);
+          }
+        }
+        if (!anchor) {
+          return;
+        }
+        var shift = lastExpandOrigin.position.clone().sub(anchor);
+        Object.keys(positions).forEach(function (id) {
+          positions[id].add(shift);
+        });
+      }
+
       function endpointMeshes(edge) {
         var from = nodeMap[edge.from] && nodeMap[edge.from].mesh;
         var to = nodeMap[edge.to] && nodeMap[edge.to].mesh;
@@ -1214,6 +1242,7 @@
         var previousPositions = snapshotNodePositions();
         clearGraph();
         var positions = layoutGraphNodes3D(THREE, currentModel.nodes, preset);
+        anchorExpandedLayout(positions);
         var sphere = new THREE.IcosahedronGeometry(0.22, 2);
         var groupSphere = new THREE.SphereGeometry(0.34, 24, 16);
         var panel = new THREE.BoxGeometry(0.46, 0.34, 0.22);
@@ -1296,6 +1325,7 @@
         });
         buildParticles(currentModel.nodes.length + currentModel.edges.length);
         applyFocus(selectedID && nodeMap[selectedID] ? selectedID : "");
+        lastExpandOrigin = null;
       }
 
       function raycast(event) {
@@ -1382,6 +1412,8 @@
             if (dragMode === "pendingNode" && pendingMesh && beginNodeDrag(pendingMesh, event)) {
               dragMode = "node";
               applyFocus(pendingMesh.userData.id);
+            } else if (dragMode === "pendingNode") {
+              dragMode = "idle";
             } else if (dragMode === "pendingPan") {
               freezeCameraMotion();
               dragMode = "pan";
@@ -1395,7 +1427,7 @@
           } else if (dragMode === "pan") {
             orbit.target.x -= dx * orbit.radius * 0.0018;
             orbit.target.y += dy * orbit.radius * 0.0018;
-          } else {
+          } else if (dragMode === "orbit") {
             orbit.theta -= dx * 0.006;
             orbit.phi -= dy * 0.005;
           }

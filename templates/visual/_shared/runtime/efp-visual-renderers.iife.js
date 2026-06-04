@@ -739,6 +739,479 @@
     }
   }
 
+  function isPrimaryThreeGraph(manifest, preset, profile) {
+    var effects = effectSpec(manifest);
+    if (effects.engine !== "three.v1") {
+      return false;
+    }
+    preset = normalizePreset(preset);
+    var scene = safeClass(effects.scene);
+    return preset === "constellation" || preset === "graph_3d" || preset === "graph_2_5d" || preset === "orbit_system" || scene.indexOf("galaxy") >= 0 || scene.indexOf("constellation") >= 0 || scene.indexOf("orbit") >= 0 || (profile && profile.key === "space");
+  }
+
+  function graphNodeGroupKey(node) {
+    if (!node) {
+      return "";
+    }
+    return String(node.parent_id || node.group_id || node.group || node.module || node.package || node.kind || "").trim();
+  }
+
+  function layoutGraphNodes3D(THREE, nodes, preset) {
+    var positions = {};
+    var count = Math.max(1, nodes.length);
+    var groupIndex = {};
+    var groupCounts = {};
+    var groups = [];
+    nodes.forEach(function (node) {
+      var key = graphNodeGroupKey(node) || "ungrouped";
+      if (!groupIndex[key]) {
+        groupIndex[key] = groups.length + 1;
+        groups.push(key);
+      }
+      groupCounts[key] = 0;
+    });
+    nodes.forEach(function (node, index) {
+      var key = graphNodeGroupKey(node) || "ungrouped";
+      var g = groupIndex[key] - 1;
+      var local = groupCounts[key] || 0;
+      groupCounts[key] = local + 1;
+      var angle = (Math.PI * 2 * index) / count;
+      var x;
+      var y;
+      var z;
+      if (node.__group || preset === "orbit_system") {
+        var radius = 1.85 + (index % 4) * 0.38;
+        x = Math.cos(angle) * radius;
+        y = Math.sin(index * 0.73) * 0.82;
+        z = Math.sin(angle) * radius;
+      } else if (groups.length > 1) {
+        var groupAngle = (Math.PI * 2 * g) / groups.length;
+        var localAngle = groupAngle + (local - 1) * 0.42;
+        var clusterRadius = 2.2 + (g % 3) * 0.26;
+        var localRadius = 0.32 + Math.sqrt(local + 1) * 0.18;
+        x = Math.cos(groupAngle) * clusterRadius + Math.cos(localAngle) * localRadius;
+        y = ((local % 7) - 3) * 0.2;
+        z = Math.sin(groupAngle) * clusterRadius + Math.sin(localAngle) * localRadius;
+      } else {
+        var golden = Math.PI * (3 - Math.sqrt(5));
+        y = 1 - (index / Math.max(1, count - 1)) * 2;
+        var sphereRadius = Math.sqrt(Math.max(0, 1 - y * y));
+        var theta = index * golden;
+        x = Math.cos(theta) * sphereRadius * 2.8;
+        z = Math.sin(theta) * sphereRadius * 2.8;
+        y *= 1.28;
+      }
+      positions[node.id] = new THREE.Vector3(x, y, z);
+    });
+    return positions;
+  }
+
+  function disposeThreeObject(object) {
+    if (!object) {
+      return;
+    }
+    if (object.children) {
+      object.children.slice().forEach(disposeThreeObject);
+    }
+    if (object.geometry && object.geometry.dispose) {
+      object.geometry.dispose();
+    }
+    if (object.material) {
+      if (Array.isArray(object.material)) {
+        object.material.forEach(function (material) {
+          if (material && material.dispose) {
+            material.dispose();
+          }
+        });
+      } else if (object.material.dispose) {
+        object.material.dispose();
+      }
+    }
+  }
+
+  function createThreeGraphScene(stage, manifest, state, preset, profile, inspector, onGraphChange) {
+    var effects = effectSpec(manifest);
+    if (effects.engine !== "three.v1") {
+      return null;
+    }
+    var THREE = window.THREE;
+    if (!THREE || !THREE.WebGLRenderer) {
+      stage.classList.add("visual-three-missing");
+      return null;
+    }
+    try {
+      stage.classList.add("visual-three-primary");
+      var layer = el("div", "visual-three-layer visual-three-primary-layer visual-three-scene-" + safeClass(effects.scene));
+      layer.setAttribute("role", "application");
+      layer.setAttribute("aria-label", "Interactive 3D graph. Drag to orbit, use the mouse wheel to zoom, click a node to inspect it.");
+      stage.appendChild(layer);
+      var width = Math.max(720, stage.clientWidth || 900);
+      var height = Math.max(520, stage.clientHeight || 620);
+      var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer.setClearColor(0x000000, 0);
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      renderer.setSize(width, height, false);
+      if (THREE.SRGBColorSpace) {
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+      }
+      layer.appendChild(renderer.domElement);
+      var labelLayer = el("div", "visual-three-label-layer");
+      layer.appendChild(labelLayer);
+
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 140);
+      var orbit = {
+        theta: 0.24,
+        phi: 1.16,
+        radius: 7.4,
+        target: new THREE.Vector3(0, 0, 0)
+      };
+      scene.add(new THREE.AmbientLight(0xffffff, 0.52));
+      var keyLight = new THREE.DirectionalLight(0x9bd7ff, 1.45);
+      keyLight.position.set(4.5, 5.8, 5.4);
+      scene.add(keyLight);
+      var fillLight = new THREE.DirectionalLight(0x38d6aa, 0.72);
+      fillLight.position.set(-4.2, -1.4, -3.5);
+      scene.add(fillLight);
+
+      var root = new THREE.Group();
+      var edgeRoot = new THREE.Group();
+      var nodeRoot = new THREE.Group();
+      root.add(edgeRoot);
+      root.add(nodeRoot);
+      scene.add(root);
+      var particleRoot = new THREE.Group();
+      scene.add(particleRoot);
+
+      var objects = [];
+      var nodeMap = {};
+      var edgeItems = [];
+      var labels = [];
+      var selectedID = "";
+      var hoverID = "";
+      var currentModel = { nodes: [], edges: [] };
+      var currentFilters = {};
+      var pointer = new THREE.Vector2();
+      var raycaster = new THREE.Raycaster();
+      var dragging = false;
+      var moved = false;
+      var dragMode = "orbit";
+      var lastX = 0;
+      var lastY = 0;
+      var start = Date.now();
+
+      function updateCamera() {
+        orbit.phi = Math.max(0.24, Math.min(Math.PI - 0.24, orbit.phi));
+        orbit.radius = Math.max(2.2, Math.min(22, orbit.radius));
+        var sinPhi = Math.sin(orbit.phi);
+        camera.position.set(
+          orbit.target.x + orbit.radius * sinPhi * Math.sin(orbit.theta),
+          orbit.target.y + orbit.radius * Math.cos(orbit.phi),
+          orbit.target.z + orbit.radius * sinPhi * Math.cos(orbit.theta)
+        );
+        camera.lookAt(orbit.target);
+      }
+
+      function clearGraph() {
+        objects = [];
+        nodeMap = {};
+        edgeItems = [];
+        labels = [];
+        while (labelLayer.firstChild) {
+          labelLayer.removeChild(labelLayer.firstChild);
+        }
+        nodeRoot.children.slice().forEach(function (child) {
+          nodeRoot.remove(child);
+          disposeThreeObject(child);
+        });
+        edgeRoot.children.slice().forEach(function (child) {
+          edgeRoot.remove(child);
+          disposeThreeObject(child);
+        });
+      }
+
+      function addLabel(node, mesh) {
+        var label = el("div", "visual-three-label" + (node.__group ? " visual-three-group-label" : ""), itemLabel(node));
+        labelLayer.appendChild(label);
+        labels.push({ element: label, mesh: mesh, node: node });
+      }
+
+      function buildParticles(total) {
+        particleRoot.children.slice().forEach(function (child) {
+          particleRoot.remove(child);
+          disposeThreeObject(child);
+        });
+        var particleCount = Math.min(780, 160 + total * 10);
+        var particlePositions = new Float32Array(particleCount * 3);
+        for (var i = 0; i < particleCount; i += 1) {
+          var a = (Math.PI * 2 * i) / particleCount;
+          var r = 3.2 + (i % 13) * 0.18;
+          particlePositions[i * 3] = Math.cos(a) * r;
+          particlePositions[i * 3 + 1] = Math.sin(i * 0.41) * 1.55;
+          particlePositions[i * 3 + 2] = Math.sin(a) * r;
+        }
+        var particleGeometry = new THREE.BufferGeometry();
+        particleGeometry.setAttribute("position", new THREE.Float32BufferAttribute(particlePositions, 3));
+        particleRoot.add(new THREE.Points(particleGeometry, new THREE.PointsMaterial({
+          color: profile && profile.radar ? 0x35c2a1 : 0x63a9ff,
+          size: 0.028,
+          transparent: true,
+          opacity: 0.44,
+          blending: THREE.AdditiveBlending
+        })));
+      }
+
+      function applyFocus(id) {
+        selectedID = id || "";
+        var neighborIDs = {};
+        edgeItems.forEach(function (item) {
+          var active = id && (item.edge.from === id || item.edge.to === id);
+          item.line.material.opacity = active ? 0.95 : id ? 0.18 : 0.48;
+          if (active) {
+            neighborIDs[item.edge.from] = true;
+            neighborIDs[item.edge.to] = true;
+          }
+        });
+        Object.keys(nodeMap).forEach(function (key) {
+          var mesh = nodeMap[key].mesh;
+          var base = mesh.userData.baseScale || 1;
+          var active = key === id;
+          var neighbor = neighborIDs[key];
+          mesh.scale.setScalar(base * (active ? 1.38 : neighbor ? 1.14 : 1));
+          mesh.material.transparent = true;
+          mesh.material.opacity = !id || active || neighbor ? mesh.userData.baseOpacity : 0.34;
+          if (mesh.material.emissiveIntensity !== undefined) {
+            mesh.material.emissiveIntensity = active ? 0.68 : neighbor ? 0.34 : mesh.userData.baseEmissive;
+          }
+        });
+      }
+
+      function rebuild(model, filters) {
+        currentModel = model || visibleGraph(state, filters || currentFilters);
+        currentFilters = filters || currentFilters || {};
+        clearGraph();
+        var positions = layoutGraphNodes3D(THREE, currentModel.nodes, preset);
+        var sphere = new THREE.IcosahedronGeometry(0.22, 2);
+        var groupSphere = new THREE.SphereGeometry(0.34, 24, 16);
+        var panel = new THREE.BoxGeometry(0.46, 0.34, 0.22);
+        currentModel.nodes.forEach(function (node) {
+          var geometry = node.__group ? groupSphere : preset === "graph_2_5d" ? panel : sphere;
+          var material = createThreeMaterial(THREE, node, effects);
+          material.transparent = true;
+          material.opacity = node.__group ? 0.9 : 0.82;
+          var mesh = new THREE.Mesh(geometry, material);
+          mesh.position.copy(positions[node.id] || new THREE.Vector3(0, 0, 0));
+          var scale = node.__group ? 1 + Math.min(1.7, (node.child_count || 1) / 18) : 0.72 + importanceValue(node, 0.35) * 0.7;
+          mesh.scale.setScalar(scale);
+          mesh.userData = {
+            id: node.id,
+            label: itemLabel(node),
+            node: node,
+            baseScale: scale,
+            baseOpacity: material.opacity,
+            baseEmissive: material.emissiveIntensity || 0.14
+          };
+          nodeRoot.add(mesh);
+          objects.push(mesh);
+          nodeMap[node.id] = { mesh: mesh, node: node };
+          if (node.__group || currentModel.nodes.length <= 28 || importanceValue(node, 0) >= 0.72) {
+            addLabel(node, mesh);
+          }
+        });
+        currentModel.edges.forEach(function (edge) {
+          var from = positions[edge.from];
+          var to = positions[edge.to];
+          if (!from || !to) {
+            return;
+          }
+          var lineGeo = new THREE.BufferGeometry();
+          lineGeo.setFromPoints([from, to]);
+          var line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
+            color: hexColor(edge.status),
+            transparent: true,
+            opacity: edge.aggregated ? 0.68 : 0.42
+          }));
+          edgeRoot.add(line);
+          edgeItems.push({ line: line, edge: edge });
+        });
+        buildParticles(currentModel.nodes.length + currentModel.edges.length);
+        applyFocus(selectedID && nodeMap[selectedID] ? selectedID : "");
+      }
+
+      function raycast(event) {
+        if (!objects.length) {
+          return [];
+        }
+        var rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        return raycaster.intersectObjects(objects, false);
+      }
+
+      function selectNode(node) {
+        if (!node) {
+          return;
+        }
+        selectedID = node.id;
+        if (node.__group) {
+          state.collapsed[node.id] = !state.collapsed[node.id];
+          inspector.show(itemLabel(node), {
+            id: node.id,
+            label: itemLabel(node),
+            collapsed: state.collapsed[node.id],
+            child_count: node.child_count,
+            children: (node.children || []).map(function (child) { return child.id; })
+          });
+          if (onGraphChange) {
+            onGraphChange();
+          } else {
+            rebuild(null, currentFilters);
+          }
+          return;
+        }
+        applyFocus(node.id);
+        inspector.show(itemLabel(node), node);
+      }
+
+      renderer.domElement.addEventListener("contextmenu", function (event) {
+        event.preventDefault();
+      });
+      renderer.domElement.addEventListener("pointerdown", function (event) {
+        dragging = true;
+        moved = false;
+        dragMode = event.shiftKey || event.button === 2 ? "pan" : "orbit";
+        lastX = event.clientX;
+        lastY = event.clientY;
+        if (renderer.domElement.setPointerCapture) {
+          renderer.domElement.setPointerCapture(event.pointerId);
+        }
+        event.preventDefault();
+        event.stopPropagation();
+      });
+      renderer.domElement.addEventListener("pointermove", function (event) {
+        if (dragging) {
+          var dx = event.clientX - lastX;
+          var dy = event.clientY - lastY;
+          moved = moved || Math.abs(dx) + Math.abs(dy) > 4;
+          if (dragMode === "pan") {
+            orbit.target.x -= dx * orbit.radius * 0.0018;
+            orbit.target.y += dy * orbit.radius * 0.0018;
+          } else {
+            orbit.theta -= dx * 0.006;
+            orbit.phi -= dy * 0.005;
+          }
+          lastX = event.clientX;
+          lastY = event.clientY;
+          updateCamera();
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        var hits = raycast(event);
+        hoverID = hits.length && hits[0].object.userData ? hits[0].object.userData.id : "";
+        renderer.domElement.style.cursor = hoverID ? "pointer" : "grab";
+      });
+      renderer.domElement.addEventListener("pointerup", function (event) {
+        dragging = false;
+        if (renderer.domElement.releasePointerCapture) {
+          renderer.domElement.releasePointerCapture(event.pointerId);
+        }
+        if (!moved) {
+          var hits = raycast(event);
+          if (hits.length && hits[0].object.userData) {
+            selectNode(hits[0].object.userData.node);
+          }
+        }
+        event.preventDefault();
+        event.stopPropagation();
+      });
+      renderer.domElement.addEventListener("wheel", function (event) {
+        orbit.radius *= event.deltaY > 0 ? 1.08 : 0.92;
+        updateCamera();
+        event.preventDefault();
+        event.stopPropagation();
+      }, { passive: false });
+      renderer.domElement.addEventListener("dblclick", function (event) {
+        orbit.theta = 0.24;
+        orbit.phi = 1.16;
+        orbit.radius = 7.4;
+        orbit.target.set(0, 0, 0);
+        selectedID = "";
+        applyFocus("");
+        updateCamera();
+        event.preventDefault();
+      });
+
+      function resize() {
+        width = Math.max(720, stage.clientWidth || width);
+        height = Math.max(520, stage.clientHeight || height);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height, false);
+      }
+      var observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
+      if (observer) {
+        observer.observe(stage);
+      }
+
+      function updateLabels() {
+        root.updateMatrixWorld(true);
+        labels.forEach(function (item) {
+          var pos = item.mesh.position.clone();
+          item.mesh.parent.localToWorld(pos);
+          pos.project(camera);
+          var visible = pos.z < 1 && pos.x >= -1.18 && pos.x <= 1.18 && pos.y >= -1.18 && pos.y <= 1.18;
+          var important = item.node.__group || item.node.id === selectedID || item.node.id === hoverID || importanceValue(item.node, 0) >= 0.72 || labels.length <= 28;
+          item.element.hidden = !visible || !important;
+          if (!item.element.hidden) {
+            item.element.style.left = ((pos.x * 0.5 + 0.5) * width).toFixed(1) + "px";
+            item.element.style.top = ((-pos.y * 0.5 + 0.5) * height).toFixed(1) + "px";
+            item.element.toggleAttribute("data-selected", item.node.id === selectedID);
+          }
+        });
+      }
+
+      updateCamera();
+      function animate() {
+        if (!document.body.contains(stage)) {
+          if (observer) {
+            observer.disconnect();
+          }
+          renderer.dispose();
+          return;
+        }
+        var t = (Date.now() - start) / 1000;
+        if (!dragging && !selectedID) {
+          root.rotation.y = Math.sin(t * 0.18) * 0.035;
+        }
+        particleRoot.rotation.y = t * 0.08;
+        updateLabels();
+        renderer.render(scene, camera);
+        window.requestAnimationFrame(animate);
+      }
+      animate();
+      stage.classList.add("visual-three-active");
+      return {
+        rebuild: rebuild,
+        focusNode: function (id) {
+          if (nodeMap[id]) {
+            selectedID = id;
+            applyFocus(id);
+          }
+        },
+        scene: scene,
+        renderer: renderer,
+        camera: camera
+      };
+    } catch (err) {
+      stage.classList.remove("visual-three-primary");
+      stage.classList.add("visual-three-fallback");
+      stage.setAttribute("data-three-error", err && err.message ? err.message : String(err));
+      return null;
+    }
+  }
+
   function uniqueValues(items, key) {
     var seen = {};
     var out = [];
@@ -843,8 +1316,13 @@
     var shell = appShell(ctx.container, manifest);
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
     var profile = decorateStage(shell.stage, manifest, data, preset);
-    createThreeScene(shell.stage, manifest, data, preset, profile, shell.inspector);
     var state = buildGraphState(data, manifest);
+    var threeGraph = isPrimaryThreeGraph(manifest, preset, profile) ? createThreeGraphScene(shell.stage, manifest, state, preset, profile, shell.inspector, function () {
+      rebuildGraph();
+    }) : null;
+    if (!threeGraph) {
+      createThreeScene(shell.stage, manifest, data, preset, profile, shell.inspector);
+    }
     var search = document.createElement("input");
     search.type = "search";
     search.placeholder = "Search";
@@ -869,19 +1347,28 @@
 
     var width = Math.max(900, shell.stage.clientWidth || 900);
     var height = Math.max(620, shell.stage.clientHeight || 620);
-    var canvas = svg("svg", { class: "visual-svg", viewBox: "0 0 " + width + " " + height, role: "img" });
-    shell.stage.appendChild(canvas);
+    var canvas = null;
+    if (!threeGraph) {
+      canvas = svg("svg", { class: "visual-svg", viewBox: "0 0 " + width + " " + height, role: "img" });
+      shell.stage.appendChild(canvas);
+    }
     var nodeElements = {};
     var edgeElements = [];
     var currentModel = { nodes: [], edges: [] };
 
     function clearCanvas() {
+      if (!canvas) {
+        return;
+      }
       while (canvas.firstChild) {
         canvas.removeChild(canvas.firstChild);
       }
     }
 
     function drawOrbitGuides() {
+      if (!canvas) {
+        return;
+      }
       if (preset === "orbit_system" || preset === "ripple" || preset === "radar_sphere") {
         [90, 170, 250].forEach(function (radius) {
           canvas.appendChild(svg("circle", { class: "visual-orbit", cx: width / 2, cy: height / 2, r: radius }));
@@ -890,17 +1377,22 @@
     }
 
     function rebuildGraph() {
-      clearCanvas();
-      drawOrbitGuides();
       nodeElements = {};
       edgeElements = [];
-      currentModel = visibleGraph(state, {
+      var filters = {
         query: search.value,
         status: statusFilter.value,
         kind: kindFilter.value,
         edgeKind: edgeKindFilter.value
-      });
+      };
+      currentModel = visibleGraph(state, filters);
       countBadge.textContent = currentModel.nodes.length + "/" + state.rawNodes.length + " nodes · " + currentModel.edges.length + "/" + state.rawEdges.length + " edges";
+      if (threeGraph) {
+        threeGraph.rebuild(currentModel, filters);
+        return;
+      }
+      clearCanvas();
+      drawOrbitGuides();
       var positions = layoutNodes(currentModel.nodes, preset, width, height);
 
       currentModel.edges.forEach(function (edge, index) {
@@ -992,6 +1484,10 @@
     }
 
     function focusNode(id) {
+      if (threeGraph) {
+        threeGraph.focusNode(id);
+        return;
+      }
       Object.keys(nodeElements).forEach(function (key) {
         nodeElements[key].element.classList.toggle("visual-focused", key === id);
       });

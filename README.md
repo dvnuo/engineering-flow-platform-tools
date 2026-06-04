@@ -72,7 +72,7 @@ For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructio
 
 ### Visual
 
-`visual` generates complete offline static visualization artifacts from 195 canonical local templates under `templates/visual`. It validates input JSON, copies local template assets, and writes `index.html`, `manifest.json`, `manifest.js`, `data.js`, and `assets/**` to `--out`. It does not call Portal, MCP, Node/npm, a server, a CDN, or any remote asset.
+`visual` generates complete offline static visualization artifacts from 195 canonical local templates. Installed templates default to `~/.efp/template/visual`; source checkouts and release archives can still pass `--template-dir ./templates/visual`. It validates input JSON, copies local template assets, and writes `index.html`, `manifest.json`, `manifest.js`, `data.js`, and `assets/**` to `--out`. It does not call Portal, MCP, Node/npm, a server, a CDN, or any remote asset.
 
 For VS Code GitHub Copilot, copy `cmd/visual/visual-cli.instructions.md` to `~/.copilot/instructions/visual-cli.instructions.md` so Copilot uses `visual` as a terminal CLI and returns the generated `index.html` path.
 
@@ -154,7 +154,7 @@ jenkins:
       ca_cert: ""
 
 visual:
-  template_dir: ./templates/visual
+  template_dir: ~/.efp/template/visual
   defaults:
     offline_strict: true
     data_mode: js-file

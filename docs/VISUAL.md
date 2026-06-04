@@ -1,6 +1,6 @@
 # Visual Offline Artifacts
 
-`visual` is a terminal-invoked Go CLI for generating offline static visualization artifacts. It reads local templates from `templates/visual`, validates input JSON, copies local assets, and writes a complete site to `--out`.
+`visual` is a terminal-invoked Go CLI for generating offline static visualization artifacts. It reads local templates from `~/.efp/template/visual` by default, validates input JSON, copies local assets, and writes a complete site to `--out`.
 
 It does not call Portal, MCP, Node/npm, a browser runtime, a CDN, or a network service.
 
@@ -13,10 +13,13 @@ Template directory resolution order:
 1. `--template-dir`
 2. `EFP_VISUAL_TEMPLATE_DIR`
 3. `visual.template_dir` from `--config`, then `EFP_CONFIG`, then `~/.efp/config.yaml`
-4. `./templates/visual`
-5. executable-adjacent release paths
+4. `~/.efp/template/visual`
+5. `./templates/visual`
+6. executable-adjacent release paths
 
 The directory must contain `registry.json`, `_shared/**`, and flat canonical template directories such as `agent.run_trace` and `codebase.module_dependency_graph`. Old template IDs are aliases in `registry.json`, not duplicate template directories.
+
+Paths beginning with `~/` are expanded for `--template-dir`, `EFP_VISUAL_TEMPLATE_DIR`, and `visual.template_dir`.
 
 ## Render Contract
 

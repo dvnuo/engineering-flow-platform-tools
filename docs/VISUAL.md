@@ -30,6 +30,12 @@ Supported renderer contracts:
 - `offline.evidence.v1`
 - `offline.matrix.v1`
 
+## 3D And Interaction Effects
+
+The shared offline runtime applies template-specific visual effects from each template's `layout.preset`. It keeps the artifact self-contained while giving the catalog Three.js-style strengths: depth projection, parallax, particle motion, radar sweeps, tunnel grids, heat fields, raised city bars, document walls, and 3D matrix cards. Graph renderers use curved paths and moving particles for flow-oriented presets, timeline renderers use a depth tunnel, evidence renderers draw citation beams, and matrix renderers lift cards by risk or impact metrics.
+
+These effects are implemented in the local `efp-visual-renderers.iife.js` and `efp-visual-runtime.css` files copied into every artifact. They do not require a CDN, npm, remote models, generated JavaScript, or network access.
+
 Supported input schema kinds:
 
 - `graph_v1`

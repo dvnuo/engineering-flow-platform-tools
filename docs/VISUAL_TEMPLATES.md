@@ -7,6 +7,7 @@ The visual CLI is an offline static site generator. It reads templates from `tem
 - Templates live in git as plain files and are not embedded into the executable.
 - Template output uses only relative paths and never fetches `data.json` or `manifest.json`.
 - Shared renderers are reused across the catalog; templates choose schema kind and layout preset.
+- `layout.preset` also selects the shared Three.js-style effect profile: space/depth graphs, flow particles, radar sweeps, timeline tunnels, terrain heat fields, city bars, document walls, and 3D matrix cards. Improve presets and shared runtime behavior instead of copying custom JS into individual templates.
 - Inputs use a small set of reusable contracts: `graph_v1`, `graph_events_v1`, `timeline_v1`, `evidence_v1`, and `matrix_v1`.
 - Template files and generated artifacts must not reference remote assets, network APIs, module scripts, or root-relative resources.
 

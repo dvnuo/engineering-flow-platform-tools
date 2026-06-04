@@ -1067,6 +1067,48 @@ func TestVisualNoGoEmbed(t *testing.T) {
 	}
 }
 
+func TestVisualRuntimeHasThreeStyleEffectContracts(t *testing.T) {
+	renderers := mustRead(t, "../templates/visual/_shared/runtime/efp-visual-renderers.iife.js")
+	css := mustRead(t, "../templates/visual/_shared/runtime/efp-visual-runtime.css")
+
+	for _, token := range []string{
+		"profileForPreset",
+		"decorateStage",
+		"attachStageInteraction",
+		"edgePath",
+		"nodeDepth",
+		"addFlowParticle",
+		"animateMotion",
+		"visual-scene-layer",
+		"visual-effect-",
+		"visual-particle",
+	} {
+		if !strings.Contains(renderers, token) {
+			t.Fatalf("shared visual renderer is missing three-style effect token %q", token)
+		}
+	}
+
+	for _, token := range []string{
+		".visual-scene-layer",
+		".visual-depth-grid",
+		".visual-tunnel-rings",
+		".visual-radar-sweep",
+		".visual-heat-field",
+		".visual-space-dot",
+		".visual-node-shadow",
+		".visual-particle",
+		".visual-timeline-3d",
+		".visual-matrix-3d",
+		"@keyframes visual-space-drift",
+		"@keyframes visual-radar-spin",
+		"@keyframes visual-tunnel-pulse",
+	} {
+		if !strings.Contains(css, token) {
+			t.Fatalf("shared visual CSS is missing three-style effect token %q", token)
+		}
+	}
+}
+
 func TestGoSourcesAreGofmtParseable(t *testing.T) {
 	criticalFiles := []string{
 		"../cmd/visual/main.go",

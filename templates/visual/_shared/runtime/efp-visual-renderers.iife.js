@@ -24,7 +24,9 @@
     header.appendChild(el("div", "visual-subtitle", (manifest.template && manifest.template.id ? manifest.template.id : "visual") + " · " + (manifest.renderer && manifest.renderer.contract ? manifest.renderer.contract : "")));
     var toolbar = el("div", "visual-toolbar");
     var content = el("main", "visual-content");
-    var stage = el("section", "visual-stage " + presetClass(manifest && manifest.layout && manifest.layout.preset));
+    var preset = normalizePreset(manifest && manifest.layout && manifest.layout.preset);
+    var stage = el("section", "visual-stage " + presetClass(preset));
+    stage.setAttribute("data-preset", preset);
     var inspectorBox = el("aside", "visual-inspector");
     content.appendChild(stage);
     content.appendChild(inspectorBox);
@@ -69,6 +71,140 @@
       citation_map: "document_wall"
     };
     return aliases[preset] || preset;
+  }
+
+  function profileForPreset(preset) {
+    preset = normalizePreset(preset);
+    var profile = {
+      key: "depth",
+      particles: true,
+      grid: true,
+      radar: false,
+      tunnel: false,
+      heat: false,
+      city: false,
+      document: false,
+      matrix: false
+    };
+    if (preset === "timeline_tunnel" || preset === "swimlane_timeline" || preset === "replay_stage") {
+      profile.key = "tunnel";
+      profile.tunnel = true;
+    } else if (preset === "flow_particles" || preset === "pipeline_flow" || preset === "sankey_3d") {
+      profile.key = "particles";
+      profile.particles = true;
+      profile.tunnel = true;
+    } else if (preset === "radar_sphere" || preset === "orbit_system" || preset === "ripple") {
+      profile.key = "radar";
+      profile.radar = true;
+    } else if (preset === "terrain_heatmap" || preset === "heatmap") {
+      profile.key = "terrain";
+      profile.heat = true;
+      profile.particles = false;
+    } else if (preset === "city_map") {
+      profile.key = "city";
+      profile.city = true;
+    } else if (preset === "document_wall" || preset === "citation_map" || preset === "evidence_board") {
+      profile.key = "documents";
+      profile.document = true;
+    } else if (preset === "matrix_board" || preset === "control_room") {
+      profile.key = "matrix";
+      profile.matrix = true;
+    } else if (preset === "graph_3d" || preset === "graph_2_5d" || preset === "constellation") {
+      profile.key = "space";
+    }
+    return profile;
+  }
+
+  function decorateStage(stage, manifest, data, preset) {
+    var profile = profileForPreset(preset);
+    stage.classList.add("visual-effect-" + profile.key);
+    attachStageInteraction(stage);
+    var layer = el("div", "visual-scene-layer visual-scene-" + profile.key);
+    layer.setAttribute("aria-hidden", "true");
+    if (profile.grid || profile.tunnel || profile.heat || profile.city || profile.matrix) {
+      layer.appendChild(el("div", "visual-depth-grid"));
+    }
+    if (profile.tunnel) {
+      layer.appendChild(el("div", "visual-tunnel-rings"));
+    }
+    if (profile.radar) {
+      layer.appendChild(el("div", "visual-radar-sweep"));
+    }
+    if (profile.heat) {
+      layer.appendChild(el("div", "visual-heat-field"));
+    }
+    var dots = Math.min(42, 16 + countDataItems(data));
+    for (var i = 0; i < dots; i += 1) {
+      var dot = el("i", "visual-space-dot");
+      dot.style.left = ((i * 37) % 100) + "%";
+      dot.style.top = ((i * 53 + 17) % 100) + "%";
+      dot.style.animationDelay = ((i % 11) * -0.37) + "s";
+      dot.style.opacity = String(0.22 + (i % 5) * 0.12);
+      layer.appendChild(dot);
+    }
+    stage.appendChild(layer);
+    return profile;
+  }
+
+  function countDataItems(data) {
+    return ["nodes", "edges", "events", "claims", "sources", "links", "items"].reduce(function (sum, key) {
+      return sum + (Array.isArray(data && data[key]) ? data[key].length : 0);
+    }, 0);
+  }
+
+  function attachStageInteraction(stage) {
+    if (stage.__efpVisualInteraction) {
+      return;
+    }
+    stage.__efpVisualInteraction = true;
+    stage.style.setProperty("--tilt-x", "0deg");
+    stage.style.setProperty("--tilt-y", "0deg");
+    stage.addEventListener("pointermove", function (event) {
+      var rect = stage.getBoundingClientRect();
+      var nx = rect.width ? (event.clientX - rect.left) / rect.width - 0.5 : 0;
+      var ny = rect.height ? (event.clientY - rect.top) / rect.height - 0.5 : 0;
+      stage.style.setProperty("--tilt-x", (ny * -5).toFixed(2) + "deg");
+      stage.style.setProperty("--tilt-y", (nx * 7).toFixed(2) + "deg");
+      stage.style.setProperty("--pointer-x", ((nx + 0.5) * 100).toFixed(1) + "%");
+      stage.style.setProperty("--pointer-y", ((ny + 0.5) * 100).toFixed(1) + "%");
+    });
+    stage.addEventListener("pointerleave", function () {
+      stage.style.setProperty("--tilt-x", "0deg");
+      stage.style.setProperty("--tilt-y", "0deg");
+    });
+  }
+
+  function edgePath(from, to, preset, index) {
+    var dx = to.x - from.x;
+    var dy = to.y - from.y;
+    var lift = normalizePreset(preset) === "graph_3d" || normalizePreset(preset) === "graph_2_5d" ? 42 : 0;
+    var bend = Math.min(120, Math.max(24, Math.sqrt(dx * dx + dy * dy) * 0.18));
+    var mx = (from.x + to.x) / 2;
+    var my = (from.y + to.y) / 2 - bend - lift + ((index % 3) - 1) * 12;
+    return "M " + from.x.toFixed(1) + " " + from.y.toFixed(1) + " Q " + mx.toFixed(1) + " " + my.toFixed(1) + " " + to.x.toFixed(1) + " " + to.y.toFixed(1);
+  }
+
+  function nodeDepth(node, index, preset) {
+    var metric = node && node.metrics ? Number(node.metrics.depth || node.metrics.risk || node.metrics.impact || node.metrics.score) : NaN;
+    if (Number.isFinite(metric)) {
+      return Math.max(0, Math.min(1, metric > 1 ? metric / 100 : metric));
+    }
+    if (normalizePreset(preset) === "city_map") {
+      return (index % 6) / 5;
+    }
+    return 0.25 + ((index * 37) % 70) / 100;
+  }
+
+  function addFlowParticle(canvas, path, index, status) {
+    var particle = svg("circle", { class: "visual-particle", r: 3.5, fill: nodeColor(status) });
+    var motion = svg("animateMotion", {
+      dur: (2.4 + (index % 5) * 0.28).toFixed(2) + "s",
+      repeatCount: "indefinite",
+      path: path,
+      begin: ((index % 7) * 0.18).toFixed(2) + "s"
+    });
+    particle.appendChild(motion);
+    canvas.appendChild(particle);
   }
 
   function uniqueValues(items, key) {
@@ -175,6 +311,8 @@
     var edges = Array.isArray(data.edges) ? data.edges : [];
     var events = Array.isArray(data.events) ? data.events : [];
     var shell = appShell(ctx.container, manifest);
+    var preset = normalizePreset(manifest.layout && manifest.layout.preset);
+    var profile = decorateStage(shell.stage, manifest, data, preset);
     var search = document.createElement("input");
     search.type = "search";
     search.placeholder = "Search";
@@ -194,7 +332,6 @@
     var height = Math.max(620, shell.stage.clientHeight || 620);
     var canvas = svg("svg", { class: "visual-svg", viewBox: "0 0 " + width + " " + height, role: "img" });
     shell.stage.appendChild(canvas);
-    var preset = normalizePreset(manifest.layout && manifest.layout.preset);
     var positions = layoutNodes(nodes, preset, width, height);
     var nodeElements = {};
     var edgeElements = [];
@@ -204,7 +341,7 @@
       });
     }
 
-    edges.forEach(function (edge) {
+    edges.forEach(function (edge, index) {
       var from = positions[edge.from];
       var to = positions[edge.to];
       if (!from || !to) {
@@ -214,12 +351,16 @@
       if (preset === "sankey_3d" || preset === "pipeline_flow" || preset === "flow_particles") {
         edgeClass += " visual-edge-flow";
       }
-      var line = svg("line", { class: edgeClass, x1: from.x, y1: from.y, x2: to.x, y2: to.y });
+      var path = edgePath(from, to, preset, index);
+      var line = svg("path", { class: edgeClass, d: path });
       if (edge.weight || edge.value) {
         line.setAttribute("stroke-width", Math.max(1.5, Math.min(12, Number(edge.weight || edge.value) || 1)));
       }
       canvas.appendChild(line);
       edgeElements.push({ element: line, edge: edge });
+      if (profile.particles && (preset === "flow_particles" || preset === "pipeline_flow" || preset === "sankey_3d" || preset === "graph_3d" || preset === "constellation")) {
+        addFlowParticle(canvas, path, index, edge.status);
+      }
       if (edge.label) {
         var label = svg("text", { class: "visual-edge-label", x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 5 });
         label.textContent = runtime.safeText(edge.label);
@@ -230,6 +371,16 @@
     nodes.forEach(function (node, index) {
       var pos = positions[node.id] || { x: width / 2, y: height / 2 };
       var group = svg("g", { class: "visual-node", tabindex: "0" });
+      var depth = nodeDepth(node, index, preset);
+      var zLift = Math.round(depth * 34);
+      group.setAttribute("style", "--node-shadow-x:" + Math.round(6 + depth * 10) + "px; --node-shadow-y:" + Math.round(8 + depth * 12) + "px");
+      if (profile.grid || profile.city || preset === "graph_3d" || preset === "graph_2_5d" || preset === "sankey_3d") {
+        canvas.appendChild(svg("ellipse", { class: "visual-node-shadow", cx: pos.x + zLift * 0.55, cy: pos.y + 38 + zLift * 0.28, rx: 30 + depth * 12, ry: 8 + depth * 4 }));
+        canvas.appendChild(svg("line", { class: "visual-depth-line", x1: pos.x, y1: pos.y + 26, x2: pos.x + zLift * 0.55, y2: pos.y + 38 + zLift * 0.28 }));
+      }
+      if (zLift) {
+        group.setAttribute("transform", "translate(" + (-zLift * 0.24).toFixed(1) + " " + (-zLift).toFixed(1) + ")");
+      }
       var shape;
       if (preset === "city_map") {
         var heightValue = 44 + ((node.metrics && Number(node.metrics.risk)) || index % 5) * 10;
@@ -306,14 +457,19 @@
   function renderTimeline(ctx) {
     var data = ctx.data || {};
     var events = Array.isArray(data.events) ? data.events : [];
-    var shell = appShell(ctx.container, ctx.manifest || {});
+    var manifest = ctx.manifest || {};
+    var shell = appShell(ctx.container, manifest);
+    var preset = normalizePreset(manifest.layout && manifest.layout.preset);
+    decorateStage(shell.stage, manifest, data, preset);
     var exportBtn = document.createElement("button");
     exportBtn.textContent = "Export";
     shell.toolbar.appendChild(exportBtn);
-    var lane = el("div", "timeline-lane");
+    var lane = el("div", "timeline-lane visual-timeline-3d");
     lane.appendChild(el("div", "timeline-track"));
-    events.forEach(function (event) {
+    events.forEach(function (event, index) {
       var card = el("article", "visual-card timeline-event");
+      card.style.setProperty("--event-z", Math.round(((index % 6) / 5) * 64) + "px");
+      card.style.setProperty("--event-delay", (index * 0.05).toFixed(2) + "s");
       card.appendChild(el("span", "timeline-dot"));
       card.appendChild(el("div", "visual-card-title", event.label || event.summary || event.id));
       var status = runtime.formatStatus(event.status || event.kind);
@@ -335,7 +491,10 @@
     var claims = Array.isArray(data.claims) ? data.claims : [];
     var sources = Array.isArray(data.sources) ? data.sources : [];
     var links = Array.isArray(data.links) ? data.links : [];
-    var shell = appShell(ctx.container, ctx.manifest || {});
+    var manifest = ctx.manifest || {};
+    var shell = appShell(ctx.container, manifest);
+    var preset = normalizePreset(manifest.layout && manifest.layout.preset);
+    decorateStage(shell.stage, manifest, data, preset);
     var width = Math.max(900, shell.stage.clientWidth || 900);
     var height = Math.max(620, shell.stage.clientHeight || 620);
     var canvas = svg("svg", { class: "visual-svg", viewBox: "0 0 " + width + " " + height });
@@ -352,7 +511,7 @@
       var a = sourcePos[link.source_id];
       var b = claimPos[link.claim_id];
       if (a && b) {
-        canvas.appendChild(svg("line", { class: "visual-edge", x1: a.x, y1: a.y, x2: b.x, y2: b.y }));
+        canvas.appendChild(svg("path", { class: "visual-edge visual-evidence-beam", d: edgePath(a, b, preset, links.indexOf(link)) }));
       }
     });
     sources.forEach(function (source) {
@@ -387,16 +546,23 @@
   function renderMatrix(ctx) {
     var data = ctx.data || {};
     var items = Array.isArray(data.items) ? data.items : [];
-    var shell = appShell(ctx.container, ctx.manifest || {});
-    var board = el("div", "matrix-stage");
+    var manifest = ctx.manifest || {};
+    var shell = appShell(ctx.container, manifest);
+    var preset = normalizePreset(manifest.layout && manifest.layout.preset);
+    decorateStage(shell.stage, manifest, data, preset);
+    var board = el("div", "matrix-stage visual-matrix-3d");
     board.appendChild(el("div", "matrix-axis-y", "Impact"));
     board.appendChild(el("div", "matrix-axis-x", "Confidence"));
-    items.forEach(function (item) {
+    items.forEach(function (item, index) {
       var x = typeof item.x === "number" ? item.x : 0.5;
       var y = typeof item.y === "number" ? item.y : 0.5;
+      var z = item.metrics && Number.isFinite(Number(item.metrics.z || item.metrics.impact || item.metrics.risk)) ? Number(item.metrics.z || item.metrics.impact || item.metrics.risk) : index % 7;
       var card = el("article", "visual-card matrix-item");
       card.style.left = Math.max(8, Math.min(92, x * 100)) + "%";
       card.style.top = Math.max(8, Math.min(92, (1 - y) * 100)) + "%";
+      var zDepth = Math.max(0, Math.min(1, z > 1 ? z / 100 : z / 7));
+      card.style.setProperty("--item-z-offset", Math.round(zDepth * 88) + "px");
+      card.style.setProperty("--item-shadow-offset", Math.round(zDepth * 22) + "px");
       card.appendChild(el("div", "visual-card-title", item.label || item.id));
       var status = runtime.formatStatus(item.status || item.kind);
       card.appendChild(el("span", status.className, status.label));

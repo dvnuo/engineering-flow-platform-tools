@@ -8,6 +8,7 @@
 - Backward compatibility aliases work for `template get`, `template schema`, `validate`, and `render`, but they live only in the registry; prefer the returned `canonical_id` for new work.
 - Do not invent template paths and do not point inputs at alias directories.
 - Template selection strategy: agent/debug/run work uses `agent` or `debug`; repo/code/diff/test work uses `codebase`; runtime/infra/service/session work uses `runtime`; Jira/GitHub/Confluence/project work uses `project`; evidence/research/citation work uses `knowledge`; plan/task/workflow work uses `planning`; KPI/business/ops work uses `business`; explain/tutorial/process work uses `education`.
+- Each template preset maps to a shared offline effect profile such as 3D depth, flow particles, radar sweep, terrain heat, tunnel timeline, document wall, or 3D matrix. Prefer selecting the right preset and input data over generating custom JavaScript.
 - Do not invent the JSON shape. Always run `visual template schema <id> --json` before writing input JSON and again before each render if the selected id changed.
 - Render to a workspace path with `visual render --template <template-id> --input <input.json> --out <workspace-output-dir> --json`.
 - Return the generated `index.html` path from `data.artifact.entrypoint`.

@@ -144,6 +144,7 @@ func Render(opts Options) (Result, error) {
 		Entrypoint:   "index.html",
 		Layout:       tpl.Layout,
 		Effects:      tpl.Effects,
+		VisualDesign: tpl.VisualDesign,
 		Interactions: tpl.Interactions,
 	}
 	if err := writeJSONFile(filepath.Join(opts.OutDir, "manifest.json"), outputManifest); err != nil {

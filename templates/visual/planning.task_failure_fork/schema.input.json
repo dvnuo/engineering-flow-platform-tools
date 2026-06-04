@@ -3,44 +3,56 @@
     "edges": [
       {
         "from": "planning-task-failure-fork-node-1",
+        "importance": 0.7,
         "kind": "dependency",
         "label": "feeds",
         "to": "planning-task-failure-fork-node-2",
+        "visibility": "overview",
         "weight": 2
       },
       {
         "from": "planning-task-failure-fork-node-2",
+        "importance": 0.7,
         "kind": "validation",
         "label": "checks",
         "to": "planning-task-failure-fork-node-3",
+        "visibility": "overview",
         "weight": 3
       },
       {
         "from": "planning-task-failure-fork-node-3",
+        "importance": 0.7,
         "kind": "handoff",
         "label": "routes",
         "to": "planning-task-failure-fork-node-4",
+        "visibility": "overview",
         "weight": 2
       },
       {
         "from": "planning-task-failure-fork-node-4",
+        "importance": 0.7,
         "kind": "risk",
         "label": "impacts",
         "to": "planning-task-failure-fork-node-5",
+        "visibility": "overview",
         "weight": 4
       },
       {
         "from": "planning-task-failure-fork-node-5",
+        "importance": 0.7,
         "kind": "feedback",
         "label": "reports",
         "to": "planning-task-failure-fork-node-6",
+        "visibility": "overview",
         "weight": 2
       },
       {
         "from": "planning-task-failure-fork-node-2",
+        "importance": 0.7,
         "kind": "signal",
         "label": "observes",
         "to": "planning-task-failure-fork-node-6",
+        "visibility": "overview",
         "weight": 1
       }
     ],
@@ -124,10 +136,40 @@
         "time": "2026-06-03T12:17:00Z"
       }
     ],
+    "groups": [
+      {
+        "collapsed": true,
+        "id": "goal",
+        "importance": 0.9,
+        "kind": "group",
+        "label": "Goal"
+      },
+      {
+        "collapsed": true,
+        "id": "task",
+        "importance": 0.82,
+        "kind": "group",
+        "label": "Task"
+      },
+      {
+        "collapsed": true,
+        "id": "automation",
+        "importance": 0.74,
+        "kind": "group",
+        "label": "Automation"
+      }
+    ],
+    "initial_view": {
+      "collapse_groups": true,
+      "max_edges": 90,
+      "max_nodes": 45,
+      "mode": "overview"
+    },
     "nodes": [
       {
         "group": "goal",
         "id": "planning-task-failure-fork-node-1",
+        "importance": 0.72,
         "kind": "task",
         "label": "Task Failure Intake",
         "metadata": {
@@ -139,11 +181,13 @@
           "confidence": 0.7,
           "risk": 0.5
         },
+        "parent_id": "goal",
         "status": "blocked"
       },
       {
         "group": "task",
         "id": "planning-task-failure-fork-node-2",
+        "importance": 0.72,
         "kind": "failure",
         "label": "Failure Fork Core",
         "metadata": {
@@ -155,11 +199,13 @@
           "confidence": 0.74,
           "risk": 0.75
         },
+        "parent_id": "task",
         "status": "error"
       },
       {
         "group": "automation",
         "id": "planning-task-failure-fork-node-3",
+        "importance": 0.72,
         "kind": "fork",
         "label": "Fork Task Policy",
         "metadata": {
@@ -171,11 +217,13 @@
           "confidence": 0.78,
           "risk": 1
         },
+        "parent_id": "automation",
         "status": "running"
       },
       {
         "group": "goal",
         "id": "planning-task-failure-fork-node-4",
+        "importance": 0.72,
         "kind": "goal",
         "label": "Task Failure Execution",
         "metadata": {
@@ -187,11 +235,13 @@
           "confidence": 0.82,
           "risk": 0
         },
+        "parent_id": "goal",
         "status": "ok"
       },
       {
         "group": "task",
         "id": "planning-task-failure-fork-node-5",
+        "importance": 0.72,
         "kind": "task",
         "label": "Failure Fork Risk",
         "metadata": {
@@ -203,11 +253,13 @@
           "confidence": 0.86,
           "risk": 0.25
         },
+        "parent_id": "task",
         "status": "warning"
       },
       {
         "group": "automation",
         "id": "planning-task-failure-fork-node-6",
+        "importance": 0.72,
         "kind": "failure",
         "label": "Fork Task Outcome",
         "metadata": {
@@ -219,6 +271,7 @@
           "confidence": 0.9,
           "risk": 0.5
         },
+        "parent_id": "automation",
         "status": "success"
       }
     ],
@@ -248,6 +301,10 @@
             },
             "id": {
               "type": "string"
+            },
+            "importance": {
+              "description": "0..1 priority used when the renderer caps the initial edge count.",
+              "type": "number"
             },
             "kind": {
               "type": "string"
@@ -283,6 +340,15 @@
               "type": "string"
             },
             "to": {
+              "type": "string"
+            },
+            "visibility": {
+              "description": "Use detail for noisy class/method/import edges that should stay hidden until search or focus.",
+              "enum": [
+                "overview",
+                "detail",
+                "hidden"
+              ],
               "type": "string"
             },
             "x": {
@@ -374,6 +440,79 @@
         },
         "type": "array"
       },
+      "groups": {
+        "description": "Optional logical containers for large graphs. Nodes can reference a group by parent_id, group_id, group, module, or package. Collapsed groups form the initial overview.",
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "collapsed": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "importance": {
+              "type": "number"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "initial_view": {
+        "additionalProperties": true,
+        "description": "Optional first-view guidance for agents. Use overview and collapsed groups for large inputs.",
+        "properties": {
+          "collapse_groups": {
+            "type": "boolean"
+          },
+          "focus_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "hide_edge_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "max_edges": {
+            "type": "number"
+          },
+          "max_nodes": {
+            "type": "number"
+          },
+          "mode": {
+            "enum": [
+              "overview",
+              "detail",
+              "focus"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "nodes": {
         "items": {
           "additionalProperties": true,
@@ -390,8 +529,16 @@
             "group": {
               "type": "string"
             },
+            "group_id": {
+              "description": "Alias for parent_id.",
+              "type": "string"
+            },
             "id": {
               "type": "string"
+            },
+            "importance": {
+              "description": "0..1 priority used for label LOD and large-graph sampling.",
+              "type": "number"
             },
             "kind": {
               "type": "string"
@@ -404,6 +551,18 @@
             },
             "metrics": {
               "type": "object"
+            },
+            "module": {
+              "description": "Module grouping hint used when parent_id/group_id is absent.",
+              "type": "string"
+            },
+            "package": {
+              "description": "Package grouping hint used when parent_id/group_id is absent.",
+              "type": "string"
+            },
+            "parent_id": {
+              "description": "Logical group id for collapsed overview rendering.",
+              "type": "string"
             },
             "relation": {
               "type": "string"
@@ -428,6 +587,10 @@
             },
             "to": {
               "type": "string"
+            },
+            "visible": {
+              "description": "Set false for low-value detail nodes in the initial overview.",
+              "type": "boolean"
             },
             "x": {
               "type": "number"

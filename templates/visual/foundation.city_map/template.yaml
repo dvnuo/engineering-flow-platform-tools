@@ -23,6 +23,29 @@ effects:
     - focus_path
   postprocess:
     - depth_fog
+visual_design:
+  initial_view: overview
+  max_initial_nodes: 60
+  max_initial_edges: 120
+  default_collapse_depth: 1
+  group_by:
+    - group
+    - kind
+    - status
+  supports:
+    - expand_collapse
+    - edge_type_filter
+    - focus_path
+    - search
+    - isolate_node
+    - label_lod
+    - export_json
+    - group_by_module
+    - hide_detail_edges
+  agent_guidance:
+    - Do not emit every detail as an initially visible node.
+    - Group related nodes and mark low-importance detail nodes visible=false.
+    - Use importance to decide the initial overview.
 offline:
   required: true
   forbid_network: true

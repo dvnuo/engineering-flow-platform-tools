@@ -20,6 +20,7 @@ go run ./cmd/browser schema probe --json >/dev/null
 go run ./cmd/jenkins schema job.build --json >/dev/null
 go run ./cmd/inspect-image schema inspect --json >/dev/null
 go run ./cmd/visual schema render --json >/dev/null
+go run ./cmd/visual schema inspect-input --json >/dev/null
 go run ./cmd/inspect-image help llm >/dev/null
 go run ./cmd/inspect-image models --json >/dev/null
 go run ./cmd/inspect-image auth status --json >/dev/null
@@ -34,6 +35,7 @@ go run ./cmd/visual template list --template-dir ./templates/visual --json >/dev
 go run ./cmd/visual template list --template-dir ./templates/visual --category agent --json >/dev/null
 go run ./cmd/visual template schema agent.run_trace --template-dir ./templates/visual --json >/dev/null
 go run ./cmd/visual template schema codebase.module_dependency_graph --template-dir ./templates/visual --json >/dev/null
+go run ./cmd/visual inspect-input --template codebase.module_dependency_graph --template-dir ./templates/visual --input ./templates/visual/codebase.module_dependency_graph/examples/basic.input.json --json >/dev/null
 go run ./cmd/visual template doctor --template-dir ./templates/visual --json >/dev/null
 tmp="$(mktemp -d)"
 templates=(

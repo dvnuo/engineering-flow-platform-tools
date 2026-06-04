@@ -52,6 +52,7 @@ visual template list --template-dir ./templates/visual --json
 visual template list --template-dir ./templates/visual --category codebase --json
 visual template get agent.run_trace --template-dir ./templates/visual --json
 visual template schema agent.run_trace --template-dir ./templates/visual --json
+visual inspect-input --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --json
 visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json
 ```
 
@@ -92,6 +93,19 @@ Each template has a real `schema.input.json` referenced by `template.yaml`:
 ```
 
 `json_schema` is expanded in `visual template schema <template-id> --json`; agents should read it before writing input JSON.
+
+## Visual Design Guidance
+
+Template schema output also includes `data.template.visual_design`. This is a compact design contract for agents:
+
+- `initial_view` describes the first screen goal, usually `overview`
+- `max_initial_nodes` and `max_initial_edges` cap what should be visible before user interaction
+- `default_collapse_depth` tells graph renderers to start from collapsed groups
+- `group_by` lists the preferred grouping keys for large graph inputs
+- `supports` lists renderer interactions such as `expand_collapse`, `edge_type_filter`, `search`, `label_lod`, and `export_json`
+- `agent_guidance` gives scenario-specific authoring hints
+
+For large graph inputs, do not dump every file, class, method, and import into the first view. Add `groups` or node `parent_id`/`group_id`/`group` fields, keep summary relationships visible, and mark noisy detail edges with `visibility: "detail"` or `visibility: "hidden"`. The shared graph renderer can then show collapsed group nodes first and let users expand, search, filter by edge type, and inspect focused details.
 
 Successful render output includes:
 
@@ -148,11 +162,14 @@ Serve the generated output directory as static files at any subpath. Portal/runt
 
 ```bash
 visual validate --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --json
+visual inspect-input --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --json
 visual template doctor --template-dir ./templates/visual --json
 visual inspect-output --out ./out/run-trace --json
 ```
 
 `visual template doctor` reads `registry.json`, validates registry expected counts, checks for unregistered direct directories under `templates/visual`, validates every `template.yaml`, validates each `schema.input.json`, validates each `examples/basic.input.json`, renders every basic example into a temporary directory, checks required output files, scans the rendered output for offline violations, and deletes the temporary directory.
+
+`visual inspect-input` validates the selected template input, then returns `quality_score`, `summary`, `warnings`, and `recommendations`. Use it before rendering large or dense inputs; warnings such as `missing_groups`, `visible_nodes_high`, `graph_density_high`, and `high_fanout_nodes` mean the input should be grouped, collapsed, filtered, or simplified before rendering.
 
 For the built-in catalog, doctor checks `registry.expected` from `templates/visual/registry.json`, the exact category counts, `canonical_template_dirs: 195`, `orphan_template_dirs: []`, template tree offline safety, non-empty template styles, rendered example output inspection, and at least 190 unique example hashes.
 

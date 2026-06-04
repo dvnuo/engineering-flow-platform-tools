@@ -25,6 +25,23 @@ effects:
   postprocess:
     - status_glitch
     - depth_fog
+visual_design:
+  initial_view: overview
+  max_initial_nodes: 24
+  default_collapse_depth: 1
+  group_by:
+    - phase
+    - kind
+    - status
+  supports:
+    - phase_collapse
+    - search
+    - focus_event
+    - export_json
+  agent_guidance:
+    - Group long timelines into phases.
+    - Show milestones first and keep routine events as collapsed detail.
+    - Use status and kind to help filtering.
 offline:
   required: true
   forbid_network: true

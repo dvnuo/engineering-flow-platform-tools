@@ -286,6 +286,7 @@ visual template categories --template-dir ./templates/visual --json
 visual template list --template-dir ./templates/visual --json
 visual template list --template-dir ./templates/visual --category codebase --json
 visual template schema agent.run_trace --template-dir ./templates/visual --json
+visual inspect-input --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --json
 visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json
 ```
 
@@ -315,9 +316,10 @@ jenkins schema job.build-with-params --json
 browser schema probe --json
 inspect-image schema inspect --json
 visual schema render --json
+visual schema inspect-input --json
 ```
 
-For agents, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. For `visual`, run `visual template categories --json`, `visual template list --category <category> --json`, `visual template get <template-id> --json`, and `visual template schema <template-id> --json` before render. Generate input JSON from the template schema, validate it, render to a new output directory, and return `data.artifact.entrypoint`. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+For agents, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. For `visual`, run `visual template categories --json`, `visual template list --category <category> --json`, `visual template get <template-id> --json`, and `visual template schema <template-id> --json` before render. Generate input JSON from the template schema and `visual_design`, inspect readability with `visual inspect-input`, validate it, render to a new output directory, and return `data.artifact.entrypoint`. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
 
 For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jira issue. When a user asks to update case `X` in cycle `Y`, prefer `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; use `execution resolve` or `cycle resolve` first when the target is ambiguous, and use `status list` rather than hard-coding numeric status ids.
 

@@ -605,6 +605,8 @@ func visualExplicit(name string) (explicitMeta, bool) {
 	items := map[string]explicitMeta{
 		"render": {Description: "Render a complete offline static visualization artifact from a local template and JSON input.",
 			Flags: append([]string{"template", "input", "out", "title", "overwrite", "data-mode"}, common...), Required: []string{"template", "input", "out"}, Risk: "write", Example: "visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --json"},
+		"inspect-input": {Description: "Analyze visual input readability and return layout, grouping, and first-view recommendations before rendering.",
+			Flags: append([]string{"template", "input"}, common...), Required: []string{"template", "input"}, Risk: "read", Example: "visual inspect-input --template codebase.module_dependency_graph --template-dir ./templates/visual --input ./templates/visual/codebase.module_dependency_graph/examples/basic.input.json --json"},
 		"validate": {Description: "Validate visual input JSON against the selected template input contract.",
 			Flags: append([]string{"template", "input"}, common...), Required: []string{"template", "input"}, Risk: "read", Example: "visual validate --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --json"},
 		"template.list": {Description: "List visual templates from templates/visual/registry.json.",

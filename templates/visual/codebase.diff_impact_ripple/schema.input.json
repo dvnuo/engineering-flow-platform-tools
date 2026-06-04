@@ -3,44 +3,56 @@
     "edges": [
       {
         "from": "node-01",
+        "importance": 0.7,
         "kind": "depends_on",
         "label": "depends on",
         "to": "node-02",
+        "visibility": "overview",
         "weight": 1
       },
       {
         "from": "node-02",
+        "importance": 0.7,
         "kind": "emits",
         "label": "emits",
         "to": "node-03",
+        "visibility": "overview",
         "weight": 2
       },
       {
         "from": "node-03",
+        "importance": 0.7,
         "kind": "validates",
         "label": "validates",
         "to": "node-04",
+        "visibility": "overview",
         "weight": 3
       },
       {
         "from": "node-04",
+        "importance": 0.7,
         "kind": "hands_off",
         "label": "hands off",
         "to": "node-05",
+        "visibility": "overview",
         "weight": 4
       },
       {
         "from": "node-05",
+        "importance": 0.7,
         "kind": "reports",
         "label": "reports",
         "to": "node-06",
+        "visibility": "overview",
         "weight": 5
       },
       {
         "from": "node-02",
+        "importance": 0.7,
         "kind": "observes",
         "label": "observes downstream",
         "to": "node-06",
+        "visibility": "overview",
         "weight": 2
       }
     ],
@@ -124,10 +136,61 @@
         "time": "2026-06-03T09:40:00Z"
       }
     ],
+    "groups": [
+      {
+        "collapsed": true,
+        "id": "changed-file",
+        "importance": 0.9,
+        "kind": "group",
+        "label": "Changed File"
+      },
+      {
+        "collapsed": true,
+        "id": "module",
+        "importance": 0.82,
+        "kind": "group",
+        "label": "Module"
+      },
+      {
+        "collapsed": true,
+        "id": "tests",
+        "importance": 0.74,
+        "kind": "group",
+        "label": "Tests"
+      },
+      {
+        "collapsed": true,
+        "id": "contract",
+        "importance": 0.66,
+        "kind": "group",
+        "label": "Contract"
+      },
+      {
+        "collapsed": true,
+        "id": "ui",
+        "importance": 0.58,
+        "kind": "group",
+        "label": "Ui"
+      },
+      {
+        "collapsed": true,
+        "id": "risk",
+        "importance": 0.5,
+        "kind": "group",
+        "label": "Risk"
+      }
+    ],
+    "initial_view": {
+      "collapse_groups": true,
+      "max_edges": 90,
+      "max_nodes": 45,
+      "mode": "overview"
+    },
     "nodes": [
       {
         "group": "changed-file",
         "id": "node-01",
+        "importance": 0.72,
         "kind": "changed",
         "label": "Changed file internal visual commands",
         "metadata": {
@@ -139,11 +202,13 @@
           "confidence": 0.68,
           "risk": 0.48
         },
+        "parent_id": "changed-file",
         "status": "running"
       },
       {
         "group": "module",
         "id": "node-02",
+        "importance": 0.72,
         "kind": "impacted",
         "label": "Impacted manifest module",
         "metadata": {
@@ -155,11 +220,13 @@
           "confidence": 0.72,
           "risk": 0.61
         },
+        "parent_id": "module",
         "status": "success"
       },
       {
         "group": "tests",
         "id": "node-03",
+        "importance": 0.72,
         "kind": "affected",
         "label": "Affected contract tests",
         "metadata": {
@@ -171,11 +238,13 @@
           "confidence": 0.76,
           "risk": 0.74
         },
+        "parent_id": "tests",
         "status": "warning"
       },
       {
         "group": "contract",
         "id": "node-04",
+        "importance": 0.72,
         "kind": "api",
         "label": "API contract output",
         "metadata": {
@@ -187,11 +256,13 @@
           "confidence": 0.8,
           "risk": 0.22
         },
+        "parent_id": "contract",
         "status": "ok"
       },
       {
         "group": "ui",
         "id": "node-05",
+        "importance": 0.72,
         "kind": "downstream",
         "label": "Downstream visual UI",
         "metadata": {
@@ -203,11 +274,13 @@
           "confidence": 0.84,
           "risk": 0.35
         },
+        "parent_id": "ui",
         "status": "blocked"
       },
       {
         "group": "risk",
         "id": "node-06",
+        "importance": 0.72,
         "kind": "risk",
         "label": "Risk metrics review",
         "metadata": {
@@ -219,6 +292,7 @@
           "confidence": 0.88,
           "risk": 0.48
         },
+        "parent_id": "risk",
         "status": "error"
       }
     ],
@@ -248,6 +322,10 @@
             },
             "id": {
               "type": "string"
+            },
+            "importance": {
+              "description": "0..1 priority used when the renderer caps the initial edge count.",
+              "type": "number"
             },
             "kind": {
               "type": "string"
@@ -283,6 +361,15 @@
               "type": "string"
             },
             "to": {
+              "type": "string"
+            },
+            "visibility": {
+              "description": "Use detail for noisy class/method/import edges that should stay hidden until search or focus.",
+              "enum": [
+                "overview",
+                "detail",
+                "hidden"
+              ],
               "type": "string"
             },
             "x": {
@@ -374,6 +461,79 @@
         },
         "type": "array"
       },
+      "groups": {
+        "description": "Optional logical containers for large graphs. Nodes can reference a group by parent_id, group_id, group, module, or package. Collapsed groups form the initial overview.",
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "collapsed": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "importance": {
+              "type": "number"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "initial_view": {
+        "additionalProperties": true,
+        "description": "Optional first-view guidance for agents. Use overview and collapsed groups for large inputs.",
+        "properties": {
+          "collapse_groups": {
+            "type": "boolean"
+          },
+          "focus_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "hide_edge_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "max_edges": {
+            "type": "number"
+          },
+          "max_nodes": {
+            "type": "number"
+          },
+          "mode": {
+            "enum": [
+              "overview",
+              "detail",
+              "focus"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "nodes": {
         "items": {
           "additionalProperties": true,
@@ -390,8 +550,16 @@
             "group": {
               "type": "string"
             },
+            "group_id": {
+              "description": "Alias for parent_id.",
+              "type": "string"
+            },
             "id": {
               "type": "string"
+            },
+            "importance": {
+              "description": "0..1 priority used for label LOD and large-graph sampling.",
+              "type": "number"
             },
             "kind": {
               "type": "string"
@@ -404,6 +572,18 @@
             },
             "metrics": {
               "type": "object"
+            },
+            "module": {
+              "description": "Module grouping hint used when parent_id/group_id is absent.",
+              "type": "string"
+            },
+            "package": {
+              "description": "Package grouping hint used when parent_id/group_id is absent.",
+              "type": "string"
+            },
+            "parent_id": {
+              "description": "Logical group id for collapsed overview rendering.",
+              "type": "string"
             },
             "relation": {
               "type": "string"
@@ -428,6 +608,10 @@
             },
             "to": {
               "type": "string"
+            },
+            "visible": {
+              "description": "Set false for low-value detail nodes in the initial overview.",
+              "type": "boolean"
             },
             "x": {
               "type": "number"

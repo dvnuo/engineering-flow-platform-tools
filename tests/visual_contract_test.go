@@ -69,6 +69,15 @@ type visualTemplateManifest struct {
 		Interaction []string `yaml:"interaction"`
 		Postprocess []string `yaml:"postprocess"`
 	} `yaml:"effects"`
+	VisualDesign struct {
+		InitialView          string   `yaml:"initial_view"`
+		MaxInitialNodes      int      `yaml:"max_initial_nodes"`
+		MaxInitialEdges      int      `yaml:"max_initial_edges"`
+		DefaultCollapseDepth int      `yaml:"default_collapse_depth"`
+		GroupBy              []string `yaml:"group_by"`
+		Supports             []string `yaml:"supports"`
+		AgentGuidance        []string `yaml:"agent_guidance"`
+	} `yaml:"visual_design"`
 	Offline struct {
 		Required      bool   `yaml:"required"`
 		ForbidNetwork bool   `yaml:"forbid_network"`
@@ -165,7 +174,7 @@ func TestVisualCommandsJSONContract(t *testing.T) {
 		m := item.(map[string]any)
 		names[m["name"].(string)] = true
 	}
-	for _, name := range []string{"render", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
+	for _, name := range []string{"render", "inspect-input", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
 		if !names[name] {
 			t.Fatalf("missing visual command %s in %#v", name, names)
 		}
@@ -183,6 +192,31 @@ func TestVisualSchemaRenderJSONContract(t *testing.T) {
 	for _, name := range []string{"template", "template-dir", "input", "out", "title", "overwrite", "dry-run", "json"} {
 		if !names[name] {
 			t.Fatalf("missing render flag %s in %#v", name, names)
+		}
+	}
+}
+
+func TestVisualSchemaInspectInputJSONContract(t *testing.T) {
+	obj := runVisualOK(t, "schema", "inspect-input", "--json")
+	data := obj["data"].(map[string]any)
+	if data["command"] != "inspect-input" {
+		t.Fatalf("unexpected inspect-input schema command: %#v", data)
+	}
+	required := stringSetFromAny(data["required"].([]any))
+	for _, name := range []string{"template", "input"} {
+		if !required[name] {
+			t.Fatalf("inspect-input schema missing required %s: %#v", name, data)
+		}
+	}
+	flags := data["flags"].([]any)
+	names := map[string]bool{}
+	for _, item := range flags {
+		m := item.(map[string]any)
+		names[m["name"].(string)] = true
+	}
+	for _, name := range []string{"template", "template-dir", "input", "json"} {
+		if !names[name] {
+			t.Fatalf("missing inspect-input flag %s in %#v", name, names)
 		}
 	}
 }
@@ -513,6 +547,108 @@ func TestVisualTemplateSchemaCommand(t *testing.T) {
 	}
 }
 
+func TestVisualTemplateSchemaIncludesVisualDesignGuidance(t *testing.T) {
+	templateDir := visualTemplateDir()
+	obj := runVisualOK(t, "template", "schema", "codebase.module_dependency_graph", "--template-dir", templateDir, "--json")
+	data := obj["data"].(map[string]any)
+	template := data["template"].(map[string]any)
+	design := template["visual_design"].(map[string]any)
+	if design["initial_view"] != "overview" || design["max_initial_nodes"].(float64) <= 0 || !stringSetFromAny(design["supports"].([]any))["expand_collapse"] {
+		t.Fatalf("template schema missing visual_design guidance: %#v", template)
+	}
+	jsonSchema := data["json_schema"].(map[string]any)
+	props := jsonSchema["properties"].(map[string]any)
+	for _, name := range []string{"groups", "initial_view", "nodes", "edges"} {
+		if _, ok := props[name].(map[string]any); !ok {
+			t.Fatalf("json_schema missing graph design property %s: %#v", name, props)
+		}
+	}
+	nodeProps := props["nodes"].(map[string]any)["items"].(map[string]any)["properties"].(map[string]any)
+	for _, name := range []string{"parent_id", "group_id", "importance", "visible"} {
+		if _, ok := nodeProps[name]; !ok {
+			t.Fatalf("json_schema missing node property %s: %#v", name, nodeProps)
+		}
+	}
+	edgeProps := props["edges"].(map[string]any)["items"].(map[string]any)["properties"].(map[string]any)
+	for _, name := range []string{"visibility", "importance"} {
+		if _, ok := edgeProps[name]; !ok {
+			t.Fatalf("json_schema missing edge property %s: %#v", name, edgeProps)
+		}
+	}
+	example := data["example"].(map[string]any)
+	if _, ok := example["groups"].([]any); !ok {
+		t.Fatalf("template schema example should demonstrate groups: %#v", example)
+	}
+	if _, ok := example["initial_view"].(map[string]any); !ok {
+		t.Fatalf("template schema example should demonstrate initial_view: %#v", example)
+	}
+}
+
+func TestVisualInspectInputDiagnostics(t *testing.T) {
+	templateDir := visualTemplateDir()
+	inputPath := filepath.Join(t.TempDir(), "large-graph.json")
+	mustWrite(t, inputPath, largeGraphInputJSON(t, 90, 180))
+	obj := runVisualOK(t, "inspect-input", "--template", "codebase.module_dependency_graph", "--template-dir", templateDir, "--input", inputPath, "--json")
+	data := obj["data"].(map[string]any)
+	if data["template_id"] != "codebase.module_dependency_graph" {
+		t.Fatalf("inspect-input returned wrong template: %#v", data)
+	}
+	if data["quality_score"].(float64) >= 100 {
+		t.Fatalf("inspect-input should reduce quality score for dense ungrouped input: %#v", data)
+	}
+	summary := data["summary"].(map[string]any)
+	if summary["nodes"].(float64) != 90 || summary["edges"].(float64) != 180 || summary["label_pressure"] == "low" {
+		t.Fatalf("inspect-input summary did not capture large graph pressure: %#v", summary)
+	}
+	warnings := data["warnings"].([]any)
+	codes := map[string]bool{}
+	for _, item := range warnings {
+		m := item.(map[string]any)
+		codes[m["code"].(string)] = true
+	}
+	for _, code := range []string{"missing_groups", "visible_nodes_high", "graph_density_high"} {
+		if !codes[code] {
+			t.Fatalf("inspect-input missing warning %s: %#v", code, warnings)
+		}
+	}
+	recommendations := data["recommendations"].(map[string]any)
+	if recommendations["initial_view"] != "overview" || recommendations["collapse_by_default"] != true || len(recommendations["group_by"].([]any)) == 0 {
+		t.Fatalf("inspect-input recommendations missing overview grouping: %#v", recommendations)
+	}
+
+	alias := runVisualOK(t, "preview", "--template", "codebase.module_dependency_graph", "--template-dir", templateDir, "--input", inputPath, "--json")
+	if alias["ok"] != true {
+		t.Fatalf("preview alias should work: %#v", alias)
+	}
+}
+
+func TestVisualGroupedGraphInputValidateRenderContract(t *testing.T) {
+	templateDir := visualTemplateDir()
+	tmp := t.TempDir()
+	inputPath := filepath.Join(tmp, "grouped-graph.json")
+	mustWrite(t, inputPath, groupedGraphInputJSON(t))
+	runVisualOK(t, "validate", "--template", "codebase.module_dependency_graph", "--template-dir", templateDir, "--input", inputPath, "--json")
+	out := filepath.Join(tmp, "artifact")
+	rendered := runVisualOK(t, "render", "--template", "codebase.module_dependency_graph", "--template-dir", templateDir, "--input", inputPath, "--out", out, "--json")
+	summary := rendered["data"].(map[string]any)["input_summary"].(map[string]any)
+	if summary["groups"].(float64) != 3 {
+		t.Fatalf("render summary should report groups: %#v", summary)
+	}
+	manifestRaw := mustRead(t, filepath.Join(out, "manifest.json"))
+	var outputManifest map[string]any
+	if err := json.Unmarshal([]byte(manifestRaw), &outputManifest); err != nil {
+		t.Fatal(err)
+	}
+	design := outputManifest["visual_design"].(map[string]any)
+	if design["initial_view"] != "overview" || !stringSetFromAny(design["supports"].([]any))["expand_collapse"] {
+		t.Fatalf("render output manifest missing visual_design: %#v", outputManifest)
+	}
+	index := mustRead(t, filepath.Join(out, "index.html"))
+	if !strings.Contains(index, "assets/runtime/efp-visual-renderers.iife.js") {
+		t.Fatalf("render output missing shared renderer script")
+	}
+}
+
 func TestVisualRegistryAndTemplateManifests(t *testing.T) {
 	templateDir := visualTemplateDir()
 	registry := visualRegistryData(t)
@@ -590,6 +726,20 @@ func TestVisualRegistryAndTemplateManifests(t *testing.T) {
 		effectScenes[manifest.Effects.Scene] = entry.ID
 		if !stringSliceContains(manifest.Effects.Interaction, "orbit_drag") || !stringSliceContains(manifest.Effects.Interaction, "raycast_inspect") {
 			t.Fatalf("%s effects interactions must support orbit drag and raycast inspect: %#v", entry.ID, manifest.Effects.Interaction)
+		}
+		if manifest.VisualDesign.InitialView != "overview" || manifest.VisualDesign.MaxInitialNodes <= 0 {
+			t.Fatalf("%s visual_design must define an overview budget: %#v", entry.ID, manifest.VisualDesign)
+		}
+		if len(manifest.VisualDesign.Supports) < 4 || !stringSliceContains(manifest.VisualDesign.Supports, "search") || !stringSliceContains(manifest.VisualDesign.Supports, "export_json") {
+			t.Fatalf("%s visual_design needs baseline supports: %#v", entry.ID, manifest.VisualDesign.Supports)
+		}
+		if manifest.InputSchemaKind == "graph_v1" || manifest.InputSchemaKind == "graph_events_v1" {
+			if manifest.VisualDesign.MaxInitialEdges <= 0 || manifest.VisualDesign.DefaultCollapseDepth < 1 || !stringSliceContains(manifest.VisualDesign.Supports, "expand_collapse") || !stringSliceContains(manifest.VisualDesign.Supports, "edge_type_filter") || len(manifest.VisualDesign.GroupBy) == 0 {
+				t.Fatalf("%s graph visual_design must support grouped overview: %#v", entry.ID, manifest.VisualDesign)
+			}
+		}
+		if len(manifest.VisualDesign.AgentGuidance) == 0 {
+			t.Fatalf("%s visual_design should include agent guidance", entry.ID)
 		}
 		if strings.TrimSpace(manifest.Description) == "" || strings.Contains(strings.ToLower(manifest.Description), "basic example") {
 			t.Fatalf("%s has generic/empty description: %q", entry.ID, manifest.Description)
@@ -1122,6 +1272,13 @@ func TestVisualRuntimeHasThreeStyleEffectContracts(t *testing.T) {
 		"attachStageInteraction",
 		"createThreeScene",
 		"effectSpec",
+		"visualDesign",
+		"buildGraphState",
+		"visibleGraph",
+		"defaultCollapseDepth",
+		"visual-count-badge",
+		"visual-group-node",
+		"visual-edge-aggregated",
 		"WebGLRenderer",
 		"Raycaster",
 		"edgePath",
@@ -1141,6 +1298,10 @@ func TestVisualRuntimeHasThreeStyleEffectContracts(t *testing.T) {
 	for _, token := range []string{
 		".visual-scene-layer",
 		".visual-three-layer",
+		".visual-count-badge",
+		".visual-group-node",
+		".visual-group-count",
+		".visual-edge-aggregated",
 		".visual-depth-grid",
 		".visual-tunnel-rings",
 		".visual-radar-sweep",
@@ -1627,6 +1788,86 @@ func assertGraphShape(t *testing.T, data map[string]any, withEvents bool) {
 	if requiredStatusVariety < 2 {
 		t.Fatalf("graph_events needs at least two key statuses, got %#v", eventStatuses)
 	}
+}
+
+func largeGraphInputJSON(t *testing.T, nodes, edges int) string {
+	t.Helper()
+	data := map[string]any{
+		"schema": "efp.visual.input.graph.v1",
+		"title":  "Large Ungrouped Repository Graph",
+		"nodes":  []map[string]any{},
+		"edges":  []map[string]any{},
+	}
+	nodeItems := data["nodes"].([]map[string]any)
+	for i := 0; i < nodes; i++ {
+		nodeItems = append(nodeItems, map[string]any{
+			"id":     fmt.Sprintf("class_%03d", i),
+			"label":  fmt.Sprintf("Repository Class %03d", i),
+			"kind":   []string{"class", "method", "package"}[i%3],
+			"status": []string{"ok", "warning", "success"}[i%3],
+			"metadata": map[string]any{
+				"file": fmt.Sprintf("pkg/module_%02d/class_%03d.go", i%12, i),
+			},
+			"metrics": map[string]any{
+				"fanout": i % 17,
+			},
+		})
+	}
+	data["nodes"] = nodeItems
+	edgeItems := data["edges"].([]map[string]any)
+	for i := 0; i < edges; i++ {
+		edgeItems = append(edgeItems, map[string]any{
+			"from":       fmt.Sprintf("class_%03d", i%nodes),
+			"to":         fmt.Sprintf("class_%03d", (i*7+3)%nodes),
+			"kind":       []string{"method_call", "imports", "depends_on"}[i%3],
+			"label":      "calls",
+			"weight":     1,
+			"importance": 0.25,
+		})
+	}
+	data["edges"] = edgeItems
+	raw, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
+}
+
+func groupedGraphInputJSON(t *testing.T) string {
+	t.Helper()
+	data := map[string]any{
+		"schema": "efp.visual.input.graph.v1",
+		"title":  "Grouped Repository Module Map",
+		"initial_view": map[string]any{
+			"mode":            "overview",
+			"max_nodes":       12,
+			"max_edges":       16,
+			"collapse_groups": true,
+		},
+		"groups": []map[string]any{
+			{"id": "api", "label": "API Layer", "kind": "module", "collapsed": true, "importance": 0.95},
+			{"id": "service", "label": "Service Layer", "kind": "module", "collapsed": true, "importance": 0.9},
+			{"id": "storage", "label": "Storage Layer", "kind": "module", "collapsed": true, "importance": 0.82},
+		},
+		"nodes": []map[string]any{
+			{"id": "router", "label": "HTTP Router", "kind": "file", "status": "ok", "parent_id": "api", "importance": 0.9, "metadata": map[string]any{"file": "internal/api/router.go"}},
+			{"id": "handler", "label": "Request Handler", "kind": "class", "status": "ok", "parent_id": "api", "importance": 0.8},
+			{"id": "service-core", "label": "Service Core", "kind": "class", "status": "warning", "parent_id": "service", "importance": 0.92},
+			{"id": "repository", "label": "Repository", "kind": "class", "status": "success", "parent_id": "storage", "importance": 0.76},
+			{"id": "migration", "label": "Migration Script", "kind": "script", "status": "blocked", "parent_id": "storage", "importance": 0.52, "visible": false},
+		},
+		"edges": []map[string]any{
+			{"from": "router", "to": "handler", "kind": "routes_to", "visibility": "overview", "importance": 0.9},
+			{"from": "handler", "to": "service-core", "kind": "calls", "visibility": "overview", "importance": 0.82},
+			{"from": "service-core", "to": "repository", "kind": "persists", "visibility": "overview", "importance": 0.78},
+			{"from": "service-core", "to": "migration", "kind": "imports", "visibility": "detail", "importance": 0.2},
+		},
+	}
+	raw, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
 }
 
 func anySlice(t *testing.T, value any) []any {

@@ -24,6 +24,25 @@ effects:
     - filter_relation
   postprocess:
     - depth_fog
+visual_design:
+  initial_view: overview
+  max_initial_nodes: 40
+  max_initial_edges: 80
+  default_collapse_depth: 1
+  group_by:
+    - claim_status
+    - source_kind
+    - reliability
+  supports:
+    - filter_relation
+    - collapse_sources
+    - focus_claim
+    - search
+    - export_json
+  agent_guidance:
+    - Show decisive claims first and group sources by kind or reliability.
+    - Use relation types supports/refutes/mentions for filtering.
+    - Hide weak or duplicative evidence until a claim is focused.
 offline:
   required: true
   forbid_network: true

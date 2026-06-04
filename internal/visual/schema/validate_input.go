@@ -20,6 +20,7 @@ type InputSummary struct {
 	Schema  string `json:"schema,omitempty"`
 	Kind    string `json:"kind"`
 	Title   string `json:"title,omitempty"`
+	Groups  int    `json:"groups,omitempty"`
 	Nodes   int    `json:"nodes,omitempty"`
 	Edges   int    `json:"edges,omitempty"`
 	Events  int    `json:"events,omitempty"`
@@ -58,6 +59,7 @@ func ValidateInput(kind string, raw []byte, limits manifest.LimitsSpec) (ParsedI
 		}
 		summary.Nodes = graph.nodes
 		summary.Edges = graph.edges
+		summary.Groups = graph.groups
 	case "graph_events_v1":
 		graph, err := validateGraph(data, limits, true)
 		if err != nil {
@@ -66,6 +68,7 @@ func ValidateInput(kind string, raw []byte, limits manifest.LimitsSpec) (ParsedI
 		summary.Nodes = graph.nodes
 		summary.Edges = graph.edges
 		summary.Events = graph.events
+		summary.Groups = graph.groups
 	case "timeline_v1":
 		events, err := requiredArray(data, "events")
 		if err != nil {
@@ -123,12 +126,38 @@ func validateSchemaField(kind string, data map[string]any) error {
 }
 
 type graphCounts struct {
+	groups int
 	nodes  int
 	edges  int
 	events int
 }
 
 func validateGraph(data map[string]any, limits manifest.LimitsSpec, withEvents bool) (graphCounts, error) {
+	groups, err := optionalArray(data, "groups")
+	if err != nil {
+		return graphCounts{}, err
+	}
+	groupIDs := map[string]bool{}
+	for i, item := range groups {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return graphCounts{}, invalid(fmt.Sprintf("graph group at index %d must be an object.", i), "Each group must contain at least a non-empty string id.")
+		}
+		id := stringField(obj, "id")
+		if id == "" {
+			return graphCounts{}, invalid(fmt.Sprintf("graph group at index %d is missing id.", i), "Set group.id to a non-empty string.")
+		}
+		if groupIDs[id] {
+			return graphCounts{}, invalid("graph group ids must be unique.", "Rename duplicate group id "+id+".")
+		}
+		groupIDs[id] = true
+		if importance, ok := obj["importance"]; ok && !isNumber(importance) {
+			return graphCounts{}, invalid("graph group importance must be numeric.", "Set group.importance to a number between 0 and 1.")
+		}
+		if collapsed, ok := obj["collapsed"]; ok && !isBool(collapsed) {
+			return graphCounts{}, invalid("graph group collapsed must be boolean.", "Set group.collapsed to true or false.")
+		}
+	}
 	nodes, err := requiredArray(data, "nodes")
 	if err != nil {
 		return graphCounts{}, err
@@ -149,7 +178,27 @@ func validateGraph(data map[string]any, limits manifest.LimitsSpec, withEvents b
 		if nodeIDs[id] {
 			return graphCounts{}, invalid("graph node ids must be unique.", "Rename duplicate node id "+id+".")
 		}
+		if groupIDs[id] {
+			return graphCounts{}, invalid("graph node id conflicts with group id: "+id, "Use distinct ids for groups and nodes.")
+		}
+		parent := firstStringField(obj, "parent_id", "group_id", "group")
+		if parent != "" && len(groupIDs) > 0 && !groupIDs[parent] {
+			return graphCounts{}, invalid("graph node references an unknown group: "+parent, "Set node.parent_id, node.group_id, or node.group to an existing group id.")
+		}
+		if importance, ok := obj["importance"]; ok && !isNumber(importance) {
+			return graphCounts{}, invalid("graph node importance must be numeric.", "Set node.importance to a number between 0 and 1.")
+		}
+		if visible, ok := obj["visible"]; ok && !isBool(visible) {
+			return graphCounts{}, invalid("graph node visible must be boolean.", "Set node.visible to true or false.")
+		}
 		nodeIDs[id] = true
+	}
+	knownIDs := map[string]bool{}
+	for id := range nodeIDs {
+		knownIDs[id] = true
+	}
+	for id := range groupIDs {
+		knownIDs[id] = true
 	}
 	edges, err := optionalArray(data, "edges")
 	if err != nil {
@@ -168,8 +217,25 @@ func validateGraph(data map[string]any, limits manifest.LimitsSpec, withEvents b
 		if from == "" || to == "" {
 			return graphCounts{}, invalid(fmt.Sprintf("graph edge at index %d is missing from/to.", i), "Set edge.from and edge.to to existing node ids.")
 		}
-		if !nodeIDs[from] || !nodeIDs[to] {
+		if !knownIDs[from] || !knownIDs[to] {
 			return graphCounts{}, invalid(fmt.Sprintf("graph edge at index %d references an unknown node.", i), "Ensure every edge.from and edge.to points to an existing node id.")
+		}
+		if importance, ok := obj["importance"]; ok && !isNumber(importance) {
+			return graphCounts{}, invalid("graph edge importance must be numeric.", "Set edge.importance to a number between 0 and 1.")
+		}
+	}
+	if initialView, ok := data["initial_view"]; ok && initialView != nil {
+		obj, ok := initialView.(map[string]any)
+		if !ok {
+			return graphCounts{}, invalid("graph initial_view must be an object.", "Set initial_view to an object with mode, max_nodes, max_edges, and collapse_groups.")
+		}
+		for _, name := range []string{"max_nodes", "max_edges"} {
+			if value, ok := obj[name]; ok && !isNumber(value) {
+				return graphCounts{}, invalid("graph initial_view."+name+" must be numeric.", "Set initial_view."+name+" to a positive number.")
+			}
+		}
+		if value, ok := obj["collapse_groups"]; ok && !isBool(value) {
+			return graphCounts{}, invalid("graph initial_view.collapse_groups must be boolean.", "Set initial_view.collapse_groups to true or false.")
 		}
 	}
 	var events []any
@@ -185,7 +251,7 @@ func validateGraph(data map[string]any, limits manifest.LimitsSpec, withEvents b
 			return graphCounts{}, err
 		}
 	}
-	return graphCounts{nodes: len(nodes), edges: len(edges), events: len(events)}, nil
+	return graphCounts{groups: len(groups), nodes: len(nodes), edges: len(edges), events: len(events)}, nil
 }
 
 func validateEvents(events []any, nodeIDs map[string]bool) error {
@@ -330,6 +396,15 @@ func stringField(data map[string]any, name string) string {
 	return strings.TrimSpace(value)
 }
 
+func firstStringField(data map[string]any, names ...string) string {
+	for _, name := range names {
+		if value := stringField(data, name); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 func isNumber(value any) bool {
 	switch v := value.(type) {
 	case json.Number:
@@ -340,6 +415,11 @@ func isNumber(value any) bool {
 	default:
 		return false
 	}
+}
+
+func isBool(value any) bool {
+	_, ok := value.(bool)
+	return ok
 }
 
 func limitOrDefault(value, fallback int) int {

@@ -26,7 +26,9 @@
 - Backward compatibility aliases work, but they are registry aliases rather than duplicate template directories; prefer the returned `canonical_id` for new inputs and examples.
 - Do not invent template paths or point inputs at alias directories.
 - Before every render, run `visual template schema <id> --json`, using `--template-dir` only when the catalog is not installed at `~/.efp/template/visual`.
-- Write input JSON that follows `data.json_schema`; do not invent the input shape and do not generate JavaScript code.
+- Write input JSON that follows `data.json_schema` and the returned `data.template.visual_design`; do not invent the input shape and do not generate JavaScript code.
+- For graph inputs larger than a small overview, include `groups` or node `parent_id`/`group_id`/`group` fields, set `initial_view.mode: "overview"`, and mark noisy low-value edges with `visibility: "detail"` or `visibility: "hidden"`.
+- Before validation/render, run `visual inspect-input --template <template-id> --input <input.json> --json` and use `data.warnings`, `data.summary`, and `data.recommendations` to reduce clutter.
 - Validate with `visual validate --template <template-id> --input <input.json> --json`, using `--template-dir` only when the catalog is not installed at `~/.efp/template/visual`.
 - Render to a new output directory with `visual render --template <template-id> --input <input.json> --out <dir> --json`.
 - Return `data.artifact.entrypoint` to the user.
@@ -163,6 +165,7 @@ jenkins schema artifact.download --json
 jenkins schema api.get --json
 inspect-image schema inspect --json
 visual schema render --json
+visual schema inspect-input --json
 ```
 
 The `required` field lists mandatory arguments and flags. The `flags` field includes type and description metadata suitable for tool planning.

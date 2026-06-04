@@ -56,6 +56,7 @@ func ValidateTemplateManifest(templateDir string, entry RegistryEntry, m *Templa
 	if err := validateEffectsSpec(&m.Effects); err != nil {
 		return err
 	}
+	normalizeVisualDesign(&m.VisualDesign)
 	if err := validateInputSchemaFile(templateDir, entry, m.InputSchema); err != nil {
 		return err
 	}
@@ -382,6 +383,31 @@ func validateEffectsSpec(effects *EffectsSpec) error {
 		effects.Postprocess[i] = normalizeManifestValue(value)
 	}
 	return nil
+}
+
+func normalizeVisualDesign(design *VisualDesign) {
+	if design == nil {
+		return
+	}
+	design.InitialView = normalizeManifestValue(design.InitialView)
+	if design.InitialView == "" {
+		design.InitialView = "overview"
+	}
+	if design.MaxInitialNodes <= 0 {
+		design.MaxInitialNodes = 60
+	}
+	if design.MaxInitialEdges <= 0 {
+		design.MaxInitialEdges = 120
+	}
+	if design.DefaultCollapseDepth < 0 {
+		design.DefaultCollapseDepth = 0
+	}
+	for i, value := range design.GroupBy {
+		design.GroupBy[i] = normalizeManifestValue(value)
+	}
+	for i, value := range design.Supports {
+		design.Supports[i] = normalizeManifestValue(value)
+	}
 }
 
 func validateAsset(templateDir, templatePath string, asset AssetSpec) error {

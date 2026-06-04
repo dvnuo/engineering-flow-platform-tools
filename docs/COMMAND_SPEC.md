@@ -24,6 +24,7 @@
 - visual template schema <template-id>
 - visual template doctor
 - visual validate
+- visual inspect-input
 - visual render
 - visual inspect-output
 - visual commands
@@ -39,9 +40,13 @@
 
 `visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, aliases, `schema_file`, and `example_file`. Alias ids resolve to the canonical template and include `requested_id` and `canonical_id`.
 
-`visual template schema <template-id> --json` returns the template metadata, full local `json_schema`, and example object agents should mirror when writing input JSON. Alias ids resolve the same way as `template get`; the template metadata includes `requested_id`, `canonical_id`, and aliases.
+`visual template schema <template-id> --json` returns the template metadata, `visual_design`, full local `json_schema`, and example object agents should mirror when writing input JSON. Alias ids resolve the same way as `template get`; the template metadata includes `requested_id`, `canonical_id`, and aliases.
 
 Agents must not discover templates by listing `templates/visual` directories or inventing template paths. Use `template categories`, `template list`, `template get`, and `template schema` only. Old IDs are registry aliases, not duplicate directories; prefer the returned `canonical_id` for new inputs.
+
+### Input Inspection
+
+`visual inspect-input --template <template-id> --input <input.json> --json` validates the input and returns `quality_score`, `summary`, `warnings`, `recommendations`, and the template `visual_design`. Use it after writing input JSON and before render, especially for large graphs. It does not write files. `visual preview` is a compatibility alias for the same command.
 
 ### Render Artifact Output
 

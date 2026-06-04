@@ -25,6 +25,24 @@ effects:
   postprocess:
     - depth_fog
     - soft_reflection
+visual_design:
+  initial_view: overview
+  max_initial_nodes: 48
+  default_collapse_depth: 1
+  group_by:
+    - kind
+    - status
+    - quadrant
+  supports:
+    - metric_filter
+    - quadrant_zoom
+    - search
+    - isolate_item
+    - export_json
+  agent_guidance:
+    - Show only high-importance items in the initial matrix.
+    - Use kind/status filters to keep dense boards readable.
+    - Move detail into metadata instead of long visible labels.
 offline:
   required: true
   forbid_network: true

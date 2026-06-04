@@ -219,13 +219,275 @@
     return manifest && manifest.effects ? manifest.effects : {};
   }
 
-  function collectThreeItems(data) {
+  function visualDesign(manifest) {
+    var design = manifest && manifest.visual_design ? manifest.visual_design : {};
+    return {
+      initialView: String(design.initial_view || "overview"),
+      maxInitialNodes: positiveInt(design.max_initial_nodes, 60),
+      maxInitialEdges: positiveInt(design.max_initial_edges, 120),
+      defaultCollapseDepth: Math.max(0, positiveInt(design.default_collapse_depth, 0)),
+      groupBy: Array.isArray(design.group_by) && design.group_by.length ? design.group_by : ["group", "module", "package"],
+      supports: Array.isArray(design.supports) ? design.supports : [],
+      agentGuidance: Array.isArray(design.agent_guidance) ? design.agent_guidance : []
+    };
+  }
+
+  function positiveInt(value, fallback) {
+    var n = Number(value);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+  }
+
+  function numberValue(value, fallback) {
+    var n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function importanceValue(item, fallback) {
+    if (!item) {
+      return fallback || 0;
+    }
+    var direct = Number(item.importance);
+    if (Number.isFinite(direct)) {
+      return direct > 1 ? direct / 100 : direct;
+    }
+    var metrics = item.metrics || {};
+    var metric = Number(metrics.importance || metrics.impact || metrics.risk || metrics.score || metrics.weight);
+    if (Number.isFinite(metric)) {
+      return metric > 1 ? metric / 100 : metric;
+    }
+    return fallback || 0;
+  }
+
+  function itemLabel(item) {
+    return String((item && (item.label || item.title || item.summary || item.text || item.id)) || "");
+  }
+
+  function itemMatchesQuery(item, query) {
+    if (!query) {
+      return true;
+    }
+    var text = [
+      itemLabel(item),
+      item && item.kind,
+      item && item.status,
+      item && item.id,
+      item && item.summary
+    ].filter(Boolean).join(" ").toLowerCase();
+    return text.indexOf(query) >= 0;
+  }
+
+  function groupIDForNode(node, design) {
+    if (!node) {
+      return "";
+    }
+    var names = ["parent_id", "group_id", "group"].concat(design && design.groupBy ? design.groupBy : []);
+    for (var i = 0; i < names.length; i += 1) {
+      var name = names[i];
+      if (node[name] !== undefined && node[name] !== null && String(node[name]).trim()) {
+        return String(node[name]).trim();
+      }
+    }
+    return "";
+  }
+
+  function buildGroupNode(id, children, explicit) {
+    explicit = explicit || {};
+    var status = explicit.status;
+    if (!status) {
+      status = children.some(function (node) { return String(node.status || "").toLowerCase() === "error" || String(node.status || "").toLowerCase() === "failed"; }) ? "warning" : "ok";
+    }
+    return {
+      id: id,
+      label: explicit.label || explicit.title || id,
+      kind: explicit.kind || "group",
+      status: status,
+      metadata: explicit.metadata || {},
+      metrics: explicit.metrics || {},
+      importance: explicit.importance !== undefined ? explicit.importance : Math.max(0.35, Math.min(1, children.length / 18)),
+      __group: true,
+      child_count: children.length,
+      children: children
+    };
+  }
+
+  function buildGraphState(data, manifest) {
+    var design = visualDesign(manifest);
+    var rawNodes = Array.isArray(data && data.nodes) ? data.nodes.slice() : [];
+    var rawEdges = Array.isArray(data && data.edges) ? data.edges.slice() : [];
+    var explicitGroups = Array.isArray(data && data.groups) ? data.groups : [];
+    var groups = {};
+    var groupOrder = [];
+    explicitGroups.forEach(function (group) {
+      if (!group || !group.id) {
+        return;
+      }
+      var id = String(group.id);
+      groups[id] = buildGroupNode(id, [], group);
+      groupOrder.push(id);
+    });
+    var parentByNode = {};
+    rawNodes.forEach(function (node) {
+      var groupID = groupIDForNode(node, design);
+      if (!groupID) {
+        return;
+      }
+      parentByNode[node.id] = groupID;
+      if (!groups[groupID]) {
+        groups[groupID] = buildGroupNode(groupID, [], { id: groupID, label: groupID });
+        groupOrder.push(groupID);
+      }
+      groups[groupID].children.push(node);
+    });
+    groupOrder.forEach(function (id) {
+      groups[id] = buildGroupNode(id, groups[id].children || [], groups[id]);
+    });
+    var collapsed = {};
+    groupOrder.forEach(function (id) {
+      var group = groups[id];
+      collapsed[id] = group.collapsed !== undefined ? !!group.collapsed : design.defaultCollapseDepth > 0;
+    });
+    return {
+      design: design,
+      rawNodes: rawNodes,
+      rawEdges: rawEdges,
+      groups: groups,
+      groupOrder: groupOrder,
+      parentByNode: parentByNode,
+      collapsed: collapsed
+    };
+  }
+
+  function compareImportance(a, b) {
+    var ai = importanceValue(a, 0);
+    var bi = importanceValue(b, 0);
+    if (ai === bi) {
+      return itemLabel(a).localeCompare(itemLabel(b));
+    }
+    return bi - ai;
+  }
+
+  function visibleGraph(state, filters) {
+    filters = filters || {};
+    var query = String(filters.query || "").toLowerCase();
+    var visibleIDs = {};
+    var visibleNodes = [];
+    var groupMatches = {};
+    var hasGroups = state.groupOrder.length > 0;
+
+    function passesNode(node) {
+      return (!filters.status || node.status === filters.status) && (!filters.kind || node.kind === filters.kind) && itemMatchesQuery(node, query);
+    }
+
+    if (hasGroups) {
+      state.groupOrder.forEach(function (groupID) {
+        var group = state.groups[groupID];
+        var children = (group.children || []).filter(function (child) {
+          return (!filters.status || child.status === filters.status) && (!filters.kind || child.kind === filters.kind) && itemMatchesQuery(child, query);
+        });
+        groupMatches[groupID] = children;
+        if (query && children.length > 0) {
+          state.collapsed[groupID] = false;
+        }
+        if (!query && state.collapsed[groupID]) {
+          visibleNodes.push(group);
+          visibleIDs[group.id] = true;
+        } else if (children.length > 0 || itemMatchesQuery(group, query)) {
+          if (state.collapsed[groupID]) {
+            visibleNodes.push(group);
+            visibleIDs[group.id] = true;
+          } else {
+            children.sort(compareImportance).forEach(function (child) {
+              visibleNodes.push(child);
+              visibleIDs[child.id] = true;
+            });
+          }
+        }
+      });
+      state.rawNodes.forEach(function (node) {
+        if (state.parentByNode[node.id]) {
+          return;
+        }
+        if (passesNode(node)) {
+          visibleNodes.push(node);
+          visibleIDs[node.id] = true;
+        }
+      });
+    } else {
+      state.rawNodes.filter(passesNode).sort(compareImportance).forEach(function (node) {
+        if (visibleNodes.length < state.design.maxInitialNodes || query || node.visible === true || importanceValue(node, 0) >= 0.65) {
+          visibleNodes.push(node);
+          visibleIDs[node.id] = true;
+        }
+      });
+    }
+
+    var maxNodes = query ? Math.max(state.design.maxInitialNodes, visibleNodes.length) : state.design.maxInitialNodes;
+    if (visibleNodes.length > maxNodes) {
+      visibleNodes = visibleNodes.slice(0, maxNodes);
+      visibleIDs = {};
+      visibleNodes.forEach(function (node) {
+        visibleIDs[node.id] = true;
+      });
+    }
+
+    var edgeKey = {};
+    var visibleEdges = [];
+    state.rawEdges.forEach(function (edge) {
+      if (filters.edgeKind && edge.kind !== filters.edgeKind) {
+        return;
+      }
+      if (edge.visibility === "hidden") {
+        return;
+      }
+      if (edge.visibility === "detail" && !query) {
+        return;
+      }
+      var from = state.parentByNode[edge.from] && state.collapsed[state.parentByNode[edge.from]] ? state.parentByNode[edge.from] : edge.from;
+      var to = state.parentByNode[edge.to] && state.collapsed[state.parentByNode[edge.to]] ? state.parentByNode[edge.to] : edge.to;
+      if (from === to || !visibleIDs[from] || !visibleIDs[to]) {
+        return;
+      }
+      var key = from + "->" + to + ":" + (edge.kind || "");
+      if (edgeKey[key]) {
+        edgeKey[key].weight = numberValue(edgeKey[key].weight, 1) + numberValue(edge.weight || edge.value, 1);
+        edgeKey[key].aggregated = true;
+        return;
+      }
+      var copy = Object.assign({}, edge, { from: from, to: to });
+      if (from !== edge.from || to !== edge.to) {
+        copy.aggregated = true;
+        copy.label = copy.label || edge.kind || "grouped";
+      }
+      edgeKey[key] = copy;
+      visibleEdges.push(copy);
+    });
+    if (!query && visibleEdges.length > state.design.maxInitialEdges) {
+      visibleEdges = visibleEdges.sort(function (a, b) { return importanceValue(b, numberValue(b.weight || b.value, 0)) - importanceValue(a, numberValue(a.weight || a.value, 0)); }).slice(0, state.design.maxInitialEdges);
+    }
+    return { nodes: visibleNodes, edges: visibleEdges, ids: visibleIDs };
+  }
+
+  function collectThreeItems(data, manifest) {
     var out = [];
     var nodes = Array.isArray(data && data.nodes) ? data.nodes : [];
+    var groups = Array.isArray(data && data.groups) ? data.groups : [];
     var events = Array.isArray(data && data.events) ? data.events : [];
     var claims = Array.isArray(data && data.claims) ? data.claims : [];
     var sources = Array.isArray(data && data.sources) ? data.sources : [];
     var items = Array.isArray(data && data.items) ? data.items : [];
+    var design = visualDesign(manifest);
+    if (groups.length && nodes.length > design.maxInitialNodes) {
+      groups.slice().sort(compareImportance).forEach(function (item) {
+        out.push({ type: "group", id: item.id, label: item.label || item.title || item.id, status: item.status, kind: item.kind || "group", payload: item });
+      });
+      nodes.slice().sort(compareImportance).slice(0, Math.max(0, design.maxInitialNodes - out.length)).forEach(function (item) {
+        out.push({ type: "node", id: item.id, label: item.label || item.id, status: item.status, kind: item.kind, payload: item });
+      });
+      return out;
+    }
+    if (nodes.length > design.maxInitialNodes) {
+      nodes = nodes.slice().sort(compareImportance).slice(0, design.maxInitialNodes);
+    }
     nodes.forEach(function (item) {
       out.push({ type: "node", id: item.id, label: item.label || item.id, status: item.status, kind: item.kind, payload: item });
     });
@@ -348,7 +610,7 @@
       var particleRoot = new THREE.Group();
       scene.add(root);
       scene.add(particleRoot);
-      var items = collectThreeItems(data);
+      var items = collectThreeItems(data, manifest);
       var objects = [];
       var positions = {};
       var sphere = new THREE.IcosahedronGeometry(0.19, 1);
@@ -577,114 +839,155 @@
   function renderGraph(ctx) {
     var data = ctx.data || {};
     var manifest = ctx.manifest || {};
-    var nodes = Array.isArray(data.nodes) ? data.nodes : [];
-    var edges = Array.isArray(data.edges) ? data.edges : [];
     var events = Array.isArray(data.events) ? data.events : [];
     var shell = appShell(ctx.container, manifest);
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
     var profile = decorateStage(shell.stage, manifest, data, preset);
     createThreeScene(shell.stage, manifest, data, preset, profile, shell.inspector);
+    var state = buildGraphState(data, manifest);
     var search = document.createElement("input");
     search.type = "search";
     search.placeholder = "Search";
-    var statusFilter = selectControl("All statuses", uniqueValues(nodes, "status"));
-    var kindFilter = selectControl("All kinds", uniqueValues(nodes, "kind"));
+    var statusFilter = selectControl("All statuses", uniqueValues(state.rawNodes.concat(state.groupOrder.map(function (id) { return state.groups[id]; })), "status"));
+    var kindFilter = selectControl("All kinds", uniqueValues(state.rawNodes.concat(state.groupOrder.map(function (id) { return state.groups[id]; })), "kind"));
+    var edgeKindFilter = selectControl("All edges", uniqueValues(state.rawEdges, "kind"));
+    var overview = document.createElement("button");
+    overview.textContent = "Overview";
     var replay = document.createElement("button");
     replay.textContent = "Replay";
     var exportBtn = document.createElement("button");
     exportBtn.textContent = "Export";
+    var countBadge = el("span", "visual-count-badge");
     shell.toolbar.appendChild(search);
     shell.toolbar.appendChild(statusFilter);
     shell.toolbar.appendChild(kindFilter);
+    shell.toolbar.appendChild(edgeKindFilter);
+    shell.toolbar.appendChild(overview);
     shell.toolbar.appendChild(replay);
     shell.toolbar.appendChild(exportBtn);
+    shell.toolbar.appendChild(countBadge);
 
     var width = Math.max(900, shell.stage.clientWidth || 900);
     var height = Math.max(620, shell.stage.clientHeight || 620);
     var canvas = svg("svg", { class: "visual-svg", viewBox: "0 0 " + width + " " + height, role: "img" });
     shell.stage.appendChild(canvas);
-    var positions = layoutNodes(nodes, preset, width, height);
     var nodeElements = {};
     var edgeElements = [];
-    if (preset === "orbit_system" || preset === "ripple" || preset === "radar_sphere") {
-      [90, 170, 250].forEach(function (radius) {
-        canvas.appendChild(svg("circle", { class: "visual-orbit", cx: width / 2, cy: height / 2, r: radius }));
-      });
+    var currentModel = { nodes: [], edges: [] };
+
+    function clearCanvas() {
+      while (canvas.firstChild) {
+        canvas.removeChild(canvas.firstChild);
+      }
     }
 
-    edges.forEach(function (edge, index) {
-      var from = positions[edge.from];
-      var to = positions[edge.to];
-      if (!from || !to) {
-        return;
+    function drawOrbitGuides() {
+      if (preset === "orbit_system" || preset === "ripple" || preset === "radar_sphere") {
+        [90, 170, 250].forEach(function (radius) {
+          canvas.appendChild(svg("circle", { class: "visual-orbit", cx: width / 2, cy: height / 2, r: radius }));
+        });
       }
-      var edgeClass = "visual-edge";
-      if (preset === "sankey_3d" || preset === "pipeline_flow" || preset === "flow_particles") {
-        edgeClass += " visual-edge-flow";
-      }
-      var path = edgePath(from, to, preset, index);
-      var line = svg("path", { class: edgeClass, d: path });
-      if (edge.weight || edge.value) {
-        line.setAttribute("stroke-width", Math.max(1.5, Math.min(12, Number(edge.weight || edge.value) || 1)));
-      }
-      canvas.appendChild(line);
-      edgeElements.push({ element: line, edge: edge });
-      if (profile.particles && (preset === "flow_particles" || preset === "pipeline_flow" || preset === "sankey_3d" || preset === "graph_3d" || preset === "constellation")) {
-        addFlowParticle(canvas, path, index, edge.status);
-      }
-      if (edge.label) {
-        var label = svg("text", { class: "visual-edge-label", x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 5 });
-        label.textContent = runtime.safeText(edge.label);
-        canvas.appendChild(label);
-      }
-    });
-
-    nodes.forEach(function (node, index) {
-      var pos = positions[node.id] || { x: width / 2, y: height / 2 };
-      var group = svg("g", { class: "visual-node", tabindex: "0" });
-      var depth = nodeDepth(node, index, preset);
-      var zLift = Math.round(depth * 34);
-      group.setAttribute("style", "--node-shadow-x:" + Math.round(6 + depth * 10) + "px; --node-shadow-y:" + Math.round(8 + depth * 12) + "px");
-      if (profile.grid || profile.city || preset === "graph_3d" || preset === "graph_2_5d" || preset === "sankey_3d") {
-        canvas.appendChild(svg("ellipse", { class: "visual-node-shadow", cx: pos.x + zLift * 0.55, cy: pos.y + 38 + zLift * 0.28, rx: 30 + depth * 12, ry: 8 + depth * 4 }));
-        canvas.appendChild(svg("line", { class: "visual-depth-line", x1: pos.x, y1: pos.y + 26, x2: pos.x + zLift * 0.55, y2: pos.y + 38 + zLift * 0.28 }));
-      }
-      if (zLift) {
-        group.setAttribute("transform", "translate(" + (-zLift * 0.24).toFixed(1) + " " + (-zLift).toFixed(1) + ")");
-      }
-      var shape;
-      if (preset === "city_map") {
-        var heightValue = 44 + ((node.metrics && Number(node.metrics.risk)) || index % 5) * 10;
-        shape = svg("rect", { x: pos.x - 26, y: pos.y - heightValue, width: 52, height: heightValue, rx: 6, fill: nodeColor(node.status) });
-      } else if (preset === "layered_stack" || preset === "state_machine" || preset === "control_room" || preset === "diff_split_view") {
-        shape = svg("rect", { x: pos.x - 44, y: pos.y - 25, width: 88, height: 50, rx: 8, fill: nodeColor(node.status) });
-      } else {
-        shape = svg("circle", { cx: pos.x, cy: pos.y, r: 28, fill: nodeColor(node.status) });
-      }
-      var label = svg("text", { x: pos.x, y: pos.y + 46, "text-anchor": "middle" });
-      label.textContent = runtime.safeText(node.label || node.id);
-      group.appendChild(shape);
-      group.appendChild(label);
-      group.addEventListener("click", function () {
-        focusNode(node.id);
-        shell.inspector.show(node.label || node.id, node);
-      });
-      canvas.appendChild(group);
-      nodeElements[node.id] = { element: group, node: node };
-    });
-
-    function matches(node) {
-      var q = search.value.toLowerCase();
-      var label = String(node.label || node.id || "").toLowerCase();
-      return (!q || label.indexOf(q) >= 0) && (!statusFilter.value || node.status === statusFilter.value) && (!kindFilter.value || node.kind === kindFilter.value);
     }
 
-    function applyFilters() {
-      nodes.forEach(function (node) {
-        var item = nodeElements[node.id];
-        if (item) {
-          item.element.classList.toggle("visual-hidden", !matches(node));
+    function rebuildGraph() {
+      clearCanvas();
+      drawOrbitGuides();
+      nodeElements = {};
+      edgeElements = [];
+      currentModel = visibleGraph(state, {
+        query: search.value,
+        status: statusFilter.value,
+        kind: kindFilter.value,
+        edgeKind: edgeKindFilter.value
+      });
+      countBadge.textContent = currentModel.nodes.length + "/" + state.rawNodes.length + " nodes · " + currentModel.edges.length + "/" + state.rawEdges.length + " edges";
+      var positions = layoutNodes(currentModel.nodes, preset, width, height);
+
+      currentModel.edges.forEach(function (edge, index) {
+        var from = positions[edge.from];
+        var to = positions[edge.to];
+        if (!from || !to) {
+          return;
         }
+        var edgeClass = "visual-edge";
+        if (edge.aggregated) {
+          edgeClass += " visual-edge-aggregated";
+        }
+        if (preset === "sankey_3d" || preset === "pipeline_flow" || preset === "flow_particles") {
+          edgeClass += " visual-edge-flow";
+        }
+        var path = edgePath(from, to, preset, index);
+        var line = svg("path", { class: edgeClass, d: path });
+        if (edge.weight || edge.value) {
+          line.setAttribute("stroke-width", Math.max(1.5, Math.min(12, Number(edge.weight || edge.value) || 1)));
+        }
+        canvas.appendChild(line);
+        edgeElements.push({ element: line, edge: edge });
+        if (profile.particles && (preset === "flow_particles" || preset === "pipeline_flow" || preset === "sankey_3d" || preset === "graph_3d" || preset === "constellation")) {
+          addFlowParticle(canvas, path, index, edge.status);
+        }
+        if (edge.label && (currentModel.edges.length <= 80 || importanceValue(edge, 0) >= 0.65 || edge.aggregated)) {
+          var edgeLabel = svg("text", { class: "visual-edge-label", x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 5 });
+          edgeLabel.textContent = runtime.safeText(edge.label);
+          canvas.appendChild(edgeLabel);
+        }
+      });
+
+      currentModel.nodes.forEach(function (node, index) {
+        var pos = positions[node.id] || { x: width / 2, y: height / 2 };
+        var className = "visual-node" + (node.__group ? " visual-group-node" : "");
+        var group = svg("g", { class: className, tabindex: "0" });
+        var depth = nodeDepth(node, index, preset);
+        var zLift = Math.round(depth * 34);
+        group.setAttribute("style", "--node-shadow-x:" + Math.round(6 + depth * 10) + "px; --node-shadow-y:" + Math.round(8 + depth * 12) + "px");
+        if (profile.grid || profile.city || preset === "graph_3d" || preset === "graph_2_5d" || preset === "sankey_3d") {
+          canvas.appendChild(svg("ellipse", { class: "visual-node-shadow", cx: pos.x + zLift * 0.55, cy: pos.y + 38 + zLift * 0.28, rx: node.__group ? 42 + depth * 16 : 30 + depth * 12, ry: 8 + depth * 4 }));
+          canvas.appendChild(svg("line", { class: "visual-depth-line", x1: pos.x, y1: pos.y + 26, x2: pos.x + zLift * 0.55, y2: pos.y + 38 + zLift * 0.28 }));
+        }
+        if (zLift) {
+          group.setAttribute("transform", "translate(" + (-zLift * 0.24).toFixed(1) + " " + (-zLift).toFixed(1) + ")");
+        }
+        var shape;
+        if (node.__group) {
+          shape = svg("rect", { x: pos.x - 58, y: pos.y - 33, width: 116, height: 66, rx: 10, fill: nodeColor(node.status) });
+        } else if (preset === "city_map") {
+          var heightValue = 44 + ((node.metrics && Number(node.metrics.risk)) || index % 5) * 10;
+          shape = svg("rect", { x: pos.x - 26, y: pos.y - heightValue, width: 52, height: heightValue, rx: 6, fill: nodeColor(node.status) });
+        } else if (preset === "layered_stack" || preset === "state_machine" || preset === "control_room" || preset === "diff_split_view") {
+          shape = svg("rect", { x: pos.x - 44, y: pos.y - 25, width: 88, height: 50, rx: 8, fill: nodeColor(node.status) });
+        } else {
+          shape = svg("circle", { cx: pos.x, cy: pos.y, r: 28, fill: nodeColor(node.status) });
+        }
+        group.appendChild(shape);
+        if (node.__group) {
+          var sign = svg("text", { class: "visual-group-count", x: pos.x, y: pos.y + 5, "text-anchor": "middle" });
+          sign.textContent = (state.collapsed[node.id] ? "+" : "-") + " " + runtime.safeText(node.child_count || 0);
+          group.appendChild(sign);
+        }
+        if (currentModel.nodes.length <= 60 || node.__group || importanceValue(node, 0) >= 0.7) {
+          var label = svg("text", { x: pos.x, y: pos.y + (node.__group ? 52 : 46), "text-anchor": "middle" });
+          label.textContent = runtime.safeText(itemLabel(node));
+          group.appendChild(label);
+        }
+        group.addEventListener("click", function () {
+          if (node.__group) {
+            state.collapsed[node.id] = !state.collapsed[node.id];
+            shell.inspector.show(itemLabel(node), {
+              id: node.id,
+              label: itemLabel(node),
+              collapsed: state.collapsed[node.id],
+              child_count: node.child_count,
+              children: (node.children || []).map(function (child) { return child.id; })
+            });
+            rebuildGraph();
+            focusNode(node.id);
+            return;
+          }
+          focusNode(node.id);
+          shell.inspector.show(itemLabel(node), node);
+        });
+        canvas.appendChild(group);
+        nodeElements[node.id] = { element: group, node: node };
       });
     }
 
@@ -698,9 +1001,20 @@
       });
     }
 
-    search.addEventListener("input", applyFilters);
-    statusFilter.addEventListener("change", applyFilters);
-    kindFilter.addEventListener("change", applyFilters);
+    search.addEventListener("input", rebuildGraph);
+    statusFilter.addEventListener("change", rebuildGraph);
+    kindFilter.addEventListener("change", rebuildGraph);
+    edgeKindFilter.addEventListener("change", rebuildGraph);
+    overview.addEventListener("click", function () {
+      search.value = "";
+      statusFilter.value = "";
+      kindFilter.value = "";
+      edgeKindFilter.value = "";
+      state.groupOrder.forEach(function (id) {
+        state.collapsed[id] = state.design.defaultCollapseDepth > 0;
+      });
+      rebuildGraph();
+    });
     exportBtn.addEventListener("click", function () {
       runtime.exportJSON(data, "visual-data.json");
     });
@@ -713,7 +1027,11 @@
       var timer = window.setInterval(function () {
         var event = events[index];
         if (event && event.node_id) {
-          focusNode(event.node_id);
+          if (nodeElements[event.node_id]) {
+            focusNode(event.node_id);
+          } else if (state.parentByNode[event.node_id]) {
+            focusNode(state.parentByNode[event.node_id]);
+          }
         }
         shell.inspector.show(event && (event.label || event.summary || event.id) || "Event", event);
         index += 1;
@@ -722,7 +1040,7 @@
         }
       }, 650);
     });
-    applyFilters();
+    rebuildGraph();
   }
 
   function renderTimeline(ctx) {

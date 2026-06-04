@@ -17,6 +17,7 @@ go run ./cmd/browser schema probe --json | Out-Null
 go run ./cmd/jenkins schema job.build --json | Out-Null
 go run ./cmd/inspect-image schema inspect --json | Out-Null
 go run ./cmd/visual schema render --json | Out-Null
+go run ./cmd/visual schema inspect-input --json | Out-Null
 go run ./cmd/inspect-image help llm | Out-Null
 go run ./cmd/inspect-image models --json | Out-Null
 go run ./cmd/inspect-image auth status --json | Out-Null
@@ -31,6 +32,7 @@ go run ./cmd/visual template list --template-dir ./templates/visual --json | Out
 go run ./cmd/visual template list --template-dir ./templates/visual --category agent --json | Out-Null
 go run ./cmd/visual template schema agent.run_trace --template-dir ./templates/visual --json | Out-Null
 go run ./cmd/visual template schema codebase.module_dependency_graph --template-dir ./templates/visual --json | Out-Null
+go run ./cmd/visual inspect-input --template codebase.module_dependency_graph --template-dir ./templates/visual --input ./templates/visual/codebase.module_dependency_graph/examples/basic.input.json --json | Out-Null
 go run ./cmd/visual template doctor --template-dir ./templates/visual --json | Out-Null
 $tmp = New-Item -ItemType Directory -Force -Path (Join-Path ([System.IO.Path]::GetTempPath()) ("visual-" + [System.Guid]::NewGuid().ToString("N")))
 $templates = @(

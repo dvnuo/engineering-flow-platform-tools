@@ -611,6 +611,9 @@ func TestVisualInspectInputDiagnostics(t *testing.T) {
 			t.Fatalf("inspect-input missing warning %s: %#v", code, warnings)
 		}
 	}
+	if summary["relation_coverage"].(float64) <= 0 || len(summary["dominant_edge_kinds"].([]any)) == 0 {
+		t.Fatalf("inspect-input summary missing relationship diagnostics: %#v", summary)
+	}
 	recommendations := data["recommendations"].(map[string]any)
 	if recommendations["initial_view"] != "overview" || recommendations["collapse_by_default"] != true || len(recommendations["group_by"].([]any)) == 0 {
 		t.Fatalf("inspect-input recommendations missing overview grouping: %#v", recommendations)
@@ -619,6 +622,43 @@ func TestVisualInspectInputDiagnostics(t *testing.T) {
 	alias := runVisualOK(t, "preview", "--template", "codebase.module_dependency_graph", "--template-dir", templateDir, "--input", inputPath, "--json")
 	if alias["ok"] != true {
 		t.Fatalf("preview alias should work: %#v", alias)
+	}
+}
+
+func TestVisualInspectInputReadabilityDiagnostics(t *testing.T) {
+	templateDir := visualTemplateDir()
+	inputPath := filepath.Join(t.TempDir(), "hard-to-read-graph.json")
+	mustWrite(t, inputPath, hardToReadGraphInputJSON(t))
+	obj := runVisualOK(t, "inspect-input", "--template", "codebase.galaxy", "--template-dir", templateDir, "--input", inputPath, "--json")
+	data := obj["data"].(map[string]any)
+	if data["quality_score"].(float64) >= 70 {
+		t.Fatalf("hard-to-read graph should receive a low quality score: %#v", data)
+	}
+	summary := data["summary"].(map[string]any)
+	for _, name := range []string{"relation_coverage", "orphan_nodes", "long_labels", "missing_importance", "missing_visibility", "dominant_edge_kinds"} {
+		if _, ok := summary[name]; !ok {
+			t.Fatalf("summary missing %s: %#v", name, summary)
+		}
+	}
+	warnings := data["warnings"].([]any)
+	codes := map[string]bool{}
+	for _, item := range warnings {
+		m := item.(map[string]any)
+		codes[m["code"].(string)] = true
+		if strings.TrimSpace(fmt.Sprint(m["severity"])) == "" {
+			t.Fatalf("warning should include severity: %#v", m)
+		}
+	}
+	for _, code := range []string{"relation_coverage_low", "missing_edge_visibility", "missing_importance", "labels_too_long", "relation_semantics_flat", "initial_view_missing"} {
+		if !codes[code] {
+			t.Fatalf("inspect-input missing readability warning %s: %#v", code, warnings)
+		}
+	}
+	recommendations := data["recommendations"].(map[string]any)
+	for _, name := range []string{"add_fields", "focus_candidates"} {
+		if _, ok := recommendations[name].([]any); !ok {
+			t.Fatalf("recommendations missing %s: %#v", name, recommendations)
+		}
 	}
 }
 
@@ -1289,6 +1329,11 @@ func TestVisualRuntimeHasThreeStyleEffectContracts(t *testing.T) {
 		"wheel",
 		"setPointerCapture",
 		"project(camera)",
+		"visual-three-edge-label",
+		"targetOpacity",
+		"updateGraphTransitions",
+		"MeshBasicMaterial",
+		"depthTest = false",
 		"edgePath",
 		"nodeDepth",
 		"addFlowParticle",
@@ -1313,6 +1358,7 @@ func TestVisualRuntimeHasThreeStyleEffectContracts(t *testing.T) {
 		"pointer-events: auto",
 		".visual-three-label-layer",
 		".visual-three-label",
+		".visual-three-edge-label",
 		".visual-count-badge",
 		".visual-group-node",
 		".visual-group-count",
@@ -1838,6 +1884,44 @@ func largeGraphInputJSON(t *testing.T, nodes, edges int) string {
 			"label":      "calls",
 			"weight":     1,
 			"importance": 0.25,
+		})
+	}
+	data["edges"] = edgeItems
+	raw, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
+}
+
+func hardToReadGraphInputJSON(t *testing.T) string {
+	t.Helper()
+	data := map[string]any{
+		"schema": "efp.visual.input.graph.v1",
+		"title":  "Hard To Read Repository Galaxy",
+		"nodes":  []map[string]any{},
+		"edges":  []map[string]any{},
+	}
+	nodeItems := data["nodes"].([]map[string]any)
+	for i := 0; i < 120; i++ {
+		nodeItems = append(nodeItems, map[string]any{
+			"id":     fmt.Sprintf("symbol_%03d", i),
+			"label":  fmt.Sprintf("com.example.billing.very.deep.package.SymbolWithLongGeneratedName%03d", i),
+			"kind":   []string{"class", "method", "field"}[i%3],
+			"status": []string{"ok", "warning"}[i%2],
+			"metadata": map[string]any{
+				"path": fmt.Sprintf("src/main/java/com/example/billing/deep/SymbolWithLongGeneratedName%03d.java", i),
+			},
+		})
+	}
+	data["nodes"] = nodeItems
+	edgeItems := data["edges"].([]map[string]any)
+	for i := 0; i < 70; i++ {
+		edgeItems = append(edgeItems, map[string]any{
+			"from":  "symbol_000",
+			"to":    fmt.Sprintf("symbol_%03d", 1+(i%50)),
+			"kind":  "contains",
+			"label": "contains",
 		})
 	}
 	data["edges"] = edgeItems

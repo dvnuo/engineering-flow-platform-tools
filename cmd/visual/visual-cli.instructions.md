@@ -11,7 +11,7 @@
 - Each template has a declared `effects` contract for its local Three.js scene, including camera, particles, material, motion, and interactions. Prefer selecting the right template and input data over generating custom JavaScript.
 - Each template also returns `visual_design` guidance. For large graph inputs, use groups or node `parent_id`/`group_id`/`group`, start with an overview, and put noisy class/method/import edges behind `visibility: "detail"` or `visibility: "hidden"`.
 - Do not invent the JSON shape. Always run `visual template schema <id> --json` before writing input JSON and again before each render if the selected id changed.
-- Before render, run `visual inspect-input --template <template-id> --input <input.json> --json`. If it reports `missing_groups`, high label pressure, or high edge density, revise the input before rendering.
+- Before render, run `visual inspect-input --template <template-id> --input <input.json> --json`. If it reports `missing_groups`, high label pressure, high edge density, low `relation_coverage`, repetitive `dominant_edge_kinds`, long labels, missing `importance`, or missing edge `visibility`, revise the input before rendering.
 - Render to a workspace path with `visual render --template <template-id> --input <input.json> --out <workspace-output-dir> --json`.
 - Return the generated `index.html` path from `data.artifact.entrypoint`.
 - Do not use remote assets, CDN URLs, runtime Node/npm, generated JavaScript, or network APIs.

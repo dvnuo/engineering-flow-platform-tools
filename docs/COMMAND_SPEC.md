@@ -46,7 +46,7 @@ Agents must not discover templates by listing `templates/visual` directories or 
 
 ### Input Inspection
 
-`visual inspect-input --template <template-id> --input <input.json> --json` validates the input and returns `quality_score`, `summary`, `warnings`, `recommendations`, and the template `visual_design`. Use it after writing input JSON and before render, especially for large graphs. It does not write files. `visual preview` is a compatibility alias for the same command.
+`visual inspect-input --template <template-id> --input <input.json> --json` validates the input and returns `quality_score`, `summary`, `warnings`, `recommendations`, and the template `visual_design`. Use it after writing input JSON and before render, especially for large graphs. Graph summaries include relationship coverage, orphan nodes, dominant edge kinds, long labels, missing importance fields, and missing edge visibility fields. Warnings include severity and optional details so agents can revise the input before rendering. It does not write files. `visual preview` is a compatibility alias for the same command.
 
 ### Render Artifact Output
 

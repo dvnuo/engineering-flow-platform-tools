@@ -28,7 +28,7 @@
 - Before every render, run `visual template schema <id> --json`, using `--template-dir` only when the catalog is not installed at `~/.efp/template/visual`.
 - Write input JSON that follows `data.json_schema` and the returned `data.template.visual_design`; do not invent the input shape and do not generate JavaScript code.
 - For graph inputs larger than a small overview, include `groups` or node `parent_id`/`group_id`/`group` fields, set `initial_view.mode: "overview"`, and mark noisy low-value edges with `visibility: "detail"` or `visibility: "hidden"`.
-- Before validation/render, run `visual inspect-input --template <template-id> --input <input.json> --json` and use `data.warnings`, `data.summary`, and `data.recommendations` to reduce clutter.
+- Before validation/render, run `visual inspect-input --template <template-id> --input <input.json> --json` and use `data.warnings`, `data.summary`, and `data.recommendations` to reduce clutter. For graph inputs, fix low `relation_coverage`, repetitive `dominant_edge_kinds`, long labels, missing `importance`, and missing edge `visibility` before rendering.
 - Validate with `visual validate --template <template-id> --input <input.json> --json`, using `--template-dir` only when the catalog is not installed at `~/.efp/template/visual`.
 - Render to a new output directory with `visual render --template <template-id> --input <input.json> --out <dir> --json`.
 - Return `data.artifact.entrypoint` to the user.

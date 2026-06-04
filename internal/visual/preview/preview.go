@@ -44,15 +44,25 @@ type Summary struct {
 	EdgeDensity       string   `json:"edge_density,omitempty"`
 	LabelPressure     string   `json:"label_pressure,omitempty"`
 	GroupCoverage     float64  `json:"group_coverage,omitempty"`
+	RelationCoverage  float64  `json:"relation_coverage,omitempty"`
+	EdgeKindCount     int      `json:"edge_kind_count,omitempty"`
+	DominantEdgeKinds []Count  `json:"dominant_edge_kinds,omitempty"`
+	OrphanNodes       []string `json:"orphan_nodes,omitempty"`
+	LongLabels        []string `json:"long_labels,omitempty"`
+	DuplicateLabels   []string `json:"duplicate_labels,omitempty"`
+	MissingImportance int      `json:"missing_importance,omitempty"`
+	MissingVisibility int      `json:"missing_visibility,omitempty"`
 	HighFanoutNodes   []string `json:"high_fanout_nodes,omitempty"`
 	InitialView       string   `json:"initial_view,omitempty"`
 	CollapseByDefault bool     `json:"collapse_by_default,omitempty"`
 }
 
 type Warning struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Hint    string `json:"hint"`
+	Code     string   `json:"code"`
+	Severity string   `json:"severity,omitempty"`
+	Message  string   `json:"message"`
+	Hint     string   `json:"hint"`
+	Details  []string `json:"details,omitempty"`
 }
 
 type Recommendations struct {
@@ -62,7 +72,15 @@ type Recommendations struct {
 	GroupBy           []string `json:"group_by,omitempty"`
 	CollapseByDefault bool     `json:"collapse_by_default"`
 	HideEdgeTypes     []string `json:"hide_edge_types,omitempty"`
+	AddFields         []string `json:"add_fields,omitempty"`
+	FocusCandidates   []string `json:"focus_candidates,omitempty"`
+	RewriteLabels     []string `json:"rewrite_labels,omitempty"`
 	AgentGuidance     []string `json:"agent_guidance,omitempty"`
+}
+
+type Count struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
 }
 
 func Preview(opts Options) (Result, error) {
@@ -170,9 +188,24 @@ func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Su
 	grouped := 0
 	degree := map[string]int{}
 	edgeKinds := map[string]int{}
+	edgeLabels := map[string]int{}
+	labels := map[string]int{}
+	missingImportance := 0
+	missingVisibility := 0
+	overviewEdges := 0
 	for _, node := range nodes {
 		if firstString(node, "parent_id", "group_id", "group", "module", "package") != "" {
 			grouped++
+		}
+		label := labelField(node)
+		if label != "" {
+			labels[label]++
+			if len(label) > 42 {
+				summary.LongLabels = appendCapped(summary.LongLabels, label, 8)
+			}
+		}
+		if !hasImportance(node) {
+			missingImportance++
 		}
 	}
 	for _, edge := range edges {
@@ -187,36 +220,97 @@ func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Su
 		if kind := stringField(edge, "kind"); kind != "" {
 			edgeKinds[kind]++
 		}
+		if label := labelField(edge); label != "" {
+			edgeLabels[label]++
+		}
+		if !hasImportance(edge) {
+			missingImportance++
+		}
+		visibility := stringField(edge, "visibility")
+		if visibility == "" {
+			missingVisibility++
+			overviewEdges++
+		} else if visibility != "hidden" && visibility != "detail" {
+			overviewEdges++
+		}
 	}
 	if len(nodes) > 0 {
 		summary.GroupCoverage = round2(float64(grouped) / float64(len(nodes)))
+		connected := 0
+		for _, node := range nodes {
+			if degree[stringField(node, "id")] > 0 {
+				connected++
+			} else {
+				summary.OrphanNodes = appendCapped(summary.OrphanNodes, labelField(node), 8)
+			}
+		}
+		summary.RelationCoverage = round2(float64(connected) / float64(len(nodes)))
 	}
+	summary.EdgeKindCount = len(edgeKinds)
+	summary.DominantEdgeKinds = topCounts(edgeKinds, 5)
+	summary.DuplicateLabels = duplicateNames(labels, 8)
+	summary.MissingImportance = missingImportance
+	summary.MissingVisibility = missingVisibility
 	highFanout := highFanoutNodes(degree, 20)
 	summary.HighFanoutNodes = highFanout
 	summary.VisibleNodes = initialVisibleNodes(nodes, groups, design)
-	summary.VisibleEdges = minInt(len(edges), design.MaxInitialEdges)
+	summary.VisibleEdges = minInt(overviewEdges, design.MaxInitialEdges)
 	quality := 100
 	if len(nodes) > design.MaxInitialNodes && len(groups) == 0 {
 		quality -= 28
-		*warnings = append(*warnings, Warning{Code: "missing_groups", Message: "Large graph input has no groups.", Hint: "Group nodes by module/package/component and render groups collapsed initially."})
+		*warnings = append(*warnings, Warning{Code: "missing_groups", Severity: "error", Message: "Large graph input has no groups, so the first view has to explain too many objects at once.", Hint: "Group nodes by module/package/component and render groups collapsed initially."})
 	}
 	if len(nodes) > design.MaxInitialNodes {
 		quality -= 16
-		*warnings = append(*warnings, Warning{Code: "visible_nodes_high", Message: "The graph has more nodes than the recommended initial view.", Hint: "Set visible=false for low-importance detail nodes or collapse them under groups."})
+		*warnings = append(*warnings, Warning{Code: "visible_nodes_high", Severity: "warning", Message: "The graph has more nodes than the recommended initial view.", Hint: "Set visible=false for low-importance detail nodes or collapse them under groups."})
 	}
 	if len(edges) > design.MaxInitialEdges || summary.EdgeDensity == "high" {
 		quality -= 22
-		*warnings = append(*warnings, Warning{Code: "graph_density_high", Message: "Edge density is high for an initial overview.", Hint: "Hide low-importance or detail-only edge types and keep only summary relationships visible first."})
+		*warnings = append(*warnings, Warning{Code: "graph_density_high", Severity: "error", Message: "Edge density is high for an initial overview, so relationships will compete visually.", Hint: "Hide low-importance or detail-only edge types and keep only summary relationships visible first.", Details: countNames(summary.DominantEdgeKinds)})
 		recommendations.HideEdgeTypes = lowValueEdgeKinds(edgeKinds)
 	}
 	if summary.GroupCoverage < 0.5 && len(nodes) > design.MaxInitialNodes {
 		quality -= 14
-		*warnings = append(*warnings, Warning{Code: "group_coverage_low", Message: "Most graph nodes are not assigned to a group.", Hint: "Set parent_id, group_id, group, module, or package so the renderer can collapse related nodes."})
+		*warnings = append(*warnings, Warning{Code: "group_coverage_low", Severity: "warning", Message: "Most graph nodes are not assigned to a group.", Hint: "Set parent_id, group_id, group, module, or package so the renderer can collapse related nodes."})
 	}
 	if len(highFanout) > 0 {
 		quality -= 10
-		*warnings = append(*warnings, Warning{Code: "high_fanout_nodes", Message: "Some nodes have very high fan-out.", Hint: "Represent high fan-out nodes as hubs or groups and hide detail edges until focus mode."})
+		*warnings = append(*warnings, Warning{Code: "high_fanout_nodes", Severity: "warning", Message: "Some nodes have very high fan-out.", Hint: "Represent high fan-out nodes as hubs or groups and hide detail edges until focus mode.", Details: highFanout})
 	}
+	if summary.RelationCoverage > 0 && summary.RelationCoverage < 0.65 && len(nodes) > 12 {
+		quality -= 14
+		*warnings = append(*warnings, Warning{Code: "relation_coverage_low", Severity: "warning", Message: "Many nodes are isolated from the visible relationship graph.", Hint: "Either connect isolated nodes to a group/hub or move them out of the initial overview.", Details: summary.OrphanNodes})
+	}
+	if missingVisibility > design.MaxInitialEdges/2 && len(edges) > design.MaxInitialEdges/2 {
+		quality -= 10
+		*warnings = append(*warnings, Warning{Code: "missing_edge_visibility", Severity: "warning", Message: "Many edges do not declare visibility, so the renderer must guess what belongs in the overview.", Hint: "Set important relationships to visibility=overview and noisy details to visibility=detail or hidden."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "edges[].visibility")
+	}
+	if missingImportance > (len(nodes)+len(edges))/2 && len(nodes)+len(edges) > design.MaxInitialNodes {
+		quality -= 8
+		*warnings = append(*warnings, Warning{Code: "missing_importance", Severity: "warning", Message: "Most nodes or edges do not declare importance, so visual emphasis is weak.", Hint: "Add importance values to modules, hubs, risks, and summary relationships."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "nodes[].importance")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "edges[].importance")
+	}
+	if len(summary.LongLabels) > 0 {
+		quality -= 8
+		*warnings = append(*warnings, Warning{Code: "labels_too_long", Severity: "warning", Message: "Some labels are too long for a readable 3D overview.", Hint: "Use short display labels and move full paths or class names into metadata.", Details: summary.LongLabels})
+		recommendations.RewriteLabels = append(recommendations.RewriteLabels, summary.LongLabels...)
+	}
+	if dominantRatio(edgeKinds, len(edges)) >= 0.65 && len(edges) > 20 {
+		quality -= 12
+		*warnings = append(*warnings, Warning{Code: "relation_semantics_flat", Severity: "warning", Message: "Most relationships use the same edge kind, so the graph does not explain why objects are connected.", Hint: "Use distinct edge kinds such as owns, calls, imports, emits, depends_on, tests, or deploys_to."})
+	}
+	if dominantRatio(edgeLabels, len(edges)) >= 0.7 && len(edges) > 20 {
+		quality -= 6
+		*warnings = append(*warnings, Warning{Code: "edge_labels_repetitive", Severity: "info", Message: "Most edge labels repeat the same word, which adds clutter without adding meaning.", Hint: "Omit repetitive edge labels or keep them only on selected/focus relationships."})
+	}
+	if _, ok := data["initial_view"].(map[string]any); !ok && len(nodes) > design.MaxInitialNodes {
+		quality -= 8
+		*warnings = append(*warnings, Warning{Code: "initial_view_missing", Severity: "warning", Message: "Large graph input does not define an initial_view policy.", Hint: "Add initial_view.mode=overview with max_nodes, max_edges, and collapse_groups=true."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "initial_view")
+	}
+	recommendations.FocusCandidates = topDegreeNodes(degree, 6)
 	return quality
 }
 
@@ -236,6 +330,121 @@ func readInput(path string, stdin io.Reader) ([]byte, error) {
 		return nil, metadata.NewError("input_read_failed", "failed to read input JSON: "+err.Error(), "Pass a readable JSON file path to --input.", 400)
 	}
 	return b, nil
+}
+
+func labelField(obj map[string]any) string {
+	for _, name := range []string{"label", "title", "summary", "text", "id"} {
+		if value := stringField(obj, name); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func hasImportance(obj map[string]any) bool {
+	if _, ok := obj["importance"]; ok {
+		return true
+	}
+	metrics, _ := obj["metrics"].(map[string]any)
+	if metrics == nil {
+		return false
+	}
+	for _, name := range []string{"importance", "impact", "risk", "score", "weight"} {
+		if _, ok := metrics[name]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func appendCapped(items []string, value string, limit int) []string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return items
+	}
+	for _, item := range items {
+		if item == value {
+			return items
+		}
+	}
+	if len(items) >= limit {
+		return items
+	}
+	return append(items, value)
+}
+
+func duplicateNames(counts map[string]int, limit int) []string {
+	var names []string
+	for name, count := range counts {
+		if count > 1 {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	if len(names) > limit {
+		return names[:limit]
+	}
+	return names
+}
+
+func topCounts(counts map[string]int, limit int) []Count {
+	var items []Count
+	for name, count := range counts {
+		if strings.TrimSpace(name) != "" {
+			items = append(items, Count{Name: name, Count: count})
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].Count == items[j].Count {
+			return items[i].Name < items[j].Name
+		}
+		return items[i].Count > items[j].Count
+	})
+	if len(items) > limit {
+		return items[:limit]
+	}
+	return items
+}
+
+func countNames(items []Count) []string {
+	var out []string
+	for _, item := range items {
+		out = append(out, item.Name)
+	}
+	return out
+}
+
+func dominantRatio(counts map[string]int, total int) float64 {
+	if total <= 0 {
+		return 0
+	}
+	max := 0
+	for _, count := range counts {
+		if count > max {
+			max = count
+		}
+	}
+	return float64(max) / float64(total)
+}
+
+func appendUnique(items []string, value string) []string {
+	for _, item := range items {
+		if item == value {
+			return items
+		}
+	}
+	return append(items, value)
+}
+
+func topDegreeNodes(degree map[string]int, limit int) []string {
+	counts := topCounts(degree, limit)
+	var out []string
+	for _, item := range counts {
+		if item.Count > 0 {
+			out = append(out, item.Name)
+		}
+	}
+	return out
 }
 
 func array(data map[string]any, name string) []any {

@@ -887,6 +887,7 @@
       var nodeMap = {};
       var edgeItems = [];
       var labels = [];
+      var edgeLabels = [];
       var selectedID = "";
       var hoverID = "";
       var currentModel = { nodes: [], edges: [] };
@@ -917,6 +918,7 @@
         nodeMap = {};
         edgeItems = [];
         labels = [];
+        edgeLabels = [];
         while (labelLayer.firstChild) {
           labelLayer.removeChild(labelLayer.firstChild);
         }
@@ -934,6 +936,21 @@
         var label = el("div", "visual-three-label" + (node.__group ? " visual-three-group-label" : ""), itemLabel(node));
         labelLayer.appendChild(label);
         labels.push({ element: label, mesh: mesh, node: node });
+      }
+
+      function addEdgeLabel(edge, from, to) {
+        var text = edge.label || edge.kind || "";
+        if (!text) {
+          return;
+        }
+        var label = el("div", "visual-three-edge-label", text);
+        label.hidden = true;
+        labelLayer.appendChild(label);
+        edgeLabels.push({
+          element: label,
+          edge: edge,
+          position: new THREE.Vector3().addVectors(from, to).multiplyScalar(0.5)
+        });
       }
 
       function buildParticles(total) {
@@ -966,7 +983,11 @@
         var neighborIDs = {};
         edgeItems.forEach(function (item) {
           var active = id && (item.edge.from === id || item.edge.to === id);
-          item.line.material.opacity = active ? 0.95 : id ? 0.18 : 0.48;
+          item.line.userData.targetOpacity = active ? 0.98 : id ? 0.2 : item.line.userData.baseOpacity;
+          (item.markers || []).forEach(function (marker) {
+            marker.userData.targetOpacity = active ? 0.92 : id ? 0.12 : marker.userData.baseOpacity;
+            marker.userData.targetScale = active ? marker.userData.baseScale * 1.35 : marker.userData.baseScale;
+          });
           if (active) {
             neighborIDs[item.edge.from] = true;
             neighborIDs[item.edge.to] = true;
@@ -977,12 +998,10 @@
           var base = mesh.userData.baseScale || 1;
           var active = key === id;
           var neighbor = neighborIDs[key];
-          mesh.scale.setScalar(base * (active ? 1.38 : neighbor ? 1.14 : 1));
+          mesh.userData.targetScale = base * (active ? 1.38 : neighbor ? 1.14 : 1);
           mesh.material.transparent = true;
-          mesh.material.opacity = !id || active || neighbor ? mesh.userData.baseOpacity : 0.34;
-          if (mesh.material.emissiveIntensity !== undefined) {
-            mesh.material.emissiveIntensity = active ? 0.68 : neighbor ? 0.34 : mesh.userData.baseEmissive;
-          }
+          mesh.userData.targetOpacity = !id || active || neighbor ? mesh.userData.baseOpacity : 0.34;
+          mesh.userData.targetEmissive = active ? 0.68 : neighbor ? 0.34 : mesh.userData.baseEmissive;
         });
       }
 
@@ -1002,15 +1021,19 @@
           var mesh = new THREE.Mesh(geometry, material);
           mesh.position.copy(positions[node.id] || new THREE.Vector3(0, 0, 0));
           var scale = node.__group ? 1 + Math.min(1.7, (node.child_count || 1) / 18) : 0.72 + importanceValue(node, 0.35) * 0.7;
-          mesh.scale.setScalar(scale);
+          mesh.scale.setScalar(0.04);
           mesh.userData = {
             id: node.id,
             label: itemLabel(node),
             node: node,
             baseScale: scale,
             baseOpacity: material.opacity,
-            baseEmissive: material.emissiveIntensity || 0.14
+            baseEmissive: material.emissiveIntensity || 0.14,
+            targetScale: scale,
+            targetOpacity: material.opacity,
+            targetEmissive: material.emissiveIntensity || 0.14
           };
+          material.opacity = 0;
           nodeRoot.add(mesh);
           objects.push(mesh);
           nodeMap[node.id] = { mesh: mesh, node: node };
@@ -1026,13 +1049,45 @@
           }
           var lineGeo = new THREE.BufferGeometry();
           lineGeo.setFromPoints([from, to]);
+          var baseOpacity = edge.aggregated ? 0.86 : 0.64;
           var line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
             color: hexColor(edge.status),
             transparent: true,
-            opacity: edge.aggregated ? 0.68 : 0.42
+            opacity: 0,
+            blending: THREE.AdditiveBlending
           }));
+          line.material.depthTest = false;
+          line.material.depthWrite = false;
+          line.renderOrder = 1;
+          line.userData = { baseOpacity: baseOpacity, targetOpacity: baseOpacity };
           edgeRoot.add(line);
-          edgeItems.push({ line: line, edge: edge });
+          var markers = [];
+          var markerMaterial = new THREE.MeshBasicMaterial({
+            color: hexColor(edge.status),
+            transparent: true,
+            opacity: 0,
+            blending: THREE.AdditiveBlending
+          });
+          markerMaterial.depthTest = false;
+          markerMaterial.depthWrite = false;
+          var markerGeometry = new THREE.SphereGeometry(edge.aggregated ? 0.055 : 0.04, 12, 8);
+          var marker = new THREE.Mesh(markerGeometry, markerMaterial);
+          marker.position.copy(from);
+          marker.renderOrder = 2;
+          marker.userData = {
+            from: from.clone(),
+            to: to.clone(),
+            phase: (edgeItems.length % 17) / 17,
+            speed: 0.18 + (edgeItems.length % 5) * 0.025,
+            baseOpacity: edge.aggregated ? 0.86 : 0.64,
+            targetOpacity: edge.aggregated ? 0.86 : 0.64,
+            baseScale: edge.aggregated ? 1.25 : 1,
+            targetScale: edge.aggregated ? 1.25 : 1
+          };
+          edgeRoot.add(marker);
+          markers.push(marker);
+          addEdgeLabel(edge, from, to);
+          edgeItems.push({ line: line, edge: edge, markers: markers });
         });
         buildParticles(currentModel.nodes.length + currentModel.edges.length);
         applyFocus(selectedID && nodeMap[selectedID] ? selectedID : "");
@@ -1170,6 +1225,50 @@
             item.element.toggleAttribute("data-selected", item.node.id === selectedID);
           }
         });
+        edgeLabels.forEach(function (item) {
+          var active = selectedID && (item.edge.from === selectedID || item.edge.to === selectedID);
+          var important = item.edge.aggregated || importanceValue(item.edge, 0) >= 0.72;
+          var overview = !selectedID && important && edgeLabels.length <= 24;
+          var pos = item.position.clone();
+          root.localToWorld(pos);
+          pos.project(camera);
+          var visible = pos.z < 1 && pos.x >= -1.12 && pos.x <= 1.12 && pos.y >= -1.12 && pos.y <= 1.12;
+          item.element.hidden = !visible || (!active && !overview);
+          if (!item.element.hidden) {
+            item.element.style.left = ((pos.x * 0.5 + 0.5) * width).toFixed(1) + "px";
+            item.element.style.top = ((-pos.y * 0.5 + 0.5) * height).toFixed(1) + "px";
+            item.element.toggleAttribute("data-selected", !!active);
+          }
+        });
+      }
+
+      function easeValue(current, target, amount) {
+        return current + (target - current) * amount;
+      }
+
+      function updateGraphTransitions(t) {
+        Object.keys(nodeMap).forEach(function (key) {
+          var mesh = nodeMap[key].mesh;
+          var targetScale = mesh.userData.targetScale || mesh.userData.baseScale || 1;
+          var currentScale = mesh.scale.x || 0.01;
+          mesh.scale.setScalar(easeValue(currentScale, targetScale, 0.12));
+          mesh.material.opacity = easeValue(mesh.material.opacity, mesh.userData.targetOpacity !== undefined ? mesh.userData.targetOpacity : mesh.userData.baseOpacity, 0.12);
+          if (mesh.material.emissiveIntensity !== undefined) {
+            mesh.material.emissiveIntensity = easeValue(mesh.material.emissiveIntensity, mesh.userData.targetEmissive !== undefined ? mesh.userData.targetEmissive : mesh.userData.baseEmissive, 0.12);
+          }
+        });
+        edgeItems.forEach(function (item) {
+          item.line.material.opacity = easeValue(item.line.material.opacity, item.line.userData.targetOpacity, 0.1);
+          (item.markers || []).forEach(function (marker) {
+            marker.material.opacity = easeValue(marker.material.opacity, marker.userData.targetOpacity, 0.12);
+            var p = (t * marker.userData.speed + marker.userData.phase) % 1;
+            p = 0.18 + p * 0.64;
+            marker.position.copy(marker.userData.from).lerp(marker.userData.to, p);
+            var targetScale = marker.userData.targetScale || marker.userData.baseScale || 1;
+            var currentScale = marker.scale.x || 1;
+            marker.scale.setScalar(easeValue(currentScale, targetScale, 0.12));
+          });
+        });
       }
 
       updateCamera();
@@ -1186,6 +1285,7 @@
           root.rotation.y = Math.sin(t * 0.18) * 0.035;
         }
         particleRoot.rotation.y = t * 0.08;
+        updateGraphTransitions(t);
         updateLabels();
         renderer.render(scene, camera);
         window.requestAnimationFrame(animate);

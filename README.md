@@ -61,6 +61,8 @@ log window --run ./.log-runs/run_001 --entry-id entry_000001 --before 50 --after
 
 See `docs/LOG.md` for the run directory layout, redaction policy, and current P0 limitations.
 
+For VS Code GitHub Copilot, copy `cmd/log/log-cli.instructions.md` to `~/.copilot/instructions/log-cli.instructions.md` so agents use bounded JSON workflows instead of dumping huge logs.
+
 ### Inspect Image
 
 `inspect-image` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It lets text-only agents inspect exactly one local image using a GitHub Copilot plugin backed vision model through `/responses`.

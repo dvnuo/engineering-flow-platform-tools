@@ -31,7 +31,7 @@ func windowCmd(o *Opts) *cobra.Command {
 			if hasEntry {
 				result, err = logtool.WindowByEntry(runDir, entryID, before, after)
 			} else {
-				result, err = logtool.WindowByFileLine(file, line, before, after)
+				result, err = logtool.WindowByFileLineInRun(runDir, file, line, before, after)
 			}
 			if err != nil {
 				return printErr(cmd, o, err)
@@ -39,7 +39,7 @@ func windowCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", result))
 		},
 	}
-	c.Flags().StringVar(&runDir, "run", "", "Run directory produced by log analyze; required when using --entry-id.")
+	c.Flags().StringVar(&runDir, "run", "", "Run directory produced by log analyze; required for entry and file windows.")
 	c.Flags().StringVar(&entryID, "entry-id", "", "Entry id from entries, search, templates, or extract output.")
 	c.Flags().StringVar(&file, "file", "", "Source file path for direct file/line window lookup.")
 	c.Flags().IntVar(&line, "line", 0, "One-based source line number for direct file/line lookup.")

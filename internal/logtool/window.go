@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -38,11 +40,22 @@ func WindowByEntry(runDir string, entryID string, before, after int) (WindowResu
 	return result, nil
 }
 
-func WindowByFileLine(path string, line int, before, after int) (WindowResult, error) {
+func WindowByFileLineInRun(runDir string, path string, line int, before, after int) (WindowResult, error) {
+	if strings.TrimSpace(runDir) == "" {
+		return WindowResult{}, NewError("invalid_args", "--run is required.", "Pass --run <run-dir> produced by log analyze.", 400)
+	}
 	if strings.TrimSpace(path) == "" || line <= 0 {
 		return WindowResult{}, NewError("invalid_args", "--file and --line are required.", "Pass --file <path> --line <line-number>.", 400)
 	}
-	return readWindow(path, int64(line), int64(line), before, after)
+	manifest, err := ReadManifest(runDir)
+	if err != nil {
+		return WindowResult{}, err
+	}
+	sourcePath, ok := sourcePathInManifest(manifest, path)
+	if !ok {
+		return WindowResult{}, NewError("source_not_in_run", "The requested source file is not part of this log run.", "Use log analyze on that source first, or call log window with an entry_id from this run.", 403)
+	}
+	return readWindow(sourcePath, int64(line), int64(line), before, after)
 }
 
 func readWindow(path string, targetStart, targetEnd int64, before, after int) (WindowResult, error) {
@@ -66,11 +79,14 @@ func readWindow(path string, targetStart, targetEnd int64, before, after int) (W
 	lineNo := int64(0)
 	var lines []WindowLine
 	for {
-		line, readErr := reader.ReadString('\n')
-		if line != "" {
+		line, readErr := readPhysicalLine(reader, defaultMaxLinePreviewBytes)
+		if line.ByteLen > 0 {
 			lineNo++
 			if lineNo >= start && lineNo <= end {
-				text := strings.TrimRight(line, "\r\n")
+				text := strings.TrimRight(line.Preview, "\r\n")
+				if line.Truncated {
+					text += lineTruncatedMarker
+				}
 				lines = append(lines, WindowLine{
 					Line:   lineNo,
 					Text:   Redact(text),
@@ -94,4 +110,49 @@ func readWindow(path string, targetStart, targetEnd int64, before, after int) (W
 		After:  after,
 		Lines:  lines,
 	}, nil
+}
+
+func sourcePathInManifest(manifest Manifest, requested string) (string, bool) {
+	requestedKeys := comparablePathKeys(requested)
+	if len(requestedKeys) == 0 {
+		return "", false
+	}
+	for _, source := range manifest.Sources {
+		sourceKeys := comparablePathKeys(source.Path)
+		for key := range requestedKeys {
+			if sourceKeys[key] {
+				return source.Path, true
+			}
+		}
+	}
+	return "", false
+}
+
+func comparablePathKeys(path string) map[string]bool {
+	keys := map[string]bool{}
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return keys
+	}
+	addPathKey(keys, trimmed)
+	cleaned := filepath.Clean(trimmed)
+	addPathKey(keys, cleaned)
+	if abs, err := filepath.Abs(cleaned); err == nil {
+		addPathKey(keys, abs)
+		if evaluated, evalErr := filepath.EvalSymlinks(abs); evalErr == nil {
+			addPathKey(keys, evaluated)
+		}
+	}
+	if evaluated, err := filepath.EvalSymlinks(cleaned); err == nil {
+		addPathKey(keys, evaluated)
+	}
+	return keys
+}
+
+func addPathKey(keys map[string]bool, path string) {
+	cleaned := filepath.Clean(path)
+	if runtime.GOOS == "windows" {
+		cleaned = strings.ToLower(cleaned)
+	}
+	keys[cleaned] = true
 }

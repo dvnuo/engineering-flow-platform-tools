@@ -116,10 +116,12 @@ func logLLMTips() []string {
 		"Use log profile and log templates to understand volume, levels, and repeated patterns before drilling into individual evidence.",
 		"Use log search for bounded matches and pass next_cursor to continue; never request all entries at once.",
 		"Use log window to retrieve redacted before/after context from the original source file when you need evidence.",
+		"Prefer log window --entry-id; log window --file --line is limited to files already recorded in the run manifest.",
 		"Use log extract --kind stacktrace or --kind error-signature to find repeated failures.",
 		"Run directories contain only manifest.json, entries.jsonl, and templates.json with redacted previews; original logs must remain available for window.",
 		"Secrets such as Authorization bearer tokens, passwords, API keys, AWS keys, private keys, and emails are redacted from outputs.",
 		"P0 supports only local files, directories, and globs; it does not call LLMs and does not connect to Loki, ClickHouse, Kubernetes, Docker, journalctl, or remote backends.",
+		"For durable agent instructions, use cmd/log/log-cli.instructions.md.",
 	}
 }
 

@@ -662,6 +662,42 @@ func TestVisualInspectInputReadabilityDiagnostics(t *testing.T) {
 	}
 }
 
+func TestVisualInspectInputMissingLabelsAndOrphans(t *testing.T) {
+	templateDir := visualTemplateDir()
+	inputPath := filepath.Join(t.TempDir(), "missing-labels-orphans.json")
+	mustWrite(t, inputPath, missingLabelsOrphansGraphInputJSON(t))
+	obj := runVisualOK(t, "inspect-input", "--template", "codebase.galaxy", "--template-dir", templateDir, "--input", inputPath, "--json")
+	data := obj["data"].(map[string]any)
+	summary := data["summary"].(map[string]any)
+	if summary["missing_labels"].(float64) < 10 {
+		t.Fatalf("inspect-input should count nodes without display labels: %#v", summary)
+	}
+	if summary["orphan_node_count"].(float64) < 8 {
+		t.Fatalf("inspect-input should count isolated graph nodes: %#v", summary)
+	}
+	if len(summary["fallback_id_labels"].([]any)) == 0 || len(summary["orphan_nodes"].([]any)) == 0 {
+		t.Fatalf("inspect-input should include sampled missing-label and orphan ids: %#v", summary)
+	}
+	warnings := data["warnings"].([]any)
+	codes := map[string]bool{}
+	for _, item := range warnings {
+		m := item.(map[string]any)
+		codes[m["code"].(string)] = true
+	}
+	for _, code := range []string{"missing_display_labels", "orphan_nodes_high"} {
+		if !codes[code] {
+			t.Fatalf("inspect-input missing warning %s: %#v", code, warnings)
+		}
+	}
+	recommendations := data["recommendations"].(map[string]any)
+	addFields := stringSetFromAny(recommendations["add_fields"].([]any))
+	for _, name := range []string{"nodes[].label", "nodes[].name", "edges[].from", "edges[].to", "edges[].kind"} {
+		if !addFields[name] {
+			t.Fatalf("inspect-input recommendations missing %s: %#v", name, recommendations)
+		}
+	}
+}
+
 func TestVisualGroupedGraphInputValidateRenderContract(t *testing.T) {
 	templateDir := visualTemplateDir()
 	tmp := t.TempDir()
@@ -1331,6 +1367,14 @@ func TestVisualRuntimeHasThreeStyleEffectContracts(t *testing.T) {
 		"project(camera)",
 		"visual-three-edge-label",
 		"targetOpacity",
+		"targetPosition",
+		"snapshotNodePositions",
+		"startPositionForNode",
+		"lastExpandOrigin",
+		"draggedMesh",
+		"dragNode",
+		"endpointMeshes",
+		"updateEdgeGeometry",
 		"updateGraphTransitions",
 		"MeshBasicMaterial",
 		"depthTest = false",
@@ -1961,6 +2005,38 @@ func groupedGraphInputJSON(t *testing.T) string {
 			{"from": "service-core", "to": "repository", "kind": "persists", "visibility": "overview", "importance": 0.78},
 			{"from": "service-core", "to": "migration", "kind": "imports", "visibility": "detail", "importance": 0.2},
 		},
+	}
+	raw, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
+}
+
+func missingLabelsOrphansGraphInputJSON(t *testing.T) string {
+	t.Helper()
+	data := map[string]any{
+		"schema": "efp.visual.input.graph.v1",
+		"title":  "Repository Graph With Missing Display Labels",
+		"nodes":  []map[string]any{},
+		"edges":  []map[string]any{},
+	}
+	nodeItems := data["nodes"].([]map[string]any)
+	for i := 0; i < 14; i++ {
+		node := map[string]any{
+			"id":     fmt.Sprintf("node_%02d", i),
+			"kind":   []string{"class", "service", "module"}[i%3],
+			"status": []string{"ok", "warning"}[i%2],
+		}
+		if i < 2 {
+			node["name"] = fmt.Sprintf("Named Module %02d", i)
+		}
+		nodeItems = append(nodeItems, node)
+	}
+	data["nodes"] = nodeItems
+	data["edges"] = []map[string]any{
+		{"from": "node_00", "to": "node_01", "kind": "depends_on", "label": "depends on"},
+		{"from": "node_02", "to": "node_03", "kind": "calls", "label": "calls"},
 	}
 	raw, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {

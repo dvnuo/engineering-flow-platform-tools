@@ -32,7 +32,7 @@ Supported renderer contracts:
 
 ## 3D And Interaction Effects
 
-Each canonical template declares an `effects` block that describes its intended Three.js scene: camera mode, particle system, material family, motion profile, interactions, and postprocess-style treatment. The shared renderer reads that contract at runtime, creates a local `THREE.WebGLRenderer` scene, and layers 3D meshes, lines, raycast picking, and particles behind the existing SVG/card information layer.
+Each canonical template declares an `effects` block that describes its intended Three.js scene: camera mode, particle system, material family, motion profile, interactions, and postprocess-style treatment. The shared renderer reads that contract at runtime and creates a local `THREE.WebGLRenderer` scene with 3D meshes, relationship lines, raycast picking, particles, HTML labels, and an inspector. Graph nodes are draggable, connected neighbors are nudged by drag movement, relationship lines update live, and collapsed groups expand from the clicked parent position into their child layout instead of abruptly reloading. SVG/HTML rendering remains the fallback when WebGL or module loading is unavailable.
 
 The generated artifact copies a vendored local Three.js bridge module to `assets/vendor/three/efp-three.module.min.js` and loads it with a relative `<script type="module">`. It does not use CDN URLs, remote modules, runtime npm, `fetch`, generated JavaScript from user input, or network access. If WebGL or module loading is unavailable, the existing SVG/HTML renderer still renders the data.
 
@@ -105,7 +105,7 @@ Template schema output also includes `data.template.visual_design`. This is a co
 - `supports` lists renderer interactions such as `expand_collapse`, `edge_type_filter`, `search`, `label_lod`, and `export_json`
 - `agent_guidance` gives scenario-specific authoring hints
 
-For large graph inputs, do not dump every file, class, method, and import into the first view. Add `groups` or node `parent_id`/`group_id`/`group` fields, keep summary relationships visible, and mark noisy detail edges with `visibility: "detail"` or `visibility: "hidden"`. The shared graph renderer can then show collapsed group nodes first and let users expand, search, filter by edge type, and inspect focused details.
+For large graph inputs, do not dump every file, class, method, and import into the first view. Add short node `label` or `name` values, put full class names or paths in `metadata`, add `groups` or node `parent_id`/`group_id`/`group` fields, keep summary relationships visible, and mark noisy detail edges with `visibility: "detail"` or `visibility: "hidden"`. The shared graph renderer can then show collapsed group nodes first and let users expand, drag, search, filter by edge type, and inspect focused details without losing the spatial relationship context.
 
 Successful render output includes:
 
@@ -169,7 +169,7 @@ visual inspect-output --out ./out/run-trace --json
 
 `visual template doctor` reads `registry.json`, validates registry expected counts, checks for unregistered direct directories under `templates/visual`, validates every `template.yaml`, validates each `schema.input.json`, validates each `examples/basic.input.json`, renders every basic example into a temporary directory, checks required output files, scans the rendered output for offline violations, and deletes the temporary directory.
 
-`visual inspect-input` validates the selected template input, then returns `quality_score`, `summary`, `warnings`, and `recommendations`. Use it before rendering large or dense inputs. For graph inputs, the summary includes visual readability signals such as `relation_coverage`, `orphan_nodes`, `dominant_edge_kinds`, `long_labels`, `missing_importance`, and `missing_visibility`. Warnings such as `missing_groups`, `visible_nodes_high`, `graph_density_high`, `relation_coverage_low`, `relation_semantics_flat`, `labels_too_long`, and `missing_edge_visibility` mean the input should be grouped, collapsed, filtered, relabeled, or simplified before rendering.
+`visual inspect-input` validates the selected template input, then returns `quality_score`, `summary`, `warnings`, and `recommendations`. Use it before rendering large or dense inputs. For graph inputs, the summary includes visual readability signals such as `relation_coverage`, `orphan_node_count`, `orphan_nodes`, `missing_labels`, `fallback_id_labels`, `dominant_edge_kinds`, `long_labels`, `missing_importance`, and `missing_visibility`. Warnings such as `missing_groups`, `visible_nodes_high`, `graph_density_high`, `relation_coverage_low`, `orphan_nodes_high`, `missing_display_labels`, `relation_semantics_flat`, `labels_too_long`, and `missing_edge_visibility` mean the input should be grouped, connected, collapsed, filtered, relabeled, or simplified before rendering.
 
 For the built-in catalog, doctor checks `registry.expected` from `templates/visual/registry.json`, the exact category counts, `canonical_template_dirs: 195`, `orphan_template_dirs: []`, template tree offline safety, non-empty template styles, rendered example output inspection, and at least 190 unique example hashes.
 

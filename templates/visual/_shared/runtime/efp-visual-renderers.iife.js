@@ -259,7 +259,7 @@
   }
 
   function itemLabel(item) {
-    return String((item && (item.label || item.title || item.summary || item.text || item.id)) || "");
+    return String((item && (item.label || item.name || item.title || item.summary || item.text || item.id)) || "");
   }
 
   function itemMatchesQuery(item, query) {
@@ -298,7 +298,7 @@
     }
     return {
       id: id,
-      label: explicit.label || explicit.title || id,
+      label: explicit.label || explicit.name || explicit.title || id,
       kind: explicit.kind || "group",
       status: status,
       metadata: explicit.metadata || {},
@@ -478,10 +478,10 @@
     var design = visualDesign(manifest);
     if (groups.length && nodes.length > design.maxInitialNodes) {
       groups.slice().sort(compareImportance).forEach(function (item) {
-        out.push({ type: "group", id: item.id, label: item.label || item.title || item.id, status: item.status, kind: item.kind || "group", payload: item });
+        out.push({ type: "group", id: item.id, label: item.label || item.name || item.title || item.id, status: item.status, kind: item.kind || "group", payload: item });
       });
       nodes.slice().sort(compareImportance).slice(0, Math.max(0, design.maxInitialNodes - out.length)).forEach(function (item) {
-        out.push({ type: "node", id: item.id, label: item.label || item.id, status: item.status, kind: item.kind, payload: item });
+        out.push({ type: "node", id: item.id, label: item.label || item.name || item.title || item.id, status: item.status, kind: item.kind, payload: item });
       });
       return out;
     }
@@ -489,21 +489,21 @@
       nodes = nodes.slice().sort(compareImportance).slice(0, design.maxInitialNodes);
     }
     nodes.forEach(function (item) {
-      out.push({ type: "node", id: item.id, label: item.label || item.id, status: item.status, kind: item.kind, payload: item });
+      out.push({ type: "node", id: item.id, label: item.label || item.name || item.title || item.id, status: item.status, kind: item.kind, payload: item });
     });
     if (!nodes.length) {
       events.forEach(function (item) {
-        out.push({ type: "event", id: item.id, label: item.label || item.summary || item.id, status: item.status, kind: item.kind, payload: item });
+        out.push({ type: "event", id: item.id, label: item.label || item.name || item.summary || item.id, status: item.status, kind: item.kind, payload: item });
       });
     }
     claims.forEach(function (item) {
-      out.push({ type: "claim", id: item.id, label: item.text || item.id, status: item.status, kind: "claim", payload: item });
+      out.push({ type: "claim", id: item.id, label: item.label || item.name || item.text || item.id, status: item.status, kind: "claim", payload: item });
     });
     sources.forEach(function (item) {
-      out.push({ type: "source", id: item.id, label: item.title || item.id, status: item.status, kind: item.kind || "source", payload: item });
+      out.push({ type: "source", id: item.id, label: item.label || item.name || item.title || item.id, status: item.status, kind: item.kind || "source", payload: item });
     });
     items.forEach(function (item) {
-      out.push({ type: "item", id: item.id, label: item.label || item.id, status: item.status, kind: item.kind, x: item.x, y: item.y, payload: item });
+      out.push({ type: "item", id: item.id, label: item.label || item.name || item.title || item.id, status: item.status, kind: item.kind, x: item.x, y: item.y, payload: item });
     });
     return out;
   }
@@ -897,6 +897,8 @@
       var dragging = false;
       var moved = false;
       var dragMode = "orbit";
+      var draggedMesh = null;
+      var lastExpandOrigin = null;
       var lastX = 0;
       var lastY = 0;
       var start = Date.now();
@@ -932,13 +934,21 @@
         });
       }
 
+      function snapshotNodePositions() {
+        var out = {};
+        Object.keys(nodeMap).forEach(function (id) {
+          out[id] = nodeMap[id].mesh.position.clone();
+        });
+        return out;
+      }
+
       function addLabel(node, mesh) {
         var label = el("div", "visual-three-label" + (node.__group ? " visual-three-group-label" : ""), itemLabel(node));
         labelLayer.appendChild(label);
         labels.push({ element: label, mesh: mesh, node: node });
       }
 
-      function addEdgeLabel(edge, from, to) {
+      function addEdgeLabel(edge) {
         var text = edge.label || edge.kind || "";
         if (!text) {
           return;
@@ -949,7 +959,104 @@
         edgeLabels.push({
           element: label,
           edge: edge,
-          position: new THREE.Vector3().addVectors(from, to).multiplyScalar(0.5)
+          position: new THREE.Vector3()
+        });
+      }
+
+      function startPositionForNode(node, target, previousPositions) {
+        if (previousPositions[node.id]) {
+          return previousPositions[node.id].clone();
+        }
+        if (node.__group && node.children && node.children.length) {
+          var sum = new THREE.Vector3();
+          var hits = 0;
+          node.children.forEach(function (child) {
+            if (child && previousPositions[child.id]) {
+              sum.add(previousPositions[child.id]);
+              hits += 1;
+            }
+          });
+          if (hits > 0) {
+            return sum.multiplyScalar(1 / hits);
+          }
+        }
+        var parentID = state.parentByNode[node.id] || "";
+        if (parentID && previousPositions[parentID]) {
+          return previousPositions[parentID].clone();
+        }
+        if (parentID && lastExpandOrigin && lastExpandOrigin.id === parentID) {
+          return lastExpandOrigin.position.clone();
+        }
+        return target.clone().multiplyScalar(0.16);
+      }
+
+      function endpointMeshes(edge) {
+        var from = nodeMap[edge.from] && nodeMap[edge.from].mesh;
+        var to = nodeMap[edge.to] && nodeMap[edge.to].mesh;
+        if (!from || !to) {
+          return null;
+        }
+        return { from: from, to: to };
+      }
+
+      function updateEdgeGeometry(item) {
+        var endpoints = endpointMeshes(item.edge);
+        if (!endpoints) {
+          return;
+        }
+        item.line.geometry.setFromPoints([endpoints.from.position, endpoints.to.position]);
+        if (item.line.geometry.computeBoundingSphere) {
+          item.line.geometry.computeBoundingSphere();
+        }
+        (item.markers || []).forEach(function (marker) {
+          marker.userData.from.copy(endpoints.from.position);
+          marker.userData.to.copy(endpoints.to.position);
+        });
+      }
+
+      function updateEdgeLabelPosition(item) {
+        var endpoints = endpointMeshes(item.edge);
+        if (!endpoints) {
+          return false;
+        }
+        item.position.copy(endpoints.from.position).add(endpoints.to.position).multiplyScalar(0.5);
+        return true;
+      }
+
+      function dragNode(mesh, dx, dy) {
+        if (!mesh || !mesh.userData) {
+          return;
+        }
+        var right = new THREE.Vector3();
+        var up = new THREE.Vector3();
+        var forward = new THREE.Vector3();
+        camera.updateMatrixWorld(true);
+        camera.matrixWorld.extractBasis(right, up, forward);
+        var scale = orbit.radius * 0.0022;
+        var delta = right.multiplyScalar(dx * scale).add(up.multiplyScalar(-dy * scale));
+        if (!mesh.userData.targetPosition) {
+          mesh.userData.targetPosition = mesh.position.clone();
+        }
+        mesh.userData.targetPosition.add(delta);
+        mesh.position.add(delta);
+        var draggedID = mesh.userData.id;
+        edgeItems.forEach(function (item) {
+          var neighborID = "";
+          if (item.edge.from === draggedID) {
+            neighborID = item.edge.to;
+          } else if (item.edge.to === draggedID) {
+            neighborID = item.edge.from;
+          }
+          if (!neighborID || !nodeMap[neighborID]) {
+            return;
+          }
+          var neighborMesh = nodeMap[neighborID].mesh;
+          var nudge = delta.clone().multiplyScalar(0.18);
+          if (!neighborMesh.userData.targetPosition) {
+            neighborMesh.userData.targetPosition = neighborMesh.position.clone();
+          }
+          neighborMesh.userData.targetPosition.add(nudge);
+          neighborMesh.position.add(nudge.clone().multiplyScalar(0.35));
         });
       }
 
@@ -1008,6 +1115,7 @@
       function rebuild(model, filters) {
         currentModel = model || visibleGraph(state, filters || currentFilters);
         currentFilters = filters || currentFilters || {};
+        var previousPositions = snapshotNodePositions();
         clearGraph();
         var positions = layoutGraphNodes3D(THREE, currentModel.nodes, preset);
         var sphere = new THREE.IcosahedronGeometry(0.22, 2);
@@ -1019,7 +1127,8 @@
           material.transparent = true;
           material.opacity = node.__group ? 0.9 : 0.82;
           var mesh = new THREE.Mesh(geometry, material);
-          mesh.position.copy(positions[node.id] || new THREE.Vector3(0, 0, 0));
+          var targetPosition = (positions[node.id] || new THREE.Vector3(0, 0, 0)).clone();
+          mesh.position.copy(startPositionForNode(node, targetPosition, previousPositions));
           var scale = node.__group ? 1 + Math.min(1.7, (node.child_count || 1) / 18) : 0.72 + importanceValue(node, 0.35) * 0.7;
           mesh.scale.setScalar(0.04);
           mesh.userData = {
@@ -1031,7 +1140,8 @@
             baseEmissive: material.emissiveIntensity || 0.14,
             targetScale: scale,
             targetOpacity: material.opacity,
-            targetEmissive: material.emissiveIntensity || 0.14
+            targetEmissive: material.emissiveIntensity || 0.14,
+            targetPosition: targetPosition
           };
           material.opacity = 0;
           nodeRoot.add(mesh);
@@ -1042,13 +1152,12 @@
           }
         });
         currentModel.edges.forEach(function (edge) {
-          var from = positions[edge.from];
-          var to = positions[edge.to];
-          if (!from || !to) {
+          var endpoints = endpointMeshes(edge);
+          if (!endpoints) {
             return;
           }
           var lineGeo = new THREE.BufferGeometry();
-          lineGeo.setFromPoints([from, to]);
+          lineGeo.setFromPoints([endpoints.from.position, endpoints.to.position]);
           var baseOpacity = edge.aggregated ? 0.86 : 0.64;
           var line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
             color: hexColor(edge.status),
@@ -1072,11 +1181,11 @@
           markerMaterial.depthWrite = false;
           var markerGeometry = new THREE.SphereGeometry(edge.aggregated ? 0.055 : 0.04, 12, 8);
           var marker = new THREE.Mesh(markerGeometry, markerMaterial);
-          marker.position.copy(from);
+          marker.position.copy(endpoints.from.position);
           marker.renderOrder = 2;
           marker.userData = {
-            from: from.clone(),
-            to: to.clone(),
+            from: endpoints.from.position.clone(),
+            to: endpoints.to.position.clone(),
             phase: (edgeItems.length % 17) / 17,
             speed: 0.18 + (edgeItems.length % 5) * 0.025,
             baseOpacity: edge.aggregated ? 0.86 : 0.64,
@@ -1086,7 +1195,7 @@
           };
           edgeRoot.add(marker);
           markers.push(marker);
-          addEdgeLabel(edge, from, to);
+          addEdgeLabel(edge);
           edgeItems.push({ line: line, edge: edge, markers: markers });
         });
         buildParticles(currentModel.nodes.length + currentModel.edges.length);
@@ -1110,6 +1219,11 @@
         }
         selectedID = node.id;
         if (node.__group) {
+          var groupMesh = nodeMap[node.id] && nodeMap[node.id].mesh;
+          lastExpandOrigin = {
+            id: node.id,
+            position: groupMesh ? groupMesh.position.clone() : new THREE.Vector3()
+          };
           state.collapsed[node.id] = !state.collapsed[node.id];
           inspector.show(itemLabel(node), {
             id: node.id,
@@ -1135,7 +1249,18 @@
       renderer.domElement.addEventListener("pointerdown", function (event) {
         dragging = true;
         moved = false;
+        draggedMesh = null;
         dragMode = event.shiftKey || event.button === 2 ? "pan" : "orbit";
+        if (!event.shiftKey && event.button !== 2) {
+          var hits = raycast(event);
+          if (hits.length && hits[0].object.userData) {
+            draggedMesh = hits[0].object;
+            dragMode = "node";
+            hoverID = draggedMesh.userData.id || "";
+            applyFocus(hoverID);
+            renderer.domElement.style.cursor = "grabbing";
+          }
+        }
         lastX = event.clientX;
         lastY = event.clientY;
         if (renderer.domElement.setPointerCapture) {
@@ -1149,7 +1274,9 @@
           var dx = event.clientX - lastX;
           var dy = event.clientY - lastY;
           moved = moved || Math.abs(dx) + Math.abs(dy) > 4;
-          if (dragMode === "pan") {
+          if (dragMode === "node" && draggedMesh) {
+            dragNode(draggedMesh, dx, dy);
+          } else if (dragMode === "pan") {
             orbit.target.x -= dx * orbit.radius * 0.0018;
             orbit.target.y += dy * orbit.radius * 0.0018;
           } else {
@@ -1158,7 +1285,9 @@
           }
           lastX = event.clientX;
           lastY = event.clientY;
-          updateCamera();
+          if (dragMode !== "node") {
+            updateCamera();
+          }
           event.preventDefault();
           event.stopPropagation();
           return;
@@ -1168,16 +1297,24 @@
         renderer.domElement.style.cursor = hoverID ? "pointer" : "grab";
       });
       renderer.domElement.addEventListener("pointerup", function (event) {
+        var releasedMesh = draggedMesh;
         dragging = false;
+        draggedMesh = null;
         if (renderer.domElement.releasePointerCapture) {
           renderer.domElement.releasePointerCapture(event.pointerId);
         }
-        if (!moved) {
+        if (!moved && releasedMesh && releasedMesh.userData) {
+          selectNode(releasedMesh.userData.node);
+        } else if (moved && releasedMesh && releasedMesh.userData) {
+          applyFocus(releasedMesh.userData.id);
+          inspector.show(itemLabel(releasedMesh.userData.node), releasedMesh.userData.node);
+        } else if (!moved) {
           var hits = raycast(event);
           if (hits.length && hits[0].object.userData) {
             selectNode(hits[0].object.userData.node);
           }
         }
+        renderer.domElement.style.cursor = hoverID ? "pointer" : "grab";
         event.preventDefault();
         event.stopPropagation();
       });
@@ -1226,6 +1363,10 @@
           }
         });
         edgeLabels.forEach(function (item) {
+          if (!updateEdgeLabelPosition(item)) {
+            item.element.hidden = true;
+            return;
+          }
           var active = selectedID && (item.edge.from === selectedID || item.edge.to === selectedID);
           var important = item.edge.aggregated || importanceValue(item.edge, 0) >= 0.72;
           var overview = !selectedID && important && edgeLabels.length <= 24;
@@ -1252,12 +1393,17 @@
           var targetScale = mesh.userData.targetScale || mesh.userData.baseScale || 1;
           var currentScale = mesh.scale.x || 0.01;
           mesh.scale.setScalar(easeValue(currentScale, targetScale, 0.12));
+          if (mesh.userData.targetPosition) {
+            var positionEase = dragMode === "node" && draggedMesh === mesh ? 0.36 : 0.12;
+            mesh.position.lerp(mesh.userData.targetPosition, positionEase);
+          }
           mesh.material.opacity = easeValue(mesh.material.opacity, mesh.userData.targetOpacity !== undefined ? mesh.userData.targetOpacity : mesh.userData.baseOpacity, 0.12);
           if (mesh.material.emissiveIntensity !== undefined) {
             mesh.material.emissiveIntensity = easeValue(mesh.material.emissiveIntensity, mesh.userData.targetEmissive !== undefined ? mesh.userData.targetEmissive : mesh.userData.baseEmissive, 0.12);
           }
         });
         edgeItems.forEach(function (item) {
+          updateEdgeGeometry(item);
           item.line.material.opacity = easeValue(item.line.material.opacity, item.line.userData.targetOpacity, 0.1);
           (item.markers || []).forEach(function (marker) {
             marker.material.opacity = easeValue(marker.material.opacity, marker.userData.targetOpacity, 0.12);

@@ -48,6 +48,9 @@ type Summary struct {
 	EdgeKindCount     int      `json:"edge_kind_count,omitempty"`
 	DominantEdgeKinds []Count  `json:"dominant_edge_kinds,omitempty"`
 	OrphanNodes       []string `json:"orphan_nodes,omitempty"`
+	OrphanNodeCount   int      `json:"orphan_node_count,omitempty"`
+	MissingLabels     int      `json:"missing_labels,omitempty"`
+	FallbackIDLabels  []string `json:"fallback_id_labels,omitempty"`
 	LongLabels        []string `json:"long_labels,omitempty"`
 	DuplicateLabels   []string `json:"duplicate_labels,omitempty"`
 	MissingImportance int      `json:"missing_importance,omitempty"`
@@ -197,6 +200,11 @@ func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Su
 		if firstString(node, "parent_id", "group_id", "group", "module", "package") != "" {
 			grouped++
 		}
+		displayLabel := displayLabelField(node)
+		if displayLabel == "" {
+			summary.MissingLabels++
+			summary.FallbackIDLabels = appendCapped(summary.FallbackIDLabels, labelField(node), 8)
+		}
 		label := labelField(node)
 		if label != "" {
 			labels[label]++
@@ -241,6 +249,7 @@ func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Su
 			if degree[stringField(node, "id")] > 0 {
 				connected++
 			} else {
+				summary.OrphanNodeCount++
 				summary.OrphanNodes = appendCapped(summary.OrphanNodes, labelField(node), 8)
 			}
 		}
@@ -277,9 +286,22 @@ func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Su
 		quality -= 10
 		*warnings = append(*warnings, Warning{Code: "high_fanout_nodes", Severity: "warning", Message: "Some nodes have very high fan-out.", Hint: "Represent high fan-out nodes as hubs or groups and hide detail edges until focus mode.", Details: highFanout})
 	}
+	if summary.MissingLabels > 0 {
+		quality -= minInt(12, 4+summary.MissingLabels/4)
+		*warnings = append(*warnings, Warning{Code: "missing_display_labels", Severity: "warning", Message: "Some graph nodes do not provide a display label or name, so the renderer falls back to technical ids.", Hint: "Add short nodes[].label or nodes[].name values and move full class names or paths into metadata.", Details: summary.FallbackIDLabels})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "nodes[].label")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "nodes[].name")
+	}
 	if summary.RelationCoverage > 0 && summary.RelationCoverage < 0.65 && len(nodes) > 12 {
 		quality -= 14
 		*warnings = append(*warnings, Warning{Code: "relation_coverage_low", Severity: "warning", Message: "Many nodes are isolated from the visible relationship graph.", Hint: "Either connect isolated nodes to a group/hub or move them out of the initial overview.", Details: summary.OrphanNodes})
+	}
+	if summary.OrphanNodeCount >= 3 && len(nodes) > 6 {
+		quality -= minInt(18, 6+summary.OrphanNodeCount/3)
+		*warnings = append(*warnings, Warning{Code: "orphan_nodes_high", Severity: "warning", Message: "Many graph nodes have no incoming or outgoing relationship.", Hint: "Add meaningful edges, assign isolated details to groups, or mark low-value isolated nodes as hidden from the initial view.", Details: summary.OrphanNodes})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "edges[].from")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "edges[].to")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "edges[].kind")
 	}
 	if missingVisibility > design.MaxInitialEdges/2 && len(edges) > design.MaxInitialEdges/2 {
 		quality -= 10
@@ -333,7 +355,16 @@ func readInput(path string, stdin io.Reader) ([]byte, error) {
 }
 
 func labelField(obj map[string]any) string {
-	for _, name := range []string{"label", "title", "summary", "text", "id"} {
+	for _, name := range []string{"label", "name", "title", "summary", "text", "id"} {
+		if value := stringField(obj, name); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func displayLabelField(obj map[string]any) string {
+	for _, name := range []string{"label", "name", "title", "summary", "text"} {
 		if value := stringField(obj, name); value != "" {
 			return value
 		}

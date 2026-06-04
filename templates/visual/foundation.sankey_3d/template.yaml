@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: sankey_3d
   group_by: group
+effects:
+  engine: three.v1
+  scene: foundation_sankey_3d
+  camera: orbit_isometric
+  particles: ambient_stars
+  material: emissive_network
+  motion: flow_chase
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+  postprocess:
+    - emissive_glow
+    - depth_fog
 offline:
   required: true
   forbid_network: true

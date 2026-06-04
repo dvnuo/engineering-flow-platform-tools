@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: timeline_tunnel
   group_by: group
+effects:
+  engine: three.v1
+  scene: foundation_timeline_tunnel
+  camera: dolly_tunnel
+  particles: event_stream
+  material: matte_depth
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - replay_timeline
+  postprocess:
+    - depth_fog
 offline:
   required: true
   forbid_network: true

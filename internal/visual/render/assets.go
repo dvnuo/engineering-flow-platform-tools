@@ -9,6 +9,9 @@ import (
 	"engineering-flow-platform-tools/internal/visual/metadata"
 )
 
+const threeModuleSource = "_shared/vendor/three/efp-three.module.min.js"
+const threeModuleOutput = "assets/vendor/three/efp-three.module.min.js"
+
 func copyAssets(templateDir string, entry manifest.RegistryEntry, tpl manifest.TemplateManifest, outDir string) ([]string, error) {
 	var files []string
 	for _, asset := range tpl.Assets {
@@ -31,6 +34,24 @@ func copyAssets(templateDir string, entry manifest.RegistryEntry, tpl manifest.T
 			return nil, err
 		}
 		files = append(files, ToArtifactPath(asset.To))
+	}
+	if usesThreeEffects(tpl) {
+		src := filepath.Join(templateDir, filepath.FromSlash(threeModuleSource))
+		info, err := os.Stat(src)
+		if err != nil || info.IsDir() {
+			return nil, metadata.NewError("template_asset_missing", "visual Three.js vendor module was not found: "+threeModuleSource, "Ensure templates/visual/_shared/vendor/three is present.", 404)
+		}
+		dst, err := safeOutputPath(outDir, threeModuleOutput)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return nil, metadata.NewError("output_write_failed", "failed to create Three.js vendor directory: "+err.Error(), "Check --out permissions.", 500)
+		}
+		if err := copyFile(dst, src); err != nil {
+			return nil, err
+		}
+		files = append(files, ToArtifactPath(threeModuleOutput))
 	}
 	return files, nil
 }
@@ -68,5 +89,12 @@ func plannedFiles(tpl manifest.TemplateManifest) []string {
 	for _, asset := range tpl.Assets {
 		add(asset.To)
 	}
+	if usesThreeEffects(tpl) {
+		add(threeModuleOutput)
+	}
 	return files
+}
+
+func usesThreeEffects(tpl manifest.TemplateManifest) bool {
+	return tpl.Effects.Engine == "three.v1"
 }

@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: city_map
   group_by: group
+effects:
+  engine: three.v1
+  scene: codebase_monorepo_workspace_map
+  camera: isometric_terrain
+  particles: dependency_pulses
+  material: heightfield_surface
+  motion: height_pulse
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+  postprocess:
+    - depth_fog
 offline:
   required: true
   forbid_network: true

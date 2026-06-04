@@ -22,9 +22,11 @@ func writeIndex(templateDir, outDir string, outputManifest manifest.OutputManife
 	}
 	defer f.Close()
 	data := map[string]any{
-		"Title":   outputManifest.Title,
-		"Styles":  tpl.Styles,
-		"Scripts": tpl.Scripts,
+		"Title":             outputManifest.Title,
+		"Styles":            tpl.Styles,
+		"Scripts":           tpl.Scripts,
+		"ThreeModule":       usesThreeEffects(tpl),
+		"ThreeModuleScript": threeModuleOutput,
 	}
 	if err := t.Execute(f, data); err != nil {
 		return metadata.NewError("output_write_failed", "failed to render index.html: "+err.Error(), "Inspect visual shell template data.", 500)

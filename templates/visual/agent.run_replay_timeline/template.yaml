@@ -10,6 +10,22 @@ renderer:
 layout:
   preset: replay_stage
   group_by: group
+effects:
+  engine: three.v1
+  scene: agent_run_replay_timeline
+  camera: dolly_tunnel
+  particles: event_stream
+  material: emissive_network
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - replay_timeline
+    - step_scrub
+  postprocess:
+    - emissive_glow
+    - depth_fog
 offline:
   required: true
   forbid_network: true

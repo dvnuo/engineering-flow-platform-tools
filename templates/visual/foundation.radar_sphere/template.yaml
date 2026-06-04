@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: radar_sphere
   group_by: group
+effects:
+  engine: three.v1
+  scene: foundation_radar_sphere
+  camera: isometric_dashboard
+  particles: risk_heat_points
+  material: holographic_rings
+  motion: orbital_scan
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - emissive_glow
 offline:
   required: true
   forbid_network: true

@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: constellation
   group_by: group
+effects:
+  engine: three.v1
+  scene: business_cost_cloud
+  camera: orbit_perspective
+  particles: kpi_signal_dust
+  material: dashboard_glass
+  motion: flow_chase
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+  postprocess:
+    - emissive_glow
+    - depth_fog
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: control_room
   group_by: group
+effects:
+  engine: three.v1
+  scene: runtime_agent_fleet_dashboard
+  camera: isometric_dashboard
+  particles: event_stream
+  material: dashboard_glass
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - replay_timeline
+    - metric_depth_hover
+  postprocess:
+    - depth_fog
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

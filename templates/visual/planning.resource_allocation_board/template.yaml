@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: matrix_board
   group_by: group
+effects:
+  engine: three.v1
+  scene: planning_resource_allocation_board
+  camera: isometric_dashboard
+  particles: evidence_beams
+  material: glass_panels
+  motion: metric_lift
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+    - filter_relation
+  postprocess:
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

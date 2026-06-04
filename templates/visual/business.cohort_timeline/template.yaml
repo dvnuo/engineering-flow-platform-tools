@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: swimlane_timeline
   group_by: group
+effects:
+  engine: three.v1
+  scene: business_cohort_timeline
+  camera: dolly_tunnel
+  particles: event_stream
+  material: dashboard_glass
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - replay_timeline
+  postprocess:
+    - depth_fog
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

@@ -207,6 +207,276 @@
     canvas.appendChild(particle);
   }
 
+  function safeClass(value) {
+    return String(value || "default").toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
+  }
+
+  function hexColor(status) {
+    return parseInt(nodeColor(status).slice(1), 16);
+  }
+
+  function effectSpec(manifest) {
+    return manifest && manifest.effects ? manifest.effects : {};
+  }
+
+  function collectThreeItems(data) {
+    var out = [];
+    var nodes = Array.isArray(data && data.nodes) ? data.nodes : [];
+    var events = Array.isArray(data && data.events) ? data.events : [];
+    var claims = Array.isArray(data && data.claims) ? data.claims : [];
+    var sources = Array.isArray(data && data.sources) ? data.sources : [];
+    var items = Array.isArray(data && data.items) ? data.items : [];
+    nodes.forEach(function (item) {
+      out.push({ type: "node", id: item.id, label: item.label || item.id, status: item.status, kind: item.kind, payload: item });
+    });
+    if (!nodes.length) {
+      events.forEach(function (item) {
+        out.push({ type: "event", id: item.id, label: item.label || item.summary || item.id, status: item.status, kind: item.kind, payload: item });
+      });
+    }
+    claims.forEach(function (item) {
+      out.push({ type: "claim", id: item.id, label: item.text || item.id, status: item.status, kind: "claim", payload: item });
+    });
+    sources.forEach(function (item) {
+      out.push({ type: "source", id: item.id, label: item.title || item.id, status: item.status, kind: item.kind || "source", payload: item });
+    });
+    items.forEach(function (item) {
+      out.push({ type: "item", id: item.id, label: item.label || item.id, status: item.status, kind: item.kind, x: item.x, y: item.y, payload: item });
+    });
+    return out;
+  }
+
+  function threePosition(THREE, item, index, count, effects, preset) {
+    var scene = safeClass(effects.scene);
+    var motion = safeClass(effects.motion);
+    var material = safeClass(effects.material);
+    var angle = (Math.PI * 2 * index) / Math.max(1, count);
+    var radius = 2.2 + (index % 4) * 0.34;
+    var x = Math.cos(angle) * radius;
+    var y = Math.sin(index * 1.17) * 0.7;
+    var z = Math.sin(angle) * radius;
+    if (typeof item.x === "number" && typeof item.y === "number") {
+      x = (item.x - 0.5) * 5.4;
+      z = (0.5 - item.y) * 4.4;
+      y = 0.18 + (index % 5) * 0.16;
+    } else if (motion.indexOf("flow") >= 0 || motion.indexOf("timeline") >= 0 || scene.indexOf("timeline") >= 0 || preset.indexOf("timeline") >= 0 || preset.indexOf("pipeline") >= 0) {
+      x = -3.2 + index * (6.4 / Math.max(1, count - 1));
+      y = Math.sin(index * 0.82) * 0.52;
+      z = (index % 3 - 1) * 0.86;
+    } else if (material.indexOf("height") >= 0 || material.indexOf("city") >= 0 || preset.indexOf("city") >= 0 || preset.indexOf("heat") >= 0) {
+      var cols = Math.max(3, Math.ceil(Math.sqrt(count)));
+      x = (index % cols - (cols - 1) / 2) * 0.9;
+      z = (Math.floor(index / cols) - (Math.ceil(count / cols) - 1) / 2) * 0.9;
+      y = 0.16 + (index % 7) * 0.18;
+    } else if (item.type === "claim" || item.type === "source" || scene.indexOf("evidence") >= 0 || scene.indexOf("lineage") >= 0) {
+      x = item.type === "source" ? -2.4 : 2.3;
+      y = 1.5 - (index % 6) * 0.58;
+      z = (index % 3 - 1) * 0.7;
+    } else if (scene.indexOf("radar") >= 0 || scene.indexOf("orbit") >= 0) {
+      radius = 1.1 + (index % 5) * 0.54;
+      x = Math.cos(angle) * radius;
+      y = Math.sin(index * 0.9) * 0.5;
+      z = Math.sin(angle) * radius;
+    }
+    return new THREE.Vector3(x, y, z);
+  }
+
+  function createThreeMaterial(THREE, item, effects) {
+    var color = hexColor(item.status);
+    var material = safeClass(effects.material);
+    var params = {
+      color: color,
+      emissive: color,
+      emissiveIntensity: material.indexOf("emissive") >= 0 || material.indexOf("holographic") >= 0 ? 0.28 : 0.14,
+      metalness: material.indexOf("glass") >= 0 || material.indexOf("holographic") >= 0 ? 0.35 : 0.16,
+      roughness: material.indexOf("glass") >= 0 ? 0.18 : 0.48
+    };
+    if (material.indexOf("glass") >= 0 || material.indexOf("holographic") >= 0) {
+      params.transparent = true;
+      params.opacity = 0.78;
+    }
+    if ((material.indexOf("glass") >= 0 || material.indexOf("physical") >= 0) && THREE.MeshPhysicalMaterial) {
+      params.clearcoat = 0.65;
+      params.iridescence = material.indexOf("holographic") >= 0 ? 0.45 : 0.12;
+      return new THREE.MeshPhysicalMaterial(params);
+    }
+    return new THREE.MeshStandardMaterial(params);
+  }
+
+  function createThreeScene(stage, manifest, data, preset, profile, inspector) {
+    var effects = effectSpec(manifest);
+    if (effects.engine !== "three.v1") {
+      return null;
+    }
+    var THREE = window.THREE;
+    if (!THREE || !THREE.WebGLRenderer) {
+      stage.classList.add("visual-three-missing");
+      return null;
+    }
+    try {
+      var layer = el("div", "visual-three-layer visual-three-scene-" + safeClass(effects.scene));
+      layer.setAttribute("aria-hidden", "true");
+      stage.insertBefore(layer, stage.firstChild);
+      var width = Math.max(720, stage.clientWidth || 900);
+      var height = Math.max(520, stage.clientHeight || 620);
+      var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer.setClearColor(0x000000, 0);
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      renderer.setSize(width, height, false);
+      if (THREE.SRGBColorSpace) {
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+      }
+      layer.appendChild(renderer.domElement);
+
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 120);
+      var cameraMode = safeClass(effects.camera);
+      if (cameraMode.indexOf("tunnel") >= 0 || cameraMode.indexOf("dolly") >= 0) {
+        camera.position.set(0, 1.2, 7.2);
+      } else if (cameraMode.indexOf("terrain") >= 0 || cameraMode.indexOf("isometric") >= 0) {
+        camera.position.set(4.5, 5.2, 6.2);
+      } else {
+        camera.position.set(0.4, 2.8, 6.8);
+      }
+      camera.lookAt(0, 0, 0);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.72));
+      var light = new THREE.DirectionalLight(0x8fdcff, 1.25);
+      light.position.set(4, 6, 5);
+      scene.add(light);
+
+      var root = new THREE.Group();
+      var particleRoot = new THREE.Group();
+      scene.add(root);
+      scene.add(particleRoot);
+      var items = collectThreeItems(data);
+      var objects = [];
+      var positions = {};
+      var sphere = new THREE.IcosahedronGeometry(0.19, 1);
+      var box = new THREE.BoxGeometry(0.36, 0.28, 0.36);
+      var panel = new THREE.BoxGeometry(0.64, 0.32, 0.08);
+      items.forEach(function (item, index) {
+        var pos = threePosition(THREE, item, index, items.length, effects, preset);
+        positions[item.id] = pos;
+        var materialName = safeClass(effects.material);
+        var geometry = sphere;
+        if (materialName.indexOf("height") >= 0 || materialName.indexOf("city") >= 0 || item.type === "item") {
+          geometry = box;
+        } else if (materialName.indexOf("glass") >= 0 || item.type === "claim" || item.type === "source") {
+          geometry = panel;
+        }
+        var mesh = new THREE.Mesh(geometry, createThreeMaterial(THREE, item, effects));
+        mesh.position.copy(pos);
+        if (geometry === box) {
+          var lift = item.payload && item.payload.metrics ? Number(item.payload.metrics.risk || item.payload.metrics.impact || item.payload.metrics.score || item.payload.metrics.value) : NaN;
+          if (!Number.isFinite(lift)) {
+            lift = index % 6;
+          }
+          mesh.scale.y = 0.75 + Math.min(2.8, Math.max(0, lift > 1 ? lift / 35 : lift * 0.35));
+          mesh.position.y += mesh.scale.y * 0.08;
+        }
+        mesh.userData = { label: item.label, payload: item.payload || item };
+        root.add(mesh);
+        objects.push(mesh);
+      });
+
+      var edges = Array.isArray(data && data.edges) ? data.edges : [];
+      edges.forEach(function (edge) {
+        var from = positions[edge.from];
+        var to = positions[edge.to];
+        if (!from || !to) {
+          return;
+        }
+        var lineGeo = new THREE.BufferGeometry();
+        lineGeo.setFromPoints([from, to]);
+        var line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
+          color: hexColor(edge.status),
+          transparent: true,
+          opacity: 0.62
+        }));
+        root.add(line);
+      });
+
+      var particleCount = Math.min(520, 96 + Math.max(items.length, edges.length) * 18);
+      var particlePositions = new Float32Array(particleCount * 3);
+      for (var i = 0; i < particleCount; i += 1) {
+        var a = (Math.PI * 2 * i) / particleCount;
+        var r = 2.2 + (i % 11) * 0.18;
+        particlePositions[i * 3] = Math.cos(a) * r;
+        particlePositions[i * 3 + 1] = Math.sin(i * 0.47) * 1.2;
+        particlePositions[i * 3 + 2] = Math.sin(a) * r;
+      }
+      var particleGeometry = new THREE.BufferGeometry();
+      particleGeometry.setAttribute("position", new THREE.Float32BufferAttribute(particlePositions, 3));
+      var particleMaterial = new THREE.PointsMaterial({
+        color: profile && profile.radar ? 0x35c2a1 : 0x63a9ff,
+        size: safeClass(effects.particles).indexOf("dust") >= 0 ? 0.026 : 0.04,
+        transparent: true,
+        opacity: 0.5,
+        blending: THREE.AdditiveBlending
+      });
+      particleRoot.add(new THREE.Points(particleGeometry, particleMaterial));
+
+      var targetTiltX = 0;
+      var targetTiltY = 0;
+      var pointer = new THREE.Vector2();
+      var raycaster = new THREE.Raycaster();
+      stage.addEventListener("pointermove", function (event) {
+        var rect = stage.getBoundingClientRect();
+        targetTiltY = rect.width ? ((event.clientX - rect.left) / rect.width - 0.5) * 0.32 : 0;
+        targetTiltX = rect.height ? ((event.clientY - rect.top) / rect.height - 0.5) * -0.22 : 0;
+      });
+      stage.addEventListener("click", function (event) {
+        if (!objects.length || !inspector) {
+          return;
+        }
+        var rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        var hits = raycaster.intersectObjects(objects, false);
+        if (hits.length && hits[0].object && hits[0].object.userData) {
+          inspector.show(hits[0].object.userData.label, hits[0].object.userData.payload);
+        }
+      });
+
+      function resize() {
+        width = Math.max(720, stage.clientWidth || width);
+        height = Math.max(520, stage.clientHeight || height);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height, false);
+      }
+      var observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
+      if (observer) {
+        observer.observe(stage);
+      }
+      var start = Date.now();
+      function animate() {
+        if (!document.body.contains(stage)) {
+          if (observer) {
+            observer.disconnect();
+          }
+          renderer.dispose();
+          return;
+        }
+        var t = (Date.now() - start) / 1000;
+        root.rotation.x += (targetTiltX - root.rotation.x) * 0.045;
+        root.rotation.y += (targetTiltY + t * 0.065 - root.rotation.y) * 0.045;
+        particleRoot.rotation.y = t * (safeClass(effects.motion).indexOf("scan") >= 0 ? 0.22 : 0.12);
+        particleRoot.rotation.x = Math.sin(t * 0.42) * 0.08;
+        renderer.render(scene, camera);
+        window.requestAnimationFrame(animate);
+      }
+      animate();
+      stage.classList.add("visual-three-active");
+      return { scene: scene, renderer: renderer, camera: camera };
+    } catch (err) {
+      stage.classList.add("visual-three-fallback");
+      stage.setAttribute("data-three-error", err && err.message ? err.message : String(err));
+      return null;
+    }
+  }
+
   function uniqueValues(items, key) {
     var seen = {};
     var out = [];
@@ -313,6 +583,7 @@
     var shell = appShell(ctx.container, manifest);
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
     var profile = decorateStage(shell.stage, manifest, data, preset);
+    createThreeScene(shell.stage, manifest, data, preset, profile, shell.inspector);
     var search = document.createElement("input");
     search.type = "search";
     search.placeholder = "Search";
@@ -460,7 +731,8 @@
     var manifest = ctx.manifest || {};
     var shell = appShell(ctx.container, manifest);
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
-    decorateStage(shell.stage, manifest, data, preset);
+    var profile = decorateStage(shell.stage, manifest, data, preset);
+    createThreeScene(shell.stage, manifest, data, preset, profile, shell.inspector);
     var exportBtn = document.createElement("button");
     exportBtn.textContent = "Export";
     shell.toolbar.appendChild(exportBtn);
@@ -494,7 +766,8 @@
     var manifest = ctx.manifest || {};
     var shell = appShell(ctx.container, manifest);
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
-    decorateStage(shell.stage, manifest, data, preset);
+    var profile = decorateStage(shell.stage, manifest, data, preset);
+    createThreeScene(shell.stage, manifest, data, preset, profile, shell.inspector);
     var width = Math.max(900, shell.stage.clientWidth || 900);
     var height = Math.max(620, shell.stage.clientHeight || 620);
     var canvas = svg("svg", { class: "visual-svg", viewBox: "0 0 " + width + " " + height });
@@ -549,7 +822,8 @@
     var manifest = ctx.manifest || {};
     var shell = appShell(ctx.container, manifest);
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
-    decorateStage(shell.stage, manifest, data, preset);
+    var profile = decorateStage(shell.stage, manifest, data, preset);
+    createThreeScene(shell.stage, manifest, data, preset, profile, shell.inspector);
     var board = el("div", "matrix-stage visual-matrix-3d");
     board.appendChild(el("div", "matrix-axis-y", "Impact"));
     board.appendChild(el("div", "matrix-axis-x", "Confidence"));

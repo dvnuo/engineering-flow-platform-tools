@@ -10,6 +10,22 @@ renderer:
 layout:
   preset: matrix_board
   group_by: group
+effects:
+  engine: three.v1
+  scene: runtime_api_contract_map
+  camera: isometric_dashboard
+  particles: event_stream
+  material: emissive_network
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - replay_timeline
+    - metric_depth_hover
+  postprocess:
+    - emissive_glow
+    - depth_fog
 offline:
   required: true
   forbid_network: true

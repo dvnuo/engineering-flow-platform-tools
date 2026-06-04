@@ -32,9 +32,9 @@ Supported renderer contracts:
 
 ## 3D And Interaction Effects
 
-The shared offline runtime applies template-specific visual effects from each template's `layout.preset`. It keeps the artifact self-contained while giving the catalog Three.js-style strengths: depth projection, parallax, particle motion, radar sweeps, tunnel grids, heat fields, raised city bars, document walls, and 3D matrix cards. Graph renderers use curved paths and moving particles for flow-oriented presets, timeline renderers use a depth tunnel, evidence renderers draw citation beams, and matrix renderers lift cards by risk or impact metrics.
+Each canonical template declares an `effects` block that describes its intended Three.js scene: camera mode, particle system, material family, motion profile, interactions, and postprocess-style treatment. The shared renderer reads that contract at runtime, creates a local `THREE.WebGLRenderer` scene, and layers 3D meshes, lines, raycast picking, and particles behind the existing SVG/card information layer.
 
-These effects are implemented in the local `efp-visual-renderers.iife.js` and `efp-visual-runtime.css` files copied into every artifact. They do not require a CDN, npm, remote models, generated JavaScript, or network access.
+The generated artifact copies a vendored local Three.js bridge module to `assets/vendor/three/efp-three.module.min.js` and loads it with a relative `<script type="module">`. It does not use CDN URLs, remote modules, runtime npm, `fetch`, generated JavaScript from user input, or network access. If WebGL or module loading is unavailable, the existing SVG/HTML renderer still renders the data.
 
 Supported input schema kinds:
 
@@ -124,11 +124,11 @@ Artifacts must be fully offline:
 - no CDN or remote URL
 - no local `data.json` fetch
 - no network APIs
-- no module scripts
+- local module scripts are allowed only for vendored relative assets such as the Three.js bridge
 - no generated JavaScript from user input
 - no `go:embed` template packaging
 
-`manifest.js` assigns `window.__EFP_VISUAL_MANIFEST__`. `data.js` assigns `window.__EFP_VISUAL_DATA__`. The runtime reads those globals and renders with local SVG/HTML/CSS.
+`manifest.js` assigns `window.__EFP_VISUAL_MANIFEST__`. `data.js` assigns `window.__EFP_VISUAL_DATA__`. The runtime reads those globals and renders with local Three.js, SVG, HTML, and CSS.
 
 ## Opening Artifacts
 

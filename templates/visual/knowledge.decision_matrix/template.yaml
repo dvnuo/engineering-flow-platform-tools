@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: decision_matrix
   group_by: group
+effects:
+  engine: three.v1
+  scene: knowledge_decision_matrix
+  camera: isometric_dashboard
+  particles: evidence_beams
+  material: matte_depth
+  motion: metric_lift
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - depth_fog
 offline:
   required: true
   forbid_network: true

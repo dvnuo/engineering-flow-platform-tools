@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: layered_stack
   group_by: group
+effects:
+  engine: three.v1
+  scene: education_exploded_architecture_view
+  camera: orbit_isometric
+  particles: teaching_path_markers
+  material: emissive_network
+  motion: slow_orbit
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - step_scrub
+  postprocess:
+    - emissive_glow
 offline:
   required: true
   forbid_network: true

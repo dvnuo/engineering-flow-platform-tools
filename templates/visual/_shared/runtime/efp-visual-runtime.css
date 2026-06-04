@@ -135,6 +135,36 @@ select {
   transform: translateZ(-80px);
 }
 
+.visual-three-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.74;
+  mix-blend-mode: screen;
+  filter: saturate(1.16) contrast(1.04);
+}
+
+.visual-three-layer canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.visual-three-active .visual-svg,
+.visual-three-active .timeline-lane,
+.visual-three-active .matrix-stage {
+  z-index: 2;
+}
+
+.visual-three-missing::after,
+.visual-three-fallback::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 .visual-depth-grid {
   position: absolute;
   inset: 8%;

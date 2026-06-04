@@ -59,6 +59,16 @@ type visualTemplateManifest struct {
 	Layout struct {
 		Preset string `yaml:"preset"`
 	} `yaml:"layout"`
+	Effects struct {
+		Engine      string   `yaml:"engine"`
+		Scene       string   `yaml:"scene"`
+		Camera      string   `yaml:"camera"`
+		Particles   string   `yaml:"particles"`
+		Material    string   `yaml:"material"`
+		Motion      string   `yaml:"motion"`
+		Interaction []string `yaml:"interaction"`
+		Postprocess []string `yaml:"postprocess"`
+	} `yaml:"effects"`
 	Offline struct {
 		Required      bool   `yaml:"required"`
 		ForbidNetwork bool   `yaml:"forbid_network"`
@@ -523,6 +533,7 @@ func TestVisualRegistryAndTemplateManifests(t *testing.T) {
 	ids := map[string]bool{}
 	aliases := map[string]string{}
 	counts := map[string]int{}
+	effectScenes := map[string]string{}
 	for _, entry := range registry.Templates {
 		if ids[entry.ID] {
 			t.Fatalf("duplicate registry id %s", entry.ID)
@@ -567,6 +578,19 @@ func TestVisualRegistryAndTemplateManifests(t *testing.T) {
 		if strings.TrimSpace(manifest.Layout.Preset) == "" || manifest.Layout.Preset != entry.LayoutPreset {
 			t.Fatalf("%s invalid layout preset: manifest=%s registry=%s", entry.ID, manifest.Layout.Preset, entry.LayoutPreset)
 		}
+		if manifest.Effects.Engine != "three.v1" {
+			t.Fatalf("%s must use local Three.js effects, got %#v", entry.ID, manifest.Effects)
+		}
+		if strings.TrimSpace(manifest.Effects.Scene) == "" || strings.TrimSpace(manifest.Effects.Camera) == "" || strings.TrimSpace(manifest.Effects.Particles) == "" || strings.TrimSpace(manifest.Effects.Material) == "" || strings.TrimSpace(manifest.Effects.Motion) == "" {
+			t.Fatalf("%s has incomplete effects contract: %#v", entry.ID, manifest.Effects)
+		}
+		if owner, exists := effectScenes[manifest.Effects.Scene]; exists {
+			t.Fatalf("effects.scene %s is duplicated by %s and %s", manifest.Effects.Scene, owner, entry.ID)
+		}
+		effectScenes[manifest.Effects.Scene] = entry.ID
+		if !stringSliceContains(manifest.Effects.Interaction, "orbit_drag") || !stringSliceContains(manifest.Effects.Interaction, "raycast_inspect") {
+			t.Fatalf("%s effects interactions must support orbit drag and raycast inspect: %#v", entry.ID, manifest.Effects.Interaction)
+		}
 		if strings.TrimSpace(manifest.Description) == "" || strings.Contains(strings.ToLower(manifest.Description), "basic example") {
 			t.Fatalf("%s has generic/empty description: %q", entry.ID, manifest.Description)
 		}
@@ -585,6 +609,9 @@ func TestVisualRegistryAndTemplateManifests(t *testing.T) {
 	}
 	if len(aliases) < 10 {
 		t.Fatalf("expected at least 10 aliases, got %#v", aliases)
+	}
+	if len(effectScenes) != 195 {
+		t.Fatalf("expected 195 unique effects scenes, got %d", len(effectScenes))
 	}
 	for category, expected := range expectedVisualCategoryCounts {
 		if counts[category] != expected {
@@ -843,12 +870,15 @@ func TestVisualRenderEveryExample(t *testing.T) {
 		t.Run(id, func(t *testing.T) {
 			out := filepath.Join(t.TempDir(), "artifact")
 			obj := runVisualOK(t, "render", "--template", id, "--template-dir", templateDir, "--input", filepath.Join(templateDir, id, "examples", "basic.input.json"), "--out", out, "--json")
-			for _, rel := range []string{"index.html", "manifest.json", "manifest.js", "data.js", "assets/runtime/efp-visual-runtime.css", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js"} {
+			for _, rel := range []string{"index.html", "manifest.json", "manifest.js", "data.js", "assets/runtime/efp-visual-runtime.css", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js", "assets/vendor/three/efp-three.module.min.js"} {
 				if _, err := os.Stat(filepath.Join(out, rel)); err != nil {
 					t.Fatalf("%s missing: %v", rel, err)
 				}
 			}
 			index := mustRead(t, filepath.Join(out, "index.html"))
+			if !strings.Contains(index, `type="module"`) || !strings.Contains(index, "assets/vendor/three/efp-three.module.min.js") {
+				t.Fatalf("index.html does not load the local Three.js module")
+			}
 			for _, token := range []string{"http://", "https://", "//cdn", "fetch(", "XMLHttpRequest", "WebSocket", "EventSource"} {
 				if strings.Contains(index, token) {
 					t.Fatalf("index.html contains forbidden token %s", token)
@@ -870,7 +900,7 @@ func TestVisualRenderEveryExample(t *testing.T) {
 			}
 			files := stringSetFromAny(artifact["files"].([]any))
 			templateStyle := filepath.ToSlash(filepath.Join("assets", "templates", id, "style.css"))
-			for _, rel := range []string{"index.html", "manifest.json", "manifest.js", "data.js", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js", "assets/runtime/efp-visual-runtime.css", templateStyle} {
+			for _, rel := range []string{"index.html", "manifest.json", "manifest.js", "data.js", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js", "assets/runtime/efp-visual-runtime.css", "assets/vendor/three/efp-three.module.min.js", templateStyle} {
 				if !files[rel] {
 					t.Fatalf("artifact files missing %s in %#v", rel, files)
 				}
@@ -890,6 +920,21 @@ func TestVisualRenderArtifactAndInspectOutputContract(t *testing.T) {
 	}
 	if artifact["relative_entrypoint"] != "index.html" || artifact["file_url_safe"] != true || artifact["http_subpath_safe"] != true {
 		t.Fatalf("render artifact missing compatibility fields: %#v", artifact)
+	}
+	if !stringSetFromAny(artifact["files"].([]any))["assets/vendor/three/efp-three.module.min.js"] {
+		t.Fatalf("render artifact missing local Three.js vendor file: %#v", artifact)
+	}
+	index := mustRead(t, filepath.Join(out, "index.html"))
+	if !strings.Contains(index, `type="module"`) || !strings.Contains(index, "assets/vendor/three/efp-three.module.min.js") {
+		t.Fatalf("index.html does not load local Three.js as a module")
+	}
+	var outputManifest map[string]any
+	if err := json.Unmarshal([]byte(mustRead(t, filepath.Join(out, "manifest.json"))), &outputManifest); err != nil {
+		t.Fatalf("manifest.json invalid: %v", err)
+	}
+	effects := outputManifest["effects"].(map[string]any)
+	if effects["engine"] != "three.v1" || effects["scene"] != "agent_run_trace" {
+		t.Fatalf("manifest.json missing effects contract: %#v", outputManifest)
 	}
 
 	inspected := runVisualOK(t, "inspect-output", "--out", out, "--json")
@@ -1075,10 +1120,15 @@ func TestVisualRuntimeHasThreeStyleEffectContracts(t *testing.T) {
 		"profileForPreset",
 		"decorateStage",
 		"attachStageInteraction",
+		"createThreeScene",
+		"effectSpec",
+		"WebGLRenderer",
+		"Raycaster",
 		"edgePath",
 		"nodeDepth",
 		"addFlowParticle",
 		"animateMotion",
+		"visual-three-layer",
 		"visual-scene-layer",
 		"visual-effect-",
 		"visual-particle",
@@ -1090,6 +1140,7 @@ func TestVisualRuntimeHasThreeStyleEffectContracts(t *testing.T) {
 
 	for _, token := range []string{
 		".visual-scene-layer",
+		".visual-three-layer",
 		".visual-depth-grid",
 		".visual-tunnel-rings",
 		".visual-radar-sweep",
@@ -1106,6 +1157,25 @@ func TestVisualRuntimeHasThreeStyleEffectContracts(t *testing.T) {
 		if !strings.Contains(css, token) {
 			t.Fatalf("shared visual CSS is missing three-style effect token %q", token)
 		}
+	}
+}
+
+func TestVisualThreeVendorModuleContract(t *testing.T) {
+	vendor := "../templates/visual/_shared/vendor/three/efp-three.module.min.js"
+	content := mustRead(t, vendor)
+	for _, token := range []string{"WebGLRenderer", "Raycaster", "MeshPhysicalMaterial", "window.THREE", "efp:three-ready"} {
+		if !strings.Contains(content, token) {
+			t.Fatalf("Three.js vendor module is missing token %s", token)
+		}
+	}
+	normalized := strings.ReplaceAll(content, "http://www.w3.org/1999/xhtml", "")
+	for _, token := range []string{"http://", "https://", "XMLHttpRequest", "WebSocket", "EventSource", "navigator.sendBeacon", "import("} {
+		if strings.Contains(strings.ToLower(normalized), strings.ToLower(token)) {
+			t.Fatalf("Three.js vendor module contains forbidden token %s", token)
+		}
+	}
+	if regexp.MustCompile(`(?i)(^|[^a-z0-9_$])fetch\s*\(|\.fetch\s*\(`).MatchString(normalized) {
+		t.Fatal("Three.js vendor module contains a browser fetch call")
 	}
 }
 
@@ -1350,20 +1420,17 @@ func TestVisualTemplateTreeOfflineAndStyles(t *testing.T) {
 	forbidden := []string{
 		"http://",
 		"https://",
-		"//",
 		"unpkg",
 		"cdnjs",
 		"jsdelivr",
 		"fonts.googleapis.com",
 		"fonts.gstatic.com",
 		"@import",
-		"fetch(",
 		"XMLHttpRequest",
 		"WebSocket",
 		"EventSource",
 		"navigator.sendBeacon",
 		"import(",
-		`<script type="module`,
 		`src="/`,
 		`href="/`,
 	}
@@ -1377,11 +1444,20 @@ func TestVisualTemplateTreeOfflineAndStyles(t *testing.T) {
 			return nil
 		}
 		content := mustRead(t, path)
+		content = strings.ReplaceAll(content, "http://www.w3.org/2000/svg", "")
+		content = strings.ReplaceAll(content, "http://www.w3.org/1999/xlink", "")
+		content = strings.ReplaceAll(content, "http://www.w3.org/1999/xhtml", "")
 		lower := strings.ToLower(content)
 		for _, token := range forbidden {
 			if strings.Contains(lower, strings.ToLower(token)) {
 				t.Fatalf("%s contains forbidden offline token %s", path, token)
 			}
+		}
+		if regexp.MustCompile(`(?i)(^|[^a-z0-9_$])fetch\s*\(|\.fetch\s*\(`).MatchString(content) {
+			t.Fatalf("%s contains forbidden offline token fetch(", path)
+		}
+		if regexp.MustCompile(`(?i)(^|[^:])//[a-z0-9][a-z0-9.-]+\.[a-z]{2,}`).MatchString(content) {
+			t.Fatalf("%s contains forbidden protocol-relative URL", path)
 		}
 		if filepath.Base(path) == "style.css" && strings.TrimSpace(content) == "" {
 			t.Fatalf("%s is empty", path)

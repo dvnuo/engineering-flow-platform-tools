@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: graph_2_5d
   group_by: group
+effects:
+  engine: three.v1
+  scene: knowledge_argument_map
+  camera: wall_orbit
+  particles: evidence_beams
+  material: glass_panels
+  motion: beam_trace
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - filter_relation
+  postprocess:
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

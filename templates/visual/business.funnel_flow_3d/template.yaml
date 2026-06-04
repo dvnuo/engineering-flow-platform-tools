@@ -10,6 +10,22 @@ renderer:
 layout:
   preset: funnel
   group_by: group
+effects:
+  engine: three.v1
+  scene: business_funnel_flow_3d
+  camera: orbit_isometric
+  particles: event_stream
+  material: dashboard_glass
+  motion: flow_chase
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - step_scrub
+  postprocess:
+    - emissive_glow
+    - depth_fog
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

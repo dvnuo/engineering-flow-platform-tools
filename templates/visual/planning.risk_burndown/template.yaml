@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: line
   group_by: group
+effects:
+  engine: three.v1
+  scene: planning_risk_burndown
+  camera: dolly_tunnel
+  particles: event_stream
+  material: risk_prism
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - replay_timeline
+    - metric_depth_hover
+  postprocess:
+    - status_glitch
+    - depth_fog
 offline:
   required: true
   forbid_network: true

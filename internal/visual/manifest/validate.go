@@ -53,6 +53,9 @@ func ValidateTemplateManifest(templateDir string, entry RegistryEntry, m *Templa
 	if strings.TrimSpace(entry.LayoutPreset) != "" && normalizeManifestValue(entry.LayoutPreset) != m.Layout.Preset {
 		return metadata.NewError("template_manifest_invalid", "visual template layout.preset does not match registry entry.", "Set registry layout_preset to "+m.Layout.Preset+".", 400)
 	}
+	if err := validateEffectsSpec(&m.Effects); err != nil {
+		return err
+	}
 	if err := validateInputSchemaFile(templateDir, entry, m.InputSchema); err != nil {
 		return err
 	}
@@ -217,6 +220,10 @@ var SupportedCategories = map[string]bool{
 	"education":  true,
 }
 
+var SupportedEffectEngines = map[string]bool{
+	"three.v1": true,
+}
+
 const DefaultExpectedCanonicalCount = 195
 
 var ExpectedCategoryCounts = map[string]int{
@@ -350,6 +357,31 @@ func containsParentPathSegment(value string) bool {
 
 func TemplateBaseDir(templateDir string, entry RegistryEntry) string {
 	return filepath.Dir(filepath.Join(templateDir, filepath.Clean(entry.Path)))
+}
+
+func validateEffectsSpec(effects *EffectsSpec) error {
+	if effects == nil || strings.TrimSpace(effects.Engine) == "" {
+		return nil
+	}
+	effects.Engine = normalizeManifestValue(effects.Engine)
+	if !SupportedEffectEngines[effects.Engine] {
+		return metadata.NewError("template_manifest_invalid", "visual template effects.engine is not supported: "+effects.Engine, "Use three.v1 for local Three.js effects.", 400)
+	}
+	effects.Scene = normalizeManifestValue(effects.Scene)
+	if effects.Scene == "" {
+		return metadata.NewError("template_manifest_invalid", "visual template effects.scene is required when effects.engine is set.", "Set a scene-specific effect id such as runtime_event_bus_flow.", 400)
+	}
+	effects.Camera = normalizeManifestValue(effects.Camera)
+	effects.Particles = normalizeManifestValue(effects.Particles)
+	effects.Material = normalizeManifestValue(effects.Material)
+	effects.Motion = normalizeManifestValue(effects.Motion)
+	for i, value := range effects.Interaction {
+		effects.Interaction[i] = normalizeManifestValue(value)
+	}
+	for i, value := range effects.Postprocess {
+		effects.Postprocess[i] = normalizeManifestValue(value)
+	}
+	return nil
 }
 
 func validateAsset(templateDir, templatePath string, asset AssetSpec) error {

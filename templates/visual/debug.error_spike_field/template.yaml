@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: terrain_heatmap
   group_by: group
+effects:
+  engine: three.v1
+  scene: debug_error_spike_field
+  camera: dolly_tunnel
+  particles: event_stream
+  material: heightfield_surface
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - replay_timeline
+    - metric_depth_hover
+  postprocess:
+    - status_glitch
+    - depth_fog
 offline:
   required: true
   forbid_network: true

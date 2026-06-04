@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: constellation
   group_by: group
+effects:
+  engine: three.v1
+  scene: runtime_k8s_pod_constellation
+  camera: orbit_perspective
+  particles: event_stream
+  material: emissive_network
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - replay_timeline
+  postprocess:
+    - emissive_glow
+    - depth_fog
 offline:
   required: true
   forbid_network: true

@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: matrix_board
   group_by: group
+effects:
+  engine: three.v1
+  scene: agent_context_window_map
+  camera: isometric_dashboard
+  particles: tool_call_sparks
+  material: matte_depth
+  motion: metric_lift
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - depth_fog
 offline:
   required: true
   forbid_network: true

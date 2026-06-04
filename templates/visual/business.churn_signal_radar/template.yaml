@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: radar_sphere
   group_by: group
+effects:
+  engine: three.v1
+  scene: business_churn_signal_radar
+  camera: isometric_dashboard
+  particles: kpi_signal_dust
+  material: holographic_rings
+  motion: flow_chase
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - emissive_glow
+    - depth_fog
 offline:
   required: true
   forbid_network: true

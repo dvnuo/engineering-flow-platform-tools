@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: diff_split_view
   group_by: group
+effects:
+  engine: three.v1
+  scene: knowledge_document_diff_map
+  camera: wall_orbit
+  particles: dependency_pulses
+  material: glass_panels
+  motion: beam_trace
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - filter_relation
+  postprocess:
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: diff_split_view
   group_by: group
+effects:
+  engine: three.v1
+  scene: debug_config_drift_map
+  camera: isometric_dashboard
+  particles: dependency_pulses
+  material: risk_prism
+  motion: metric_lift
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - status_glitch
 offline:
   required: true
   forbid_network: true

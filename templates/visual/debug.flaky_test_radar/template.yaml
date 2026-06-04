@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: radar_sphere
   group_by: group
+effects:
+  engine: three.v1
+  scene: debug_flaky_test_radar
+  camera: isometric_dashboard
+  particles: dependency_pulses
+  material: holographic_rings
+  motion: orbital_scan
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - emissive_glow
+    - status_glitch
 offline:
   required: true
   forbid_network: true

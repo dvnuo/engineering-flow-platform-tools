@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: control_room
   group_by: group
+effects:
+  engine: three.v1
+  scene: agent_session_state_panel
+  camera: isometric_dashboard
+  particles: tool_call_sparks
+  material: dashboard_glass
+  motion: metric_lift
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

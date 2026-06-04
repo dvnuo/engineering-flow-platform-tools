@@ -30,9 +30,10 @@
 - Validate with `visual validate --template <template-id> --input <input.json> --json`, using `--template-dir` only when the catalog is not installed at `~/.efp/template/visual`.
 - Render to a new output directory with `visual render --template <template-id> --input <input.json> --out <dir> --json`.
 - Return `data.artifact.entrypoint` to the user.
-- Do not use remote assets, CDN URLs, Node/npm, generated JavaScript, or network APIs.
+- Visual effects are template-declared. Do not override them with generated JavaScript; choose the right template and provide better input data.
+- Do not use remote assets, CDN URLs, runtime Node/npm, generated JavaScript, or network APIs.
 - Use `--dry-run` to preview planned files before writing.
-- The generated `index.html` is safe for `file://` and for Portal/runtime static proxy subpaths because asset paths are relative.
+- The generated `index.html` is safe for `file://` and for Portal/runtime static proxy subpaths because asset paths, including the local Three.js module bridge, are relative.
 
 Recommended template categories:
 

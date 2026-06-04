@@ -10,6 +10,22 @@ renderer:
 layout:
   preset: matrix_board
   group_by: group
+effects:
+  engine: three.v1
+  scene: business_risk_matrix_3d
+  camera: isometric_dashboard
+  particles: kpi_signal_dust
+  material: dashboard_glass
+  motion: flow_chase
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - emissive_glow
+    - status_glitch
+    - depth_fog
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

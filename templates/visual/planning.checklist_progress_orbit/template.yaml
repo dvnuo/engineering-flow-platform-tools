@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: orbit_system
   group_by: group
+effects:
+  engine: three.v1
+  scene: planning_checklist_progress_orbit
+  camera: orbit_perspective
+  particles: ambient_stars
+  material: holographic_rings
+  motion: orbital_scan
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+  postprocess:
+    - emissive_glow
 offline:
   required: true
   forbid_network: true

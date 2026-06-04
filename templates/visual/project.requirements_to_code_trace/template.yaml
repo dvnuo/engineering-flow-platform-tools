@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: layered_stack
   group_by: group
+effects:
+  engine: three.v1
+  scene: project_requirements_to_code_trace
+  camera: orbit_isometric
+  particles: event_stream
+  material: emissive_network
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - filter_relation
+  postprocess:
+    - emissive_glow
+    - depth_fog
 offline:
   required: true
   forbid_network: true

@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: control_room
   group_by: group
+effects:
+  engine: three.v1
+  scene: project_release_readiness_dashboard
+  camera: isometric_dashboard
+  particles: risk_heat_points
+  material: dashboard_glass
+  motion: metric_lift
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

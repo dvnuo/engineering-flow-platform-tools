@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: waterfall
   group_by: group
+effects:
+  engine: three.v1
+  scene: debug_trace_waterfall_3d
+  camera: dolly_tunnel
+  particles: event_stream
+  material: matte_depth
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - replay_timeline
+  postprocess:
+    - status_glitch
+    - depth_fog
 offline:
   required: true
   forbid_network: true

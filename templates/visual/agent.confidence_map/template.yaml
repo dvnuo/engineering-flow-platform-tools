@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: evidence_board
   group_by: group
+effects:
+  engine: three.v1
+  scene: agent_confidence_map
+  camera: isometric_dashboard
+  particles: tool_call_sparks
+  material: glass_panels
+  motion: beam_trace
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - filter_relation
+  postprocess:
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: heatmap
   group_by: group
+effects:
+  engine: three.v1
+  scene: debug_latency_heatmap
+  camera: isometric_dashboard
+  particles: risk_heat_points
+  material: heightfield_surface
+  motion: height_pulse
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - status_glitch
 offline:
   required: true
   forbid_network: true

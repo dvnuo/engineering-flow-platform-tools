@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: heatmap
   group_by: group
+effects:
+  engine: three.v1
+  scene: knowledge_source_gap_map
+  camera: isometric_terrain
+  particles: evidence_beams
+  material: heightfield_surface
+  motion: height_pulse
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+    - filter_relation
+  postprocess:
+    - depth_fog
 offline:
   required: true
   forbid_network: true

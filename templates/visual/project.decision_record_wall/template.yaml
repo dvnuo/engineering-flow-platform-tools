@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: document_wall
   group_by: group
+effects:
+  engine: three.v1
+  scene: project_decision_record_wall
+  camera: wall_orbit
+  particles: evidence_beams
+  material: glass_panels
+  motion: beam_trace
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - filter_relation
+  postprocess:
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

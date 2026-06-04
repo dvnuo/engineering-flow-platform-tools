@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: network_boundary_map
   group_by: group
+effects:
+  engine: three.v1
+  scene: education_security_threat_model
+  camera: orbit_isometric
+  particles: dependency_pulses
+  material: holographic_rings
+  motion: slow_orbit
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - step_scrub
+  postprocess:
+    - emissive_glow
+    - status_glitch
 offline:
   required: true
   forbid_network: true

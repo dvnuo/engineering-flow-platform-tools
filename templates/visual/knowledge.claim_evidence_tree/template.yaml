@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: radial_tree
   group_by: group
+effects:
+  engine: three.v1
+  scene: knowledge_claim_evidence_tree
+  camera: wall_orbit
+  particles: evidence_beams
+  material: glass_panels
+  motion: beam_trace
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - filter_relation
+  postprocess:
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

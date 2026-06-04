@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: control_room
   group_by: group
+effects:
+  engine: three.v1
+  scene: business_kpi_control_room
+  camera: isometric_dashboard
+  particles: kpi_signal_dust
+  material: dashboard_glass
+  motion: flow_chase
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - emissive_glow
+    - depth_fog
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

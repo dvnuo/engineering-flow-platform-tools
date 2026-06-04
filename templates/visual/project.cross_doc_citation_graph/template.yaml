@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: citation_map
   group_by: group
+effects:
+  engine: three.v1
+  scene: project_cross_doc_citation_graph
+  camera: wall_orbit
+  particles: evidence_beams
+  material: glass_panels
+  motion: beam_trace
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - filter_relation
+  postprocess:
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

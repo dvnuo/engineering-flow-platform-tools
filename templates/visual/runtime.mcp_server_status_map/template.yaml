@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: matrix_board
   group_by: group
+effects:
+  engine: three.v1
+  scene: runtime_mcp_server_status_map
+  camera: isometric_dashboard
+  particles: event_stream
+  material: matte_depth
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - replay_timeline
+    - metric_depth_hover
+  postprocess:
+    - depth_fog
 offline:
   required: true
   forbid_network: true

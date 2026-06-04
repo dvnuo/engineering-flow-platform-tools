@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: matrix_board
   group_by: group
+effects:
+  engine: three.v1
+  scene: project_risk_matrix
+  camera: isometric_dashboard
+  particles: risk_heat_points
+  material: risk_prism
+  motion: metric_lift
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - metric_depth_hover
+  postprocess:
+    - status_glitch
 offline:
   required: true
   forbid_network: true

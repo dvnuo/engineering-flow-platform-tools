@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: matrix_board
   group_by: group
+effects:
+  engine: three.v1
+  scene: codebase_ownership_map
+  camera: isometric_dashboard
+  particles: dependency_pulses
+  material: emissive_network
+  motion: metric_lift
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - metric_depth_hover
+  postprocess:
+    - emissive_glow
 offline:
   required: true
   forbid_network: true

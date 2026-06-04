@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: swimlane_timeline
   group_by: group
+effects:
+  engine: three.v1
+  scene: planning_parallel_sessions_map
+  camera: dolly_tunnel
+  particles: event_stream
+  material: emissive_network
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - replay_timeline
+  postprocess:
+    - emissive_glow
+    - depth_fog
 offline:
   required: true
   forbid_network: true

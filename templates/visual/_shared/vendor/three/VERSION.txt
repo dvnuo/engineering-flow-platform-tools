@@ -1,0 +1,2 @@
+three@0.184.0
+Bundled from npm package three@0.184.0 with esbuild as a local ESM bridge for offline visual artifacts.

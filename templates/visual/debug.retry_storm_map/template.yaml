@@ -10,6 +10,23 @@ renderer:
 layout:
   preset: flow_particles
   group_by: group
+effects:
+  engine: three.v1
+  scene: debug_retry_storm_map
+  camera: orbit_isometric
+  particles: event_stream
+  material: emissive_network
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - replay_timeline
+    - step_scrub
+  postprocess:
+    - emissive_glow
+    - status_glitch
+    - depth_fog
 offline:
   required: true
   forbid_network: true

@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: constellation
   group_by: group
+effects:
+  engine: three.v1
+  scene: knowledge_document_cluster_map
+  camera: wall_orbit
+  particles: evidence_beams
+  material: glass_panels
+  motion: orbital_scan
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - filter_relation
+  postprocess:
+    - emissive_glow
+    - soft_reflection
 offline:
   required: true
   forbid_network: true

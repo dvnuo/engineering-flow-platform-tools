@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: constellation
   group_by: group
+effects:
+  engine: three.v1
+  scene: codebase_dead_code_detector
+  camera: orbit_perspective
+  particles: dependency_pulses
+  material: emissive_network
+  motion: orbital_scan
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+  postprocess:
+    - emissive_glow
 offline:
   required: true
   forbid_network: true

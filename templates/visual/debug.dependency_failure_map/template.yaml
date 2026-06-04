@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: service_map
   group_by: group
+effects:
+  engine: three.v1
+  scene: debug_dependency_failure_map
+  camera: orbit_isometric
+  particles: dependency_pulses
+  material: emissive_network
+  motion: slow_orbit
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+  postprocess:
+    - emissive_glow
+    - status_glitch
 offline:
   required: true
   forbid_network: true

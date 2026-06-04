@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: funnel
   group_by: group
+effects:
+  engine: three.v1
+  scene: project_blocker_funnel
+  camera: orbit_isometric
+  particles: kpi_signal_dust
+  material: emissive_network
+  motion: flow_chase
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+  postprocess:
+    - emissive_glow
+    - depth_fog
 offline:
   required: true
   forbid_network: true

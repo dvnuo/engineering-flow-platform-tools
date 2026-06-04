@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: pipeline_flow
   group_by: group
+effects:
+  engine: three.v1
+  scene: education_ml_pipeline_view
+  camera: orbit_isometric
+  particles: event_stream
+  material: emissive_network
+  motion: flow_chase
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - step_scrub
+  postprocess:
+    - emissive_glow
+    - depth_fog
 offline:
   required: true
   forbid_network: true

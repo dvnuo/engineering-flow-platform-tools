@@ -10,6 +10,19 @@ renderer:
 layout:
   preset: radial_tree
   group_by: group
+effects:
+  engine: three.v1
+  scene: planning_goal_breakdown_tree
+  camera: orbit_isometric
+  particles: ambient_stars
+  material: emissive_network
+  motion: slow_orbit
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+  postprocess:
+    - emissive_glow
 offline:
   required: true
   forbid_network: true

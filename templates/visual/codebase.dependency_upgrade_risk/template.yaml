@@ -10,6 +10,21 @@ renderer:
 layout:
   preset: radar_sphere
   group_by: group
+effects:
+  engine: three.v1
+  scene: codebase_dependency_upgrade_risk
+  camera: orbit_perspective
+  particles: dependency_pulses
+  material: holographic_rings
+  motion: orbital_scan
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - metric_depth_hover
+  postprocess:
+    - emissive_glow
+    - status_glitch
 offline:
   required: true
   forbid_network: true

@@ -10,6 +10,22 @@ renderer:
 layout:
   preset: radial_tree
   group_by: group
+effects:
+  engine: three.v1
+  scene: planning_task_failure_fork
+  camera: orbit_isometric
+  particles: event_stream
+  material: emissive_network
+  motion: timeline_replay
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+    - replay_timeline
+  postprocess:
+    - emissive_glow
+    - status_glitch
+    - depth_fog
 offline:
   required: true
   forbid_network: true

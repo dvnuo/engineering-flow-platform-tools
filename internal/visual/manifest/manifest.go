@@ -10,6 +10,7 @@ type TemplateManifest struct {
 	InputSchemaKind string       `yaml:"input_schema_kind" json:"input_schema_kind"`
 	Renderer        RendererSpec `yaml:"renderer" json:"renderer"`
 	Layout          LayoutSpec   `yaml:"layout" json:"layout"`
+	Effects         EffectsSpec  `yaml:"effects,omitempty" json:"effects,omitempty"`
 	Offline         OfflineSpec  `yaml:"offline" json:"offline"`
 	Assets          []AssetSpec  `yaml:"assets" json:"assets"`
 	Styles          []string     `yaml:"styles" json:"styles"`
@@ -26,6 +27,17 @@ type RendererSpec struct {
 type LayoutSpec struct {
 	Preset  string `yaml:"preset" json:"preset"`
 	GroupBy string `yaml:"group_by,omitempty" json:"group_by,omitempty"`
+}
+
+type EffectsSpec struct {
+	Engine      string   `yaml:"engine,omitempty" json:"engine,omitempty"`
+	Scene       string   `yaml:"scene,omitempty" json:"scene,omitempty"`
+	Camera      string   `yaml:"camera,omitempty" json:"camera,omitempty"`
+	Particles   string   `yaml:"particles,omitempty" json:"particles,omitempty"`
+	Material    string   `yaml:"material,omitempty" json:"material,omitempty"`
+	Motion      string   `yaml:"motion,omitempty" json:"motion,omitempty"`
+	Interaction []string `yaml:"interaction,omitempty" json:"interaction,omitempty"`
+	Postprocess []string `yaml:"postprocess,omitempty" json:"postprocess,omitempty"`
 }
 
 type OfflineSpec struct {
@@ -55,6 +67,7 @@ type OutputManifest struct {
 	Offline      bool           `json:"offline"`
 	Entrypoint   string         `json:"entrypoint"`
 	Layout       LayoutSpec     `json:"layout"`
+	Effects      EffectsSpec    `json:"effects,omitempty"`
 	Interactions []string       `json:"interactions"`
 }
 

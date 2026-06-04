@@ -10,6 +10,20 @@ renderer:
 layout:
   preset: radial_tree
   group_by: group
+effects:
+  engine: three.v1
+  scene: debug_blast_radius_sphere
+  camera: orbit_perspective
+  particles: ambient_stars
+  material: holographic_rings
+  motion: orbital_scan
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - focus_path
+  postprocess:
+    - emissive_glow
+    - status_glitch
 offline:
   required: true
   forbid_network: true

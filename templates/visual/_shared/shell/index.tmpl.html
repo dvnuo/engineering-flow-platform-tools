@@ -12,11 +12,32 @@
 <body>
   <noscript>This offline visual artifact requires local JavaScript to render the embedded data.</noscript>
   <div id="visual-root" class="visual-root"></div>
+  {{- if .ThreeModule }}
+  <script>
+    window.EFPVisualThreePending = true;
+  </script>
+  <script type="module" src="{{ .ThreeModuleScript }}"></script>
+  {{- end }}
   {{- range .Scripts }}
   <script src="{{ . }}"></script>
   {{- end }}
   <script>
-    window.EFPVisualRuntime.boot();
+    (function () {
+      var started = false;
+      function start() {
+        if (started) {
+          return;
+        }
+        started = true;
+        window.EFPVisualRuntime.boot();
+      }
+      if (window.EFPVisualThreePending) {
+        window.addEventListener("efp:three-ready", start, { once: true });
+        window.setTimeout(start, 1200);
+      } else {
+        start();
+      }
+    }());
   </script>
 </body>
 </html>

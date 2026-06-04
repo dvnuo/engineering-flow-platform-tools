@@ -2,7 +2,7 @@ id: debug.dependency_version_conflict
 version: 1.0.0
 category: debug
 title: Dependency Version Conflict
-description: Visualize Dependency Version Conflict as a complete offline graph view for debug workflows using the graph_2_5d layout.
+description: Shows conflicting package versions, dependents, lockfiles, and resolution candidates.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

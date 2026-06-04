@@ -2,7 +2,7 @@ id: agent.react_loop_replay
 version: 1.0.0
 category: agent
 title: React Loop Replay
-description: Visualize React Loop Replay as a complete offline graph_events view for agent workflows using the replay_stage layout.
+description: Replays observe, think, act, and validate cycles with tool calls and decision checkpoints.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

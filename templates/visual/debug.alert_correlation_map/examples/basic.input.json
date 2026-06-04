@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Alert Correlation Map Example"
+  "title": "Alert Correlation Map: Clusters alerts by shared service, symptom, dependency, time window, and likely incident"
 }

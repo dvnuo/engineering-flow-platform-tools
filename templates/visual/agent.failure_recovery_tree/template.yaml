@@ -2,7 +2,7 @@ id: agent.failure_recovery_tree
 version: 1.0.0
 category: agent
 title: Failure Recovery Tree
-description: Visualize Failure Recovery Tree as a complete offline graph_events view for agent workflows using the radial_tree layout.
+description: Branches agent failures into symptoms, suspected causes, retry choices, and verified recovery steps.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

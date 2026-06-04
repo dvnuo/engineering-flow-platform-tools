@@ -2,7 +2,7 @@ id: planning.approval_workflow
 version: 1.0.0
 category: planning
 title: Approval Workflow
-description: Visualize Approval Workflow as a complete offline graph_events view for planning workflows using the permission_gate layout.
+description: Tracks approval requests, reviewers, policy gates, blocked actions, and final authorization.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

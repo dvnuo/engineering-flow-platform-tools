@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Stakeholder Network Example"
+  "title": "Stakeholder Network: Maps stakeholders, decision rights, communication channels, dependencies, and escalation paths"
 }

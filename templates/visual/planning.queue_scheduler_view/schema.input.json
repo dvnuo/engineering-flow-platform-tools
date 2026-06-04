@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Queue Scheduler View Example"
+    "title": "Queue Scheduler View: Organizes queued work by priority, SLA, owner, runtime window, and dispatch state"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

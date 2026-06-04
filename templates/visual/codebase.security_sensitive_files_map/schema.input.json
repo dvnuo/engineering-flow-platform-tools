@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Security Sensitive Files Map Example"
+    "title": "Security Sensitive Files Map: Highlights sensitive files, boundaries, data flows, reviewers, and required checks"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

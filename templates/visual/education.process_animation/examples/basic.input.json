@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Process Animation Example"
+  "title": "Process Animation: Demonstrates process start, scheduling, IO waits, signals, completion, and failure transitions"
 }

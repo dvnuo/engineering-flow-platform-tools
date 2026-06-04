@@ -2,7 +2,7 @@ id: runtime.permission_boundary_map
 version: 1.0.0
 category: runtime
 title: Permission Boundary Map
-description: Visualize Permission Boundary Map as a complete offline graph view for runtime workflows using the layered_stack layout.
+description: Maps actors, roles, guarded actions, approval points, and denied paths across a runtime.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

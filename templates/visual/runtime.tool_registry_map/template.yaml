@@ -2,7 +2,7 @@ id: runtime.tool_registry_map
 version: 1.0.0
 category: runtime
 title: Tool Registry Map
-description: Visualize Tool Registry Map as a complete offline graph view for runtime workflows using the radial_tree layout.
+description: Organizes registered tools, schemas, owners, health checks, and version compatibility.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

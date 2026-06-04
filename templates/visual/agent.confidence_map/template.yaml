@@ -2,7 +2,7 @@ id: agent.confidence_map
 version: 1.0.0
 category: agent
 title: Confidence Map
-description: Visualize Confidence Map as a complete offline evidence view for agent workflows using the evidence_board layout.
+description: Links agent conclusions to evidence, counterevidence, source reliability, and confidence levels.
 input_schema: schema.input.json
 input_schema_kind: evidence_v1
 renderer:

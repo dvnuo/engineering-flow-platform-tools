@@ -2,7 +2,7 @@ id: project.decision_record_wall
 version: 1.0.0
 category: project
 title: Decision Record Wall
-description: Visualize Decision Record Wall as a complete offline evidence view for project workflows using the document_wall layout.
+description: Displays decision records with status, rationale, owners, supporting evidence, and superseded notes.
 input_schema: schema.input.json
 input_schema_kind: evidence_v1
 renderer:

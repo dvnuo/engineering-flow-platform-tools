@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Goal Breakdown Tree Example"
+    "title": "Goal Breakdown Tree: Breaks a goal into deliverables, tasks, owners, validation, and dependency branches"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

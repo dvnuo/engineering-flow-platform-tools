@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Blast Radius Sphere Example"
+    "title": "Blast Radius Sphere: Estimates impacted users, services, data paths, and rollback scope around a failure"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

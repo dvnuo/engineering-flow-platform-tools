@@ -2,7 +2,7 @@ id: codebase.pr_diff_impact_map
 version: 1.0.0
 category: codebase
 title: PR Diff Impact Map
-description: Visualize PR Diff Impact Map as a complete offline graph_events view for codebase workflows using the ripple layout.
+description: Shows how pull request changes touch modules, tests, contracts, reviewers, and release risk.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

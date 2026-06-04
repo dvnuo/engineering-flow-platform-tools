@@ -2,7 +2,7 @@ id: business.market_map
 version: 1.0.0
 category: business
 title: Market Map
-description: Visualize Market Map as a complete offline matrix view for business workflows using the terrain_heatmap layout.
+description: Places market segments by size, growth, competition, fit, and entry confidence.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

@@ -2,7 +2,7 @@ id: business.sales_pipeline_3d
 version: 1.0.0
 category: business
 title: Sales Pipeline 3D
-description: Visualize Sales Pipeline 3D as a complete offline graph view for business workflows using the pipeline_flow layout.
+description: Tracks opportunities from lead through qualification, proposal, negotiation, and close.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

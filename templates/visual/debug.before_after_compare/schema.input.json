@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Before After Compare Example"
+    "title": "Before After Compare: Compares system state before and after a fix, deploy, rollback, or configuration change"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

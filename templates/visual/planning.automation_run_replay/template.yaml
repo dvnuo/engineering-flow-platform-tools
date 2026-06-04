@@ -2,7 +2,7 @@ id: planning.automation_run_replay
 version: 1.0.0
 category: planning
 title: Automation Run Replay
-description: Visualize Automation Run Replay as a complete offline graph_events view for planning workflows using the replay_stage layout.
+description: Replays an automation run through triggers, actions, retries, failures, and completion.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

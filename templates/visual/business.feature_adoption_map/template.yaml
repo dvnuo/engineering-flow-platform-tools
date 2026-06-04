@@ -2,7 +2,7 @@ id: business.feature_adoption_map
 version: 1.0.0
 category: business
 title: Feature Adoption Map
-description: Visualize Feature Adoption Map as a complete offline matrix view for business workflows using the heatmap layout.
+description: Plots feature usage by segment, account tier, activation depth, and expansion signal.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

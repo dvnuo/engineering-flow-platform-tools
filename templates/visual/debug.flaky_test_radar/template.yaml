@@ -2,7 +2,7 @@ id: debug.flaky_test_radar
 version: 1.0.0
 category: debug
 title: Flaky Test Radar
-description: Visualize Flaky Test Radar as a complete offline matrix view for debug workflows using the radar_sphere layout.
+description: Plots flaky tests by failure rate, owner, runtime cost, and confidence in quarantine or fix.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

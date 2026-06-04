@@ -2,7 +2,7 @@ id: business.opportunity_landscape
 version: 1.0.0
 category: business
 title: Opportunity Landscape
-description: Visualize Opportunity Landscape as a complete offline matrix view for business workflows using the terrain_heatmap layout.
+description: Plots opportunities by value, feasibility, strategic fit, confidence, and timing.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

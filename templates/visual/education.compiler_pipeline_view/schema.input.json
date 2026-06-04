@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Compiler Pipeline View Example"
+    "title": "Compiler Pipeline View: Explains source parsing, analysis, optimization, code generation, and diagnostics in a compiler"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

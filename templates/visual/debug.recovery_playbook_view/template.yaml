@@ -2,7 +2,7 @@ id: debug.recovery_playbook_view
 version: 1.0.0
 category: debug
 title: Recovery Playbook View
-description: Visualize Recovery Playbook View as a complete offline graph_events view for debug workflows using the step_ladder layout.
+description: Steps through detection, mitigation, rollback, validation, and handoff tasks in a recovery playbook.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

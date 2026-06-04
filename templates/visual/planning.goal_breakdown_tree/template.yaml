@@ -2,7 +2,7 @@ id: planning.goal_breakdown_tree
 version: 1.0.0
 category: planning
 title: Goal Breakdown Tree
-description: Visualize Goal Breakdown Tree as a complete offline graph view for planning workflows using the radial_tree layout.
+description: Breaks a goal into deliverables, tasks, owners, validation, and dependency branches.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

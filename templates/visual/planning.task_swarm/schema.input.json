@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Task Swarm Example"
+    "title": "Task Swarm: Coordinates many tasks by owner, dependency, status, collision risk, and convergence point"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

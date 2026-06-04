@@ -2,7 +2,7 @@ id: agent.context_window_map
 version: 1.0.0
 category: agent
 title: Context Window Map
-description: Visualize Context Window Map as a complete offline matrix view for agent workflows using the matrix_board layout.
+description: Tracks context chunks by relevance, freshness, token weight, and whether they are still needed.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

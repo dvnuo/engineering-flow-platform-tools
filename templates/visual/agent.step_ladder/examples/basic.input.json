@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Step Ladder Example"
+  "title": "Step Ladder: Breaks an agent task into ordered steps with prerequisites, evidence, and completion state"
 }

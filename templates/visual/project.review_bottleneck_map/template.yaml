@@ -2,7 +2,7 @@ id: project.review_bottleneck_map
 version: 1.0.0
 category: project
 title: Review Bottleneck Map
-description: Visualize Review Bottleneck Map as a complete offline matrix view for project workflows using the control_room layout.
+description: Shows stalled reviews by reviewer, waiting time, file area, and unblock action.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

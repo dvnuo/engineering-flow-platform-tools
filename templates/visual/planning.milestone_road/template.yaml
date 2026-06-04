@@ -2,7 +2,7 @@ id: planning.milestone_road
 version: 1.0.0
 category: planning
 title: Milestone Road
-description: Visualize Milestone Road as a complete offline timeline view for planning workflows using the roadmap layout.
+description: Orders milestones along a delivery path with entry criteria, risks, and completion evidence.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

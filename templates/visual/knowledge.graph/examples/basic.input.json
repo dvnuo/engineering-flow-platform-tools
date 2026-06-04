@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Graph Example"
+  "title": "Graph: Connects concepts, facts, owners, references, and unresolved gaps in a knowledge graph"
 }

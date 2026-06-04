@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Orbit System Example"
+  "title": "Orbit System: Shows a central system with related teams, dependencies, controls, and checks in orbital bands"
 }

@@ -2,7 +2,7 @@ id: business.sla_dashboard
 version: 1.0.0
 category: business
 title: SLA Dashboard
-description: Visualize SLA Dashboard as a complete offline matrix view for business workflows using the control_room layout.
+description: Shows SLA targets, live attainment, breach risk, support queue pressure, and ownership.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

@@ -93,5 +93,5 @@
     }
   ],
   "schema": "efp.visual.input.timeline.v1",
-  "title": "Error Spike Field Example"
+  "title": "Error Spike Field: Places error spikes by endpoint, time, status code, and related deploy or traffic signals"
 }

@@ -2,7 +2,7 @@ id: business.risk_matrix_3d
 version: 1.0.0
 category: business
 title: Risk Matrix 3D
-description: Visualize Risk Matrix 3D as a complete offline matrix view for business workflows using the matrix_board layout.
+description: Plots business risks by likelihood, impact, velocity, mitigation owner, and residual exposure.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

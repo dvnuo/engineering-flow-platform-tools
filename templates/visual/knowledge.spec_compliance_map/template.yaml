@@ -2,7 +2,7 @@ id: knowledge.spec_compliance_map
 version: 1.0.0
 category: knowledge
 title: Spec Compliance Map
-description: Visualize Spec Compliance Map as a complete offline graph view for knowledge workflows using the matrix_board layout.
+description: Connects spec requirements, implementation evidence, tests, exceptions, and compliance gaps.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

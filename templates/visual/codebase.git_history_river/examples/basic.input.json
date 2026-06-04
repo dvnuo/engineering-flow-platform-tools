@@ -93,5 +93,5 @@
     }
   ],
   "schema": "efp.visual.input.timeline.v1",
-  "title": "Git History River Example"
+  "title": "Git History River: Shows commits, authors, release points, reverts, and hot files along a repository history stream"
 }

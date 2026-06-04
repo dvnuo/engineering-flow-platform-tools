@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Ownership Map Example"
+  "title": "Ownership Map: Connects files, services, teams, reviewers, and backup owners for stewardship review"
 }

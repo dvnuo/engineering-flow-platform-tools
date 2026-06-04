@@ -2,7 +2,7 @@ id: planning.resource_allocation_board
 version: 1.0.0
 category: planning
 title: Resource Allocation Board
-description: Visualize Resource Allocation Board as a complete offline matrix view for planning workflows using the matrix_board layout.
+description: Balances people, systems, budget, and time across workstreams and delivery risk.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

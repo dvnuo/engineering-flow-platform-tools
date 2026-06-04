@@ -2,7 +2,7 @@ id: business.ops_shift_overview
 version: 1.0.0
 category: business
 title: Ops Shift Overview
-description: Visualize Ops Shift Overview as a complete offline matrix view for business workflows using the control_room layout.
+description: Summarizes shift workload, incidents, handoffs, queue health, and pending escalations.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

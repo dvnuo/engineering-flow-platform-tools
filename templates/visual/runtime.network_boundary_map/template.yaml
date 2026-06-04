@@ -2,7 +2,7 @@ id: runtime.network_boundary_map
 version: 1.0.0
 category: runtime
 title: Network Boundary Map
-description: Visualize Network Boundary Map as a complete offline graph view for runtime workflows using the layered_stack layout.
+description: Shows network zones, trusted edges, ingress points, egress rules, and boundary controls.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

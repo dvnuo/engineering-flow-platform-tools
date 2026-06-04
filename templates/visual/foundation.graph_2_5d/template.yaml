@@ -2,7 +2,7 @@ id: foundation.graph_2_5d
 version: 1.0.0
 category: foundation
 title: Graph 2 5D
-description: Visualize Graph 2 5D as a complete offline graph view for foundation workflows using the graph_2_5d layout.
+description: Layers graph nodes by ownership, status, and depth so dense dependency maps stay readable.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

@@ -2,7 +2,7 @@ id: codebase.ownership_map
 version: 1.0.0
 category: codebase
 title: Ownership Map
-description: Visualize Ownership Map as a complete offline graph view for codebase workflows using the matrix_board layout.
+description: Connects files, services, teams, reviewers, and backup owners for stewardship review.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Opportunity Landscape Example"
+    "title": "Opportunity Landscape: Plots opportunities by value, feasibility, strategic fit, confidence, and timing"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

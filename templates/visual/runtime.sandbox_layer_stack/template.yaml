@@ -2,7 +2,7 @@ id: runtime.sandbox_layer_stack
 version: 1.0.0
 category: runtime
 title: Sandbox Layer Stack
-description: Visualize Sandbox Layer Stack as a complete offline graph view for runtime workflows using the layered_stack layout.
+description: Stacks sandbox permissions, filesystem scope, network policy, and command execution boundaries.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

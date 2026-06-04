@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Coverage Terrain Example"
+  "title": "Coverage Terrain: Plots packages by coverage, churn, risk, and ownership to expose weak test terrain"
 }

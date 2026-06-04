@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Dependency Version Conflict Example"
+  "title": "Dependency Version Conflict: Shows conflicting package versions, dependents, lockfiles, and resolution candidates"
 }

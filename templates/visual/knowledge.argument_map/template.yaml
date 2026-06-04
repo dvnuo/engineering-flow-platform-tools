@@ -2,7 +2,7 @@ id: knowledge.argument_map
 version: 1.0.0
 category: knowledge
 title: Argument Map
-description: Visualize Argument Map as a complete offline evidence view for knowledge workflows using the graph_2_5d layout.
+description: Maps positions, supporting claims, objections, sources, and confidence for a decision debate.
 input_schema: schema.input.json
 input_schema_kind: evidence_v1
 renderer:

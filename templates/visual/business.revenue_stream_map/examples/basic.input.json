@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Revenue Stream Map Example"
+  "title": "Revenue Stream Map: Traces revenue from customer segments through products, channels, renewals, and leakage"
 }

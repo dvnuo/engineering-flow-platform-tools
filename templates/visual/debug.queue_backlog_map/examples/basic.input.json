@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Queue Backlog Map Example"
+  "title": "Queue Backlog Map: Shows queue depth, worker health, age, retry pressure, and throughput blockers"
 }

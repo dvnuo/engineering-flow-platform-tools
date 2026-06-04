@@ -2,7 +2,7 @@ id: debug.dependency_failure_map
 version: 1.0.0
 category: debug
 title: Dependency Failure Map
-description: Visualize Dependency Failure Map as a complete offline graph view for debug workflows using the service_map layout.
+description: Connects a failing dependency to callers, retries, fallbacks, alerts, and customer impact.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

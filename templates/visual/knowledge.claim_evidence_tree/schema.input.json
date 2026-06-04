@@ -97,7 +97,7 @@
         "title": "Evidence Tree decision record"
       }
     ],
-    "title": "Claim Evidence Tree Example"
+    "title": "Claim Evidence Tree: Branches each claim into supporting, refuting, and contextual sources with confidence"
   },
   "input_schema_kind": "evidence_v1",
   "json_schema": {

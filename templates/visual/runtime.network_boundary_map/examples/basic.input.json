@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Network Boundary Map Example"
+  "title": "Network Boundary Map: Shows network zones, trusted edges, ingress points, egress rules, and boundary controls"
 }

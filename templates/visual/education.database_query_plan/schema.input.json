@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Database Query Plan Example"
+    "title": "Database Query Plan: Breaks a query plan into scans, joins, filters, indexes, cost, and execution order"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

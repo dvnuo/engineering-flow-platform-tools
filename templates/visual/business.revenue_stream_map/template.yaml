@@ -2,7 +2,7 @@ id: business.revenue_stream_map
 version: 1.0.0
 category: business
 title: Revenue Stream Map
-description: Visualize Revenue Stream Map as a complete offline graph view for business workflows using the sankey_3d layout.
+description: Traces revenue from customer segments through products, channels, renewals, and leakage.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

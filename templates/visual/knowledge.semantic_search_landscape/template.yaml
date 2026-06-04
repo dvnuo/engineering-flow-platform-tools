@@ -2,7 +2,7 @@ id: knowledge.semantic_search_landscape
 version: 1.0.0
 category: knowledge
 title: Semantic Search Landscape
-description: Visualize Semantic Search Landscape as a complete offline matrix view for knowledge workflows using the terrain_heatmap layout.
+description: Plots search results by relevance, source type, confidence, and topic cluster.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

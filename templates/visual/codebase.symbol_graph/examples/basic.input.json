@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Symbol Graph Example"
+  "title": "Symbol Graph: Links symbols, call sites, packages, and tests to explain code navigation and impact"
 }

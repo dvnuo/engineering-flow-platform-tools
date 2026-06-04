@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Permission Boundary Map Example"
+  "title": "Permission Boundary Map: Maps actors, roles, guarded actions, approval points, and denied paths across a runtime"
 }

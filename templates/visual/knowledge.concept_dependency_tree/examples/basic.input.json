@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Concept Dependency Tree Example"
+  "title": "Concept Dependency Tree: Shows prerequisite concepts, dependent ideas, learning order, and weak understanding areas"
 }

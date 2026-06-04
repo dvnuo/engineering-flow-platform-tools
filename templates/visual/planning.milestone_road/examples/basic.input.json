@@ -93,5 +93,5 @@
     }
   ],
   "schema": "efp.visual.input.timeline.v1",
-  "title": "Milestone Road Example"
+  "title": "Milestone Road: Orders milestones along a delivery path with entry criteria, risks, and completion evidence"
 }

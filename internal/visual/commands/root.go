@@ -39,6 +39,10 @@ type missingFilesError interface {
 	MissingFiles() []string
 }
 
+type orphanTemplateDirsError interface {
+	OrphanTemplateDirs() []string
+}
+
 func NewRoot() *cobra.Command {
 	cobra.EnableCommandSorting = false
 	o := &Opts{Format: "table", OfflineStrict: true}
@@ -105,6 +109,10 @@ func failureFromError(err error, fallbackCode string) output.Envelope {
 		var me missingFilesError
 		if errors.As(err, &me) {
 			detail.MissingFiles = me.MissingFiles()
+		}
+		var oe orphanTemplateDirsError
+		if errors.As(err, &oe) {
+			detail.OrphanTemplateDirs = oe.OrphanTemplateDirs()
 		}
 		return output.Envelope{OK: false, Error: detail}
 	}

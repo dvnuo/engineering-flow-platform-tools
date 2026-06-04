@@ -2,7 +2,7 @@ id: education.security_threat_model
 version: 1.0.0
 category: education
 title: Security Threat Model
-description: Visualize Security Threat Model as a complete offline graph view for education workflows using the network_boundary_map layout.
+description: Maps assets, trust boundaries, attack paths, controls, and residual risks.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

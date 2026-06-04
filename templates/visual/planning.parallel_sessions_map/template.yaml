@@ -2,7 +2,7 @@ id: planning.parallel_sessions_map
 version: 1.0.0
 category: planning
 title: Parallel Sessions Map
-description: Visualize Parallel Sessions Map as a complete offline graph_events view for planning workflows using the swimlane_timeline layout.
+description: Shows parallel work sessions, shared files, dependencies, conflicts, and merge points.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

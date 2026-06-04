@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Confluence Space Map Example"
+  "title": "Confluence Space Map: Maps Confluence spaces, page trees, owners, stale areas, and linked project artifacts"
 }

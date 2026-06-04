@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Ops Shift Overview Example"
+    "title": "Ops Shift Overview: Summarizes shift workload, incidents, handoffs, queue health, and pending escalations"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

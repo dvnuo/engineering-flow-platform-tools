@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Team Load Balance Example"
+  "title": "Team Load Balance: Compares team load, capacity, focus area, risk, and rebalancing options"
 }

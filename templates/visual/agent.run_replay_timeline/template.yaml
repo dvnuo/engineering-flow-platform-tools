@@ -2,7 +2,7 @@ id: agent.run_replay_timeline
 version: 1.0.0
 category: agent
 title: Run Replay Timeline
-description: Visualize Run Replay Timeline as a complete offline graph_events view for agent workflows using the replay_stage layout.
+description: Shows an agent run as a replayable sequence of planning, edits, checks, and final response.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

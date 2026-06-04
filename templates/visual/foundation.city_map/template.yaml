@@ -2,7 +2,7 @@ id: foundation.city_map
 version: 1.0.0
 category: foundation
 title: City Map
-description: Visualize City Map as a complete offline graph view for foundation workflows using the city_map layout.
+description: Arranges services, stores, queues, and ownership zones as city blocks for quick spatial scanning.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

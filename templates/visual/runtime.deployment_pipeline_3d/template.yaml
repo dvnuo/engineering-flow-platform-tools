@@ -2,7 +2,7 @@ id: runtime.deployment_pipeline_3d
 version: 1.0.0
 category: runtime
 title: Deployment Pipeline 3D
-description: Visualize Deployment Pipeline 3D as a complete offline graph_events view for runtime workflows using the pipeline_flow layout.
+description: Tracks build artifacts through deploy stages, checks, approvals, and rollback points.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

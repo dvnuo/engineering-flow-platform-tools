@@ -2,7 +2,7 @@ id: education.migration_strategy_view
 version: 1.0.0
 category: education
 title: Migration Strategy View
-description: Visualize Migration Strategy View as a complete offline graph_events view for education workflows using the diff_split_view layout.
+description: Explains phased migration from legacy path through dual write, validation, cutover, and cleanup.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

@@ -2,7 +2,7 @@ id: debug.latency_heatmap
 version: 1.0.0
 category: debug
 title: Latency Heatmap
-description: Visualize Latency Heatmap as a complete offline matrix view for debug workflows using the heatmap layout.
+description: Maps latency by endpoint, dependency, percentile, and time window to reveal hotspots.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Support Escalation Graph Example"
+    "title": "Support Escalation Graph: Connects support cases, impacted customers, engineering owners, severity, and resolution path"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

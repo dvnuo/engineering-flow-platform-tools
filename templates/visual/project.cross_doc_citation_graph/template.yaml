@@ -2,7 +2,7 @@ id: project.cross_doc_citation_graph
 version: 1.0.0
 category: project
 title: Cross Doc Citation Graph
-description: Visualize Cross Doc Citation Graph as a complete offline evidence view for project workflows using the citation_map layout.
+description: Connects documents, cited decisions, source claims, and conflicting references across a project.
 input_schema: schema.input.json
 input_schema_kind: evidence_v1
 renderer:

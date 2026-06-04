@@ -2,7 +2,7 @@ id: project.support_escalation_graph
 version: 1.0.0
 category: project
 title: Support Escalation Graph
-description: Visualize Support Escalation Graph as a complete offline graph view for project workflows using the layered_stack layout.
+description: Connects support cases, impacted customers, engineering owners, severity, and resolution path.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

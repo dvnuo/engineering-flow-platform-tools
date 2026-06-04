@@ -2,7 +2,7 @@ id: codebase.coverage_terrain
 version: 1.0.0
 category: codebase
 title: Coverage Terrain
-description: Visualize Coverage Terrain as a complete offline matrix view for codebase workflows using the terrain_heatmap layout.
+description: Plots packages by coverage, churn, risk, and ownership to expose weak test terrain.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

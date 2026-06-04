@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Config Drift Map Example"
+    "title": "Config Drift Map: Compares expected and observed configuration across environments, owners, and drift severity"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Graph 3D Example"
+    "title": "Graph 3D: Places major nodes, edges, and hotspots into a depth based graph for exploring complex systems"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

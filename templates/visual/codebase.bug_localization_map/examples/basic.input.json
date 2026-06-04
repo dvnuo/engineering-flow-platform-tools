@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Bug Localization Map Example"
+  "title": "Bug Localization Map: Connects symptoms, logs, failing tests, touched modules, and likely fix targets for a bug"
 }

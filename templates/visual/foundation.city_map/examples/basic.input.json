@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "City Map Example"
+  "title": "City Map: Arranges services, stores, queues, and ownership zones as city blocks for quick spatial scanning"
 }

@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "SLA Dashboard Example"
+    "title": "SLA Dashboard: Shows SLA targets, live attainment, breach risk, support queue pressure, and ownership"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

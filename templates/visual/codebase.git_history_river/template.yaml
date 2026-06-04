@@ -2,7 +2,7 @@ id: codebase.git_history_river
 version: 1.0.0
 category: codebase
 title: Git History River
-description: Visualize Git History River as a complete offline timeline view for codebase workflows using the river layout.
+description: Shows commits, authors, release points, reverts, and hot files along a repository history stream.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

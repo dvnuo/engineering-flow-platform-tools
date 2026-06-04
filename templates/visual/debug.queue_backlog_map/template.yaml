@@ -2,7 +2,7 @@ id: debug.queue_backlog_map
 version: 1.0.0
 category: debug
 title: Queue Backlog Map
-description: Visualize Queue Backlog Map as a complete offline matrix view for debug workflows using the control_room layout.
+description: Shows queue depth, worker health, age, retry pressure, and throughput blockers.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

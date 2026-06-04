@@ -2,7 +2,7 @@ id: runtime.adapter_proxy_map
 version: 1.0.0
 category: runtime
 title: Adapter Proxy Map
-description: Visualize Adapter Proxy Map as a complete offline graph view for runtime workflows using the pipeline_flow layout.
+description: Maps adapters, proxy hops, retries, auth boundaries, and downstream service dependencies.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

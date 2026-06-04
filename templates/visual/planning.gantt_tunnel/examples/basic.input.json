@@ -93,5 +93,5 @@
     }
   ],
   "schema": "efp.visual.input.timeline.v1",
-  "title": "Gantt Tunnel Example"
+  "title": "Gantt Tunnel: Shows scheduled tasks, milestones, dependencies, slippage, and critical windows"
 }

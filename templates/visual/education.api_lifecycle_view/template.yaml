@@ -2,7 +2,7 @@ id: education.api_lifecycle_view
 version: 1.0.0
 category: education
 title: API Lifecycle View
-description: Visualize API Lifecycle View as a complete offline timeline view for education workflows using the pipeline_flow layout.
+description: Teaches how an API moves from design through implementation, versioning, deprecation, and retirement.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

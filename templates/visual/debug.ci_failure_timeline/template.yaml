@@ -2,7 +2,7 @@ id: debug.ci_failure_timeline
 version: 1.0.0
 category: debug
 title: CI Failure Timeline
-description: Visualize CI Failure Timeline as a complete offline timeline view for debug workflows using the swimlane_timeline layout.
+description: Orders CI job starts, failures, retries, artifact checks, and fix verification events.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

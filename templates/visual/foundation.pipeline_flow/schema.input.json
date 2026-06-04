@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Pipeline Flow Example"
+    "title": "Pipeline Flow: Connects staged work from intake through build, validation, approval, and release handoff"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

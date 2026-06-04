@@ -2,7 +2,7 @@ id: knowledge.source_gap_map
 version: 1.0.0
 category: knowledge
 title: Source Gap Map
-description: Visualize Source Gap Map as a complete offline evidence view for knowledge workflows using the heatmap layout.
+description: Shows claims with missing, weak, refuting, or outdated sources and their confidence impact.
 input_schema: schema.input.json
 input_schema_kind: evidence_v1
 renderer:

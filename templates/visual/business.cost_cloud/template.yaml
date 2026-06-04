@@ -2,7 +2,7 @@ id: business.cost_cloud
 version: 1.0.0
 category: business
 title: Cost Cloud
-description: Visualize Cost Cloud as a complete offline graph view for business workflows using the constellation layout.
+description: Groups infrastructure, vendor, team, and feature costs with ownership and savings targets.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "API Contract Map Example"
+  "title": "API Contract Map: Connects API producers, consumers, schemas, compatibility status, and contract test coverage"
 }

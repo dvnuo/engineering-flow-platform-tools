@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Refactor Plan Map Example"
+  "title": "Refactor Plan Map: Lays out refactor targets, dependencies, staging strategy, and validation gates"
 }

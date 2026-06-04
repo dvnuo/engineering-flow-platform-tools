@@ -2,7 +2,7 @@ id: debug.error_spike_field
 version: 1.0.0
 category: debug
 title: Error Spike Field
-description: Visualize Error Spike Field as a complete offline timeline view for debug workflows using the terrain_heatmap layout.
+description: Places error spikes by endpoint, time, status code, and related deploy or traffic signals.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Exploded Architecture View Example"
+  "title": "Exploded Architecture View: Separates an architecture into layers, responsibilities, data paths, and dependency rules"
 }

@@ -2,7 +2,7 @@ id: foundation.matrix_board
 version: 1.0.0
 category: foundation
 title: Matrix Board
-description: Visualize Matrix Board as a complete offline matrix view for foundation workflows using the matrix_board layout.
+description: Positions work items by priority and effort while preserving owner, status, and risk context.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

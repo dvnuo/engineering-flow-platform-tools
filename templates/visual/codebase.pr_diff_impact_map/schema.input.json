@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "PR Diff Impact Map Example"
+    "title": "PR Diff Impact Map: Shows how pull request changes touch modules, tests, contracts, reviewers, and release risk"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

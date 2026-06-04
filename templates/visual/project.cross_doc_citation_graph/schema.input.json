@@ -97,7 +97,7 @@
         "title": "Cross Doc decision record"
       }
     ],
-    "title": "Cross Doc Citation Graph Example"
+    "title": "Cross Doc Citation Graph: Connects documents, cited decisions, source claims, and conflicting references across a project"
   },
   "input_schema_kind": "evidence_v1",
   "json_schema": {

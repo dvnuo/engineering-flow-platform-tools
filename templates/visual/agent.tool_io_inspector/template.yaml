@@ -2,7 +2,7 @@ id: agent.tool_io_inspector
 version: 1.0.0
 category: agent
 title: Tool Io Inspector
-description: Visualize Tool Io Inspector as a complete offline graph_events view for agent workflows using the diff_split_view layout.
+description: Compares tool inputs and outputs so arguments, files, command results, and errors can be inspected.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

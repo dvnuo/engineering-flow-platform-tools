@@ -2,7 +2,7 @@ id: project.epic_story_map
 version: 1.0.0
 category: project
 title: Epic Story Map
-description: Visualize Epic Story Map as a complete offline graph view for project workflows using the layered_stack layout.
+description: Breaks epics into stories, dependencies, acceptance signals, and release slices.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

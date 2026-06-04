@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Runbook Execution Map Example"
+    "title": "Runbook Execution Map: Steps through runbook actions, operators, checks, failure branches, and completion evidence"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

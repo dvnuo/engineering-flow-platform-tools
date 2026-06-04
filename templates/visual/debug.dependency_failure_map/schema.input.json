@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Dependency Failure Map Example"
+    "title": "Dependency Failure Map: Connects a failing dependency to callers, retries, fallbacks, alerts, and customer impact"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

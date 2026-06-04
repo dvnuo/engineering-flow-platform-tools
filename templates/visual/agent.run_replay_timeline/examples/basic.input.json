@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Run Replay Timeline Example"
+  "title": "Run Replay Timeline: Shows an agent run as a replayable sequence of planning, edits, checks, and final response"
 }

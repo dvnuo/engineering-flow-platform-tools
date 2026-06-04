@@ -2,7 +2,7 @@ id: debug.blast_radius_sphere
 version: 1.0.0
 category: debug
 title: Blast Radius Sphere
-description: Visualize Blast Radius Sphere as a complete offline graph view for debug workflows using the radial_tree layout.
+description: Estimates impacted users, services, data paths, and rollback scope around a failure.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

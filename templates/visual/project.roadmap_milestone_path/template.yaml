@@ -2,7 +2,7 @@ id: project.roadmap_milestone_path
 version: 1.0.0
 category: project
 title: Roadmap Milestone Path
-description: Visualize Roadmap Milestone Path as a complete offline timeline view for project workflows using the roadmap layout.
+description: Orders roadmap milestones with dependencies, confidence, launch criteria, and risk notes.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

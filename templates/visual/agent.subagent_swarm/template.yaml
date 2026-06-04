@@ -2,7 +2,7 @@ id: agent.subagent_swarm
 version: 1.0.0
 category: agent
 title: Subagent Swarm
-description: Visualize Subagent Swarm as a complete offline graph_events view for agent workflows using the constellation layout.
+description: Coordinates specialist agents, assigned scopes, shared artifacts, and merge or handoff points.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

@@ -94,7 +94,7 @@
       }
     ],
     "schema": "efp.visual.input.timeline.v1",
-    "title": "Customer Journey Map Example"
+    "title": "Customer Journey Map: Orders customer touchpoints, friction, support moments, conversion points, and retention signals"
   },
   "input_schema_kind": "timeline_v1",
   "json_schema": {

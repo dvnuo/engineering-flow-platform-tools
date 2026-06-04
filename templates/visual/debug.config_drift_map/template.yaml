@@ -2,7 +2,7 @@ id: debug.config_drift_map
 version: 1.0.0
 category: debug
 title: Config Drift Map
-description: Visualize Config Drift Map as a complete offline matrix view for debug workflows using the diff_split_view layout.
+description: Compares expected and observed configuration across environments, owners, and drift severity.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

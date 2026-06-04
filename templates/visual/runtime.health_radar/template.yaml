@@ -2,7 +2,7 @@ id: runtime.health_radar
 version: 1.0.0
 category: runtime
 title: Health Radar
-description: Visualize Health Radar as a complete offline matrix view for runtime workflows using the radar_sphere layout.
+description: Plots services by saturation, errors, latency, dependency health, and incident exposure.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

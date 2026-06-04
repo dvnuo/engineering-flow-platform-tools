@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Risk Matrix 3D Example"
+    "title": "Risk Matrix 3D: Plots business risks by likelihood, impact, velocity, mitigation owner, and residual exposure"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

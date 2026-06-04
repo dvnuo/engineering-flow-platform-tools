@@ -2,7 +2,7 @@ id: education.network_packet_path
 version: 1.0.0
 category: education
 title: Network Packet Path
-description: Visualize Network Packet Path as a complete offline graph_events view for education workflows using the pipeline_flow layout.
+description: Follows packets through client, DNS, gateway, firewall, service, and response path.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

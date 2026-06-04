@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "State Machine Example"
+    "title": "State Machine: Documents allowed states, transitions, guards, and terminal outcomes for a process"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

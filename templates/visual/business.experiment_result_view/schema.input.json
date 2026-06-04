@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Experiment Result View Example"
+    "title": "Experiment Result View: Compares experiment variants by metric lift, guardrails, confidence, and rollout decision"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

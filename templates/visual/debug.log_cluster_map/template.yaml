@@ -2,7 +2,7 @@ id: debug.log_cluster_map
 version: 1.0.0
 category: debug
 title: Log Cluster Map
-description: Visualize Log Cluster Map as a complete offline graph view for debug workflows using the constellation layout.
+description: Groups log signatures, affected services, example messages, and suspected causes.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

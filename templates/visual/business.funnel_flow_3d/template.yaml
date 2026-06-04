@@ -2,7 +2,7 @@ id: business.funnel_flow_3d
 version: 1.0.0
 category: business
 title: Funnel Flow 3D
-description: Visualize Funnel Flow 3D as a complete offline graph view for business workflows using the funnel layout.
+description: Tracks prospects through funnel stages, conversion leaks, owners, and recovery actions.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

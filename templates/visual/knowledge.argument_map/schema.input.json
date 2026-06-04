@@ -97,7 +97,7 @@
         "title": "Argument Map decision record"
       }
     ],
-    "title": "Argument Map Example"
+    "title": "Argument Map: Maps positions, supporting claims, objections, sources, and confidence for a decision debate"
   },
   "input_schema_kind": "evidence_v1",
   "json_schema": {

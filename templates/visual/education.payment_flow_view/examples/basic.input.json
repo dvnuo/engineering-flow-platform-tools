@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Payment Flow View Example"
+  "title": "Payment Flow View: Explains checkout, authorization, capture, settlement, refund, and failure handling"
 }

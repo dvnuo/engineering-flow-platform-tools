@@ -2,7 +2,7 @@ id: runtime.config_overlay_view
 version: 1.0.0
 category: runtime
 title: Config Overlay View
-description: Visualize Config Overlay View as a complete offline graph view for runtime workflows using the layered_stack layout.
+description: Stacks default, environment, secret, and runtime overrides to explain effective configuration.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Radar Sphere Example"
+    "title": "Radar Sphere: Plots entities by exposure, confidence, and urgency for portfolio or health review"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

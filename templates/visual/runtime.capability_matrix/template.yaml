@@ -2,7 +2,7 @@ id: runtime.capability_matrix
 version: 1.0.0
 category: runtime
 title: Capability Matrix
-description: Visualize Capability Matrix as a complete offline matrix view for runtime workflows using the matrix_board layout.
+description: Compares runtime capabilities by owner, maturity, availability, and operational readiness.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Latency Heatmap Example"
+  "title": "Latency Heatmap: Maps latency by endpoint, dependency, percentile, and time window to reveal hotspots"
 }

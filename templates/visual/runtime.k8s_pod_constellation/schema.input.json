@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "K8s Pod Constellation Example"
+    "title": "K8s Pod Constellation: Groups Kubernetes pods, deployments, services, config maps, and failing workloads"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

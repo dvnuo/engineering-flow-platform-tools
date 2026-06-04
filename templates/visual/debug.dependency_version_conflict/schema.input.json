@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Dependency Version Conflict Example"
+    "title": "Dependency Version Conflict: Shows conflicting package versions, dependents, lockfiles, and resolution candidates"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

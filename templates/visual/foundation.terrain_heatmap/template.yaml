@@ -2,7 +2,7 @@ id: foundation.terrain_heatmap
 version: 1.0.0
 category: foundation
 title: Terrain Heatmap
-description: Visualize Terrain Heatmap as a complete offline matrix view for foundation workflows using the terrain_heatmap layout.
+description: Turns scored items into terrain so clusters, outliers, and high pressure areas stand out.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

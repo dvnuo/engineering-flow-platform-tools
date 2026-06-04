@@ -2,7 +2,7 @@ id: foundation.orbit_system
 version: 1.0.0
 category: foundation
 title: Orbit System
-description: Visualize Orbit System as a complete offline graph view for foundation workflows using the orbit_system layout.
+description: Shows a central system with related teams, dependencies, controls, and checks in orbital bands.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

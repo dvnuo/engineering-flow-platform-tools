@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Health Radar Example"
+  "title": "Health Radar: Plots services by saturation, errors, latency, dependency health, and incident exposure"
 }

@@ -2,7 +2,7 @@ id: agent.debug_blackbox
 version: 1.0.0
 category: agent
 title: Debug Blackbox
-description: Visualize Debug Blackbox as a complete offline graph_events view for agent workflows using the control_room layout.
+description: Reconstructs a failed agent run from prompt intake through tool output, validation, and recovery.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

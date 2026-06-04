@@ -2,7 +2,7 @@ id: knowledge.unknowns_map
 version: 1.0.0
 category: knowledge
 title: Unknowns Map
-description: Visualize Unknowns Map as a complete offline matrix view for knowledge workflows using the matrix_board layout.
+description: Tracks known unknowns by impact, owner, evidence needed, and decision deadline.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

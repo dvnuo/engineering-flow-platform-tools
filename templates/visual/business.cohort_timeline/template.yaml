@@ -2,7 +2,7 @@ id: business.cohort_timeline
 version: 1.0.0
 category: business
 title: Cohort Timeline
-description: Visualize Cohort Timeline as a complete offline timeline view for business workflows using the swimlane_timeline layout.
+description: Tracks customer cohorts through activation, retention, expansion, support, and churn events.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

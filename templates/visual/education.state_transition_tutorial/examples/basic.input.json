@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "State Transition Tutorial Example"
+  "title": "State Transition Tutorial: Teaches states, events, guards, allowed transitions, and terminal outcomes with examples"
 }

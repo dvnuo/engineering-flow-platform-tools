@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Approval Workflow Example"
+    "title": "Approval Workflow: Tracks approval requests, reviewers, policy gates, blocked actions, and final authorization"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

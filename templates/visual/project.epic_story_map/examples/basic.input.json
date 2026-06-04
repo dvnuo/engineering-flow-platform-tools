@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Epic Story Map Example"
+  "title": "Epic Story Map: Breaks epics into stories, dependencies, acceptance signals, and release slices"
 }

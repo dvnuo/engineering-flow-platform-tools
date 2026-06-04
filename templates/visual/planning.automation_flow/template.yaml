@@ -2,7 +2,7 @@ id: planning.automation_flow
 version: 1.0.0
 category: planning
 title: Automation Flow
-description: Visualize Automation Flow as a complete offline graph view for planning workflows using the pipeline_flow layout.
+description: Maps automated steps, triggers, inputs, outputs, owners, and verification checks.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

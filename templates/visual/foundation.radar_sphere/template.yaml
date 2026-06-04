@@ -2,7 +2,7 @@ id: foundation.radar_sphere
 version: 1.0.0
 category: foundation
 title: Radar Sphere
-description: Visualize Radar Sphere as a complete offline matrix view for foundation workflows using the radar_sphere layout.
+description: Plots entities by exposure, confidence, and urgency for portfolio or health review.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

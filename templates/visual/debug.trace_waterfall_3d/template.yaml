@@ -2,7 +2,7 @@ id: debug.trace_waterfall_3d
 version: 1.0.0
 category: debug
 title: Trace Waterfall 3D
-description: Visualize Trace Waterfall 3D as a complete offline timeline view for debug workflows using the waterfall layout.
+description: Orders trace spans by service, duration, wait time, and failing dependency.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

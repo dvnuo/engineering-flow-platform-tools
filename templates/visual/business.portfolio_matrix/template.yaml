@@ -2,7 +2,7 @@ id: business.portfolio_matrix
 version: 1.0.0
 category: business
 title: Portfolio Matrix
-description: Visualize Portfolio Matrix as a complete offline matrix view for business workflows using the matrix_board layout.
+description: Compares initiatives by value, cost, risk, strategic fit, and current investment state.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

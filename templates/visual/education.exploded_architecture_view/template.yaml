@@ -2,7 +2,7 @@ id: education.exploded_architecture_view
 version: 1.0.0
 category: education
 title: Exploded Architecture View
-description: Visualize Exploded Architecture View as a complete offline graph view for education workflows using the layered_stack layout.
+description: Separates an architecture into layers, responsibilities, data paths, and dependency rules.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

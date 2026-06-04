@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Recovery Playbook View Example"
+    "title": "Recovery Playbook View: Steps through detection, mitigation, rollback, validation, and handoff tasks in a recovery playbook"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

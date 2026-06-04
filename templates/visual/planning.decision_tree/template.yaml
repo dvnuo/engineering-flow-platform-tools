@@ -2,7 +2,7 @@ id: planning.decision_tree
 version: 1.0.0
 category: planning
 title: Decision Tree
-description: Visualize Decision Tree as a complete offline graph view for planning workflows using the radial_tree layout.
+description: Branches choices, criteria, consequences, owners, and fallback paths for a plan.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

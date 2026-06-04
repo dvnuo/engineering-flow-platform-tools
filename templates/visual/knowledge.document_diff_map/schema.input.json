@@ -97,7 +97,7 @@
         "title": "Diff Map decision record"
       }
     ],
-    "title": "Document Diff Map Example"
+    "title": "Document Diff Map: Compares document revisions, changed claims, missing evidence, and review implications"
   },
   "input_schema_kind": "evidence_v1",
   "json_schema": {

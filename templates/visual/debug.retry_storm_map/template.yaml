@@ -2,7 +2,7 @@ id: debug.retry_storm_map
 version: 1.0.0
 category: debug
 title: Retry Storm Map
-description: Visualize Retry Storm Map as a complete offline graph_events view for debug workflows using the flow_particles layout.
+description: Shows retry loops, callers, throttles, backoff gaps, and downstream saturation.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

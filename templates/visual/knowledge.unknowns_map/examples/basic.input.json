@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Unknowns Map Example"
+  "title": "Unknowns Map: Tracks known unknowns by impact, owner, evidence needed, and decision deadline"
 }

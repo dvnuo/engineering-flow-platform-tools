@@ -2,7 +2,7 @@ id: codebase.security_sensitive_files_map
 version: 1.0.0
 category: codebase
 title: Security Sensitive Files Map
-description: Visualize Security Sensitive Files Map as a complete offline graph view for codebase workflows using the network_boundary_map layout.
+description: Highlights sensitive files, boundaries, data flows, reviewers, and required checks.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

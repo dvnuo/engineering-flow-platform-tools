@@ -94,7 +94,7 @@
       }
     ],
     "schema": "efp.visual.input.timeline.v1",
-    "title": "CI Failure Timeline Example"
+    "title": "CI Failure Timeline: Orders CI job starts, failures, retries, artifact checks, and fix verification events"
   },
   "input_schema_kind": "timeline_v1",
   "json_schema": {

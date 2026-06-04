@@ -2,7 +2,7 @@ id: project.release_train
 version: 1.0.0
 category: project
 title: Release Train
-description: Visualize Release Train as a complete offline graph_events view for project workflows using the pipeline_flow layout.
+description: Tracks features and fixes as they board, validate, and leave a release train.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

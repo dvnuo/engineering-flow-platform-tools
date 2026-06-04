@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Flaky Test Radar Example"
+    "title": "Flaky Test Radar: Plots flaky tests by failure rate, owner, runtime cost, and confidence in quarantine or fix"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Memory Layout View Example"
+  "title": "Memory Layout View: Shows stack, heap, static data, pointers, allocation lifetime, and ownership boundaries"
 }

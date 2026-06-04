@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Matrix Board Example"
+    "title": "Matrix Board: Positions work items by priority and effort while preserving owner, status, and risk context"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

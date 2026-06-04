@@ -2,7 +2,7 @@ id: planning.checklist_progress_orbit
 version: 1.0.0
 category: planning
 title: Checklist Progress Orbit
-description: Visualize Checklist Progress Orbit as a complete offline graph view for planning workflows using the orbit_system layout.
+description: Shows checklist items orbiting a goal by owner, completion state, and blocking dependency.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Network Packet Path Example"
+    "title": "Network Packet Path: Follows packets through client, DNS, gateway, firewall, service, and response path"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

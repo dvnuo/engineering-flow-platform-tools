@@ -2,7 +2,7 @@ id: runtime.k8s_pod_constellation
 version: 1.0.0
 category: runtime
 title: K8s Pod Constellation
-description: Visualize K8s Pod Constellation as a complete offline graph view for runtime workflows using the constellation layout.
+description: Groups Kubernetes pods, deployments, services, config maps, and failing workloads.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

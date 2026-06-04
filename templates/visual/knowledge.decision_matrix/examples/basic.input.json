@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Decision Matrix Example"
+  "title": "Decision Matrix: Scores decision options against criteria, risks, evidence, and implementation constraints"
 }

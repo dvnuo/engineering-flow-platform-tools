@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Debug Blackbox Example"
+  "title": "Debug Blackbox: Reconstructs a failed agent run from prompt intake through tool output, validation, and recovery"
 }

@@ -2,7 +2,7 @@ id: debug.regression_detector
 version: 1.0.0
 category: debug
 title: Regression Detector
-description: Visualize Regression Detector as a complete offline timeline view for debug workflows using the river layout.
+description: Tracks metric and test regressions against commits, deploy windows, and suspect changes.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

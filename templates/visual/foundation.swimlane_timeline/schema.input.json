@@ -94,7 +94,7 @@
       }
     ],
     "schema": "efp.visual.input.timeline.v1",
-    "title": "Swimlane Timeline Example"
+    "title": "Swimlane Timeline: Splits time ordered events across owners or systems so parallel progress and handoffs stay visible"
   },
   "input_schema_kind": "timeline_v1",
   "json_schema": {

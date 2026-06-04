@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Portfolio Matrix Example"
+    "title": "Portfolio Matrix: Compares initiatives by value, cost, risk, strategic fit, and current investment state"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

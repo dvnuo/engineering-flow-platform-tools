@@ -2,7 +2,7 @@ id: codebase.dead_code_detector
 version: 1.0.0
 category: codebase
 title: Dead Code Detector
-description: Visualize Dead Code Detector as a complete offline graph view for codebase workflows using the constellation layout.
+description: Groups unused symbols, unreachable modules, stale entrypoints, and cleanup confidence.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

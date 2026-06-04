@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Faq Constellation Example"
+    "title": "Faq Constellation: Clusters common questions, answers, source links, ownership, and update priority"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

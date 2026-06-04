@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Capability Matrix Example"
+    "title": "Capability Matrix: Compares runtime capabilities by owner, maturity, availability, and operational readiness"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

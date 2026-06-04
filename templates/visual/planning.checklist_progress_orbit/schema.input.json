@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Checklist Progress Orbit Example"
+    "title": "Checklist Progress Orbit: Shows checklist items orbiting a goal by owner, completion state, and blocking dependency"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

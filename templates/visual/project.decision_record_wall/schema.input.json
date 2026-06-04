@@ -97,7 +97,7 @@
         "title": "Record Wall decision record"
       }
     ],
-    "title": "Decision Record Wall Example"
+    "title": "Decision Record Wall: Displays decision records with status, rationale, owners, supporting evidence, and superseded notes"
   },
   "input_schema_kind": "evidence_v1",
   "json_schema": {

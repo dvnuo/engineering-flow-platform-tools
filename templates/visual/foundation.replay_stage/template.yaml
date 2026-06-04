@@ -2,7 +2,7 @@ id: foundation.replay_stage
 version: 1.0.0
 category: foundation
 title: Replay Stage
-description: Visualize Replay Stage as a complete offline graph_events view for foundation workflows using the replay_stage layout.
+description: Replays event sequences with actors, commands, transitions, and outcomes on a staged timeline.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

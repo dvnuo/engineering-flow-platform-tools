@@ -2,7 +2,7 @@ id: business.customer_journey_map
 version: 1.0.0
 category: business
 title: Customer Journey Map
-description: Visualize Customer Journey Map as a complete offline timeline view for business workflows using the journey layout.
+description: Orders customer touchpoints, friction, support moments, conversion points, and retention signals.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

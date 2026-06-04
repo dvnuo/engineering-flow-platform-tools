@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Sprint Board 3D Example"
+  "title": "Sprint Board 3D: Places sprint work by status, owner, priority, capacity, and blocked state"
 }

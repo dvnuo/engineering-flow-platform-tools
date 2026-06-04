@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Decision Tree Example"
+  "title": "Decision Tree: Branches choices, criteria, consequences, owners, and fallback paths for a plan"
 }

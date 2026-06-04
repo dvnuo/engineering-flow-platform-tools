@@ -93,5 +93,5 @@
     }
   ],
   "schema": "efp.visual.input.timeline.v1",
-  "title": "Risk Burndown Example"
+  "title": "Risk Burndown: Tracks risk reduction over time with mitigations, owners, review dates, and residual exposure"
 }

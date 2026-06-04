@@ -2,7 +2,7 @@ id: debug.alert_correlation_map
 version: 1.0.0
 category: debug
 title: Alert Correlation Map
-description: Visualize Alert Correlation Map as a complete offline graph view for debug workflows using the constellation layout.
+description: Clusters alerts by shared service, symptom, dependency, time window, and likely incident.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

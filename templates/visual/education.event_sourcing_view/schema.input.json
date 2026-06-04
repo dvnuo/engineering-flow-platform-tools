@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Event Sourcing View Example"
+    "title": "Event Sourcing View: Shows commands, events, projections, replay, snapshots, and consistency checks"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Tradeoff Stage Example"
+  "title": "Tradeoff Stage: Compares design tradeoffs by learning goal, benefit, cost, risk, and when to choose each option"
 }

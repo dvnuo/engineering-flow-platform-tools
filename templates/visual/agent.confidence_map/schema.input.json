@@ -97,7 +97,7 @@
         "title": "Confidence Map decision record"
       }
     ],
-    "title": "Confidence Map Example"
+    "title": "Confidence Map: Links agent conclusions to evidence, counterevidence, source reliability, and confidence levels"
   },
   "input_schema_kind": "evidence_v1",
   "json_schema": {

@@ -230,6 +230,21 @@ func templateDoctorCmd(o *Opts) *cobra.Command {
 			if err := manifest.ValidateExpectedCategoryCounts(counts, expected.Categories); err != nil {
 				return print(cmd, o, doctorFailure(err, "", filepath.Join(templateDir, "registry.json")))
 			}
+			canonicalTemplateDirs := registry.CanonicalTemplateDirs()
+			orphanTemplateDirs, err := registry.OrphanTemplateDirs(templateDir)
+			if err != nil {
+				return print(cmd, o, doctorFailure(err, "", templateDir))
+			}
+			if len(orphanTemplateDirs) > 0 {
+				return print(cmd, o, doctorFailure(visualCommandError{
+					code:               "template_doctor_failed",
+					message:            "Found template directories that are not registered in templates/visual/registry.json.",
+					hint:               "Remove legacy directories or add an explicit allowed_legacy_alias_dirs entry.",
+					status:             400,
+					file:               filepath.ToSlash(filepath.Join(templateDir, "registry.json")),
+					orphanTemplateDirs: orphanTemplateDirs,
+				}, "", filepath.Join(templateDir, "registry.json")))
+			}
 			var checked []doctorTemplateResult
 			checkedExamples := 0
 			renderedExamples := 0
@@ -302,6 +317,8 @@ func templateDoctorCmd(o *Opts) *cobra.Command {
 				"checked_examples":             checkedExamples,
 				"rendered_examples":            renderedExamples,
 				"unique_example_hashes":        len(exampleHashes),
+				"canonical_template_dirs":      len(canonicalTemplateDirs),
+				"orphan_template_dirs":         orphanTemplateDirs,
 				"offline":                      true,
 				"offline_strict":               o.OfflineStrict,
 				"templates":                    checked,
@@ -413,6 +430,7 @@ func doctorFailure(err error, templateID, file string) output.Envelope {
 	hint := "Fix this template and rerun visual template doctor --template-dir ./templates/visual --json."
 	status := 400
 	var missing []string
+	var orphan []string
 	var ce codedError
 	if errors.As(err, &ce) {
 		message = ce.Message()
@@ -421,6 +439,7 @@ func doctorFailure(err error, templateID, file string) output.Envelope {
 		}
 		status = ce.Status()
 		missing = missingFilesFromError(err)
+		orphan = orphanTemplateDirsFromError(err)
 	} else if err != nil {
 		message = err.Error()
 	}
@@ -437,13 +456,14 @@ func doctorFailure(err error, templateID, file string) output.Envelope {
 		}
 	}
 	return failureFromError(visualCommandError{
-		code:         "template_doctor_failed",
-		message:      message,
-		hint:         hint,
-		status:       status,
-		templateID:   templateID,
-		file:         file,
-		missingFiles: missing,
+		code:               "template_doctor_failed",
+		message:            message,
+		hint:               hint,
+		status:             status,
+		templateID:         templateID,
+		file:               file,
+		missingFiles:       missing,
+		orphanTemplateDirs: orphan,
 	}, "template_doctor_failed")
 }
 
@@ -552,14 +572,23 @@ func missingFilesFromError(err error) []string {
 	return nil
 }
 
+func orphanTemplateDirsFromError(err error) []string {
+	var oe orphanTemplateDirsError
+	if errors.As(err, &oe) {
+		return oe.OrphanTemplateDirs()
+	}
+	return nil
+}
+
 type visualCommandError struct {
-	code         string
-	message      string
-	hint         string
-	status       int
-	templateID   string
-	file         string
-	missingFiles []string
+	code               string
+	message            string
+	hint               string
+	status             int
+	templateID         string
+	file               string
+	missingFiles       []string
+	orphanTemplateDirs []string
 }
 
 func (e visualCommandError) Error() string   { return e.message }
@@ -575,4 +604,7 @@ func (e visualCommandError) File() string {
 }
 func (e visualCommandError) MissingFiles() []string {
 	return append([]string{}, e.missingFiles...)
+}
+func (e visualCommandError) OrphanTemplateDirs() []string {
+	return append([]string{}, e.orphanTemplateDirs...)
 }

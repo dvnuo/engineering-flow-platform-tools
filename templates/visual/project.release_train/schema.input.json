@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Release Train Example"
+    "title": "Release Train: Tracks features and fixes as they board, validate, and leave a release train"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

@@ -97,7 +97,7 @@
         "title": "Citation Map decision record"
       }
     ],
-    "title": "Citation Map Example"
+    "title": "Citation Map: Connects sources, cited claims, reliability, recency, and gaps in a citation set"
   },
   "input_schema_kind": "evidence_v1",
   "json_schema": {

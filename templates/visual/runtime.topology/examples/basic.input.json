@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Topology Example"
+  "title": "Topology: Shows core runtime components, queues, stores, adapters, and operational links"
 }

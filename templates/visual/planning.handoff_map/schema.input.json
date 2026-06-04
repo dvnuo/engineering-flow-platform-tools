@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Handoff Map Example"
+    "title": "Handoff Map: Connects work products, owners, acceptance criteria, timing, and receiving teams"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Migration Strategy View Example"
+  "title": "Migration Strategy View: Explains phased migration from legacy path through dual write, validation, cutover, and cleanup"
 }

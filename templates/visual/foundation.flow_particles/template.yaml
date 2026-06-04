@@ -2,7 +2,7 @@ id: foundation.flow_particles
 version: 1.0.0
 category: foundation
 title: Flow Particles
-description: Visualize Flow Particles as a complete offline graph_events view for foundation workflows using the flow_particles layout.
+description: Animates ordered handoffs between producers, processors, reviewers, and completion gates.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

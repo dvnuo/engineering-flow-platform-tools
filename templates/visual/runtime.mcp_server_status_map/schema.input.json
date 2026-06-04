@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "MCP Server Status Map Example"
+    "title": "MCP Server Status Map: Summarizes MCP servers by tool availability, latency, auth state, and failure signals"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

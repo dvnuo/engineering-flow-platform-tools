@@ -2,7 +2,7 @@ id: project.stakeholder_network
 version: 1.0.0
 category: project
 title: Stakeholder Network
-description: Visualize Stakeholder Network as a complete offline graph view for project workflows using the constellation layout.
+description: Maps stakeholders, decision rights, communication channels, dependencies, and escalation paths.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Kanban 3D Example"
+  "title": "Kanban 3D: Places cards by status, priority, owner, age, and blocked or ready state"
 }

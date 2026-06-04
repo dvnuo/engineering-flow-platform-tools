@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "API Surface Map Example"
+    "title": "API Surface Map: Maps exported endpoints, callers, owners, version contracts, and compatibility risk"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

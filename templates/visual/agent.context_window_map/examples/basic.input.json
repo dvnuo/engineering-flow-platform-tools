@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Context Window Map Example"
+  "title": "Context Window Map: Tracks context chunks by relevance, freshness, token weight, and whether they are still needed"
 }

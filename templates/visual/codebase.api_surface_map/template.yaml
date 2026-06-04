@@ -2,7 +2,7 @@ id: codebase.api_surface_map
 version: 1.0.0
 category: codebase
 title: API Surface Map
-description: Visualize API Surface Map as a complete offline graph view for codebase workflows using the layered_stack layout.
+description: Maps exported endpoints, callers, owners, version contracts, and compatibility risk.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

@@ -2,7 +2,7 @@ id: foundation.sankey_3d
 version: 1.0.0
 category: foundation
 title: Sankey 3D
-description: Visualize Sankey 3D as a complete offline graph view for foundation workflows using the sankey_3d layout.
+description: Traces volume movement between sources, processing stages, sinks, and loss points.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

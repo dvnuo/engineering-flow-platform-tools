@@ -2,7 +2,7 @@ id: agent.step_ladder
 version: 1.0.0
 category: agent
 title: Step Ladder
-description: Visualize Step Ladder as a complete offline graph_events view for agent workflows using the pipeline_flow layout.
+description: Breaks an agent task into ordered steps with prerequisites, evidence, and completion state.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

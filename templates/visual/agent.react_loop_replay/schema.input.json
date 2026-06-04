@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "React Loop Replay Example"
+    "title": "React Loop Replay: Replays observe, think, act, and validate cycles with tool calls and decision checkpoints"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

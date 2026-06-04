@@ -2,7 +2,7 @@ id: debug.error_budget_burn
 version: 1.0.0
 category: debug
 title: Error Budget Burn
-description: Visualize Error Budget Burn as a complete offline timeline view for debug workflows using the funnel layout.
+description: Tracks error budget consumption alongside incidents, deploys, mitigations, and recovery.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

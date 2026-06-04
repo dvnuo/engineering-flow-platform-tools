@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Design Tradeoff Radar Example"
+    "title": "Design Tradeoff Radar: Plots design choices by cost, reversibility, risk, performance, and confidence"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

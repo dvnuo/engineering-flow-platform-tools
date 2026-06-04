@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Subagent Swarm Example"
+    "title": "Subagent Swarm: Coordinates specialist agents, assigned scopes, shared artifacts, and merge or handoff points"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

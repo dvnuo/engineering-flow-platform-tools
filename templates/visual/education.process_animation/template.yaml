@@ -2,7 +2,7 @@ id: education.process_animation
 version: 1.0.0
 category: education
 title: Process Animation
-description: Visualize Process Animation as a complete offline graph_events view for education workflows using the flow_particles layout.
+description: Demonstrates process start, scheduling, IO waits, signals, completion, and failure transitions.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

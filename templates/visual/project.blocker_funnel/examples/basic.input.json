@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Blocker Funnel Example"
+  "title": "Blocker Funnel: Funnels project blockers from discovery through owner assignment, mitigation, and closure"
 }

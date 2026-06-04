@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Bug Triage Board Example"
+  "title": "Bug Triage Board: Organizes bugs by severity, owner, reproduction status, customer impact, and next action"
 }

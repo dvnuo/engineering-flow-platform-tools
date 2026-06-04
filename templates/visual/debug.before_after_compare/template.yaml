@@ -2,7 +2,7 @@ id: debug.before_after_compare
 version: 1.0.0
 category: debug
 title: Before After Compare
-description: Visualize Before After Compare as a complete offline graph_events view for debug workflows using the diff_split_view layout.
+description: Compares system state before and after a fix, deploy, rollback, or configuration change.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

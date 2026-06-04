@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Topic Landscape Example"
+    "title": "Topic Landscape: Places topics by maturity, evidence density, ownership, and open questions"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

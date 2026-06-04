@@ -2,7 +2,7 @@ id: education.ml_pipeline_view
 version: 1.0.0
 category: education
 title: ML Pipeline View
-description: Visualize ML Pipeline View as a complete offline graph view for education workflows using the pipeline_flow layout.
+description: Maps data ingestion, feature work, training, evaluation, deployment, and monitoring.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

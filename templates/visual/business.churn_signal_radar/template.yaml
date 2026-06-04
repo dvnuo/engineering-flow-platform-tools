@@ -2,7 +2,7 @@ id: business.churn_signal_radar
 version: 1.0.0
 category: business
 title: Churn Signal Radar
-description: Visualize Churn Signal Radar as a complete offline matrix view for business workflows using the radar_sphere layout.
+description: Plots customer churn signals by account health, usage drop, support history, and renewal risk.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

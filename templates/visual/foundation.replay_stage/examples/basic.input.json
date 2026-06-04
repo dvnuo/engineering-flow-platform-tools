@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Replay Stage Example"
+  "title": "Replay Stage: Replays event sequences with actors, commands, transitions, and outcomes on a staged timeline"
 }

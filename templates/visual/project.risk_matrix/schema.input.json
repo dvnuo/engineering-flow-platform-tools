@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Risk Matrix Example"
+    "title": "Risk Matrix: Plots project risks by likelihood, impact, owner, mitigation, and review state"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

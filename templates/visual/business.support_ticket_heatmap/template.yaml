@@ -2,7 +2,7 @@ id: business.support_ticket_heatmap
 version: 1.0.0
 category: business
 title: Support Ticket Heatmap
-description: Visualize Support Ticket Heatmap as a complete offline matrix view for business workflows using the heatmap layout.
+description: Plots support tickets by product area, severity, age, customer tier, and backlog pressure.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

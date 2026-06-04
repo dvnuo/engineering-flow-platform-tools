@@ -93,5 +93,5 @@
     }
   ],
   "schema": "efp.visual.input.timeline.v1",
-  "title": "Regression Detector Example"
+  "title": "Regression Detector: Tracks metric and test regressions against commits, deploy windows, and suspect changes"
 }

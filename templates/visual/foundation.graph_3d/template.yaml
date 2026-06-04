@@ -2,7 +2,7 @@ id: foundation.graph_3d
 version: 1.0.0
 category: foundation
 title: Graph 3D
-description: Visualize Graph 3D as a complete offline graph view for foundation workflows using the graph_3d layout.
+description: Places major nodes, edges, and hotspots into a depth based graph for exploring complex systems.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

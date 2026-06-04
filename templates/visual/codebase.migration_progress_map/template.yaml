@@ -2,7 +2,7 @@ id: codebase.migration_progress_map
 version: 1.0.0
 category: codebase
 title: Migration Progress Map
-description: Visualize Migration Progress Map as a complete offline graph_events view for codebase workflows using the pipeline_flow layout.
+description: Tracks migration stages from legacy modules through adapters, tests, rollout, and cleanup.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

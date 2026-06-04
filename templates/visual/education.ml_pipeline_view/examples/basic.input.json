@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "ML Pipeline View Example"
+  "title": "ML Pipeline View: Maps data ingestion, feature work, training, evaluation, deployment, and monitoring"
 }

@@ -17,17 +17,20 @@
 - Always use `--json`.
 - Always use `--template-dir` when templates are in the workspace or release artifact.
 - Do not read all 195 template details up front.
+- Do not infer available templates from the `templates/visual` file tree.
+- Discover templates only with `visual template categories`, `visual template list`, `visual template get`, and `visual template schema`.
 - Run `visual template categories --template-dir ./templates/visual --json`.
 - Run `visual template list --template-dir ./templates/visual --category <category> --json`.
 - Run `visual template get <template-id> --template-dir ./templates/visual --json`.
 - Run `visual template schema <template-id> --template-dir ./templates/visual --json`.
-- Backward compatibility aliases work, but prefer the returned `canonical_id` for new inputs and examples.
+- Backward compatibility aliases work, but they are registry aliases rather than duplicate template directories; prefer the returned `canonical_id` for new inputs and examples.
+- Do not invent template paths or point inputs at alias directories.
 - Before every render, run `visual template schema <id> --template-dir ./templates/visual --json`.
 - Write input JSON that follows `data.json_schema`; do not invent the input shape and do not generate JavaScript code.
 - Validate with `visual validate --template <template-id> --template-dir ./templates/visual --input <input.json> --json`.
 - Render to a new output directory with `visual render --template <template-id> --input <input.json> --out <dir> --json`.
 - Return `data.artifact.entrypoint` to the user.
-- Do not use remote assets, CDN URLs, Node/npm, or network APIs.
+- Do not use remote assets, CDN URLs, Node/npm, generated JavaScript, or network APIs.
 - Use `--dry-run` to preview planned files before writing.
 - The generated `index.html` is safe for `file://` and for Portal/runtime static proxy subpaths because asset paths are relative.
 

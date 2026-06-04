@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Data Lifecycle View Example"
+  "title": "Data Lifecycle View: Shows data creation, validation, storage, transformation, retention, and deletion stages"
 }

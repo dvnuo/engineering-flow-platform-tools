@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Market Map Example"
+  "title": "Market Map: Places market segments by size, growth, competition, fit, and entry confidence"
 }

@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Terrain Heatmap Example"
+  "title": "Terrain Heatmap: Turns scored items into terrain so clusters, outliers, and high pressure areas stand out"
 }

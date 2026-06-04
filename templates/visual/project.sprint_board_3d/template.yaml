@@ -2,7 +2,7 @@ id: project.sprint_board_3d
 version: 1.0.0
 category: project
 title: Sprint Board 3D
-description: Visualize Sprint Board 3D as a complete offline matrix view for project workflows using the kanban layout.
+description: Places sprint work by status, owner, priority, capacity, and blocked state.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

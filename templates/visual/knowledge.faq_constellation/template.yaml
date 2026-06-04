@@ -2,7 +2,7 @@ id: knowledge.faq_constellation
 version: 1.0.0
 category: knowledge
 title: Faq Constellation
-description: Visualize Faq Constellation as a complete offline graph view for knowledge workflows using the constellation layout.
+description: Clusters common questions, answers, source links, ownership, and update priority.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

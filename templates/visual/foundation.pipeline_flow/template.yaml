@@ -2,7 +2,7 @@ id: foundation.pipeline_flow
 version: 1.0.0
 category: foundation
 title: Pipeline Flow
-description: Visualize Pipeline Flow as a complete offline graph view for foundation workflows using the pipeline_flow layout.
+description: Connects staged work from intake through build, validation, approval, and release handoff.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

@@ -2,7 +2,7 @@ id: planning.task_swarm
 version: 1.0.0
 category: planning
 title: Task Swarm
-description: Visualize Task Swarm as a complete offline graph_events view for planning workflows using the constellation layout.
+description: Coordinates many tasks by owner, dependency, status, collision risk, and convergence point.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

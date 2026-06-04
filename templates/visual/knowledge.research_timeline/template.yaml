@@ -2,7 +2,7 @@ id: knowledge.research_timeline
 version: 1.0.0
 category: knowledge
 title: Research Timeline
-description: Visualize Research Timeline as a complete offline timeline view for knowledge workflows using the timeline_tunnel layout.
+description: Orders research findings, source reviews, decisions, and follow up questions over time.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

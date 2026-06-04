@@ -94,7 +94,7 @@
       }
     ],
     "schema": "efp.visual.input.timeline.v1",
-    "title": "Error Budget Burn Example"
+    "title": "Error Budget Burn: Tracks error budget consumption alongside incidents, deploys, mitigations, and recovery"
   },
   "input_schema_kind": "timeline_v1",
   "json_schema": {

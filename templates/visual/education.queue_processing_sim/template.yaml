@@ -2,7 +2,7 @@ id: education.queue_processing_sim
 version: 1.0.0
 category: education
 title: Queue Processing Sim
-description: Visualize Queue Processing Sim as a complete offline graph_events view for education workflows using the flow_particles layout.
+description: Shows enqueue, dispatch, worker execution, retry, dead letter, and completion behavior.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

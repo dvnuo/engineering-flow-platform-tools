@@ -2,7 +2,7 @@ id: education.database_query_plan
 version: 1.0.0
 category: education
 title: Database Query Plan
-description: Visualize Database Query Plan as a complete offline graph view for education workflows using the radial_tree layout.
+description: Breaks a query plan into scans, joins, filters, indexes, cost, and execution order.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

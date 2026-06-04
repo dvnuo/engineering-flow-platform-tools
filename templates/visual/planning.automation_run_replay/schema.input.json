@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Automation Run Replay Example"
+    "title": "Automation Run Replay: Replays an automation run through triggers, actions, retries, failures, and completion"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

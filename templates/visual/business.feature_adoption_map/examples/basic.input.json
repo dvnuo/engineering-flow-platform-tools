@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Feature Adoption Map Example"
+  "title": "Feature Adoption Map: Plots feature usage by segment, account tier, activation depth, and expansion signal"
 }

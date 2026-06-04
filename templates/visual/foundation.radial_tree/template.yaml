@@ -2,7 +2,7 @@ id: foundation.radial_tree
 version: 1.0.0
 category: foundation
 title: Radial Tree
-description: Visualize Radial Tree as a complete offline graph view for foundation workflows using the radial_tree layout.
+description: Branches a root subject into causes, decisions, owners, and follow up paths.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

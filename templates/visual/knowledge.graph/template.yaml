@@ -2,7 +2,7 @@ id: knowledge.graph
 version: 1.0.0
 category: knowledge
 title: Graph
-description: Visualize Graph as a complete offline graph view for knowledge workflows using the knowledge_graph layout.
+description: Connects concepts, facts, owners, references, and unresolved gaps in a knowledge graph.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

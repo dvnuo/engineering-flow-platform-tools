@@ -97,7 +97,7 @@
         "title": "Cluster Map decision record"
       }
     ],
-    "title": "Document Cluster Map Example"
+    "title": "Document Cluster Map: Groups related documents by topic, source type, freshness, and evidence role"
   },
   "input_schema_kind": "evidence_v1",
   "json_schema": {

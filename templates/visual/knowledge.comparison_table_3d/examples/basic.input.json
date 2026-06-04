@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Comparison Table 3D Example"
+  "title": "Comparison Table 3D: Compares options by criteria, score, evidence strength, and unresolved tradeoffs"
 }

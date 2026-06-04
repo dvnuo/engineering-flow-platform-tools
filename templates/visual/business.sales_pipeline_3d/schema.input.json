@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Sales Pipeline 3D Example"
+    "title": "Sales Pipeline 3D: Tracks opportunities from lead through qualification, proposal, negotiation, and close"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

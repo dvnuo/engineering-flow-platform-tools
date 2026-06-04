@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Retry Storm Map Example"
+  "title": "Retry Storm Map: Shows retry loops, callers, throttles, backoff gaps, and downstream saturation"
 }

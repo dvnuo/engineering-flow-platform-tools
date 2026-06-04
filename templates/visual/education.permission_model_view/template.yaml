@@ -2,7 +2,7 @@ id: education.permission_model_view
 version: 1.0.0
 category: education
 title: Permission Model View
-description: Visualize Permission Model View as a complete offline matrix view for education workflows using the matrix_board layout.
+description: Compares roles, resources, allowed actions, denied actions, and policy inheritance.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

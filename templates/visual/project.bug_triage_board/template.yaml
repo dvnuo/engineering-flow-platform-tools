@@ -2,7 +2,7 @@ id: project.bug_triage_board
 version: 1.0.0
 category: project
 title: Bug Triage Board
-description: Visualize Bug Triage Board as a complete offline matrix view for project workflows using the kanban layout.
+description: Organizes bugs by severity, owner, reproduction status, customer impact, and next action.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

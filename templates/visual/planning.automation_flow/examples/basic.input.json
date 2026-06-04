@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Automation Flow Example"
+  "title": "Automation Flow: Maps automated steps, triggers, inputs, outputs, owners, and verification checks"
 }

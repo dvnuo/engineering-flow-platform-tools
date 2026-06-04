@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Sandbox Layer Stack Example"
+  "title": "Sandbox Layer Stack: Stacks sandbox permissions, filesystem scope, network policy, and command execution boundaries"
 }

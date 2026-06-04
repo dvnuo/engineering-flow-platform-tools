@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Task Failure Fork Example"
+  "title": "Task Failure Fork: Branches failed tasks into symptoms, retry choices, owner decisions, and recovery path"
 }

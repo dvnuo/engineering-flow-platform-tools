@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Diff Split View Example"
+  "title": "Diff Split View: Compares before and after graph states so reviewers can follow changed nodes, transitions, and risk flags"
 }

@@ -2,7 +2,7 @@ id: business.capacity_planning_map
 version: 1.0.0
 category: business
 title: Capacity Planning Map
-description: Visualize Capacity Planning Map as a complete offline matrix view for business workflows using the control_room layout.
+description: Compares capacity demand, staffing, throughput, bottlenecks, and forecast risk.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

@@ -16,7 +16,7 @@ Template directory resolution order:
 4. `./templates/visual`
 5. executable-adjacent release paths
 
-The directory must contain `registry.json`, `_shared/**`, and flat template directories such as `agent.run_trace` and `codebase.module_dependency_graph`.
+The directory must contain `registry.json`, `_shared/**`, and flat canonical template directories such as `agent.run_trace` and `codebase.module_dependency_graph`. Old template IDs are aliases in `registry.json`, not duplicate template directories.
 
 ## Render Contract
 
@@ -46,7 +46,7 @@ visual template schema agent.run_trace --template-dir ./templates/visual --json
 visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json
 ```
 
-Canonical IDs are preferred, but compatibility aliases also work. For example, `visual template get service.topology --template-dir ./templates/visual --json` resolves to `runtime.service_topology`, and `visual render --template service.topology ...` renders with the canonical template.
+Canonical IDs are preferred, but compatibility aliases also work. For example, `visual template get service.topology --template-dir ./templates/visual --json` resolves to `runtime.service_topology`, and `visual render --template service.topology ...` renders with the canonical template. These old IDs are registry aliases, not duplicate templates in the file tree.
 
 Count fields distinguish registry entries from compatibility aliases:
 
@@ -143,8 +143,8 @@ visual template doctor --template-dir ./templates/visual --json
 visual inspect-output --out ./out/run-trace --json
 ```
 
-`visual template doctor` reads `registry.json`, validates every `template.yaml`, validates each `schema.input.json`, validates each `examples/basic.input.json`, renders every basic example into a temporary directory, checks required output files, scans the rendered output for offline violations, and deletes the temporary directory.
+`visual template doctor` reads `registry.json`, validates registry expected counts, checks for unregistered direct directories under `templates/visual`, validates every `template.yaml`, validates each `schema.input.json`, validates each `examples/basic.input.json`, renders every basic example into a temporary directory, checks required output files, scans the rendered output for offline violations, and deletes the temporary directory.
 
-For the built-in catalog, doctor checks `registry.expected` from `templates/visual/registry.json`, the exact category counts, template tree offline safety, non-empty template styles, rendered example output inspection, and at least 190 unique example hashes.
+For the built-in catalog, doctor checks `registry.expected` from `templates/visual/registry.json`, the exact category counts, `canonical_template_dirs: 195`, `orphan_template_dirs: []`, template tree offline safety, non-empty template styles, rendered example output inspection, and at least 190 unique example hashes.
 
 Use `--dry-run` on `visual render` to preview `planned_files` without creating `--out`.

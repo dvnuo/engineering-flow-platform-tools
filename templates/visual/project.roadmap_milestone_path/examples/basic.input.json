@@ -93,5 +93,5 @@
     }
   ],
   "schema": "efp.visual.input.timeline.v1",
-  "title": "Roadmap Milestone Path Example"
+  "title": "Roadmap Milestone Path: Orders roadmap milestones with dependencies, confidence, launch criteria, and risk notes"
 }

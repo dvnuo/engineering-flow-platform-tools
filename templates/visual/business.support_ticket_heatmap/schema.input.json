@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Support Ticket Heatmap Example"
+    "title": "Support Ticket Heatmap: Plots support tickets by product area, severity, age, customer tier, and backlog pressure"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

@@ -93,5 +93,5 @@
     }
   ],
   "schema": "efp.visual.input.timeline.v1",
-  "title": "Trace Waterfall 3D Example"
+  "title": "Trace Waterfall 3D: Orders trace spans by service, duration, wait time, and failing dependency"
 }

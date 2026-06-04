@@ -2,7 +2,7 @@ id: project.pr_review_map
 version: 1.0.0
 category: project
 title: PR Review Map
-description: Visualize PR Review Map as a complete offline graph view for project workflows using the graph_2_5d layout.
+description: Connects pull requests, reviewers, touched areas, pending comments, and merge blockers.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

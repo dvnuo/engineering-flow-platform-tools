@@ -2,7 +2,7 @@ id: education.tradeoff_stage
 version: 1.0.0
 category: education
 title: Tradeoff Stage
-description: Visualize Tradeoff Stage as a complete offline matrix view for education workflows using the matrix_board layout.
+description: Compares design tradeoffs by learning goal, benefit, cost, risk, and when to choose each option.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

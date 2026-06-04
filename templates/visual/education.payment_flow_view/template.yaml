@@ -2,7 +2,7 @@ id: education.payment_flow_view
 version: 1.0.0
 category: education
 title: Payment Flow View
-description: Visualize Payment Flow View as a complete offline graph_events view for education workflows using the pipeline_flow layout.
+description: Explains checkout, authorization, capture, settlement, refund, and failure handling.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

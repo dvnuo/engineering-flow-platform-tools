@@ -2,7 +2,7 @@ id: business.customer_segment_constellation
 version: 1.0.0
 category: business
 title: Customer Segment Constellation
-description: Visualize Customer Segment Constellation as a complete offline graph view for business workflows using the constellation layout.
+description: Clusters customer segments by needs, revenue, adoption, support load, and opportunity.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

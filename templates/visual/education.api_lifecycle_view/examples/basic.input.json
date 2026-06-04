@@ -93,5 +93,5 @@
     }
   ],
   "schema": "efp.visual.input.timeline.v1",
-  "title": "API Lifecycle View Example"
+  "title": "API Lifecycle View: Teaches how an API moves from design through implementation, versioning, deprecation, and retirement"
 }

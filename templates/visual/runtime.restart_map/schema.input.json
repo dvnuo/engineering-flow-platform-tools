@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Restart Map Example"
+    "title": "Restart Map: Traces restart triggers, dependency order, degraded periods, and service recovery outcomes"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

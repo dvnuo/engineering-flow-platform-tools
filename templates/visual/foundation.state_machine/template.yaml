@@ -2,7 +2,7 @@ id: foundation.state_machine
 version: 1.0.0
 category: foundation
 title: State Machine
-description: Visualize State Machine as a complete offline graph view for foundation workflows using the state_machine layout.
+description: Documents allowed states, transitions, guards, and terminal outcomes for a process.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

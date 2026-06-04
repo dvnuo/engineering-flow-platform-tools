@@ -2,7 +2,7 @@ id: codebase.monorepo_workspace_map
 version: 1.0.0
 category: codebase
 title: Monorepo Workspace Map
-description: Visualize Monorepo Workspace Map as a complete offline graph view for codebase workflows using the city_map layout.
+description: Maps packages, apps, shared libraries, build boundaries, and team ownership in a monorepo.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

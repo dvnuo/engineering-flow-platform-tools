@@ -2,7 +2,7 @@ id: debug.resource_pressure_map
 version: 1.0.0
 category: debug
 title: Resource Pressure Map
-description: Visualize Resource Pressure Map as a complete offline matrix view for debug workflows using the radar_sphere layout.
+description: Plots CPU, memory, disk, connection, and queue pressure by component and severity.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

@@ -2,7 +2,7 @@ id: education.event_sourcing_view
 version: 1.0.0
 category: education
 title: Event Sourcing View
-description: Visualize Event Sourcing View as a complete offline graph_events view for education workflows using the timeline_tunnel layout.
+description: Shows commands, events, projections, replay, snapshots, and consistency checks.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

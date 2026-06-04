@@ -2,7 +2,7 @@ id: knowledge.design_tradeoff_radar
 version: 1.0.0
 category: knowledge
 title: Design Tradeoff Radar
-description: Visualize Design Tradeoff Radar as a complete offline matrix view for knowledge workflows using the radar_sphere layout.
+description: Plots design choices by cost, reversibility, risk, performance, and confidence.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

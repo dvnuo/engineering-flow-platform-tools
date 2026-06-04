@@ -2,7 +2,7 @@ id: education.data_lifecycle_view
 version: 1.0.0
 category: education
 title: Data Lifecycle View
-description: Visualize Data Lifecycle View as a complete offline graph_events view for education workflows using the pipeline_flow layout.
+description: Shows data creation, validation, storage, transformation, retention, and deletion stages.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

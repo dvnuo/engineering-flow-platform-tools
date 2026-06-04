@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Spec Compliance Map Example"
+  "title": "Spec Compliance Map: Connects spec requirements, implementation evidence, tests, exceptions, and compliance gaps"
 }

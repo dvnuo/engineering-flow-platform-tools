@@ -2,7 +2,7 @@ id: knowledge.document_cluster_map
 version: 1.0.0
 category: knowledge
 title: Document Cluster Map
-description: Visualize Document Cluster Map as a complete offline evidence view for knowledge workflows using the constellation layout.
+description: Groups related documents by topic, source type, freshness, and evidence role.
 input_schema: schema.input.json
 input_schema_kind: evidence_v1
 renderer:

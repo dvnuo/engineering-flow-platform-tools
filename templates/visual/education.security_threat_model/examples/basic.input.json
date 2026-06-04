@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Security Threat Model Example"
+  "title": "Security Threat Model: Maps assets, trust boundaries, attack paths, controls, and residual risks"
 }

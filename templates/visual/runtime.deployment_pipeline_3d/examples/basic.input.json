@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Deployment Pipeline 3D Example"
+  "title": "Deployment Pipeline 3D: Tracks build artifacts through deploy stages, checks, approvals, and rollback points"
 }

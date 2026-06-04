@@ -2,7 +2,7 @@ id: education.state_transition_tutorial
 version: 1.0.0
 category: education
 title: State Transition Tutorial
-description: Visualize State Transition Tutorial as a complete offline graph view for education workflows using the state_machine layout.
+description: Teaches states, events, guards, allowed transitions, and terminal outcomes with examples.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

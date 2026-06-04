@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Adapter Proxy Map Example"
+    "title": "Adapter Proxy Map: Maps adapters, proxy hops, retries, auth boundaries, and downstream service dependencies"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

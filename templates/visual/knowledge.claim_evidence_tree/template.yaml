@@ -2,7 +2,7 @@ id: knowledge.claim_evidence_tree
 version: 1.0.0
 category: knowledge
 title: Claim Evidence Tree
-description: Visualize Claim Evidence Tree as a complete offline evidence view for knowledge workflows using the radial_tree layout.
+description: Branches each claim into supporting, refuting, and contextual sources with confidence.
 input_schema: schema.input.json
 input_schema_kind: evidence_v1
 renderer:

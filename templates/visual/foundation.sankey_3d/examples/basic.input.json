@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Sankey 3D Example"
+  "title": "Sankey 3D: Traces volume movement between sources, processing stages, sinks, and loss points"
 }

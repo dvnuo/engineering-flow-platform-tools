@@ -39,7 +39,9 @@ Aliases do not count as canonical templates. `canonical_count` is the number of 
 
 ## Backward Compatibility Aliases
 
-Aliases let older template IDs resolve to the current canonical template without adding duplicate canonical entries. `visual template get <alias>`, `visual template schema <alias>`, `visual validate --template <alias>`, and `visual render --template <alias>` all use the canonical template and return canonical metadata.
+Aliases let older template IDs resolve to the current canonical template without adding duplicate canonical entries or duplicate directories. Alias definitions are maintained only in `templates/visual/registry.json`. `visual template get <alias>`, `visual template schema <alias>`, `visual validate --template <alias>`, and `visual render --template <alias>` all use the canonical template and return canonical metadata.
+
+Legacy template IDs remain supported as aliases, but their old directories are intentionally removed. Do not add a directory for an alias; add or update the alias on the canonical registry entry instead.
 
 | Alias | Canonical ID |
 |---|---|
@@ -50,6 +52,22 @@ Aliases let older template IDs resolve to the current canonical template without
 | `project.requirements_trace` | `project.requirements_to_code_trace` |
 | `knowledge.doc_freshness` | `project.doc_freshness_map` |
 | `agent.fleet_dashboard` | `runtime.agent_fleet_dashboard` |
+| `agent.permission_gate` | `agent.permission_gate_map` |
+| `agent.tool_constellation` | `agent.tool_call_constellation` |
+| `codebase.diff_impact` | `codebase.diff_impact_ripple` |
+
+## Directory Consistency
+
+Every direct directory under `templates/visual`, except `_shared`, must correspond to a canonical template entry in `registry.json`. The canonical directory is the dirname of `registry.templates[].path`, for example `runtime.service_topology/template.yaml` maps to `templates/visual/runtime.service_topology`.
+
+`visual template doctor --template-dir ./templates/visual --json` reports `canonical_template_dirs` and `orphan_template_dirs`. The built-in catalog must report `canonical_template_dirs: 195` and `orphan_template_dirs: []`.
+
+## Template Quality Bar
+
+- Descriptions must be scenario-specific and must explain the real workflow the template supports.
+- Example titles must be meaningful and must not be `Basic Example`, `Example`, or `<Template Title> Example`.
+- Examples must use domain data for the template scenario, not only generic `Intake`, `Core`, `Policy`, `Risk`, and `Review` labels.
+- Each template needs at least three tags, a supported category, a layout preset, a non-empty `style.css`, and a `schema.input.json` with both `json_schema` and `example`.
 
 ## Layout Presets
 
@@ -348,4 +366,4 @@ Create `templates/visual/<template-id>/template.yaml`, `schema.input.json`, `sty
 
 ## Doctor Acceptance
 
-`visual template doctor --template-dir ./templates/visual --json` checks the registry, expected counts from `registry.json`, manifests, schemas, examples, rendering, output inspection, offline scanning, style file presence, external URL absence, and example uniqueness. The catalog passes when `expected_canonical_templates`, `canonical_templates`, `checked_templates`, `checked_examples`, and `rendered_examples` agree with registry metadata and `offline: true`.
+`visual template doctor --template-dir ./templates/visual --json` checks the registry, expected counts from `registry.json`, directory consistency, manifests, schemas, examples, rendering, output inspection, offline scanning, style file presence, external URL absence, and example uniqueness. The catalog passes when `expected_canonical_templates`, `canonical_templates`, `canonical_template_dirs`, `checked_templates`, `checked_examples`, and `rendered_examples` agree with registry metadata, `orphan_template_dirs` is empty, and `offline: true`.

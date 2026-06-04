@@ -2,7 +2,7 @@ id: runtime.topology
 version: 1.0.0
 category: runtime
 title: Topology
-description: Visualize Topology as a complete offline graph view for runtime workflows using the layered_stack layout.
+description: Shows core runtime components, queues, stores, adapters, and operational links.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

@@ -2,7 +2,7 @@ id: codebase.bug_localization_map
 version: 1.0.0
 category: codebase
 title: Bug Localization Map
-description: Visualize Bug Localization Map as a complete offline graph_events view for codebase workflows using the heatmap layout.
+description: Connects symptoms, logs, failing tests, touched modules, and likely fix targets for a bug.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

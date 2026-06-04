@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -92,6 +93,13 @@ var allowedVisualRenderers = map[string]bool{
 	"offline.timeline.v1": true,
 	"offline.evidence.v1": true,
 	"offline.matrix.v1":   true,
+}
+
+var genericVisualDescriptionPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`^Visualize .+ as a complete offline .+ view for .+ workflows using .+ layout\.$`),
+	regexp.MustCompile(`^Visualize .+ structure, flow, and status.+$`),
+	regexp.MustCompile(`^Offline .+ visualization for .+ workflows\.$`),
+	regexp.MustCompile(`^.+ template for visual artifacts\.$`),
 }
 
 var highValueTemplateKeywords = map[string][]string{
@@ -301,6 +309,13 @@ func TestVisualTemplateListGetDoctor(t *testing.T) {
 	if doctorData["unique_example_hashes"].(float64) < 190 {
 		t.Fatalf("doctor did not report enough unique examples: %#v", doctorData)
 	}
+	if doctorData["canonical_template_dirs"].(float64) != 195 {
+		t.Fatalf("doctor did not report canonical_template_dirs=195: %#v", doctorData)
+	}
+	orphanDirs := doctorData["orphan_template_dirs"].([]any)
+	if len(orphanDirs) != 0 {
+		t.Fatalf("doctor reported orphan template dirs: %#v", orphanDirs)
+	}
 	doctorTemplates := doctorData["templates"].([]any)
 	if len(doctorTemplates) != 195 {
 		t.Fatalf("expected 195 doctor template results, got %d", len(doctorTemplates))
@@ -323,6 +338,9 @@ func TestVisualBackwardCompatibleAliases(t *testing.T) {
 		"project.requirements_trace": "project.requirements_to_code_trace",
 		"knowledge.doc_freshness":    "project.doc_freshness_map",
 		"agent.fleet_dashboard":      "runtime.agent_fleet_dashboard",
+		"agent.permission_gate":      "agent.permission_gate_map",
+		"agent.tool_constellation":   "agent.tool_call_constellation",
+		"codebase.diff_impact":       "codebase.diff_impact_ripple",
 	}
 	for alias, canonical := range aliases {
 		t.Run(alias, func(t *testing.T) {
@@ -404,6 +422,51 @@ func TestVisualDoctorUsesRegistryExpectedCounts(t *testing.T) {
 	text := strings.ToLower(fmt.Sprint(errObj["message"]) + " " + fmt.Sprint(errObj["hint"]))
 	if !strings.Contains(text, "expected") || !strings.Contains(text, "mismatch") || !strings.Contains(text, "196") || !strings.Contains(text, "195") {
 		t.Fatalf("doctor did not explain expected mismatch: %#v", errObj)
+	}
+}
+
+func TestVisualNoUnregisteredTemplateDirectories(t *testing.T) {
+	templateDir := visualTemplateDir()
+	canonicalDirs := canonicalTemplateDirsFromRegistry(t, visualRegistryData(t))
+	if len(canonicalDirs) != 195 {
+		t.Fatalf("expected 195 canonical template dirs, got %d", len(canonicalDirs))
+	}
+	entries, err := os.ReadDir(templateDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var orphan []string
+	for _, entry := range entries {
+		if !entry.IsDir() || entry.Name() == "_shared" {
+			continue
+		}
+		if !canonicalDirs[entry.Name()] {
+			orphan = append(orphan, entry.Name())
+		}
+	}
+	sort.Strings(orphan)
+	if len(orphan) > 0 {
+		t.Fatalf("templates/visual contains unregistered template directories: %#v", orphan)
+	}
+}
+
+func TestVisualDoctorRejectsUnregisteredTemplateDirectories(t *testing.T) {
+	templateDir := filepath.Join(t.TempDir(), "visual")
+	copyTree(t, visualTemplateDir(), templateDir)
+	if err := os.MkdirAll(filepath.Join(templateDir, "legacy.alias_only"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	fail := runVisual(t, "template", "doctor", "--template-dir", templateDir, "--json")
+	assertErrorCode(t, fail, "template_doctor_failed")
+	errObj := fail["error"].(map[string]any)
+	orphan := stringSetFromAny(errObj["orphan_template_dirs"].([]any))
+	if !orphan["legacy.alias_only"] {
+		t.Fatalf("doctor did not report orphan template dir: %#v", errObj)
+	}
+	text := strings.ToLower(fmt.Sprint(errObj["message"]) + " " + fmt.Sprint(errObj["hint"]))
+	if !strings.Contains(text, "not registered") || !strings.Contains(text, "legacy") {
+		t.Fatalf("doctor did not explain orphan template dirs: %#v", errObj)
 	}
 }
 
@@ -525,6 +588,61 @@ func TestVisualRegistryAndTemplateManifests(t *testing.T) {
 		if counts[category] != expected {
 			t.Fatalf("category %s expected %d, got %#v", category, expected, counts)
 		}
+	}
+}
+
+func TestVisualAllTemplatesHaveNonGenericMetadata(t *testing.T) {
+	templateDir := visualTemplateDir()
+	for _, entry := range visualRegistryData(t).Templates {
+		t.Run(entry.ID, func(t *testing.T) {
+			var manifest visualTemplateManifest
+			raw := mustRead(t, filepath.Join(templateDir, entry.ID, "template.yaml"))
+			if err := yaml.Unmarshal([]byte(raw), &manifest); err != nil {
+				t.Fatalf("template.yaml invalid for %s: %v", entry.ID, err)
+			}
+			if strings.TrimSpace(entry.Title) == "" || strings.TrimSpace(manifest.Title) == "" {
+				t.Fatalf("%s has empty title: registry=%q manifest=%q", entry.ID, entry.Title, manifest.Title)
+			}
+			assertNonGenericVisualDescription(t, entry.ID, "registry", entry.Description)
+			assertNonGenericVisualDescription(t, entry.ID, "template.yaml", manifest.Description)
+			if len(entry.Tags) < 3 || len(manifest.Tags) < 3 {
+				t.Fatalf("%s needs at least 3 tags: registry=%#v manifest=%#v", entry.ID, entry.Tags, manifest.Tags)
+			}
+			if strings.TrimSpace(entry.LayoutPreset) == "" || strings.TrimSpace(manifest.Layout.Preset) == "" {
+				t.Fatalf("%s is missing layout preset: registry=%q manifest=%q", entry.ID, entry.LayoutPreset, manifest.Layout.Preset)
+			}
+			if !expectedVisualCategoryExists(entry.Category) || !expectedVisualCategoryExists(manifest.Category) {
+				t.Fatalf("%s has invalid category: registry=%q manifest=%q", entry.ID, entry.Category, manifest.Category)
+			}
+
+			var schemaDoc map[string]any
+			schemaRaw := mustRead(t, filepath.Join(templateDir, entry.ID, "schema.input.json"))
+			if err := json.Unmarshal([]byte(schemaRaw), &schemaDoc); err != nil {
+				t.Fatalf("schema.input.json invalid for %s: %v", entry.ID, err)
+			}
+			if _, ok := schemaDoc["json_schema"].(map[string]any); !ok {
+				t.Fatalf("%s schema.input.json missing json_schema: %#v", entry.ID, schemaDoc)
+			}
+			if _, ok := schemaDoc["example"].(map[string]any); !ok {
+				t.Fatalf("%s schema.input.json missing example: %#v", entry.ID, schemaDoc)
+			}
+
+			var example map[string]any
+			exampleRaw := mustRead(t, filepath.Join(templateDir, entry.ID, "examples", "basic.input.json"))
+			if err := json.Unmarshal([]byte(exampleRaw), &example); err != nil {
+				t.Fatalf("basic.input.json invalid for %s: %v", entry.ID, err)
+			}
+			title := strings.TrimSpace(fmt.Sprint(example["title"]))
+			for _, generic := range []string{"Basic Example", "Example", entry.Title + " Example", manifest.Title + " Example"} {
+				if strings.EqualFold(title, strings.TrimSpace(generic)) {
+					t.Fatalf("%s has generic example title: %q", entry.ID, title)
+				}
+			}
+			style, err := os.Stat(filepath.Join(templateDir, entry.ID, "style.css"))
+			if err != nil || style.IsDir() || style.Size() == 0 {
+				t.Fatalf("%s style.css missing or empty: %v", entry.ID, err)
+			}
+		})
 	}
 }
 
@@ -963,9 +1081,16 @@ func TestVisualBuildAndSmokeScriptsContract(t *testing.T) {
 	}
 
 	smokePS := mustRead(t, "../scripts/smoke.ps1")
-	for _, token := range []string{"template schema", "template doctor", "render --template"} {
+	for _, token := range []string{"visual commands --json", "visual schema render --json", "visual template categories", "visual template schema", "visual template doctor", "render --template"} {
 		if !strings.Contains(smokePS, token) {
 			t.Fatalf("scripts/smoke.ps1 missing visual smoke token %s", token)
+		}
+	}
+
+	testWorkflow := mustRead(t, "../.github/workflows/test.yml")
+	for _, token := range []string{"windows-latest", "shell: pwsh", "scripts/smoke.ps1"} {
+		if !strings.Contains(testWorkflow, token) {
+			t.Fatalf(".github/workflows/test.yml missing Windows smoke token %s", token)
 		}
 	}
 }
@@ -1081,6 +1206,36 @@ func visualRegistryDataFromDir(t *testing.T, templateDir string) visualRegistry 
 		t.Fatal(err)
 	}
 	return registry
+}
+
+func canonicalTemplateDirsFromRegistry(t *testing.T, registry visualRegistry) map[string]bool {
+	t.Helper()
+	dirs := map[string]bool{}
+	for _, entry := range registry.Templates {
+		dir := filepath.ToSlash(filepath.Dir(filepath.FromSlash(entry.Path)))
+		if dir == "." || strings.TrimSpace(dir) == "" {
+			t.Fatalf("registry entry %s has invalid template path: %s", entry.ID, entry.Path)
+		}
+		dirs[dir] = true
+	}
+	return dirs
+}
+
+func assertNonGenericVisualDescription(t *testing.T, id, source, description string) {
+	t.Helper()
+	description = strings.TrimSpace(description)
+	if description == "" {
+		t.Fatalf("%s has empty %s description", id, source)
+	}
+	for _, pattern := range genericVisualDescriptionPatterns {
+		if pattern.MatchString(description) {
+			t.Fatalf("%s has generic %s description: %q", id, source, description)
+		}
+	}
+}
+
+func expectedVisualCategoryExists(category string) bool {
+	return expectedVisualCategoryCounts[category] > 0
 }
 
 func assertGraphShape(t *testing.T, data map[string]any, withEvents bool) {

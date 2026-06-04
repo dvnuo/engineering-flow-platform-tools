@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Migration Progress Map Example"
+    "title": "Migration Progress Map: Tracks migration stages from legacy modules through adapters, tests, rollout, and cleanup"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

@@ -2,7 +2,7 @@ id: business.team_load_balance
 version: 1.0.0
 category: business
 title: Team Load Balance
-description: Visualize Team Load Balance as a complete offline matrix view for business workflows using the matrix_board layout.
+description: Compares team load, capacity, focus area, risk, and rebalancing options.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

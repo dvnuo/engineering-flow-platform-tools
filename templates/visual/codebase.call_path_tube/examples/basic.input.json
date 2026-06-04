@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Call Path Tube Example"
+  "title": "Call Path Tube: Traces request or function call paths through packages, adapters, branches, and exit points"
 }

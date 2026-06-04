@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Dead Code Detector Example"
+    "title": "Dead Code Detector: Groups unused symbols, unreachable modules, stale entrypoints, and cleanup confidence"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

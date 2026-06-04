@@ -2,7 +2,7 @@ id: education.cache_behavior_sim
 version: 1.0.0
 category: education
 title: Cache Behavior Sim
-description: Visualize Cache Behavior Sim as a complete offline graph_events view for education workflows using the state_machine layout.
+description: Demonstrates cache hits, misses, invalidation, refresh, stampede risk, and fallback behavior.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

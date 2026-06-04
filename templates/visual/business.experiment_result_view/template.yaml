@@ -2,7 +2,7 @@ id: business.experiment_result_view
 version: 1.0.0
 category: business
 title: Experiment Result View
-description: Visualize Experiment Result View as a complete offline matrix view for business workflows using the diff_split_view layout.
+description: Compares experiment variants by metric lift, guardrails, confidence, and rollout decision.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

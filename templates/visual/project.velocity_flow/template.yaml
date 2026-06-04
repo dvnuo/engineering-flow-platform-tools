@@ -2,7 +2,7 @@ id: project.velocity_flow
 version: 1.0.0
 category: project
 title: Velocity Flow
-description: Visualize Velocity Flow as a complete offline graph_events view for project workflows using the flow_particles layout.
+description: Tracks work entering, moving through, and leaving delivery stages with throughput signals.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

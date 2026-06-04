@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Cache Behavior Sim Example"
+    "title": "Cache Behavior Sim: Demonstrates cache hits, misses, invalidation, refresh, stampede risk, and fallback behavior"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

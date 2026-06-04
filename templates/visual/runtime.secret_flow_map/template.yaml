@@ -2,7 +2,7 @@ id: runtime.secret_flow_map
 version: 1.0.0
 category: runtime
 title: Secret Flow Map
-description: Visualize Secret Flow Map as a complete offline graph view for runtime workflows using the network_boundary_map layout.
+description: Tracks secret sources, injection points, consumers, rotation state, and exposure controls.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

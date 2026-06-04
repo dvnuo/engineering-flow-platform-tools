@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Semantic Search Landscape Example"
+  "title": "Semantic Search Landscape: Plots search results by relevance, source type, confidence, and topic cluster"
 }

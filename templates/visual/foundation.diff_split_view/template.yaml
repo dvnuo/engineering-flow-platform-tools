@@ -2,7 +2,7 @@ id: foundation.diff_split_view
 version: 1.0.0
 category: foundation
 title: Diff Split View
-description: Visualize Diff Split View as a complete offline graph_events view for foundation workflows using the diff_split_view layout.
+description: Compares before and after graph states so reviewers can follow changed nodes, transitions, and risk flags.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

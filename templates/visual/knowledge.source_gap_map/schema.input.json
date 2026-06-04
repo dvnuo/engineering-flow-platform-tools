@@ -97,7 +97,7 @@
         "title": "Gap Map decision record"
       }
     ],
-    "title": "Source Gap Map Example"
+    "title": "Source Gap Map: Shows claims with missing, weak, refuting, or outdated sources and their confidence impact"
   },
   "input_schema_kind": "evidence_v1",
   "json_schema": {

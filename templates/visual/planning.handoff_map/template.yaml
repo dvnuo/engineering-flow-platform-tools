@@ -2,7 +2,7 @@ id: planning.handoff_map
 version: 1.0.0
 category: planning
 title: Handoff Map
-description: Visualize Handoff Map as a complete offline graph_events view for planning workflows using the pipeline_flow layout.
+description: Connects work products, owners, acceptance criteria, timing, and receiving teams.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

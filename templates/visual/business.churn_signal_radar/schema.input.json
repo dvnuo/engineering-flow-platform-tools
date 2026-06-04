@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Churn Signal Radar Example"
+    "title": "Churn Signal Radar: Plots customer churn signals by account health, usage drop, support history, and renewal risk"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

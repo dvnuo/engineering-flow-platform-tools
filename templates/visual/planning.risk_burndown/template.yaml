@@ -2,7 +2,7 @@ id: planning.risk_burndown
 version: 1.0.0
 category: planning
 title: Risk Burndown
-description: Visualize Risk Burndown as a complete offline timeline view for planning workflows using the line layout.
+description: Tracks risk reduction over time with mitigations, owners, review dates, and residual exposure.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

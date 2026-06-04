@@ -2,7 +2,7 @@ id: planning.task_failure_fork
 version: 1.0.0
 category: planning
 title: Task Failure Fork
-description: Visualize Task Failure Fork as a complete offline graph_events view for planning workflows using the radial_tree layout.
+description: Branches failed tasks into symptoms, retry choices, owner decisions, and recovery path.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

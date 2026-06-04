@@ -93,5 +93,5 @@
     }
   ],
   "schema": "efp.visual.input.timeline.v1",
-  "title": "Cohort Timeline Example"
+  "title": "Cohort Timeline: Tracks customer cohorts through activation, retention, expansion, support, and churn events"
 }

@@ -143,7 +143,7 @@
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Log Cluster Map Example"
+    "title": "Log Cluster Map: Groups log signatures, affected services, example messages, and suspected causes"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

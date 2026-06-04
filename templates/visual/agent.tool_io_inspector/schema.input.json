@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Tool Io Inspector Example"
+    "title": "Tool Io Inspector: Compares tool inputs and outputs so arguments, files, command results, and errors can be inspected"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

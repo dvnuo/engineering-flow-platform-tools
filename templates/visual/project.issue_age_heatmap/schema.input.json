@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Issue Age Heatmap Example"
+    "title": "Issue Age Heatmap: Plots issues by age, priority, owner, workflow state, and escalation risk"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

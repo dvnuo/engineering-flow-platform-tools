@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Queue Processing Sim Example"
+  "title": "Queue Processing Sim: Shows enqueue, dispatch, worker execution, retry, dead letter, and completion behavior"
 }

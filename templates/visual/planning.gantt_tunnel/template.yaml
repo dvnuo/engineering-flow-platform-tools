@@ -2,7 +2,7 @@ id: planning.gantt_tunnel
 version: 1.0.0
 category: planning
 title: Gantt Tunnel
-description: Visualize Gantt Tunnel as a complete offline timeline view for planning workflows using the gantt layout.
+description: Shows scheduled tasks, milestones, dependencies, slippage, and critical windows.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

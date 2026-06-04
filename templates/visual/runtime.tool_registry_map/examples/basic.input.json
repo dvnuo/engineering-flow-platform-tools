@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Tool Registry Map Example"
+  "title": "Tool Registry Map: Organizes registered tools, schemas, owners, health checks, and version compatibility"
 }

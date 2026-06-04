@@ -2,7 +2,7 @@ id: foundation.document_wall
 version: 1.0.0
 category: foundation
 title: Document Wall
-description: Visualize Document Wall as a complete offline evidence view for foundation workflows using the document_wall layout.
+description: Pins claims and source cards into a document wall for reviewing provenance, freshness, and contradictions.
 input_schema: schema.input.json
 input_schema_kind: evidence_v1
 renderer:

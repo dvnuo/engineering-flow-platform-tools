@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Parallel Sessions Map Example"
+    "title": "Parallel Sessions Map: Shows parallel work sessions, shared files, dependencies, conflicts, and merge points"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

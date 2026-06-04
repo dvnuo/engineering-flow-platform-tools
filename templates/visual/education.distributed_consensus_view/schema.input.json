@@ -223,7 +223,7 @@
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Distributed Consensus View Example"
+    "title": "Distributed Consensus View: Explains proposals, votes, quorum, leader changes, replication lag, and committed state"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

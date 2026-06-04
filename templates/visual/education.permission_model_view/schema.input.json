@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Permission Model View Example"
+    "title": "Permission Model View: Compares roles, resources, allowed actions, denied actions, and policy inheritance"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

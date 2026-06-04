@@ -2,7 +2,7 @@ id: project.risk_matrix
 version: 1.0.0
 category: project
 title: Risk Matrix
-description: Visualize Risk Matrix as a complete offline matrix view for project workflows using the matrix_board layout.
+description: Plots project risks by likelihood, impact, owner, mitigation, and review state.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

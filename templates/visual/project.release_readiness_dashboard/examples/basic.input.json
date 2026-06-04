@@ -164,5 +164,5 @@
     }
   ],
   "schema": "efp.visual.input.matrix.v1",
-  "title": "Release Readiness Dashboard Example"
+  "title": "Release Readiness Dashboard: Summarizes release gates, open risks, test status, approvals, and rollback readiness"
 }

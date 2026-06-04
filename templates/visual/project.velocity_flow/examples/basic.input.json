@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Velocity Flow Example"
+  "title": "Velocity Flow: Tracks work entering, moving through, and leaving delivery stages with throughput signals"
 }

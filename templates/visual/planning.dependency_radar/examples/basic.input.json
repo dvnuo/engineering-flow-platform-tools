@@ -142,5 +142,5 @@
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Dependency Radar Example"
+  "title": "Dependency Radar: Plots dependencies by urgency, confidence, owner, risk, and schedule impact"
 }

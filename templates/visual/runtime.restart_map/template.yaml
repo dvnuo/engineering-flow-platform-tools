@@ -2,7 +2,7 @@ id: runtime.restart_map
 version: 1.0.0
 category: runtime
 title: Restart Map
-description: Visualize Restart Map as a complete offline graph_events view for runtime workflows using the radial_tree layout.
+description: Traces restart triggers, dependency order, degraded periods, and service recovery outcomes.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

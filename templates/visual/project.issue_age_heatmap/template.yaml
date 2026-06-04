@@ -2,7 +2,7 @@ id: project.issue_age_heatmap
 version: 1.0.0
 category: project
 title: Issue Age Heatmap
-description: Visualize Issue Age Heatmap as a complete offline matrix view for project workflows using the heatmap layout.
+description: Plots issues by age, priority, owner, workflow state, and escalation risk.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

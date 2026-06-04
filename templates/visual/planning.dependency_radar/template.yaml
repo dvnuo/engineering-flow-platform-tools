@@ -2,7 +2,7 @@ id: planning.dependency_radar
 version: 1.0.0
 category: planning
 title: Dependency Radar
-description: Visualize Dependency Radar as a complete offline graph view for planning workflows using the radar_sphere layout.
+description: Plots dependencies by urgency, confidence, owner, risk, and schedule impact.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

@@ -165,7 +165,7 @@
       }
     ],
     "schema": "efp.visual.input.matrix.v1",
-    "title": "Source Reliability Matrix Example"
+    "title": "Source Reliability Matrix: Compares sources by reliability, recency, independence, bias, and coverage"
   },
   "input_schema_kind": "matrix_v1",
   "json_schema": {

@@ -222,5 +222,5 @@
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Failure Recovery Tree Example"
+  "title": "Failure Recovery Tree: Branches agent failures into symptoms, suspected causes, retry choices, and verified recovery steps"
 }

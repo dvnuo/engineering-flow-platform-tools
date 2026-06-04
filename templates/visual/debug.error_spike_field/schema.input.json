@@ -1,0 +1,193 @@
+{
+  "example": {
+    "events": [
+      {
+        "id": "debug-error-spike-field-event-1",
+        "kind": "intake",
+        "label": "Error Spike Opened",
+        "lane": "symptom",
+        "metadata": {
+          "sequence": 1,
+          "template_id": "debug.error_spike_field"
+        },
+        "status": "success",
+        "summary": "Error Spike Field advanced through intake with terrain_heatmap context.",
+        "time": "2026-06-03T10:45:00Z"
+      },
+      {
+        "id": "debug-error-spike-field-event-2",
+        "kind": "analysis",
+        "label": "Spike Field Triaged",
+        "lane": "cause",
+        "metadata": {
+          "sequence": 2,
+          "template_id": "debug.error_spike_field"
+        },
+        "status": "running",
+        "summary": "Error Spike Field advanced through analysis with terrain_heatmap context.",
+        "time": "2026-06-03T11:02:00Z"
+      },
+      {
+        "id": "debug-error-spike-field-event-3",
+        "kind": "decision",
+        "label": "Field Error Mapped",
+        "lane": "mitigation",
+        "metadata": {
+          "sequence": 3,
+          "template_id": "debug.error_spike_field"
+        },
+        "status": "warning",
+        "summary": "Error Spike Field advanced through decision with terrain_heatmap context.",
+        "time": "2026-06-03T11:19:00Z"
+      },
+      {
+        "id": "debug-error-spike-field-event-4",
+        "kind": "execution",
+        "label": "Error Spike Acted",
+        "lane": "symptom",
+        "metadata": {
+          "sequence": 4,
+          "template_id": "debug.error_spike_field"
+        },
+        "status": "success",
+        "summary": "Error Spike Field advanced through execution with terrain_heatmap context.",
+        "time": "2026-06-03T11:36:00Z"
+      },
+      {
+        "id": "debug-error-spike-field-event-5",
+        "kind": "verification",
+        "label": "Spike Field Checked",
+        "lane": "cause",
+        "metadata": {
+          "sequence": 5,
+          "template_id": "debug.error_spike_field"
+        },
+        "status": "error",
+        "summary": "Error Spike Field advanced through verification with terrain_heatmap context.",
+        "time": "2026-06-03T11:53:00Z"
+      },
+      {
+        "id": "debug-error-spike-field-event-6",
+        "kind": "handoff",
+        "label": "Field Error Recovered",
+        "lane": "mitigation",
+        "metadata": {
+          "sequence": 6,
+          "template_id": "debug.error_spike_field"
+        },
+        "status": "blocked",
+        "summary": "Error Spike Field advanced through handoff with terrain_heatmap context.",
+        "time": "2026-06-03T12:10:00Z"
+      },
+      {
+        "id": "debug-error-spike-field-event-7",
+        "kind": "closeout",
+        "label": "Error Spike Closed",
+        "lane": "symptom",
+        "metadata": {
+          "sequence": 7,
+          "template_id": "debug.error_spike_field"
+        },
+        "status": "success",
+        "summary": "Error Spike Field advanced through closeout with terrain_heatmap context.",
+        "time": "2026-06-03T12:27:00Z"
+      }
+    ],
+    "schema": "efp.visual.input.timeline.v1",
+    "title": "Error Spike Field: Places error spikes by endpoint, time, status code, and related deploy or traffic signals"
+  },
+  "input_schema_kind": "timeline_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.timeline.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "debug.error_spike_field"
+}

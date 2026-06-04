@@ -1,0 +1,168 @@
+{
+  "items": [
+    {
+      "group": "symptom",
+      "id": "debug-flaky-test-radar-item-1",
+      "kind": "flaky",
+      "label": "Flaky Test North",
+      "metadata": {
+        "note": "Flaky Test Radar matrix cell 1",
+        "quadrant": "q1",
+        "template_id": "debug.flaky_test_radar"
+      },
+      "metrics": {
+        "confidence": 0.55,
+        "impact": 0.4
+      },
+      "status": "ok",
+      "x": 0.17,
+      "y": 0.29
+    },
+    {
+      "group": "cause",
+      "id": "debug-flaky-test-radar-item-2",
+      "kind": "test",
+      "label": "Test Radar East",
+      "metadata": {
+        "note": "Flaky Test Radar matrix cell 2",
+        "quadrant": "q2",
+        "template_id": "debug.flaky_test_radar"
+      },
+      "metrics": {
+        "confidence": 0.59,
+        "impact": 0.46
+      },
+      "status": "warning",
+      "x": 0.4,
+      "y": 0.6
+    },
+    {
+      "group": "mitigation",
+      "id": "debug-flaky-test-radar-item-3",
+      "kind": "radar",
+      "label": "Radar Flaky South",
+      "metadata": {
+        "note": "Flaky Test Radar matrix cell 3",
+        "quadrant": "q3",
+        "template_id": "debug.flaky_test_radar"
+      },
+      "metrics": {
+        "confidence": 0.63,
+        "impact": 0.52
+      },
+      "status": "success",
+      "x": 0.63,
+      "y": 0.02
+    },
+    {
+      "group": "symptom",
+      "id": "debug-flaky-test-radar-item-4",
+      "kind": "symptom",
+      "label": "Flaky Test West",
+      "metadata": {
+        "note": "Flaky Test Radar matrix cell 4",
+        "quadrant": "q4",
+        "template_id": "debug.flaky_test_radar"
+      },
+      "metrics": {
+        "confidence": 0.67,
+        "impact": 0.58
+      },
+      "status": "blocked",
+      "x": 0.86,
+      "y": 0.33
+    },
+    {
+      "group": "cause",
+      "id": "debug-flaky-test-radar-item-5",
+      "kind": "flaky",
+      "label": "Test Radar Signal",
+      "metadata": {
+        "note": "Flaky Test Radar matrix cell 5",
+        "quadrant": "q1",
+        "template_id": "debug.flaky_test_radar"
+      },
+      "metrics": {
+        "confidence": 0.71,
+        "impact": 0.64
+      },
+      "status": "error",
+      "x": 0.18,
+      "y": 0.64
+    },
+    {
+      "group": "mitigation",
+      "id": "debug-flaky-test-radar-item-6",
+      "kind": "test",
+      "label": "Radar Flaky Review",
+      "metadata": {
+        "note": "Flaky Test Radar matrix cell 6",
+        "quadrant": "q2",
+        "template_id": "debug.flaky_test_radar"
+      },
+      "metrics": {
+        "confidence": 0.75,
+        "impact": 0.7
+      },
+      "status": "running",
+      "x": 0.41,
+      "y": 0.06
+    },
+    {
+      "group": "symptom",
+      "id": "debug-flaky-test-radar-item-7",
+      "kind": "radar",
+      "label": "Flaky Test Ready",
+      "metadata": {
+        "note": "Flaky Test Radar matrix cell 7",
+        "quadrant": "q3",
+        "template_id": "debug.flaky_test_radar"
+      },
+      "metrics": {
+        "confidence": 0.79,
+        "impact": 0.76
+      },
+      "status": "idle",
+      "x": 0.64,
+      "y": 0.37
+    },
+    {
+      "group": "cause",
+      "id": "debug-flaky-test-radar-item-8",
+      "kind": "symptom",
+      "label": "Test Radar Watch",
+      "metadata": {
+        "note": "Flaky Test Radar matrix cell 8",
+        "quadrant": "q4",
+        "template_id": "debug.flaky_test_radar"
+      },
+      "metrics": {
+        "confidence": 0.83,
+        "impact": 0.82
+      },
+      "status": "ok",
+      "x": 0.87,
+      "y": 0.68
+    },
+    {
+      "group": "mitigation",
+      "id": "debug-flaky-test-radar-item-9",
+      "kind": "flaky",
+      "label": "Radar Flaky Owner",
+      "metadata": {
+        "note": "Flaky Test Radar matrix cell 9",
+        "quadrant": "q1",
+        "template_id": "debug.flaky_test_radar"
+      },
+      "metrics": {
+        "confidence": 0.87,
+        "impact": 0.88
+      },
+      "status": "warning",
+      "x": 0.19,
+      "y": 0.1
+    }
+  ],
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Flaky Test Radar: Plots flaky tests by failure rate, owner, runtime cost, and confidence in quarantine or fix"
+}

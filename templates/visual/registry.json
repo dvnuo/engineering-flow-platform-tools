@@ -1,0 +1,3830 @@
+{
+  "version": 2,
+  "expected": {
+    "canonical_count": 195,
+    "categories": {
+      "agent": 15,
+      "business": 20,
+      "codebase": 20,
+      "debug": 20,
+      "education": 20,
+      "foundation": 20,
+      "knowledge": 20,
+      "planning": 20,
+      "project": 20,
+      "runtime": 20
+    }
+  },
+  "templates": [
+    {
+      "id": "foundation.city_map",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.city_map/template.yaml",
+      "title": "City Map",
+      "description": "Arranges services, stores, queues, and ownership zones as city blocks for quick spatial scanning.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "city_map",
+      "tags": [
+        "city",
+        "city_map",
+        "foundation",
+        "graph",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.constellation",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.constellation/template.yaml",
+      "title": "Constellation",
+      "description": "Places related capabilities in an orbit so ownership, dependencies, and coordination points are easy to scan.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "constellation",
+        "foundation",
+        "graph"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.control_room",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.control_room/template.yaml",
+      "title": "Control Room",
+      "description": "Summarizes operational signals as a control room for queues, latency, error budget, and readiness.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "control",
+        "control_room",
+        "foundation",
+        "matrix",
+        "room"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.diff_split_view",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.diff_split_view/template.yaml",
+      "title": "Diff Split View",
+      "description": "Compares before and after graph states so reviewers can follow changed nodes, transitions, and risk flags.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "diff",
+        "diff_split_view",
+        "foundation",
+        "graph_events",
+        "split",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.document_wall",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.document_wall/template.yaml",
+      "title": "Document Wall",
+      "description": "Pins claims and source cards into a document wall for reviewing provenance, freshness, and contradictions.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "document_wall",
+      "tags": [
+        "document",
+        "document_wall",
+        "evidence",
+        "foundation",
+        "wall"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.flow_particles",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.flow_particles/template.yaml",
+      "title": "Flow Particles",
+      "description": "Animates ordered handoffs between producers, processors, reviewers, and completion gates.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "flow",
+        "flow_particles",
+        "foundation",
+        "graph_events",
+        "particles"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.graph_2_5d",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.graph_2_5d/template.yaml",
+      "title": "Graph 2 5D",
+      "description": "Layers graph nodes by ownership, status, and depth so dense dependency maps stay readable.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "2",
+        "5d",
+        "foundation",
+        "graph",
+        "graph_2_5d"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.graph_3d",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.graph_3d/template.yaml",
+      "title": "Graph 3D",
+      "description": "Places major nodes, edges, and hotspots into a depth based graph for exploring complex systems.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_3d",
+      "tags": [
+        "3d",
+        "foundation",
+        "graph",
+        "graph_3d"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.layered_stack",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.layered_stack/template.yaml",
+      "title": "Layered Stack",
+      "description": "Maps a layered system from domain model through adapters, policy, telemetry, and release boundary.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "foundation",
+        "graph",
+        "layered",
+        "layered_stack",
+        "stack"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.matrix_board",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.matrix_board/template.yaml",
+      "title": "Matrix Board",
+      "description": "Positions work items by priority and effort while preserving owner, status, and risk context.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "board",
+        "foundation",
+        "matrix",
+        "matrix_board"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.orbit_system",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.orbit_system/template.yaml",
+      "title": "Orbit System",
+      "description": "Shows a central system with related teams, dependencies, controls, and checks in orbital bands.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "orbit_system",
+      "tags": [
+        "foundation",
+        "graph",
+        "orbit",
+        "orbit_system",
+        "system"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.pipeline_flow",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.pipeline_flow/template.yaml",
+      "title": "Pipeline Flow",
+      "description": "Connects staged work from intake through build, validation, approval, and release handoff.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "flow",
+        "foundation",
+        "graph",
+        "pipeline",
+        "pipeline_flow"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.radar_sphere",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.radar_sphere/template.yaml",
+      "title": "Radar Sphere",
+      "description": "Plots entities by exposure, confidence, and urgency for portfolio or health review.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "foundation",
+        "matrix",
+        "radar",
+        "radar_sphere",
+        "sphere"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.radial_tree",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.radial_tree/template.yaml",
+      "title": "Radial Tree",
+      "description": "Branches a root subject into causes, decisions, owners, and follow up paths.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "foundation",
+        "graph",
+        "radial",
+        "radial_tree",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.replay_stage",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.replay_stage/template.yaml",
+      "title": "Replay Stage",
+      "description": "Replays event sequences with actors, commands, transitions, and outcomes on a staged timeline.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "replay_stage",
+      "tags": [
+        "foundation",
+        "graph_events",
+        "replay",
+        "replay_stage",
+        "stage"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.sankey_3d",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.sankey_3d/template.yaml",
+      "title": "Sankey 3D",
+      "description": "Traces volume movement between sources, processing stages, sinks, and loss points.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "sankey_3d",
+      "tags": [
+        "3d",
+        "foundation",
+        "graph",
+        "sankey",
+        "sankey_3d"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.state_machine",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.state_machine/template.yaml",
+      "title": "State Machine",
+      "description": "Documents allowed states, transitions, guards, and terminal outcomes for a process.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "state_machine",
+      "tags": [
+        "foundation",
+        "graph",
+        "machine",
+        "state",
+        "state_machine"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.swimlane_timeline",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.swimlane_timeline/template.yaml",
+      "title": "Swimlane Timeline",
+      "description": "Splits time ordered events across owners or systems so parallel progress and handoffs stay visible.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "swimlane_timeline",
+      "tags": [
+        "foundation",
+        "swimlane",
+        "swimlane_timeline",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.terrain_heatmap",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.terrain_heatmap/template.yaml",
+      "title": "Terrain Heatmap",
+      "description": "Turns scored items into terrain so clusters, outliers, and high pressure areas stand out.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "foundation",
+        "heatmap",
+        "matrix",
+        "terrain",
+        "terrain_heatmap"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "foundation.timeline_tunnel",
+      "version": "1.0.0",
+      "category": "foundation",
+      "path": "foundation.timeline_tunnel/template.yaml",
+      "title": "Timeline Tunnel",
+      "description": "Shows release milestones moving through an ordered tunnel of decisions, risks, rehearsal, and final signoff.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "timeline_tunnel",
+      "tags": [
+        "foundation",
+        "timeline",
+        "timeline_tunnel",
+        "tunnel"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.active_run_monitor",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.active_run_monitor/template.yaml",
+      "title": "Active Run Monitor",
+      "description": "Monitors active agent work across queued tasks, running commands, edits, tests, and final handoff.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "fleet",
+      "tags": [
+        "active",
+        "agent",
+        "fleet",
+        "graph_events",
+        "monitor",
+        "run"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.confidence_map",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.confidence_map/template.yaml",
+      "title": "Confidence Map",
+      "description": "Links agent conclusions to evidence, counterevidence, source reliability, and confidence levels.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "evidence_board",
+      "tags": [
+        "agent",
+        "confidence",
+        "evidence",
+        "evidence_board",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.context_window_map",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.context_window_map/template.yaml",
+      "title": "Context Window Map",
+      "description": "Tracks context chunks by relevance, freshness, token weight, and whether they are still needed.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "agent",
+        "context",
+        "map",
+        "matrix",
+        "matrix_board",
+        "window"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.debug_blackbox",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.debug_blackbox/template.yaml",
+      "title": "Debug Blackbox",
+      "description": "Reconstructs a failed agent run from prompt intake through tool output, validation, and recovery.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "agent",
+        "blackbox",
+        "control_room",
+        "debug",
+        "graph_events"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.failure_recovery_tree",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.failure_recovery_tree/template.yaml",
+      "title": "Failure Recovery Tree",
+      "description": "Branches agent failures into symptoms, suspected causes, retry choices, and verified recovery steps.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "agent",
+        "failure",
+        "graph_events",
+        "radial_tree",
+        "recovery",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.permission_gate_map",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.permission_gate_map/template.yaml",
+      "title": "Permission Gate Map",
+      "description": "Maps the approval gates an agent must pass before writes, network calls, destructive actions, and publication.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "agent",
+        "gate",
+        "graph_events",
+        "layered_stack",
+        "map",
+        "permission"
+      ],
+      "aliases": [
+        "agent.permission_gate"
+      ]
+    },
+    {
+      "id": "agent.react_loop_replay",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.react_loop_replay/template.yaml",
+      "title": "React Loop Replay",
+      "description": "Replays observe, think, act, and validate cycles with tool calls and decision checkpoints.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "replay_stage",
+      "tags": [
+        "agent",
+        "graph_events",
+        "loop",
+        "react",
+        "replay",
+        "replay_stage"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.run_replay_timeline",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.run_replay_timeline/template.yaml",
+      "title": "Run Replay Timeline",
+      "description": "Shows an agent run as a replayable sequence of planning, edits, checks, and final response.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "replay_stage",
+      "tags": [
+        "agent",
+        "graph_events",
+        "replay",
+        "replay_stage",
+        "run",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.run_trace",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.run_trace/template.yaml",
+      "title": "Run Trace",
+      "description": "Follows an agent run from user request through planning, tool calls, validation, and final response.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "timeline_tunnel",
+      "tags": [
+        "agent",
+        "graph_events",
+        "run",
+        "timeline_tunnel",
+        "trace"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.session_state_panel",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.session_state_panel/template.yaml",
+      "title": "Session State Panel",
+      "description": "Displays session state such as context budget, open work, command state, and verification readiness.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "agent",
+        "control_room",
+        "matrix",
+        "panel",
+        "session",
+        "state"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.step_ladder",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.step_ladder/template.yaml",
+      "title": "Step Ladder",
+      "description": "Breaks an agent task into ordered steps with prerequisites, evidence, and completion state.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "agent",
+        "graph_events",
+        "ladder",
+        "pipeline_flow",
+        "step"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.subagent_swarm",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.subagent_swarm/template.yaml",
+      "title": "Subagent Swarm",
+      "description": "Coordinates specialist agents, assigned scopes, shared artifacts, and merge or handoff points.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "agent",
+        "constellation",
+        "graph_events",
+        "subagent",
+        "swarm"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.thinking_timeline",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.thinking_timeline/template.yaml",
+      "title": "Thinking Timeline",
+      "description": "Tracks reasoning checkpoints across context scan, hypothesis, validation, and answer assembly.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "swimlane_timeline",
+      "tags": [
+        "agent",
+        "graph_events",
+        "swimlane_timeline",
+        "thinking",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "agent.tool_call_constellation",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.tool_call_constellation/template.yaml",
+      "title": "Tool Call Constellation",
+      "description": "Shows tool calls as a constellation around the run, including reads, edits, validation, and push steps.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "agent",
+        "call",
+        "constellation",
+        "graph_events",
+        "tool"
+      ],
+      "aliases": [
+        "agent.tool_constellation"
+      ]
+    },
+    {
+      "id": "agent.tool_io_inspector",
+      "version": "1.0.0",
+      "category": "agent",
+      "path": "agent.tool_io_inspector/template.yaml",
+      "title": "Tool Io Inspector",
+      "description": "Compares tool inputs and outputs so arguments, files, command results, and errors can be inspected.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "agent",
+        "diff_split_view",
+        "graph_events",
+        "inspector",
+        "io",
+        "tool"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.api_surface_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.api_surface_map/template.yaml",
+      "title": "API Surface Map",
+      "description": "Maps exported endpoints, callers, owners, version contracts, and compatibility risk.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "api",
+        "codebase",
+        "graph",
+        "layered_stack",
+        "map",
+        "surface"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.bug_localization_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.bug_localization_map/template.yaml",
+      "title": "Bug Localization Map",
+      "description": "Connects symptoms, logs, failing tests, touched modules, and likely fix targets for a bug.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "bug",
+        "codebase",
+        "graph_events",
+        "heatmap",
+        "localization",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.call_path_tube",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.call_path_tube/template.yaml",
+      "title": "Call Path Tube",
+      "description": "Traces request or function call paths through packages, adapters, branches, and exit points.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "call",
+        "codebase",
+        "graph",
+        "path",
+        "pipeline_flow",
+        "tube"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.config_dependency_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.config_dependency_map/template.yaml",
+      "title": "Config Dependency Map",
+      "description": "Shows how config keys feed services, feature flags, secrets, and deployment behavior.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "codebase",
+        "config",
+        "dependency",
+        "graph",
+        "map",
+        "radial_tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.coverage_terrain",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.coverage_terrain/template.yaml",
+      "title": "Coverage Terrain",
+      "description": "Plots packages by coverage, churn, risk, and ownership to expose weak test terrain.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "codebase",
+        "coverage",
+        "matrix",
+        "terrain",
+        "terrain_heatmap"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.dead_code_detector",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.dead_code_detector/template.yaml",
+      "title": "Dead Code Detector",
+      "description": "Groups unused symbols, unreachable modules, stale entrypoints, and cleanup confidence.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "code",
+        "codebase",
+        "constellation",
+        "dead",
+        "detector",
+        "graph"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.dependency_upgrade_risk",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.dependency_upgrade_risk/template.yaml",
+      "title": "Dependency Upgrade Risk",
+      "description": "Assesses dependency upgrades by consumers, breaking changes, test coverage, and rollout risk.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "codebase",
+        "dependency",
+        "graph",
+        "radar_sphere",
+        "risk",
+        "upgrade"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.diff_impact_ripple",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.diff_impact_ripple/template.yaml",
+      "title": "Diff Impact Ripple",
+      "description": "Shows how a changed file ripples into modules, tests, API contracts, downstream UI, and risk metrics.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "ripple",
+      "tags": [
+        "codebase",
+        "diff",
+        "graph_events",
+        "impact",
+        "ripple"
+      ],
+      "aliases": [
+        "codebase.diff_impact"
+      ]
+    },
+    {
+      "id": "codebase.galaxy",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.galaxy/template.yaml",
+      "title": "Galaxy",
+      "description": "Organizes repository areas into a galaxy of packages, tests, shared helpers, and release scripts.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "galaxy",
+      "tags": [
+        "codebase",
+        "galaxy",
+        "graph"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.git_history_river",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.git_history_river/template.yaml",
+      "title": "Git History River",
+      "description": "Shows commits, authors, release points, reverts, and hot files along a repository history stream.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "river",
+      "tags": [
+        "codebase",
+        "git",
+        "history",
+        "river",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.hotspot_city",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.hotspot_city/template.yaml",
+      "title": "Hotspot City",
+      "description": "Places churn heavy files, fragile modules, owners, and test gaps into a code hotspot city.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "city_map",
+      "tags": [
+        "city",
+        "city_map",
+        "codebase",
+        "graph",
+        "hotspot"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.migration_progress_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.migration_progress_map/template.yaml",
+      "title": "Migration Progress Map",
+      "description": "Tracks migration stages from legacy modules through adapters, tests, rollout, and cleanup.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "codebase",
+        "graph_events",
+        "map",
+        "migration",
+        "pipeline_flow",
+        "progress"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.module_dependency_graph",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.module_dependency_graph/template.yaml",
+      "title": "Module Dependency Graph",
+      "description": "Connects modules, helper packages, tests, and scripts to show dependency direction and ownership.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "codebase",
+        "dependency",
+        "graph",
+        "layered_stack",
+        "module"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.monorepo_workspace_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.monorepo_workspace_map/template.yaml",
+      "title": "Monorepo Workspace Map",
+      "description": "Maps packages, apps, shared libraries, build boundaries, and team ownership in a monorepo.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "city_map",
+      "tags": [
+        "city_map",
+        "codebase",
+        "graph",
+        "map",
+        "monorepo",
+        "workspace"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.ownership_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.ownership_map/template.yaml",
+      "title": "Ownership Map",
+      "description": "Connects files, services, teams, reviewers, and backup owners for stewardship review.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "codebase",
+        "graph",
+        "map",
+        "matrix_board",
+        "ownership"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.pr_diff_impact_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.pr_diff_impact_map/template.yaml",
+      "title": "PR Diff Impact Map",
+      "description": "Shows how pull request changes touch modules, tests, contracts, reviewers, and release risk.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "ripple",
+      "tags": [
+        "codebase",
+        "diff",
+        "graph_events",
+        "impact",
+        "map",
+        "pr",
+        "ripple"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.refactor_plan_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.refactor_plan_map/template.yaml",
+      "title": "Refactor Plan Map",
+      "description": "Lays out refactor targets, dependencies, staging strategy, and validation gates.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "codebase",
+        "diff_split_view",
+        "graph",
+        "map",
+        "plan",
+        "refactor"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.security_sensitive_files_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.security_sensitive_files_map/template.yaml",
+      "title": "Security Sensitive Files Map",
+      "description": "Highlights sensitive files, boundaries, data flows, reviewers, and required checks.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "network_boundary_map",
+      "tags": [
+        "codebase",
+        "files",
+        "graph",
+        "map",
+        "network_boundary_map",
+        "security",
+        "sensitive"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.symbol_graph",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.symbol_graph/template.yaml",
+      "title": "Symbol Graph",
+      "description": "Links symbols, call sites, packages, and tests to explain code navigation and impact.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "codebase",
+        "graph",
+        "graph_2_5d",
+        "symbol"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "codebase.test_failure_map",
+      "version": "1.0.0",
+      "category": "codebase",
+      "path": "codebase.test_failure_map/template.yaml",
+      "title": "Test Failure Map",
+      "description": "Links failing tests to assertions, affected modules, fixtures, and the fix candidate under review.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "codebase",
+        "failure",
+        "graph_events",
+        "layered_stack",
+        "map",
+        "test"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.adapter_proxy_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.adapter_proxy_map/template.yaml",
+      "title": "Adapter Proxy Map",
+      "description": "Maps adapters, proxy hops, retries, auth boundaries, and downstream service dependencies.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "adapter",
+        "graph",
+        "map",
+        "pipeline_flow",
+        "proxy",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.agent_fleet_dashboard",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.agent_fleet_dashboard/template.yaml",
+      "title": "Agent Fleet Dashboard",
+      "description": "Shows the health of a runtime agent fleet across active runs, queues, tool latency, and failure rates.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "agent",
+        "control_room",
+        "dashboard",
+        "fleet",
+        "matrix",
+        "runtime"
+      ],
+      "aliases": [
+        "agent.fleet_dashboard"
+      ]
+    },
+    {
+      "id": "runtime.api_contract_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.api_contract_map/template.yaml",
+      "title": "API Contract Map",
+      "description": "Connects API producers, consumers, schemas, compatibility status, and contract test coverage.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "api",
+        "contract",
+        "graph",
+        "map",
+        "matrix_board",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.capability_matrix",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.capability_matrix/template.yaml",
+      "title": "Capability Matrix",
+      "description": "Compares runtime capabilities by owner, maturity, availability, and operational readiness.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "capability",
+        "matrix",
+        "matrix_board",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.config_overlay_view",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.config_overlay_view/template.yaml",
+      "title": "Config Overlay View",
+      "description": "Stacks default, environment, secret, and runtime overrides to explain effective configuration.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "config",
+        "graph",
+        "layered_stack",
+        "overlay",
+        "runtime",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.deployment_pipeline_3d",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.deployment_pipeline_3d/template.yaml",
+      "title": "Deployment Pipeline 3D",
+      "description": "Tracks build artifacts through deploy stages, checks, approvals, and rollback points.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "3d",
+        "deployment",
+        "graph_events",
+        "pipeline",
+        "pipeline_flow",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.event_bus_flow",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.event_bus_flow/template.yaml",
+      "title": "Event Bus Flow",
+      "description": "Shows event bus flow from producer through broker, consumers, dead letter handling, and observability.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "bus",
+        "event",
+        "flow",
+        "flow_particles",
+        "graph_events",
+        "runtime"
+      ],
+      "aliases": [
+        "runtime.event_flow"
+      ]
+    },
+    {
+      "id": "runtime.event_reconcile_loop",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.event_reconcile_loop/template.yaml",
+      "title": "Event Reconcile Loop",
+      "description": "Explains how live portal events and OpenCode stream updates reconcile with snapshots and duplicate suppression.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "state_machine",
+      "tags": [
+        "event",
+        "graph_events",
+        "loop",
+        "reconcile",
+        "runtime",
+        "state_machine"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.health_radar",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.health_radar/template.yaml",
+      "title": "Health Radar",
+      "description": "Plots services by saturation, errors, latency, dependency health, and incident exposure.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "health",
+        "matrix",
+        "radar",
+        "radar_sphere",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.k8s_pod_constellation",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.k8s_pod_constellation/template.yaml",
+      "title": "K8s Pod Constellation",
+      "description": "Groups Kubernetes pods, deployments, services, config maps, and failing workloads.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "constellation",
+        "graph",
+        "k8s",
+        "pod",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.mcp_server_status_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.mcp_server_status_map/template.yaml",
+      "title": "MCP Server Status Map",
+      "description": "Summarizes MCP servers by tool availability, latency, auth state, and failure signals.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "map",
+        "matrix",
+        "matrix_board",
+        "mcp",
+        "runtime",
+        "server",
+        "status"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.network_boundary_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.network_boundary_map/template.yaml",
+      "title": "Network Boundary Map",
+      "description": "Shows network zones, trusted edges, ingress points, egress rules, and boundary controls.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "boundary",
+        "graph",
+        "layered_stack",
+        "map",
+        "network",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.permission_boundary_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.permission_boundary_map/template.yaml",
+      "title": "Permission Boundary Map",
+      "description": "Maps actors, roles, guarded actions, approval points, and denied paths across a runtime.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "boundary",
+        "graph",
+        "layered_stack",
+        "map",
+        "permission",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.restart_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.restart_map/template.yaml",
+      "title": "Restart Map",
+      "description": "Traces restart triggers, dependency order, degraded periods, and service recovery outcomes.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "graph_events",
+        "map",
+        "radial_tree",
+        "restart",
+        "runtime"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.sandbox_layer_stack",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.sandbox_layer_stack/template.yaml",
+      "title": "Sandbox Layer Stack",
+      "description": "Stacks sandbox permissions, filesystem scope, network policy, and command execution boundaries.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "graph",
+        "layer",
+        "layered_stack",
+        "runtime",
+        "sandbox",
+        "stack"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.secret_flow_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.secret_flow_map/template.yaml",
+      "title": "Secret Flow Map",
+      "description": "Tracks secret sources, injection points, consumers, rotation state, and exposure controls.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "network_boundary_map",
+      "tags": [
+        "flow",
+        "graph",
+        "map",
+        "network_boundary_map",
+        "runtime",
+        "secret"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.service_topology",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.service_topology/template.yaml",
+      "title": "Service Topology",
+      "description": "Maps runtime services, adapters, queues, stores, and health probes in a service topology.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "service_map",
+      "tags": [
+        "graph",
+        "runtime",
+        "service",
+        "service_map",
+        "topology"
+      ],
+      "aliases": [
+        "service.topology"
+      ]
+    },
+    {
+      "id": "runtime.session_binding_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.session_binding_map/template.yaml",
+      "title": "Session Binding Map",
+      "description": "Connects browser tabs, CLI sessions, runtime adapters, and artifact paths to their active session binding.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "binding",
+        "graph",
+        "layered_stack",
+        "map",
+        "runtime",
+        "session"
+      ],
+      "aliases": [
+        "runtime.session_binding"
+      ]
+    },
+    {
+      "id": "runtime.tool_registry_map",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.tool_registry_map/template.yaml",
+      "title": "Tool Registry Map",
+      "description": "Organizes registered tools, schemas, owners, health checks, and version compatibility.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "graph",
+        "map",
+        "radial_tree",
+        "registry",
+        "runtime",
+        "tool"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "runtime.topology",
+      "version": "1.0.0",
+      "category": "runtime",
+      "path": "runtime.topology/template.yaml",
+      "title": "Topology",
+      "description": "Shows core runtime components, queues, stores, adapters, and operational links.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "graph",
+        "layered_stack",
+        "runtime",
+        "topology"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.alert_correlation_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.alert_correlation_map/template.yaml",
+      "title": "Alert Correlation Map",
+      "description": "Clusters alerts by shared service, symptom, dependency, time window, and likely incident.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "alert",
+        "constellation",
+        "correlation",
+        "debug",
+        "graph",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.before_after_compare",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.before_after_compare/template.yaml",
+      "title": "Before After Compare",
+      "description": "Compares system state before and after a fix, deploy, rollback, or configuration change.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "after",
+        "before",
+        "compare",
+        "debug",
+        "diff_split_view",
+        "graph_events"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.blast_radius_sphere",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.blast_radius_sphere/template.yaml",
+      "title": "Blast Radius Sphere",
+      "description": "Estimates impacted users, services, data paths, and rollback scope around a failure.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "blast",
+        "debug",
+        "graph",
+        "radial_tree",
+        "radius",
+        "sphere"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.ci_failure_timeline",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.ci_failure_timeline/template.yaml",
+      "title": "CI Failure Timeline",
+      "description": "Orders CI job starts, failures, retries, artifact checks, and fix verification events.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "swimlane_timeline",
+      "tags": [
+        "ci",
+        "debug",
+        "failure",
+        "swimlane_timeline",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.config_drift_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.config_drift_map/template.yaml",
+      "title": "Config Drift Map",
+      "description": "Compares expected and observed configuration across environments, owners, and drift severity.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "config",
+        "debug",
+        "diff_split_view",
+        "drift",
+        "map",
+        "matrix"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.dependency_failure_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.dependency_failure_map/template.yaml",
+      "title": "Dependency Failure Map",
+      "description": "Connects a failing dependency to callers, retries, fallbacks, alerts, and customer impact.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "service_map",
+      "tags": [
+        "debug",
+        "dependency",
+        "failure",
+        "graph",
+        "map",
+        "service_map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.dependency_version_conflict",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.dependency_version_conflict/template.yaml",
+      "title": "Dependency Version Conflict",
+      "description": "Shows conflicting package versions, dependents, lockfiles, and resolution candidates.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "conflict",
+        "debug",
+        "dependency",
+        "graph",
+        "graph_2_5d",
+        "version"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.error_budget_burn",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.error_budget_burn/template.yaml",
+      "title": "Error Budget Burn",
+      "description": "Tracks error budget consumption alongside incidents, deploys, mitigations, and recovery.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "funnel",
+      "tags": [
+        "budget",
+        "burn",
+        "debug",
+        "error",
+        "funnel",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.error_spike_field",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.error_spike_field/template.yaml",
+      "title": "Error Spike Field",
+      "description": "Places error spikes by endpoint, time, status code, and related deploy or traffic signals.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "debug",
+        "error",
+        "field",
+        "spike",
+        "terrain_heatmap",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.flaky_test_radar",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.flaky_test_radar/template.yaml",
+      "title": "Flaky Test Radar",
+      "description": "Plots flaky tests by failure rate, owner, runtime cost, and confidence in quarantine or fix.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "debug",
+        "flaky",
+        "matrix",
+        "radar",
+        "radar_sphere",
+        "test"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.incident_timeline",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.incident_timeline/template.yaml",
+      "title": "Incident Timeline",
+      "description": "Lays out incident detection, mitigation, rollback, customer update, and postmortem events in order.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "incident_timeline",
+      "tags": [
+        "debug",
+        "incident",
+        "incident_timeline",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.latency_heatmap",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.latency_heatmap/template.yaml",
+      "title": "Latency Heatmap",
+      "description": "Maps latency by endpoint, dependency, percentile, and time window to reveal hotspots.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "debug",
+        "heatmap",
+        "latency",
+        "matrix"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.log_cluster_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.log_cluster_map/template.yaml",
+      "title": "Log Cluster Map",
+      "description": "Groups log signatures, affected services, example messages, and suspected causes.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "cluster",
+        "constellation",
+        "debug",
+        "graph",
+        "log",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.queue_backlog_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.queue_backlog_map/template.yaml",
+      "title": "Queue Backlog Map",
+      "description": "Shows queue depth, worker health, age, retry pressure, and throughput blockers.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "backlog",
+        "control_room",
+        "debug",
+        "map",
+        "matrix",
+        "queue"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.recovery_playbook_view",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.recovery_playbook_view/template.yaml",
+      "title": "Recovery Playbook View",
+      "description": "Steps through detection, mitigation, rollback, validation, and handoff tasks in a recovery playbook.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "step_ladder",
+      "tags": [
+        "debug",
+        "graph_events",
+        "playbook",
+        "recovery",
+        "step_ladder",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.regression_detector",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.regression_detector/template.yaml",
+      "title": "Regression Detector",
+      "description": "Tracks metric and test regressions against commits, deploy windows, and suspect changes.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "river",
+      "tags": [
+        "debug",
+        "detector",
+        "regression",
+        "river",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.resource_pressure_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.resource_pressure_map/template.yaml",
+      "title": "Resource Pressure Map",
+      "description": "Plots CPU, memory, disk, connection, and queue pressure by component and severity.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "debug",
+        "map",
+        "matrix",
+        "pressure",
+        "radar_sphere",
+        "resource"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.retry_storm_map",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.retry_storm_map/template.yaml",
+      "title": "Retry Storm Map",
+      "description": "Shows retry loops, callers, throttles, backoff gaps, and downstream saturation.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "debug",
+        "flow_particles",
+        "graph_events",
+        "map",
+        "retry",
+        "storm"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.root_cause_tree",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.root_cause_tree/template.yaml",
+      "title": "Root Cause Tree",
+      "description": "Branches symptoms, contributing changes, failed safeguards, and confirmed cause into a root cause tree.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "cause",
+        "debug",
+        "graph",
+        "radial_tree",
+        "root",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "debug.trace_waterfall_3d",
+      "version": "1.0.0",
+      "category": "debug",
+      "path": "debug.trace_waterfall_3d/template.yaml",
+      "title": "Trace Waterfall 3D",
+      "description": "Orders trace spans by service, duration, wait time, and failing dependency.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "waterfall",
+      "tags": [
+        "3d",
+        "debug",
+        "timeline",
+        "trace",
+        "waterfall"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.blocker_funnel",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.blocker_funnel/template.yaml",
+      "title": "Blocker Funnel",
+      "description": "Funnels project blockers from discovery through owner assignment, mitigation, and closure.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "funnel",
+      "tags": [
+        "blocker",
+        "funnel",
+        "graph",
+        "project"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.bug_triage_board",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.bug_triage_board/template.yaml",
+      "title": "Bug Triage Board",
+      "description": "Organizes bugs by severity, owner, reproduction status, customer impact, and next action.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "kanban",
+      "tags": [
+        "board",
+        "bug",
+        "kanban",
+        "matrix",
+        "project",
+        "triage"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.confluence_space_map",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.confluence_space_map/template.yaml",
+      "title": "Confluence Space Map",
+      "description": "Maps Confluence spaces, page trees, owners, stale areas, and linked project artifacts.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "confluence",
+        "graph",
+        "map",
+        "project",
+        "radial_tree",
+        "space"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.cross_doc_citation_graph",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.cross_doc_citation_graph/template.yaml",
+      "title": "Cross Doc Citation Graph",
+      "description": "Connects documents, cited decisions, source claims, and conflicting references across a project.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "citation_map",
+      "tags": [
+        "citation",
+        "citation_map",
+        "cross",
+        "doc",
+        "evidence",
+        "graph",
+        "project"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.decision_record_wall",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.decision_record_wall/template.yaml",
+      "title": "Decision Record Wall",
+      "description": "Displays decision records with status, rationale, owners, supporting evidence, and superseded notes.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "document_wall",
+      "tags": [
+        "decision",
+        "document_wall",
+        "evidence",
+        "project",
+        "record",
+        "wall"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.doc_freshness_map",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.doc_freshness_map/template.yaml",
+      "title": "Doc Freshness Map",
+      "description": "Plots project documents by freshness, owner, review state, and release relevance.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "doc",
+        "freshness",
+        "heatmap",
+        "map",
+        "matrix",
+        "project"
+      ],
+      "aliases": [
+        "knowledge.doc_freshness"
+      ]
+    },
+    {
+      "id": "project.epic_story_map",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.epic_story_map/template.yaml",
+      "title": "Epic Story Map",
+      "description": "Breaks epics into stories, dependencies, acceptance signals, and release slices.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "epic",
+        "graph",
+        "layered_stack",
+        "map",
+        "project",
+        "story"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.issue_age_heatmap",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.issue_age_heatmap/template.yaml",
+      "title": "Issue Age Heatmap",
+      "description": "Plots issues by age, priority, owner, workflow state, and escalation risk.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "age",
+        "heatmap",
+        "issue",
+        "matrix",
+        "project"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.issue_dependency_graph",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.issue_dependency_graph/template.yaml",
+      "title": "Issue Dependency Graph",
+      "description": "Connects Jira issues, blockers, owners, acceptance criteria, and release dependencies.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "dependency",
+        "graph",
+        "graph_2_5d",
+        "issue",
+        "project"
+      ],
+      "aliases": [
+        "project.issue_graph"
+      ]
+    },
+    {
+      "id": "project.pr_review_map",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.pr_review_map/template.yaml",
+      "title": "PR Review Map",
+      "description": "Connects pull requests, reviewers, touched areas, pending comments, and merge blockers.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "graph",
+        "graph_2_5d",
+        "map",
+        "pr",
+        "project",
+        "review"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.release_readiness_dashboard",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.release_readiness_dashboard/template.yaml",
+      "title": "Release Readiness Dashboard",
+      "description": "Summarizes release gates, open risks, test status, approvals, and rollback readiness.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "control_room",
+        "dashboard",
+        "matrix",
+        "project",
+        "readiness",
+        "release"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.release_train",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.release_train/template.yaml",
+      "title": "Release Train",
+      "description": "Tracks features and fixes as they board, validate, and leave a release train.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "graph_events",
+        "pipeline_flow",
+        "project",
+        "release",
+        "train"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.requirements_to_code_trace",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.requirements_to_code_trace/template.yaml",
+      "title": "Requirements To Code Trace",
+      "description": "Traces a requirement through design documentation, Jira work, pull request, changed files, tests, and release checks.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "code",
+        "graph",
+        "layered_stack",
+        "project",
+        "requirements",
+        "to",
+        "trace"
+      ],
+      "aliases": [
+        "project.requirements_trace"
+      ]
+    },
+    {
+      "id": "project.review_bottleneck_map",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.review_bottleneck_map/template.yaml",
+      "title": "Review Bottleneck Map",
+      "description": "Shows stalled reviews by reviewer, waiting time, file area, and unblock action.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "bottleneck",
+        "control_room",
+        "map",
+        "matrix",
+        "project",
+        "review"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.risk_matrix",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.risk_matrix/template.yaml",
+      "title": "Risk Matrix",
+      "description": "Plots project risks by likelihood, impact, owner, mitigation, and review state.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "matrix",
+        "matrix_board",
+        "project",
+        "risk"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.roadmap_milestone_path",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.roadmap_milestone_path/template.yaml",
+      "title": "Roadmap Milestone Path",
+      "description": "Orders roadmap milestones with dependencies, confidence, launch criteria, and risk notes.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "roadmap",
+      "tags": [
+        "milestone",
+        "path",
+        "project",
+        "roadmap",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.sprint_board_3d",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.sprint_board_3d/template.yaml",
+      "title": "Sprint Board 3D",
+      "description": "Places sprint work by status, owner, priority, capacity, and blocked state.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "kanban",
+      "tags": [
+        "3d",
+        "board",
+        "kanban",
+        "matrix",
+        "project",
+        "sprint"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.stakeholder_network",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.stakeholder_network/template.yaml",
+      "title": "Stakeholder Network",
+      "description": "Maps stakeholders, decision rights, communication channels, dependencies, and escalation paths.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "constellation",
+        "graph",
+        "network",
+        "project",
+        "stakeholder"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.support_escalation_graph",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.support_escalation_graph/template.yaml",
+      "title": "Support Escalation Graph",
+      "description": "Connects support cases, impacted customers, engineering owners, severity, and resolution path.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "escalation",
+        "graph",
+        "layered_stack",
+        "project",
+        "support"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "project.velocity_flow",
+      "version": "1.0.0",
+      "category": "project",
+      "path": "project.velocity_flow/template.yaml",
+      "title": "Velocity Flow",
+      "description": "Tracks work entering, moving through, and leaving delivery stages with throughput signals.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "flow",
+        "flow_particles",
+        "graph_events",
+        "project",
+        "velocity"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.answer_lineage_view",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.answer_lineage_view/template.yaml",
+      "title": "Answer Lineage View",
+      "description": "Shows answer claims back to sources, assumptions, confidence, and unresolved evidence gaps.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "answer",
+        "evidence",
+        "knowledge",
+        "lineage",
+        "radial_tree",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.argument_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.argument_map/template.yaml",
+      "title": "Argument Map",
+      "description": "Maps positions, supporting claims, objections, sources, and confidence for a decision debate.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "argument",
+        "evidence",
+        "graph_2_5d",
+        "knowledge",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.citation_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.citation_map/template.yaml",
+      "title": "Citation Map",
+      "description": "Connects sources, cited claims, reliability, recency, and gaps in a citation set.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "citation_map",
+      "tags": [
+        "citation",
+        "citation_map",
+        "evidence",
+        "knowledge",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.claim_evidence_tree",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.claim_evidence_tree/template.yaml",
+      "title": "Claim Evidence Tree",
+      "description": "Branches each claim into supporting, refuting, and contextual sources with confidence.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "claim",
+        "evidence",
+        "knowledge",
+        "radial_tree",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.comparison_table_3d",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.comparison_table_3d/template.yaml",
+      "title": "Comparison Table 3D",
+      "description": "Compares options by criteria, score, evidence strength, and unresolved tradeoffs.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "3d",
+        "comparison",
+        "knowledge",
+        "matrix",
+        "matrix_board",
+        "table"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.concept_dependency_tree",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.concept_dependency_tree/template.yaml",
+      "title": "Concept Dependency Tree",
+      "description": "Shows prerequisite concepts, dependent ideas, learning order, and weak understanding areas.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "concept",
+        "dependency",
+        "graph",
+        "knowledge",
+        "radial_tree",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.decision_matrix",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.decision_matrix/template.yaml",
+      "title": "Decision Matrix",
+      "description": "Scores decision options against criteria, risks, evidence, and implementation constraints.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "decision_matrix",
+      "tags": [
+        "decision",
+        "decision_matrix",
+        "knowledge",
+        "matrix"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.design_tradeoff_radar",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.design_tradeoff_radar/template.yaml",
+      "title": "Design Tradeoff Radar",
+      "description": "Plots design choices by cost, reversibility, risk, performance, and confidence.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "design",
+        "knowledge",
+        "matrix",
+        "radar",
+        "radar_sphere",
+        "tradeoff"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.document_cluster_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.document_cluster_map/template.yaml",
+      "title": "Document Cluster Map",
+      "description": "Groups related documents by topic, source type, freshness, and evidence role.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "cluster",
+        "constellation",
+        "document",
+        "evidence",
+        "knowledge",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.document_diff_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.document_diff_map/template.yaml",
+      "title": "Document Diff Map",
+      "description": "Compares document revisions, changed claims, missing evidence, and review implications.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "diff",
+        "diff_split_view",
+        "document",
+        "evidence",
+        "knowledge",
+        "map"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.evidence_board",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.evidence_board/template.yaml",
+      "title": "Evidence Board",
+      "description": "Boards claims, sources, reliability, confidence, and support or refute links for a decision.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "evidence_board",
+      "tags": [
+        "board",
+        "evidence",
+        "evidence_board",
+        "knowledge"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.faq_constellation",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.faq_constellation/template.yaml",
+      "title": "Faq Constellation",
+      "description": "Clusters common questions, answers, source links, ownership, and update priority.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "constellation",
+        "faq",
+        "graph",
+        "knowledge"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.graph",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.graph/template.yaml",
+      "title": "Graph",
+      "description": "Connects concepts, facts, owners, references, and unresolved gaps in a knowledge graph.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "knowledge_graph",
+      "tags": [
+        "graph",
+        "knowledge",
+        "knowledge_graph"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.research_timeline",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.research_timeline/template.yaml",
+      "title": "Research Timeline",
+      "description": "Orders research findings, source reviews, decisions, and follow up questions over time.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "timeline_tunnel",
+      "tags": [
+        "knowledge",
+        "research",
+        "timeline",
+        "timeline_tunnel"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.semantic_search_landscape",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.semantic_search_landscape/template.yaml",
+      "title": "Semantic Search Landscape",
+      "description": "Plots search results by relevance, source type, confidence, and topic cluster.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "knowledge",
+        "landscape",
+        "matrix",
+        "search",
+        "semantic",
+        "terrain_heatmap"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.source_gap_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.source_gap_map/template.yaml",
+      "title": "Source Gap Map",
+      "description": "Shows claims with missing, weak, refuting, or outdated sources and their confidence impact.",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "evidence",
+        "gap",
+        "heatmap",
+        "knowledge",
+        "map",
+        "source"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.source_reliability_matrix",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.source_reliability_matrix/template.yaml",
+      "title": "Source Reliability Matrix",
+      "description": "Compares sources by reliability, recency, independence, bias, and coverage.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "knowledge",
+        "matrix",
+        "matrix_board",
+        "reliability",
+        "source"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.spec_compliance_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.spec_compliance_map/template.yaml",
+      "title": "Spec Compliance Map",
+      "description": "Connects spec requirements, implementation evidence, tests, exceptions, and compliance gaps.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "compliance",
+        "graph",
+        "knowledge",
+        "map",
+        "matrix_board",
+        "spec"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.topic_landscape",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.topic_landscape/template.yaml",
+      "title": "Topic Landscape",
+      "description": "Places topics by maturity, evidence density, ownership, and open questions.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "knowledge",
+        "landscape",
+        "matrix",
+        "terrain_heatmap",
+        "topic"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "knowledge.unknowns_map",
+      "version": "1.0.0",
+      "category": "knowledge",
+      "path": "knowledge.unknowns_map/template.yaml",
+      "title": "Unknowns Map",
+      "description": "Tracks known unknowns by impact, owner, evidence needed, and decision deadline.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "knowledge",
+        "map",
+        "matrix",
+        "matrix_board",
+        "unknowns"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.approval_workflow",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.approval_workflow/template.yaml",
+      "title": "Approval Workflow",
+      "description": "Tracks approval requests, reviewers, policy gates, blocked actions, and final authorization.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "permission_gate",
+      "tags": [
+        "approval",
+        "graph_events",
+        "permission_gate",
+        "planning",
+        "workflow"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.automation_flow",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.automation_flow/template.yaml",
+      "title": "Automation Flow",
+      "description": "Maps automated steps, triggers, inputs, outputs, owners, and verification checks.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "automation",
+        "flow",
+        "graph",
+        "pipeline_flow",
+        "planning"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.automation_run_replay",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.automation_run_replay/template.yaml",
+      "title": "Automation Run Replay",
+      "description": "Replays an automation run through triggers, actions, retries, failures, and completion.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "replay_stage",
+      "tags": [
+        "automation",
+        "graph_events",
+        "planning",
+        "replay",
+        "replay_stage",
+        "run"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.checklist_progress_orbit",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.checklist_progress_orbit/template.yaml",
+      "title": "Checklist Progress Orbit",
+      "description": "Shows checklist items orbiting a goal by owner, completion state, and blocking dependency.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "orbit_system",
+      "tags": [
+        "checklist",
+        "graph",
+        "orbit",
+        "orbit_system",
+        "planning",
+        "progress"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.critical_path_view",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.critical_path_view/template.yaml",
+      "title": "Critical Path View",
+      "description": "Highlights the shortest path through required fixes, tests, documentation, commit, and push.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "dag",
+      "tags": [
+        "critical",
+        "dag",
+        "graph",
+        "path",
+        "planning",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.decision_tree",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.decision_tree/template.yaml",
+      "title": "Decision Tree",
+      "description": "Branches choices, criteria, consequences, owners, and fallback paths for a plan.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "decision",
+        "graph",
+        "planning",
+        "radial_tree",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.dependency_radar",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.dependency_radar/template.yaml",
+      "title": "Dependency Radar",
+      "description": "Plots dependencies by urgency, confidence, owner, risk, and schedule impact.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "dependency",
+        "graph",
+        "planning",
+        "radar",
+        "radar_sphere"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.gantt_tunnel",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.gantt_tunnel/template.yaml",
+      "title": "Gantt Tunnel",
+      "description": "Shows scheduled tasks, milestones, dependencies, slippage, and critical windows.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "gantt",
+      "tags": [
+        "gantt",
+        "planning",
+        "timeline",
+        "tunnel"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.goal_breakdown_tree",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.goal_breakdown_tree/template.yaml",
+      "title": "Goal Breakdown Tree",
+      "description": "Breaks a goal into deliverables, tasks, owners, validation, and dependency branches.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "breakdown",
+        "goal",
+        "graph",
+        "planning",
+        "radial_tree",
+        "tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.handoff_map",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.handoff_map/template.yaml",
+      "title": "Handoff Map",
+      "description": "Connects work products, owners, acceptance criteria, timing, and receiving teams.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "graph_events",
+        "handoff",
+        "map",
+        "pipeline_flow",
+        "planning"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.kanban_3d",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.kanban_3d/template.yaml",
+      "title": "Kanban 3D",
+      "description": "Places cards by status, priority, owner, age, and blocked or ready state.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "kanban",
+      "tags": [
+        "3d",
+        "kanban",
+        "matrix",
+        "planning"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.milestone_road",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.milestone_road/template.yaml",
+      "title": "Milestone Road",
+      "description": "Orders milestones along a delivery path with entry criteria, risks, and completion evidence.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "roadmap",
+      "tags": [
+        "milestone",
+        "planning",
+        "road",
+        "roadmap",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.parallel_sessions_map",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.parallel_sessions_map/template.yaml",
+      "title": "Parallel Sessions Map",
+      "description": "Shows parallel work sessions, shared files, dependencies, conflicts, and merge points.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "swimlane_timeline",
+      "tags": [
+        "graph_events",
+        "map",
+        "parallel",
+        "planning",
+        "sessions",
+        "swimlane_timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.plan_dag",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.plan_dag/template.yaml",
+      "title": "Plan Dag",
+      "description": "Arranges implementation tasks, dependencies, verification gates, and publication into a directed plan.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "dag",
+      "tags": [
+        "dag",
+        "graph",
+        "plan",
+        "planning"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.queue_scheduler_view",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.queue_scheduler_view/template.yaml",
+      "title": "Queue Scheduler View",
+      "description": "Organizes queued work by priority, SLA, owner, runtime window, and dispatch state.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "kanban",
+      "tags": [
+        "kanban",
+        "matrix",
+        "planning",
+        "queue",
+        "scheduler",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.resource_allocation_board",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.resource_allocation_board/template.yaml",
+      "title": "Resource Allocation Board",
+      "description": "Balances people, systems, budget, and time across workstreams and delivery risk.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "allocation",
+        "board",
+        "matrix",
+        "matrix_board",
+        "planning",
+        "resource"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.risk_burndown",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.risk_burndown/template.yaml",
+      "title": "Risk Burndown",
+      "description": "Tracks risk reduction over time with mitigations, owners, review dates, and residual exposure.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "line",
+      "tags": [
+        "burndown",
+        "line",
+        "planning",
+        "risk",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.runbook_execution_map",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.runbook_execution_map/template.yaml",
+      "title": "Runbook Execution Map",
+      "description": "Steps through runbook actions, operators, checks, failure branches, and completion evidence.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "step_ladder",
+      "tags": [
+        "execution",
+        "graph_events",
+        "map",
+        "planning",
+        "runbook",
+        "step_ladder"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.task_failure_fork",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.task_failure_fork/template.yaml",
+      "title": "Task Failure Fork",
+      "description": "Branches failed tasks into symptoms, retry choices, owner decisions, and recovery path.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "failure",
+        "fork",
+        "graph_events",
+        "planning",
+        "radial_tree",
+        "task"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "planning.task_swarm",
+      "version": "1.0.0",
+      "category": "planning",
+      "path": "planning.task_swarm/template.yaml",
+      "title": "Task Swarm",
+      "description": "Coordinates many tasks by owner, dependency, status, collision risk, and convergence point.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "constellation",
+        "graph_events",
+        "planning",
+        "swarm",
+        "task"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.capacity_planning_map",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.capacity_planning_map/template.yaml",
+      "title": "Capacity Planning Map",
+      "description": "Compares capacity demand, staffing, throughput, bottlenecks, and forecast risk.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "business",
+        "capacity",
+        "control_room",
+        "map",
+        "matrix",
+        "planning"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.churn_signal_radar",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.churn_signal_radar/template.yaml",
+      "title": "Churn Signal Radar",
+      "description": "Plots customer churn signals by account health, usage drop, support history, and renewal risk.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "radar_sphere",
+      "tags": [
+        "business",
+        "churn",
+        "matrix",
+        "radar",
+        "radar_sphere",
+        "signal"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.cohort_timeline",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.cohort_timeline/template.yaml",
+      "title": "Cohort Timeline",
+      "description": "Tracks customer cohorts through activation, retention, expansion, support, and churn events.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "swimlane_timeline",
+      "tags": [
+        "business",
+        "cohort",
+        "swimlane_timeline",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.cost_cloud",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.cost_cloud/template.yaml",
+      "title": "Cost Cloud",
+      "description": "Groups infrastructure, vendor, team, and feature costs with ownership and savings targets.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "business",
+        "cloud",
+        "constellation",
+        "cost",
+        "graph"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.customer_journey_map",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.customer_journey_map/template.yaml",
+      "title": "Customer Journey Map",
+      "description": "Orders customer touchpoints, friction, support moments, conversion points, and retention signals.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "journey",
+      "tags": [
+        "business",
+        "customer",
+        "journey",
+        "map",
+        "timeline"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.customer_segment_constellation",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.customer_segment_constellation/template.yaml",
+      "title": "Customer Segment Constellation",
+      "description": "Clusters customer segments by needs, revenue, adoption, support load, and opportunity.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "business",
+        "constellation",
+        "customer",
+        "graph",
+        "segment"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.experiment_result_view",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.experiment_result_view/template.yaml",
+      "title": "Experiment Result View",
+      "description": "Compares experiment variants by metric lift, guardrails, confidence, and rollout decision.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "business",
+        "diff_split_view",
+        "experiment",
+        "matrix",
+        "result",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.feature_adoption_map",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.feature_adoption_map/template.yaml",
+      "title": "Feature Adoption Map",
+      "description": "Plots feature usage by segment, account tier, activation depth, and expansion signal.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "adoption",
+        "business",
+        "feature",
+        "heatmap",
+        "map",
+        "matrix"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.funnel_flow_3d",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.funnel_flow_3d/template.yaml",
+      "title": "Funnel Flow 3D",
+      "description": "Tracks prospects through funnel stages, conversion leaks, owners, and recovery actions.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "funnel",
+      "tags": [
+        "3d",
+        "business",
+        "flow",
+        "funnel",
+        "graph"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.kpi_control_room",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.kpi_control_room/template.yaml",
+      "title": "KPI Control Room",
+      "description": "Tracks product and support KPIs including active users, conversion, revenue, support tickets, SLA, and churn risk.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "business",
+        "control",
+        "control_room",
+        "kpi",
+        "matrix",
+        "room"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.market_map",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.market_map/template.yaml",
+      "title": "Market Map",
+      "description": "Places market segments by size, growth, competition, fit, and entry confidence.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "business",
+        "map",
+        "market",
+        "matrix",
+        "terrain_heatmap"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.opportunity_landscape",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.opportunity_landscape/template.yaml",
+      "title": "Opportunity Landscape",
+      "description": "Plots opportunities by value, feasibility, strategic fit, confidence, and timing.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "terrain_heatmap",
+      "tags": [
+        "business",
+        "landscape",
+        "matrix",
+        "opportunity",
+        "terrain_heatmap"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.ops_shift_overview",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.ops_shift_overview/template.yaml",
+      "title": "Ops Shift Overview",
+      "description": "Summarizes shift workload, incidents, handoffs, queue health, and pending escalations.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "business",
+        "control_room",
+        "matrix",
+        "ops",
+        "overview",
+        "shift"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.portfolio_matrix",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.portfolio_matrix/template.yaml",
+      "title": "Portfolio Matrix",
+      "description": "Compares initiatives by value, cost, risk, strategic fit, and current investment state.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "business",
+        "matrix",
+        "matrix_board",
+        "portfolio"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.revenue_stream_map",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.revenue_stream_map/template.yaml",
+      "title": "Revenue Stream Map",
+      "description": "Traces revenue from customer segments through products, channels, renewals, and leakage.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "sankey_3d",
+      "tags": [
+        "business",
+        "graph",
+        "map",
+        "revenue",
+        "sankey_3d",
+        "stream"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.risk_matrix_3d",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.risk_matrix_3d/template.yaml",
+      "title": "Risk Matrix 3D",
+      "description": "Plots business risks by likelihood, impact, velocity, mitigation owner, and residual exposure.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "3d",
+        "business",
+        "matrix",
+        "matrix_board",
+        "risk"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.sales_pipeline_3d",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.sales_pipeline_3d/template.yaml",
+      "title": "Sales Pipeline 3D",
+      "description": "Tracks opportunities from lead through qualification, proposal, negotiation, and close.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "3d",
+        "business",
+        "graph",
+        "pipeline",
+        "pipeline_flow",
+        "sales"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.sla_dashboard",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.sla_dashboard/template.yaml",
+      "title": "SLA Dashboard",
+      "description": "Shows SLA targets, live attainment, breach risk, support queue pressure, and ownership.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "business",
+        "control_room",
+        "dashboard",
+        "matrix",
+        "sla"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.support_ticket_heatmap",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.support_ticket_heatmap/template.yaml",
+      "title": "Support Ticket Heatmap",
+      "description": "Plots support tickets by product area, severity, age, customer tier, and backlog pressure.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "heatmap",
+      "tags": [
+        "business",
+        "heatmap",
+        "matrix",
+        "support",
+        "ticket"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "business.team_load_balance",
+      "version": "1.0.0",
+      "category": "business",
+      "path": "business.team_load_balance/template.yaml",
+      "title": "Team Load Balance",
+      "description": "Compares team load, capacity, focus area, risk, and rebalancing options.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "balance",
+        "business",
+        "load",
+        "matrix",
+        "matrix_board",
+        "team"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.api_lifecycle_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.api_lifecycle_view/template.yaml",
+      "title": "API Lifecycle View",
+      "description": "Teaches how an API moves from design through implementation, versioning, deprecation, and retirement.",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "api",
+        "education",
+        "lifecycle",
+        "pipeline_flow",
+        "timeline",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.auth_flow_animation",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.auth_flow_animation/template.yaml",
+      "title": "Auth Flow Animation",
+      "description": "Teaches an authentication flow from browser login through identity provider, token exchange, session cookie, and protected API.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "animation",
+        "auth",
+        "education",
+        "flow",
+        "graph_events",
+        "pipeline_flow"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.cache_behavior_sim",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.cache_behavior_sim/template.yaml",
+      "title": "Cache Behavior Sim",
+      "description": "Demonstrates cache hits, misses, invalidation, refresh, stampede risk, and fallback behavior.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "state_machine",
+      "tags": [
+        "behavior",
+        "cache",
+        "education",
+        "graph_events",
+        "sim",
+        "state_machine"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.compiler_pipeline_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.compiler_pipeline_view/template.yaml",
+      "title": "Compiler Pipeline View",
+      "description": "Explains source parsing, analysis, optimization, code generation, and diagnostics in a compiler.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "compiler",
+        "education",
+        "graph",
+        "pipeline",
+        "pipeline_flow",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.data_lifecycle_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.data_lifecycle_view/template.yaml",
+      "title": "Data Lifecycle View",
+      "description": "Shows data creation, validation, storage, transformation, retention, and deletion stages.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "data",
+        "education",
+        "graph_events",
+        "lifecycle",
+        "pipeline_flow",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.database_query_plan",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.database_query_plan/template.yaml",
+      "title": "Database Query Plan",
+      "description": "Breaks a query plan into scans, joins, filters, indexes, cost, and execution order.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "database",
+        "education",
+        "graph",
+        "plan",
+        "query",
+        "radial_tree"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.distributed_consensus_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.distributed_consensus_view/template.yaml",
+      "title": "Distributed Consensus View",
+      "description": "Explains proposals, votes, quorum, leader changes, replication lag, and committed state.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "constellation",
+      "tags": [
+        "consensus",
+        "constellation",
+        "distributed",
+        "education",
+        "graph_events",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.event_sourcing_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.event_sourcing_view/template.yaml",
+      "title": "Event Sourcing View",
+      "description": "Shows commands, events, projections, replay, snapshots, and consistency checks.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "timeline_tunnel",
+      "tags": [
+        "education",
+        "event",
+        "graph_events",
+        "sourcing",
+        "timeline_tunnel",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.exploded_architecture_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.exploded_architecture_view/template.yaml",
+      "title": "Exploded Architecture View",
+      "description": "Separates an architecture into layers, responsibilities, data paths, and dependency rules.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "architecture",
+        "education",
+        "exploded",
+        "graph",
+        "layered_stack",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.memory_layout_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.memory_layout_view/template.yaml",
+      "title": "Memory Layout View",
+      "description": "Shows stack, heap, static data, pointers, allocation lifetime, and ownership boundaries.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "education",
+        "graph",
+        "layered_stack",
+        "layout",
+        "memory",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.migration_strategy_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.migration_strategy_view/template.yaml",
+      "title": "Migration Strategy View",
+      "description": "Explains phased migration from legacy path through dual write, validation, cutover, and cleanup.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "diff_split_view",
+      "tags": [
+        "diff_split_view",
+        "education",
+        "graph_events",
+        "migration",
+        "strategy",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.ml_pipeline_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.ml_pipeline_view/template.yaml",
+      "title": "ML Pipeline View",
+      "description": "Maps data ingestion, feature work, training, evaluation, deployment, and monitoring.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "education",
+        "graph",
+        "ml",
+        "pipeline",
+        "pipeline_flow",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.network_packet_path",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.network_packet_path/template.yaml",
+      "title": "Network Packet Path",
+      "description": "Follows packets through client, DNS, gateway, firewall, service, and response path.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "education",
+        "graph_events",
+        "network",
+        "packet",
+        "path",
+        "pipeline_flow"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.payment_flow_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.payment_flow_view/template.yaml",
+      "title": "Payment Flow View",
+      "description": "Explains checkout, authorization, capture, settlement, refund, and failure handling.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "education",
+        "flow",
+        "graph_events",
+        "payment",
+        "pipeline_flow",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.permission_model_view",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.permission_model_view/template.yaml",
+      "title": "Permission Model View",
+      "description": "Compares roles, resources, allowed actions, denied actions, and policy inheritance.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "education",
+        "matrix",
+        "matrix_board",
+        "model",
+        "permission",
+        "view"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.process_animation",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.process_animation/template.yaml",
+      "title": "Process Animation",
+      "description": "Demonstrates process start, scheduling, IO waits, signals, completion, and failure transitions.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "animation",
+        "education",
+        "flow_particles",
+        "graph_events",
+        "process"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.queue_processing_sim",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.queue_processing_sim/template.yaml",
+      "title": "Queue Processing Sim",
+      "description": "Shows enqueue, dispatch, worker execution, retry, dead letter, and completion behavior.",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "education",
+        "flow_particles",
+        "graph_events",
+        "processing",
+        "queue",
+        "sim"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.security_threat_model",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.security_threat_model/template.yaml",
+      "title": "Security Threat Model",
+      "description": "Maps assets, trust boundaries, attack paths, controls, and residual risks.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "network_boundary_map",
+      "tags": [
+        "education",
+        "graph",
+        "model",
+        "network_boundary_map",
+        "security",
+        "threat"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.state_transition_tutorial",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.state_transition_tutorial/template.yaml",
+      "title": "State Transition Tutorial",
+      "description": "Teaches states, events, guards, allowed transitions, and terminal outcomes with examples.",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "state_machine",
+      "tags": [
+        "education",
+        "graph",
+        "state",
+        "state_machine",
+        "transition",
+        "tutorial"
+      ],
+      "aliases": []
+    },
+    {
+      "id": "education.tradeoff_stage",
+      "version": "1.0.0",
+      "category": "education",
+      "path": "education.tradeoff_stage/template.yaml",
+      "title": "Tradeoff Stage",
+      "description": "Compares design tradeoffs by learning goal, benefit, cost, risk, and when to choose each option.",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "education",
+        "matrix",
+        "matrix_board",
+        "stage",
+        "tradeoff"
+      ],
+      "aliases": []
+    }
+  ]
+}

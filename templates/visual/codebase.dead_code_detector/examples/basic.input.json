@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "codebase-dead-code-detector-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "codebase-dead-code-detector-node-2",
+      "weight": 2
+    },
+    {
+      "from": "codebase-dead-code-detector-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "codebase-dead-code-detector-node-3",
+      "weight": 3
+    },
+    {
+      "from": "codebase-dead-code-detector-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "codebase-dead-code-detector-node-4",
+      "weight": 2
+    },
+    {
+      "from": "codebase-dead-code-detector-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "codebase-dead-code-detector-node-5",
+      "weight": 4
+    },
+    {
+      "from": "codebase-dead-code-detector-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "codebase-dead-code-detector-node-6",
+      "weight": 2
+    },
+    {
+      "from": "codebase-dead-code-detector-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "codebase-dead-code-detector-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "source",
+      "id": "codebase-dead-code-detector-node-1",
+      "kind": "dead",
+      "label": "Dead Code Intake",
+      "metadata": {
+        "detail": "Dead Code Detector signal 1",
+        "owner": "source",
+        "template_id": "codebase.dead_code_detector"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "test",
+      "id": "codebase-dead-code-detector-node-2",
+      "kind": "code",
+      "label": "Code Detector Core",
+      "metadata": {
+        "detail": "Dead Code Detector signal 2",
+        "owner": "test",
+        "template_id": "codebase.dead_code_detector"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "release",
+      "id": "codebase-dead-code-detector-node-3",
+      "kind": "detector",
+      "label": "Detector Dead Policy",
+      "metadata": {
+        "detail": "Dead Code Detector signal 3",
+        "owner": "release",
+        "template_id": "codebase.dead_code_detector"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "source",
+      "id": "codebase-dead-code-detector-node-4",
+      "kind": "source",
+      "label": "Dead Code Execution",
+      "metadata": {
+        "detail": "Dead Code Detector signal 4",
+        "owner": "source",
+        "template_id": "codebase.dead_code_detector"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "test",
+      "id": "codebase-dead-code-detector-node-5",
+      "kind": "dead",
+      "label": "Code Detector Risk",
+      "metadata": {
+        "detail": "Dead Code Detector signal 5",
+        "owner": "test",
+        "template_id": "codebase.dead_code_detector"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "release",
+      "id": "codebase-dead-code-detector-node-6",
+      "kind": "code",
+      "label": "Detector Dead Outcome",
+      "metadata": {
+        "detail": "Dead Code Detector signal 6",
+        "owner": "release",
+        "template_id": "codebase.dead_code_detector"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Dead Code Detector: Groups unused symbols, unreachable modules, stale entrypoints, and cleanup confidence"
+}

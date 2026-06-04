@@ -1,0 +1,168 @@
+{
+  "items": [
+    {
+      "group": "planning",
+      "id": "project-sprint-board-3d-item-1",
+      "kind": "sprint",
+      "label": "Sprint Board North",
+      "metadata": {
+        "note": "Sprint Board 3D matrix cell 1",
+        "quadrant": "q1",
+        "template_id": "project.sprint_board_3d"
+      },
+      "metrics": {
+        "confidence": 0.55,
+        "impact": 0.4
+      },
+      "status": "ok",
+      "x": 0.17,
+      "y": 0.29
+    },
+    {
+      "group": "review",
+      "id": "project-sprint-board-3d-item-2",
+      "kind": "board",
+      "label": "Board 3d East",
+      "metadata": {
+        "note": "Sprint Board 3D matrix cell 2",
+        "quadrant": "q2",
+        "template_id": "project.sprint_board_3d"
+      },
+      "metrics": {
+        "confidence": 0.59,
+        "impact": 0.46
+      },
+      "status": "warning",
+      "x": 0.4,
+      "y": 0.6
+    },
+    {
+      "group": "delivery",
+      "id": "project-sprint-board-3d-item-3",
+      "kind": "3d",
+      "label": "3d Sprint South",
+      "metadata": {
+        "note": "Sprint Board 3D matrix cell 3",
+        "quadrant": "q3",
+        "template_id": "project.sprint_board_3d"
+      },
+      "metrics": {
+        "confidence": 0.63,
+        "impact": 0.52
+      },
+      "status": "success",
+      "x": 0.63,
+      "y": 0.02
+    },
+    {
+      "group": "planning",
+      "id": "project-sprint-board-3d-item-4",
+      "kind": "planning",
+      "label": "Sprint Board West",
+      "metadata": {
+        "note": "Sprint Board 3D matrix cell 4",
+        "quadrant": "q4",
+        "template_id": "project.sprint_board_3d"
+      },
+      "metrics": {
+        "confidence": 0.67,
+        "impact": 0.58
+      },
+      "status": "blocked",
+      "x": 0.86,
+      "y": 0.33
+    },
+    {
+      "group": "review",
+      "id": "project-sprint-board-3d-item-5",
+      "kind": "sprint",
+      "label": "Board 3d Signal",
+      "metadata": {
+        "note": "Sprint Board 3D matrix cell 5",
+        "quadrant": "q1",
+        "template_id": "project.sprint_board_3d"
+      },
+      "metrics": {
+        "confidence": 0.71,
+        "impact": 0.64
+      },
+      "status": "error",
+      "x": 0.18,
+      "y": 0.64
+    },
+    {
+      "group": "delivery",
+      "id": "project-sprint-board-3d-item-6",
+      "kind": "board",
+      "label": "3d Sprint Review",
+      "metadata": {
+        "note": "Sprint Board 3D matrix cell 6",
+        "quadrant": "q2",
+        "template_id": "project.sprint_board_3d"
+      },
+      "metrics": {
+        "confidence": 0.75,
+        "impact": 0.7
+      },
+      "status": "running",
+      "x": 0.41,
+      "y": 0.06
+    },
+    {
+      "group": "planning",
+      "id": "project-sprint-board-3d-item-7",
+      "kind": "3d",
+      "label": "Sprint Board Ready",
+      "metadata": {
+        "note": "Sprint Board 3D matrix cell 7",
+        "quadrant": "q3",
+        "template_id": "project.sprint_board_3d"
+      },
+      "metrics": {
+        "confidence": 0.79,
+        "impact": 0.76
+      },
+      "status": "idle",
+      "x": 0.64,
+      "y": 0.37
+    },
+    {
+      "group": "review",
+      "id": "project-sprint-board-3d-item-8",
+      "kind": "planning",
+      "label": "Board 3d Watch",
+      "metadata": {
+        "note": "Sprint Board 3D matrix cell 8",
+        "quadrant": "q4",
+        "template_id": "project.sprint_board_3d"
+      },
+      "metrics": {
+        "confidence": 0.83,
+        "impact": 0.82
+      },
+      "status": "ok",
+      "x": 0.87,
+      "y": 0.68
+    },
+    {
+      "group": "delivery",
+      "id": "project-sprint-board-3d-item-9",
+      "kind": "sprint",
+      "label": "3d Sprint Owner",
+      "metadata": {
+        "note": "Sprint Board 3D matrix cell 9",
+        "quadrant": "q1",
+        "template_id": "project.sprint_board_3d"
+      },
+      "metrics": {
+        "confidence": 0.87,
+        "impact": 0.88
+      },
+      "status": "warning",
+      "x": 0.19,
+      "y": 0.1
+    }
+  ],
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Sprint Board 3D: Places sprint work by status, owner, priority, capacity, and blocked state"
+}

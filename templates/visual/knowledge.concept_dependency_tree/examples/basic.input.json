@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "knowledge-concept-dependency-tree-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "knowledge-concept-dependency-tree-node-2",
+      "weight": 2
+    },
+    {
+      "from": "knowledge-concept-dependency-tree-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "knowledge-concept-dependency-tree-node-3",
+      "weight": 3
+    },
+    {
+      "from": "knowledge-concept-dependency-tree-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "knowledge-concept-dependency-tree-node-4",
+      "weight": 2
+    },
+    {
+      "from": "knowledge-concept-dependency-tree-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "knowledge-concept-dependency-tree-node-5",
+      "weight": 4
+    },
+    {
+      "from": "knowledge-concept-dependency-tree-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "knowledge-concept-dependency-tree-node-6",
+      "weight": 2
+    },
+    {
+      "from": "knowledge-concept-dependency-tree-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "knowledge-concept-dependency-tree-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "claim",
+      "id": "knowledge-concept-dependency-tree-node-1",
+      "kind": "concept",
+      "label": "Concept Dependency Intake",
+      "metadata": {
+        "detail": "Concept Dependency Tree signal 1",
+        "owner": "claim",
+        "template_id": "knowledge.concept_dependency_tree"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "source",
+      "id": "knowledge-concept-dependency-tree-node-2",
+      "kind": "dependency",
+      "label": "Dependency Tree Core",
+      "metadata": {
+        "detail": "Concept Dependency Tree signal 2",
+        "owner": "source",
+        "template_id": "knowledge.concept_dependency_tree"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "decision",
+      "id": "knowledge-concept-dependency-tree-node-3",
+      "kind": "tree",
+      "label": "Tree Concept Policy",
+      "metadata": {
+        "detail": "Concept Dependency Tree signal 3",
+        "owner": "decision",
+        "template_id": "knowledge.concept_dependency_tree"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "claim",
+      "id": "knowledge-concept-dependency-tree-node-4",
+      "kind": "claim",
+      "label": "Concept Dependency Execution",
+      "metadata": {
+        "detail": "Concept Dependency Tree signal 4",
+        "owner": "claim",
+        "template_id": "knowledge.concept_dependency_tree"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "source",
+      "id": "knowledge-concept-dependency-tree-node-5",
+      "kind": "concept",
+      "label": "Dependency Tree Risk",
+      "metadata": {
+        "detail": "Concept Dependency Tree signal 5",
+        "owner": "source",
+        "template_id": "knowledge.concept_dependency_tree"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "decision",
+      "id": "knowledge-concept-dependency-tree-node-6",
+      "kind": "dependency",
+      "label": "Tree Concept Outcome",
+      "metadata": {
+        "detail": "Concept Dependency Tree signal 6",
+        "owner": "decision",
+        "template_id": "knowledge.concept_dependency_tree"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Concept Dependency Tree: Shows prerequisite concepts, dependent ideas, learning order, and weak understanding areas"
+}

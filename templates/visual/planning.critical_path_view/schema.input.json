@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "node-01",
+        "kind": "depends_on",
+        "label": "depends on",
+        "to": "node-02",
+        "weight": 1
+      },
+      {
+        "from": "node-02",
+        "kind": "emits",
+        "label": "emits",
+        "to": "node-03",
+        "weight": 2
+      },
+      {
+        "from": "node-03",
+        "kind": "validates",
+        "label": "validates",
+        "to": "node-04",
+        "weight": 3
+      },
+      {
+        "from": "node-04",
+        "kind": "hands_off",
+        "label": "hands off",
+        "to": "node-05",
+        "weight": 4
+      },
+      {
+        "from": "node-05",
+        "kind": "reports",
+        "label": "reports",
+        "to": "node-06",
+        "weight": 5
+      },
+      {
+        "from": "node-02",
+        "kind": "observes",
+        "label": "observes downstream",
+        "to": "node-06",
+        "weight": 2
+      }
+    ],
+    "nodes": [
+      {
+        "group": "metadata",
+        "id": "node-01",
+        "kind": "registry",
+        "label": "Registry expected ready",
+        "metadata": {
+          "owner": "metadata",
+          "review_date": "2026-06-03",
+          "scenario": "Critical Path To PR Update"
+        },
+        "metrics": {
+          "confidence": 0.68,
+          "risk": 0.48
+        },
+        "status": "running"
+      },
+      {
+        "group": "alias",
+        "id": "node-02",
+        "kind": "alias",
+        "label": "Alias contract passing",
+        "metadata": {
+          "owner": "alias",
+          "review_date": "2026-06-03",
+          "scenario": "Critical Path To PR Update"
+        },
+        "metrics": {
+          "confidence": 0.72,
+          "risk": 0.61
+        },
+        "status": "success"
+      },
+      {
+        "group": "build",
+        "id": "node-03",
+        "kind": "build",
+        "label": "Build parser passing",
+        "metadata": {
+          "owner": "build",
+          "review_date": "2026-06-03",
+          "scenario": "Critical Path To PR Update"
+        },
+        "metrics": {
+          "confidence": 0.76,
+          "risk": 0.74
+        },
+        "status": "warning"
+      },
+      {
+        "group": "quality",
+        "id": "node-04",
+        "kind": "semantic",
+        "label": "Semantic checks passing",
+        "metadata": {
+          "owner": "quality",
+          "review_date": "2026-06-03",
+          "scenario": "Critical Path To PR Update"
+        },
+        "metrics": {
+          "confidence": 0.8,
+          "risk": 0.22
+        },
+        "status": "ok"
+      },
+      {
+        "group": "smoke",
+        "id": "node-05",
+        "kind": "smoke",
+        "label": "Smoke script passing",
+        "metadata": {
+          "owner": "smoke",
+          "review_date": "2026-06-03",
+          "scenario": "Critical Path To PR Update"
+        },
+        "metrics": {
+          "confidence": 0.84,
+          "risk": 0.35
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "publish",
+        "id": "node-06",
+        "kind": "push",
+        "label": "Push to PR branch",
+        "metadata": {
+          "owner": "publish",
+          "review_date": "2026-06-03",
+          "scenario": "Critical Path To PR Update"
+        },
+        "metrics": {
+          "confidence": 0.88,
+          "risk": 0.48
+        },
+        "status": "error"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Critical Path To PR Update"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "planning.critical_path_view"
+}

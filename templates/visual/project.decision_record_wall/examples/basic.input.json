@@ -1,0 +1,100 @@
+{
+  "claims": [
+    {
+      "confidence": 0.82,
+      "id": "project-decision-record-wall-claim-1",
+      "status": "supported",
+      "text": "Decision Record is supported by current artifacts"
+    },
+    {
+      "confidence": 0.61,
+      "id": "project-decision-record-wall-claim-2",
+      "status": "warning",
+      "text": "Record Wall has a known gap"
+    },
+    {
+      "confidence": 0.44,
+      "id": "project-decision-record-wall-claim-3",
+      "status": "refuted",
+      "text": "Wall Decision conflicts with stale assumptions"
+    },
+    {
+      "confidence": 0.76,
+      "id": "project-decision-record-wall-claim-4",
+      "status": "success",
+      "text": "Decision Record is ready for review"
+    }
+  ],
+  "links": [
+    {
+      "claim_id": "project-decision-record-wall-claim-1",
+      "relation": "supports",
+      "source_id": "project-decision-record-wall-source-1",
+      "weight": 0.9
+    },
+    {
+      "claim_id": "project-decision-record-wall-claim-1",
+      "relation": "mentions",
+      "source_id": "project-decision-record-wall-source-2",
+      "weight": 0.5
+    },
+    {
+      "claim_id": "project-decision-record-wall-claim-2",
+      "relation": "supports",
+      "source_id": "project-decision-record-wall-source-3",
+      "weight": 0.6
+    },
+    {
+      "claim_id": "project-decision-record-wall-claim-3",
+      "relation": "refutes",
+      "source_id": "project-decision-record-wall-source-4",
+      "weight": 0.7
+    },
+    {
+      "claim_id": "project-decision-record-wall-claim-4",
+      "relation": "supports",
+      "source_id": "project-decision-record-wall-source-5",
+      "weight": 0.8
+    },
+    {
+      "claim_id": "project-decision-record-wall-claim-2",
+      "relation": "mentions",
+      "source_id": "project-decision-record-wall-source-5",
+      "weight": 0.4
+    }
+  ],
+  "schema": "efp.visual.input.evidence.v1",
+  "sources": [
+    {
+      "id": "project-decision-record-wall-source-1",
+      "kind": "document",
+      "reliability": 0.87,
+      "title": "Decision Record design note"
+    },
+    {
+      "id": "project-decision-record-wall-source-2",
+      "kind": "log",
+      "reliability": 0.72,
+      "title": "Record Wall run log"
+    },
+    {
+      "id": "project-decision-record-wall-source-3",
+      "kind": "review",
+      "reliability": 0.66,
+      "title": "Wall Decision review thread"
+    },
+    {
+      "id": "project-decision-record-wall-source-4",
+      "kind": "metric",
+      "reliability": 0.79,
+      "title": "Decision Record benchmark"
+    },
+    {
+      "id": "project-decision-record-wall-source-5",
+      "kind": "record",
+      "reliability": 0.91,
+      "title": "Record Wall decision record"
+    }
+  ],
+  "title": "Decision Record Wall: Displays decision records with status, rationale, owners, supporting evidence, and superseded notes"
+}

@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "debug-retry-storm-map-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "debug-retry-storm-map-node-2",
+      "weight": 2
+    },
+    {
+      "from": "debug-retry-storm-map-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "debug-retry-storm-map-node-3",
+      "weight": 3
+    },
+    {
+      "from": "debug-retry-storm-map-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "debug-retry-storm-map-node-4",
+      "weight": 2
+    },
+    {
+      "from": "debug-retry-storm-map-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "debug-retry-storm-map-node-5",
+      "weight": 4
+    },
+    {
+      "from": "debug-retry-storm-map-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "debug-retry-storm-map-node-6",
+      "weight": 2
+    },
+    {
+      "from": "debug-retry-storm-map-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "debug-retry-storm-map-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "debug-retry-storm-map-event-1",
+      "kind": "start",
+      "label": "Retry Storm Map Opened",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "debug.retry_storm_map"
+      },
+      "node_id": "debug-retry-storm-map-node-1",
+      "status": "running",
+      "summary": "Retry Storm Map event 1 references Retry Storm Intake.",
+      "time": "2026-06-03T12:22:00Z"
+    },
+    {
+      "id": "debug-retry-storm-map-event-2",
+      "kind": "tool",
+      "label": "Retry Storm Map Triaged",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "debug.retry_storm_map"
+      },
+      "node_id": "debug-retry-storm-map-node-2",
+      "status": "success",
+      "summary": "Retry Storm Map event 2 references Storm Map Core.",
+      "time": "2026-06-03T12:33:00Z"
+    },
+    {
+      "id": "debug-retry-storm-map-event-3",
+      "kind": "checkpoint",
+      "label": "Retry Storm Map Mapped",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "debug.retry_storm_map"
+      },
+      "node_id": "debug-retry-storm-map-node-3",
+      "status": "warning",
+      "summary": "Retry Storm Map event 3 references Map Retry Policy.",
+      "time": "2026-06-03T12:44:00Z"
+    },
+    {
+      "id": "debug-retry-storm-map-event-4",
+      "kind": "decision",
+      "label": "Retry Storm Map Acted",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "debug.retry_storm_map"
+      },
+      "node_id": "debug-retry-storm-map-node-4",
+      "status": "running",
+      "summary": "Retry Storm Map event 4 references Retry Storm Execution.",
+      "time": "2026-06-03T12:55:00Z"
+    },
+    {
+      "id": "debug-retry-storm-map-event-5",
+      "kind": "recovery",
+      "label": "Retry Storm Map Checked",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "debug.retry_storm_map"
+      },
+      "node_id": "debug-retry-storm-map-node-5",
+      "status": "error",
+      "summary": "Retry Storm Map event 5 references Storm Map Risk.",
+      "time": "2026-06-03T13:06:00Z"
+    },
+    {
+      "id": "debug-retry-storm-map-event-6",
+      "kind": "finish",
+      "label": "Retry Storm Map Recovered",
+      "metadata": {
+        "layout": "flow_particles",
+        "template_id": "debug.retry_storm_map"
+      },
+      "node_id": "debug-retry-storm-map-node-6",
+      "status": "success",
+      "summary": "Retry Storm Map event 6 references Map Retry Outcome.",
+      "time": "2026-06-03T13:17:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "symptom",
+      "id": "debug-retry-storm-map-node-1",
+      "kind": "retry",
+      "label": "Retry Storm Intake",
+      "metadata": {
+        "detail": "Retry Storm Map signal 1",
+        "owner": "symptom",
+        "template_id": "debug.retry_storm_map"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "cause",
+      "id": "debug-retry-storm-map-node-2",
+      "kind": "storm",
+      "label": "Storm Map Core",
+      "metadata": {
+        "detail": "Retry Storm Map signal 2",
+        "owner": "cause",
+        "template_id": "debug.retry_storm_map"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "mitigation",
+      "id": "debug-retry-storm-map-node-3",
+      "kind": "map",
+      "label": "Map Retry Policy",
+      "metadata": {
+        "detail": "Retry Storm Map signal 3",
+        "owner": "mitigation",
+        "template_id": "debug.retry_storm_map"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "symptom",
+      "id": "debug-retry-storm-map-node-4",
+      "kind": "symptom",
+      "label": "Retry Storm Execution",
+      "metadata": {
+        "detail": "Retry Storm Map signal 4",
+        "owner": "symptom",
+        "template_id": "debug.retry_storm_map"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "cause",
+      "id": "debug-retry-storm-map-node-5",
+      "kind": "retry",
+      "label": "Storm Map Risk",
+      "metadata": {
+        "detail": "Retry Storm Map signal 5",
+        "owner": "cause",
+        "template_id": "debug.retry_storm_map"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "mitigation",
+      "id": "debug-retry-storm-map-node-6",
+      "kind": "storm",
+      "label": "Map Retry Outcome",
+      "metadata": {
+        "detail": "Retry Storm Map signal 6",
+        "owner": "mitigation",
+        "template_id": "debug.retry_storm_map"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Retry Storm Map: Shows retry loops, callers, throttles, backoff gaps, and downstream saturation"
+}

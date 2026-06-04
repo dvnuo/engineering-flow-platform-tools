@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "node-01",
+      "kind": "depends_on",
+      "label": "depends on",
+      "to": "node-02",
+      "weight": 1
+    },
+    {
+      "from": "node-02",
+      "kind": "emits",
+      "label": "emits",
+      "to": "node-03",
+      "weight": 2
+    },
+    {
+      "from": "node-03",
+      "kind": "validates",
+      "label": "validates",
+      "to": "node-04",
+      "weight": 3
+    },
+    {
+      "from": "node-04",
+      "kind": "hands_off",
+      "label": "hands off",
+      "to": "node-05",
+      "weight": 4
+    },
+    {
+      "from": "node-05",
+      "kind": "reports",
+      "label": "reports",
+      "to": "node-06",
+      "weight": 5
+    },
+    {
+      "from": "node-02",
+      "kind": "observes",
+      "label": "observes downstream",
+      "to": "node-06",
+      "weight": 2
+    }
+  ],
+  "events": [
+    {
+      "id": "event-01",
+      "kind": "alias",
+      "label": "Alias assertion failed",
+      "metadata": {
+        "sequence": 1,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-01",
+      "status": "running",
+      "summary": "Alias assertion failed during Contract Test Failure Map",
+      "time": "2026-06-03T09:05:00Z"
+    },
+    {
+      "id": "event-02",
+      "kind": "expected",
+      "label": "Expected count mismatch logged",
+      "metadata": {
+        "sequence": 2,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-02",
+      "status": "success",
+      "summary": "Expected count mismatch logged during Contract Test Failure Map",
+      "time": "2026-06-03T09:12:00Z"
+    },
+    {
+      "id": "event-03",
+      "kind": "build",
+      "label": "Build parser checked",
+      "metadata": {
+        "sequence": 3,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-03",
+      "status": "warning",
+      "summary": "Build parser checked during Contract Test Failure Map",
+      "time": "2026-06-03T09:19:00Z"
+    },
+    {
+      "id": "event-04",
+      "kind": "fixture",
+      "label": "Fixture copied",
+      "metadata": {
+        "sequence": 4,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-04",
+      "status": "running",
+      "summary": "Fixture copied during Contract Test Failure Map",
+      "time": "2026-06-03T09:26:00Z"
+    },
+    {
+      "id": "event-05",
+      "kind": "envelope",
+      "label": "Envelope inspected",
+      "metadata": {
+        "sequence": 5,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-05",
+      "status": "error",
+      "summary": "Envelope inspected during Contract Test Failure Map",
+      "time": "2026-06-03T09:33:00Z"
+    },
+    {
+      "id": "event-06",
+      "kind": "patch",
+      "label": "Patch candidate verified",
+      "metadata": {
+        "sequence": 6,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-06",
+      "status": "success",
+      "summary": "Patch candidate verified during Contract Test Failure Map",
+      "time": "2026-06-03T09:40:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "alias",
+      "id": "node-01",
+      "kind": "visual",
+      "label": "Visual alias test",
+      "metadata": {
+        "owner": "alias",
+        "review_date": "2026-06-03",
+        "scenario": "Contract Test Failure Map"
+      },
+      "metrics": {
+        "confidence": 0.68,
+        "risk": 0.48
+      },
+      "status": "running"
+    },
+    {
+      "group": "doctor",
+      "id": "node-02",
+      "kind": "doctor",
+      "label": "Doctor expected count assertion",
+      "metadata": {
+        "owner": "doctor",
+        "review_date": "2026-06-03",
+        "scenario": "Contract Test Failure Map"
+      },
+      "metrics": {
+        "confidence": 0.72,
+        "risk": 0.61
+      },
+      "status": "success"
+    },
+    {
+      "group": "build",
+      "id": "node-03",
+      "kind": "build",
+      "label": "Build script static check",
+      "metadata": {
+        "owner": "build",
+        "review_date": "2026-06-03",
+        "scenario": "Contract Test Failure Map"
+      },
+      "metrics": {
+        "confidence": 0.76,
+        "risk": 0.74
+      },
+      "status": "warning"
+    },
+    {
+      "group": "fixture",
+      "id": "node-04",
+      "kind": "registry",
+      "label": "Registry fixture",
+      "metadata": {
+        "owner": "fixture",
+        "review_date": "2026-06-03",
+        "scenario": "Contract Test Failure Map"
+      },
+      "metrics": {
+        "confidence": 0.8,
+        "risk": 0.22
+      },
+      "status": "ok"
+    },
+    {
+      "group": "output",
+      "id": "node-05",
+      "kind": "command",
+      "label": "Command output envelope",
+      "metadata": {
+        "owner": "output",
+        "review_date": "2026-06-03",
+        "scenario": "Contract Test Failure Map"
+      },
+      "metrics": {
+        "confidence": 0.84,
+        "risk": 0.35
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "fix",
+      "id": "node-06",
+      "kind": "fix",
+      "label": "Fix candidate patch",
+      "metadata": {
+        "owner": "fix",
+        "review_date": "2026-06-03",
+        "scenario": "Contract Test Failure Map"
+      },
+      "metrics": {
+        "confidence": 0.88,
+        "risk": 0.48
+      },
+      "status": "error"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Contract Test Failure Map"
+}

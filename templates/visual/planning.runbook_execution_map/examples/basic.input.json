@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "planning-runbook-execution-map-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "planning-runbook-execution-map-node-2",
+      "weight": 2
+    },
+    {
+      "from": "planning-runbook-execution-map-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "planning-runbook-execution-map-node-3",
+      "weight": 3
+    },
+    {
+      "from": "planning-runbook-execution-map-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "planning-runbook-execution-map-node-4",
+      "weight": 2
+    },
+    {
+      "from": "planning-runbook-execution-map-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "planning-runbook-execution-map-node-5",
+      "weight": 4
+    },
+    {
+      "from": "planning-runbook-execution-map-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "planning-runbook-execution-map-node-6",
+      "weight": 2
+    },
+    {
+      "from": "planning-runbook-execution-map-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "planning-runbook-execution-map-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "planning-runbook-execution-map-event-1",
+      "kind": "start",
+      "label": "Runbook Execution Map Opened",
+      "metadata": {
+        "layout": "step_ladder",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "node_id": "planning-runbook-execution-map-node-1",
+      "status": "running",
+      "summary": "Runbook Execution Map event 1 references Runbook Execution Intake.",
+      "time": "2026-06-03T13:52:00Z"
+    },
+    {
+      "id": "planning-runbook-execution-map-event-2",
+      "kind": "tool",
+      "label": "Runbook Execution Map Triaged",
+      "metadata": {
+        "layout": "step_ladder",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "node_id": "planning-runbook-execution-map-node-2",
+      "status": "success",
+      "summary": "Runbook Execution Map event 2 references Execution Map Core.",
+      "time": "2026-06-03T14:03:00Z"
+    },
+    {
+      "id": "planning-runbook-execution-map-event-3",
+      "kind": "checkpoint",
+      "label": "Runbook Execution Map Mapped",
+      "metadata": {
+        "layout": "step_ladder",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "node_id": "planning-runbook-execution-map-node-3",
+      "status": "warning",
+      "summary": "Runbook Execution Map event 3 references Map Runbook Policy.",
+      "time": "2026-06-03T14:14:00Z"
+    },
+    {
+      "id": "planning-runbook-execution-map-event-4",
+      "kind": "decision",
+      "label": "Runbook Execution Map Acted",
+      "metadata": {
+        "layout": "step_ladder",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "node_id": "planning-runbook-execution-map-node-4",
+      "status": "running",
+      "summary": "Runbook Execution Map event 4 references Runbook Execution Execution.",
+      "time": "2026-06-03T14:25:00Z"
+    },
+    {
+      "id": "planning-runbook-execution-map-event-5",
+      "kind": "recovery",
+      "label": "Runbook Execution Map Checked",
+      "metadata": {
+        "layout": "step_ladder",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "node_id": "planning-runbook-execution-map-node-5",
+      "status": "error",
+      "summary": "Runbook Execution Map event 5 references Execution Map Risk.",
+      "time": "2026-06-03T14:36:00Z"
+    },
+    {
+      "id": "planning-runbook-execution-map-event-6",
+      "kind": "finish",
+      "label": "Runbook Execution Map Recovered",
+      "metadata": {
+        "layout": "step_ladder",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "node_id": "planning-runbook-execution-map-node-6",
+      "status": "success",
+      "summary": "Runbook Execution Map event 6 references Map Runbook Outcome.",
+      "time": "2026-06-03T14:47:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "goal",
+      "id": "planning-runbook-execution-map-node-1",
+      "kind": "runbook",
+      "label": "Runbook Execution Intake",
+      "metadata": {
+        "detail": "Runbook Execution Map signal 1",
+        "owner": "goal",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "task",
+      "id": "planning-runbook-execution-map-node-2",
+      "kind": "execution",
+      "label": "Execution Map Core",
+      "metadata": {
+        "detail": "Runbook Execution Map signal 2",
+        "owner": "task",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "automation",
+      "id": "planning-runbook-execution-map-node-3",
+      "kind": "map",
+      "label": "Map Runbook Policy",
+      "metadata": {
+        "detail": "Runbook Execution Map signal 3",
+        "owner": "automation",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "goal",
+      "id": "planning-runbook-execution-map-node-4",
+      "kind": "goal",
+      "label": "Runbook Execution Execution",
+      "metadata": {
+        "detail": "Runbook Execution Map signal 4",
+        "owner": "goal",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "task",
+      "id": "planning-runbook-execution-map-node-5",
+      "kind": "runbook",
+      "label": "Execution Map Risk",
+      "metadata": {
+        "detail": "Runbook Execution Map signal 5",
+        "owner": "task",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "automation",
+      "id": "planning-runbook-execution-map-node-6",
+      "kind": "execution",
+      "label": "Map Runbook Outcome",
+      "metadata": {
+        "detail": "Runbook Execution Map signal 6",
+        "owner": "automation",
+        "template_id": "planning.runbook_execution_map"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Runbook Execution Map: Steps through runbook actions, operators, checks, failure branches, and completion evidence"
+}

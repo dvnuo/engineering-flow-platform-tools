@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "foundation-orbit-system-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "foundation-orbit-system-node-2",
+        "weight": 2
+      },
+      {
+        "from": "foundation-orbit-system-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "foundation-orbit-system-node-3",
+        "weight": 3
+      },
+      {
+        "from": "foundation-orbit-system-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "foundation-orbit-system-node-4",
+        "weight": 2
+      },
+      {
+        "from": "foundation-orbit-system-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "foundation-orbit-system-node-5",
+        "weight": 4
+      },
+      {
+        "from": "foundation-orbit-system-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "foundation-orbit-system-node-6",
+        "weight": 2
+      },
+      {
+        "from": "foundation-orbit-system-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "foundation-orbit-system-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "input",
+        "id": "foundation-orbit-system-node-1",
+        "kind": "orbit",
+        "label": "Orbit System Intake",
+        "metadata": {
+          "detail": "Orbit System signal 1",
+          "owner": "input",
+          "template_id": "foundation.orbit_system"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "success"
+      },
+      {
+        "group": "layout",
+        "id": "foundation-orbit-system-node-2",
+        "kind": "system",
+        "label": "System Orbit Core",
+        "metadata": {
+          "detail": "Orbit System signal 2",
+          "owner": "layout",
+          "template_id": "foundation.orbit_system"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "output",
+        "id": "foundation-orbit-system-node-3",
+        "kind": "output",
+        "label": "Orbit System Policy",
+        "metadata": {
+          "detail": "Orbit System signal 3",
+          "owner": "output",
+          "template_id": "foundation.orbit_system"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "error"
+      },
+      {
+        "group": "input",
+        "id": "foundation-orbit-system-node-4",
+        "kind": "input",
+        "label": "System Orbit Execution",
+        "metadata": {
+          "detail": "Orbit System signal 4",
+          "owner": "input",
+          "template_id": "foundation.orbit_system"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "running"
+      },
+      {
+        "group": "layout",
+        "id": "foundation-orbit-system-node-5",
+        "kind": "orbit",
+        "label": "Orbit System Risk",
+        "metadata": {
+          "detail": "Orbit System signal 5",
+          "owner": "layout",
+          "template_id": "foundation.orbit_system"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "ok"
+      },
+      {
+        "group": "output",
+        "id": "foundation-orbit-system-node-6",
+        "kind": "system",
+        "label": "System Orbit Outcome",
+        "metadata": {
+          "detail": "Orbit System signal 6",
+          "owner": "output",
+          "template_id": "foundation.orbit_system"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "warning"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Orbit System: Shows a central system with related teams, dependencies, controls, and checks in orbital bands"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "foundation.orbit_system"
+}

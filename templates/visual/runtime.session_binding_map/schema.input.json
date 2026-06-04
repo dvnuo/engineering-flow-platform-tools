@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "node-01",
+        "kind": "depends_on",
+        "label": "depends on",
+        "to": "node-02",
+        "weight": 1
+      },
+      {
+        "from": "node-02",
+        "kind": "emits",
+        "label": "emits",
+        "to": "node-03",
+        "weight": 2
+      },
+      {
+        "from": "node-03",
+        "kind": "validates",
+        "label": "validates",
+        "to": "node-04",
+        "weight": 3
+      },
+      {
+        "from": "node-04",
+        "kind": "hands_off",
+        "label": "hands off",
+        "to": "node-05",
+        "weight": 4
+      },
+      {
+        "from": "node-05",
+        "kind": "reports",
+        "label": "reports",
+        "to": "node-06",
+        "weight": 5
+      },
+      {
+        "from": "node-02",
+        "kind": "observes",
+        "label": "observes downstream",
+        "to": "node-06",
+        "weight": 2
+      }
+    ],
+    "nodes": [
+      {
+        "group": "browser",
+        "id": "node-01",
+        "kind": "browser",
+        "label": "Browser tab",
+        "metadata": {
+          "owner": "browser",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Session Binding Map"
+        },
+        "metrics": {
+          "confidence": 0.68,
+          "risk": 0.48
+        },
+        "status": "running"
+      },
+      {
+        "group": "cli",
+        "id": "node-02",
+        "kind": "visual",
+        "label": "Visual CLI invocation",
+        "metadata": {
+          "owner": "cli",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Session Binding Map"
+        },
+        "metrics": {
+          "confidence": 0.72,
+          "risk": 0.61
+        },
+        "status": "success"
+      },
+      {
+        "group": "adapter",
+        "id": "node-03",
+        "kind": "runtime",
+        "label": "Runtime adapter",
+        "metadata": {
+          "owner": "adapter",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Session Binding Map"
+        },
+        "metrics": {
+          "confidence": 0.76,
+          "risk": 0.74
+        },
+        "status": "warning"
+      },
+      {
+        "group": "session",
+        "id": "node-04",
+        "kind": "session",
+        "label": "Session id binding",
+        "metadata": {
+          "owner": "session",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Session Binding Map"
+        },
+        "metrics": {
+          "confidence": 0.8,
+          "risk": 0.22
+        },
+        "status": "ok"
+      },
+      {
+        "group": "artifact",
+        "id": "node-05",
+        "kind": "artifact",
+        "label": "Artifact output path",
+        "metadata": {
+          "owner": "artifact",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Session Binding Map"
+        },
+        "metrics": {
+          "confidence": 0.84,
+          "risk": 0.35
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "audit",
+        "id": "node-06",
+        "kind": "audit",
+        "label": "Audit record",
+        "metadata": {
+          "owner": "audit",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Session Binding Map"
+        },
+        "metrics": {
+          "confidence": 0.88,
+          "risk": 0.48
+        },
+        "status": "error"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Runtime Session Binding Map"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "runtime.session_binding_map"
+}

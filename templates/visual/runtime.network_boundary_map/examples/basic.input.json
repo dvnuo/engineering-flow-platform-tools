@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "runtime-network-boundary-map-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "runtime-network-boundary-map-node-2",
+      "weight": 2
+    },
+    {
+      "from": "runtime-network-boundary-map-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "runtime-network-boundary-map-node-3",
+      "weight": 3
+    },
+    {
+      "from": "runtime-network-boundary-map-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "runtime-network-boundary-map-node-4",
+      "weight": 2
+    },
+    {
+      "from": "runtime-network-boundary-map-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "runtime-network-boundary-map-node-5",
+      "weight": 4
+    },
+    {
+      "from": "runtime-network-boundary-map-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "runtime-network-boundary-map-node-6",
+      "weight": 2
+    },
+    {
+      "from": "runtime-network-boundary-map-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "runtime-network-boundary-map-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "edge",
+      "id": "runtime-network-boundary-map-node-1",
+      "kind": "network",
+      "label": "Network Boundary Intake",
+      "metadata": {
+        "detail": "Network Boundary Map signal 1",
+        "owner": "edge",
+        "template_id": "runtime.network_boundary_map"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-network-boundary-map-node-2",
+      "kind": "boundary",
+      "label": "Boundary Map Core",
+      "metadata": {
+        "detail": "Network Boundary Map signal 2",
+        "owner": "adapter",
+        "template_id": "runtime.network_boundary_map"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "service",
+      "id": "runtime-network-boundary-map-node-3",
+      "kind": "map",
+      "label": "Map Network Policy",
+      "metadata": {
+        "detail": "Network Boundary Map signal 3",
+        "owner": "service",
+        "template_id": "runtime.network_boundary_map"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "edge",
+      "id": "runtime-network-boundary-map-node-4",
+      "kind": "edge",
+      "label": "Network Boundary Execution",
+      "metadata": {
+        "detail": "Network Boundary Map signal 4",
+        "owner": "edge",
+        "template_id": "runtime.network_boundary_map"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-network-boundary-map-node-5",
+      "kind": "network",
+      "label": "Boundary Map Risk",
+      "metadata": {
+        "detail": "Network Boundary Map signal 5",
+        "owner": "adapter",
+        "template_id": "runtime.network_boundary_map"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "service",
+      "id": "runtime-network-boundary-map-node-6",
+      "kind": "boundary",
+      "label": "Map Network Outcome",
+      "metadata": {
+        "detail": "Network Boundary Map signal 6",
+        "owner": "service",
+        "template_id": "runtime.network_boundary_map"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Network Boundary Map: Shows network zones, trusted edges, ingress points, egress rules, and boundary controls"
+}

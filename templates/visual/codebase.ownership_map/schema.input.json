@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "codebase-ownership-map-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "codebase-ownership-map-node-2",
+        "weight": 2
+      },
+      {
+        "from": "codebase-ownership-map-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "codebase-ownership-map-node-3",
+        "weight": 3
+      },
+      {
+        "from": "codebase-ownership-map-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "codebase-ownership-map-node-4",
+        "weight": 2
+      },
+      {
+        "from": "codebase-ownership-map-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "codebase-ownership-map-node-5",
+        "weight": 4
+      },
+      {
+        "from": "codebase-ownership-map-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "codebase-ownership-map-node-6",
+        "weight": 2
+      },
+      {
+        "from": "codebase-ownership-map-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "codebase-ownership-map-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "source",
+        "id": "codebase-ownership-map-node-1",
+        "kind": "ownership",
+        "label": "Ownership Map Intake",
+        "metadata": {
+          "detail": "Ownership Map signal 1",
+          "owner": "source",
+          "template_id": "codebase.ownership_map"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "success"
+      },
+      {
+        "group": "test",
+        "id": "codebase-ownership-map-node-2",
+        "kind": "map",
+        "label": "Map Ownership Core",
+        "metadata": {
+          "detail": "Ownership Map signal 2",
+          "owner": "test",
+          "template_id": "codebase.ownership_map"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "release",
+        "id": "codebase-ownership-map-node-3",
+        "kind": "release",
+        "label": "Ownership Map Policy",
+        "metadata": {
+          "detail": "Ownership Map signal 3",
+          "owner": "release",
+          "template_id": "codebase.ownership_map"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "error"
+      },
+      {
+        "group": "source",
+        "id": "codebase-ownership-map-node-4",
+        "kind": "source",
+        "label": "Map Ownership Execution",
+        "metadata": {
+          "detail": "Ownership Map signal 4",
+          "owner": "source",
+          "template_id": "codebase.ownership_map"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "running"
+      },
+      {
+        "group": "test",
+        "id": "codebase-ownership-map-node-5",
+        "kind": "ownership",
+        "label": "Ownership Map Risk",
+        "metadata": {
+          "detail": "Ownership Map signal 5",
+          "owner": "test",
+          "template_id": "codebase.ownership_map"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "ok"
+      },
+      {
+        "group": "release",
+        "id": "codebase-ownership-map-node-6",
+        "kind": "map",
+        "label": "Map Ownership Outcome",
+        "metadata": {
+          "detail": "Ownership Map signal 6",
+          "owner": "release",
+          "template_id": "codebase.ownership_map"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "warning"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Ownership Map: Connects files, services, teams, reviewers, and backup owners for stewardship review"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "codebase.ownership_map"
+}

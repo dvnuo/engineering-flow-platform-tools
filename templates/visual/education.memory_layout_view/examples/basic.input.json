@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "education-memory-layout-view-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "education-memory-layout-view-node-2",
+      "weight": 2
+    },
+    {
+      "from": "education-memory-layout-view-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "education-memory-layout-view-node-3",
+      "weight": 3
+    },
+    {
+      "from": "education-memory-layout-view-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "education-memory-layout-view-node-4",
+      "weight": 2
+    },
+    {
+      "from": "education-memory-layout-view-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "education-memory-layout-view-node-5",
+      "weight": 4
+    },
+    {
+      "from": "education-memory-layout-view-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "education-memory-layout-view-node-6",
+      "weight": 2
+    },
+    {
+      "from": "education-memory-layout-view-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "education-memory-layout-view-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "concept",
+      "id": "education-memory-layout-view-node-1",
+      "kind": "memory",
+      "label": "Memory Layout Intake",
+      "metadata": {
+        "detail": "Memory Layout View signal 1",
+        "owner": "concept",
+        "template_id": "education.memory_layout_view"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "step",
+      "id": "education-memory-layout-view-node-2",
+      "kind": "layout",
+      "label": "Layout View Core",
+      "metadata": {
+        "detail": "Memory Layout View signal 2",
+        "owner": "step",
+        "template_id": "education.memory_layout_view"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "assessment",
+      "id": "education-memory-layout-view-node-3",
+      "kind": "view",
+      "label": "View Memory Policy",
+      "metadata": {
+        "detail": "Memory Layout View signal 3",
+        "owner": "assessment",
+        "template_id": "education.memory_layout_view"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "concept",
+      "id": "education-memory-layout-view-node-4",
+      "kind": "concept",
+      "label": "Memory Layout Execution",
+      "metadata": {
+        "detail": "Memory Layout View signal 4",
+        "owner": "concept",
+        "template_id": "education.memory_layout_view"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "step",
+      "id": "education-memory-layout-view-node-5",
+      "kind": "memory",
+      "label": "Layout View Risk",
+      "metadata": {
+        "detail": "Memory Layout View signal 5",
+        "owner": "step",
+        "template_id": "education.memory_layout_view"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "assessment",
+      "id": "education-memory-layout-view-node-6",
+      "kind": "layout",
+      "label": "View Memory Outcome",
+      "metadata": {
+        "detail": "Memory Layout View signal 6",
+        "owner": "assessment",
+        "template_id": "education.memory_layout_view"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Memory Layout View: Shows stack, heap, static data, pointers, allocation lifetime, and ownership boundaries"
+}

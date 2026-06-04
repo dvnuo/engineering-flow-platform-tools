@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "business-sales-pipeline-3d-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "business-sales-pipeline-3d-node-2",
+      "weight": 2
+    },
+    {
+      "from": "business-sales-pipeline-3d-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "business-sales-pipeline-3d-node-3",
+      "weight": 3
+    },
+    {
+      "from": "business-sales-pipeline-3d-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "business-sales-pipeline-3d-node-4",
+      "weight": 2
+    },
+    {
+      "from": "business-sales-pipeline-3d-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "business-sales-pipeline-3d-node-5",
+      "weight": 4
+    },
+    {
+      "from": "business-sales-pipeline-3d-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "business-sales-pipeline-3d-node-6",
+      "weight": 2
+    },
+    {
+      "from": "business-sales-pipeline-3d-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "business-sales-pipeline-3d-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "customer",
+      "id": "business-sales-pipeline-3d-node-1",
+      "kind": "sales",
+      "label": "Sales Pipeline Intake",
+      "metadata": {
+        "detail": "Sales Pipeline 3D signal 1",
+        "owner": "customer",
+        "template_id": "business.sales_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "revenue",
+      "id": "business-sales-pipeline-3d-node-2",
+      "kind": "pipeline",
+      "label": "Pipeline 3d Core",
+      "metadata": {
+        "detail": "Sales Pipeline 3D signal 2",
+        "owner": "revenue",
+        "template_id": "business.sales_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "operation",
+      "id": "business-sales-pipeline-3d-node-3",
+      "kind": "3d",
+      "label": "3d Sales Policy",
+      "metadata": {
+        "detail": "Sales Pipeline 3D signal 3",
+        "owner": "operation",
+        "template_id": "business.sales_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "customer",
+      "id": "business-sales-pipeline-3d-node-4",
+      "kind": "customer",
+      "label": "Sales Pipeline Execution",
+      "metadata": {
+        "detail": "Sales Pipeline 3D signal 4",
+        "owner": "customer",
+        "template_id": "business.sales_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "revenue",
+      "id": "business-sales-pipeline-3d-node-5",
+      "kind": "sales",
+      "label": "Pipeline 3d Risk",
+      "metadata": {
+        "detail": "Sales Pipeline 3D signal 5",
+        "owner": "revenue",
+        "template_id": "business.sales_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "operation",
+      "id": "business-sales-pipeline-3d-node-6",
+      "kind": "pipeline",
+      "label": "3d Sales Outcome",
+      "metadata": {
+        "detail": "Sales Pipeline 3D signal 6",
+        "owner": "operation",
+        "template_id": "business.sales_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Sales Pipeline 3D: Tracks opportunities from lead through qualification, proposal, negotiation, and close"
+}

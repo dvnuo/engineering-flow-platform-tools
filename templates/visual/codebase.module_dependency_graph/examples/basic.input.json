@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "node-01",
+      "kind": "depends_on",
+      "label": "depends on",
+      "to": "node-02",
+      "weight": 1
+    },
+    {
+      "from": "node-02",
+      "kind": "emits",
+      "label": "emits",
+      "to": "node-03",
+      "weight": 2
+    },
+    {
+      "from": "node-03",
+      "kind": "validates",
+      "label": "validates",
+      "to": "node-04",
+      "weight": 3
+    },
+    {
+      "from": "node-04",
+      "kind": "hands_off",
+      "label": "hands off",
+      "to": "node-05",
+      "weight": 4
+    },
+    {
+      "from": "node-05",
+      "kind": "reports",
+      "label": "reports",
+      "to": "node-06",
+      "weight": 5
+    },
+    {
+      "from": "node-02",
+      "kind": "observes",
+      "label": "observes downstream",
+      "to": "node-06",
+      "weight": 2
+    }
+  ],
+  "nodes": [
+    {
+      "group": "entrypoint",
+      "id": "node-01",
+      "kind": "cmd",
+      "label": "cmd visual",
+      "metadata": {
+        "owner": "entrypoint",
+        "review_date": "2026-06-03",
+        "scenario": "Visual Module Dependency Graph"
+      },
+      "metrics": {
+        "confidence": 0.68,
+        "risk": 0.48
+      },
+      "status": "running"
+    },
+    {
+      "group": "commands",
+      "id": "node-02",
+      "kind": "internal",
+      "label": "internal visual commands",
+      "metadata": {
+        "owner": "commands",
+        "review_date": "2026-06-03",
+        "scenario": "Visual Module Dependency Graph"
+      },
+      "metrics": {
+        "confidence": 0.72,
+        "risk": 0.61
+      },
+      "status": "success"
+    },
+    {
+      "group": "manifest",
+      "id": "node-03",
+      "kind": "manifest",
+      "label": "manifest registry",
+      "metadata": {
+        "owner": "manifest",
+        "review_date": "2026-06-03",
+        "scenario": "Visual Module Dependency Graph"
+      },
+      "metrics": {
+        "confidence": 0.76,
+        "risk": 0.74
+      },
+      "status": "warning"
+    },
+    {
+      "group": "schema",
+      "id": "node-04",
+      "kind": "schema",
+      "label": "schema validator",
+      "metadata": {
+        "owner": "schema",
+        "review_date": "2026-06-03",
+        "scenario": "Visual Module Dependency Graph"
+      },
+      "metrics": {
+        "confidence": 0.8,
+        "risk": 0.22
+      },
+      "status": "ok"
+    },
+    {
+      "group": "render",
+      "id": "node-05",
+      "kind": "render",
+      "label": "render package",
+      "metadata": {
+        "owner": "render",
+        "review_date": "2026-06-03",
+        "scenario": "Visual Module Dependency Graph"
+      },
+      "metrics": {
+        "confidence": 0.84,
+        "risk": 0.35
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "tests",
+      "id": "node-06",
+      "kind": "visual",
+      "label": "visual contract tests",
+      "metadata": {
+        "owner": "tests",
+        "review_date": "2026-06-03",
+        "scenario": "Visual Module Dependency Graph"
+      },
+      "metrics": {
+        "confidence": 0.88,
+        "risk": 0.48
+      },
+      "status": "error"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Visual Module Dependency Graph"
+}

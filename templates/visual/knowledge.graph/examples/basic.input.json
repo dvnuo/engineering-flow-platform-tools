@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "knowledge-graph-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "knowledge-graph-node-2",
+      "weight": 2
+    },
+    {
+      "from": "knowledge-graph-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "knowledge-graph-node-3",
+      "weight": 3
+    },
+    {
+      "from": "knowledge-graph-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "knowledge-graph-node-4",
+      "weight": 2
+    },
+    {
+      "from": "knowledge-graph-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "knowledge-graph-node-5",
+      "weight": 4
+    },
+    {
+      "from": "knowledge-graph-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "knowledge-graph-node-6",
+      "weight": 2
+    },
+    {
+      "from": "knowledge-graph-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "knowledge-graph-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "claim",
+      "id": "knowledge-graph-node-1",
+      "kind": "graph",
+      "label": "Graph Graph Intake",
+      "metadata": {
+        "detail": "Graph signal 1",
+        "owner": "claim",
+        "template_id": "knowledge.graph"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "warning"
+    },
+    {
+      "group": "source",
+      "id": "knowledge-graph-node-2",
+      "kind": "source",
+      "label": "Graph Graph Core",
+      "metadata": {
+        "detail": "Graph signal 2",
+        "owner": "source",
+        "template_id": "knowledge.graph"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "success"
+    },
+    {
+      "group": "decision",
+      "id": "knowledge-graph-node-3",
+      "kind": "decision",
+      "label": "Graph Graph Policy",
+      "metadata": {
+        "detail": "Graph signal 3",
+        "owner": "decision",
+        "template_id": "knowledge.graph"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "claim",
+      "id": "knowledge-graph-node-4",
+      "kind": "claim",
+      "label": "Graph Graph Execution",
+      "metadata": {
+        "detail": "Graph signal 4",
+        "owner": "claim",
+        "template_id": "knowledge.graph"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "error"
+    },
+    {
+      "group": "source",
+      "id": "knowledge-graph-node-5",
+      "kind": "graph",
+      "label": "Graph Graph Risk",
+      "metadata": {
+        "detail": "Graph signal 5",
+        "owner": "source",
+        "template_id": "knowledge.graph"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "running"
+    },
+    {
+      "group": "decision",
+      "id": "knowledge-graph-node-6",
+      "kind": "source",
+      "label": "Graph Graph Outcome",
+      "metadata": {
+        "detail": "Graph signal 6",
+        "owner": "decision",
+        "template_id": "knowledge.graph"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "ok"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Graph: Connects concepts, facts, owners, references, and unresolved gaps in a knowledge graph"
+}

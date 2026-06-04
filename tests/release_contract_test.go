@@ -10,6 +10,7 @@ import (
 	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
 	"engineering-flow-platform-tools/internal/testutil"
+	vcmd "engineering-flow-platform-tools/internal/visual/commands"
 )
 
 func TestVersionJSONContract(t *testing.T) {
@@ -33,6 +34,13 @@ func TestVersionJSONContract(t *testing.T) {
 		}},
 		{name: "jenkins", run: func(b *bytes.Buffer) error {
 			cmd := kcmd.NewRoot()
+			cmd.SetOut(b)
+			cmd.SetErr(b)
+			cmd.SetArgs([]string{"version", "--json"})
+			return cmd.Execute()
+		}},
+		{name: "visual", run: func(b *bytes.Buffer) error {
+			cmd := vcmd.NewRoot()
 			cmd.SetOut(b)
 			cmd.SetErr(b)
 			cmd.SetArgs([]string{"version", "--json"})
@@ -64,6 +72,7 @@ func TestDocsAndScriptsExist(t *testing.T) {
 		"../docs/RELEASE.md",
 		"../docs/SECURITY.md",
 		"../docs/TROUBLESHOOTING.md",
+		"../docs/VISUAL.md",
 		"../scripts/smoke.sh",
 		"../scripts/smoke.ps1",
 		"../.github/workflows/release.yml",
@@ -88,6 +97,22 @@ func TestBuildScriptsListRequiredTargets(t *testing.T) {
 		}
 		if !strings.Contains(s, "-ldflags") || !strings.Contains(s, "internal/version.Version") {
 			t.Fatalf("%s does not inject version ldflags", path)
+		}
+		if !strings.Contains(s, "./cmd/visual") {
+			t.Fatalf("%s missing visual build target", path)
+		}
+	}
+}
+
+func TestReleaseWorkflowIncludesVisualTemplates(t *testing.T) {
+	b, err := os.ReadFile("../.github/workflows/release.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	for _, token := range []string{"./cmd/visual", "templates/visual"} {
+		if !strings.Contains(s, token) {
+			t.Fatalf("release workflow missing %s", token)
 		}
 	}
 }

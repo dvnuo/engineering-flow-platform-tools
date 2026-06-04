@@ -1,0 +1,463 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "education-process-animation-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "education-process-animation-node-2",
+        "weight": 2
+      },
+      {
+        "from": "education-process-animation-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "education-process-animation-node-3",
+        "weight": 3
+      },
+      {
+        "from": "education-process-animation-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "education-process-animation-node-4",
+        "weight": 2
+      },
+      {
+        "from": "education-process-animation-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "education-process-animation-node-5",
+        "weight": 4
+      },
+      {
+        "from": "education-process-animation-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "education-process-animation-node-6",
+        "weight": 2
+      },
+      {
+        "from": "education-process-animation-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "education-process-animation-node-6",
+        "weight": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "education-process-animation-event-1",
+        "kind": "start",
+        "label": "Process Animation Opened",
+        "metadata": {
+          "layout": "flow_particles",
+          "template_id": "education.process_animation"
+        },
+        "node_id": "education-process-animation-node-1",
+        "status": "running",
+        "summary": "Process Animation event 1 references Process Animation Intake.",
+        "time": "2026-06-03T11:21:00Z"
+      },
+      {
+        "id": "education-process-animation-event-2",
+        "kind": "tool",
+        "label": "Process Animation Triaged",
+        "metadata": {
+          "layout": "flow_particles",
+          "template_id": "education.process_animation"
+        },
+        "node_id": "education-process-animation-node-2",
+        "status": "success",
+        "summary": "Process Animation event 2 references Animation Process Core.",
+        "time": "2026-06-03T11:32:00Z"
+      },
+      {
+        "id": "education-process-animation-event-3",
+        "kind": "checkpoint",
+        "label": "Process Animation Mapped",
+        "metadata": {
+          "layout": "flow_particles",
+          "template_id": "education.process_animation"
+        },
+        "node_id": "education-process-animation-node-3",
+        "status": "warning",
+        "summary": "Process Animation event 3 references Process Animation Policy.",
+        "time": "2026-06-03T11:43:00Z"
+      },
+      {
+        "id": "education-process-animation-event-4",
+        "kind": "decision",
+        "label": "Process Animation Acted",
+        "metadata": {
+          "layout": "flow_particles",
+          "template_id": "education.process_animation"
+        },
+        "node_id": "education-process-animation-node-4",
+        "status": "running",
+        "summary": "Process Animation event 4 references Animation Process Execution.",
+        "time": "2026-06-03T11:54:00Z"
+      },
+      {
+        "id": "education-process-animation-event-5",
+        "kind": "recovery",
+        "label": "Process Animation Checked",
+        "metadata": {
+          "layout": "flow_particles",
+          "template_id": "education.process_animation"
+        },
+        "node_id": "education-process-animation-node-5",
+        "status": "error",
+        "summary": "Process Animation event 5 references Process Animation Risk.",
+        "time": "2026-06-03T12:05:00Z"
+      },
+      {
+        "id": "education-process-animation-event-6",
+        "kind": "finish",
+        "label": "Process Animation Recovered",
+        "metadata": {
+          "layout": "flow_particles",
+          "template_id": "education.process_animation"
+        },
+        "node_id": "education-process-animation-node-6",
+        "status": "success",
+        "summary": "Process Animation event 6 references Animation Process Outcome.",
+        "time": "2026-06-03T12:16:00Z"
+      }
+    ],
+    "nodes": [
+      {
+        "group": "concept",
+        "id": "education-process-animation-node-1",
+        "kind": "process",
+        "label": "Process Animation Intake",
+        "metadata": {
+          "detail": "Process Animation signal 1",
+          "owner": "concept",
+          "template_id": "education.process_animation"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "success"
+      },
+      {
+        "group": "step",
+        "id": "education-process-animation-node-2",
+        "kind": "animation",
+        "label": "Animation Process Core",
+        "metadata": {
+          "detail": "Process Animation signal 2",
+          "owner": "step",
+          "template_id": "education.process_animation"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "assessment",
+        "id": "education-process-animation-node-3",
+        "kind": "assessment",
+        "label": "Process Animation Policy",
+        "metadata": {
+          "detail": "Process Animation signal 3",
+          "owner": "assessment",
+          "template_id": "education.process_animation"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "error"
+      },
+      {
+        "group": "concept",
+        "id": "education-process-animation-node-4",
+        "kind": "concept",
+        "label": "Animation Process Execution",
+        "metadata": {
+          "detail": "Process Animation signal 4",
+          "owner": "concept",
+          "template_id": "education.process_animation"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "running"
+      },
+      {
+        "group": "step",
+        "id": "education-process-animation-node-5",
+        "kind": "process",
+        "label": "Process Animation Risk",
+        "metadata": {
+          "detail": "Process Animation signal 5",
+          "owner": "step",
+          "template_id": "education.process_animation"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "ok"
+      },
+      {
+        "group": "assessment",
+        "id": "education-process-animation-node-6",
+        "kind": "animation",
+        "label": "Animation Process Outcome",
+        "metadata": {
+          "detail": "Process Animation signal 6",
+          "owner": "assessment",
+          "template_id": "education.process_animation"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "warning"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Process Animation: Demonstrates process start, scheduling, IO waits, signals, completion, and failure transitions"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "education.process_animation"
+}

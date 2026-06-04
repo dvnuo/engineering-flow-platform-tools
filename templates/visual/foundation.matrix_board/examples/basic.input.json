@@ -1,0 +1,168 @@
+{
+  "items": [
+    {
+      "group": "input",
+      "id": "foundation-matrix-board-item-1",
+      "kind": "matrix",
+      "label": "Matrix Board North",
+      "metadata": {
+        "note": "Matrix Board matrix cell 1",
+        "quadrant": "q1",
+        "template_id": "foundation.matrix_board"
+      },
+      "metrics": {
+        "confidence": 0.55,
+        "impact": 0.4
+      },
+      "status": "ok",
+      "x": 0.17,
+      "y": 0.29
+    },
+    {
+      "group": "layout",
+      "id": "foundation-matrix-board-item-2",
+      "kind": "board",
+      "label": "Board Matrix East",
+      "metadata": {
+        "note": "Matrix Board matrix cell 2",
+        "quadrant": "q2",
+        "template_id": "foundation.matrix_board"
+      },
+      "metrics": {
+        "confidence": 0.59,
+        "impact": 0.46
+      },
+      "status": "warning",
+      "x": 0.4,
+      "y": 0.6
+    },
+    {
+      "group": "output",
+      "id": "foundation-matrix-board-item-3",
+      "kind": "output",
+      "label": "Matrix Board South",
+      "metadata": {
+        "note": "Matrix Board matrix cell 3",
+        "quadrant": "q3",
+        "template_id": "foundation.matrix_board"
+      },
+      "metrics": {
+        "confidence": 0.63,
+        "impact": 0.52
+      },
+      "status": "success",
+      "x": 0.63,
+      "y": 0.02
+    },
+    {
+      "group": "input",
+      "id": "foundation-matrix-board-item-4",
+      "kind": "input",
+      "label": "Board Matrix West",
+      "metadata": {
+        "note": "Matrix Board matrix cell 4",
+        "quadrant": "q4",
+        "template_id": "foundation.matrix_board"
+      },
+      "metrics": {
+        "confidence": 0.67,
+        "impact": 0.58
+      },
+      "status": "blocked",
+      "x": 0.86,
+      "y": 0.33
+    },
+    {
+      "group": "layout",
+      "id": "foundation-matrix-board-item-5",
+      "kind": "matrix",
+      "label": "Matrix Board Signal",
+      "metadata": {
+        "note": "Matrix Board matrix cell 5",
+        "quadrant": "q1",
+        "template_id": "foundation.matrix_board"
+      },
+      "metrics": {
+        "confidence": 0.71,
+        "impact": 0.64
+      },
+      "status": "error",
+      "x": 0.18,
+      "y": 0.64
+    },
+    {
+      "group": "output",
+      "id": "foundation-matrix-board-item-6",
+      "kind": "board",
+      "label": "Board Matrix Review",
+      "metadata": {
+        "note": "Matrix Board matrix cell 6",
+        "quadrant": "q2",
+        "template_id": "foundation.matrix_board"
+      },
+      "metrics": {
+        "confidence": 0.75,
+        "impact": 0.7
+      },
+      "status": "running",
+      "x": 0.41,
+      "y": 0.06
+    },
+    {
+      "group": "input",
+      "id": "foundation-matrix-board-item-7",
+      "kind": "output",
+      "label": "Matrix Board Ready",
+      "metadata": {
+        "note": "Matrix Board matrix cell 7",
+        "quadrant": "q3",
+        "template_id": "foundation.matrix_board"
+      },
+      "metrics": {
+        "confidence": 0.79,
+        "impact": 0.76
+      },
+      "status": "idle",
+      "x": 0.64,
+      "y": 0.37
+    },
+    {
+      "group": "layout",
+      "id": "foundation-matrix-board-item-8",
+      "kind": "input",
+      "label": "Board Matrix Watch",
+      "metadata": {
+        "note": "Matrix Board matrix cell 8",
+        "quadrant": "q4",
+        "template_id": "foundation.matrix_board"
+      },
+      "metrics": {
+        "confidence": 0.83,
+        "impact": 0.82
+      },
+      "status": "ok",
+      "x": 0.87,
+      "y": 0.68
+    },
+    {
+      "group": "output",
+      "id": "foundation-matrix-board-item-9",
+      "kind": "matrix",
+      "label": "Matrix Board Owner",
+      "metadata": {
+        "note": "Matrix Board matrix cell 9",
+        "quadrant": "q1",
+        "template_id": "foundation.matrix_board"
+      },
+      "metrics": {
+        "confidence": 0.87,
+        "impact": 0.88
+      },
+      "status": "warning",
+      "x": 0.19,
+      "y": 0.1
+    }
+  ],
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Matrix Board: Positions work items by priority and effort while preserving owner, status, and risk context"
+}

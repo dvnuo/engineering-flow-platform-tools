@@ -1,0 +1,52 @@
+id: foundation.graph_2_5d
+version: 1.0.0
+category: foundation
+title: Graph 2 5D
+description: Layers graph nodes by ownership, status, and depth so dense dependency maps stay readable.
+input_schema: schema.input.json
+input_schema_kind: graph_v1
+renderer:
+  contract: offline.graph.v1
+layout:
+  preset: graph_2_5d
+  group_by: group
+offline:
+  required: true
+  forbid_network: true
+  data_mode: js-file
+assets:
+  - from: ../_shared/runtime/efp-visual-runtime.iife.js
+    to: assets/runtime/efp-visual-runtime.iife.js
+  - from: ../_shared/runtime/efp-visual-renderers.iife.js
+    to: assets/runtime/efp-visual-renderers.iife.js
+  - from: ../_shared/runtime/efp-visual-runtime.css
+    to: assets/runtime/efp-visual-runtime.css
+  - from: style.css
+    to: assets/templates/foundation.graph_2_5d/style.css
+styles:
+  - assets/runtime/efp-visual-runtime.css
+  - assets/templates/foundation.graph_2_5d/style.css
+scripts:
+  - manifest.js
+  - data.js
+  - assets/runtime/efp-visual-runtime.iife.js
+  - assets/runtime/efp-visual-renderers.iife.js
+interactions:
+  - hover_tooltip
+  - click_inspect
+  - search_node
+  - filter_by_type
+  - filter_by_status
+  - focus_path
+  - export_json
+limits:
+  max_nodes: 1000
+  max_edges: 3000
+  max_events: 5000
+  max_items: 2000
+tags:
+  - 2
+  - 5d
+  - foundation
+  - graph
+  - graph_2_5d

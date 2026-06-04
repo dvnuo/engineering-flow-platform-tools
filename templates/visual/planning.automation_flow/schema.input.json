@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "planning-automation-flow-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "planning-automation-flow-node-2",
+        "weight": 2
+      },
+      {
+        "from": "planning-automation-flow-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "planning-automation-flow-node-3",
+        "weight": 3
+      },
+      {
+        "from": "planning-automation-flow-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "planning-automation-flow-node-4",
+        "weight": 2
+      },
+      {
+        "from": "planning-automation-flow-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "planning-automation-flow-node-5",
+        "weight": 4
+      },
+      {
+        "from": "planning-automation-flow-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "planning-automation-flow-node-6",
+        "weight": 2
+      },
+      {
+        "from": "planning-automation-flow-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "planning-automation-flow-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "goal",
+        "id": "planning-automation-flow-node-1",
+        "kind": "automation",
+        "label": "Automation Flow Intake",
+        "metadata": {
+          "detail": "Automation Flow signal 1",
+          "owner": "goal",
+          "template_id": "planning.automation_flow"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "success"
+      },
+      {
+        "group": "task",
+        "id": "planning-automation-flow-node-2",
+        "kind": "flow",
+        "label": "Flow Automation Core",
+        "metadata": {
+          "detail": "Automation Flow signal 2",
+          "owner": "task",
+          "template_id": "planning.automation_flow"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "automation",
+        "id": "planning-automation-flow-node-3",
+        "kind": "automation",
+        "label": "Automation Flow Policy",
+        "metadata": {
+          "detail": "Automation Flow signal 3",
+          "owner": "automation",
+          "template_id": "planning.automation_flow"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "error"
+      },
+      {
+        "group": "goal",
+        "id": "planning-automation-flow-node-4",
+        "kind": "goal",
+        "label": "Flow Automation Execution",
+        "metadata": {
+          "detail": "Automation Flow signal 4",
+          "owner": "goal",
+          "template_id": "planning.automation_flow"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "running"
+      },
+      {
+        "group": "task",
+        "id": "planning-automation-flow-node-5",
+        "kind": "automation",
+        "label": "Automation Flow Risk",
+        "metadata": {
+          "detail": "Automation Flow signal 5",
+          "owner": "task",
+          "template_id": "planning.automation_flow"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "ok"
+      },
+      {
+        "group": "automation",
+        "id": "planning-automation-flow-node-6",
+        "kind": "flow",
+        "label": "Flow Automation Outcome",
+        "metadata": {
+          "detail": "Automation Flow signal 6",
+          "owner": "automation",
+          "template_id": "planning.automation_flow"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "warning"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Automation Flow: Maps automated steps, triggers, inputs, outputs, owners, and verification checks"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "planning.automation_flow"
+}

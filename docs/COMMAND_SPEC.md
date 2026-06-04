@@ -2,7 +2,7 @@
 
 ## Common Conventions
 
-- For agent workflows, default every `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` command and subcommand to `--json`.
+- For agent workflows, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json`.
 - `--json` returns the stable `ok/data/error` envelope.
 - Command parsing failures return `ok=false` with `error.code=invalid_args` when `--json` is present.
 - `--format table|json|yaml` selects output rendering where supported.
@@ -10,6 +10,54 @@
 - Destructive commands require `--yes`.
 - Write commands support `--dry-run` unless explicitly documented otherwise.
 - Windows `cmd` agents should use double quotes, `where <binary>`, `dir`, `cd`, and `type` rather than Bash-only commands or single-quote quoting.
+
+## Visual
+
+### Basic
+- visual template categories
+- visual template list
+- visual template list --category <category>
+- visual template list --query <text>
+- visual template list --renderer <renderer-contract>
+- visual template list --schema-kind <input-schema-kind>
+- visual template get <template-id>
+- visual template schema <template-id>
+- visual template doctor
+- visual validate
+- visual render
+- visual inspect-output
+- visual commands
+- visual schema <command>
+- visual help llm
+- visual version
+
+### Template Discovery
+
+`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`. `canonical_count` is the number of canonical registry entries, `alias_count` is compatibility aliases, and `total_count` is both combined.
+
+`visual template list --json` returns 195 canonical templates from `templates/visual/registry.json`. Use `--category`, `--query`, `--renderer`, and `--schema-kind` to narrow discovery before reading template details. The response includes normalized `filters`, `matched_count`, `canonical_count`, `total_count`, and `alias_count`.
+
+`visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, aliases, `schema_file`, and `example_file`. Alias ids resolve to the canonical template and include `requested_id` and `canonical_id`.
+
+`visual template schema <template-id> --json` returns the template metadata, full local `json_schema`, and example object agents should mirror when writing input JSON. Alias ids resolve the same way as `template get`; the template metadata includes `requested_id`, `canonical_id`, and aliases.
+
+Agents must not discover templates by listing `templates/visual` directories or inventing template paths. Use `template categories`, `template list`, `template get`, and `template schema` only. Old IDs are registry aliases, not duplicate directories; prefer the returned `canonical_id` for new inputs.
+
+### Render Artifact Output
+
+`visual render --json` returns `data.artifact` with these compatibility fields:
+
+- `template_id`
+- `template_version`
+- `title`
+- `out_dir`
+- `out`
+- `entrypoint`
+- `relative_entrypoint`
+- `offline`
+- `file_url_safe`
+- `http_subpath_safe`
+- `files`
 
 ## Jira
 

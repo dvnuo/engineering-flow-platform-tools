@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "runtime-deployment-pipeline-3d-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "runtime-deployment-pipeline-3d-node-2",
+      "weight": 2
+    },
+    {
+      "from": "runtime-deployment-pipeline-3d-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "runtime-deployment-pipeline-3d-node-3",
+      "weight": 3
+    },
+    {
+      "from": "runtime-deployment-pipeline-3d-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "runtime-deployment-pipeline-3d-node-4",
+      "weight": 2
+    },
+    {
+      "from": "runtime-deployment-pipeline-3d-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "runtime-deployment-pipeline-3d-node-5",
+      "weight": 4
+    },
+    {
+      "from": "runtime-deployment-pipeline-3d-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "runtime-deployment-pipeline-3d-node-6",
+      "weight": 2
+    },
+    {
+      "from": "runtime-deployment-pipeline-3d-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "runtime-deployment-pipeline-3d-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "runtime-deployment-pipeline-3d-event-1",
+      "kind": "start",
+      "label": "Deployment Pipeline 3D Opened",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "node_id": "runtime-deployment-pipeline-3d-node-1",
+      "status": "running",
+      "summary": "Deployment Pipeline 3D event 1 references Deployment Pipeline Intake.",
+      "time": "2026-06-03T13:02:00Z"
+    },
+    {
+      "id": "runtime-deployment-pipeline-3d-event-2",
+      "kind": "tool",
+      "label": "Deployment Pipeline 3D Triaged",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "node_id": "runtime-deployment-pipeline-3d-node-2",
+      "status": "success",
+      "summary": "Deployment Pipeline 3D event 2 references Pipeline 3d Core.",
+      "time": "2026-06-03T13:13:00Z"
+    },
+    {
+      "id": "runtime-deployment-pipeline-3d-event-3",
+      "kind": "checkpoint",
+      "label": "Deployment Pipeline 3D Mapped",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "node_id": "runtime-deployment-pipeline-3d-node-3",
+      "status": "warning",
+      "summary": "Deployment Pipeline 3D event 3 references 3d Deployment Policy.",
+      "time": "2026-06-03T13:24:00Z"
+    },
+    {
+      "id": "runtime-deployment-pipeline-3d-event-4",
+      "kind": "decision",
+      "label": "Deployment Pipeline 3D Acted",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "node_id": "runtime-deployment-pipeline-3d-node-4",
+      "status": "running",
+      "summary": "Deployment Pipeline 3D event 4 references Deployment Pipeline Execution.",
+      "time": "2026-06-03T13:35:00Z"
+    },
+    {
+      "id": "runtime-deployment-pipeline-3d-event-5",
+      "kind": "recovery",
+      "label": "Deployment Pipeline 3D Checked",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "node_id": "runtime-deployment-pipeline-3d-node-5",
+      "status": "error",
+      "summary": "Deployment Pipeline 3D event 5 references Pipeline 3d Risk.",
+      "time": "2026-06-03T13:46:00Z"
+    },
+    {
+      "id": "runtime-deployment-pipeline-3d-event-6",
+      "kind": "finish",
+      "label": "Deployment Pipeline 3D Recovered",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "node_id": "runtime-deployment-pipeline-3d-node-6",
+      "status": "success",
+      "summary": "Deployment Pipeline 3D event 6 references 3d Deployment Outcome.",
+      "time": "2026-06-03T13:57:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "edge",
+      "id": "runtime-deployment-pipeline-3d-node-1",
+      "kind": "deployment",
+      "label": "Deployment Pipeline Intake",
+      "metadata": {
+        "detail": "Deployment Pipeline 3D signal 1",
+        "owner": "edge",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-deployment-pipeline-3d-node-2",
+      "kind": "pipeline",
+      "label": "Pipeline 3d Core",
+      "metadata": {
+        "detail": "Deployment Pipeline 3D signal 2",
+        "owner": "adapter",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "service",
+      "id": "runtime-deployment-pipeline-3d-node-3",
+      "kind": "3d",
+      "label": "3d Deployment Policy",
+      "metadata": {
+        "detail": "Deployment Pipeline 3D signal 3",
+        "owner": "service",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "edge",
+      "id": "runtime-deployment-pipeline-3d-node-4",
+      "kind": "edge",
+      "label": "Deployment Pipeline Execution",
+      "metadata": {
+        "detail": "Deployment Pipeline 3D signal 4",
+        "owner": "edge",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-deployment-pipeline-3d-node-5",
+      "kind": "deployment",
+      "label": "Pipeline 3d Risk",
+      "metadata": {
+        "detail": "Deployment Pipeline 3D signal 5",
+        "owner": "adapter",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "service",
+      "id": "runtime-deployment-pipeline-3d-node-6",
+      "kind": "pipeline",
+      "label": "3d Deployment Outcome",
+      "metadata": {
+        "detail": "Deployment Pipeline 3D signal 6",
+        "owner": "service",
+        "template_id": "runtime.deployment_pipeline_3d"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Deployment Pipeline 3D: Tracks build artifacts through deploy stages, checks, approvals, and rollback points"
+}

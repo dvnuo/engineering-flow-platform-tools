@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "foundation-graph-3d-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "foundation-graph-3d-node-2",
+      "weight": 2
+    },
+    {
+      "from": "foundation-graph-3d-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "foundation-graph-3d-node-3",
+      "weight": 3
+    },
+    {
+      "from": "foundation-graph-3d-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "foundation-graph-3d-node-4",
+      "weight": 2
+    },
+    {
+      "from": "foundation-graph-3d-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "foundation-graph-3d-node-5",
+      "weight": 4
+    },
+    {
+      "from": "foundation-graph-3d-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "foundation-graph-3d-node-6",
+      "weight": 2
+    },
+    {
+      "from": "foundation-graph-3d-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "foundation-graph-3d-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "input",
+      "id": "foundation-graph-3d-node-1",
+      "kind": "graph",
+      "label": "Graph 3d Intake",
+      "metadata": {
+        "detail": "Graph 3D signal 1",
+        "owner": "input",
+        "template_id": "foundation.graph_3d"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "layout",
+      "id": "foundation-graph-3d-node-2",
+      "kind": "3d",
+      "label": "3d Graph Core",
+      "metadata": {
+        "detail": "Graph 3D signal 2",
+        "owner": "layout",
+        "template_id": "foundation.graph_3d"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "output",
+      "id": "foundation-graph-3d-node-3",
+      "kind": "output",
+      "label": "Graph 3d Policy",
+      "metadata": {
+        "detail": "Graph 3D signal 3",
+        "owner": "output",
+        "template_id": "foundation.graph_3d"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "input",
+      "id": "foundation-graph-3d-node-4",
+      "kind": "input",
+      "label": "3d Graph Execution",
+      "metadata": {
+        "detail": "Graph 3D signal 4",
+        "owner": "input",
+        "template_id": "foundation.graph_3d"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "layout",
+      "id": "foundation-graph-3d-node-5",
+      "kind": "graph",
+      "label": "Graph 3d Risk",
+      "metadata": {
+        "detail": "Graph 3D signal 5",
+        "owner": "layout",
+        "template_id": "foundation.graph_3d"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "output",
+      "id": "foundation-graph-3d-node-6",
+      "kind": "3d",
+      "label": "3d Graph Outcome",
+      "metadata": {
+        "detail": "Graph 3D signal 6",
+        "owner": "output",
+        "template_id": "foundation.graph_3d"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Graph 3D: Places major nodes, edges, and hotspots into a depth based graph for exploring complex systems"
+}

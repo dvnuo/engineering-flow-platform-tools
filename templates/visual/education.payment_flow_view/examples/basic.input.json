@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "education-payment-flow-view-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "education-payment-flow-view-node-2",
+      "weight": 2
+    },
+    {
+      "from": "education-payment-flow-view-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "education-payment-flow-view-node-3",
+      "weight": 3
+    },
+    {
+      "from": "education-payment-flow-view-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "education-payment-flow-view-node-4",
+      "weight": 2
+    },
+    {
+      "from": "education-payment-flow-view-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "education-payment-flow-view-node-5",
+      "weight": 4
+    },
+    {
+      "from": "education-payment-flow-view-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "education-payment-flow-view-node-6",
+      "weight": 2
+    },
+    {
+      "from": "education-payment-flow-view-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "education-payment-flow-view-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "education-payment-flow-view-event-1",
+      "kind": "start",
+      "label": "Payment Flow View Opened",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "education.payment_flow_view"
+      },
+      "node_id": "education-payment-flow-view-node-1",
+      "status": "running",
+      "summary": "Payment Flow View event 1 references Payment Flow Intake.",
+      "time": "2026-06-03T11:03:00Z"
+    },
+    {
+      "id": "education-payment-flow-view-event-2",
+      "kind": "tool",
+      "label": "Payment Flow View Triaged",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "education.payment_flow_view"
+      },
+      "node_id": "education-payment-flow-view-node-2",
+      "status": "success",
+      "summary": "Payment Flow View event 2 references Flow View Core.",
+      "time": "2026-06-03T11:14:00Z"
+    },
+    {
+      "id": "education-payment-flow-view-event-3",
+      "kind": "checkpoint",
+      "label": "Payment Flow View Mapped",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "education.payment_flow_view"
+      },
+      "node_id": "education-payment-flow-view-node-3",
+      "status": "warning",
+      "summary": "Payment Flow View event 3 references View Payment Policy.",
+      "time": "2026-06-03T11:25:00Z"
+    },
+    {
+      "id": "education-payment-flow-view-event-4",
+      "kind": "decision",
+      "label": "Payment Flow View Acted",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "education.payment_flow_view"
+      },
+      "node_id": "education-payment-flow-view-node-4",
+      "status": "running",
+      "summary": "Payment Flow View event 4 references Payment Flow Execution.",
+      "time": "2026-06-03T11:36:00Z"
+    },
+    {
+      "id": "education-payment-flow-view-event-5",
+      "kind": "recovery",
+      "label": "Payment Flow View Checked",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "education.payment_flow_view"
+      },
+      "node_id": "education-payment-flow-view-node-5",
+      "status": "error",
+      "summary": "Payment Flow View event 5 references Flow View Risk.",
+      "time": "2026-06-03T11:47:00Z"
+    },
+    {
+      "id": "education-payment-flow-view-event-6",
+      "kind": "finish",
+      "label": "Payment Flow View Recovered",
+      "metadata": {
+        "layout": "pipeline_flow",
+        "template_id": "education.payment_flow_view"
+      },
+      "node_id": "education-payment-flow-view-node-6",
+      "status": "success",
+      "summary": "Payment Flow View event 6 references View Payment Outcome.",
+      "time": "2026-06-03T11:58:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "concept",
+      "id": "education-payment-flow-view-node-1",
+      "kind": "payment",
+      "label": "Payment Flow Intake",
+      "metadata": {
+        "detail": "Payment Flow View signal 1",
+        "owner": "concept",
+        "template_id": "education.payment_flow_view"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "step",
+      "id": "education-payment-flow-view-node-2",
+      "kind": "flow",
+      "label": "Flow View Core",
+      "metadata": {
+        "detail": "Payment Flow View signal 2",
+        "owner": "step",
+        "template_id": "education.payment_flow_view"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "assessment",
+      "id": "education-payment-flow-view-node-3",
+      "kind": "view",
+      "label": "View Payment Policy",
+      "metadata": {
+        "detail": "Payment Flow View signal 3",
+        "owner": "assessment",
+        "template_id": "education.payment_flow_view"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "concept",
+      "id": "education-payment-flow-view-node-4",
+      "kind": "concept",
+      "label": "Payment Flow Execution",
+      "metadata": {
+        "detail": "Payment Flow View signal 4",
+        "owner": "concept",
+        "template_id": "education.payment_flow_view"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "step",
+      "id": "education-payment-flow-view-node-5",
+      "kind": "payment",
+      "label": "Flow View Risk",
+      "metadata": {
+        "detail": "Payment Flow View signal 5",
+        "owner": "step",
+        "template_id": "education.payment_flow_view"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "assessment",
+      "id": "education-payment-flow-view-node-6",
+      "kind": "flow",
+      "label": "View Payment Outcome",
+      "metadata": {
+        "detail": "Payment Flow View signal 6",
+        "owner": "assessment",
+        "template_id": "education.payment_flow_view"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Payment Flow View: Explains checkout, authorization, capture, settlement, refund, and failure handling"
+}

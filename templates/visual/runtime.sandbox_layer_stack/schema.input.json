@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "runtime-sandbox-layer-stack-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "runtime-sandbox-layer-stack-node-2",
+        "weight": 2
+      },
+      {
+        "from": "runtime-sandbox-layer-stack-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "runtime-sandbox-layer-stack-node-3",
+        "weight": 3
+      },
+      {
+        "from": "runtime-sandbox-layer-stack-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "runtime-sandbox-layer-stack-node-4",
+        "weight": 2
+      },
+      {
+        "from": "runtime-sandbox-layer-stack-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "runtime-sandbox-layer-stack-node-5",
+        "weight": 4
+      },
+      {
+        "from": "runtime-sandbox-layer-stack-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "runtime-sandbox-layer-stack-node-6",
+        "weight": 2
+      },
+      {
+        "from": "runtime-sandbox-layer-stack-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "runtime-sandbox-layer-stack-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "edge",
+        "id": "runtime-sandbox-layer-stack-node-1",
+        "kind": "sandbox",
+        "label": "Sandbox Layer Intake",
+        "metadata": {
+          "detail": "Sandbox Layer Stack signal 1",
+          "owner": "edge",
+          "template_id": "runtime.sandbox_layer_stack"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "adapter",
+        "id": "runtime-sandbox-layer-stack-node-2",
+        "kind": "layer",
+        "label": "Layer Stack Core",
+        "metadata": {
+          "detail": "Sandbox Layer Stack signal 2",
+          "owner": "adapter",
+          "template_id": "runtime.sandbox_layer_stack"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "service",
+        "id": "runtime-sandbox-layer-stack-node-3",
+        "kind": "stack",
+        "label": "Stack Sandbox Policy",
+        "metadata": {
+          "detail": "Sandbox Layer Stack signal 3",
+          "owner": "service",
+          "template_id": "runtime.sandbox_layer_stack"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "edge",
+        "id": "runtime-sandbox-layer-stack-node-4",
+        "kind": "edge",
+        "label": "Sandbox Layer Execution",
+        "metadata": {
+          "detail": "Sandbox Layer Stack signal 4",
+          "owner": "edge",
+          "template_id": "runtime.sandbox_layer_stack"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "adapter",
+        "id": "runtime-sandbox-layer-stack-node-5",
+        "kind": "sandbox",
+        "label": "Layer Stack Risk",
+        "metadata": {
+          "detail": "Sandbox Layer Stack signal 5",
+          "owner": "adapter",
+          "template_id": "runtime.sandbox_layer_stack"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "service",
+        "id": "runtime-sandbox-layer-stack-node-6",
+        "kind": "layer",
+        "label": "Stack Sandbox Outcome",
+        "metadata": {
+          "detail": "Sandbox Layer Stack signal 6",
+          "owner": "service",
+          "template_id": "runtime.sandbox_layer_stack"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Sandbox Layer Stack: Stacks sandbox permissions, filesystem scope, network policy, and command execution boundaries"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "runtime.sandbox_layer_stack"
+}

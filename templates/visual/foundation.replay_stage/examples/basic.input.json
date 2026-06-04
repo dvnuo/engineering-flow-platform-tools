@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "foundation-replay-stage-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "foundation-replay-stage-node-2",
+      "weight": 2
+    },
+    {
+      "from": "foundation-replay-stage-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "foundation-replay-stage-node-3",
+      "weight": 3
+    },
+    {
+      "from": "foundation-replay-stage-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "foundation-replay-stage-node-4",
+      "weight": 2
+    },
+    {
+      "from": "foundation-replay-stage-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "foundation-replay-stage-node-5",
+      "weight": 4
+    },
+    {
+      "from": "foundation-replay-stage-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "foundation-replay-stage-node-6",
+      "weight": 2
+    },
+    {
+      "from": "foundation-replay-stage-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "foundation-replay-stage-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "foundation-replay-stage-event-1",
+      "kind": "start",
+      "label": "Replay Stage Opened",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "foundation.replay_stage"
+      },
+      "node_id": "foundation-replay-stage-node-1",
+      "status": "running",
+      "summary": "Replay Stage event 1 references Replay Stage Intake.",
+      "time": "2026-06-03T15:50:00Z"
+    },
+    {
+      "id": "foundation-replay-stage-event-2",
+      "kind": "tool",
+      "label": "Replay Stage Triaged",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "foundation.replay_stage"
+      },
+      "node_id": "foundation-replay-stage-node-2",
+      "status": "success",
+      "summary": "Replay Stage event 2 references Stage Replay Core.",
+      "time": "2026-06-03T16:01:00Z"
+    },
+    {
+      "id": "foundation-replay-stage-event-3",
+      "kind": "checkpoint",
+      "label": "Replay Stage Mapped",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "foundation.replay_stage"
+      },
+      "node_id": "foundation-replay-stage-node-3",
+      "status": "warning",
+      "summary": "Replay Stage event 3 references Replay Stage Policy.",
+      "time": "2026-06-03T16:12:00Z"
+    },
+    {
+      "id": "foundation-replay-stage-event-4",
+      "kind": "decision",
+      "label": "Replay Stage Acted",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "foundation.replay_stage"
+      },
+      "node_id": "foundation-replay-stage-node-4",
+      "status": "running",
+      "summary": "Replay Stage event 4 references Stage Replay Execution.",
+      "time": "2026-06-03T16:23:00Z"
+    },
+    {
+      "id": "foundation-replay-stage-event-5",
+      "kind": "recovery",
+      "label": "Replay Stage Checked",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "foundation.replay_stage"
+      },
+      "node_id": "foundation-replay-stage-node-5",
+      "status": "error",
+      "summary": "Replay Stage event 5 references Replay Stage Risk.",
+      "time": "2026-06-03T16:34:00Z"
+    },
+    {
+      "id": "foundation-replay-stage-event-6",
+      "kind": "finish",
+      "label": "Replay Stage Recovered",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "foundation.replay_stage"
+      },
+      "node_id": "foundation-replay-stage-node-6",
+      "status": "success",
+      "summary": "Replay Stage event 6 references Stage Replay Outcome.",
+      "time": "2026-06-03T16:45:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "input",
+      "id": "foundation-replay-stage-node-1",
+      "kind": "replay",
+      "label": "Replay Stage Intake",
+      "metadata": {
+        "detail": "Replay Stage signal 1",
+        "owner": "input",
+        "template_id": "foundation.replay_stage"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "layout",
+      "id": "foundation-replay-stage-node-2",
+      "kind": "stage",
+      "label": "Stage Replay Core",
+      "metadata": {
+        "detail": "Replay Stage signal 2",
+        "owner": "layout",
+        "template_id": "foundation.replay_stage"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "output",
+      "id": "foundation-replay-stage-node-3",
+      "kind": "output",
+      "label": "Replay Stage Policy",
+      "metadata": {
+        "detail": "Replay Stage signal 3",
+        "owner": "output",
+        "template_id": "foundation.replay_stage"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "input",
+      "id": "foundation-replay-stage-node-4",
+      "kind": "input",
+      "label": "Stage Replay Execution",
+      "metadata": {
+        "detail": "Replay Stage signal 4",
+        "owner": "input",
+        "template_id": "foundation.replay_stage"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "layout",
+      "id": "foundation-replay-stage-node-5",
+      "kind": "replay",
+      "label": "Replay Stage Risk",
+      "metadata": {
+        "detail": "Replay Stage signal 5",
+        "owner": "layout",
+        "template_id": "foundation.replay_stage"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "output",
+      "id": "foundation-replay-stage-node-6",
+      "kind": "stage",
+      "label": "Stage Replay Outcome",
+      "metadata": {
+        "detail": "Replay Stage signal 6",
+        "owner": "output",
+        "template_id": "foundation.replay_stage"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Replay Stage: Replays event sequences with actors, commands, transitions, and outcomes on a staged timeline"
+}

@@ -7,6 +7,17 @@ type RootConfig struct {
 	Jira       ProductConfig `json:"jira" yaml:"jira"`
 	Confluence ProductConfig `json:"confluence" yaml:"confluence"`
 	Jenkins    ProductConfig `json:"jenkins" yaml:"jenkins"`
+	Visual     VisualConfig  `json:"visual" yaml:"visual"`
+}
+
+type VisualConfig struct {
+	TemplateDir string         `json:"template_dir" yaml:"template_dir"`
+	Defaults    VisualDefaults `json:"defaults" yaml:"defaults"`
+}
+
+type VisualDefaults struct {
+	OfflineStrict *bool  `json:"offline_strict,omitempty" yaml:"offline_strict,omitempty"`
+	DataMode      string `json:"data_mode,omitempty" yaml:"data_mode,omitempty"`
 }
 
 type ProductConfig struct {

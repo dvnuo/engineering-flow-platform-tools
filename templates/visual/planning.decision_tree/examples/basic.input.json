@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "planning-decision-tree-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "planning-decision-tree-node-2",
+      "weight": 2
+    },
+    {
+      "from": "planning-decision-tree-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "planning-decision-tree-node-3",
+      "weight": 3
+    },
+    {
+      "from": "planning-decision-tree-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "planning-decision-tree-node-4",
+      "weight": 2
+    },
+    {
+      "from": "planning-decision-tree-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "planning-decision-tree-node-5",
+      "weight": 4
+    },
+    {
+      "from": "planning-decision-tree-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "planning-decision-tree-node-6",
+      "weight": 2
+    },
+    {
+      "from": "planning-decision-tree-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "planning-decision-tree-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "goal",
+      "id": "planning-decision-tree-node-1",
+      "kind": "decision",
+      "label": "Decision Tree Intake",
+      "metadata": {
+        "detail": "Decision Tree signal 1",
+        "owner": "goal",
+        "template_id": "planning.decision_tree"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "task",
+      "id": "planning-decision-tree-node-2",
+      "kind": "tree",
+      "label": "Tree Decision Core",
+      "metadata": {
+        "detail": "Decision Tree signal 2",
+        "owner": "task",
+        "template_id": "planning.decision_tree"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "automation",
+      "id": "planning-decision-tree-node-3",
+      "kind": "automation",
+      "label": "Decision Tree Policy",
+      "metadata": {
+        "detail": "Decision Tree signal 3",
+        "owner": "automation",
+        "template_id": "planning.decision_tree"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "goal",
+      "id": "planning-decision-tree-node-4",
+      "kind": "goal",
+      "label": "Tree Decision Execution",
+      "metadata": {
+        "detail": "Decision Tree signal 4",
+        "owner": "goal",
+        "template_id": "planning.decision_tree"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "task",
+      "id": "planning-decision-tree-node-5",
+      "kind": "decision",
+      "label": "Decision Tree Risk",
+      "metadata": {
+        "detail": "Decision Tree signal 5",
+        "owner": "task",
+        "template_id": "planning.decision_tree"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "automation",
+      "id": "planning-decision-tree-node-6",
+      "kind": "tree",
+      "label": "Tree Decision Outcome",
+      "metadata": {
+        "detail": "Decision Tree signal 6",
+        "owner": "automation",
+        "template_id": "planning.decision_tree"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Decision Tree: Branches choices, criteria, consequences, owners, and fallback paths for a plan"
+}

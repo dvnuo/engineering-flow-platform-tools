@@ -1,0 +1,168 @@
+{
+  "items": [
+    {
+      "group": "goal",
+      "id": "planning-resource-allocation-board-item-1",
+      "kind": "resource",
+      "label": "Resource Allocation North",
+      "metadata": {
+        "note": "Resource Allocation Board matrix cell 1",
+        "quadrant": "q1",
+        "template_id": "planning.resource_allocation_board"
+      },
+      "metrics": {
+        "confidence": 0.55,
+        "impact": 0.4
+      },
+      "status": "ok",
+      "x": 0.17,
+      "y": 0.29
+    },
+    {
+      "group": "task",
+      "id": "planning-resource-allocation-board-item-2",
+      "kind": "allocation",
+      "label": "Allocation Board East",
+      "metadata": {
+        "note": "Resource Allocation Board matrix cell 2",
+        "quadrant": "q2",
+        "template_id": "planning.resource_allocation_board"
+      },
+      "metrics": {
+        "confidence": 0.59,
+        "impact": 0.46
+      },
+      "status": "warning",
+      "x": 0.4,
+      "y": 0.6
+    },
+    {
+      "group": "automation",
+      "id": "planning-resource-allocation-board-item-3",
+      "kind": "board",
+      "label": "Board Resource South",
+      "metadata": {
+        "note": "Resource Allocation Board matrix cell 3",
+        "quadrant": "q3",
+        "template_id": "planning.resource_allocation_board"
+      },
+      "metrics": {
+        "confidence": 0.63,
+        "impact": 0.52
+      },
+      "status": "success",
+      "x": 0.63,
+      "y": 0.02
+    },
+    {
+      "group": "goal",
+      "id": "planning-resource-allocation-board-item-4",
+      "kind": "goal",
+      "label": "Resource Allocation West",
+      "metadata": {
+        "note": "Resource Allocation Board matrix cell 4",
+        "quadrant": "q4",
+        "template_id": "planning.resource_allocation_board"
+      },
+      "metrics": {
+        "confidence": 0.67,
+        "impact": 0.58
+      },
+      "status": "blocked",
+      "x": 0.86,
+      "y": 0.33
+    },
+    {
+      "group": "task",
+      "id": "planning-resource-allocation-board-item-5",
+      "kind": "resource",
+      "label": "Allocation Board Signal",
+      "metadata": {
+        "note": "Resource Allocation Board matrix cell 5",
+        "quadrant": "q1",
+        "template_id": "planning.resource_allocation_board"
+      },
+      "metrics": {
+        "confidence": 0.71,
+        "impact": 0.64
+      },
+      "status": "error",
+      "x": 0.18,
+      "y": 0.64
+    },
+    {
+      "group": "automation",
+      "id": "planning-resource-allocation-board-item-6",
+      "kind": "allocation",
+      "label": "Board Resource Review",
+      "metadata": {
+        "note": "Resource Allocation Board matrix cell 6",
+        "quadrant": "q2",
+        "template_id": "planning.resource_allocation_board"
+      },
+      "metrics": {
+        "confidence": 0.75,
+        "impact": 0.7
+      },
+      "status": "running",
+      "x": 0.41,
+      "y": 0.06
+    },
+    {
+      "group": "goal",
+      "id": "planning-resource-allocation-board-item-7",
+      "kind": "board",
+      "label": "Resource Allocation Ready",
+      "metadata": {
+        "note": "Resource Allocation Board matrix cell 7",
+        "quadrant": "q3",
+        "template_id": "planning.resource_allocation_board"
+      },
+      "metrics": {
+        "confidence": 0.79,
+        "impact": 0.76
+      },
+      "status": "idle",
+      "x": 0.64,
+      "y": 0.37
+    },
+    {
+      "group": "task",
+      "id": "planning-resource-allocation-board-item-8",
+      "kind": "goal",
+      "label": "Allocation Board Watch",
+      "metadata": {
+        "note": "Resource Allocation Board matrix cell 8",
+        "quadrant": "q4",
+        "template_id": "planning.resource_allocation_board"
+      },
+      "metrics": {
+        "confidence": 0.83,
+        "impact": 0.82
+      },
+      "status": "ok",
+      "x": 0.87,
+      "y": 0.68
+    },
+    {
+      "group": "automation",
+      "id": "planning-resource-allocation-board-item-9",
+      "kind": "resource",
+      "label": "Board Resource Owner",
+      "metadata": {
+        "note": "Resource Allocation Board matrix cell 9",
+        "quadrant": "q1",
+        "template_id": "planning.resource_allocation_board"
+      },
+      "metrics": {
+        "confidence": 0.87,
+        "impact": 0.88
+      },
+      "status": "warning",
+      "x": 0.19,
+      "y": 0.1
+    }
+  ],
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Resource Allocation Board: Balances people, systems, budget, and time across workstreams and delivery risk"
+}

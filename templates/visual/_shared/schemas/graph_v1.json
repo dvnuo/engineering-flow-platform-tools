@@ -1,0 +1,7 @@
+{
+  "$schema": "efp.visual.local.schema",
+  "kind": "graph_v1",
+  "offline": true,
+  "schema": "efp.visual.shared_input_schema.graph_v1",
+  "type": "object"
+}

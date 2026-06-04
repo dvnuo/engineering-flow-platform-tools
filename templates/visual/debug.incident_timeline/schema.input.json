@@ -1,0 +1,180 @@
+{
+  "example": {
+    "events": [
+      {
+        "id": "event-01",
+        "kind": "alert",
+        "label": "Alert fired for checkout errors",
+        "metadata": {
+          "checkpoint": 1,
+          "owner": "release team",
+          "review_date": "2026-06-03"
+        },
+        "status": "running",
+        "summary": "Alert fired for checkout errors in Checkout Incident Timeline",
+        "time": "2026-06-03T09:05:00Z"
+      },
+      {
+        "id": "event-02",
+        "kind": "incident",
+        "label": "Incident commander assigned",
+        "metadata": {
+          "checkpoint": 2,
+          "owner": "release team",
+          "review_date": "2026-06-03"
+        },
+        "status": "success",
+        "summary": "Incident commander assigned in Checkout Incident Timeline",
+        "time": "2026-06-03T09:12:00Z"
+      },
+      {
+        "id": "event-03",
+        "kind": "payment",
+        "label": "Payment adapter disabled",
+        "metadata": {
+          "checkpoint": 3,
+          "owner": "release team",
+          "review_date": "2026-06-03"
+        },
+        "status": "warning",
+        "summary": "Payment adapter disabled in Checkout Incident Timeline",
+        "time": "2026-06-03T09:19:00Z"
+      },
+      {
+        "id": "event-04",
+        "kind": "rollback",
+        "label": "Rollback completed",
+        "metadata": {
+          "checkpoint": 4,
+          "owner": "release team",
+          "review_date": "2026-06-03"
+        },
+        "status": "success",
+        "summary": "Rollback completed in Checkout Incident Timeline",
+        "time": "2026-06-03T09:26:00Z"
+      },
+      {
+        "id": "event-05",
+        "kind": "customer",
+        "label": "Customer update posted",
+        "metadata": {
+          "checkpoint": 5,
+          "owner": "release team",
+          "review_date": "2026-06-03"
+        },
+        "status": "running",
+        "summary": "Customer update posted in Checkout Incident Timeline",
+        "time": "2026-06-03T09:33:00Z"
+      },
+      {
+        "id": "event-06",
+        "kind": "postmortem",
+        "label": "Postmortem action created",
+        "metadata": {
+          "checkpoint": 6,
+          "owner": "release team",
+          "review_date": "2026-06-03"
+        },
+        "status": "success",
+        "summary": "Postmortem action created in Checkout Incident Timeline",
+        "time": "2026-06-03T09:40:00Z"
+      }
+    ],
+    "schema": "efp.visual.input.timeline.v1",
+    "title": "Checkout Incident Timeline"
+  },
+  "input_schema_kind": "timeline_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.timeline.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "debug.incident_timeline"
+}

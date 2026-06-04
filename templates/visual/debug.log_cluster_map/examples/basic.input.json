@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "debug-log-cluster-map-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "debug-log-cluster-map-node-2",
+      "weight": 2
+    },
+    {
+      "from": "debug-log-cluster-map-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "debug-log-cluster-map-node-3",
+      "weight": 3
+    },
+    {
+      "from": "debug-log-cluster-map-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "debug-log-cluster-map-node-4",
+      "weight": 2
+    },
+    {
+      "from": "debug-log-cluster-map-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "debug-log-cluster-map-node-5",
+      "weight": 4
+    },
+    {
+      "from": "debug-log-cluster-map-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "debug-log-cluster-map-node-6",
+      "weight": 2
+    },
+    {
+      "from": "debug-log-cluster-map-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "debug-log-cluster-map-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "symptom",
+      "id": "debug-log-cluster-map-node-1",
+      "kind": "log",
+      "label": "Log Cluster Intake",
+      "metadata": {
+        "detail": "Log Cluster Map signal 1",
+        "owner": "symptom",
+        "template_id": "debug.log_cluster_map"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "cause",
+      "id": "debug-log-cluster-map-node-2",
+      "kind": "cluster",
+      "label": "Cluster Map Core",
+      "metadata": {
+        "detail": "Log Cluster Map signal 2",
+        "owner": "cause",
+        "template_id": "debug.log_cluster_map"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "mitigation",
+      "id": "debug-log-cluster-map-node-3",
+      "kind": "map",
+      "label": "Map Log Policy",
+      "metadata": {
+        "detail": "Log Cluster Map signal 3",
+        "owner": "mitigation",
+        "template_id": "debug.log_cluster_map"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "symptom",
+      "id": "debug-log-cluster-map-node-4",
+      "kind": "symptom",
+      "label": "Log Cluster Execution",
+      "metadata": {
+        "detail": "Log Cluster Map signal 4",
+        "owner": "symptom",
+        "template_id": "debug.log_cluster_map"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "cause",
+      "id": "debug-log-cluster-map-node-5",
+      "kind": "log",
+      "label": "Cluster Map Risk",
+      "metadata": {
+        "detail": "Log Cluster Map signal 5",
+        "owner": "cause",
+        "template_id": "debug.log_cluster_map"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "mitigation",
+      "id": "debug-log-cluster-map-node-6",
+      "kind": "cluster",
+      "label": "Map Log Outcome",
+      "metadata": {
+        "detail": "Log Cluster Map signal 6",
+        "owner": "mitigation",
+        "template_id": "debug.log_cluster_map"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Log Cluster Map: Groups log signatures, affected services, example messages, and suspected causes"
+}

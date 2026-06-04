@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "project-support-escalation-graph-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "project-support-escalation-graph-node-2",
+        "weight": 2
+      },
+      {
+        "from": "project-support-escalation-graph-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "project-support-escalation-graph-node-3",
+        "weight": 3
+      },
+      {
+        "from": "project-support-escalation-graph-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "project-support-escalation-graph-node-4",
+        "weight": 2
+      },
+      {
+        "from": "project-support-escalation-graph-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "project-support-escalation-graph-node-5",
+        "weight": 4
+      },
+      {
+        "from": "project-support-escalation-graph-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "project-support-escalation-graph-node-6",
+        "weight": 2
+      },
+      {
+        "from": "project-support-escalation-graph-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "project-support-escalation-graph-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "planning",
+        "id": "project-support-escalation-graph-node-1",
+        "kind": "support",
+        "label": "Support Escalation Intake",
+        "metadata": {
+          "detail": "Support Escalation Graph signal 1",
+          "owner": "planning",
+          "template_id": "project.support_escalation_graph"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "review",
+        "id": "project-support-escalation-graph-node-2",
+        "kind": "escalation",
+        "label": "Escalation Graph Core",
+        "metadata": {
+          "detail": "Support Escalation Graph signal 2",
+          "owner": "review",
+          "template_id": "project.support_escalation_graph"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "delivery",
+        "id": "project-support-escalation-graph-node-3",
+        "kind": "graph",
+        "label": "Graph Support Policy",
+        "metadata": {
+          "detail": "Support Escalation Graph signal 3",
+          "owner": "delivery",
+          "template_id": "project.support_escalation_graph"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "planning",
+        "id": "project-support-escalation-graph-node-4",
+        "kind": "planning",
+        "label": "Support Escalation Execution",
+        "metadata": {
+          "detail": "Support Escalation Graph signal 4",
+          "owner": "planning",
+          "template_id": "project.support_escalation_graph"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "review",
+        "id": "project-support-escalation-graph-node-5",
+        "kind": "support",
+        "label": "Escalation Graph Risk",
+        "metadata": {
+          "detail": "Support Escalation Graph signal 5",
+          "owner": "review",
+          "template_id": "project.support_escalation_graph"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "delivery",
+        "id": "project-support-escalation-graph-node-6",
+        "kind": "escalation",
+        "label": "Graph Support Outcome",
+        "metadata": {
+          "detail": "Support Escalation Graph signal 6",
+          "owner": "delivery",
+          "template_id": "project.support_escalation_graph"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Support Escalation Graph: Connects support cases, impacted customers, engineering owners, severity, and resolution path"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "project.support_escalation_graph"
+}

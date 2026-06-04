@@ -1,0 +1,193 @@
+{
+  "example": {
+    "events": [
+      {
+        "id": "planning-milestone-road-event-1",
+        "kind": "intake",
+        "label": "Milestone Road Opened",
+        "lane": "goal",
+        "metadata": {
+          "sequence": 1,
+          "template_id": "planning.milestone_road"
+        },
+        "status": "success",
+        "summary": "Milestone Road advanced through intake with roadmap context.",
+        "time": "2026-06-03T13:50:00Z"
+      },
+      {
+        "id": "planning-milestone-road-event-2",
+        "kind": "analysis",
+        "label": "Road Milestone Triaged",
+        "lane": "task",
+        "metadata": {
+          "sequence": 2,
+          "template_id": "planning.milestone_road"
+        },
+        "status": "running",
+        "summary": "Milestone Road advanced through analysis with roadmap context.",
+        "time": "2026-06-03T14:07:00Z"
+      },
+      {
+        "id": "planning-milestone-road-event-3",
+        "kind": "decision",
+        "label": "Milestone Road Mapped",
+        "lane": "automation",
+        "metadata": {
+          "sequence": 3,
+          "template_id": "planning.milestone_road"
+        },
+        "status": "warning",
+        "summary": "Milestone Road advanced through decision with roadmap context.",
+        "time": "2026-06-03T14:24:00Z"
+      },
+      {
+        "id": "planning-milestone-road-event-4",
+        "kind": "execution",
+        "label": "Road Milestone Acted",
+        "lane": "goal",
+        "metadata": {
+          "sequence": 4,
+          "template_id": "planning.milestone_road"
+        },
+        "status": "success",
+        "summary": "Milestone Road advanced through execution with roadmap context.",
+        "time": "2026-06-03T14:41:00Z"
+      },
+      {
+        "id": "planning-milestone-road-event-5",
+        "kind": "verification",
+        "label": "Milestone Road Checked",
+        "lane": "task",
+        "metadata": {
+          "sequence": 5,
+          "template_id": "planning.milestone_road"
+        },
+        "status": "error",
+        "summary": "Milestone Road advanced through verification with roadmap context.",
+        "time": "2026-06-03T14:58:00Z"
+      },
+      {
+        "id": "planning-milestone-road-event-6",
+        "kind": "handoff",
+        "label": "Road Milestone Recovered",
+        "lane": "automation",
+        "metadata": {
+          "sequence": 6,
+          "template_id": "planning.milestone_road"
+        },
+        "status": "blocked",
+        "summary": "Milestone Road advanced through handoff with roadmap context.",
+        "time": "2026-06-03T15:15:00Z"
+      },
+      {
+        "id": "planning-milestone-road-event-7",
+        "kind": "closeout",
+        "label": "Milestone Road Closed",
+        "lane": "goal",
+        "metadata": {
+          "sequence": 7,
+          "template_id": "planning.milestone_road"
+        },
+        "status": "success",
+        "summary": "Milestone Road advanced through closeout with roadmap context.",
+        "time": "2026-06-03T15:32:00Z"
+      }
+    ],
+    "schema": "efp.visual.input.timeline.v1",
+    "title": "Milestone Road: Orders milestones along a delivery path with entry criteria, risks, and completion evidence"
+  },
+  "input_schema_kind": "timeline_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.timeline.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "planning.milestone_road"
+}

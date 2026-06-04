@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "codebase-monorepo-workspace-map-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "codebase-monorepo-workspace-map-node-2",
+        "weight": 2
+      },
+      {
+        "from": "codebase-monorepo-workspace-map-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "codebase-monorepo-workspace-map-node-3",
+        "weight": 3
+      },
+      {
+        "from": "codebase-monorepo-workspace-map-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "codebase-monorepo-workspace-map-node-4",
+        "weight": 2
+      },
+      {
+        "from": "codebase-monorepo-workspace-map-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "codebase-monorepo-workspace-map-node-5",
+        "weight": 4
+      },
+      {
+        "from": "codebase-monorepo-workspace-map-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "codebase-monorepo-workspace-map-node-6",
+        "weight": 2
+      },
+      {
+        "from": "codebase-monorepo-workspace-map-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "codebase-monorepo-workspace-map-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "source",
+        "id": "codebase-monorepo-workspace-map-node-1",
+        "kind": "monorepo",
+        "label": "Monorepo Workspace Intake",
+        "metadata": {
+          "detail": "Monorepo Workspace Map signal 1",
+          "owner": "source",
+          "template_id": "codebase.monorepo_workspace_map"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "test",
+        "id": "codebase-monorepo-workspace-map-node-2",
+        "kind": "workspace",
+        "label": "Workspace Map Core",
+        "metadata": {
+          "detail": "Monorepo Workspace Map signal 2",
+          "owner": "test",
+          "template_id": "codebase.monorepo_workspace_map"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "release",
+        "id": "codebase-monorepo-workspace-map-node-3",
+        "kind": "map",
+        "label": "Map Monorepo Policy",
+        "metadata": {
+          "detail": "Monorepo Workspace Map signal 3",
+          "owner": "release",
+          "template_id": "codebase.monorepo_workspace_map"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "source",
+        "id": "codebase-monorepo-workspace-map-node-4",
+        "kind": "source",
+        "label": "Monorepo Workspace Execution",
+        "metadata": {
+          "detail": "Monorepo Workspace Map signal 4",
+          "owner": "source",
+          "template_id": "codebase.monorepo_workspace_map"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "test",
+        "id": "codebase-monorepo-workspace-map-node-5",
+        "kind": "monorepo",
+        "label": "Workspace Map Risk",
+        "metadata": {
+          "detail": "Monorepo Workspace Map signal 5",
+          "owner": "test",
+          "template_id": "codebase.monorepo_workspace_map"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "release",
+        "id": "codebase-monorepo-workspace-map-node-6",
+        "kind": "workspace",
+        "label": "Map Monorepo Outcome",
+        "metadata": {
+          "detail": "Monorepo Workspace Map signal 6",
+          "owner": "release",
+          "template_id": "codebase.monorepo_workspace_map"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Monorepo Workspace Map: Maps packages, apps, shared libraries, build boundaries, and team ownership in a monorepo"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "codebase.monorepo_workspace_map"
+}

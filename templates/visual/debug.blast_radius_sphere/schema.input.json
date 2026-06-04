@@ -1,0 +1,308 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "debug-blast-radius-sphere-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "debug-blast-radius-sphere-node-2",
+        "weight": 2
+      },
+      {
+        "from": "debug-blast-radius-sphere-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "debug-blast-radius-sphere-node-3",
+        "weight": 3
+      },
+      {
+        "from": "debug-blast-radius-sphere-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "debug-blast-radius-sphere-node-4",
+        "weight": 2
+      },
+      {
+        "from": "debug-blast-radius-sphere-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "debug-blast-radius-sphere-node-5",
+        "weight": 4
+      },
+      {
+        "from": "debug-blast-radius-sphere-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "debug-blast-radius-sphere-node-6",
+        "weight": 2
+      },
+      {
+        "from": "debug-blast-radius-sphere-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "debug-blast-radius-sphere-node-6",
+        "weight": 1
+      }
+    ],
+    "nodes": [
+      {
+        "group": "symptom",
+        "id": "debug-blast-radius-sphere-node-1",
+        "kind": "blast",
+        "label": "Blast Radius Intake",
+        "metadata": {
+          "detail": "Blast Radius Sphere signal 1",
+          "owner": "symptom",
+          "template_id": "debug.blast_radius_sphere"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "cause",
+        "id": "debug-blast-radius-sphere-node-2",
+        "kind": "radius",
+        "label": "Radius Sphere Core",
+        "metadata": {
+          "detail": "Blast Radius Sphere signal 2",
+          "owner": "cause",
+          "template_id": "debug.blast_radius_sphere"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "mitigation",
+        "id": "debug-blast-radius-sphere-node-3",
+        "kind": "sphere",
+        "label": "Sphere Blast Policy",
+        "metadata": {
+          "detail": "Blast Radius Sphere signal 3",
+          "owner": "mitigation",
+          "template_id": "debug.blast_radius_sphere"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "symptom",
+        "id": "debug-blast-radius-sphere-node-4",
+        "kind": "symptom",
+        "label": "Blast Radius Execution",
+        "metadata": {
+          "detail": "Blast Radius Sphere signal 4",
+          "owner": "symptom",
+          "template_id": "debug.blast_radius_sphere"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "cause",
+        "id": "debug-blast-radius-sphere-node-5",
+        "kind": "blast",
+        "label": "Radius Sphere Risk",
+        "metadata": {
+          "detail": "Blast Radius Sphere signal 5",
+          "owner": "cause",
+          "template_id": "debug.blast_radius_sphere"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "mitigation",
+        "id": "debug-blast-radius-sphere-node-6",
+        "kind": "radius",
+        "label": "Sphere Blast Outcome",
+        "metadata": {
+          "detail": "Blast Radius Sphere signal 6",
+          "owner": "mitigation",
+          "template_id": "debug.blast_radius_sphere"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph.v1",
+    "title": "Blast Radius Sphere: Estimates impacted users, services, data paths, and rollback scope around a failure"
+  },
+  "input_schema_kind": "graph_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "debug.blast_radius_sphere"
+}

@@ -1,0 +1,168 @@
+{
+  "items": [
+    {
+      "group": "claim",
+      "id": "knowledge-design-tradeoff-radar-item-1",
+      "kind": "design",
+      "label": "Design Tradeoff North",
+      "metadata": {
+        "note": "Design Tradeoff Radar matrix cell 1",
+        "quadrant": "q1",
+        "template_id": "knowledge.design_tradeoff_radar"
+      },
+      "metrics": {
+        "confidence": 0.55,
+        "impact": 0.4
+      },
+      "status": "ok",
+      "x": 0.17,
+      "y": 0.29
+    },
+    {
+      "group": "source",
+      "id": "knowledge-design-tradeoff-radar-item-2",
+      "kind": "tradeoff",
+      "label": "Tradeoff Radar East",
+      "metadata": {
+        "note": "Design Tradeoff Radar matrix cell 2",
+        "quadrant": "q2",
+        "template_id": "knowledge.design_tradeoff_radar"
+      },
+      "metrics": {
+        "confidence": 0.59,
+        "impact": 0.46
+      },
+      "status": "warning",
+      "x": 0.4,
+      "y": 0.6
+    },
+    {
+      "group": "decision",
+      "id": "knowledge-design-tradeoff-radar-item-3",
+      "kind": "radar",
+      "label": "Radar Design South",
+      "metadata": {
+        "note": "Design Tradeoff Radar matrix cell 3",
+        "quadrant": "q3",
+        "template_id": "knowledge.design_tradeoff_radar"
+      },
+      "metrics": {
+        "confidence": 0.63,
+        "impact": 0.52
+      },
+      "status": "success",
+      "x": 0.63,
+      "y": 0.02
+    },
+    {
+      "group": "claim",
+      "id": "knowledge-design-tradeoff-radar-item-4",
+      "kind": "claim",
+      "label": "Design Tradeoff West",
+      "metadata": {
+        "note": "Design Tradeoff Radar matrix cell 4",
+        "quadrant": "q4",
+        "template_id": "knowledge.design_tradeoff_radar"
+      },
+      "metrics": {
+        "confidence": 0.67,
+        "impact": 0.58
+      },
+      "status": "blocked",
+      "x": 0.86,
+      "y": 0.33
+    },
+    {
+      "group": "source",
+      "id": "knowledge-design-tradeoff-radar-item-5",
+      "kind": "design",
+      "label": "Tradeoff Radar Signal",
+      "metadata": {
+        "note": "Design Tradeoff Radar matrix cell 5",
+        "quadrant": "q1",
+        "template_id": "knowledge.design_tradeoff_radar"
+      },
+      "metrics": {
+        "confidence": 0.71,
+        "impact": 0.64
+      },
+      "status": "error",
+      "x": 0.18,
+      "y": 0.64
+    },
+    {
+      "group": "decision",
+      "id": "knowledge-design-tradeoff-radar-item-6",
+      "kind": "tradeoff",
+      "label": "Radar Design Review",
+      "metadata": {
+        "note": "Design Tradeoff Radar matrix cell 6",
+        "quadrant": "q2",
+        "template_id": "knowledge.design_tradeoff_radar"
+      },
+      "metrics": {
+        "confidence": 0.75,
+        "impact": 0.7
+      },
+      "status": "running",
+      "x": 0.41,
+      "y": 0.06
+    },
+    {
+      "group": "claim",
+      "id": "knowledge-design-tradeoff-radar-item-7",
+      "kind": "radar",
+      "label": "Design Tradeoff Ready",
+      "metadata": {
+        "note": "Design Tradeoff Radar matrix cell 7",
+        "quadrant": "q3",
+        "template_id": "knowledge.design_tradeoff_radar"
+      },
+      "metrics": {
+        "confidence": 0.79,
+        "impact": 0.76
+      },
+      "status": "idle",
+      "x": 0.64,
+      "y": 0.37
+    },
+    {
+      "group": "source",
+      "id": "knowledge-design-tradeoff-radar-item-8",
+      "kind": "claim",
+      "label": "Tradeoff Radar Watch",
+      "metadata": {
+        "note": "Design Tradeoff Radar matrix cell 8",
+        "quadrant": "q4",
+        "template_id": "knowledge.design_tradeoff_radar"
+      },
+      "metrics": {
+        "confidence": 0.83,
+        "impact": 0.82
+      },
+      "status": "ok",
+      "x": 0.87,
+      "y": 0.68
+    },
+    {
+      "group": "decision",
+      "id": "knowledge-design-tradeoff-radar-item-9",
+      "kind": "design",
+      "label": "Radar Design Owner",
+      "metadata": {
+        "note": "Design Tradeoff Radar matrix cell 9",
+        "quadrant": "q1",
+        "template_id": "knowledge.design_tradeoff_radar"
+      },
+      "metrics": {
+        "confidence": 0.87,
+        "impact": 0.88
+      },
+      "status": "warning",
+      "x": 0.19,
+      "y": 0.1
+    }
+  ],
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Design Tradeoff Radar: Plots design choices by cost, reversibility, risk, performance, and confidence"
+}

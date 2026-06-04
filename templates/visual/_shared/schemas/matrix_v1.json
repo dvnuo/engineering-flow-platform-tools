@@ -1,0 +1,7 @@
+{
+  "$schema": "efp.visual.local.schema",
+  "kind": "matrix_v1",
+  "offline": true,
+  "schema": "efp.visual.shared_input_schema.matrix_v1",
+  "type": "object"
+}

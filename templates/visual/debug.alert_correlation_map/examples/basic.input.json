@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "debug-alert-correlation-map-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "debug-alert-correlation-map-node-2",
+      "weight": 2
+    },
+    {
+      "from": "debug-alert-correlation-map-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "debug-alert-correlation-map-node-3",
+      "weight": 3
+    },
+    {
+      "from": "debug-alert-correlation-map-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "debug-alert-correlation-map-node-4",
+      "weight": 2
+    },
+    {
+      "from": "debug-alert-correlation-map-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "debug-alert-correlation-map-node-5",
+      "weight": 4
+    },
+    {
+      "from": "debug-alert-correlation-map-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "debug-alert-correlation-map-node-6",
+      "weight": 2
+    },
+    {
+      "from": "debug-alert-correlation-map-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "debug-alert-correlation-map-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "symptom",
+      "id": "debug-alert-correlation-map-node-1",
+      "kind": "alert",
+      "label": "Alert Correlation Intake",
+      "metadata": {
+        "detail": "Alert Correlation Map signal 1",
+        "owner": "symptom",
+        "template_id": "debug.alert_correlation_map"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "cause",
+      "id": "debug-alert-correlation-map-node-2",
+      "kind": "correlation",
+      "label": "Correlation Map Core",
+      "metadata": {
+        "detail": "Alert Correlation Map signal 2",
+        "owner": "cause",
+        "template_id": "debug.alert_correlation_map"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "error"
+    },
+    {
+      "group": "mitigation",
+      "id": "debug-alert-correlation-map-node-3",
+      "kind": "map",
+      "label": "Map Alert Policy",
+      "metadata": {
+        "detail": "Alert Correlation Map signal 3",
+        "owner": "mitigation",
+        "template_id": "debug.alert_correlation_map"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "running"
+    },
+    {
+      "group": "symptom",
+      "id": "debug-alert-correlation-map-node-4",
+      "kind": "symptom",
+      "label": "Alert Correlation Execution",
+      "metadata": {
+        "detail": "Alert Correlation Map signal 4",
+        "owner": "symptom",
+        "template_id": "debug.alert_correlation_map"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "ok"
+    },
+    {
+      "group": "cause",
+      "id": "debug-alert-correlation-map-node-5",
+      "kind": "alert",
+      "label": "Correlation Map Risk",
+      "metadata": {
+        "detail": "Alert Correlation Map signal 5",
+        "owner": "cause",
+        "template_id": "debug.alert_correlation_map"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "warning"
+    },
+    {
+      "group": "mitigation",
+      "id": "debug-alert-correlation-map-node-6",
+      "kind": "correlation",
+      "label": "Map Alert Outcome",
+      "metadata": {
+        "detail": "Alert Correlation Map signal 6",
+        "owner": "mitigation",
+        "template_id": "debug.alert_correlation_map"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "success"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Alert Correlation Map: Clusters alerts by shared service, symptom, dependency, time window, and likely incident"
+}

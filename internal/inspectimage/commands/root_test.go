@@ -436,6 +436,7 @@ func run(t *testing.T, client interface {
 	Responses(context.Context, copilot.ResponsesRequest) (map[string]any, error)
 }, args ...string) map[string]any {
 	t.Helper()
+	isolateInspectImageConfig(t, args)
 	cmd := NewRootWithClient(client)
 	var b bytes.Buffer
 	cmd.SetOut(&b)
@@ -453,6 +454,7 @@ func runSplit(t *testing.T, client interface {
 	Responses(context.Context, copilot.ResponsesRequest) (map[string]any, error)
 }, args ...string) (string, string) {
 	t.Helper()
+	isolateInspectImageConfig(t, args)
 	cmd := NewRootWithClient(client)
 	var stdout, stderr bytes.Buffer
 	cmd.SetOut(&stdout)
@@ -468,6 +470,7 @@ func runText(t *testing.T, client interface {
 	Responses(context.Context, copilot.ResponsesRequest) (map[string]any, error)
 }, args ...string) string {
 	t.Helper()
+	isolateInspectImageConfig(t, args)
 	cmd := NewRootWithClient(client)
 	var b bytes.Buffer
 	cmd.SetOut(&b)
@@ -477,6 +480,23 @@ func runText(t *testing.T, client interface {
 		t.Fatalf("execute failed: %v out=%s", err, b.String())
 	}
 	return b.String()
+}
+
+func isolateInspectImageConfig(t *testing.T, args []string) {
+	t.Helper()
+	for i, arg := range args {
+		if arg == "--config" || strings.HasPrefix(arg, "--config=") {
+			if arg == "--config" && i+1 >= len(args) {
+				return
+			}
+			return
+		}
+	}
+	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
+	if err := config.Save(cfgPath, config.Default()); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(config.EnvConfigPath, cfgPath)
 }
 
 func readJSONFile(t *testing.T, path string) map[string]any {

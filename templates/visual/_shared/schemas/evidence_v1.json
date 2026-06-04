@@ -1,0 +1,7 @@
+{
+  "$schema": "efp.visual.local.schema",
+  "kind": "evidence_v1",
+  "offline": true,
+  "schema": "efp.visual.shared_input_schema.evidence_v1",
+  "type": "object"
+}

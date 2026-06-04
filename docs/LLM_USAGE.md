@@ -1,16 +1,49 @@
 # LLM/Agent Usage
 
-- For agents, default every `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
+- For agents, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
 - Only omit `--json` when intentionally reading human-oriented `--help` text or when a documented interactive human prompt requires text output.
 - Use --instance when multiple instances are configured.
 - Full Jira/Confluence URLs can auto-select the instance.
 - Use --dry-run before write operations.
 - Use --yes for destructive operations.
 - Inspect error.code and error.hint before retrying.
-- Command parsing failures across `jira`, `confluence`, `jenkins`, `browser`, and `inspect-image` return a JSON `invalid_args` envelope when `--json` is present.
+- Command parsing failures across `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` return a JSON `invalid_args` envelope when `--json` is present.
 - On Windows `cmd`, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`; avoid Bash-only quoting and commands.
 - If PATH lookup is unstable, run `where <binary>` and invoke the exact `.exe` path with double quotes.
 - For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
+
+## Visual Artifact Usage
+
+- Always use `--json`.
+- Always use `--template-dir` when templates are in the workspace or release artifact.
+- Do not read all 195 template details up front.
+- Do not infer available templates from the `templates/visual` file tree.
+- Discover templates only with `visual template categories`, `visual template list`, `visual template get`, and `visual template schema`.
+- Run `visual template categories --template-dir ./templates/visual --json`.
+- Run `visual template list --template-dir ./templates/visual --category <category> --json`.
+- Run `visual template get <template-id> --template-dir ./templates/visual --json`.
+- Run `visual template schema <template-id> --template-dir ./templates/visual --json`.
+- Backward compatibility aliases work, but they are registry aliases rather than duplicate template directories; prefer the returned `canonical_id` for new inputs and examples.
+- Do not invent template paths or point inputs at alias directories.
+- Before every render, run `visual template schema <id> --template-dir ./templates/visual --json`.
+- Write input JSON that follows `data.json_schema`; do not invent the input shape and do not generate JavaScript code.
+- Validate with `visual validate --template <template-id> --template-dir ./templates/visual --input <input.json> --json`.
+- Render to a new output directory with `visual render --template <template-id> --input <input.json> --out <dir> --json`.
+- Return `data.artifact.entrypoint` to the user.
+- Do not use remote assets, CDN URLs, Node/npm, generated JavaScript, or network APIs.
+- Use `--dry-run` to preview planned files before writing.
+- The generated `index.html` is safe for `file://` and for Portal/runtime static proxy subpaths because asset paths are relative.
+
+Recommended template categories:
+
+- `agent` or `debug` for agent runs, failures, incidents, traces, and recovery.
+- `codebase` for repo, code, diff, dependency, test, coverage, and migration work.
+- `runtime` for infra, service, adapter, session, event, sandbox, and capability maps.
+- `project` for Jira, GitHub, Confluence, requirements, releases, and reviews.
+- `knowledge` for evidence, research, citation, source, and answer lineage.
+- `planning` for plans, tasks, workflows, automation, approvals, and goals.
+- `business` for KPI, funnel, customer, revenue, support, capacity, and ops views.
+- `education` for explanations, tutorials, lifecycle, process, and tradeoff visuals.
 
 ## Jenkins Automation
 
@@ -98,7 +131,7 @@
 
 ## Recommended Workflow
 
-1. Discover commands with `jira commands --json`, `confluence commands --json`, `jenkins commands --json`, or `browser commands --json`.
+1. Discover commands with `jira commands --json`, `confluence commands --json`, `jenkins commands --json`, `browser commands --json`, `inspect-image commands --json`, or `visual commands --json`.
 2. Inspect the exact command schema before constructing arguments.
 3. Prefer full Jira issue URLs or Confluence page URLs when the user provides them.
 4. Add `--instance` when the URL is ambiguous across configured instances.
@@ -128,6 +161,7 @@ jenkins schema build.status --json
 jenkins schema artifact.download --json
 jenkins schema api.get --json
 inspect-image schema inspect --json
+visual schema render --json
 ```
 
 The `required` field lists mandatory arguments and flags. The `flags` field includes type and description metadata suitable for tool planning.

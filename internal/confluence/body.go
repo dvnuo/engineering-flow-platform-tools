@@ -9,4 +9,3 @@ func NormalizeBodyFormat(format string) string {
 	}
 	return f
 }
-

@@ -1,0 +1,146 @@
+{
+  "edges": [
+    {
+      "from": "project-stakeholder-network-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "project-stakeholder-network-node-2",
+      "weight": 2
+    },
+    {
+      "from": "project-stakeholder-network-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "project-stakeholder-network-node-3",
+      "weight": 3
+    },
+    {
+      "from": "project-stakeholder-network-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "project-stakeholder-network-node-4",
+      "weight": 2
+    },
+    {
+      "from": "project-stakeholder-network-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "project-stakeholder-network-node-5",
+      "weight": 4
+    },
+    {
+      "from": "project-stakeholder-network-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "project-stakeholder-network-node-6",
+      "weight": 2
+    },
+    {
+      "from": "project-stakeholder-network-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "project-stakeholder-network-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "group": "planning",
+      "id": "project-stakeholder-network-node-1",
+      "kind": "stakeholder",
+      "label": "Stakeholder Network Intake",
+      "metadata": {
+        "detail": "Stakeholder Network signal 1",
+        "owner": "planning",
+        "template_id": "project.stakeholder_network"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "review",
+      "id": "project-stakeholder-network-node-2",
+      "kind": "network",
+      "label": "Network Stakeholder Core",
+      "metadata": {
+        "detail": "Stakeholder Network signal 2",
+        "owner": "review",
+        "template_id": "project.stakeholder_network"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "delivery",
+      "id": "project-stakeholder-network-node-3",
+      "kind": "delivery",
+      "label": "Stakeholder Network Policy",
+      "metadata": {
+        "detail": "Stakeholder Network signal 3",
+        "owner": "delivery",
+        "template_id": "project.stakeholder_network"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "planning",
+      "id": "project-stakeholder-network-node-4",
+      "kind": "planning",
+      "label": "Network Stakeholder Execution",
+      "metadata": {
+        "detail": "Stakeholder Network signal 4",
+        "owner": "planning",
+        "template_id": "project.stakeholder_network"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "review",
+      "id": "project-stakeholder-network-node-5",
+      "kind": "stakeholder",
+      "label": "Stakeholder Network Risk",
+      "metadata": {
+        "detail": "Stakeholder Network signal 5",
+        "owner": "review",
+        "template_id": "project.stakeholder_network"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "delivery",
+      "id": "project-stakeholder-network-node-6",
+      "kind": "network",
+      "label": "Network Stakeholder Outcome",
+      "metadata": {
+        "detail": "Stakeholder Network signal 6",
+        "owner": "delivery",
+        "template_id": "project.stakeholder_network"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Stakeholder Network: Maps stakeholders, decision rights, communication channels, dependencies, and escalation paths"
+}

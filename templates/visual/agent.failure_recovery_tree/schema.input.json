@@ -1,0 +1,463 @@
+{
+  "example": {
+    "edges": [
+      {
+        "from": "agent-failure-recovery-tree-node-1",
+        "kind": "dependency",
+        "label": "feeds",
+        "to": "agent-failure-recovery-tree-node-2",
+        "weight": 2
+      },
+      {
+        "from": "agent-failure-recovery-tree-node-2",
+        "kind": "validation",
+        "label": "checks",
+        "to": "agent-failure-recovery-tree-node-3",
+        "weight": 3
+      },
+      {
+        "from": "agent-failure-recovery-tree-node-3",
+        "kind": "handoff",
+        "label": "routes",
+        "to": "agent-failure-recovery-tree-node-4",
+        "weight": 2
+      },
+      {
+        "from": "agent-failure-recovery-tree-node-4",
+        "kind": "risk",
+        "label": "impacts",
+        "to": "agent-failure-recovery-tree-node-5",
+        "weight": 4
+      },
+      {
+        "from": "agent-failure-recovery-tree-node-5",
+        "kind": "feedback",
+        "label": "reports",
+        "to": "agent-failure-recovery-tree-node-6",
+        "weight": 2
+      },
+      {
+        "from": "agent-failure-recovery-tree-node-2",
+        "kind": "signal",
+        "label": "observes",
+        "to": "agent-failure-recovery-tree-node-6",
+        "weight": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "agent-failure-recovery-tree-event-1",
+        "kind": "start",
+        "label": "Failure Recovery Tree Opened",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "node_id": "agent-failure-recovery-tree-node-1",
+        "status": "running",
+        "summary": "Failure Recovery Tree event 1 references Failure Recovery Intake.",
+        "time": "2026-06-03T15:14:00Z"
+      },
+      {
+        "id": "agent-failure-recovery-tree-event-2",
+        "kind": "tool",
+        "label": "Failure Recovery Tree Triaged",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "node_id": "agent-failure-recovery-tree-node-2",
+        "status": "success",
+        "summary": "Failure Recovery Tree event 2 references Recovery Tree Core.",
+        "time": "2026-06-03T15:25:00Z"
+      },
+      {
+        "id": "agent-failure-recovery-tree-event-3",
+        "kind": "checkpoint",
+        "label": "Failure Recovery Tree Mapped",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "node_id": "agent-failure-recovery-tree-node-3",
+        "status": "warning",
+        "summary": "Failure Recovery Tree event 3 references Tree Failure Policy.",
+        "time": "2026-06-03T15:36:00Z"
+      },
+      {
+        "id": "agent-failure-recovery-tree-event-4",
+        "kind": "decision",
+        "label": "Failure Recovery Tree Acted",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "node_id": "agent-failure-recovery-tree-node-4",
+        "status": "running",
+        "summary": "Failure Recovery Tree event 4 references Failure Recovery Execution.",
+        "time": "2026-06-03T15:47:00Z"
+      },
+      {
+        "id": "agent-failure-recovery-tree-event-5",
+        "kind": "recovery",
+        "label": "Failure Recovery Tree Checked",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "node_id": "agent-failure-recovery-tree-node-5",
+        "status": "error",
+        "summary": "Failure Recovery Tree event 5 references Recovery Tree Risk.",
+        "time": "2026-06-03T15:58:00Z"
+      },
+      {
+        "id": "agent-failure-recovery-tree-event-6",
+        "kind": "finish",
+        "label": "Failure Recovery Tree Recovered",
+        "metadata": {
+          "layout": "radial_tree",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "node_id": "agent-failure-recovery-tree-node-6",
+        "status": "success",
+        "summary": "Failure Recovery Tree event 6 references Tree Failure Outcome.",
+        "time": "2026-06-03T16:09:00Z"
+      }
+    ],
+    "nodes": [
+      {
+        "group": "reasoning",
+        "id": "agent-failure-recovery-tree-node-1",
+        "kind": "failure",
+        "label": "Failure Recovery Intake",
+        "metadata": {
+          "detail": "Failure Recovery Tree signal 1",
+          "owner": "reasoning",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "metrics": {
+          "confidence": 0.7,
+          "risk": 0.5
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "tooling",
+        "id": "agent-failure-recovery-tree-node-2",
+        "kind": "recovery",
+        "label": "Recovery Tree Core",
+        "metadata": {
+          "detail": "Failure Recovery Tree signal 2",
+          "owner": "tooling",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "metrics": {
+          "confidence": 0.74,
+          "risk": 0.75
+        },
+        "status": "error"
+      },
+      {
+        "group": "response",
+        "id": "agent-failure-recovery-tree-node-3",
+        "kind": "tree",
+        "label": "Tree Failure Policy",
+        "metadata": {
+          "detail": "Failure Recovery Tree signal 3",
+          "owner": "response",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "metrics": {
+          "confidence": 0.78,
+          "risk": 1
+        },
+        "status": "running"
+      },
+      {
+        "group": "reasoning",
+        "id": "agent-failure-recovery-tree-node-4",
+        "kind": "reasoning",
+        "label": "Failure Recovery Execution",
+        "metadata": {
+          "detail": "Failure Recovery Tree signal 4",
+          "owner": "reasoning",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "metrics": {
+          "confidence": 0.82,
+          "risk": 0
+        },
+        "status": "ok"
+      },
+      {
+        "group": "tooling",
+        "id": "agent-failure-recovery-tree-node-5",
+        "kind": "failure",
+        "label": "Recovery Tree Risk",
+        "metadata": {
+          "detail": "Failure Recovery Tree signal 5",
+          "owner": "tooling",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "metrics": {
+          "confidence": 0.86,
+          "risk": 0.25
+        },
+        "status": "warning"
+      },
+      {
+        "group": "response",
+        "id": "agent-failure-recovery-tree-node-6",
+        "kind": "recovery",
+        "label": "Tree Failure Outcome",
+        "metadata": {
+          "detail": "Failure Recovery Tree signal 6",
+          "owner": "response",
+          "template_id": "agent.failure_recovery_tree"
+        },
+        "metrics": {
+          "confidence": 0.9,
+          "risk": 0.5
+        },
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.graph_events.v1",
+    "title": "Failure Recovery Tree: Branches agent failures into symptoms, suspected causes, retry choices, and verified recovery steps"
+  },
+  "input_schema_kind": "graph_events_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "events": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "time",
+            "kind",
+            "label",
+            "status",
+            "summary"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "nodes": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.graph_events.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodes",
+      "edges",
+      "events"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "agent.failure_recovery_tree"
+}

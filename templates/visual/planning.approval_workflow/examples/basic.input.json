@@ -1,0 +1,226 @@
+{
+  "edges": [
+    {
+      "from": "planning-approval-workflow-node-1",
+      "kind": "dependency",
+      "label": "feeds",
+      "to": "planning-approval-workflow-node-2",
+      "weight": 2
+    },
+    {
+      "from": "planning-approval-workflow-node-2",
+      "kind": "validation",
+      "label": "checks",
+      "to": "planning-approval-workflow-node-3",
+      "weight": 3
+    },
+    {
+      "from": "planning-approval-workflow-node-3",
+      "kind": "handoff",
+      "label": "routes",
+      "to": "planning-approval-workflow-node-4",
+      "weight": 2
+    },
+    {
+      "from": "planning-approval-workflow-node-4",
+      "kind": "risk",
+      "label": "impacts",
+      "to": "planning-approval-workflow-node-5",
+      "weight": 4
+    },
+    {
+      "from": "planning-approval-workflow-node-5",
+      "kind": "feedback",
+      "label": "reports",
+      "to": "planning-approval-workflow-node-6",
+      "weight": 2
+    },
+    {
+      "from": "planning-approval-workflow-node-2",
+      "kind": "signal",
+      "label": "observes",
+      "to": "planning-approval-workflow-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "planning-approval-workflow-event-1",
+      "kind": "start",
+      "label": "Approval Workflow Opened",
+      "metadata": {
+        "layout": "permission_gate",
+        "template_id": "planning.approval_workflow"
+      },
+      "node_id": "planning-approval-workflow-node-1",
+      "status": "running",
+      "summary": "Approval Workflow event 1 references Approval Workflow Intake.",
+      "time": "2026-06-03T10:28:00Z"
+    },
+    {
+      "id": "planning-approval-workflow-event-2",
+      "kind": "tool",
+      "label": "Approval Workflow Triaged",
+      "metadata": {
+        "layout": "permission_gate",
+        "template_id": "planning.approval_workflow"
+      },
+      "node_id": "planning-approval-workflow-node-2",
+      "status": "success",
+      "summary": "Approval Workflow event 2 references Workflow Approval Core.",
+      "time": "2026-06-03T10:39:00Z"
+    },
+    {
+      "id": "planning-approval-workflow-event-3",
+      "kind": "checkpoint",
+      "label": "Approval Workflow Mapped",
+      "metadata": {
+        "layout": "permission_gate",
+        "template_id": "planning.approval_workflow"
+      },
+      "node_id": "planning-approval-workflow-node-3",
+      "status": "warning",
+      "summary": "Approval Workflow event 3 references Approval Workflow Policy.",
+      "time": "2026-06-03T10:50:00Z"
+    },
+    {
+      "id": "planning-approval-workflow-event-4",
+      "kind": "decision",
+      "label": "Approval Workflow Acted",
+      "metadata": {
+        "layout": "permission_gate",
+        "template_id": "planning.approval_workflow"
+      },
+      "node_id": "planning-approval-workflow-node-4",
+      "status": "running",
+      "summary": "Approval Workflow event 4 references Workflow Approval Execution.",
+      "time": "2026-06-03T11:01:00Z"
+    },
+    {
+      "id": "planning-approval-workflow-event-5",
+      "kind": "recovery",
+      "label": "Approval Workflow Checked",
+      "metadata": {
+        "layout": "permission_gate",
+        "template_id": "planning.approval_workflow"
+      },
+      "node_id": "planning-approval-workflow-node-5",
+      "status": "error",
+      "summary": "Approval Workflow event 5 references Approval Workflow Risk.",
+      "time": "2026-06-03T11:12:00Z"
+    },
+    {
+      "id": "planning-approval-workflow-event-6",
+      "kind": "finish",
+      "label": "Approval Workflow Recovered",
+      "metadata": {
+        "layout": "permission_gate",
+        "template_id": "planning.approval_workflow"
+      },
+      "node_id": "planning-approval-workflow-node-6",
+      "status": "success",
+      "summary": "Approval Workflow event 6 references Workflow Approval Outcome.",
+      "time": "2026-06-03T11:23:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "group": "goal",
+      "id": "planning-approval-workflow-node-1",
+      "kind": "approval",
+      "label": "Approval Workflow Intake",
+      "metadata": {
+        "detail": "Approval Workflow signal 1",
+        "owner": "goal",
+        "template_id": "planning.approval_workflow"
+      },
+      "metrics": {
+        "confidence": 0.7,
+        "risk": 0.5
+      },
+      "status": "success"
+    },
+    {
+      "group": "task",
+      "id": "planning-approval-workflow-node-2",
+      "kind": "workflow",
+      "label": "Workflow Approval Core",
+      "metadata": {
+        "detail": "Approval Workflow signal 2",
+        "owner": "task",
+        "template_id": "planning.approval_workflow"
+      },
+      "metrics": {
+        "confidence": 0.74,
+        "risk": 0.75
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "automation",
+      "id": "planning-approval-workflow-node-3",
+      "kind": "automation",
+      "label": "Approval Workflow Policy",
+      "metadata": {
+        "detail": "Approval Workflow signal 3",
+        "owner": "automation",
+        "template_id": "planning.approval_workflow"
+      },
+      "metrics": {
+        "confidence": 0.78,
+        "risk": 1
+      },
+      "status": "error"
+    },
+    {
+      "group": "goal",
+      "id": "planning-approval-workflow-node-4",
+      "kind": "goal",
+      "label": "Workflow Approval Execution",
+      "metadata": {
+        "detail": "Approval Workflow signal 4",
+        "owner": "goal",
+        "template_id": "planning.approval_workflow"
+      },
+      "metrics": {
+        "confidence": 0.82,
+        "risk": 0
+      },
+      "status": "running"
+    },
+    {
+      "group": "task",
+      "id": "planning-approval-workflow-node-5",
+      "kind": "approval",
+      "label": "Approval Workflow Risk",
+      "metadata": {
+        "detail": "Approval Workflow signal 5",
+        "owner": "task",
+        "template_id": "planning.approval_workflow"
+      },
+      "metrics": {
+        "confidence": 0.86,
+        "risk": 0.25
+      },
+      "status": "ok"
+    },
+    {
+      "group": "automation",
+      "id": "planning-approval-workflow-node-6",
+      "kind": "workflow",
+      "label": "Workflow Approval Outcome",
+      "metadata": {
+        "detail": "Approval Workflow signal 6",
+        "owner": "automation",
+        "template_id": "planning.approval_workflow"
+      },
+      "metrics": {
+        "confidence": 0.9,
+        "risk": 0.5
+      },
+      "status": "warning"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Approval Workflow: Tracks approval requests, reviewers, policy gates, blocked actions, and final authorization"
+}

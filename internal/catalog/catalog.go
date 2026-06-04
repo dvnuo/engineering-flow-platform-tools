@@ -523,6 +523,12 @@ func meta(product, usage string) llm.CommandMeta {
 			explicitFound = true
 		}
 	}
+	if product == "visual" {
+		if local, ok := visualExplicit(name); ok {
+			ex = local
+			explicitFound = true
+		}
+	}
 	r := risk(usage)
 	if ex.Risk != "" {
 		r = ex.Risk
@@ -536,6 +542,9 @@ func meta(product, usage string) llm.CommandMeta {
 	}
 	if product == "inspect-image" && name != "inspect" && len(ex.Flags) == 0 {
 		flags = []string{"json", "format", "verbose", "config"}
+	}
+	if product == "visual" && len(ex.Flags) == 0 {
+		flags = []string{"template-dir", "config", "json", "format", "verbose", "dry-run", "offline-strict"}
 	}
 	desc := ex.Description
 	if desc == "" {
@@ -564,9 +573,16 @@ func meta(product, usage string) llm.CommandMeta {
 			}
 		}
 	}
+	if product == "visual" {
+		for _, p := range []string{"jira ", "confluence ", "browser ", "inspect-image "} {
+			if strings.HasPrefix(example, p) {
+				example = strings.Replace(example, p, "visual ", 1)
+			}
+		}
+	}
 	req := ex.Required
 	if len(req) == 0 {
-		if (product == "inspect-image" || product == "jenkins") && explicitFound {
+		if (product == "inspect-image" || product == "jenkins" || product == "visual") && explicitFound {
 			req = []string{}
 		} else {
 			req = required(name)
@@ -582,6 +598,36 @@ func meta(product, usage string) llm.CommandMeta {
 		Flags:       flags,
 		Required:    req,
 	}
+}
+
+func visualExplicit(name string) (explicitMeta, bool) {
+	common := []string{"template-dir", "config", "json", "format", "verbose", "dry-run", "offline-strict"}
+	items := map[string]explicitMeta{
+		"render": {Description: "Render a complete offline static visualization artifact from a local template and JSON input.",
+			Flags: append([]string{"template", "input", "out", "title", "overwrite", "data-mode"}, common...), Required: []string{"template", "input", "out"}, Risk: "write", Example: "visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --json"},
+		"validate": {Description: "Validate visual input JSON against the selected template input contract.",
+			Flags: append([]string{"template", "input"}, common...), Required: []string{"template", "input"}, Risk: "read", Example: "visual validate --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --json"},
+		"template.list": {Description: "List visual templates from templates/visual/registry.json.",
+			Flags: common, Risk: "read", Example: "visual template list --template-dir ./templates/visual --json"},
+		"template.get": {Description: "Show one visual template manifest and renderer contract.",
+			Flags: common, Required: []string{"template-id"}, Risk: "read", Example: "visual template get agent.run_trace --template-dir ./templates/visual --json"},
+		"template.schema": {Description: "Show one visual template input JSON schema and basic example.",
+			Flags: common, Required: []string{"template_id"}, Risk: "read", Example: "visual template schema agent.run_trace --template-dir ./templates/visual --json"},
+		"template.doctor": {Description: "Validate template registry, manifests, schemas, examples, rendered outputs, and offline safety.",
+			Flags: common, Risk: "read", Example: "visual template doctor --template-dir ./templates/visual --json"},
+		"inspect-output": {Description: "Inspect a generated visual output directory for required files and offline safety.",
+			Flags: append([]string{"out"}, common...), Required: []string{"out"}, Risk: "read", Example: "visual inspect-output --out ./out/run-trace --json"},
+		"commands": {Description: "List available visual commands with metadata.",
+			Flags: common, Risk: "read", Example: "visual commands --json"},
+		"schema": {Description: "Show visual command argument and flag schema.",
+			Flags: common, Required: []string{"command"}, Risk: "read", Example: "visual schema render --json"},
+		"help.llm": {Description: "Show visual CLI usage guidance for LLM agents.",
+			Flags: common, Risk: "read", Example: "visual help llm --json"},
+		"version": {Description: "Print visual CLI version, commit, and build date.",
+			Flags: common, Risk: "read", Example: "visual version --json"},
+	}
+	item, ok := items[name]
+	return item, ok
 }
 
 func inspectImageExplicit(name string) (explicitMeta, bool) {
@@ -914,6 +960,10 @@ func argumentDescription(name string) string {
 		return "Jira issue key or full Jira issue URL."
 	case "jira-url":
 		return "Full Jira URL, especially a Zephyr project or test-management URL."
+	case "template_id":
+		return "Visual template id, such as agent.run_trace."
+	case "template-id":
+		return "Visual template id, such as agent.run_trace."
 	case "comment-id":
 		return "Comment id."
 	case "attachment-id":

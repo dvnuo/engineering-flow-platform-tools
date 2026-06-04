@@ -1,0 +1,261 @@
+{
+  "example": {
+    "items": [
+      {
+        "group": "customer",
+        "id": "business-risk-matrix-3d-item-1",
+        "kind": "risk",
+        "label": "Risk Matrix North",
+        "metadata": {
+          "note": "Risk Matrix 3D matrix cell 1",
+          "quadrant": "q1",
+          "template_id": "business.risk_matrix_3d"
+        },
+        "metrics": {
+          "confidence": 0.55,
+          "impact": 0.4
+        },
+        "status": "ok",
+        "x": 0.17,
+        "y": 0.29
+      },
+      {
+        "group": "revenue",
+        "id": "business-risk-matrix-3d-item-2",
+        "kind": "matrix",
+        "label": "Matrix 3d East",
+        "metadata": {
+          "note": "Risk Matrix 3D matrix cell 2",
+          "quadrant": "q2",
+          "template_id": "business.risk_matrix_3d"
+        },
+        "metrics": {
+          "confidence": 0.59,
+          "impact": 0.46
+        },
+        "status": "warning",
+        "x": 0.4,
+        "y": 0.6
+      },
+      {
+        "group": "operation",
+        "id": "business-risk-matrix-3d-item-3",
+        "kind": "3d",
+        "label": "3d Risk South",
+        "metadata": {
+          "note": "Risk Matrix 3D matrix cell 3",
+          "quadrant": "q3",
+          "template_id": "business.risk_matrix_3d"
+        },
+        "metrics": {
+          "confidence": 0.63,
+          "impact": 0.52
+        },
+        "status": "success",
+        "x": 0.63,
+        "y": 0.02
+      },
+      {
+        "group": "customer",
+        "id": "business-risk-matrix-3d-item-4",
+        "kind": "customer",
+        "label": "Risk Matrix West",
+        "metadata": {
+          "note": "Risk Matrix 3D matrix cell 4",
+          "quadrant": "q4",
+          "template_id": "business.risk_matrix_3d"
+        },
+        "metrics": {
+          "confidence": 0.67,
+          "impact": 0.58
+        },
+        "status": "blocked",
+        "x": 0.86,
+        "y": 0.33
+      },
+      {
+        "group": "revenue",
+        "id": "business-risk-matrix-3d-item-5",
+        "kind": "risk",
+        "label": "Matrix 3d Signal",
+        "metadata": {
+          "note": "Risk Matrix 3D matrix cell 5",
+          "quadrant": "q1",
+          "template_id": "business.risk_matrix_3d"
+        },
+        "metrics": {
+          "confidence": 0.71,
+          "impact": 0.64
+        },
+        "status": "error",
+        "x": 0.18,
+        "y": 0.64
+      },
+      {
+        "group": "operation",
+        "id": "business-risk-matrix-3d-item-6",
+        "kind": "matrix",
+        "label": "3d Risk Review",
+        "metadata": {
+          "note": "Risk Matrix 3D matrix cell 6",
+          "quadrant": "q2",
+          "template_id": "business.risk_matrix_3d"
+        },
+        "metrics": {
+          "confidence": 0.75,
+          "impact": 0.7
+        },
+        "status": "running",
+        "x": 0.41,
+        "y": 0.06
+      },
+      {
+        "group": "customer",
+        "id": "business-risk-matrix-3d-item-7",
+        "kind": "3d",
+        "label": "Risk Matrix Ready",
+        "metadata": {
+          "note": "Risk Matrix 3D matrix cell 7",
+          "quadrant": "q3",
+          "template_id": "business.risk_matrix_3d"
+        },
+        "metrics": {
+          "confidence": 0.79,
+          "impact": 0.76
+        },
+        "status": "idle",
+        "x": 0.64,
+        "y": 0.37
+      },
+      {
+        "group": "revenue",
+        "id": "business-risk-matrix-3d-item-8",
+        "kind": "customer",
+        "label": "Matrix 3d Watch",
+        "metadata": {
+          "note": "Risk Matrix 3D matrix cell 8",
+          "quadrant": "q4",
+          "template_id": "business.risk_matrix_3d"
+        },
+        "metrics": {
+          "confidence": 0.83,
+          "impact": 0.82
+        },
+        "status": "ok",
+        "x": 0.87,
+        "y": 0.68
+      },
+      {
+        "group": "operation",
+        "id": "business-risk-matrix-3d-item-9",
+        "kind": "risk",
+        "label": "3d Risk Owner",
+        "metadata": {
+          "note": "Risk Matrix 3D matrix cell 9",
+          "quadrant": "q1",
+          "template_id": "business.risk_matrix_3d"
+        },
+        "metrics": {
+          "confidence": 0.87,
+          "impact": 0.88
+        },
+        "status": "warning",
+        "x": 0.19,
+        "y": 0.1
+      }
+    ],
+    "schema": "efp.visual.input.matrix.v1",
+    "title": "Risk Matrix 3D: Plots business risks by likelihood, impact, velocity, mitigation owner, and residual exposure"
+  },
+  "input_schema_kind": "matrix_v1",
+  "json_schema": {
+    "$schema": "efp.visual.local.schema",
+    "additionalProperties": true,
+    "properties": {
+      "items": {
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "claim_id": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "from": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "relation": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "x",
+            "y"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "schema": {
+        "const": "efp.visual.input.matrix.v1",
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "items"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "business.risk_matrix_3d"
+}

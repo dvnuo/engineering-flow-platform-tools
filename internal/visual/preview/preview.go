@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"engineering-flow-platform-tools/internal/visual/manifest"
@@ -31,33 +32,39 @@ type Result struct {
 }
 
 type Summary struct {
-	Nodes             int      `json:"nodes,omitempty"`
-	Edges             int      `json:"edges,omitempty"`
-	Groups            int      `json:"groups,omitempty"`
-	VisibleNodes      int      `json:"visible_nodes,omitempty"`
-	VisibleEdges      int      `json:"visible_edges,omitempty"`
-	Events            int      `json:"events,omitempty"`
-	Claims            int      `json:"claims,omitempty"`
-	Sources           int      `json:"sources,omitempty"`
-	Links             int      `json:"links,omitempty"`
-	Items             int      `json:"items,omitempty"`
-	EdgeDensity       string   `json:"edge_density,omitempty"`
-	LabelPressure     string   `json:"label_pressure,omitempty"`
-	GroupCoverage     float64  `json:"group_coverage,omitempty"`
-	RelationCoverage  float64  `json:"relation_coverage,omitempty"`
-	EdgeKindCount     int      `json:"edge_kind_count,omitempty"`
-	DominantEdgeKinds []Count  `json:"dominant_edge_kinds,omitempty"`
-	OrphanNodes       []string `json:"orphan_nodes,omitempty"`
-	OrphanNodeCount   int      `json:"orphan_node_count,omitempty"`
-	MissingLabels     int      `json:"missing_labels,omitempty"`
-	FallbackIDLabels  []string `json:"fallback_id_labels,omitempty"`
-	LongLabels        []string `json:"long_labels,omitempty"`
-	DuplicateLabels   []string `json:"duplicate_labels,omitempty"`
-	MissingImportance int      `json:"missing_importance,omitempty"`
-	MissingVisibility int      `json:"missing_visibility,omitempty"`
-	HighFanoutNodes   []string `json:"high_fanout_nodes,omitempty"`
-	InitialView       string   `json:"initial_view,omitempty"`
-	CollapseByDefault bool     `json:"collapse_by_default,omitempty"`
+	Nodes                  int      `json:"nodes,omitempty"`
+	Edges                  int      `json:"edges,omitempty"`
+	Groups                 int      `json:"groups,omitempty"`
+	VisibleNodes           int      `json:"visible_nodes,omitempty"`
+	VisibleEdges           int      `json:"visible_edges,omitempty"`
+	Events                 int      `json:"events,omitempty"`
+	Claims                 int      `json:"claims,omitempty"`
+	Sources                int      `json:"sources,omitempty"`
+	Links                  int      `json:"links,omitempty"`
+	Items                  int      `json:"items,omitempty"`
+	EdgeDensity            string   `json:"edge_density,omitempty"`
+	LabelPressure          string   `json:"label_pressure,omitempty"`
+	GroupCoverage          float64  `json:"group_coverage,omitempty"`
+	RelationCoverage       float64  `json:"relation_coverage,omitempty"`
+	EdgeKindCount          int      `json:"edge_kind_count,omitempty"`
+	DominantEdgeKinds      []Count  `json:"dominant_edge_kinds,omitempty"`
+	OrphanNodes            []string `json:"orphan_nodes,omitempty"`
+	OrphanNodeCount        int      `json:"orphan_node_count,omitempty"`
+	LargestGroupSize       int      `json:"largest_group_size,omitempty"`
+	LargeGroups            []string `json:"large_groups,omitempty"`
+	GenericGroups          []string `json:"generic_groups,omitempty"`
+	MissingLabels          int      `json:"missing_labels,omitempty"`
+	FallbackIDLabels       []string `json:"fallback_id_labels,omitempty"`
+	LongLabels             []string `json:"long_labels,omitempty"`
+	DuplicateLabels        []string `json:"duplicate_labels,omitempty"`
+	EventsWithoutNodeID    int      `json:"events_without_node_id,omitempty"`
+	EventsWithoutKnownNode int      `json:"events_without_known_node,omitempty"`
+	EventNodeCoverage      float64  `json:"event_node_coverage,omitempty"`
+	MissingImportance      int      `json:"missing_importance,omitempty"`
+	MissingVisibility      int      `json:"missing_visibility,omitempty"`
+	HighFanoutNodes        []string `json:"high_fanout_nodes,omitempty"`
+	InitialView            string   `json:"initial_view,omitempty"`
+	CollapseByDefault      bool     `json:"collapse_by_default,omitempty"`
 }
 
 type Warning struct {
@@ -183,12 +190,17 @@ func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Su
 	nodes := objectArray(data, "nodes")
 	edges := objectArray(data, "edges")
 	groups := objectArray(data, "groups")
+	events := objectArray(data, "events")
 	summary.Nodes = len(nodes)
 	summary.Edges = len(edges)
 	summary.Groups = len(groups)
+	summary.Events = len(events)
 	summary.EdgeDensity = densityLabel(len(nodes), len(edges))
 	summary.LabelPressure = pressureLabel(len(nodes), design.MaxInitialNodes)
 	grouped := 0
+	nodeIDs := map[string]bool{}
+	groupLabels := map[string]string{}
+	groupSizes := map[string]int{}
 	degree := map[string]int{}
 	edgeKinds := map[string]int{}
 	edgeLabels := map[string]int{}
@@ -196,9 +208,23 @@ func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Su
 	missingImportance := 0
 	missingVisibility := 0
 	overviewEdges := 0
+	for _, group := range groups {
+		id := stringField(group, "id")
+		if id == "" {
+			continue
+		}
+		if label := displayLabelField(group); label != "" {
+			groupLabels[id] = label
+		}
+	}
 	for _, node := range nodes {
-		if firstString(node, "parent_id", "group_id", "group", "module", "package") != "" {
+		id := stringField(node, "id")
+		if id != "" {
+			nodeIDs[id] = true
+		}
+		if groupKey := groupKeyField(node); groupKey != "" {
 			grouped++
+			groupSizes[groupKey]++
 		}
 		displayLabel := displayLabelField(node)
 		if displayLabel == "" {
@@ -255,6 +281,37 @@ func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Su
 		}
 		summary.RelationCoverage = round2(float64(connected) / float64(len(nodes)))
 	}
+	for groupKey, size := range groupSizes {
+		if size > summary.LargestGroupSize {
+			summary.LargestGroupSize = size
+		}
+		groupLabel := groupLabels[groupKey]
+		if groupLabel == "" {
+			groupLabel = groupKey
+		}
+		if size >= maxInt(6, len(nodes)/4) && len(nodes) > 12 {
+			summary.LargeGroups = appendCapped(summary.LargeGroups, groupLabel+" ("+intString(size)+")", 8)
+		}
+		if isGenericGroupLabel(groupLabel) {
+			summary.GenericGroups = appendCapped(summary.GenericGroups, groupLabel, 8)
+		}
+	}
+	if len(events) > 0 {
+		knownEvents := 0
+		for _, event := range events {
+			nodeID := firstString(event, "node_id", "node", "target_node_id")
+			if nodeID == "" {
+				summary.EventsWithoutNodeID++
+				continue
+			}
+			if nodeIDs[nodeID] {
+				knownEvents++
+			} else {
+				summary.EventsWithoutKnownNode++
+			}
+		}
+		summary.EventNodeCoverage = round2(float64(knownEvents) / float64(len(events)))
+	}
 	summary.EdgeKindCount = len(edgeKinds)
 	summary.DominantEdgeKinds = topCounts(edgeKinds, 5)
 	summary.DuplicateLabels = duplicateNames(labels, 8)
@@ -281,6 +338,23 @@ func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Su
 	if summary.GroupCoverage < 0.5 && len(nodes) > design.MaxInitialNodes {
 		quality -= 14
 		*warnings = append(*warnings, Warning{Code: "group_coverage_low", Severity: "warning", Message: "Most graph nodes are not assigned to a group.", Hint: "Set parent_id, group_id, group, module, or package so the renderer can collapse related nodes."})
+	}
+	if len(summary.LargeGroups) > 0 {
+		quality -= 8
+		*warnings = append(*warnings, Warning{Code: "groups_too_coarse", Severity: "warning", Message: "Some collapsed groups contain too many children to explain when expanded.", Hint: "Split coarse groups into scenario-specific subgroups or add nested parent_id/group_id levels.", Details: summary.LargeGroups})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "nodes[].parent_id")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "groups[].label")
+	}
+	if len(summary.GenericGroups) > 0 {
+		quality -= 7
+		*warnings = append(*warnings, Warning{Code: "generic_group_labels", Severity: "warning", Message: "Some groups use generic labels that do not explain their role in the visual story.", Hint: "Use scenario-specific group labels such as API Gateway, Build Scan, Approval Gate, Incident Source, or Release Check.", Details: summary.GenericGroups})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "groups[].label")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "groups[].summary")
+	}
+	if len(events) > 0 && summary.EventNodeCoverage < 0.8 {
+		quality -= 12
+		*warnings = append(*warnings, Warning{Code: "event_node_coverage_low", Severity: "warning", Message: "Many graph events are not attached to known nodes, so replay cannot explain which object changed.", Hint: "Set events[].node_id to an existing node id for every meaningful event.", Details: []string{"events_without_node_id=" + intString(summary.EventsWithoutNodeID), "events_without_known_node=" + intString(summary.EventsWithoutKnownNode)}})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "events[].node_id")
 	}
 	if len(highFanout) > 0 {
 		quality -= 10
@@ -370,6 +444,39 @@ func displayLabelField(obj map[string]any) string {
 		}
 	}
 	return ""
+}
+
+func groupKeyField(obj map[string]any) string {
+	return firstString(obj, "parent_id", "group_id", "group", "module", "package")
+}
+
+func isGenericGroupLabel(value string) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	value = strings.Trim(value, " .:-_#")
+	for value != "" && value[0] >= '0' && value[0] <= '9' {
+		value = strings.TrimSpace(value[1:])
+		value = strings.Trim(value, " .:-_#")
+	}
+	if value == "" {
+		return false
+	}
+	generic := map[string]bool{
+		"core":      true,
+		"default":   true,
+		"group":     true,
+		"intake":    true,
+		"misc":      true,
+		"other":     true,
+		"phase":     true,
+		"policy":    true,
+		"review":    true,
+		"risk":      true,
+		"stage":     true,
+		"step":      true,
+		"task":      true,
+		"ungrouped": true,
+	}
+	return generic[value]
 }
 
 func hasImportance(obj map[string]any) bool {
@@ -593,4 +700,15 @@ func minInt(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func intString(value int) string {
+	return strconv.Itoa(value)
 }

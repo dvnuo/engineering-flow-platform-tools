@@ -741,12 +741,7 @@
 
   function isPrimaryThreeGraph(manifest, preset, profile) {
     var effects = effectSpec(manifest);
-    if (effects.engine !== "three.v1") {
-      return false;
-    }
-    preset = normalizePreset(preset);
-    var scene = safeClass(effects.scene);
-    return preset === "constellation" || preset === "graph_3d" || preset === "graph_2_5d" || preset === "orbit_system" || scene.indexOf("galaxy") >= 0 || scene.indexOf("constellation") >= 0 || scene.indexOf("orbit") >= 0 || (profile && profile.key === "space");
+    return effects.engine === "three.v1";
   }
 
   function graphNodeGroupKey(node) {
@@ -779,7 +774,21 @@
       var x;
       var y;
       var z;
-      if (node.__group || preset === "orbit_system") {
+      if (preset === "timeline_tunnel" || preset === "swimlane_timeline" || preset === "replay_stage" || preset === "pipeline_flow" || preset === "flow_particles" || preset === "step_ladder") {
+        x = -3.1 + index * (6.2 / Math.max(1, count - 1));
+        y = node.__group ? 0.36 + (index % 2) * 0.2 : Math.sin(index * 0.74) * 0.42;
+        z = ((index % 3) - 1) * 0.78;
+      } else if (preset === "layered_stack" || preset === "state_machine" || preset === "dag" || preset === "permission_gate" || preset === "network_boundary_map" || preset === "service_map") {
+        var cols = Math.max(2, Math.ceil(Math.sqrt(count)));
+        x = (index % cols - (cols - 1) / 2) * 1.15;
+        y = node.__group ? 0.5 : 0.08 + (g % 4) * 0.18;
+        z = (Math.floor(index / cols) - (Math.ceil(count / cols) - 1) / 2) * 1.08;
+      } else if (preset === "city_map" || preset === "heatmap") {
+        var cityCols = Math.max(3, Math.ceil(Math.sqrt(count)));
+        x = (index % cityCols - (cityCols - 1) / 2) * 0.92;
+        y = 0.18 + importanceValue(node, 0.35) * 0.88;
+        z = (Math.floor(index / cityCols) - (Math.ceil(count / cityCols) - 1) / 2) * 0.92;
+      } else if (node.__group || preset === "orbit_system") {
         var radius = 1.85 + (index % 4) * 0.38;
         x = Math.cos(angle) * radius;
         y = Math.sin(index * 0.73) * 0.82;
@@ -896,11 +905,18 @@
       var raycaster = new THREE.Raycaster();
       var dragging = false;
       var moved = false;
-      var dragMode = "orbit";
+      var dragMode = "idle";
       var draggedMesh = null;
+      var pendingMesh = null;
       var lastExpandOrigin = null;
+      var dragPlane = { normal: new THREE.Vector3(), point: new THREE.Vector3() };
+      var dragPointerPoint = new THREE.Vector3();
+      var dragOffset = new THREE.Vector3();
+      var autoRotateGraph = true;
       var lastX = 0;
       var lastY = 0;
+      var startX = 0;
+      var startY = 0;
       var start = Date.now();
 
       function updateCamera() {
@@ -942,8 +958,25 @@
         return out;
       }
 
+      function groupCountText(node) {
+        var count = Number(node && node.child_count);
+        if (!Number.isFinite(count) || count <= 0) {
+          return "";
+        }
+        return count === 1 ? "1 item hidden" : count + " items hidden";
+      }
+
+      function displayNodeLabel(node) {
+        var label = itemLabel(node);
+        if (node && node.__group) {
+          var count = groupCountText(node);
+          return count ? label + " · " + count : label;
+        }
+        return label;
+      }
+
       function addLabel(node, mesh) {
-        var label = el("div", "visual-three-label" + (node.__group ? " visual-three-group-label" : ""), itemLabel(node));
+        var label = el("div", "visual-three-label" + (node.__group ? " visual-three-group-label" : ""), displayNodeLabel(node));
         labelLayer.appendChild(label);
         labels.push({ element: label, mesh: mesh, node: node });
       }
@@ -1023,22 +1056,78 @@
         return true;
       }
 
-      function dragNode(mesh, dx, dy) {
-        if (!mesh || !mesh.userData) {
-          return;
+      function setPointerFromEvent(event) {
+        var rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      }
+
+      function pointerLocalPoint(event, plane, target) {
+        setPointerFromEvent(event);
+        raycaster.setFromCamera(pointer, camera);
+        var ray = raycaster.ray;
+        if (!ray || !ray.origin || !ray.direction) {
+          return null;
         }
-        var right = new THREE.Vector3();
-        var up = new THREE.Vector3();
-        var forward = new THREE.Vector3();
+        var denominator = plane.normal.dot(ray.direction);
+        if (Math.abs(denominator) < 0.000001) {
+          return null;
+        }
+        var distance = plane.point.clone().sub(ray.origin).dot(plane.normal) / denominator;
+        if (!Number.isFinite(distance) || distance < 0) {
+          return null;
+        }
+        target.copy(ray.origin).add(ray.direction.clone().multiplyScalar(distance));
+        var parent = draggedMesh && draggedMesh.parent ? draggedMesh.parent : nodeRoot;
+        parent.worldToLocal(target);
+        return target;
+      }
+
+      function freezeCameraMotion() {
+        autoRotateGraph = false;
+      }
+
+      function beginNodeDrag(mesh, event) {
+        if (!mesh || !mesh.userData) {
+          return false;
+        }
+        freezeCameraMotion();
         camera.updateMatrixWorld(true);
-        camera.matrixWorld.extractBasis(right, up, forward);
-        var scale = orbit.radius * 0.0022;
-        var delta = right.multiplyScalar(dx * scale).add(up.multiplyScalar(-dy * scale));
+        mesh.parent.updateMatrixWorld(true);
+        var normal = new THREE.Vector3();
+        var worldPosition = mesh.position.clone();
+        mesh.parent.localToWorld(worldPosition);
+        camera.getWorldDirection(normal);
+        dragPlane.normal.copy(normal);
+        dragPlane.point.copy(worldPosition);
+        draggedMesh = mesh;
+        if (!pointerLocalPoint(event, dragPlane, dragPointerPoint)) {
+          draggedMesh = null;
+          return false;
+        }
+        dragOffset.copy(mesh.position).sub(dragPointerPoint);
         if (!mesh.userData.targetPosition) {
           mesh.userData.targetPosition = mesh.position.clone();
         }
-        mesh.userData.targetPosition.add(delta);
-        mesh.position.add(delta);
+        renderer.domElement.style.cursor = "grabbing";
+        return true;
+      }
+
+      function dragNodeToPointer(mesh, event) {
+        if (!mesh || !mesh.userData) {
+          return;
+        }
+        if (!pointerLocalPoint(event, dragPlane, dragPointerPoint)) {
+          return;
+        }
+        var target = dragPointerPoint.clone().add(dragOffset);
+        if (!mesh.userData.targetPosition) {
+          mesh.userData.targetPosition = mesh.position.clone();
+        }
+        var previous = mesh.userData.targetPosition.clone();
+        var delta = target.clone().sub(previous);
+        mesh.userData.targetPosition.copy(target);
+        mesh.position.copy(target);
         var draggedID = mesh.userData.id;
         edgeItems.forEach(function (item) {
           var neighborID = "";
@@ -1056,7 +1145,7 @@
             neighborMesh.userData.targetPosition = neighborMesh.position.clone();
           }
           neighborMesh.userData.targetPosition.add(nudge);
-          neighborMesh.position.add(nudge.clone().multiplyScalar(0.35));
+          neighborMesh.position.add(nudge.clone().multiplyScalar(0.22));
         });
       }
 
@@ -1206,9 +1295,7 @@
         if (!objects.length) {
           return [];
         }
-        var rect = renderer.domElement.getBoundingClientRect();
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        setPointerFromEvent(event);
         raycaster.setFromCamera(pointer, camera);
         return raycaster.intersectObjects(objects, false);
       }
@@ -1217,6 +1304,7 @@
         if (!node) {
           return;
         }
+        freezeCameraMotion();
         selectedID = node.id;
         if (node.__group) {
           var groupMesh = nodeMap[node.id] && nodeMap[node.id].mesh;
@@ -1247,20 +1335,23 @@
         event.preventDefault();
       });
       renderer.domElement.addEventListener("pointerdown", function (event) {
+        freezeCameraMotion();
         dragging = true;
         moved = false;
         draggedMesh = null;
-        dragMode = event.shiftKey || event.button === 2 ? "pan" : "orbit";
+        pendingMesh = null;
+        dragMode = event.shiftKey || event.button === 2 ? "pendingPan" : "pendingOrbit";
         if (!event.shiftKey && event.button !== 2) {
           var hits = raycast(event);
           if (hits.length && hits[0].object.userData) {
-            draggedMesh = hits[0].object;
-            dragMode = "node";
-            hoverID = draggedMesh.userData.id || "";
-            applyFocus(hoverID);
-            renderer.domElement.style.cursor = "grabbing";
+            pendingMesh = hits[0].object;
+            dragMode = "pendingNode";
+            hoverID = pendingMesh.userData.id || "";
+            renderer.domElement.style.cursor = "pointer";
           }
         }
+        startX = event.clientX;
+        startY = event.clientY;
         lastX = event.clientX;
         lastY = event.clientY;
         if (renderer.domElement.setPointerCapture) {
@@ -1273,9 +1364,27 @@
         if (dragging) {
           var dx = event.clientX - lastX;
           var dy = event.clientY - lastY;
-          moved = moved || Math.abs(dx) + Math.abs(dy) > 4;
+          var totalMove = Math.abs(event.clientX - startX) + Math.abs(event.clientY - startY);
+          if (!moved && totalMove <= 7) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+          if (!moved) {
+            moved = true;
+            if (dragMode === "pendingNode" && pendingMesh && beginNodeDrag(pendingMesh, event)) {
+              dragMode = "node";
+              applyFocus(pendingMesh.userData.id);
+            } else if (dragMode === "pendingPan") {
+              freezeCameraMotion();
+              dragMode = "pan";
+            } else {
+              freezeCameraMotion();
+              dragMode = "orbit";
+            }
+          }
           if (dragMode === "node" && draggedMesh) {
-            dragNode(draggedMesh, dx, dy);
+            dragNodeToPointer(draggedMesh, event);
           } else if (dragMode === "pan") {
             orbit.target.x -= dx * orbit.radius * 0.0018;
             orbit.target.y += dy * orbit.radius * 0.0018;
@@ -1297,15 +1406,18 @@
         renderer.domElement.style.cursor = hoverID ? "pointer" : "grab";
       });
       renderer.domElement.addEventListener("pointerup", function (event) {
-        var releasedMesh = draggedMesh;
+        var releasedMesh = draggedMesh || pendingMesh;
         dragging = false;
         draggedMesh = null;
+        pendingMesh = null;
+        var releasedMode = dragMode;
+        dragMode = "idle";
         if (renderer.domElement.releasePointerCapture) {
           renderer.domElement.releasePointerCapture(event.pointerId);
         }
         if (!moved && releasedMesh && releasedMesh.userData) {
           selectNode(releasedMesh.userData.node);
-        } else if (moved && releasedMesh && releasedMesh.userData) {
+        } else if (moved && releasedMode === "node" && releasedMesh && releasedMesh.userData) {
           applyFocus(releasedMesh.userData.id);
           inspector.show(itemLabel(releasedMesh.userData.node), releasedMesh.userData.node);
         } else if (!moved) {
@@ -1319,12 +1431,14 @@
         event.stopPropagation();
       });
       renderer.domElement.addEventListener("wheel", function (event) {
+        freezeCameraMotion();
         orbit.radius *= event.deltaY > 0 ? 1.08 : 0.92;
         updateCamera();
         event.preventDefault();
         event.stopPropagation();
       }, { passive: false });
       renderer.domElement.addEventListener("dblclick", function (event) {
+        freezeCameraMotion();
         orbit.theta = 0.24;
         orbit.phi = 1.16;
         orbit.radius = 7.4;
@@ -1427,7 +1541,7 @@
           return;
         }
         var t = (Date.now() - start) / 1000;
-        if (!dragging && !selectedID) {
+        if (autoRotateGraph && !dragging && !selectedID) {
           root.rotation.y = Math.sin(t * 0.18) * 0.035;
         }
         particleRoot.rotation.y = t * 0.08;
@@ -1699,7 +1813,8 @@
         group.appendChild(shape);
         if (node.__group) {
           var sign = svg("text", { class: "visual-group-count", x: pos.x, y: pos.y + 5, "text-anchor": "middle" });
-          sign.textContent = (state.collapsed[node.id] ? "+" : "-") + " " + runtime.safeText(node.child_count || 0);
+          var hiddenText = Number(node.child_count || 0) === 1 ? "1 hidden" : runtime.safeText(node.child_count || 0) + " hidden";
+          sign.textContent = state.collapsed[node.id] ? hiddenText : "expanded";
           group.appendChild(sign);
         }
         if (currentModel.nodes.length <= 60 || node.__group || importanceValue(node, 0) >= 0.7) {

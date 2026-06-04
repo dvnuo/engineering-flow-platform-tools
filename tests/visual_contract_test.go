@@ -698,6 +698,44 @@ func TestVisualInspectInputMissingLabelsAndOrphans(t *testing.T) {
 	}
 }
 
+func TestVisualInspectInputGroupAndEventDiagnostics(t *testing.T) {
+	templateDir := visualTemplateDir()
+	inputPath := filepath.Join(t.TempDir(), "coarse-groups-events.json")
+	mustWrite(t, inputPath, coarseGroupsEventsInputJSON(t))
+	obj := runVisualOK(t, "inspect-input", "--template", "agent.run_trace", "--template-dir", templateDir, "--input", inputPath, "--json")
+	data := obj["data"].(map[string]any)
+	if data["quality_score"].(float64) >= 90 {
+		t.Fatalf("coarse graph_events input should reduce quality score: %#v", data)
+	}
+	summary := data["summary"].(map[string]any)
+	for _, name := range []string{"largest_group_size", "large_groups", "generic_groups", "events_without_node_id", "event_node_coverage"} {
+		if _, ok := summary[name]; !ok {
+			t.Fatalf("inspect-input summary missing %s: %#v", name, summary)
+		}
+	}
+	if summary["largest_group_size"].(float64) < 9 || summary["event_node_coverage"].(float64) >= 0.8 {
+		t.Fatalf("inspect-input group/event diagnostics look wrong: %#v", summary)
+	}
+	warnings := data["warnings"].([]any)
+	codes := map[string]bool{}
+	for _, item := range warnings {
+		m := item.(map[string]any)
+		codes[m["code"].(string)] = true
+	}
+	for _, code := range []string{"groups_too_coarse", "generic_group_labels", "event_node_coverage_low"} {
+		if !codes[code] {
+			t.Fatalf("inspect-input missing warning %s: %#v", code, warnings)
+		}
+	}
+	recommendations := data["recommendations"].(map[string]any)
+	addFields := stringSetFromAny(recommendations["add_fields"].([]any))
+	for _, name := range []string{"nodes[].parent_id", "groups[].label", "groups[].summary", "events[].node_id"} {
+		if !addFields[name] {
+			t.Fatalf("inspect-input recommendations missing %s: %#v", name, recommendations)
+		}
+	}
+}
+
 func TestVisualGroupedGraphInputValidateRenderContract(t *testing.T) {
 	templateDir := visualTemplateDir()
 	tmp := t.TempDir()
@@ -1372,7 +1410,14 @@ func TestVisualRuntimeHasThreeStyleEffectContracts(t *testing.T) {
 		"startPositionForNode",
 		"lastExpandOrigin",
 		"draggedMesh",
-		"dragNode",
+		"dragPlane",
+		"pendingNode",
+		"beginNodeDrag",
+		"dragNodeToPointer",
+		"freezeCameraMotion",
+		"autoRotateGraph",
+		"return effects.engine === \"three.v1\"",
+		"items hidden",
 		"endpointMeshes",
 		"updateEdgeGeometry",
 		"updateGraphTransitions",
@@ -1423,6 +1468,39 @@ func TestVisualRuntimeHasThreeStyleEffectContracts(t *testing.T) {
 		if !strings.Contains(css, token) {
 			t.Fatalf("shared visual CSS is missing three-style effect token %q", token)
 		}
+	}
+}
+
+func TestVisualGraphTemplatesUsePrimaryThreeRendererContract(t *testing.T) {
+	renderers := mustRead(t, "../templates/visual/_shared/runtime/efp-visual-renderers.iife.js")
+	for _, token := range []string{
+		"return effects.engine === \"three.v1\";",
+		"visual-three-primary",
+		"visual-three-fallback",
+		"visual-svg",
+	} {
+		if !strings.Contains(renderers, token) {
+			t.Fatalf("shared graph renderer missing primary Three contract token %q", token)
+		}
+	}
+	registry := visualRegistryData(t)
+	graphTemplates := 0
+	for _, entry := range registry.Templates {
+		if entry.InputSchemaKind != "graph_v1" && entry.InputSchemaKind != "graph_events_v1" {
+			continue
+		}
+		graphTemplates++
+		raw := mustRead(t, filepath.Join(visualTemplateDir(), entry.ID, "template.yaml"))
+		var manifest visualTemplateManifest
+		if err := yaml.Unmarshal([]byte(raw), &manifest); err != nil {
+			t.Fatalf("template.yaml invalid for %s: %v", entry.ID, err)
+		}
+		if manifest.Effects.Engine != "three.v1" {
+			t.Fatalf("%s graph template must use primary local Three renderer, got %#v", entry.ID, manifest.Effects)
+		}
+	}
+	if graphTemplates < 100 {
+		t.Fatalf("expected graph renderer contract to cover the bulk of the catalog, got %d graph templates", graphTemplates)
 	}
 }
 
@@ -2038,6 +2116,56 @@ func missingLabelsOrphansGraphInputJSON(t *testing.T) string {
 		{"from": "node_00", "to": "node_01", "kind": "depends_on", "label": "depends on"},
 		{"from": "node_02", "to": "node_03", "kind": "calls", "label": "calls"},
 	}
+	raw, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
+}
+
+func coarseGroupsEventsInputJSON(t *testing.T) string {
+	t.Helper()
+	data := map[string]any{
+		"schema": "efp.visual.input.graph_events.v1",
+		"title":  "Coarse Run Trace With Detached Events",
+		"groups": []map[string]any{
+			{"id": "core", "label": "Core", "kind": "phase"},
+			{"id": "review", "label": "Review", "kind": "phase"},
+		},
+		"nodes": []map[string]any{},
+		"edges": []map[string]any{},
+		"events": []map[string]any{
+			{"id": "event_0", "time": "2026-06-03T12:00:00Z", "kind": "tool_started", "status": "running", "summary": "Detached event without node binding"},
+			{"id": "event_1", "time": "2026-06-03T12:01:00Z", "kind": "tool_finished", "status": "warning", "summary": "Event misses the changed node binding"},
+			{"id": "event_2", "time": "2026-06-03T12:02:00Z", "kind": "tool_started", "status": "success", "node_id": "node_01", "summary": "One event points to a known node"},
+			{"id": "event_3", "time": "2026-06-03T12:03:00Z", "kind": "tool_started", "status": "running", "summary": "Another detached event"},
+			{"id": "event_4", "time": "2026-06-03T12:04:00Z", "kind": "tool_finished", "status": "success", "summary": "Detached completion event"},
+		},
+	}
+	nodes := data["nodes"].([]map[string]any)
+	for i := 0; i < 18; i++ {
+		group := "core"
+		if i >= 10 {
+			group = "review"
+		}
+		nodes = append(nodes, map[string]any{
+			"id":        fmt.Sprintf("node_%02d", i),
+			"label":     fmt.Sprintf("Run Detail %02d", i),
+			"kind":      []string{"tool", "message", "checkpoint"}[i%3],
+			"status":    []string{"running", "success", "warning"}[i%3],
+			"parent_id": group,
+		})
+	}
+	data["nodes"] = nodes
+	edges := data["edges"].([]map[string]any)
+	for i := 0; i < 7; i++ {
+		edges = append(edges, map[string]any{
+			"from": fmt.Sprintf("node_%02d", i),
+			"to":   fmt.Sprintf("node_%02d", i+1),
+			"kind": "follows",
+		})
+	}
+	data["edges"] = edges
 	raw, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		t.Fatal(err)

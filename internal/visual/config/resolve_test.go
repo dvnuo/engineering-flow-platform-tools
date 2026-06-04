@@ -13,7 +13,7 @@ func TestResolveTemplateDirUsesEFPHomeDefaultBeforeCheckout(t *testing.T) {
 	cwd := t.TempDir()
 	mustMkdir(t, filepath.Join(home, ".efp", "template", "visual"))
 	mustMkdir(t, filepath.Join(cwd, "templates", "visual"))
-	t.Chdir(cwd)
+	chdir(t, cwd)
 
 	got, err := ResolveTemplateDir("", "")
 	if err != nil {
@@ -29,7 +29,7 @@ func TestResolveTemplateDirFallsBackToWorkspaceTemplates(t *testing.T) {
 	setVisualConfigTestHome(t)
 	cwd := t.TempDir()
 	mustMkdir(t, filepath.Join(cwd, "templates", "visual"))
-	t.Chdir(cwd)
+	chdir(t, cwd)
 
 	got, err := ResolveTemplateDir("", "")
 	if err != nil {
@@ -90,4 +90,20 @@ func mustMkdir(t *testing.T, path string) {
 	if err := os.MkdirAll(path, 0o755); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func chdir(t *testing.T, path string) {
+	t.Helper()
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(path); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(old); err != nil {
+			t.Errorf("failed to restore working directory: %v", err)
+		}
+	})
 }

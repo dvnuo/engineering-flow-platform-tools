@@ -2,7 +2,7 @@ id: codebase.module_dependency_graph
 version: 1.0.0
 category: codebase
 title: Module Dependency Graph
-description: Visualize Module Dependency Graph as a complete offline graph view for codebase workflows using the layered_stack layout.
+description: Connects modules, helper packages, tests, and scripts to show dependency direction and ownership.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

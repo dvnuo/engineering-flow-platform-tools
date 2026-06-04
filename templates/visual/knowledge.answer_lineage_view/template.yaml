@@ -2,7 +2,7 @@ id: knowledge.answer_lineage_view
 version: 1.0.0
 category: knowledge
 title: Answer Lineage View
-description: Visualize Answer Lineage View as a complete offline evidence view for knowledge workflows using the radial_tree layout.
+description: Shows answer claims back to sources, assumptions, confidence, and unresolved evidence gaps.
 input_schema: schema.input.json
 input_schema_kind: evidence_v1
 renderer:

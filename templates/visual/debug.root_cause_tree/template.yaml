@@ -2,7 +2,7 @@ id: debug.root_cause_tree
 version: 1.0.0
 category: debug
 title: Root Cause Tree
-description: Visualize Root Cause Tree as a complete offline graph view for debug workflows using the radial_tree layout.
+description: Branches symptoms, contributing changes, failed safeguards, and confirmed cause into a root cause tree.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

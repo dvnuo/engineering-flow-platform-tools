@@ -144,11 +144,19 @@ func ValidateRegistry(r Registry) error {
 	return nil
 }
 
-func ValidateExpectedCategoryCounts(counts map[string]int) error {
+func ValidateExpectedCategoryCounts(counts, expected map[string]int) error {
 	for _, category := range SupportedCategoryOrder {
-		expected := ExpectedCategoryCounts[category]
-		if counts[category] != expected {
-			return metadata.NewError("template_registry_invalid", "visual template category "+category+" has unexpected count.", "Expected "+category+"="+itoa(expected)+".", 400)
+		want, ok := expected[category]
+		if !ok {
+			return metadata.NewError("template_registry_invalid", "visual template registry expected category count is missing for "+category+".", "Add registry.expected.categories."+category+" to templates/visual/registry.json.", 400)
+		}
+		if counts[category] != want {
+			return metadata.NewError("template_registry_invalid", "visual template registry expected category count mismatch for "+category+".", "Expected "+category+"="+itoa(want)+", got "+itoa(counts[category])+".", 400)
+		}
+	}
+	for category := range expected {
+		if !SupportedCategories[category] {
+			return metadata.NewError("template_registry_invalid", "visual template registry expected category is not supported: "+category, "Use one of: "+strings.Join(SupportedCategoryOrder, ", ")+".", 400)
 		}
 	}
 	for category, count := range counts {
@@ -208,6 +216,8 @@ var SupportedCategories = map[string]bool{
 	"business":   true,
 	"education":  true,
 }
+
+const DefaultExpectedCanonicalCount = 195
 
 var ExpectedCategoryCounts = map[string]int{
 	"foundation": 20,

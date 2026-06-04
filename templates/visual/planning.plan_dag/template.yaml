@@ -2,7 +2,7 @@ id: planning.plan_dag
 version: 1.0.0
 category: planning
 title: Plan Dag
-description: Visualize Plan Dag as a complete offline graph view for planning workflows using the dag layout.
+description: Arranges implementation tasks, dependencies, verification gates, and publication into a directed plan.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

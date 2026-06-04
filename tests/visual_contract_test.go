@@ -18,8 +18,14 @@ import (
 )
 
 type visualRegistry struct {
-	Version   int                   `json:"version"`
-	Templates []visualRegistryEntry `json:"templates"`
+	Version   int                    `json:"version"`
+	Expected  visualRegistryExpected `json:"expected"`
+	Templates []visualRegistryEntry  `json:"templates"`
+}
+
+type visualRegistryExpected struct {
+	CanonicalCount int            `json:"canonical_count"`
+	Categories     map[string]int `json:"categories"`
 }
 
 type visualRegistryEntry struct {
@@ -86,6 +92,39 @@ var allowedVisualRenderers = map[string]bool{
 	"offline.timeline.v1": true,
 	"offline.evidence.v1": true,
 	"offline.matrix.v1":   true,
+}
+
+var highValueTemplateKeywords = map[string][]string{
+	"foundation.timeline_tunnel":         {"release", "architecture", "prototype", "signoff"},
+	"foundation.layered_stack":           {"domain", "adapter", "telemetry", "release"},
+	"foundation.constellation":           {"capability", "billing", "analytics", "compliance"},
+	"foundation.control_room":            {"queue", "latency", "error", "rollback"},
+	"agent.run_trace":                    {"user", "plan", "tool", "test"},
+	"agent.thinking_timeline":            {"goal", "context", "hypothesis", "verification"},
+	"agent.tool_call_constellation":      {"shell", "registry", "schema", "push"},
+	"agent.permission_gate_map":          {"permission", "network", "destructive", "commit"},
+	"agent.active_run_monitor":           {"queue", "command", "verification", "handoff"},
+	"agent.session_state_panel":          {"context", "worktree", "commit", "push"},
+	"codebase.galaxy":                    {"repository", "package", "tests", "scripts"},
+	"codebase.module_dependency_graph":   {"module", "manifest", "schema", "render"},
+	"codebase.diff_impact_ripple":        {"changed", "tests", "contract", "risk"},
+	"codebase.test_failure_map":          {"failure", "assertion", "fixture", "patch"},
+	"runtime.service_topology":           {"service", "registry", "worker", "health"},
+	"runtime.event_bus_flow":             {"producer", "broker", "consumer", "metrics"},
+	"runtime.event_reconcile_loop":       {"portal", "opencode", "message.part.updated", "duplicate"},
+	"runtime.session_binding_map":        {"browser", "session", "artifact", "audit"},
+	"runtime.agent_fleet_dashboard":      {"fleet", "latency", "retry", "sla"},
+	"debug.incident_timeline":            {"incident", "rollback", "customer", "postmortem"},
+	"debug.root_cause_tree":              {"symptom", "deploy", "retry", "cause"},
+	"project.issue_dependency_graph":     {"jira", "blocker", "release", "approval"},
+	"project.requirements_to_code_trace": {"requirement", "confluence", "github", "tests"},
+	"project.doc_freshness_map":          {"documentation", "alias", "doctor", "build"},
+	"knowledge.evidence_board":           {"claim", "source", "confidence", "reliability"},
+	"knowledge.answer_lineage_view":      {"answer", "validation", "powershell", "branch"},
+	"planning.plan_dag":                  {"plan", "metadata", "tests", "verification"},
+	"planning.critical_path_view":        {"critical", "alias", "smoke", "push"},
+	"business.kpi_control_room":          {"users", "conversion", "revenue", "churn"},
+	"education.auth_flow_animation":      {"browser", "identity", "token", "cookie"},
 }
 
 func TestVisualVersionJSONContract(t *testing.T) {
@@ -179,7 +218,7 @@ func TestVisualTemplateListGetDoctor(t *testing.T) {
 	if len(templates) != 195 || listData["canonical_count"].(float64) != 195 {
 		t.Fatalf("expected 195 canonical templates, got len=%d data=%#v", len(templates), listData)
 	}
-	if listData["total_count"].(float64) < 195 {
+	if listData["total_count"].(float64) < 195 || listData["alias_count"].(float64) < 10 {
 		t.Fatalf("total_count should include canonical templates and aliases: %#v", listData)
 	}
 
@@ -240,6 +279,16 @@ func TestVisualTemplateListGetDoctor(t *testing.T) {
 	if checked != 195 || doctorData["canonical_templates"].(float64) != 195 {
 		t.Fatalf("expected 195 checked templates, got %#v", doctorData)
 	}
+	if doctorData["expected_canonical_templates"].(float64) != 195 {
+		t.Fatalf("doctor missing expected canonical count: %#v", doctorData)
+	}
+	expectedCategories := doctorData["expected_categories"].(map[string]any)
+	actualCategories := doctorData["categories"].(map[string]any)
+	for category, expected := range expectedVisualCategoryCounts {
+		if expectedCategories[category].(float64) != float64(expected) || actualCategories[category].(float64) != float64(expected) {
+			t.Fatalf("doctor category mismatch for %s: expected=%#v actual=%#v", category, expectedCategories, actualCategories)
+		}
+	}
 	if doctorData["checked_examples"].(float64) != 195 {
 		t.Fatalf("expected 195 checked examples, got %#v", doctorData)
 	}
@@ -261,6 +310,100 @@ func TestVisualTemplateListGetDoctor(t *testing.T) {
 		if m["rendered"] != true || strings.TrimSpace(m["example"].(string)) == "" || strings.TrimSpace(m["category"].(string)) == "" {
 			t.Fatalf("unexpected doctor template result: %#v", m)
 		}
+	}
+}
+
+func TestVisualBackwardCompatibleAliases(t *testing.T) {
+	templateDir := visualTemplateDir()
+	aliases := map[string]string{
+		"service.topology":           "runtime.service_topology",
+		"runtime.session_binding":    "runtime.session_binding_map",
+		"runtime.event_flow":         "runtime.event_bus_flow",
+		"project.issue_graph":        "project.issue_dependency_graph",
+		"project.requirements_trace": "project.requirements_to_code_trace",
+		"knowledge.doc_freshness":    "project.doc_freshness_map",
+		"agent.fleet_dashboard":      "runtime.agent_fleet_dashboard",
+	}
+	for alias, canonical := range aliases {
+		t.Run(alias, func(t *testing.T) {
+			got := runVisualOK(t, "template", "get", alias, "--template-dir", templateDir, "--json")
+			getData := got["data"].(map[string]any)
+			if getData["requested_id"] != alias || getData["canonical_id"] != canonical {
+				t.Fatalf("alias get mismatch: %#v", getData)
+			}
+			template := getData["template"].(map[string]any)
+			if template["id"] != canonical {
+				t.Fatalf("alias get returned wrong template: %#v", template)
+			}
+
+			schema := runVisualOK(t, "template", "schema", alias, "--template-dir", templateDir, "--json")
+			schemaData := schema["data"].(map[string]any)
+			schemaTemplate := schemaData["template"].(map[string]any)
+			if schemaTemplate["requested_id"] != alias || schemaTemplate["canonical_id"] != canonical {
+				t.Fatalf("alias schema mismatch: %#v", schemaTemplate)
+			}
+			jsonSchema, ok := schemaData["json_schema"].(map[string]any)
+			if !ok || len(jsonSchema) <= 3 {
+				t.Fatalf("alias schema missing json_schema: %#v", schemaData)
+			}
+
+			input := filepath.Join(templateDir, canonical, "examples", "basic.input.json")
+			validated := runVisualOK(t, "validate", "--template", alias, "--template-dir", templateDir, "--input", input, "--json")
+			if validated["data"].(map[string]any)["template_id"] != canonical {
+				t.Fatalf("alias validate did not use canonical template: %#v", validated)
+			}
+
+			out := filepath.Join(t.TempDir(), strings.ReplaceAll(alias, ".", "-"))
+			rendered := runVisualOK(t, "render", "--template", alias, "--template-dir", templateDir, "--input", input, "--out", out, "--title", "Alias Smoke", "--json")
+			artifact := rendered["data"].(map[string]any)["artifact"].(map[string]any)
+			if artifact["template_id"] != canonical {
+				t.Fatalf("alias render did not use canonical template: %#v", artifact)
+			}
+			if _, err := os.Stat(filepath.Join(out, "index.html")); err != nil {
+				t.Fatalf("alias render did not write index.html: %v", err)
+			}
+		})
+	}
+
+	list := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--json")
+	listData := list["data"].(map[string]any)
+	if listData["canonical_count"].(float64) != 195 || listData["total_count"].(float64) < 195 || listData["alias_count"].(float64) < float64(len(aliases)) {
+		t.Fatalf("list count contract failed: %#v", listData)
+	}
+	ids := map[string]bool{}
+	for _, item := range listData["templates"].([]any) {
+		m := item.(map[string]any)
+		id := m["id"].(string)
+		if ids[id] {
+			t.Fatalf("duplicate canonical id in list: %s", id)
+		}
+		ids[id] = true
+	}
+
+	doctor := runVisualOK(t, "template", "doctor", "--template-dir", templateDir, "--json")
+	doctorData := doctor["data"].(map[string]any)
+	if doctorData["checked_templates"].(float64) != 195 || doctorData["checked_examples"].(float64) != 195 || doctorData["rendered_examples"].(float64) != 195 || doctorData["offline"] != true {
+		t.Fatalf("doctor alias contract failed: %#v", doctorData)
+	}
+}
+
+func TestVisualDoctorUsesRegistryExpectedCounts(t *testing.T) {
+	templateDir := filepath.Join(t.TempDir(), "visual")
+	copyTree(t, visualTemplateDir(), templateDir)
+	registry := visualRegistryDataFromDir(t, templateDir)
+	registry.Expected.CanonicalCount = 196
+	b, err := json.MarshalIndent(registry, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustWrite(t, filepath.Join(templateDir, "registry.json"), string(append(b, '\n')))
+
+	fail := runVisual(t, "template", "doctor", "--template-dir", templateDir, "--json")
+	assertErrorCode(t, fail, "template_doctor_failed")
+	errObj := fail["error"].(map[string]any)
+	text := strings.ToLower(fmt.Sprint(errObj["message"]) + " " + fmt.Sprint(errObj["hint"]))
+	if !strings.Contains(text, "expected") || !strings.Contains(text, "mismatch") || !strings.Contains(text, "196") || !strings.Contains(text, "195") {
+		t.Fatalf("doctor did not explain expected mismatch: %#v", errObj)
 	}
 }
 
@@ -300,6 +443,14 @@ func TestVisualRegistryAndTemplateManifests(t *testing.T) {
 	registry := visualRegistryData(t)
 	if registry.Version != 2 {
 		t.Fatalf("expected registry version 2, got %d", registry.Version)
+	}
+	if registry.Expected.CanonicalCount != 195 {
+		t.Fatalf("expected registry metadata canonical_count 195, got %#v", registry.Expected)
+	}
+	for category, expected := range expectedVisualCategoryCounts {
+		if registry.Expected.Categories[category] != expected {
+			t.Fatalf("registry expected category %s should be %d, got %#v", category, expected, registry.Expected.Categories)
+		}
 	}
 	if len(registry.Templates) != 195 {
 		t.Fatalf("expected 195 registry templates, got %d", len(registry.Templates))
@@ -367,8 +518,8 @@ func TestVisualRegistryAndTemplateManifests(t *testing.T) {
 			t.Fatalf("%s missing tags", entry.ID)
 		}
 	}
-	if len(aliases) != 10 {
-		t.Fatalf("expected 10 aliases, got %#v", aliases)
+	if len(aliases) < 10 {
+		t.Fatalf("expected at least 10 aliases, got %#v", aliases)
 	}
 	for category, expected := range expectedVisualCategoryCounts {
 		if counts[category] != expected {
@@ -508,6 +659,52 @@ func TestVisualExamplesHaveRequiredShapeAndUniqueContent(t *testing.T) {
 	}
 	if len(hashes) < 190 {
 		t.Fatalf("expected at least 190 unique example hashes, got %d", len(hashes))
+	}
+}
+
+func TestVisualHighValueTemplateSemanticExamples(t *testing.T) {
+	templateDir := visualTemplateDir()
+	entries := map[string]visualRegistryEntry{}
+	for _, entry := range visualRegistryData(t).Templates {
+		entries[entry.ID] = entry
+	}
+	for id, keywords := range highValueTemplateKeywords {
+		t.Run(id, func(t *testing.T) {
+			entry, ok := entries[id]
+			if !ok {
+				t.Fatalf("high value template missing from registry: %s", id)
+			}
+			var manifest visualTemplateManifest
+			rawManifest := mustRead(t, filepath.Join(templateDir, id, "template.yaml"))
+			if err := yaml.Unmarshal([]byte(rawManifest), &manifest); err != nil {
+				t.Fatalf("template.yaml invalid for %s: %v", id, err)
+			}
+			for _, description := range []string{entry.Description, manifest.Description} {
+				lower := strings.ToLower(description)
+				if strings.Contains(lower, "visualize ") && strings.Contains(lower, " as a complete offline ") {
+					t.Fatalf("%s has generic description: %q", id, description)
+				}
+			}
+			rawExample := mustRead(t, filepath.Join(templateDir, id, "examples", "basic.input.json"))
+			var example map[string]any
+			if err := json.Unmarshal([]byte(rawExample), &example); err != nil {
+				t.Fatalf("example invalid for %s: %v", id, err)
+			}
+			title := strings.TrimSpace(fmt.Sprint(example["title"]))
+			if strings.EqualFold(title, manifest.Title+" Example") || strings.EqualFold(title, "Basic Example") {
+				t.Fatalf("%s has generic example title: %q", id, title)
+			}
+			lowerExample := strings.ToLower(rawExample)
+			matched := 0
+			for _, keyword := range keywords {
+				if strings.Contains(lowerExample, strings.ToLower(keyword)) {
+					matched++
+				}
+			}
+			if matched < 3 {
+				t.Fatalf("%s example matched %d domain keywords from %#v", id, matched, keywords)
+			}
+		})
 	}
 }
 
@@ -750,6 +947,29 @@ func TestVisualNoGoEmbed(t *testing.T) {
 	}
 }
 
+func TestVisualBuildAndSmokeScriptsContract(t *testing.T) {
+	buildSH := mustRead(t, "../scripts/build.sh")
+	for _, token := range []string{"--snapshot", "--os", "--arch", "TARGET_OS", "TARGET_ARCH", "./cmd/visual"} {
+		if !strings.Contains(buildSH, token) {
+			t.Fatalf("scripts/build.sh missing %s support", token)
+		}
+	}
+
+	buildPS := mustRead(t, "../scripts/build.ps1")
+	for _, token := range []string{"-Snapshot", "-OS", "-Arch", "$TargetOS", "$TargetArch", "./cmd/visual"} {
+		if !strings.Contains(buildPS, token) {
+			t.Fatalf("scripts/build.ps1 missing %s support", token)
+		}
+	}
+
+	smokePS := mustRead(t, "../scripts/smoke.ps1")
+	for _, token := range []string{"template schema", "template doctor", "render --template"} {
+		if !strings.Contains(smokePS, token) {
+			t.Fatalf("scripts/smoke.ps1 missing visual smoke token %s", token)
+		}
+	}
+}
+
 func TestVisualTemplateTreeOfflineAndStyles(t *testing.T) {
 	forbidden := []string{
 		"http://",
@@ -847,8 +1067,13 @@ func visualTemplateIDs(t *testing.T) []string {
 
 func visualRegistryData(t *testing.T) visualRegistry {
 	t.Helper()
+	return visualRegistryDataFromDir(t, visualTemplateDir())
+}
+
+func visualRegistryDataFromDir(t *testing.T, templateDir string) visualRegistry {
+	t.Helper()
 	var registry visualRegistry
-	b, err := os.ReadFile(filepath.Join(visualTemplateDir(), "registry.json"))
+	b, err := os.ReadFile(filepath.Join(templateDir, "registry.json"))
 	if err != nil {
 		t.Fatal(err)
 	}

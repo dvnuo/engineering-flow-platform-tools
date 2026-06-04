@@ -2,7 +2,7 @@ id: agent.run_trace
 version: 1.0.0
 category: agent
 title: Run Trace
-description: Visualize Run Trace as a complete offline graph_events view for agent workflows using the timeline_tunnel layout.
+description: Follows an agent run from user request through planning, tool calls, validation, and final response.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

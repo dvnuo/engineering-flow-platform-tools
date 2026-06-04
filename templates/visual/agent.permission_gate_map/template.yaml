@@ -2,7 +2,7 @@ id: agent.permission_gate_map
 version: 1.0.0
 category: agent
 title: Permission Gate Map
-description: Visualize Permission Gate Map as a complete offline graph_events view for agent workflows using the layered_stack layout.
+description: Maps the approval gates an agent must pass before writes, network calls, destructive actions, and publication.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

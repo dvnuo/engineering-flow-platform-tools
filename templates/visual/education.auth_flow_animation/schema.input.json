@@ -2,228 +2,264 @@
   "example": {
     "edges": [
       {
-        "from": "education-auth-flow-animation-node-1",
-        "kind": "dependency",
-        "label": "feeds",
-        "to": "education-auth-flow-animation-node-2",
+        "from": "node-01",
+        "kind": "depends_on",
+        "label": "depends on",
+        "to": "node-02",
+        "weight": 1
+      },
+      {
+        "from": "node-02",
+        "kind": "emits",
+        "label": "emits",
+        "to": "node-03",
         "weight": 2
       },
       {
-        "from": "education-auth-flow-animation-node-2",
-        "kind": "validation",
-        "label": "checks",
-        "to": "education-auth-flow-animation-node-3",
+        "from": "node-03",
+        "kind": "validates",
+        "label": "validates",
+        "to": "node-04",
         "weight": 3
       },
       {
-        "from": "education-auth-flow-animation-node-3",
-        "kind": "handoff",
-        "label": "routes",
-        "to": "education-auth-flow-animation-node-4",
-        "weight": 2
-      },
-      {
-        "from": "education-auth-flow-animation-node-4",
-        "kind": "risk",
-        "label": "impacts",
-        "to": "education-auth-flow-animation-node-5",
+        "from": "node-04",
+        "kind": "hands_off",
+        "label": "hands off",
+        "to": "node-05",
         "weight": 4
       },
       {
-        "from": "education-auth-flow-animation-node-5",
-        "kind": "feedback",
+        "from": "node-05",
+        "kind": "reports",
         "label": "reports",
-        "to": "education-auth-flow-animation-node-6",
-        "weight": 2
+        "to": "node-06",
+        "weight": 5
       },
       {
-        "from": "education-auth-flow-animation-node-2",
-        "kind": "signal",
-        "label": "observes",
-        "to": "education-auth-flow-animation-node-6",
-        "weight": 1
+        "from": "node-06",
+        "kind": "guards",
+        "label": "guards",
+        "to": "node-07",
+        "weight": 6
+      },
+      {
+        "from": "node-02",
+        "kind": "observes",
+        "label": "observes downstream",
+        "to": "node-07",
+        "weight": 2
       }
     ],
     "events": [
       {
-        "id": "education-auth-flow-animation-event-1",
-        "kind": "start",
-        "label": "Auth Flow Animation Opened",
+        "id": "event-01",
+        "kind": "browser",
+        "label": "Browser requested login",
         "metadata": {
-          "layout": "pipeline_flow",
-          "template_id": "education.auth_flow_animation"
+          "sequence": 1,
+          "source": "local visual smoke"
         },
-        "node_id": "education-auth-flow-animation-node-1",
+        "node_id": "node-01",
         "status": "running",
-        "summary": "Auth Flow Animation event 1 references Auth Flow Intake.",
-        "time": "2026-06-03T13:10:00Z"
+        "summary": "Browser requested login during Auth Code Flow Animation",
+        "time": "2026-06-03T09:05:00Z"
       },
       {
-        "id": "education-auth-flow-animation-event-2",
-        "kind": "tool",
-        "label": "Auth Flow Animation Triaged",
+        "id": "event-02",
+        "kind": "login",
+        "label": "Login route redirected",
         "metadata": {
-          "layout": "pipeline_flow",
-          "template_id": "education.auth_flow_animation"
+          "sequence": 2,
+          "source": "local visual smoke"
         },
-        "node_id": "education-auth-flow-animation-node-2",
+        "node_id": "node-02",
         "status": "success",
-        "summary": "Auth Flow Animation event 2 references Flow Animation Core.",
-        "time": "2026-06-03T13:21:00Z"
+        "summary": "Login route redirected during Auth Code Flow Animation",
+        "time": "2026-06-03T09:12:00Z"
       },
       {
-        "id": "education-auth-flow-animation-event-3",
-        "kind": "checkpoint",
-        "label": "Auth Flow Animation Mapped",
+        "id": "event-03",
+        "kind": "identity",
+        "label": "Identity provider accepted credentials",
         "metadata": {
-          "layout": "pipeline_flow",
-          "template_id": "education.auth_flow_animation"
+          "sequence": 3,
+          "source": "local visual smoke"
         },
-        "node_id": "education-auth-flow-animation-node-3",
+        "node_id": "node-03",
         "status": "warning",
-        "summary": "Auth Flow Animation event 3 references Animation Auth Policy.",
-        "time": "2026-06-03T13:32:00Z"
+        "summary": "Identity provider accepted credentials during Auth Code Flow Animation",
+        "time": "2026-06-03T09:19:00Z"
       },
       {
-        "id": "education-auth-flow-animation-event-4",
-        "kind": "decision",
-        "label": "Auth Flow Animation Acted",
+        "id": "event-04",
+        "kind": "auth",
+        "label": "Auth code returned",
         "metadata": {
-          "layout": "pipeline_flow",
-          "template_id": "education.auth_flow_animation"
+          "sequence": 4,
+          "source": "local visual smoke"
         },
-        "node_id": "education-auth-flow-animation-node-4",
+        "node_id": "node-04",
         "status": "running",
-        "summary": "Auth Flow Animation event 4 references Auth Flow Execution.",
-        "time": "2026-06-03T13:43:00Z"
+        "summary": "Auth code returned during Auth Code Flow Animation",
+        "time": "2026-06-03T09:26:00Z"
       },
       {
-        "id": "education-auth-flow-animation-event-5",
-        "kind": "recovery",
-        "label": "Auth Flow Animation Checked",
+        "id": "event-05",
+        "kind": "token",
+        "label": "Token exchange completed",
         "metadata": {
-          "layout": "pipeline_flow",
-          "template_id": "education.auth_flow_animation"
+          "sequence": 5,
+          "source": "local visual smoke"
         },
-        "node_id": "education-auth-flow-animation-node-5",
+        "node_id": "node-05",
         "status": "error",
-        "summary": "Auth Flow Animation event 5 references Flow Animation Risk.",
-        "time": "2026-06-03T13:54:00Z"
+        "summary": "Token exchange completed during Auth Code Flow Animation",
+        "time": "2026-06-03T09:33:00Z"
       },
       {
-        "id": "education-auth-flow-animation-event-6",
-        "kind": "finish",
-        "label": "Auth Flow Animation Recovered",
+        "id": "event-06",
+        "kind": "session",
+        "label": "Session cookie issued",
         "metadata": {
-          "layout": "pipeline_flow",
-          "template_id": "education.auth_flow_animation"
+          "sequence": 6,
+          "source": "local visual smoke"
         },
-        "node_id": "education-auth-flow-animation-node-6",
+        "node_id": "node-06",
         "status": "success",
-        "summary": "Auth Flow Animation event 6 references Animation Auth Outcome.",
-        "time": "2026-06-03T14:05:00Z"
+        "summary": "Session cookie issued during Auth Code Flow Animation",
+        "time": "2026-06-03T09:40:00Z"
+      },
+      {
+        "id": "event-07",
+        "kind": "protected",
+        "label": "Protected API allowed request",
+        "metadata": {
+          "sequence": 7,
+          "source": "local visual smoke"
+        },
+        "node_id": "node-07",
+        "status": "warning",
+        "summary": "Protected API allowed request during Auth Code Flow Animation",
+        "time": "2026-06-03T09:47:00Z"
       }
     ],
     "nodes": [
       {
-        "group": "concept",
-        "id": "education-auth-flow-animation-node-1",
-        "kind": "auth",
-        "label": "Auth Flow Intake",
+        "group": "browser",
+        "id": "node-01",
+        "kind": "user",
+        "label": "User browser",
         "metadata": {
-          "detail": "Auth Flow Animation signal 1",
-          "owner": "concept",
-          "template_id": "education.auth_flow_animation"
+          "owner": "browser",
+          "review_date": "2026-06-03",
+          "scenario": "Auth Code Flow Animation"
         },
         "metrics": {
-          "confidence": 0.7,
-          "risk": 0.5
-        },
-        "status": "blocked"
-      },
-      {
-        "group": "step",
-        "id": "education-auth-flow-animation-node-2",
-        "kind": "flow",
-        "label": "Flow Animation Core",
-        "metadata": {
-          "detail": "Auth Flow Animation signal 2",
-          "owner": "step",
-          "template_id": "education.auth_flow_animation"
-        },
-        "metrics": {
-          "confidence": 0.74,
-          "risk": 0.75
-        },
-        "status": "error"
-      },
-      {
-        "group": "assessment",
-        "id": "education-auth-flow-animation-node-3",
-        "kind": "animation",
-        "label": "Animation Auth Policy",
-        "metadata": {
-          "detail": "Auth Flow Animation signal 3",
-          "owner": "assessment",
-          "template_id": "education.auth_flow_animation"
-        },
-        "metrics": {
-          "confidence": 0.78,
-          "risk": 1
+          "confidence": 0.68,
+          "risk": 0.48
         },
         "status": "running"
       },
       {
-        "group": "concept",
-        "id": "education-auth-flow-animation-node-4",
-        "kind": "concept",
-        "label": "Auth Flow Execution",
+        "group": "route",
+        "id": "node-02",
+        "kind": "login",
+        "label": "Login route",
         "metadata": {
-          "detail": "Auth Flow Animation signal 4",
-          "owner": "concept",
-          "template_id": "education.auth_flow_animation"
+          "owner": "route",
+          "review_date": "2026-06-03",
+          "scenario": "Auth Code Flow Animation"
         },
         "metrics": {
-          "confidence": 0.82,
-          "risk": 0
+          "confidence": 0.72,
+          "risk": 0.61
         },
-        "status": "ok"
+        "status": "success"
       },
       {
-        "group": "step",
-        "id": "education-auth-flow-animation-node-5",
-        "kind": "auth",
-        "label": "Flow Animation Risk",
+        "group": "identity",
+        "id": "node-03",
+        "kind": "identity",
+        "label": "Identity provider",
         "metadata": {
-          "detail": "Auth Flow Animation signal 5",
-          "owner": "step",
-          "template_id": "education.auth_flow_animation"
+          "owner": "identity",
+          "review_date": "2026-06-03",
+          "scenario": "Auth Code Flow Animation"
         },
         "metrics": {
-          "confidence": 0.86,
-          "risk": 0.25
+          "confidence": 0.76,
+          "risk": 0.74
         },
         "status": "warning"
       },
       {
-        "group": "assessment",
-        "id": "education-auth-flow-animation-node-6",
-        "kind": "flow",
-        "label": "Animation Auth Outcome",
+        "group": "code",
+        "id": "node-04",
+        "kind": "auth",
+        "label": "Auth code callback",
         "metadata": {
-          "detail": "Auth Flow Animation signal 6",
-          "owner": "assessment",
-          "template_id": "education.auth_flow_animation"
+          "owner": "code",
+          "review_date": "2026-06-03",
+          "scenario": "Auth Code Flow Animation"
         },
         "metrics": {
-          "confidence": 0.9,
-          "risk": 0.5
+          "confidence": 0.8,
+          "risk": 0.22
+        },
+        "status": "ok"
+      },
+      {
+        "group": "token",
+        "id": "node-05",
+        "kind": "token",
+        "label": "Token exchange",
+        "metadata": {
+          "owner": "token",
+          "review_date": "2026-06-03",
+          "scenario": "Auth Code Flow Animation"
+        },
+        "metrics": {
+          "confidence": 0.84,
+          "risk": 0.35
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "cookie",
+        "id": "node-06",
+        "kind": "session",
+        "label": "Session cookie",
+        "metadata": {
+          "owner": "cookie",
+          "review_date": "2026-06-03",
+          "scenario": "Auth Code Flow Animation"
+        },
+        "metrics": {
+          "confidence": 0.88,
+          "risk": 0.48
+        },
+        "status": "error"
+      },
+      {
+        "group": "api",
+        "id": "node-07",
+        "kind": "protected",
+        "label": "Protected API",
+        "metadata": {
+          "owner": "api",
+          "review_date": "2026-06-03",
+          "scenario": "Auth Code Flow Animation"
+        },
+        "metrics": {
+          "confidence": 0.92,
+          "risk": 0.61
         },
         "status": "success"
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Auth Flow Animation Example"
+    "title": "Auth Code Flow Animation"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

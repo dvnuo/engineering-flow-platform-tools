@@ -2,7 +2,7 @@ id: codebase.diff_impact_ripple
 version: 1.0.0
 category: codebase
 title: Diff Impact Ripple
-description: Visualize Diff Impact Ripple as a complete offline graph_events view for codebase workflows using the ripple layout.
+description: Shows how a changed file ripples into modules, tests, API contracts, downstream UI, and risk metrics.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

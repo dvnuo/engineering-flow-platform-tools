@@ -2,7 +2,7 @@ id: agent.active_run_monitor
 version: 1.0.0
 category: agent
 title: Active Run Monitor
-description: Visualize Active Run Monitor as a complete offline graph_events view for agent workflows using the fleet layout.
+description: Monitors active agent work across queued tasks, running commands, edits, tests, and final handoff.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

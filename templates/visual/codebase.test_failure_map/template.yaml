@@ -2,7 +2,7 @@ id: codebase.test_failure_map
 version: 1.0.0
 category: codebase
 title: Test Failure Map
-description: Visualize Test Failure Map as a complete offline graph_events view for codebase workflows using the layered_stack layout.
+description: Links failing tests to assertions, affected modules, fixtures, and the fix candidate under review.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

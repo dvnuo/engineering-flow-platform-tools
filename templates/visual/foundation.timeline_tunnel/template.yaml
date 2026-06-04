@@ -2,7 +2,7 @@ id: foundation.timeline_tunnel
 version: 1.0.0
 category: foundation
 title: Timeline Tunnel
-description: Visualize Timeline Tunnel as a complete offline timeline view for foundation workflows using the timeline_tunnel layout.
+description: Shows release milestones moving through an ordered tunnel of decisions, risks, rehearsal, and final signoff.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

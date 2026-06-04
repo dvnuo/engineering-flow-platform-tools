@@ -2,7 +2,7 @@ id: codebase.galaxy
 version: 1.0.0
 category: codebase
 title: Galaxy
-description: Visualize Galaxy as a complete offline graph view for codebase workflows using the galaxy layout.
+description: Organizes repository areas into a galaxy of packages, tests, shared helpers, and release scripts.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

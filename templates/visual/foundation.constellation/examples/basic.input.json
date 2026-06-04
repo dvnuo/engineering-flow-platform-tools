@@ -1,146 +1,146 @@
 {
   "edges": [
     {
-      "from": "foundation-constellation-node-1",
-      "kind": "dependency",
-      "label": "feeds",
-      "to": "foundation-constellation-node-2",
+      "from": "node-01",
+      "kind": "depends_on",
+      "label": "depends on",
+      "to": "node-02",
+      "weight": 1
+    },
+    {
+      "from": "node-02",
+      "kind": "emits",
+      "label": "emits",
+      "to": "node-03",
       "weight": 2
     },
     {
-      "from": "foundation-constellation-node-2",
-      "kind": "validation",
-      "label": "checks",
-      "to": "foundation-constellation-node-3",
+      "from": "node-03",
+      "kind": "validates",
+      "label": "validates",
+      "to": "node-04",
       "weight": 3
     },
     {
-      "from": "foundation-constellation-node-3",
-      "kind": "handoff",
-      "label": "routes",
-      "to": "foundation-constellation-node-4",
-      "weight": 2
-    },
-    {
-      "from": "foundation-constellation-node-4",
-      "kind": "risk",
-      "label": "impacts",
-      "to": "foundation-constellation-node-5",
+      "from": "node-04",
+      "kind": "hands_off",
+      "label": "hands off",
+      "to": "node-05",
       "weight": 4
     },
     {
-      "from": "foundation-constellation-node-5",
-      "kind": "feedback",
+      "from": "node-05",
+      "kind": "reports",
       "label": "reports",
-      "to": "foundation-constellation-node-6",
-      "weight": 2
+      "to": "node-06",
+      "weight": 5
     },
     {
-      "from": "foundation-constellation-node-2",
-      "kind": "signal",
-      "label": "observes",
-      "to": "foundation-constellation-node-6",
-      "weight": 1
+      "from": "node-02",
+      "kind": "observes",
+      "label": "observes downstream",
+      "to": "node-06",
+      "weight": 2
     }
   ],
   "nodes": [
     {
-      "group": "input",
-      "id": "foundation-constellation-node-1",
-      "kind": "constellation",
-      "label": "Constellation Constellation Intake",
+      "group": "coordination",
+      "id": "node-01",
+      "kind": "coordinator",
+      "label": "Coordinator capability",
       "metadata": {
-        "detail": "Constellation signal 1",
-        "owner": "input",
-        "template_id": "foundation.constellation"
+        "owner": "coordination",
+        "review_date": "2026-06-03",
+        "scenario": "Capability Constellation Map"
       },
       "metrics": {
-        "confidence": 0.7,
-        "risk": 0.5
-      },
-      "status": "warning"
-    },
-    {
-      "group": "layout",
-      "id": "foundation-constellation-node-2",
-      "kind": "layout",
-      "label": "Constellation Constellation Core",
-      "metadata": {
-        "detail": "Constellation signal 2",
-        "owner": "layout",
-        "template_id": "foundation.constellation"
-      },
-      "metrics": {
-        "confidence": 0.74,
-        "risk": 0.75
-      },
-      "status": "success"
-    },
-    {
-      "group": "output",
-      "id": "foundation-constellation-node-3",
-      "kind": "output",
-      "label": "Constellation Constellation Policy",
-      "metadata": {
-        "detail": "Constellation signal 3",
-        "owner": "output",
-        "template_id": "foundation.constellation"
-      },
-      "metrics": {
-        "confidence": 0.78,
-        "risk": 1
-      },
-      "status": "blocked"
-    },
-    {
-      "group": "input",
-      "id": "foundation-constellation-node-4",
-      "kind": "input",
-      "label": "Constellation Constellation Execution",
-      "metadata": {
-        "detail": "Constellation signal 4",
-        "owner": "input",
-        "template_id": "foundation.constellation"
-      },
-      "metrics": {
-        "confidence": 0.82,
-        "risk": 0
-      },
-      "status": "error"
-    },
-    {
-      "group": "layout",
-      "id": "foundation-constellation-node-5",
-      "kind": "constellation",
-      "label": "Constellation Constellation Risk",
-      "metadata": {
-        "detail": "Constellation signal 5",
-        "owner": "layout",
-        "template_id": "foundation.constellation"
-      },
-      "metrics": {
-        "confidence": 0.86,
-        "risk": 0.25
+        "confidence": 0.68,
+        "risk": 0.48
       },
       "status": "running"
     },
     {
-      "group": "output",
-      "id": "foundation-constellation-node-6",
-      "kind": "layout",
-      "label": "Constellation Constellation Outcome",
+      "group": "billing",
+      "id": "node-02",
+      "kind": "billing",
+      "label": "Billing orbit",
       "metadata": {
-        "detail": "Constellation signal 6",
-        "owner": "output",
-        "template_id": "foundation.constellation"
+        "owner": "billing",
+        "review_date": "2026-06-03",
+        "scenario": "Capability Constellation Map"
       },
       "metrics": {
-        "confidence": 0.9,
-        "risk": 0.5
+        "confidence": 0.72,
+        "risk": 0.61
+      },
+      "status": "success"
+    },
+    {
+      "group": "search",
+      "id": "node-03",
+      "kind": "search",
+      "label": "Search orbit",
+      "metadata": {
+        "owner": "search",
+        "review_date": "2026-06-03",
+        "scenario": "Capability Constellation Map"
+      },
+      "metrics": {
+        "confidence": 0.76,
+        "risk": 0.74
+      },
+      "status": "warning"
+    },
+    {
+      "group": "messaging",
+      "id": "node-04",
+      "kind": "notification",
+      "label": "Notification orbit",
+      "metadata": {
+        "owner": "messaging",
+        "review_date": "2026-06-03",
+        "scenario": "Capability Constellation Map"
+      },
+      "metrics": {
+        "confidence": 0.8,
+        "risk": 0.22
       },
       "status": "ok"
+    },
+    {
+      "group": "analytics",
+      "id": "node-05",
+      "kind": "analytics",
+      "label": "Analytics orbit",
+      "metadata": {
+        "owner": "analytics",
+        "review_date": "2026-06-03",
+        "scenario": "Capability Constellation Map"
+      },
+      "metrics": {
+        "confidence": 0.84,
+        "risk": 0.35
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "governance",
+      "id": "node-06",
+      "kind": "compliance",
+      "label": "Compliance checkpoint",
+      "metadata": {
+        "owner": "governance",
+        "review_date": "2026-06-03",
+        "scenario": "Capability Constellation Map"
+      },
+      "metrics": {
+        "confidence": 0.88,
+        "risk": 0.48
+      },
+      "status": "error"
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Constellation Example"
+  "title": "Capability Constellation Map"
 }

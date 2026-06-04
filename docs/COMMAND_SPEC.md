@@ -33,13 +33,13 @@
 
 ### Template Discovery
 
-`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`.
+`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`. `canonical_count` is the number of canonical registry entries, `alias_count` is compatibility aliases, and `total_count` is both combined.
 
-`visual template list --json` returns 195 canonical templates from `templates/visual/registry.json`. Use `--category`, `--query`, `--renderer`, and `--schema-kind` to narrow discovery before reading template details.
+`visual template list --json` returns 195 canonical templates from `templates/visual/registry.json`. Use `--category`, `--query`, `--renderer`, and `--schema-kind` to narrow discovery before reading template details. The response includes normalized `filters`, `matched_count`, `canonical_count`, `total_count`, and `alias_count`.
 
 `visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, aliases, `schema_file`, and `example_file`. Alias ids resolve to the canonical template and include `requested_id` and `canonical_id`.
 
-`visual template schema <template-id> --json` returns the template metadata, full local `json_schema`, and example object agents should mirror when writing input JSON.
+`visual template schema <template-id> --json` returns the template metadata, full local `json_schema`, and example object agents should mirror when writing input JSON. Alias ids resolve the same way as `template get`; the template metadata includes `requested_id`, `canonical_id`, and aliases.
 
 ### Render Artifact Output
 

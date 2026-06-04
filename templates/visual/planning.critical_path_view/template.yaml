@@ -2,7 +2,7 @@ id: planning.critical_path_view
 version: 1.0.0
 category: planning
 title: Critical Path View
-description: Visualize Critical Path View as a complete offline graph view for planning workflows using the dag layout.
+description: Highlights the shortest path through required fixes, tests, documentation, commit, and push.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

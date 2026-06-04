@@ -2,228 +2,228 @@
   "example": {
     "edges": [
       {
-        "from": "codebase-test-failure-map-node-1",
-        "kind": "dependency",
-        "label": "feeds",
-        "to": "codebase-test-failure-map-node-2",
+        "from": "node-01",
+        "kind": "depends_on",
+        "label": "depends on",
+        "to": "node-02",
+        "weight": 1
+      },
+      {
+        "from": "node-02",
+        "kind": "emits",
+        "label": "emits",
+        "to": "node-03",
         "weight": 2
       },
       {
-        "from": "codebase-test-failure-map-node-2",
-        "kind": "validation",
-        "label": "checks",
-        "to": "codebase-test-failure-map-node-3",
+        "from": "node-03",
+        "kind": "validates",
+        "label": "validates",
+        "to": "node-04",
         "weight": 3
       },
       {
-        "from": "codebase-test-failure-map-node-3",
-        "kind": "handoff",
-        "label": "routes",
-        "to": "codebase-test-failure-map-node-4",
-        "weight": 2
-      },
-      {
-        "from": "codebase-test-failure-map-node-4",
-        "kind": "risk",
-        "label": "impacts",
-        "to": "codebase-test-failure-map-node-5",
+        "from": "node-04",
+        "kind": "hands_off",
+        "label": "hands off",
+        "to": "node-05",
         "weight": 4
       },
       {
-        "from": "codebase-test-failure-map-node-5",
-        "kind": "feedback",
+        "from": "node-05",
+        "kind": "reports",
         "label": "reports",
-        "to": "codebase-test-failure-map-node-6",
-        "weight": 2
+        "to": "node-06",
+        "weight": 5
       },
       {
-        "from": "codebase-test-failure-map-node-2",
-        "kind": "signal",
-        "label": "observes",
-        "to": "codebase-test-failure-map-node-6",
-        "weight": 1
+        "from": "node-02",
+        "kind": "observes",
+        "label": "observes downstream",
+        "to": "node-06",
+        "weight": 2
       }
     ],
     "events": [
       {
-        "id": "codebase-test-failure-map-event-1",
-        "kind": "start",
-        "label": "Test Failure Map Opened",
+        "id": "event-01",
+        "kind": "alias",
+        "label": "Alias assertion failed",
         "metadata": {
-          "layout": "layered_stack",
-          "template_id": "codebase.test_failure_map"
+          "sequence": 1,
+          "source": "local visual smoke"
         },
-        "node_id": "codebase-test-failure-map-node-1",
+        "node_id": "node-01",
         "status": "running",
-        "summary": "Test Failure Map event 1 references Test Failure Intake.",
-        "time": "2026-06-03T15:24:00Z"
+        "summary": "Alias assertion failed during Contract Test Failure Map",
+        "time": "2026-06-03T09:05:00Z"
       },
       {
-        "id": "codebase-test-failure-map-event-2",
-        "kind": "tool",
-        "label": "Test Failure Map Triaged",
+        "id": "event-02",
+        "kind": "expected",
+        "label": "Expected count mismatch logged",
         "metadata": {
-          "layout": "layered_stack",
-          "template_id": "codebase.test_failure_map"
+          "sequence": 2,
+          "source": "local visual smoke"
         },
-        "node_id": "codebase-test-failure-map-node-2",
+        "node_id": "node-02",
         "status": "success",
-        "summary": "Test Failure Map event 2 references Failure Map Core.",
-        "time": "2026-06-03T15:35:00Z"
+        "summary": "Expected count mismatch logged during Contract Test Failure Map",
+        "time": "2026-06-03T09:12:00Z"
       },
       {
-        "id": "codebase-test-failure-map-event-3",
-        "kind": "checkpoint",
-        "label": "Test Failure Map Mapped",
+        "id": "event-03",
+        "kind": "build",
+        "label": "Build parser checked",
         "metadata": {
-          "layout": "layered_stack",
-          "template_id": "codebase.test_failure_map"
+          "sequence": 3,
+          "source": "local visual smoke"
         },
-        "node_id": "codebase-test-failure-map-node-3",
+        "node_id": "node-03",
         "status": "warning",
-        "summary": "Test Failure Map event 3 references Map Test Policy.",
-        "time": "2026-06-03T15:46:00Z"
+        "summary": "Build parser checked during Contract Test Failure Map",
+        "time": "2026-06-03T09:19:00Z"
       },
       {
-        "id": "codebase-test-failure-map-event-4",
-        "kind": "decision",
-        "label": "Test Failure Map Acted",
+        "id": "event-04",
+        "kind": "fixture",
+        "label": "Fixture copied",
         "metadata": {
-          "layout": "layered_stack",
-          "template_id": "codebase.test_failure_map"
+          "sequence": 4,
+          "source": "local visual smoke"
         },
-        "node_id": "codebase-test-failure-map-node-4",
+        "node_id": "node-04",
         "status": "running",
-        "summary": "Test Failure Map event 4 references Test Failure Execution.",
-        "time": "2026-06-03T15:57:00Z"
+        "summary": "Fixture copied during Contract Test Failure Map",
+        "time": "2026-06-03T09:26:00Z"
       },
       {
-        "id": "codebase-test-failure-map-event-5",
-        "kind": "recovery",
-        "label": "Test Failure Map Checked",
+        "id": "event-05",
+        "kind": "envelope",
+        "label": "Envelope inspected",
         "metadata": {
-          "layout": "layered_stack",
-          "template_id": "codebase.test_failure_map"
+          "sequence": 5,
+          "source": "local visual smoke"
         },
-        "node_id": "codebase-test-failure-map-node-5",
+        "node_id": "node-05",
         "status": "error",
-        "summary": "Test Failure Map event 5 references Failure Map Risk.",
-        "time": "2026-06-03T16:08:00Z"
+        "summary": "Envelope inspected during Contract Test Failure Map",
+        "time": "2026-06-03T09:33:00Z"
       },
       {
-        "id": "codebase-test-failure-map-event-6",
-        "kind": "finish",
-        "label": "Test Failure Map Recovered",
+        "id": "event-06",
+        "kind": "patch",
+        "label": "Patch candidate verified",
         "metadata": {
-          "layout": "layered_stack",
-          "template_id": "codebase.test_failure_map"
+          "sequence": 6,
+          "source": "local visual smoke"
         },
-        "node_id": "codebase-test-failure-map-node-6",
+        "node_id": "node-06",
         "status": "success",
-        "summary": "Test Failure Map event 6 references Map Test Outcome.",
-        "time": "2026-06-03T16:19:00Z"
+        "summary": "Patch candidate verified during Contract Test Failure Map",
+        "time": "2026-06-03T09:40:00Z"
       }
     ],
     "nodes": [
       {
-        "group": "source",
-        "id": "codebase-test-failure-map-node-1",
-        "kind": "test",
-        "label": "Test Failure Intake",
+        "group": "alias",
+        "id": "node-01",
+        "kind": "visual",
+        "label": "Visual alias test",
         "metadata": {
-          "detail": "Test Failure Map signal 1",
-          "owner": "source",
-          "template_id": "codebase.test_failure_map"
+          "owner": "alias",
+          "review_date": "2026-06-03",
+          "scenario": "Contract Test Failure Map"
         },
         "metrics": {
-          "confidence": 0.7,
-          "risk": 0.5
-        },
-        "status": "blocked"
-      },
-      {
-        "group": "test",
-        "id": "codebase-test-failure-map-node-2",
-        "kind": "failure",
-        "label": "Failure Map Core",
-        "metadata": {
-          "detail": "Test Failure Map signal 2",
-          "owner": "test",
-          "template_id": "codebase.test_failure_map"
-        },
-        "metrics": {
-          "confidence": 0.74,
-          "risk": 0.75
-        },
-        "status": "error"
-      },
-      {
-        "group": "release",
-        "id": "codebase-test-failure-map-node-3",
-        "kind": "map",
-        "label": "Map Test Policy",
-        "metadata": {
-          "detail": "Test Failure Map signal 3",
-          "owner": "release",
-          "template_id": "codebase.test_failure_map"
-        },
-        "metrics": {
-          "confidence": 0.78,
-          "risk": 1
+          "confidence": 0.68,
+          "risk": 0.48
         },
         "status": "running"
       },
       {
-        "group": "source",
-        "id": "codebase-test-failure-map-node-4",
-        "kind": "source",
-        "label": "Test Failure Execution",
+        "group": "doctor",
+        "id": "node-02",
+        "kind": "doctor",
+        "label": "Doctor expected count assertion",
         "metadata": {
-          "detail": "Test Failure Map signal 4",
-          "owner": "source",
-          "template_id": "codebase.test_failure_map"
+          "owner": "doctor",
+          "review_date": "2026-06-03",
+          "scenario": "Contract Test Failure Map"
         },
         "metrics": {
-          "confidence": 0.82,
-          "risk": 0
+          "confidence": 0.72,
+          "risk": 0.61
         },
-        "status": "ok"
+        "status": "success"
       },
       {
-        "group": "test",
-        "id": "codebase-test-failure-map-node-5",
-        "kind": "test",
-        "label": "Failure Map Risk",
+        "group": "build",
+        "id": "node-03",
+        "kind": "build",
+        "label": "Build script static check",
         "metadata": {
-          "detail": "Test Failure Map signal 5",
-          "owner": "test",
-          "template_id": "codebase.test_failure_map"
+          "owner": "build",
+          "review_date": "2026-06-03",
+          "scenario": "Contract Test Failure Map"
         },
         "metrics": {
-          "confidence": 0.86,
-          "risk": 0.25
+          "confidence": 0.76,
+          "risk": 0.74
         },
         "status": "warning"
       },
       {
-        "group": "release",
-        "id": "codebase-test-failure-map-node-6",
-        "kind": "failure",
-        "label": "Map Test Outcome",
+        "group": "fixture",
+        "id": "node-04",
+        "kind": "registry",
+        "label": "Registry fixture",
         "metadata": {
-          "detail": "Test Failure Map signal 6",
-          "owner": "release",
-          "template_id": "codebase.test_failure_map"
+          "owner": "fixture",
+          "review_date": "2026-06-03",
+          "scenario": "Contract Test Failure Map"
         },
         "metrics": {
-          "confidence": 0.9,
-          "risk": 0.5
+          "confidence": 0.8,
+          "risk": 0.22
         },
-        "status": "success"
+        "status": "ok"
+      },
+      {
+        "group": "output",
+        "id": "node-05",
+        "kind": "command",
+        "label": "Command output envelope",
+        "metadata": {
+          "owner": "output",
+          "review_date": "2026-06-03",
+          "scenario": "Contract Test Failure Map"
+        },
+        "metrics": {
+          "confidence": 0.84,
+          "risk": 0.35
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "fix",
+        "id": "node-06",
+        "kind": "fix",
+        "label": "Fix candidate patch",
+        "metadata": {
+          "owner": "fix",
+          "review_date": "2026-06-03",
+          "scenario": "Contract Test Failure Map"
+        },
+        "metrics": {
+          "confidence": 0.88,
+          "risk": 0.48
+        },
+        "status": "error"
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Test Failure Map Example"
+    "title": "Contract Test Failure Map"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

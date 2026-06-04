@@ -2,7 +2,7 @@ id: foundation.constellation
 version: 1.0.0
 category: foundation
 title: Constellation
-description: Visualize Constellation as a complete offline graph view for foundation workflows using the constellation layout.
+description: Places related capabilities in an orbit so ownership, dependencies, and coordination points are easy to scan.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

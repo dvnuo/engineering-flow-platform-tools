@@ -2,228 +2,228 @@
   "example": {
     "edges": [
       {
-        "from": "runtime-event-bus-flow-node-1",
-        "kind": "dependency",
-        "label": "feeds",
-        "to": "runtime-event-bus-flow-node-2",
+        "from": "node-01",
+        "kind": "depends_on",
+        "label": "depends on",
+        "to": "node-02",
+        "weight": 1
+      },
+      {
+        "from": "node-02",
+        "kind": "emits",
+        "label": "emits",
+        "to": "node-03",
         "weight": 2
       },
       {
-        "from": "runtime-event-bus-flow-node-2",
-        "kind": "validation",
-        "label": "checks",
-        "to": "runtime-event-bus-flow-node-3",
+        "from": "node-03",
+        "kind": "validates",
+        "label": "validates",
+        "to": "node-04",
         "weight": 3
       },
       {
-        "from": "runtime-event-bus-flow-node-3",
-        "kind": "handoff",
-        "label": "routes",
-        "to": "runtime-event-bus-flow-node-4",
-        "weight": 2
-      },
-      {
-        "from": "runtime-event-bus-flow-node-4",
-        "kind": "risk",
-        "label": "impacts",
-        "to": "runtime-event-bus-flow-node-5",
+        "from": "node-04",
+        "kind": "hands_off",
+        "label": "hands off",
+        "to": "node-05",
         "weight": 4
       },
       {
-        "from": "runtime-event-bus-flow-node-5",
-        "kind": "feedback",
+        "from": "node-05",
+        "kind": "reports",
         "label": "reports",
-        "to": "runtime-event-bus-flow-node-6",
-        "weight": 2
+        "to": "node-06",
+        "weight": 5
       },
       {
-        "from": "runtime-event-bus-flow-node-2",
-        "kind": "signal",
-        "label": "observes",
-        "to": "runtime-event-bus-flow-node-6",
-        "weight": 1
+        "from": "node-02",
+        "kind": "observes",
+        "label": "observes downstream",
+        "to": "node-06",
+        "weight": 2
       }
     ],
     "events": [
       {
-        "id": "runtime-event-bus-flow-event-1",
-        "kind": "start",
-        "label": "Event Bus Flow Opened",
+        "id": "event-01",
+        "kind": "producer",
+        "label": "Producer emitted session.updated",
         "metadata": {
-          "layout": "flow_particles",
-          "template_id": "runtime.event_bus_flow"
+          "sequence": 1,
+          "source": "local visual smoke"
         },
-        "node_id": "runtime-event-bus-flow-node-1",
+        "node_id": "node-01",
         "status": "running",
-        "summary": "Event Bus Flow event 1 references Event Bus Intake.",
-        "time": "2026-06-03T16:23:00Z"
+        "summary": "Producer emitted session.updated during Runtime Event Bus Flow",
+        "time": "2026-06-03T09:05:00Z"
       },
       {
-        "id": "runtime-event-bus-flow-event-2",
-        "kind": "tool",
-        "label": "Event Bus Flow Triaged",
+        "id": "event-02",
+        "kind": "broker",
+        "label": "Broker routed event",
         "metadata": {
-          "layout": "flow_particles",
-          "template_id": "runtime.event_bus_flow"
+          "sequence": 2,
+          "source": "local visual smoke"
         },
-        "node_id": "runtime-event-bus-flow-node-2",
+        "node_id": "node-02",
         "status": "success",
-        "summary": "Event Bus Flow event 2 references Bus Flow Core.",
-        "time": "2026-06-03T16:34:00Z"
+        "summary": "Broker routed event during Runtime Event Bus Flow",
+        "time": "2026-06-03T09:12:00Z"
       },
       {
-        "id": "runtime-event-bus-flow-event-3",
-        "kind": "checkpoint",
-        "label": "Event Bus Flow Mapped",
+        "id": "event-03",
+        "kind": "render",
+        "label": "Render consumer applied update",
         "metadata": {
-          "layout": "flow_particles",
-          "template_id": "runtime.event_bus_flow"
+          "sequence": 3,
+          "source": "local visual smoke"
         },
-        "node_id": "runtime-event-bus-flow-node-3",
+        "node_id": "node-03",
         "status": "warning",
-        "summary": "Event Bus Flow event 3 references Flow Event Policy.",
-        "time": "2026-06-03T16:45:00Z"
+        "summary": "Render consumer applied update during Runtime Event Bus Flow",
+        "time": "2026-06-03T09:19:00Z"
       },
       {
-        "id": "runtime-event-bus-flow-event-4",
-        "kind": "decision",
-        "label": "Event Bus Flow Acted",
+        "id": "event-04",
+        "kind": "audit",
+        "label": "Audit consumer stored record",
         "metadata": {
-          "layout": "flow_particles",
-          "template_id": "runtime.event_bus_flow"
+          "sequence": 4,
+          "source": "local visual smoke"
         },
-        "node_id": "runtime-event-bus-flow-node-4",
+        "node_id": "node-04",
         "status": "running",
-        "summary": "Event Bus Flow event 4 references Event Bus Execution.",
-        "time": "2026-06-03T16:56:00Z"
+        "summary": "Audit consumer stored record during Runtime Event Bus Flow",
+        "time": "2026-06-03T09:26:00Z"
       },
       {
-        "id": "runtime-event-bus-flow-event-5",
-        "kind": "recovery",
-        "label": "Event Bus Flow Checked",
+        "id": "event-05",
+        "kind": "dead",
+        "label": "Dead letter queue stayed empty",
         "metadata": {
-          "layout": "flow_particles",
-          "template_id": "runtime.event_bus_flow"
+          "sequence": 5,
+          "source": "local visual smoke"
         },
-        "node_id": "runtime-event-bus-flow-node-5",
+        "node_id": "node-05",
         "status": "error",
-        "summary": "Event Bus Flow event 5 references Bus Flow Risk.",
-        "time": "2026-06-03T17:07:00Z"
+        "summary": "Dead letter queue stayed empty during Runtime Event Bus Flow",
+        "time": "2026-06-03T09:33:00Z"
       },
       {
-        "id": "runtime-event-bus-flow-event-6",
-        "kind": "finish",
-        "label": "Event Bus Flow Recovered",
+        "id": "event-06",
+        "kind": "metrics",
+        "label": "Metrics sink recorded lag",
         "metadata": {
-          "layout": "flow_particles",
-          "template_id": "runtime.event_bus_flow"
+          "sequence": 6,
+          "source": "local visual smoke"
         },
-        "node_id": "runtime-event-bus-flow-node-6",
+        "node_id": "node-06",
         "status": "success",
-        "summary": "Event Bus Flow event 6 references Flow Event Outcome.",
-        "time": "2026-06-03T17:18:00Z"
+        "summary": "Metrics sink recorded lag during Runtime Event Bus Flow",
+        "time": "2026-06-03T09:40:00Z"
       }
     ],
     "nodes": [
       {
-        "group": "edge",
-        "id": "runtime-event-bus-flow-node-1",
-        "kind": "event",
-        "label": "Event Bus Intake",
+        "group": "producer",
+        "id": "node-01",
+        "kind": "session",
+        "label": "Session event producer",
         "metadata": {
-          "detail": "Event Bus Flow signal 1",
-          "owner": "edge",
-          "template_id": "runtime.event_bus_flow"
+          "owner": "producer",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Event Bus Flow"
         },
         "metrics": {
-          "confidence": 0.7,
-          "risk": 0.5
-        },
-        "status": "blocked"
-      },
-      {
-        "group": "adapter",
-        "id": "runtime-event-bus-flow-node-2",
-        "kind": "bus",
-        "label": "Bus Flow Core",
-        "metadata": {
-          "detail": "Event Bus Flow signal 2",
-          "owner": "adapter",
-          "template_id": "runtime.event_bus_flow"
-        },
-        "metrics": {
-          "confidence": 0.74,
-          "risk": 0.75
-        },
-        "status": "error"
-      },
-      {
-        "group": "service",
-        "id": "runtime-event-bus-flow-node-3",
-        "kind": "flow",
-        "label": "Flow Event Policy",
-        "metadata": {
-          "detail": "Event Bus Flow signal 3",
-          "owner": "service",
-          "template_id": "runtime.event_bus_flow"
-        },
-        "metrics": {
-          "confidence": 0.78,
-          "risk": 1
+          "confidence": 0.68,
+          "risk": 0.48
         },
         "status": "running"
       },
       {
-        "group": "edge",
-        "id": "runtime-event-bus-flow-node-4",
-        "kind": "edge",
-        "label": "Event Bus Execution",
+        "group": "broker",
+        "id": "node-02",
+        "kind": "event",
+        "label": "Event bus broker",
         "metadata": {
-          "detail": "Event Bus Flow signal 4",
-          "owner": "edge",
-          "template_id": "runtime.event_bus_flow"
+          "owner": "broker",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Event Bus Flow"
         },
         "metrics": {
-          "confidence": 0.82,
-          "risk": 0
+          "confidence": 0.72,
+          "risk": 0.61
         },
-        "status": "ok"
+        "status": "success"
       },
       {
-        "group": "adapter",
-        "id": "runtime-event-bus-flow-node-5",
-        "kind": "event",
-        "label": "Bus Flow Risk",
+        "group": "consumer",
+        "id": "node-03",
+        "kind": "render",
+        "label": "Render consumer",
         "metadata": {
-          "detail": "Event Bus Flow signal 5",
-          "owner": "adapter",
-          "template_id": "runtime.event_bus_flow"
+          "owner": "consumer",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Event Bus Flow"
         },
         "metrics": {
-          "confidence": 0.86,
-          "risk": 0.25
+          "confidence": 0.76,
+          "risk": 0.74
         },
         "status": "warning"
       },
       {
-        "group": "service",
-        "id": "runtime-event-bus-flow-node-6",
-        "kind": "bus",
-        "label": "Flow Event Outcome",
+        "group": "audit",
+        "id": "node-04",
+        "kind": "audit",
+        "label": "Audit consumer",
         "metadata": {
-          "detail": "Event Bus Flow signal 6",
-          "owner": "service",
-          "template_id": "runtime.event_bus_flow"
+          "owner": "audit",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Event Bus Flow"
         },
         "metrics": {
-          "confidence": 0.9,
-          "risk": 0.5
+          "confidence": 0.8,
+          "risk": 0.22
         },
-        "status": "success"
+        "status": "ok"
+      },
+      {
+        "group": "dead-letter",
+        "id": "node-05",
+        "kind": "dead",
+        "label": "Dead letter queue",
+        "metadata": {
+          "owner": "dead-letter",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Event Bus Flow"
+        },
+        "metrics": {
+          "confidence": 0.84,
+          "risk": 0.35
+        },
+        "status": "blocked"
+      },
+      {
+        "group": "metrics",
+        "id": "node-06",
+        "kind": "metrics",
+        "label": "Metrics sink",
+        "metadata": {
+          "owner": "metrics",
+          "review_date": "2026-06-03",
+          "scenario": "Runtime Event Bus Flow"
+        },
+        "metrics": {
+          "confidence": 0.88,
+          "risk": 0.48
+        },
+        "status": "error"
       }
     ],
     "schema": "efp.visual.input.graph_events.v1",
-    "title": "Event Bus Flow Example"
+    "title": "Runtime Event Bus Flow"
   },
   "input_schema_kind": "graph_events_v1",
   "json_schema": {

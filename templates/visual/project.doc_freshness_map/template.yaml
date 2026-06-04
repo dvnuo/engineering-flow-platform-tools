@@ -2,7 +2,7 @@ id: project.doc_freshness_map
 version: 1.0.0
 category: project
 title: Doc Freshness Map
-description: Visualize Doc Freshness Map as a complete offline matrix view for project workflows using the heatmap layout.
+description: Plots project documents by freshness, owner, review state, and release relevance.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

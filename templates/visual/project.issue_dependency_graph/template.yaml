@@ -2,7 +2,7 @@ id: project.issue_dependency_graph
 version: 1.0.0
 category: project
 title: Issue Dependency Graph
-description: Visualize Issue Dependency Graph as a complete offline graph view for project workflows using the graph_2_5d layout.
+description: Connects Jira issues, blockers, owners, acceptance criteria, and release dependencies.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

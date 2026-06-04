@@ -2,7 +2,7 @@ id: knowledge.evidence_board
 version: 1.0.0
 category: knowledge
 title: Evidence Board
-description: Visualize Evidence Board as a complete offline evidence view for knowledge workflows using the evidence_board layout.
+description: Boards claims, sources, reliability, confidence, and support or refute links for a decision.
 input_schema: schema.input.json
 input_schema_kind: evidence_v1
 renderer:

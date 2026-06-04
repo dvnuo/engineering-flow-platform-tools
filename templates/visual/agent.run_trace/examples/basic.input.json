@@ -1,226 +1,226 @@
 {
   "edges": [
     {
-      "from": "agent-run-trace-node-1",
-      "kind": "dependency",
-      "label": "feeds",
-      "to": "agent-run-trace-node-2",
+      "from": "node-01",
+      "kind": "depends_on",
+      "label": "depends on",
+      "to": "node-02",
+      "weight": 1
+    },
+    {
+      "from": "node-02",
+      "kind": "emits",
+      "label": "emits",
+      "to": "node-03",
       "weight": 2
     },
     {
-      "from": "agent-run-trace-node-2",
-      "kind": "validation",
-      "label": "checks",
-      "to": "agent-run-trace-node-3",
+      "from": "node-03",
+      "kind": "validates",
+      "label": "validates",
+      "to": "node-04",
       "weight": 3
     },
     {
-      "from": "agent-run-trace-node-3",
-      "kind": "handoff",
-      "label": "routes",
-      "to": "agent-run-trace-node-4",
-      "weight": 2
-    },
-    {
-      "from": "agent-run-trace-node-4",
-      "kind": "risk",
-      "label": "impacts",
-      "to": "agent-run-trace-node-5",
+      "from": "node-04",
+      "kind": "hands_off",
+      "label": "hands off",
+      "to": "node-05",
       "weight": 4
     },
     {
-      "from": "agent-run-trace-node-5",
-      "kind": "feedback",
+      "from": "node-05",
+      "kind": "reports",
       "label": "reports",
-      "to": "agent-run-trace-node-6",
-      "weight": 2
+      "to": "node-06",
+      "weight": 5
     },
     {
-      "from": "agent-run-trace-node-2",
-      "kind": "signal",
-      "label": "observes",
-      "to": "agent-run-trace-node-6",
-      "weight": 1
+      "from": "node-02",
+      "kind": "observes",
+      "label": "observes downstream",
+      "to": "node-06",
+      "weight": 2
     }
   ],
   "events": [
     {
-      "id": "agent-run-trace-event-1",
-      "kind": "start",
-      "label": "Run Trace Opened",
+      "id": "event-01",
+      "kind": "request",
+      "label": "Request parsed",
       "metadata": {
-        "layout": "timeline_tunnel",
-        "template_id": "agent.run_trace"
+        "sequence": 1,
+        "source": "local visual smoke"
       },
-      "node_id": "agent-run-trace-node-1",
+      "node_id": "node-01",
       "status": "running",
-      "summary": "Run Trace event 1 references Run Trace Intake.",
-      "time": "2026-06-03T10:34:00Z"
+      "summary": "Request parsed during Agent Patch Run Trace",
+      "time": "2026-06-03T09:05:00Z"
     },
     {
-      "id": "agent-run-trace-event-2",
-      "kind": "tool",
-      "label": "Run Trace Triaged",
+      "id": "event-02",
+      "kind": "plan",
+      "label": "Plan marked in progress",
       "metadata": {
-        "layout": "timeline_tunnel",
-        "template_id": "agent.run_trace"
+        "sequence": 2,
+        "source": "local visual smoke"
       },
-      "node_id": "agent-run-trace-node-2",
+      "node_id": "node-02",
       "status": "success",
-      "summary": "Run Trace event 2 references Trace Run Core.",
-      "time": "2026-06-03T10:45:00Z"
+      "summary": "Plan marked in progress during Agent Patch Run Trace",
+      "time": "2026-06-03T09:12:00Z"
     },
     {
-      "id": "agent-run-trace-event-3",
-      "kind": "checkpoint",
-      "label": "Run Trace Mapped",
+      "id": "event-03",
+      "kind": "source",
+      "label": "Source files inspected",
       "metadata": {
-        "layout": "timeline_tunnel",
-        "template_id": "agent.run_trace"
+        "sequence": 3,
+        "source": "local visual smoke"
       },
-      "node_id": "agent-run-trace-node-3",
+      "node_id": "node-03",
       "status": "warning",
-      "summary": "Run Trace event 3 references Run Trace Policy.",
-      "time": "2026-06-03T10:56:00Z"
+      "summary": "Source files inspected during Agent Patch Run Trace",
+      "time": "2026-06-03T09:19:00Z"
     },
     {
-      "id": "agent-run-trace-event-4",
-      "kind": "decision",
-      "label": "Run Trace Acted",
+      "id": "event-04",
+      "kind": "patch",
+      "label": "Patch applied to tests",
       "metadata": {
-        "layout": "timeline_tunnel",
-        "template_id": "agent.run_trace"
+        "sequence": 4,
+        "source": "local visual smoke"
       },
-      "node_id": "agent-run-trace-node-4",
+      "node_id": "node-04",
       "status": "running",
-      "summary": "Run Trace event 4 references Trace Run Execution.",
-      "time": "2026-06-03T11:07:00Z"
+      "summary": "Patch applied to tests during Agent Patch Run Trace",
+      "time": "2026-06-03T09:26:00Z"
     },
     {
-      "id": "agent-run-trace-event-5",
-      "kind": "recovery",
-      "label": "Run Trace Checked",
+      "id": "event-05",
+      "kind": "go",
+      "label": "Go test reported success",
       "metadata": {
-        "layout": "timeline_tunnel",
-        "template_id": "agent.run_trace"
+        "sequence": 5,
+        "source": "local visual smoke"
       },
-      "node_id": "agent-run-trace-node-5",
+      "node_id": "node-05",
       "status": "error",
-      "summary": "Run Trace event 5 references Run Trace Risk.",
-      "time": "2026-06-03T11:18:00Z"
+      "summary": "Go test reported success during Agent Patch Run Trace",
+      "time": "2026-06-03T09:33:00Z"
     },
     {
-      "id": "agent-run-trace-event-6",
-      "kind": "finish",
-      "label": "Run Trace Recovered",
+      "id": "event-06",
+      "kind": "summary",
+      "label": "Summary returned to user",
       "metadata": {
-        "layout": "timeline_tunnel",
-        "template_id": "agent.run_trace"
+        "sequence": 6,
+        "source": "local visual smoke"
       },
-      "node_id": "agent-run-trace-node-6",
+      "node_id": "node-06",
       "status": "success",
-      "summary": "Run Trace event 6 references Trace Run Outcome.",
-      "time": "2026-06-03T11:29:00Z"
+      "summary": "Summary returned to user during Agent Patch Run Trace",
+      "time": "2026-06-03T09:40:00Z"
     }
   ],
   "nodes": [
     {
-      "group": "reasoning",
-      "id": "agent-run-trace-node-1",
-      "kind": "run",
-      "label": "Run Trace Intake",
+      "group": "user",
+      "id": "node-01",
+      "kind": "user",
+      "label": "User instruction",
       "metadata": {
-        "detail": "Run Trace signal 1",
-        "owner": "reasoning",
-        "template_id": "agent.run_trace"
+        "owner": "user",
+        "review_date": "2026-06-03",
+        "scenario": "Agent Patch Run Trace"
       },
       "metrics": {
-        "confidence": 0.7,
-        "risk": 0.5
+        "confidence": 0.68,
+        "risk": 0.48
+      },
+      "status": "running"
+    },
+    {
+      "group": "planning",
+      "id": "node-02",
+      "kind": "plan",
+      "label": "Plan update",
+      "metadata": {
+        "owner": "planning",
+        "review_date": "2026-06-03",
+        "scenario": "Agent Patch Run Trace"
+      },
+      "metrics": {
+        "confidence": 0.72,
+        "risk": 0.61
       },
       "status": "success"
     },
     {
       "group": "tooling",
-      "id": "agent-run-trace-node-2",
-      "kind": "trace",
-      "label": "Trace Run Core",
+      "id": "node-03",
+      "kind": "file",
+      "label": "File read tool",
       "metadata": {
-        "detail": "Run Trace signal 2",
         "owner": "tooling",
-        "template_id": "agent.run_trace"
+        "review_date": "2026-06-03",
+        "scenario": "Agent Patch Run Trace"
       },
       "metrics": {
-        "confidence": 0.74,
-        "risk": 0.75
+        "confidence": 0.76,
+        "risk": 0.74
+      },
+      "status": "warning"
+    },
+    {
+      "group": "editing",
+      "id": "node-04",
+      "kind": "patch",
+      "label": "Patch apply tool",
+      "metadata": {
+        "owner": "editing",
+        "review_date": "2026-06-03",
+        "scenario": "Agent Patch Run Trace"
+      },
+      "metrics": {
+        "confidence": 0.8,
+        "risk": 0.22
+      },
+      "status": "ok"
+    },
+    {
+      "group": "verification",
+      "id": "node-05",
+      "kind": "go",
+      "label": "Go test run",
+      "metadata": {
+        "owner": "verification",
+        "review_date": "2026-06-03",
+        "scenario": "Agent Patch Run Trace"
+      },
+      "metrics": {
+        "confidence": 0.84,
+        "risk": 0.35
       },
       "status": "blocked"
     },
     {
       "group": "response",
-      "id": "agent-run-trace-node-3",
-      "kind": "response",
-      "label": "Run Trace Policy",
+      "id": "node-06",
+      "kind": "final",
+      "label": "Final response",
       "metadata": {
-        "detail": "Run Trace signal 3",
         "owner": "response",
-        "template_id": "agent.run_trace"
+        "review_date": "2026-06-03",
+        "scenario": "Agent Patch Run Trace"
       },
       "metrics": {
-        "confidence": 0.78,
-        "risk": 1
+        "confidence": 0.88,
+        "risk": 0.48
       },
       "status": "error"
-    },
-    {
-      "group": "reasoning",
-      "id": "agent-run-trace-node-4",
-      "kind": "reasoning",
-      "label": "Trace Run Execution",
-      "metadata": {
-        "detail": "Run Trace signal 4",
-        "owner": "reasoning",
-        "template_id": "agent.run_trace"
-      },
-      "metrics": {
-        "confidence": 0.82,
-        "risk": 0
-      },
-      "status": "running"
-    },
-    {
-      "group": "tooling",
-      "id": "agent-run-trace-node-5",
-      "kind": "run",
-      "label": "Run Trace Risk",
-      "metadata": {
-        "detail": "Run Trace signal 5",
-        "owner": "tooling",
-        "template_id": "agent.run_trace"
-      },
-      "metrics": {
-        "confidence": 0.86,
-        "risk": 0.25
-      },
-      "status": "ok"
-    },
-    {
-      "group": "response",
-      "id": "agent-run-trace-node-6",
-      "kind": "trace",
-      "label": "Trace Run Outcome",
-      "metadata": {
-        "detail": "Run Trace signal 6",
-        "owner": "response",
-        "template_id": "agent.run_trace"
-      },
-      "metrics": {
-        "confidence": 0.9,
-        "risk": 0.5
-      },
-      "status": "warning"
     }
   ],
   "schema": "efp.visual.input.graph_events.v1",
-  "title": "Run Trace Example"
+  "title": "Agent Patch Run Trace"
 }

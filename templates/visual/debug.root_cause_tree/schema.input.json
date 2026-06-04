@@ -2,148 +2,148 @@
   "example": {
     "edges": [
       {
-        "from": "debug-root-cause-tree-node-1",
-        "kind": "dependency",
-        "label": "feeds",
-        "to": "debug-root-cause-tree-node-2",
+        "from": "node-01",
+        "kind": "depends_on",
+        "label": "depends on",
+        "to": "node-02",
+        "weight": 1
+      },
+      {
+        "from": "node-02",
+        "kind": "emits",
+        "label": "emits",
+        "to": "node-03",
         "weight": 2
       },
       {
-        "from": "debug-root-cause-tree-node-2",
-        "kind": "validation",
-        "label": "checks",
-        "to": "debug-root-cause-tree-node-3",
+        "from": "node-03",
+        "kind": "validates",
+        "label": "validates",
+        "to": "node-04",
         "weight": 3
       },
       {
-        "from": "debug-root-cause-tree-node-3",
-        "kind": "handoff",
-        "label": "routes",
-        "to": "debug-root-cause-tree-node-4",
-        "weight": 2
-      },
-      {
-        "from": "debug-root-cause-tree-node-4",
-        "kind": "risk",
-        "label": "impacts",
-        "to": "debug-root-cause-tree-node-5",
+        "from": "node-04",
+        "kind": "hands_off",
+        "label": "hands off",
+        "to": "node-05",
         "weight": 4
       },
       {
-        "from": "debug-root-cause-tree-node-5",
-        "kind": "feedback",
+        "from": "node-05",
+        "kind": "reports",
         "label": "reports",
-        "to": "debug-root-cause-tree-node-6",
-        "weight": 2
+        "to": "node-06",
+        "weight": 5
       },
       {
-        "from": "debug-root-cause-tree-node-2",
-        "kind": "signal",
-        "label": "observes",
-        "to": "debug-root-cause-tree-node-6",
-        "weight": 1
+        "from": "node-02",
+        "kind": "observes",
+        "label": "observes downstream",
+        "to": "node-06",
+        "weight": 2
       }
     ],
     "nodes": [
       {
         "group": "symptom",
-        "id": "debug-root-cause-tree-node-1",
-        "kind": "root",
-        "label": "Root Cause Intake",
+        "id": "node-01",
+        "kind": "checkout",
+        "label": "Checkout error spike",
         "metadata": {
-          "detail": "Root Cause Tree signal 1",
           "owner": "symptom",
-          "template_id": "debug.root_cause_tree"
+          "review_date": "2026-06-03",
+          "scenario": "Root Cause Analysis Tree"
         },
         "metrics": {
-          "confidence": 0.7,
-          "risk": 0.5
+          "confidence": 0.68,
+          "risk": 0.48
+        },
+        "status": "running"
+      },
+      {
+        "group": "change",
+        "id": "node-02",
+        "kind": "payment",
+        "label": "Payment adapter deploy",
+        "metadata": {
+          "owner": "change",
+          "review_date": "2026-06-03",
+          "scenario": "Root Cause Analysis Tree"
+        },
+        "metrics": {
+          "confidence": 0.72,
+          "risk": 0.61
+        },
+        "status": "success"
+      },
+      {
+        "group": "validation",
+        "id": "node-03",
+        "kind": "schema",
+        "label": "Schema validation gap",
+        "metadata": {
+          "owner": "validation",
+          "review_date": "2026-06-03",
+          "scenario": "Root Cause Analysis Tree"
+        },
+        "metrics": {
+          "confidence": 0.76,
+          "risk": 0.74
+        },
+        "status": "warning"
+      },
+      {
+        "group": "resilience",
+        "id": "node-04",
+        "kind": "retry",
+        "label": "Retry storm",
+        "metadata": {
+          "owner": "resilience",
+          "review_date": "2026-06-03",
+          "scenario": "Root Cause Analysis Tree"
+        },
+        "metrics": {
+          "confidence": 0.8,
+          "risk": 0.22
+        },
+        "status": "ok"
+      },
+      {
+        "group": "monitoring",
+        "id": "node-05",
+        "kind": "missing",
+        "label": "Missing canary alert",
+        "metadata": {
+          "owner": "monitoring",
+          "review_date": "2026-06-03",
+          "scenario": "Root Cause Analysis Tree"
+        },
+        "metrics": {
+          "confidence": 0.84,
+          "risk": 0.35
         },
         "status": "blocked"
       },
       {
         "group": "cause",
-        "id": "debug-root-cause-tree-node-2",
-        "kind": "cause",
-        "label": "Cause Tree Core",
+        "id": "node-06",
+        "kind": "confirmed",
+        "label": "Confirmed root cause",
         "metadata": {
-          "detail": "Root Cause Tree signal 2",
           "owner": "cause",
-          "template_id": "debug.root_cause_tree"
+          "review_date": "2026-06-03",
+          "scenario": "Root Cause Analysis Tree"
         },
         "metrics": {
-          "confidence": 0.74,
-          "risk": 0.75
+          "confidence": 0.88,
+          "risk": 0.48
         },
         "status": "error"
-      },
-      {
-        "group": "mitigation",
-        "id": "debug-root-cause-tree-node-3",
-        "kind": "tree",
-        "label": "Tree Root Policy",
-        "metadata": {
-          "detail": "Root Cause Tree signal 3",
-          "owner": "mitigation",
-          "template_id": "debug.root_cause_tree"
-        },
-        "metrics": {
-          "confidence": 0.78,
-          "risk": 1
-        },
-        "status": "running"
-      },
-      {
-        "group": "symptom",
-        "id": "debug-root-cause-tree-node-4",
-        "kind": "symptom",
-        "label": "Root Cause Execution",
-        "metadata": {
-          "detail": "Root Cause Tree signal 4",
-          "owner": "symptom",
-          "template_id": "debug.root_cause_tree"
-        },
-        "metrics": {
-          "confidence": 0.82,
-          "risk": 0
-        },
-        "status": "ok"
-      },
-      {
-        "group": "cause",
-        "id": "debug-root-cause-tree-node-5",
-        "kind": "root",
-        "label": "Cause Tree Risk",
-        "metadata": {
-          "detail": "Root Cause Tree signal 5",
-          "owner": "cause",
-          "template_id": "debug.root_cause_tree"
-        },
-        "metrics": {
-          "confidence": 0.86,
-          "risk": 0.25
-        },
-        "status": "warning"
-      },
-      {
-        "group": "mitigation",
-        "id": "debug-root-cause-tree-node-6",
-        "kind": "cause",
-        "label": "Tree Root Outcome",
-        "metadata": {
-          "detail": "Root Cause Tree signal 6",
-          "owner": "mitigation",
-          "template_id": "debug.root_cause_tree"
-        },
-        "metrics": {
-          "confidence": 0.9,
-          "risk": 0.5
-        },
-        "status": "success"
       }
     ],
     "schema": "efp.visual.input.graph.v1",
-    "title": "Root Cause Tree Example"
+    "title": "Root Cause Analysis Tree"
   },
   "input_schema_kind": "graph_v1",
   "json_schema": {

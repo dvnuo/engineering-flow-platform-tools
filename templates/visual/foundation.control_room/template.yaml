@@ -2,7 +2,7 @@ id: foundation.control_room
 version: 1.0.0
 category: foundation
 title: Control Room
-description: Visualize Control Room as a complete offline matrix view for foundation workflows using the control_room layout.
+description: Summarizes operational signals as a control room for queues, latency, error budget, and readiness.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

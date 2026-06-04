@@ -3,8 +3,14 @@ package manifest
 import "strings"
 
 type Registry struct {
-	Version   int             `json:"version"`
-	Templates []RegistryEntry `json:"templates"`
+	Version   int              `json:"version"`
+	Expected  RegistryExpected `json:"expected,omitempty"`
+	Templates []RegistryEntry  `json:"templates"`
+}
+
+type RegistryExpected struct {
+	CanonicalCount int            `json:"canonical_count"`
+	Categories     map[string]int `json:"categories,omitempty"`
 }
 
 type RegistryEntry struct {
@@ -64,4 +70,41 @@ func (r Registry) CategoryCounts() map[string]int {
 		counts[entry.Category]++
 	}
 	return counts
+}
+
+func (r Registry) EffectiveExpected() (RegistryExpected, []string) {
+	expected := RegistryExpected{
+		CanonicalCount: r.Expected.CanonicalCount,
+		Categories:     copyCategoryCounts(r.Expected.Categories),
+	}
+	var warnings []string
+	if expected.CanonicalCount == 0 && len(expected.Categories) == 0 {
+		warnings = append(warnings, "registry.expected is missing; using default visual template counts.")
+		expected = DefaultRegistryExpected()
+		return expected, warnings
+	}
+	if expected.CanonicalCount == 0 {
+		warnings = append(warnings, "registry.expected.canonical_count is missing; using default canonical count.")
+		expected.CanonicalCount = DefaultExpectedCanonicalCount
+	}
+	if len(expected.Categories) == 0 {
+		warnings = append(warnings, "registry.expected.categories is missing; using default category counts.")
+		expected.Categories = copyCategoryCounts(ExpectedCategoryCounts)
+	}
+	return expected, warnings
+}
+
+func DefaultRegistryExpected() RegistryExpected {
+	return RegistryExpected{
+		CanonicalCount: DefaultExpectedCanonicalCount,
+		Categories:     copyCategoryCounts(ExpectedCategoryCounts),
+	}
+}
+
+func copyCategoryCounts(in map[string]int) map[string]int {
+	out := make(map[string]int, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }

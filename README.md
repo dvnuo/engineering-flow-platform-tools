@@ -352,11 +352,15 @@ For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jir
 ```bash
 bash scripts/build.sh
 bash scripts/build.sh --snapshot
+bash scripts/build.sh --os linux --arch amd64
+bash scripts/build.sh --snapshot --os linux --arch amd64
 ```
 
 ```powershell
 ./scripts/build.ps1
-./scripts/build.ps1 --snapshot
+./scripts/build.ps1 -Snapshot
+./scripts/build.ps1 -OS linux -Arch amd64
+./scripts/build.ps1 -Snapshot -OS linux -Arch amd64
 ```
 
 Build outputs are placed under `dist/<goos>-<goarch>/` for linux, darwin, and windows on amd64 and arm64.

@@ -2,7 +2,7 @@ id: foundation.layered_stack
 version: 1.0.0
 category: foundation
 title: Layered Stack
-description: Visualize Layered Stack as a complete offline graph view for foundation workflows using the layered_stack layout.
+description: Maps a layered system from domain model through adapters, policy, telemetry, and release boundary.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

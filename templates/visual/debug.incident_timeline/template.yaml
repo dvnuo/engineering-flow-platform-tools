@@ -2,7 +2,7 @@ id: debug.incident_timeline
 version: 1.0.0
 category: debug
 title: Incident Timeline
-description: Visualize Incident Timeline as a complete offline timeline view for debug workflows using the incident_timeline layout.
+description: Lays out incident detection, mitigation, rollback, customer update, and postmortem events in order.
 input_schema: schema.input.json
 input_schema_kind: timeline_v1
 renderer:

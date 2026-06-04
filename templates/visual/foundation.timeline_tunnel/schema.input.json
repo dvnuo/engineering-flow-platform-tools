@@ -2,99 +2,86 @@
   "example": {
     "events": [
       {
-        "id": "foundation-timeline-tunnel-event-1",
+        "id": "event-01",
         "kind": "intake",
-        "label": "Timeline Tunnel Opened",
-        "lane": "input",
+        "label": "Intake scope locked",
         "metadata": {
-          "sequence": 1,
-          "template_id": "foundation.timeline_tunnel"
-        },
-        "status": "success",
-        "summary": "Timeline Tunnel advanced through intake with timeline_tunnel context.",
-        "time": "2026-06-03T11:52:00Z"
-      },
-      {
-        "id": "foundation-timeline-tunnel-event-2",
-        "kind": "analysis",
-        "label": "Tunnel Timeline Triaged",
-        "lane": "layout",
-        "metadata": {
-          "sequence": 2,
-          "template_id": "foundation.timeline_tunnel"
+          "checkpoint": 1,
+          "owner": "release team",
+          "review_date": "2026-06-03"
         },
         "status": "running",
-        "summary": "Timeline Tunnel advanced through analysis with timeline_tunnel context.",
-        "time": "2026-06-03T12:09:00Z"
+        "summary": "Intake scope locked in Release Readiness Tunnel",
+        "time": "2026-06-03T09:05:00Z"
       },
       {
-        "id": "foundation-timeline-tunnel-event-3",
-        "kind": "decision",
-        "label": "Timeline Tunnel Mapped",
-        "lane": "output",
+        "id": "event-02",
+        "kind": "architecture",
+        "label": "Architecture review completed",
         "metadata": {
-          "sequence": 3,
-          "template_id": "foundation.timeline_tunnel"
+          "checkpoint": 2,
+          "owner": "release team",
+          "review_date": "2026-06-03"
+        },
+        "status": "success",
+        "summary": "Architecture review completed in Release Readiness Tunnel",
+        "time": "2026-06-03T09:12:00Z"
+      },
+      {
+        "id": "event-03",
+        "kind": "prototype",
+        "label": "Prototype validated by support",
+        "metadata": {
+          "checkpoint": 3,
+          "owner": "release team",
+          "review_date": "2026-06-03"
         },
         "status": "warning",
-        "summary": "Timeline Tunnel advanced through decision with timeline_tunnel context.",
-        "time": "2026-06-03T12:26:00Z"
+        "summary": "Prototype validated by support in Release Readiness Tunnel",
+        "time": "2026-06-03T09:19:00Z"
       },
       {
-        "id": "foundation-timeline-tunnel-event-4",
-        "kind": "execution",
-        "label": "Tunnel Timeline Acted",
-        "lane": "input",
+        "id": "event-04",
+        "kind": "risk",
+        "label": "Risk burn down checkpoint",
         "metadata": {
-          "sequence": 4,
-          "template_id": "foundation.timeline_tunnel"
+          "checkpoint": 4,
+          "owner": "release team",
+          "review_date": "2026-06-03"
         },
         "status": "success",
-        "summary": "Timeline Tunnel advanced through execution with timeline_tunnel context.",
-        "time": "2026-06-03T12:43:00Z"
+        "summary": "Risk burn down checkpoint in Release Readiness Tunnel",
+        "time": "2026-06-03T09:26:00Z"
       },
       {
-        "id": "foundation-timeline-tunnel-event-5",
-        "kind": "verification",
-        "label": "Timeline Tunnel Checked",
-        "lane": "layout",
+        "id": "event-05",
+        "kind": "release",
+        "label": "Release rehearsal passed",
         "metadata": {
-          "sequence": 5,
-          "template_id": "foundation.timeline_tunnel"
+          "checkpoint": 5,
+          "owner": "release team",
+          "review_date": "2026-06-03"
         },
-        "status": "error",
-        "summary": "Timeline Tunnel advanced through verification with timeline_tunnel context.",
-        "time": "2026-06-03T13:00:00Z"
+        "status": "running",
+        "summary": "Release rehearsal passed in Release Readiness Tunnel",
+        "time": "2026-06-03T09:33:00Z"
       },
       {
-        "id": "foundation-timeline-tunnel-event-6",
-        "kind": "handoff",
-        "label": "Tunnel Timeline Recovered",
-        "lane": "output",
+        "id": "event-06",
+        "kind": "stakeholder",
+        "label": "Stakeholder signoff recorded",
         "metadata": {
-          "sequence": 6,
-          "template_id": "foundation.timeline_tunnel"
-        },
-        "status": "blocked",
-        "summary": "Timeline Tunnel advanced through handoff with timeline_tunnel context.",
-        "time": "2026-06-03T13:17:00Z"
-      },
-      {
-        "id": "foundation-timeline-tunnel-event-7",
-        "kind": "closeout",
-        "label": "Timeline Tunnel Closed",
-        "lane": "input",
-        "metadata": {
-          "sequence": 7,
-          "template_id": "foundation.timeline_tunnel"
+          "checkpoint": 6,
+          "owner": "release team",
+          "review_date": "2026-06-03"
         },
         "status": "success",
-        "summary": "Timeline Tunnel advanced through closeout with timeline_tunnel context.",
-        "time": "2026-06-03T13:34:00Z"
+        "summary": "Stakeholder signoff recorded in Release Readiness Tunnel",
+        "time": "2026-06-03T09:40:00Z"
       }
     ],
     "schema": "efp.visual.input.timeline.v1",
-    "title": "Timeline Tunnel Example"
+    "title": "Release Readiness Tunnel"
   },
   "input_schema_kind": "timeline_v1",
   "json_schema": {

@@ -2,102 +2,138 @@
   "example": {
     "claims": [
       {
-        "confidence": 0.82,
-        "id": "knowledge-evidence-board-claim-1",
+        "confidence": 0.58,
+        "id": "claim-01",
+        "metadata": {
+          "priority": 1,
+          "reviewer": "visual contract reviewer"
+        },
         "status": "supported",
-        "text": "Evidence Board is supported by current artifacts"
+        "text": "Alias get resolves to canonical template"
       },
       {
-        "confidence": 0.61,
-        "id": "knowledge-evidence-board-claim-2",
+        "confidence": 0.68,
+        "id": "claim-02",
+        "metadata": {
+          "priority": 2,
+          "reviewer": "visual contract reviewer"
+        },
+        "status": "supported",
+        "text": "Alias render uses canonical example input"
+      },
+      {
+        "confidence": 0.78,
+        "id": "claim-03",
+        "metadata": {
+          "priority": 3,
+          "reviewer": "visual contract reviewer"
+        },
         "status": "warning",
-        "text": "Board Evidence has a known gap"
+        "text": "Doctor count comes from registry expected"
       },
       {
-        "confidence": 0.44,
-        "id": "knowledge-evidence-board-claim-3",
+        "confidence": 0.88,
+        "id": "claim-04",
+        "metadata": {
+          "priority": 4,
+          "reviewer": "visual contract reviewer"
+        },
         "status": "refuted",
-        "text": "Evidence Board conflicts with stale assumptions"
-      },
-      {
-        "confidence": 0.76,
-        "id": "knowledge-evidence-board-claim-4",
-        "status": "success",
-        "text": "Board Evidence is ready for review"
+        "text": "Build script filters target platform"
       }
     ],
     "links": [
       {
-        "claim_id": "knowledge-evidence-board-claim-1",
+        "claim_id": "claim-01",
         "relation": "supports",
-        "source_id": "knowledge-evidence-board-source-1",
-        "weight": 0.9
+        "source_id": "source-01",
+        "weight": 0.91
       },
       {
-        "claim_id": "knowledge-evidence-board-claim-1",
+        "claim_id": "claim-01",
         "relation": "mentions",
-        "source_id": "knowledge-evidence-board-source-2",
-        "weight": 0.5
+        "source_id": "source-02",
+        "weight": 0.62
       },
       {
-        "claim_id": "knowledge-evidence-board-claim-2",
+        "claim_id": "claim-02",
         "relation": "supports",
-        "source_id": "knowledge-evidence-board-source-3",
-        "weight": 0.6
+        "source_id": "source-03",
+        "weight": 0.84
       },
       {
-        "claim_id": "knowledge-evidence-board-claim-3",
+        "claim_id": "claim-03",
+        "relation": "mentions",
+        "source_id": "source-04",
+        "weight": 0.58
+      },
+      {
+        "claim_id": "claim-03",
         "relation": "refutes",
-        "source_id": "knowledge-evidence-board-source-4",
-        "weight": 0.7
+        "source_id": "source-05",
+        "weight": 0.66
       },
       {
-        "claim_id": "knowledge-evidence-board-claim-4",
+        "claim_id": "claim-04",
         "relation": "supports",
-        "source_id": "knowledge-evidence-board-source-5",
-        "weight": 0.8
-      },
-      {
-        "claim_id": "knowledge-evidence-board-claim-2",
-        "relation": "mentions",
-        "source_id": "knowledge-evidence-board-source-5",
-        "weight": 0.4
+        "source_id": "source-02",
+        "weight": 0.77
       }
     ],
     "schema": "efp.visual.input.evidence.v1",
     "sources": [
       {
-        "id": "knowledge-evidence-board-source-1",
-        "kind": "document",
-        "reliability": 0.87,
-        "title": "Evidence Board design note"
+        "id": "source-01",
+        "kind": "test",
+        "metadata": {
+          "captured": "2026-06-03",
+          "owner": "test"
+        },
+        "reliability": 0.64,
+        "title": "Visual contract test output"
       },
       {
-        "id": "knowledge-evidence-board-source-2",
-        "kind": "log",
-        "reliability": 0.72,
-        "title": "Board Evidence run log"
+        "id": "source-02",
+        "kind": "registry",
+        "metadata": {
+          "captured": "2026-06-03",
+          "owner": "registry"
+        },
+        "reliability": 0.71,
+        "title": "Registry alias table"
       },
       {
-        "id": "knowledge-evidence-board-source-3",
-        "kind": "review",
-        "reliability": 0.66,
-        "title": "Evidence Board review thread"
+        "id": "source-03",
+        "kind": "command-output",
+        "metadata": {
+          "captured": "2026-06-03",
+          "owner": "command-output"
+        },
+        "reliability": 0.78,
+        "title": "Doctor JSON envelope"
       },
       {
-        "id": "knowledge-evidence-board-source-4",
-        "kind": "metric",
-        "reliability": 0.79,
-        "title": "Board Evidence benchmark"
+        "id": "source-04",
+        "kind": "script",
+        "metadata": {
+          "captured": "2026-06-03",
+          "owner": "script"
+        },
+        "reliability": 0.85,
+        "title": "Build script parser review"
       },
       {
-        "id": "knowledge-evidence-board-source-5",
-        "kind": "record",
-        "reliability": 0.91,
-        "title": "Evidence Board decision record"
+        "id": "source-05",
+        "kind": "artifact",
+        "metadata": {
+          "captured": "2026-06-03",
+          "owner": "artifact"
+        },
+        "reliability": 0.92,
+        "title": "Smoke render artifact"
       }
     ],
-    "title": "Evidence Board Example"
+    "title": "Alias Contract Evidence Board"
   },
   "input_schema_kind": "evidence_v1",
   "json_schema": {

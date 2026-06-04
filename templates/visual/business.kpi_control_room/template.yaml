@@ -2,7 +2,7 @@ id: business.kpi_control_room
 version: 1.0.0
 category: business
 title: KPI Control Room
-description: Visualize KPI Control Room as a complete offline matrix view for business workflows using the control_room layout.
+description: Tracks product and support KPIs including active users, conversion, revenue, support tickets, SLA, and churn risk.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

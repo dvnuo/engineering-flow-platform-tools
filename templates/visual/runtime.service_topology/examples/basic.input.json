@@ -1,146 +1,146 @@
 {
   "edges": [
     {
-      "from": "runtime-service-topology-node-1",
-      "kind": "dependency",
-      "label": "feeds",
-      "to": "runtime-service-topology-node-2",
+      "from": "node-01",
+      "kind": "depends_on",
+      "label": "depends on",
+      "to": "node-02",
+      "weight": 1
+    },
+    {
+      "from": "node-02",
+      "kind": "emits",
+      "label": "emits",
+      "to": "node-03",
       "weight": 2
     },
     {
-      "from": "runtime-service-topology-node-2",
-      "kind": "validation",
-      "label": "checks",
-      "to": "runtime-service-topology-node-3",
+      "from": "node-03",
+      "kind": "validates",
+      "label": "validates",
+      "to": "node-04",
       "weight": 3
     },
     {
-      "from": "runtime-service-topology-node-3",
-      "kind": "handoff",
-      "label": "routes",
-      "to": "runtime-service-topology-node-4",
-      "weight": 2
-    },
-    {
-      "from": "runtime-service-topology-node-4",
-      "kind": "risk",
-      "label": "impacts",
-      "to": "runtime-service-topology-node-5",
+      "from": "node-04",
+      "kind": "hands_off",
+      "label": "hands off",
+      "to": "node-05",
       "weight": 4
     },
     {
-      "from": "runtime-service-topology-node-5",
-      "kind": "feedback",
+      "from": "node-05",
+      "kind": "reports",
       "label": "reports",
-      "to": "runtime-service-topology-node-6",
-      "weight": 2
+      "to": "node-06",
+      "weight": 5
     },
     {
-      "from": "runtime-service-topology-node-2",
-      "kind": "signal",
-      "label": "observes",
-      "to": "runtime-service-topology-node-6",
-      "weight": 1
+      "from": "node-02",
+      "kind": "observes",
+      "label": "observes downstream",
+      "to": "node-06",
+      "weight": 2
     }
   ],
   "nodes": [
     {
-      "group": "edge",
-      "id": "runtime-service-topology-node-1",
-      "kind": "service",
-      "label": "Service Topology Intake",
+      "group": "gateway",
+      "id": "node-01",
+      "kind": "portal",
+      "label": "Portal gateway",
       "metadata": {
-        "detail": "Service Topology signal 1",
-        "owner": "edge",
-        "template_id": "runtime.service_topology"
+        "owner": "gateway",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
       },
       "metrics": {
-        "confidence": 0.7,
-        "risk": 0.5
-      },
-      "status": "success"
-    },
-    {
-      "group": "adapter",
-      "id": "runtime-service-topology-node-2",
-      "kind": "topology",
-      "label": "Topology Service Core",
-      "metadata": {
-        "detail": "Service Topology signal 2",
-        "owner": "adapter",
-        "template_id": "runtime.service_topology"
-      },
-      "metrics": {
-        "confidence": 0.74,
-        "risk": 0.75
-      },
-      "status": "blocked"
-    },
-    {
-      "group": "service",
-      "id": "runtime-service-topology-node-3",
-      "kind": "service",
-      "label": "Service Topology Policy",
-      "metadata": {
-        "detail": "Service Topology signal 3",
-        "owner": "service",
-        "template_id": "runtime.service_topology"
-      },
-      "metrics": {
-        "confidence": 0.78,
-        "risk": 1
-      },
-      "status": "error"
-    },
-    {
-      "group": "edge",
-      "id": "runtime-service-topology-node-4",
-      "kind": "edge",
-      "label": "Topology Service Execution",
-      "metadata": {
-        "detail": "Service Topology signal 4",
-        "owner": "edge",
-        "template_id": "runtime.service_topology"
-      },
-      "metrics": {
-        "confidence": 0.82,
-        "risk": 0
+        "confidence": 0.68,
+        "risk": 0.48
       },
       "status": "running"
     },
     {
-      "group": "adapter",
-      "id": "runtime-service-topology-node-5",
-      "kind": "service",
-      "label": "Service Topology Risk",
+      "group": "service",
+      "id": "node-02",
+      "kind": "visual",
+      "label": "Visual CLI service",
       "metadata": {
-        "detail": "Service Topology signal 5",
-        "owner": "adapter",
-        "template_id": "runtime.service_topology"
+        "owner": "service",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
       },
       "metrics": {
-        "confidence": 0.86,
-        "risk": 0.25
+        "confidence": 0.72,
+        "risk": 0.61
+      },
+      "status": "success"
+    },
+    {
+      "group": "registry",
+      "id": "node-03",
+      "kind": "template",
+      "label": "Template registry store",
+      "metadata": {
+        "owner": "registry",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
+      },
+      "metrics": {
+        "confidence": 0.76,
+        "risk": 0.74
+      },
+      "status": "warning"
+    },
+    {
+      "group": "worker",
+      "id": "node-04",
+      "kind": "render",
+      "label": "Render worker",
+      "metadata": {
+        "owner": "worker",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
+      },
+      "metrics": {
+        "confidence": 0.8,
+        "risk": 0.22
       },
       "status": "ok"
     },
     {
-      "group": "service",
-      "id": "runtime-service-topology-node-6",
-      "kind": "topology",
-      "label": "Topology Service Outcome",
+      "group": "storage",
+      "id": "node-05",
+      "kind": "artifact",
+      "label": "Artifact directory",
       "metadata": {
-        "detail": "Service Topology signal 6",
-        "owner": "service",
-        "template_id": "runtime.service_topology"
+        "owner": "storage",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
       },
       "metrics": {
-        "confidence": 0.9,
-        "risk": 0.5
+        "confidence": 0.84,
+        "risk": 0.35
       },
-      "status": "warning"
+      "status": "blocked"
+    },
+    {
+      "group": "health",
+      "id": "node-06",
+      "kind": "health",
+      "label": "Health probe",
+      "metadata": {
+        "owner": "health",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
+      },
+      "metrics": {
+        "confidence": 0.88,
+        "risk": 0.48
+      },
+      "status": "error"
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Service Topology Example"
+  "title": "Runtime Service Topology"
 }

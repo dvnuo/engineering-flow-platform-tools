@@ -2,7 +2,7 @@ id: project.requirements_to_code_trace
 version: 1.0.0
 category: project
 title: Requirements To Code Trace
-description: Visualize Requirements To Code Trace as a complete offline graph view for project workflows using the layered_stack layout.
+description: Traces a requirement through design documentation, Jira work, pull request, changed files, tests, and release checks.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

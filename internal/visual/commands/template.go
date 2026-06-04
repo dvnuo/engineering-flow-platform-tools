@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"engineering-flow-platform-tools/internal/output"
@@ -215,6 +216,20 @@ func templateDoctorCmd(o *Opts) *cobra.Command {
 			if err := render.ScanOffline(templateDir); err != nil {
 				return print(cmd, o, doctorFailure(err, "", templateDir))
 			}
+			expected, warnings := registry.EffectiveExpected()
+			counts := registry.CategoryCounts()
+			if registry.CanonicalCount() != expected.CanonicalCount {
+				return print(cmd, o, doctorFailure(visualCommandError{
+					code:    "template_doctor_failed",
+					message: "visual template registry expected canonical count mismatch.",
+					hint:    "Expected canonical_count=" + strconv.Itoa(expected.CanonicalCount) + ", got " + strconv.Itoa(registry.CanonicalCount()) + ". Update registry.expected or the template catalog together.",
+					status:  400,
+					file:    filepath.Join(templateDir, "registry.json"),
+				}, "", filepath.Join(templateDir, "registry.json")))
+			}
+			if err := manifest.ValidateExpectedCategoryCounts(counts, expected.Categories); err != nil {
+				return print(cmd, o, doctorFailure(err, "", filepath.Join(templateDir, "registry.json")))
+			}
 			var checked []doctorTemplateResult
 			checkedExamples := 0
 			renderedExamples := 0
@@ -265,19 +280,6 @@ func templateDoctorCmd(o *Opts) *cobra.Command {
 					Rendered:        true,
 				})
 			}
-			if registry.CanonicalCount() != 195 {
-				return print(cmd, o, doctorFailure(visualCommandError{
-					code:    "template_doctor_failed",
-					message: "visual template registry has unexpected canonical count.",
-					hint:    "Expected 195 canonical templates in templates/visual/registry.json.",
-					status:  400,
-					file:    filepath.Join(templateDir, "registry.json"),
-				}, "", filepath.Join(templateDir, "registry.json")))
-			}
-			counts := registry.CategoryCounts()
-			if err := manifest.ValidateExpectedCategoryCounts(counts); err != nil {
-				return print(cmd, o, doctorFailure(err, "", filepath.Join(templateDir, "registry.json")))
-			}
 			if len(exampleHashes) < minInt(190, len(registry.Templates)) {
 				return print(cmd, o, doctorFailure(visualCommandError{
 					code:    "template_doctor_failed",
@@ -287,20 +289,23 @@ func templateDoctorCmd(o *Opts) *cobra.Command {
 				}, "", templateDir))
 			}
 			return print(cmd, o, output.Success("", map[string]any{
-				"template_dir":          templateDir,
-				"registry_version":      registry.Version,
-				"canonical_templates":   registry.CanonicalCount(),
-				"total_templates":       registry.TotalCount(),
-				"alias_count":           registry.AliasCount(),
-				"categories":            counts,
-				"category_list":         manifest.SortedCategoryCounts(counts),
-				"checked_templates":     len(checked),
-				"checked_examples":      checkedExamples,
-				"rendered_examples":     renderedExamples,
-				"unique_example_hashes": len(exampleHashes),
-				"offline":               true,
-				"offline_strict":        o.OfflineStrict,
-				"templates":             checked,
+				"template_dir":                 templateDir,
+				"registry_version":             registry.Version,
+				"expected_canonical_templates": expected.CanonicalCount,
+				"canonical_templates":          registry.CanonicalCount(),
+				"total_templates":              registry.TotalCount(),
+				"alias_count":                  registry.AliasCount(),
+				"expected_categories":          expected.Categories,
+				"categories":                   counts,
+				"category_list":                manifest.SortedCategoryCounts(counts),
+				"checked_templates":            len(checked),
+				"checked_examples":             checkedExamples,
+				"rendered_examples":            renderedExamples,
+				"unique_example_hashes":        len(exampleHashes),
+				"offline":                      true,
+				"offline_strict":               o.OfflineStrict,
+				"templates":                    checked,
+				"warnings":                     warnings,
 			}))
 		},
 	}

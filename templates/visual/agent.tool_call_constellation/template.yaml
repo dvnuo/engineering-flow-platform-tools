@@ -2,7 +2,7 @@ id: agent.tool_call_constellation
 version: 1.0.0
 category: agent
 title: Tool Call Constellation
-description: Visualize Tool Call Constellation as a complete offline graph_events view for agent workflows using the constellation layout.
+description: Shows tool calls as a constellation around the run, including reads, edits, validation, and push steps.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

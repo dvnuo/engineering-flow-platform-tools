@@ -2,7 +2,7 @@ id: agent.thinking_timeline
 version: 1.0.0
 category: agent
 title: Thinking Timeline
-description: Visualize Thinking Timeline as a complete offline graph_events view for agent workflows using the swimlane_timeline layout.
+description: Tracks reasoning checkpoints across context scan, hypothesis, validation, and answer assembly.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

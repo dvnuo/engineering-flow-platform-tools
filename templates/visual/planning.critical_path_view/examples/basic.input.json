@@ -1,146 +1,146 @@
 {
   "edges": [
     {
-      "from": "planning-critical-path-view-node-1",
-      "kind": "dependency",
-      "label": "feeds",
-      "to": "planning-critical-path-view-node-2",
+      "from": "node-01",
+      "kind": "depends_on",
+      "label": "depends on",
+      "to": "node-02",
+      "weight": 1
+    },
+    {
+      "from": "node-02",
+      "kind": "emits",
+      "label": "emits",
+      "to": "node-03",
       "weight": 2
     },
     {
-      "from": "planning-critical-path-view-node-2",
-      "kind": "validation",
-      "label": "checks",
-      "to": "planning-critical-path-view-node-3",
+      "from": "node-03",
+      "kind": "validates",
+      "label": "validates",
+      "to": "node-04",
       "weight": 3
     },
     {
-      "from": "planning-critical-path-view-node-3",
-      "kind": "handoff",
-      "label": "routes",
-      "to": "planning-critical-path-view-node-4",
-      "weight": 2
-    },
-    {
-      "from": "planning-critical-path-view-node-4",
-      "kind": "risk",
-      "label": "impacts",
-      "to": "planning-critical-path-view-node-5",
+      "from": "node-04",
+      "kind": "hands_off",
+      "label": "hands off",
+      "to": "node-05",
       "weight": 4
     },
     {
-      "from": "planning-critical-path-view-node-5",
-      "kind": "feedback",
+      "from": "node-05",
+      "kind": "reports",
       "label": "reports",
-      "to": "planning-critical-path-view-node-6",
-      "weight": 2
+      "to": "node-06",
+      "weight": 5
     },
     {
-      "from": "planning-critical-path-view-node-2",
-      "kind": "signal",
-      "label": "observes",
-      "to": "planning-critical-path-view-node-6",
-      "weight": 1
+      "from": "node-02",
+      "kind": "observes",
+      "label": "observes downstream",
+      "to": "node-06",
+      "weight": 2
     }
   ],
   "nodes": [
     {
-      "group": "goal",
-      "id": "planning-critical-path-view-node-1",
-      "kind": "critical",
-      "label": "Critical Path Intake",
+      "group": "metadata",
+      "id": "node-01",
+      "kind": "registry",
+      "label": "Registry expected ready",
       "metadata": {
-        "detail": "Critical Path View signal 1",
-        "owner": "goal",
-        "template_id": "planning.critical_path_view"
+        "owner": "metadata",
+        "review_date": "2026-06-03",
+        "scenario": "Critical Path To PR Update"
       },
       "metrics": {
-        "confidence": 0.7,
-        "risk": 0.5
-      },
-      "status": "blocked"
-    },
-    {
-      "group": "task",
-      "id": "planning-critical-path-view-node-2",
-      "kind": "path",
-      "label": "Path View Core",
-      "metadata": {
-        "detail": "Critical Path View signal 2",
-        "owner": "task",
-        "template_id": "planning.critical_path_view"
-      },
-      "metrics": {
-        "confidence": 0.74,
-        "risk": 0.75
-      },
-      "status": "error"
-    },
-    {
-      "group": "automation",
-      "id": "planning-critical-path-view-node-3",
-      "kind": "view",
-      "label": "View Critical Policy",
-      "metadata": {
-        "detail": "Critical Path View signal 3",
-        "owner": "automation",
-        "template_id": "planning.critical_path_view"
-      },
-      "metrics": {
-        "confidence": 0.78,
-        "risk": 1
+        "confidence": 0.68,
+        "risk": 0.48
       },
       "status": "running"
     },
     {
-      "group": "goal",
-      "id": "planning-critical-path-view-node-4",
-      "kind": "goal",
-      "label": "Critical Path Execution",
+      "group": "alias",
+      "id": "node-02",
+      "kind": "alias",
+      "label": "Alias contract passing",
       "metadata": {
-        "detail": "Critical Path View signal 4",
-        "owner": "goal",
-        "template_id": "planning.critical_path_view"
+        "owner": "alias",
+        "review_date": "2026-06-03",
+        "scenario": "Critical Path To PR Update"
       },
       "metrics": {
-        "confidence": 0.82,
-        "risk": 0
+        "confidence": 0.72,
+        "risk": 0.61
       },
-      "status": "ok"
+      "status": "success"
     },
     {
-      "group": "task",
-      "id": "planning-critical-path-view-node-5",
-      "kind": "critical",
-      "label": "Path View Risk",
+      "group": "build",
+      "id": "node-03",
+      "kind": "build",
+      "label": "Build parser passing",
       "metadata": {
-        "detail": "Critical Path View signal 5",
-        "owner": "task",
-        "template_id": "planning.critical_path_view"
+        "owner": "build",
+        "review_date": "2026-06-03",
+        "scenario": "Critical Path To PR Update"
       },
       "metrics": {
-        "confidence": 0.86,
-        "risk": 0.25
+        "confidence": 0.76,
+        "risk": 0.74
       },
       "status": "warning"
     },
     {
-      "group": "automation",
-      "id": "planning-critical-path-view-node-6",
-      "kind": "path",
-      "label": "View Critical Outcome",
+      "group": "quality",
+      "id": "node-04",
+      "kind": "semantic",
+      "label": "Semantic checks passing",
       "metadata": {
-        "detail": "Critical Path View signal 6",
-        "owner": "automation",
-        "template_id": "planning.critical_path_view"
+        "owner": "quality",
+        "review_date": "2026-06-03",
+        "scenario": "Critical Path To PR Update"
       },
       "metrics": {
-        "confidence": 0.9,
-        "risk": 0.5
+        "confidence": 0.8,
+        "risk": 0.22
       },
-      "status": "success"
+      "status": "ok"
+    },
+    {
+      "group": "smoke",
+      "id": "node-05",
+      "kind": "smoke",
+      "label": "Smoke script passing",
+      "metadata": {
+        "owner": "smoke",
+        "review_date": "2026-06-03",
+        "scenario": "Critical Path To PR Update"
+      },
+      "metrics": {
+        "confidence": 0.84,
+        "risk": 0.35
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "publish",
+      "id": "node-06",
+      "kind": "push",
+      "label": "Push to PR branch",
+      "metadata": {
+        "owner": "publish",
+        "review_date": "2026-06-03",
+        "scenario": "Critical Path To PR Update"
+      },
+      "metrics": {
+        "confidence": 0.88,
+        "risk": 0.48
+      },
+      "status": "error"
     }
   ],
   "schema": "efp.visual.input.graph.v1",
-  "title": "Critical Path View Example"
+  "title": "Critical Path To PR Update"
 }

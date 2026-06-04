@@ -2,7 +2,7 @@ id: runtime.agent_fleet_dashboard
 version: 1.0.0
 category: runtime
 title: Agent Fleet Dashboard
-description: Visualize Agent Fleet Dashboard as a complete offline matrix view for runtime workflows using the control_room layout.
+description: Shows the health of a runtime agent fleet across active runs, queues, tool latency, and failure rates.
 input_schema: schema.input.json
 input_schema_kind: matrix_v1
 renderer:

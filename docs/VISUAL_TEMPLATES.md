@@ -31,6 +31,26 @@ The visual CLI is an offline static site generator. It reads templates from `tem
 - `evidence_v1`: claims, sources, and evidence links for research and decision views.
 - `matrix_v1`: positioned items for boards, dashboards, heatmaps, radars, and portfolio views.
 
+## Registry Expected Counts
+
+`templates/visual/registry.json` contains an `expected` block that defines the accepted canonical template count and per-category counts. `visual template doctor` reads these values from the registry instead of using command code constants. When adding or removing canonical templates, update `registry.expected.canonical_count`, `registry.expected.categories`, the registry entries, and tests together.
+
+Aliases do not count as canonical templates. `canonical_count` is the number of registry template entries, `alias_count` is the number of compatibility aliases, and `total_count` is canonical templates plus aliases.
+
+## Backward Compatibility Aliases
+
+Aliases let older template IDs resolve to the current canonical template without adding duplicate canonical entries. `visual template get <alias>`, `visual template schema <alias>`, `visual validate --template <alias>`, and `visual render --template <alias>` all use the canonical template and return canonical metadata.
+
+| Alias | Canonical ID |
+|---|---|
+| `service.topology` | `runtime.service_topology` |
+| `runtime.session_binding` | `runtime.session_binding_map` |
+| `runtime.event_flow` | `runtime.event_bus_flow` |
+| `project.issue_graph` | `project.issue_dependency_graph` |
+| `project.requirements_trace` | `project.requirements_to_code_trace` |
+| `knowledge.doc_freshness` | `project.doc_freshness_map` |
+| `agent.fleet_dashboard` | `runtime.agent_fleet_dashboard` |
+
 ## Layout Presets
 
 - `citation_map`
@@ -324,8 +344,8 @@ The render result includes `relative_entrypoint: index.html`, `file_url_safe: tr
 
 ## Adding Template 196
 
-Create `templates/visual/<template-id>/template.yaml`, `schema.input.json`, `style.css`, and `examples/basic.input.json`. Add one registry entry with a unique id, legal category, supported schema kind, supported renderer, supported layout preset, tags, and any aliases. Reuse shared runtime assets, keep `offline.required` and `offline.forbid_network` true, use `data_mode: js-file`, and run doctor before committing.
+Create `templates/visual/<template-id>/template.yaml`, `schema.input.json`, `style.css`, and `examples/basic.input.json`. Add one registry entry with a unique id, legal category, supported schema kind, supported renderer, supported layout preset, tags, and any aliases. Update `registry.expected.canonical_count` and the relevant `registry.expected.categories` value at the same time. Reuse shared runtime assets, keep `offline.required` and `offline.forbid_network` true, use `data_mode: js-file`, and run doctor before committing.
 
 ## Doctor Acceptance
 
-`visual template doctor --template-dir ./templates/visual --json` checks the registry, category counts, manifests, schemas, examples, rendering, output inspection, offline scanning, style file presence, external URL absence, and example uniqueness. The catalog passes when it reports 195 checked templates, 195 checked examples, 195 rendered examples, and `offline: true`.
+`visual template doctor --template-dir ./templates/visual --json` checks the registry, expected counts from `registry.json`, manifests, schemas, examples, rendering, output inspection, offline scanning, style file presence, external URL absence, and example uniqueness. The catalog passes when `expected_canonical_templates`, `canonical_templates`, `checked_templates`, `checked_examples`, and `rendered_examples` agree with registry metadata and `offline: true`.

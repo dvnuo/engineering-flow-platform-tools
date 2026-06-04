@@ -2,7 +2,7 @@ id: education.auth_flow_animation
 version: 1.0.0
 category: education
 title: Auth Flow Animation
-description: Visualize Auth Flow Animation as a complete offline graph_events view for education workflows using the pipeline_flow layout.
+description: Teaches an authentication flow from browser login through identity provider, token exchange, session cookie, and protected API.
 input_schema: schema.input.json
 input_schema_kind: graph_events_v1
 renderer:

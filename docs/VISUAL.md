@@ -4,7 +4,7 @@
 
 It does not call Portal, MCP, Node/npm, a browser runtime, a CDN, or a network service.
 
-The built-in catalog contains 195 canonical templates across 10 categories. See [VISUAL_TEMPLATES.md](VISUAL_TEMPLATES.md) for the full index, category guidance, schema kinds, layout presets, and template authoring rules.
+The built-in catalog contains 195 canonical templates across 10 categories. See [VISUAL_TEMPLATES.md](VISUAL_TEMPLATES.md) for the full index, category guidance, backward compatibility aliases, schema kinds, layout presets, and template authoring rules.
 
 ## Template Directory
 
@@ -45,6 +45,14 @@ visual template get agent.run_trace --template-dir ./templates/visual --json
 visual template schema agent.run_trace --template-dir ./templates/visual --json
 visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json
 ```
+
+Canonical IDs are preferred, but compatibility aliases also work. For example, `visual template get service.topology --template-dir ./templates/visual --json` resolves to `runtime.service_topology`, and `visual render --template service.topology ...` renders with the canonical template.
+
+Count fields distinguish registry entries from compatibility aliases:
+
+- `canonical_count`: canonical templates in `registry.json`
+- `alias_count`: compatibility aliases
+- `total_count`: canonical templates plus aliases
 
 Each template has a real `schema.input.json` referenced by `template.yaml`:
 
@@ -137,6 +145,6 @@ visual inspect-output --out ./out/run-trace --json
 
 `visual template doctor` reads `registry.json`, validates every `template.yaml`, validates each `schema.input.json`, validates each `examples/basic.input.json`, renders every basic example into a temporary directory, checks required output files, scans the rendered output for offline violations, and deletes the temporary directory.
 
-For the built-in catalog, doctor also checks `canonical_templates=195`, the exact category counts, template tree offline safety, non-empty template styles, rendered example output inspection, and at least 190 unique example hashes.
+For the built-in catalog, doctor checks `registry.expected` from `templates/visual/registry.json`, the exact category counts, template tree offline safety, non-empty template styles, rendered example output inspection, and at least 190 unique example hashes.
 
 Use `--dry-run` on `visual render` to preview `planned_files` without creating `--out`.

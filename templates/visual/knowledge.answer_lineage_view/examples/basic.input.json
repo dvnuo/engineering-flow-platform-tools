@@ -1,100 +1,136 @@
 {
   "claims": [
     {
-      "confidence": 0.82,
-      "id": "knowledge-answer-lineage-view-claim-1",
+      "confidence": 0.58,
+      "id": "claim-01",
+      "metadata": {
+        "priority": 1,
+        "reviewer": "visual contract reviewer"
+      },
       "status": "supported",
-      "text": "Answer Lineage is supported by current artifacts"
+      "text": "Final report must cite commit hash"
     },
     {
-      "confidence": 0.61,
-      "id": "knowledge-answer-lineage-view-claim-2",
+      "confidence": 0.68,
+      "id": "claim-02",
+      "metadata": {
+        "priority": 2,
+        "reviewer": "visual contract reviewer"
+      },
+      "status": "supported",
+      "text": "Validation commands must be listed"
+    },
+    {
+      "confidence": 0.78,
+      "id": "claim-03",
+      "metadata": {
+        "priority": 3,
+        "reviewer": "visual contract reviewer"
+      },
       "status": "warning",
-      "text": "Lineage View has a known gap"
+      "text": "PowerShell gaps need disclosure"
     },
     {
-      "confidence": 0.44,
-      "id": "knowledge-answer-lineage-view-claim-3",
+      "confidence": 0.88,
+      "id": "claim-04",
+      "metadata": {
+        "priority": 4,
+        "reviewer": "visual contract reviewer"
+      },
       "status": "refuted",
-      "text": "View Answer conflicts with stale assumptions"
-    },
-    {
-      "confidence": 0.76,
-      "id": "knowledge-answer-lineage-view-claim-4",
-      "status": "success",
-      "text": "Answer Lineage is ready for review"
+      "text": "PR branch remains unchanged"
     }
   ],
   "links": [
     {
-      "claim_id": "knowledge-answer-lineage-view-claim-1",
+      "claim_id": "claim-01",
       "relation": "supports",
-      "source_id": "knowledge-answer-lineage-view-source-1",
-      "weight": 0.9
+      "source_id": "source-01",
+      "weight": 0.91
     },
     {
-      "claim_id": "knowledge-answer-lineage-view-claim-1",
+      "claim_id": "claim-01",
       "relation": "mentions",
-      "source_id": "knowledge-answer-lineage-view-source-2",
-      "weight": 0.5
+      "source_id": "source-02",
+      "weight": 0.62
     },
     {
-      "claim_id": "knowledge-answer-lineage-view-claim-2",
+      "claim_id": "claim-02",
       "relation": "supports",
-      "source_id": "knowledge-answer-lineage-view-source-3",
-      "weight": 0.6
+      "source_id": "source-03",
+      "weight": 0.84
     },
     {
-      "claim_id": "knowledge-answer-lineage-view-claim-3",
+      "claim_id": "claim-03",
+      "relation": "mentions",
+      "source_id": "source-04",
+      "weight": 0.58
+    },
+    {
+      "claim_id": "claim-03",
       "relation": "refutes",
-      "source_id": "knowledge-answer-lineage-view-source-4",
-      "weight": 0.7
+      "source_id": "source-05",
+      "weight": 0.66
     },
     {
-      "claim_id": "knowledge-answer-lineage-view-claim-4",
+      "claim_id": "claim-04",
       "relation": "supports",
-      "source_id": "knowledge-answer-lineage-view-source-5",
-      "weight": 0.8
-    },
-    {
-      "claim_id": "knowledge-answer-lineage-view-claim-2",
-      "relation": "mentions",
-      "source_id": "knowledge-answer-lineage-view-source-5",
-      "weight": 0.4
+      "source_id": "source-02",
+      "weight": 0.77
     }
   ],
   "schema": "efp.visual.input.evidence.v1",
   "sources": [
     {
-      "id": "knowledge-answer-lineage-view-source-1",
-      "kind": "document",
-      "reliability": 0.87,
-      "title": "Answer Lineage design note"
+      "id": "source-01",
+      "kind": "test",
+      "metadata": {
+        "captured": "2026-06-03",
+        "owner": "test"
+      },
+      "reliability": 0.64,
+      "title": "Git commit output"
     },
     {
-      "id": "knowledge-answer-lineage-view-source-2",
-      "kind": "log",
-      "reliability": 0.72,
-      "title": "Lineage View run log"
+      "id": "source-02",
+      "kind": "registry",
+      "metadata": {
+        "captured": "2026-06-03",
+        "owner": "registry"
+      },
+      "reliability": 0.71,
+      "title": "Go test transcript"
     },
     {
-      "id": "knowledge-answer-lineage-view-source-3",
-      "kind": "review",
-      "reliability": 0.66,
-      "title": "View Answer review thread"
+      "id": "source-03",
+      "kind": "command-output",
+      "metadata": {
+        "captured": "2026-06-03",
+        "owner": "command-output"
+      },
+      "reliability": 0.78,
+      "title": "PowerShell availability check"
     },
     {
-      "id": "knowledge-answer-lineage-view-source-4",
-      "kind": "metric",
-      "reliability": 0.79,
-      "title": "Answer Lineage benchmark"
+      "id": "source-04",
+      "kind": "script",
+      "metadata": {
+        "captured": "2026-06-03",
+        "owner": "script"
+      },
+      "reliability": 0.85,
+      "title": "Remote branch push result"
     },
     {
-      "id": "knowledge-answer-lineage-view-source-5",
-      "kind": "record",
-      "reliability": 0.91,
-      "title": "Lineage View decision record"
+      "id": "source-05",
+      "kind": "artifact",
+      "metadata": {
+        "captured": "2026-06-03",
+        "owner": "artifact"
+      },
+      "reliability": 0.92,
+      "title": "PR status view"
     }
   ],
-  "title": "Answer Lineage View Example"
+  "title": "Answer Lineage Review"
 }

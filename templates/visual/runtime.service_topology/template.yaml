@@ -2,7 +2,7 @@ id: runtime.service_topology
 version: 1.0.0
 category: runtime
 title: Service Topology
-description: Visualize Service Topology as a complete offline graph view for runtime workflows using the service_map layout.
+description: Maps runtime services, adapters, queues, stores, and health probes in a service topology.
 input_schema: schema.input.json
 input_schema_kind: graph_v1
 renderer:

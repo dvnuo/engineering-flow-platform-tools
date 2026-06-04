@@ -52,7 +52,7 @@ func NewRoot() *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 	}
-	cmd.PersistentFlags().StringVar(&o.TemplateDir, "template-dir", "", "Path to templates/visual")
+	cmd.PersistentFlags().StringVar(&o.TemplateDir, "template-dir", "", "Path to visual templates; defaults to ~/.efp/template/visual, then ./templates/visual")
 	cmd.PersistentFlags().StringVar(&o.Config, "config", "", "Path to EFP config file")
 	cmd.PersistentFlags().BoolVar(&o.JSON, "json", false, "Output stable JSON envelope")
 	cmd.PersistentFlags().StringVar(&o.Format, "format", "table", "Output format: table|json|yaml")
@@ -67,7 +67,7 @@ func NewRoot() *cobra.Command {
 		Short:   "Generate complete offline static visualization artifacts from local templates",
 		Long: strings.TrimSpace(`visual is a terminal-invoked CLI for agents and scripts that need deterministic offline HTML/SVG artifacts.
 
-It reads local templates under templates/visual, validates JSON input, copies local assets, and writes index.html, manifest.json, manifest.js, data.js, and assets/** to an output directory. It does not start a server, call Portal, call MCP, use Node/npm, download assets, or generate arbitrary JavaScript.`),
+It reads local templates from ~/.efp/template/visual by default, with checkout and release fallbacks, validates JSON input, copies local assets, and writes index.html, manifest.json, manifest.js, data.js, and assets/** to an output directory. It does not start a server, call Portal, call MCP, use Node/npm, download assets, or generate arbitrary JavaScript.`),
 		Examples: []string{
 			`visual commands --json`,
 			`visual schema render --json`,

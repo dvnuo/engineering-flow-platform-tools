@@ -21,6 +21,11 @@ func ResolveTemplateDir(flagTemplateDir string, flagConfig string) (string, erro
 	if p := configTemplateDir(flagConfig); p != "" {
 		return ensureTemplateDir(p)
 	}
+	if p, err := DefaultTemplateDir(); err == nil {
+		if p, ok := existingTemplateDir(p); ok {
+			return p, nil
+		}
+	}
 	if p, ok := existingTemplateDir(filepath.Join(".", "templates", "visual")); ok {
 		return p, nil
 	}
@@ -38,9 +43,17 @@ func ResolveTemplateDir(flagTemplateDir string, flagConfig string) (string, erro
 	return "", metadata.NewError(
 		"template_dir_missing",
 		"visual template directory was not found.",
-		"Pass --template-dir, set EFP_VISUAL_TEMPLATE_DIR, configure visual.template_dir, or run from a checkout containing ./templates/visual.",
+		"Pass --template-dir, set EFP_VISUAL_TEMPLATE_DIR, configure visual.template_dir, install templates under ~/.efp/template/visual, or run from a checkout containing ./templates/visual.",
 		404,
 	)
+}
+
+func DefaultTemplateDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".efp", "template", "visual"), nil
 }
 
 func configTemplateDir(flagConfig string) string {
@@ -69,7 +82,7 @@ func configTemplateDir(flagConfig string) string {
 }
 
 func ensureTemplateDir(path string) (string, error) {
-	clean := filepath.Clean(path)
+	clean := filepath.Clean(expandUserPath(path))
 	info, err := os.Stat(clean)
 	if err != nil || !info.IsDir() {
 		return "", metadata.NewError(
@@ -83,10 +96,25 @@ func ensureTemplateDir(path string) (string, error) {
 }
 
 func existingTemplateDir(path string) (string, bool) {
-	clean := filepath.Clean(path)
+	clean := filepath.Clean(expandUserPath(path))
 	info, err := os.Stat(clean)
 	if err != nil || !info.IsDir() {
 		return "", false
 	}
 	return clean, true
+}
+
+func expandUserPath(path string) string {
+	p := strings.TrimSpace(path)
+	if p == "~" || strings.HasPrefix(p, "~/") || strings.HasPrefix(p, `~\`) {
+		home, err := os.UserHomeDir()
+		if err != nil || home == "" {
+			return p
+		}
+		if p == "~" {
+			return home
+		}
+		return filepath.Join(home, strings.TrimLeft(p[1:], `/\`))
+	}
+	return p
 }

@@ -18,13 +18,28 @@
 - log commands
 - log schema <command>
 - log help llm
+- log doctor
+- log run list
+- log run get <run>
+- log run delete <run>
+- log run verify <run>
 - log analyze
 - log profile
+- log template list <run>
+- log template get <run>
+- log template entries <run>
+- log template variables <run>
 - log templates
 - log entries
 - log search
 - log window
 - log extract
+- log group
+- log timeline
+- log summarize
+- log export evidence <run>
+
+`log analyze` supports `--dry-run` and may auto-generate a run directory when `--run` is omitted. `log run delete` requires `--yes`; `log export evidence` supports `--dry-run` and requires `--overwrite` before replacing an existing file.
 
 ## Jira
 

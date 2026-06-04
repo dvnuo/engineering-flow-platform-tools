@@ -50,8 +50,10 @@ func TestLogCommandsJSONMetadata(t *testing.T) {
 	if len(commands) < 10 {
 		t.Fatalf("expected at least 10 commands, got %d", len(commands))
 	}
+	seen := map[string]bool{}
 	for _, raw := range commands {
 		item := raw.(map[string]any)
+		seen[item["name"].(string)] = true
 		for _, key := range []string{"name", "usage", "risk", "description", "examples", "flags"} {
 			if _, ok := item[key]; !ok {
 				t.Fatalf("missing %s in %#v", key, item)
@@ -63,6 +65,11 @@ func TestLogCommandsJSONMetadata(t *testing.T) {
 		}
 		if len(item["examples"].([]any)) == 0 || len(item["flags"].([]any)) == 0 {
 			t.Fatalf("missing examples or flags: %#v", item)
+		}
+	}
+	for _, name := range []string{"doctor", "run.list", "run.get", "run.delete", "template.list", "template.get", "template.entries", "group", "timeline", "summarize", "export.evidence"} {
+		if !seen[name] {
+			t.Fatalf("missing P0 design command %s in log commands", name)
 		}
 	}
 }
@@ -105,6 +112,10 @@ func TestLogAnalyzeProfileSearchWindowExtractCLI(t *testing.T) {
 	if len(next["data"].(map[string]any)["items"].([]any)) != 1 {
 		t.Fatalf("bad search next: %#v", next)
 	}
+	_, cursorOnly := runLog(t, "search", "--run", runDir, "--limit", "1", "--cursor", searchData["next_cursor"].(string), "--json")
+	if len(cursorOnly["data"].(map[string]any)["items"].([]any)) != 1 {
+		t.Fatalf("bad cursor-only search next: %#v", cursorOnly)
+	}
 	_, window := runLog(t, "window", "--run", runDir, "--entry-id", "entry_000002", "--before", "1", "--after", "1", "--json")
 	lines := window["data"].(map[string]any)["lines"].([]any)
 	if len(lines) == 0 {
@@ -124,6 +135,82 @@ func TestLogAnalyzeProfileSearchWindowExtractCLI(t *testing.T) {
 	items := extract["data"].(map[string]any)["items"].([]any)
 	if len(items) == 0 {
 		t.Fatalf("missing stacktrace extract: %#v", extract)
+	}
+}
+
+func TestLogP0DesignCommandsCLI(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "app.log")
+	content := strings.Join([]string{
+		"2026-06-03T10:00:00Z INFO service started",
+		"2026-06-03T10:01:00Z ERROR api database password=secret timeout after 3000ms",
+		"java.lang.RuntimeException: boom",
+		"    at example.Main.main(Main.java:10)",
+		"2026-06-03T10:02:00Z ERROR api database password=secret timeout after 5000ms",
+	}, "\n") + "\n"
+	if err := os.WriteFile(logPath, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dryRunDir := filepath.Join(dir, "dry-run")
+	out, dryRun := runLog(t, "analyze", "--source", logPath, "--run", dryRunDir, "--dry-run", "--json")
+	assertNoLiteral(t, string(out), "secret")
+	if dryRun["data"].(map[string]any)["dry_run"] != true {
+		t.Fatalf("expected dry-run analyze: %#v", dryRun)
+	}
+	if _, err := os.Stat(filepath.Join(dryRunDir, "manifest.json")); !os.IsNotExist(err) {
+		t.Fatalf("dry-run wrote manifest: %v", err)
+	}
+
+	runDir := filepath.Join(dir, "run")
+	runLog(t, "analyze", "--source", logPath, "--run", runDir, "--json")
+	runLog(t, "doctor", "--json")
+	runLog(t, "run", "get", runDir, "--json")
+	runLog(t, "run", "verify", runDir, "--json")
+	_, runs := runLog(t, "run", "list", "--workspace", dir, "--json")
+	if len(runs["data"].(map[string]any)["runs"].([]any)) == 0 {
+		t.Fatalf("run list did not include temp run: %#v", runs)
+	}
+
+	_, templateList := runLog(t, "template", "list", runDir, "--only", "non-info", "--json")
+	templates := templateList["data"].(map[string]any)["templates"].([]any)
+	if len(templates) == 0 {
+		t.Fatalf("missing templates: %#v", templateList)
+	}
+	templateID := templates[0].(map[string]any)["template_id"].(string)
+	runLog(t, "template", "get", runDir, "--template", templateID, "--json")
+	runLog(t, "template", "entries", runDir, "--template", templateID, "--limit", "2", "--json")
+	runLog(t, "template", "variables", runDir, "--template", templateID, "--json")
+
+	_, group := runLog(t, "group", runDir, "--by", "error_signature", "--json")
+	if len(group["data"].(map[string]any)["groups"].([]any)) == 0 {
+		t.Fatalf("missing groups: %#v", group)
+	}
+	_, timeline := runLog(t, "timeline", runDir, "--bucket", "1m", "--json")
+	if len(timeline["data"].(map[string]any)["series"].([]any)) == 0 {
+		t.Fatalf("missing timeline: %#v", timeline)
+	}
+	_, summary := runLog(t, "summarize", runDir, "--focus", "database errors", "--json")
+	if len(summary["data"].(map[string]any)["findings"].([]any)) == 0 {
+		t.Fatalf("missing summary findings: %#v", summary)
+	}
+
+	exportPath := filepath.Join(dir, "evidence.md")
+	_, exportDryRun := runLog(t, "export", "evidence", runDir, "--evidence", "entry_000002", "--format", "markdown", "--output", exportPath, "--dry-run", "--json")
+	if exportDryRun["data"].(map[string]any)["written"] == true {
+		t.Fatalf("dry-run export wrote file: %#v", exportDryRun)
+	}
+	if _, err := os.Stat(exportPath); !os.IsNotExist(err) {
+		t.Fatalf("dry-run export created file: %v", err)
+	}
+	runLog(t, "export", "evidence", runDir, "--evidence", "entry_000002", "--format", "markdown", "--output", exportPath, "--json")
+	exported, err := os.ReadFile(exportPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertNoLiteral(t, string(exported), "secret")
+	_, exists := runLog(t, "export", "evidence", runDir, "--evidence", "entry_000002", "--format", "markdown", "--output", exportPath, "--json")
+	if exists["ok"] != false || exists["error"].(map[string]any)["code"] != "log_export_exists" {
+		t.Fatalf("expected export exists error: %#v", exists)
 	}
 }
 

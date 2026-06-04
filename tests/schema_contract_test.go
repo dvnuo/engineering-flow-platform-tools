@@ -129,8 +129,11 @@ func TestSchemaConcreteFlags(t *testing.T) {
 	requireFlags(t, schemaData(t, "jenkins", "build.log-follow"), "start", "max-rounds", "wait-ms")
 	requireFlags(t, schemaData(t, "jenkins", "artifact.download"), "output")
 	requireRequired(t, schemaData(t, "jenkins", "api.delete"), "path", "yes")
-	requireFlags(t, schemaData(t, "log", "analyze"), "source", "run", "format-hint", "max-bytes", "max-line-bytes", "json", "format", "verbose")
-	requireRequired(t, schemaData(t, "log", "analyze"), "source", "run")
+	requireFlags(t, schemaData(t, "log", "analyze"), "source", "run", "format-hint", "max-bytes", "max-line-bytes", "dry-run", "json", "format", "verbose")
+	requireRequired(t, schemaData(t, "log", "analyze"), "source")
+	requireFlags(t, schemaData(t, "log", "template.list"), "only", "sort", "limit", "json", "format", "verbose")
+	requireFlags(t, schemaData(t, "log", "group"), "run", "by", "level", "query", "template-id", "bucket", "limit")
+	requireFlags(t, schemaData(t, "log", "export.evidence"), "run", "evidence", "format", "output", "overwrite", "dry-run")
 }
 
 func TestSchemaMatchesCobraFlags(t *testing.T) {

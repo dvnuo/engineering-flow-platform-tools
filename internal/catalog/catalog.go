@@ -112,13 +112,26 @@ var logCommands = []string{
 	"commands",
 	"schema <command>",
 	"help llm",
+	"doctor",
+	"run list",
+	"run get <run>",
+	"run delete <run>",
+	"run verify <run>",
 	"analyze",
 	"profile",
+	"template list <run>",
+	"template get <run>",
+	"template entries <run>",
+	"template variables <run>",
 	"templates",
 	"entries",
 	"search",
 	"window",
 	"extract",
+	"group",
+	"timeline",
+	"summarize",
+	"export evidence <run>",
 }
 
 func Commands(product string) []llm.CommandMeta {
@@ -206,10 +219,14 @@ func SchemaFromCobra(product, name string, root *cobra.Command) (map[string]any,
 	}
 	item := meta(product, binding.Usage)
 	item.Examples = examplesForCobra(item, binding.Command)
+	usage := binding.Usage
+	if product == "log" {
+		usage = logCommandUsage(item.Name, binding.Usage)
+	}
 	args := argumentSpecs(binding.Usage)
 	return map[string]any{
 		"command":          item.Name,
-		"usage":            binding.Usage,
+		"usage":            usage,
 		"description":      item.Description,
 		"risk":             item.Risk,
 		"arguments":        arguments(binding.Usage),
@@ -268,7 +285,9 @@ func visibleCommand(cmd *cobra.Command) bool {
 func findCobraBinding(product string, root *cobra.Command, key string) (cobraBinding, bool) {
 	key = strings.TrimSpace(key)
 	for _, binding := range cobraBindings(product, root) {
-		if key == binding.Name || key == binding.Usage || key == strings.TrimPrefix(binding.Usage, product+" ") {
+		trimmedUsage := strings.TrimPrefix(binding.Usage, product+" ")
+		trimmedName := strings.TrimPrefix(binding.Name, product+".")
+		if key == binding.Name || key == trimmedName || key == binding.Usage || key == trimmedUsage {
 			return binding, true
 		}
 	}
@@ -623,20 +642,46 @@ func logExplicit(name string) (explicitMeta, bool) {
 			Flags: common, Required: []string{"command"}, Risk: "read", Example: "log schema analyze --json"},
 		"help.llm": {Description: "Show log CLI guidance for agents that need bounded local log evidence.",
 			Flags: common, Risk: "read", Example: "log help llm --json"},
+		"doctor": {Description: "Check local log CLI defaults, workspace path, and safety assumptions.",
+			Flags: common, Risk: "read", Example: "log doctor --json"},
+		"run.list": {Description: "List local log analysis runs from the default or selected workspace.",
+			Flags: append([]string{"workspace"}, common...), Risk: "read", Example: "log run list --json"},
+		"run.get": {Description: "Show one run manifest and index summary without reading raw logs.",
+			Flags: common, Required: []string{"run"}, Risk: "read", Example: "log run get ./.log-runs/run_001 --json"},
+		"run.delete": {Description: "Delete a run directory after explicit confirmation.",
+			Flags: append([]string{"yes", "dry-run"}, common...), Required: []string{"run", "yes"}, Risk: "delete", Example: "log run delete ./.log-runs/run_001 --yes --dry-run --json"},
+		"run.verify": {Description: "Verify run files and manifest counts for a local analysis run.",
+			Flags: common, Required: []string{"run"}, Risk: "read", Example: "log run verify ./.log-runs/run_001 --json"},
 		"analyze": {Description: "Stream local log files into a bounded analysis run directory.",
-			Flags: append([]string{"source", "run", "format-hint", "max-bytes", "max-line-bytes"}, common...), Required: []string{"source", "run"}, Risk: "read", Example: "log analyze --source ./logs/app.log --run ./.log-runs/run_001 --json"},
+			Flags: append([]string{"source", "run", "format-hint", "max-bytes", "max-line-bytes", "dry-run"}, common...), Required: []string{"source"}, Risk: "write_local_index", Example: "log analyze --source ./logs/app.log --run ./.log-runs/run_001 --json"},
 		"profile": {Description: "Summarize sources, levels, templates, and time range for an analysis run.",
 			Flags: append([]string{"run"}, common...), Required: []string{"run"}, Risk: "read", Example: "log profile --run ./.log-runs/run_001 --json"},
+		"template.list": {Description: "List recurring redacted log templates with counts and representative entries.",
+			Flags: append([]string{"only", "sort", "limit"}, common...), Required: []string{"run"}, Risk: "read", Example: "log template list ./.log-runs/run_001 --only non-info --json"},
+		"template.get": {Description: "Fetch one redacted template by template id.",
+			Flags: append([]string{"template"}, common...), Required: []string{"run", "template"}, Risk: "read", Example: "log template get ./.log-runs/run_001 --template tpl_abc123 --json"},
+		"template.entries": {Description: "Page through redacted entries for one template.",
+			Flags: append([]string{"template", "level", "limit", "cursor"}, common...), Required: []string{"run", "template"}, Risk: "read", Example: "log template entries ./.log-runs/run_001 --template tpl_abc123 --limit 20 --json"},
+		"template.variables": {Description: "Summarize redacted variable samples captured for one template.",
+			Flags: append([]string{"template", "limit"}, common...), Required: []string{"run", "template"}, Risk: "read", Example: "log template variables ./.log-runs/run_001 --template tpl_abc123 --json"},
 		"templates": {Description: "List recurring redacted log templates with counts and representative entries.",
 			Flags: append([]string{"run", "only", "sort", "limit"}, common...), Required: []string{"run"}, Risk: "read", Example: "log templates --run ./.log-runs/run_001 --only non-info --sort count --json"},
 		"entries": {Description: "Page through redacted indexed entries without printing the whole log.",
 			Flags: append([]string{"run", "template-id", "level", "limit", "cursor"}, common...), Required: []string{"run"}, Risk: "read", Example: "log entries --run ./.log-runs/run_001 --level ERROR --limit 20 --json"},
 		"search": {Description: "Search redacted entries by text or regex with bounded cursor pagination.",
-			Flags: append([]string{"run", "query", "regex", "level", "template-id", "since", "until", "limit", "cursor"}, common...), Required: []string{"run", "query"}, Risk: "read", Example: "log search --run ./.log-runs/run_001 --query \"ERROR OR timeout\" --json"},
+			Flags: append([]string{"run", "query", "regex", "level", "service", "template-id", "template", "since", "until", "limit", "cursor"}, common...), Required: []string{"run", "query|cursor"}, Risk: "read", Example: "log search --run ./.log-runs/run_001 --query \"ERROR OR timeout\" --json"},
 		"window": {Description: "Return redacted source lines around an entry id or file and line number.",
 			Flags: append([]string{"run", "entry-id", "file", "line", "before", "after"}, common...), Required: []string{"run", "entry-id|file+line"}, Risk: "read", Example: "log window --run ./.log-runs/run_001 --entry-id entry_000001 --before 50 --after 50 --json"},
 		"extract": {Description: "Extract stacktrace groups or error signatures from redacted indexed entries.",
 			Flags: append([]string{"run", "kind", "limit"}, common...), Required: []string{"run", "kind"}, Risk: "read", Example: "log extract --run ./.log-runs/run_001 --kind stacktrace --json"},
+		"group": {Description: "Group entries by template, error signature, level, service, or time.",
+			Flags: append([]string{"run", "by", "level", "query", "template-id", "bucket", "limit"}, common...), Required: []string{"run", "by"}, Risk: "read", Example: "log group --run ./.log-runs/run_001 --by error_signature --json"},
+		"timeline": {Description: "Build a bounded time series from timestamped entries.",
+			Flags: append([]string{"run", "bucket", "level", "template-id", "limit"}, common...), Required: []string{"run"}, Risk: "read", Example: "log timeline --run ./.log-runs/run_001 --bucket 1m --json"},
+		"summarize": {Description: "Create a deterministic evidence summary without calling an LLM.",
+			Flags: append([]string{"run", "focus", "since", "until"}, common...), Required: []string{"run"}, Risk: "read", Example: "log summarize --run ./.log-runs/run_001 --focus \"dominant failures\" --json"},
+		"export.evidence": {Description: "Export one redacted entry or template evidence item to a local file.",
+			Flags: append([]string{"run", "evidence", "format", "output", "overwrite", "dry-run"}, common...), Required: []string{"run", "evidence", "output"}, Risk: "write", Example: "log export evidence --run ./.log-runs/run_001 --evidence entry_000001 --format markdown --output evidence.md --dry-run --json"},
 	}
 	item, ok := items[name]
 	return item, ok
@@ -652,20 +697,46 @@ func logCommandUsage(name, fallback string) string {
 		return "log schema <command> --json"
 	case "help.llm":
 		return "log help llm"
+	case "doctor":
+		return "log doctor --json"
+	case "run.list":
+		return "log run list --json"
+	case "run.get":
+		return "log run get <run> --json"
+	case "run.delete":
+		return "log run delete <run> --yes --json"
+	case "run.verify":
+		return "log run verify <run> --json"
 	case "analyze":
-		return "log analyze --source <path> --run <run-dir> [flags]"
+		return "log analyze --source <path> [--run <run-dir>] [flags]"
 	case "profile":
-		return "log profile --run <run-dir> --json"
+		return "log profile <run> --json"
+	case "template.list":
+		return "log template list <run> [flags]"
+	case "template.get":
+		return "log template get <run> --template <template-id> --json"
+	case "template.entries":
+		return "log template entries <run> --template <template-id> [flags]"
+	case "template.variables":
+		return "log template variables <run> --template <template-id> [flags]"
 	case "templates":
 		return "log templates --run <run-dir> [flags]"
 	case "entries":
 		return "log entries --run <run-dir> [flags]"
 	case "search":
-		return "log search --run <run-dir> --query <query> [flags]"
+		return "log search <run> --query <query> [flags]"
 	case "window":
-		return "log window --run <run-dir> (--entry-id <entry-id> OR --file <path> --line <line-number>) [flags]"
+		return "log window <run> (--entry-id <entry-id> OR --file <path> --line <line-number>) [flags]"
 	case "extract":
-		return "log extract --run <run-dir> --kind stacktrace|error-signature [flags]"
+		return "log extract <run> --kind stacktrace|error_signature [flags]"
+	case "group":
+		return "log group <run> --by template|error_signature|level|service|time [flags]"
+	case "timeline":
+		return "log timeline <run> --bucket 1m [flags]"
+	case "summarize":
+		return "log summarize <run> [flags]"
+	case "export.evidence":
+		return "log export evidence <run> --evidence <id> --output <file> [flags]"
 	default:
 		return fallback
 	}

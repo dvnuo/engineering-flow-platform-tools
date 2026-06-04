@@ -10,13 +10,17 @@ func entriesCmd(o *Opts) *cobra.Command {
 	opts := logtool.EntryListOptions{Limit: 50}
 	var runDir string
 	c := &cobra.Command{
-		Use:   "entries",
+		Use:   "entries [run]",
 		Short: "List bounded redacted entries from a run",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if missingRunDir(runDir) {
-				return requireRunDir(cmd, o, runDir)
+			resolved, ok, err := resolveRunDirArg(cmd, o, runDir, args)
+			if err != nil {
+				return err
 			}
-			result, err := logtool.Entries(runDir, opts)
+			if !ok {
+				return nil
+			}
+			result, err := logtool.Entries(logtool.ResolveRunDir(resolved), opts)
 			if err != nil {
 				return printErr(cmd, o, err)
 			}

@@ -18,9 +18,10 @@ func TestLogAgentInstructionsAreDocumented(t *testing.T) {
 	for _, want := range []string{
 		"# Log CLI Instructions for Agents",
 		"Always use `--json`",
-		"Do not use MCP",
 		"Do not use `cat`",
 		"log analyze --source <path> --run <run-dir> --json",
+		"log group ./.log-runs/run_001 --by error_signature",
+		"log summarize ./.log-runs/run_001",
 		"log window --file <path> --line <line>` only for files already present in that run's `manifest.json`",
 	} {
 		if !strings.Contains(text, want) {

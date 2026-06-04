@@ -20,6 +20,8 @@ go run ./cmd/browser schema probe --json >/dev/null
 go run ./cmd/jenkins schema job.build --json >/dev/null
 go run ./cmd/inspect-image schema inspect --json >/dev/null
 go run ./cmd/log schema analyze --json >/dev/null
+go run ./cmd/log schema template.list --json >/dev/null
+go run ./cmd/log schema group --json >/dev/null
 go run ./cmd/inspect-image help llm >/dev/null
 go run ./cmd/inspect-image models --json >/dev/null
 go run ./cmd/inspect-image auth status --json >/dev/null
@@ -40,12 +42,27 @@ java.lang.RuntimeException: boom
 EOF
 
 out="$tmp/log-smoke-output.txt"
-go run ./cmd/log analyze --source "$tmp/app.log" --run "$tmp/run" --json > "$out"
-go run ./cmd/log profile --run "$tmp/run" --json >> "$out"
-go run ./cmd/log search --run "$tmp/run" --query timeout --json >> "$out"
-go run ./cmd/log window --run "$tmp/run" --entry-id entry_000002 --before 1 --after 1 --json >> "$out"
-go run ./cmd/log extract --run "$tmp/run" --kind stacktrace --json >> "$out"
-if grep -R "secret" "$out" "$tmp/run"; then
+go run ./cmd/log doctor --json > "$out"
+go run ./cmd/log analyze --source "$tmp/app.log" --run "$tmp/dry-run" --dry-run --json >> "$out"
+go run ./cmd/log analyze --source "$tmp/app.log" --run "$tmp/run" --json >> "$out"
+go run ./cmd/log run get "$tmp/run" --json >> "$out"
+go run ./cmd/log run verify "$tmp/run" --json >> "$out"
+go run ./cmd/log run delete "$tmp/run" --yes --dry-run --json >> "$out"
+go run ./cmd/log run list --workspace "$tmp" --json >> "$out"
+go run ./cmd/log profile "$tmp/run" --json >> "$out"
+tpl="$(go run ./cmd/log template list "$tmp/run" --only non-info --json | tee -a "$out" | sed -n 's/.*"template_id": "\(tpl_[^"]*\)".*/\1/p' | head -n 1)"
+go run ./cmd/log template get "$tmp/run" --template "$tpl" --json >> "$out"
+go run ./cmd/log template entries "$tmp/run" --template "$tpl" --json >> "$out"
+go run ./cmd/log template variables "$tmp/run" --template "$tpl" --json >> "$out"
+go run ./cmd/log search "$tmp/run" --query timeout --json >> "$out"
+go run ./cmd/log group "$tmp/run" --by error_signature --json >> "$out"
+go run ./cmd/log timeline "$tmp/run" --bucket 1m --json >> "$out"
+go run ./cmd/log summarize "$tmp/run" --focus "database timeout" --json >> "$out"
+go run ./cmd/log window "$tmp/run" --entry-id entry_000002 --before 1 --after 1 --json >> "$out"
+go run ./cmd/log extract "$tmp/run" --kind stacktrace --json >> "$out"
+go run ./cmd/log export evidence "$tmp/run" --evidence entry_000002 --format markdown --output "$tmp/evidence.md" --dry-run --json >> "$out"
+go run ./cmd/log export evidence "$tmp/run" --evidence entry_000002 --format markdown --output "$tmp/evidence.md" --json >> "$out"
+if grep -R "secret" "$out" "$tmp/run" "$tmp/evidence.md"; then
   echo "log smoke leaked an unredacted secret" >&2
   exit 1
 fi

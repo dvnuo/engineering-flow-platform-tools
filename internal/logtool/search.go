@@ -16,7 +16,14 @@ const (
 )
 
 type cursorState struct {
-	Offset int `json:"offset"`
+	Offset     int    `json:"offset"`
+	Query      string `json:"query,omitempty"`
+	Regex      bool   `json:"regex,omitempty"`
+	Level      string `json:"level,omitempty"`
+	Service    string `json:"service,omitempty"`
+	TemplateID string `json:"template_id,omitempty"`
+	Since      string `json:"since,omitempty"`
+	Until      string `json:"until,omitempty"`
 }
 
 func Search(runDir string, opts SearchOptions) (SearchResult, error) {
@@ -27,7 +34,7 @@ func Search(runDir string, opts SearchOptions) (SearchResult, error) {
 	if err != nil {
 		return SearchResult{}, err
 	}
-	offset, err := decodeCursor(opts.Cursor)
+	offset, err := applySearchCursor(&opts)
 	if err != nil {
 		return SearchResult{}, err
 	}
@@ -42,6 +49,9 @@ func Search(runDir string, opts SearchOptions) (SearchResult, error) {
 	if opts.Level != "" && level == "" {
 		return SearchResult{}, NewError("invalid_args", "--level is invalid.", "Use TRACE, DEBUG, INFO, WARN, ERROR, FATAL, or PANIC.", 400)
 	}
+	if strings.TrimSpace(opts.Query) == "" {
+		return SearchResult{}, NewError("invalid_args", "--query or --cursor is required.", "Pass --query <text>, or pass --cursor from a previous search response.", 400)
+	}
 	since, err := parseOptionalTime(opts.Since, "--since")
 	if err != nil {
 		return SearchResult{}, err
@@ -54,6 +64,9 @@ func Search(runDir string, opts SearchOptions) (SearchResult, error) {
 	total := 0
 	err = ReadEntries(runDir, func(entry Entry) error {
 		if !entryMatchesFilters(entry, level, opts.TemplateID, since, until) {
+			return nil
+		}
+		if opts.Service != "" && !strings.EqualFold(entry.Service, opts.Service) {
 			return nil
 		}
 		if !queryMatches(entry, opts.Query, re) {
@@ -73,7 +86,7 @@ func Search(runDir string, opts SearchOptions) (SearchResult, error) {
 	}
 	result := SearchResult{Query: opts.Query, Matches: total, Items: items}
 	if total > offset+len(items) {
-		result.NextCursor = encodeCursor(offset + len(items))
+		result.NextCursor = encodeSearchCursor(offset+len(items), opts)
 	}
 	return result, nil
 }
@@ -252,22 +265,73 @@ func normalizeLimit(limit, def int) (int, error) {
 }
 
 func decodeCursor(cursor string) (int, error) {
+	state, err := decodeCursorState(cursor)
+	return state.Offset, err
+}
+
+func decodeCursorState(cursor string) (cursorState, error) {
 	if strings.TrimSpace(cursor) == "" {
-		return 0, nil
+		return cursorState{}, nil
 	}
 	b, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
-		return 0, NewError("invalid_args", "--cursor is invalid.", "Use next_cursor returned by the previous response.", 400)
+		return cursorState{}, NewError("invalid_args", "--cursor is invalid.", "Use next_cursor returned by the previous response.", 400)
 	}
 	var state cursorState
 	if err := json.Unmarshal(b, &state); err != nil || state.Offset < 0 {
-		return 0, NewError("invalid_args", "--cursor is invalid.", "Use next_cursor returned by the previous response.", 400)
+		return cursorState{}, NewError("invalid_args", "--cursor is invalid.", "Use next_cursor returned by the previous response.", 400)
 	}
-	return state.Offset, nil
+	return state, nil
 }
 
 func encodeCursor(offset int) string {
 	b, _ := json.Marshal(cursorState{Offset: offset})
+	return base64.RawURLEncoding.EncodeToString(b)
+}
+
+func applySearchCursor(opts *SearchOptions) (int, error) {
+	state, err := decodeCursorState(opts.Cursor)
+	if err != nil {
+		return 0, err
+	}
+	if strings.TrimSpace(opts.Cursor) == "" {
+		return 0, nil
+	}
+	if opts.Query == "" {
+		opts.Query = state.Query
+	}
+	if !opts.Regex {
+		opts.Regex = state.Regex
+	}
+	if opts.Level == "" {
+		opts.Level = state.Level
+	}
+	if opts.Service == "" {
+		opts.Service = state.Service
+	}
+	if opts.TemplateID == "" {
+		opts.TemplateID = state.TemplateID
+	}
+	if opts.Since == "" {
+		opts.Since = state.Since
+	}
+	if opts.Until == "" {
+		opts.Until = state.Until
+	}
+	return state.Offset, nil
+}
+
+func encodeSearchCursor(offset int, opts SearchOptions) string {
+	b, _ := json.Marshal(cursorState{
+		Offset:     offset,
+		Query:      opts.Query,
+		Regex:      opts.Regex,
+		Level:      opts.Level,
+		Service:    opts.Service,
+		TemplateID: opts.TemplateID,
+		Since:      opts.Since,
+		Until:      opts.Until,
+	})
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 

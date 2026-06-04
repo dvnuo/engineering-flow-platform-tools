@@ -30,13 +30,18 @@ func Extract(runDir string, kind string, limit int) (ExtractResult, error) {
 	for _, tpl := range templates {
 		templateByID[tpl.TemplateID] = tpl
 	}
+	kind = strings.TrimSpace(kind)
 	switch kind {
-	case "stacktrace":
-		return extractStacktraces(runDir, templateByID, n)
-	case "error-signature":
-		return extractErrorSignatures(runDir, templateByID, n)
+	case "stacktrace", "exception", "panic":
+		result, err := extractStacktraces(runDir, templateByID, n)
+		result.Kind = kind
+		return result, err
+	case "error-signature", "error_signature":
+		result, err := extractErrorSignatures(runDir, templateByID, n)
+		result.Kind = kind
+		return result, err
 	default:
-		return ExtractResult{}, NewError("invalid_args", "--kind must be stacktrace or error-signature.", "Run log schema extract --json.", 400)
+		return ExtractResult{}, NewError("invalid_args", "--kind must be stacktrace, exception, panic, error-signature, or error_signature.", "Run log schema extract --json.", 400)
 	}
 }
 

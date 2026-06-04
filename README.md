@@ -49,14 +49,17 @@ All CLI binaries return a stable JSON `invalid_args` envelope for command parsin
 
 ### Log Analysis
 
-`log` is a local-only CLI binary for agent-friendly analysis of large log files, directories, and globs. It streams inputs into a small run directory containing a manifest, redacted entry index, and templates, then supports bounded search, source windows, and stacktrace/error-signature extraction without copying raw logs.
+`log` is a local-only CLI binary for agent-friendly analysis of large log files, directories, and globs. It streams inputs into a small run directory containing a manifest, redacted entry index, and templates, then supports bounded search, source windows, template/group/timeline views, deterministic summaries, stacktrace/error-signature extraction, and redacted evidence export without copying raw logs.
 
 Examples:
 
 ```bash
 log analyze --source ./logs/app.log --run ./.log-runs/run_001 --json
+log template list ./.log-runs/run_001 --only non-info --json
+log group ./.log-runs/run_001 --by error_signature --json
 log search --run ./.log-runs/run_001 --query 'ERROR OR timeout' --json
 log window --run ./.log-runs/run_001 --entry-id entry_000001 --before 50 --after 50 --json
+log summarize ./.log-runs/run_001 --focus 'dominant failures' --json
 ```
 
 See `docs/LOG.md` for the run directory layout, redaction policy, and current P0 limitations.

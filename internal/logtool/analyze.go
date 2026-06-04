@@ -19,7 +19,7 @@ func Analyze(ctx context.Context, opts AnalyzeOptions) (AnalyzeResult, error) {
 		return AnalyzeResult{}, NewError("invalid_args", "--source is required.", "Pass --source <file|dir|glob>.", 400)
 	}
 	if strings.TrimSpace(opts.RunDir) == "" {
-		return AnalyzeResult{}, NewError("invalid_args", "--run is required.", "Pass --run <run-dir>.", 400)
+		opts.RunDir = NewAutoRunDir()
 	}
 	if opts.FormatHint == "" {
 		opts.FormatHint = "auto"

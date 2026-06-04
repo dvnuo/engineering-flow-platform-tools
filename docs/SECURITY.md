@@ -23,3 +23,11 @@
 - It does not store raw images or raw responses.
 - Shared config is stored in `~/.efp/config.yaml`; short-lived Copilot tokens are stored in `~/.efp/tmp/copilot_token`. Files are written with `0600` permissions where supported.
 - `github_access_token`, `copilot_token`, Authorization headers, and base64 image data must never appear in stdout, stderr, verbose output, dry-run output, or test snapshots.
+
+## Log
+
+- `log` stores only redacted previews, templates, offsets, and metadata in run directories; it must not copy full raw source logs into the run directory.
+- `log window` may re-read original source files for bounded evidence, but every returned line is redacted before stdout.
+- `log analyze --dry-run`, `log export evidence --dry-run`, verbose diagnostics, run files, and exported evidence must not reveal Authorization headers, cookies, passwords, tokens, API keys, AWS credentials, private keys, or emails.
+- `log export evidence` writes redacted entry/template evidence only and requires `--overwrite` before replacing an existing output file.
+- `log run delete` is destructive and requires `--yes`.

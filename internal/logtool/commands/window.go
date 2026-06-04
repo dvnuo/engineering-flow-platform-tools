@@ -13,25 +13,26 @@ func windowCmd(o *Opts) *cobra.Command {
 	var line, before, after int
 	before, after = 20, 20
 	c := &cobra.Command{
-		Use:   "window",
+		Use:   "window [run]",
 		Short: "Return redacted source lines around an entry or file line",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if strings.TrimSpace(runDir) == "" {
-				return print(cmd, o, output.Failure("invalid_args", "--run is required.", "Pass the run directory created by log analyze.", 400))
+			resolved, ok, err := resolveRunDirArg(cmd, o, runDir, args)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return nil
 			}
 			hasEntry := strings.TrimSpace(entryID) != ""
 			hasFileLine := strings.TrimSpace(file) != "" || line > 0
 			if hasEntry == hasFileLine {
 				return print(cmd, o, output.Failure("invalid_args", "Use either --entry-id or --file plus --line.", "Run log schema window --json.", 400))
 			}
-			var (
-				result logtool.WindowResult
-				err    error
-			)
+			var result logtool.WindowResult
 			if hasEntry {
-				result, err = logtool.WindowByEntry(runDir, entryID, before, after)
+				result, err = logtool.WindowByEntry(logtool.ResolveRunDir(resolved), entryID, before, after)
 			} else {
-				result, err = logtool.WindowByFileLineInRun(runDir, file, line, before, after)
+				result, err = logtool.WindowByFileLineInRun(logtool.ResolveRunDir(resolved), file, line, before, after)
 			}
 			if err != nil {
 				return printErr(cmd, o, err)

@@ -6,12 +6,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func templatesCmd(o *Opts) *cobra.Command {
-	var runDir, only, sortBy string
-	var limit int
+func summarizeCmd(o *Opts) *cobra.Command {
+	opts := logtool.SummaryOptions{}
+	var runDir string
 	c := &cobra.Command{
-		Use:   "templates [run]",
-		Short: "List recurring redacted log templates from a run",
+		Use:   "summarize [run]",
+		Short: "Create a deterministic evidence summary for a run",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resolved, ok, err := resolveRunDirArg(cmd, o, runDir, args)
 			if err != nil {
@@ -20,7 +20,7 @@ func templatesCmd(o *Opts) *cobra.Command {
 			if !ok {
 				return nil
 			}
-			result, err := logtool.Templates(logtool.ResolveRunDir(resolved), only, sortBy, limit)
+			result, err := logtool.Summarize(logtool.ResolveRunDir(resolved), opts)
 			if err != nil {
 				return printErr(cmd, o, err)
 			}
@@ -28,8 +28,8 @@ func templatesCmd(o *Opts) *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&runDir, "run", "", "Run directory produced by log analyze.")
-	c.Flags().StringVar(&only, "only", "all", "Template filter: all or non-info.")
-	c.Flags().StringVar(&sortBy, "sort", "count", "Template sort: count, first_seen, or last_seen.")
-	c.Flags().IntVar(&limit, "limit", 50, "Maximum templates to return, up to 200.")
+	c.Flags().StringVar(&opts.Focus, "focus", "", "Optional investigation focus; no LLM is called.")
+	c.Flags().StringVar(&opts.Since, "since", "", "Optional start timestamp for agent planning metadata.")
+	c.Flags().StringVar(&opts.Until, "until", "", "Optional end timestamp for agent planning metadata.")
 	return c
 }

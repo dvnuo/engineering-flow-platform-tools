@@ -14,6 +14,13 @@ func analyzeCmd(o *Opts) *cobra.Command {
 		Short: "Stream local log files into a bounded analysis run directory",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.ToolVersion = version.Version
+			if opts.DryRun {
+				result, err := logtool.AnalyzeDryRun(opts)
+				if err != nil {
+					return printErr(cmd, o, err)
+				}
+				return print(cmd, o, output.Success("", result))
+			}
 			result, err := logtool.Analyze(cmd.Context(), opts)
 			if err != nil {
 				return printErr(cmd, o, err)
@@ -26,5 +33,6 @@ func analyzeCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&opts.FormatHint, "format-hint", "auto", "Input format hint: auto, json, or plain.")
 	c.Flags().Int64Var(&opts.MaxBytes, "max-bytes", 0, "Maximum bytes to ingest across sources; zero means no explicit cap.")
 	c.Flags().Int64Var(&opts.MaxLineBytes, "max-line-bytes", 65536, "Maximum bytes kept per line preview before truncation.")
+	c.Flags().BoolVar(&opts.DryRun, "dry-run", false, "Validate sources and estimate work without writing a run directory.")
 	return c
 }

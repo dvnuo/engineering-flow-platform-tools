@@ -66,10 +66,12 @@
 
 - Use `log` when local logs are too large to paste into the conversation.
 - Always start with `log analyze --source <file|dir|glob> --run <run-dir> --json`.
-- Use `log profile`, `log templates`, and `log search` before requesting source windows.
+- Use `log profile`, `log template list`, `log group`, `log timeline`, and `log search` before requesting source windows.
 - Use `log window --entry-id <id>` only for bounded redacted evidence around relevant entries.
-- Use `log extract --kind stacktrace` or `log extract --kind error-signature` for repeated failure patterns.
-- Do not ask `log` to summarize with an LLM, tail in real time, or connect to remote logging backends; P0 is local offline analysis only.
+- Use `log extract --kind stacktrace` or `log extract --kind error_signature` for repeated failure patterns.
+- Use `log summarize <run> --json` for deterministic findings and next commands; it does not call an LLM.
+- Use `log export evidence <run> --dry-run --json` before writing redacted evidence files.
+- Do not ask `log` to tail in real time, connect to remote logging backends, or export raw source logs; P0 is local offline analysis only.
 - Keep the original source files available because `log window` reads them by path and returns `source_missing` if they are gone.
 
 ## Jira Zephyr Test Management

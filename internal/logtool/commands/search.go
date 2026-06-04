@@ -10,16 +10,20 @@ func searchCmd(o *Opts) *cobra.Command {
 	opts := logtool.SearchOptions{Limit: 20}
 	var runDir string
 	c := &cobra.Command{
-		Use:   "search",
+		Use:   "search [run]",
 		Short: "Search redacted log entries with bounded results",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if missingRunDir(runDir) {
-				return requireRunDir(cmd, o, runDir)
+			resolved, ok, err := resolveRunDirArg(cmd, o, runDir, args)
+			if err != nil {
+				return err
 			}
-			if opts.Query == "" {
-				return print(cmd, o, output.Failure("invalid_args", "--query is required.", "Pass --query <text> or run log schema search --json.", 400))
+			if !ok {
+				return nil
 			}
-			result, err := logtool.Search(runDir, opts)
+			if opts.Query == "" && opts.Cursor == "" {
+				return print(cmd, o, output.Failure("invalid_args", "--query or --cursor is required.", "Pass --query <text>, or pass --cursor from a previous search response.", 400))
+			}
+			result, err := logtool.Search(logtool.ResolveRunDir(resolved), opts)
 			if err != nil {
 				return printErr(cmd, o, err)
 			}
@@ -30,7 +34,9 @@ func searchCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&opts.Query, "query", "", "Search query text; separate alternatives with OR.")
 	c.Flags().BoolVar(&opts.Regex, "regex", false, "Treat --query as a regular expression.")
 	c.Flags().StringVar(&opts.Level, "level", "", "Filter by normalized level: TRACE, DEBUG, INFO, WARN, ERROR, FATAL, or PANIC.")
+	c.Flags().StringVar(&opts.Service, "service", "", "Filter matches to one parsed service or component.")
 	c.Flags().StringVar(&opts.TemplateID, "template-id", "", "Filter matches to one template id.")
+	c.Flags().StringVar(&opts.TemplateID, "template", "", "Alias for --template-id.")
 	c.Flags().StringVar(&opts.Since, "since", "", "Only include entries at or after this timestamp.")
 	c.Flags().StringVar(&opts.Until, "until", "", "Only include entries at or before this timestamp.")
 	c.Flags().IntVar(&opts.Limit, "limit", 20, "Maximum matches to return, up to 200.")

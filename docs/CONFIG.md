@@ -59,7 +59,17 @@ inspect_image:
     store_raw_image: false
     store_raw_response: false
     redact_tokens_in_logs: true
+
+log:
+  default_workspace: ~/.efp/log-runs
+  output:
+    default_limit: 50
+    max_limit: 200
+  redaction:
+    enabled: true
 ```
+
+`log` P0 does not require credentials and does not store business secrets in config. The current CLI accepts explicit `--run <run-dir>` paths and uses `~/.efp/log-runs` only when a run id/path is omitted or when `log run list` is called without `--workspace`.
 
 ## Jira Instance Fields
 

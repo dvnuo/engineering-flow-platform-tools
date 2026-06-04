@@ -109,7 +109,7 @@ func mergeNodeComments(old, new *yaml.Node) *yaml.Node {
 		return new
 	}
 	copyComments(old, new)
-	if old.Kind == new.Kind && old.Style != 0 {
+	if old.Kind == new.Kind && old.Kind == yaml.ScalarNode && old.Style != 0 {
 		new.Style = old.Style
 	}
 	switch new.Kind {

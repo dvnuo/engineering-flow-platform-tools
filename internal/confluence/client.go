@@ -4,4 +4,3 @@ type RequestMeta struct {
 	Method string
 	Path   string
 }
-

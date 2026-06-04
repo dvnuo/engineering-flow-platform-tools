@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -15,6 +16,7 @@ import (
 
 	"engineering-flow-platform-tools/internal/testutil"
 	vcmd "engineering-flow-platform-tools/internal/visual/commands"
+	vmanifest "engineering-flow-platform-tools/internal/visual/manifest"
 	"gopkg.in/yaml.v3"
 )
 
@@ -1065,6 +1067,213 @@ func TestVisualNoGoEmbed(t *testing.T) {
 	}
 }
 
+func TestGoSourcesAreGofmtParseable(t *testing.T) {
+	criticalFiles := []string{
+		"../cmd/visual/main.go",
+		"../internal/output/output.go",
+		"../internal/visual/commands/root.go",
+		"../internal/visual/commands/template.go",
+		"../internal/visual/manifest/registry.go",
+		"visual_contract_test.go",
+	}
+	cmd := exec.Command("gofmt", append([]string{"-l"}, criticalFiles...)...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("critical Go files are not gofmt-parseable: %v\n%s", err, out)
+	}
+	if strings.TrimSpace(string(out)) != "" {
+		t.Fatalf("critical Go files are not gofmt-formatted:\n%s", out)
+	}
+
+	for path, token := range map[string]string{
+		"../cmd/visual/main.go":                   "package main import",
+		"../internal/output/output.go":            "package output import",
+		"../internal/visual/commands/root.go":     "package commands import",
+		"../internal/visual/commands/template.go": "package commands import",
+		"../internal/visual/manifest/registry.go": "package manifest import",
+	} {
+		if strings.Contains(mustRead(t, path), token) {
+			t.Fatalf("%s contains collapsed Go package/import token %q", path, token)
+		}
+	}
+}
+
+func TestShellScriptsHaveValidShebangAndNewlines(t *testing.T) {
+	for _, path := range []string{"../scripts/smoke.sh", "../scripts/build.sh"} {
+		content := mustRead(t, path)
+		lines := splitLines(content)
+		if len(lines) == 0 || lines[0] != "#!/usr/bin/env bash" {
+			t.Fatalf("%s must start with bash shebang on its own line", path)
+		}
+		if !strings.Contains(content, "set -euo pipefail") {
+			t.Fatalf("%s missing set -euo pipefail", path)
+		}
+		if lineCount(content) <= 20 {
+			t.Fatalf("%s appears collapsed: only %d lines", path, lineCount(content))
+		}
+		if strings.Contains(content, "#!/usr/bin/env bash set -euo") {
+			t.Fatalf("%s contains collapsed shebang/set token", path)
+		}
+	}
+
+	smoke := mustRead(t, "../scripts/smoke.sh")
+	for _, token := range []string{
+		"go run ./cmd/visual commands --json",
+		"go run ./cmd/visual schema render --json",
+		"go run ./cmd/visual template categories",
+		"go run ./cmd/visual template list",
+		"go run ./cmd/visual template schema",
+		"go run ./cmd/visual template doctor",
+		"for template in",
+		"done",
+	} {
+		if !strings.Contains(smoke, token) {
+			t.Fatalf("scripts/smoke.sh missing visual smoke token %q", token)
+		}
+	}
+}
+
+func TestPowerShellScriptsHaveReadableNewlines(t *testing.T) {
+	for _, path := range []string{"../scripts/smoke.ps1", "../scripts/build.ps1"} {
+		content := mustRead(t, path)
+		if lineCount(content) <= 20 {
+			t.Fatalf("%s appears collapsed: only %d lines", path, lineCount(content))
+		}
+		if len(splitLines(content)) <= 1 {
+			t.Fatalf("%s appears to be a single-line PowerShell script", path)
+		}
+		if !strings.Contains(content, "./cmd/visual") {
+			t.Fatalf("%s missing visual command coverage", path)
+		}
+	}
+
+	smoke := mustRead(t, "../scripts/smoke.ps1")
+	for _, token := range []string{"go run ./cmd/visual", "template doctor", "render --template"} {
+		if !strings.Contains(smoke, token) {
+			t.Fatalf("scripts/smoke.ps1 missing visual smoke token %q", token)
+		}
+	}
+	build := mustRead(t, "../scripts/build.ps1")
+	for _, token := range []string{"-Snapshot", "-OS", "-Arch", "go build", "./cmd/visual"} {
+		if !strings.Contains(build, token) {
+			t.Fatalf("scripts/build.ps1 missing build token %q", token)
+		}
+	}
+}
+
+func TestWorkflowYAMLHasExpectedStructure(t *testing.T) {
+	path := "../.github/workflows/test.yml"
+	content := mustRead(t, path)
+	if lineCount(content) <= 20 {
+		t.Fatalf("%s appears collapsed: only %d lines", path, lineCount(content))
+	}
+	for _, token := range []string{"windows-latest", "scripts/smoke.ps1", "go build ./cmd/visual", "shell: pwsh"} {
+		if !strings.Contains(content, token) {
+			t.Fatalf("%s missing expected workflow token %q", path, token)
+		}
+	}
+	if strings.Contains(content, "name: test on:") {
+		t.Fatalf("%s contains collapsed workflow header", path)
+	}
+	var parsed map[string]any
+	if err := yaml.Unmarshal([]byte(content), &parsed); err != nil {
+		t.Fatalf("%s is not valid YAML: %v", path, err)
+	}
+	if parsed["name"] != "test" || parsed["jobs"] == nil {
+		t.Fatalf("%s missing expected top-level workflow structure: %#v", path, parsed)
+	}
+}
+
+func TestTemplateYAMLFilesAreMultilineAndParseable(t *testing.T) {
+	templateDir := visualTemplateDir()
+	registry, err := vmanifest.LoadRegistry(templateDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if registry.CanonicalCount() != 195 {
+		t.Fatalf("expected 195 canonical templates, got %d", registry.CanonicalCount())
+	}
+	for _, entry := range registry.Templates {
+		t.Run(entry.ID, func(t *testing.T) {
+			path := filepath.Join(templateDir, entry.ID, "template.yaml")
+			content := mustRead(t, path)
+			if lineCount(content) <= 20 {
+				t.Fatalf("%s appears collapsed: only %d lines", path, lineCount(content))
+			}
+			if strings.Contains(content, "id: "+entry.ID+" version:") {
+				t.Fatalf("%s contains collapsed id/version YAML", path)
+			}
+			tpl, err := vmanifest.LoadTemplateManifest(templateDir, entry)
+			if err != nil {
+				t.Fatalf("%s could not be loaded by manifest.LoadTemplateManifest: %v", path, err)
+			}
+			if err := vmanifest.ValidateTemplateManifest(templateDir, entry, &tpl); err != nil {
+				t.Fatalf("%s failed manifest validation: %v", path, err)
+			}
+			if tpl.Renderer.Contract != entry.Renderer {
+				t.Fatalf("%s renderer mismatch: manifest=%s registry=%s", path, tpl.Renderer.Contract, entry.Renderer)
+			}
+			for _, asset := range []vmanifest.AssetSpec{
+				{From: "../_shared/runtime/efp-visual-runtime.iife.js", To: "assets/runtime/efp-visual-runtime.iife.js"},
+				{From: "../_shared/runtime/efp-visual-renderers.iife.js", To: "assets/runtime/efp-visual-renderers.iife.js"},
+				{From: "../_shared/runtime/efp-visual-runtime.css", To: "assets/runtime/efp-visual-runtime.css"},
+				{From: "style.css", To: filepath.ToSlash(filepath.Join("assets", "templates", entry.ID, "style.css"))},
+			} {
+				if !assetSpecContains(tpl.Assets, asset) {
+					t.Fatalf("%s missing asset mapping %#v in %#v", path, asset, tpl.Assets)
+				}
+			}
+			for _, style := range []string{"assets/runtime/efp-visual-runtime.css", filepath.ToSlash(filepath.Join("assets", "templates", entry.ID, "style.css"))} {
+				if !stringSliceContains(tpl.Styles, style) {
+					t.Fatalf("%s missing style %s in %#v", path, style, tpl.Styles)
+				}
+			}
+			for _, script := range []string{"manifest.js", "data.js", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js"} {
+				if !stringSliceContains(tpl.Scripts, script) {
+					t.Fatalf("%s missing script %s in %#v", path, script, tpl.Scripts)
+				}
+			}
+		})
+	}
+}
+
+func TestMarkdownDocsAreReadable(t *testing.T) {
+	thresholds := map[string]int{
+		"../README.md":                             80,
+		"../docs/VISUAL_TEMPLATES.md":              120,
+		"../docs/VISUAL.md":                        80,
+		"../docs/COMMAND_SPEC.md":                  120,
+		"../docs/LLM_USAGE.md":                     80,
+		"../cmd/visual/visual-cli.instructions.md": 12,
+	}
+	for path, minLines := range thresholds {
+		content := mustRead(t, path)
+		if lineCount(content) <= minLines {
+			t.Fatalf("%s appears collapsed: got %d lines, want more than %d", path, lineCount(content), minLines)
+		}
+		if !strings.HasPrefix(content, "#") && !strings.Contains(content, "\n#") {
+			t.Fatalf("%s does not look like readable Markdown with headings", path)
+		}
+	}
+
+	templatesDoc := mustRead(t, "../docs/VISUAL_TEMPLATES.md")
+	if !strings.Contains(templatesDoc, "| Alias | Canonical ID |\n|---|---|") {
+		t.Fatalf("docs/VISUAL_TEMPLATES.md alias table header is not multiline")
+	}
+	aliasRows := 0
+	for _, line := range splitLines(templatesDoc) {
+		if strings.HasPrefix(line, "| `") && strings.Contains(line, "` | `") {
+			aliasRows++
+		}
+	}
+	if aliasRows < 10 {
+		t.Fatalf("docs/VISUAL_TEMPLATES.md alias table appears collapsed: found %d alias rows", aliasRows)
+	}
+	if strings.Contains(templatesDoc, "`service.topology` | `runtime.service_topology` | | `runtime.session_binding`") {
+		t.Fatalf("docs/VISUAL_TEMPLATES.md alias table is collapsed onto one line")
+	}
+}
+
 func TestVisualBuildAndSmokeScriptsContract(t *testing.T) {
 	buildSH := mustRead(t, "../scripts/build.sh")
 	for _, token := range []string{"--snapshot", "--os", "--arch", "TARGET_OS", "TARGET_ARCH", "./cmd/visual"} {
@@ -1332,6 +1541,35 @@ func stringSliceContains(items []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func assetSpecContains(items []vmanifest.AssetSpec, want vmanifest.AssetSpec) bool {
+	wantFrom := filepath.ToSlash(filepath.Clean(want.From))
+	wantTo := filepath.ToSlash(filepath.Clean(want.To))
+	for _, item := range items {
+		if filepath.ToSlash(filepath.Clean(item.From)) == wantFrom && filepath.ToSlash(filepath.Clean(item.To)) == wantTo {
+			return true
+		}
+	}
+	return false
+}
+
+func lineCount(content string) int {
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.TrimRight(content, "\n")
+	if content == "" {
+		return 0
+	}
+	return strings.Count(content, "\n") + 1
+}
+
+func splitLines(content string) []string {
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.TrimRight(content, "\n")
+	if content == "" {
+		return nil
+	}
+	return strings.Split(content, "\n")
 }
 
 func assertRelativeHTMLCSSJS(t *testing.T, out string) {

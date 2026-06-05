@@ -1,24 +1,23 @@
-# visual CLI instructions for VS Code GitHub Copilot
+# visual CLI Instructions for Agents
 
-- `visual` is a terminal-invoked CLI, not a browser UI, Portal tool, runtime built-in, MCP tool, or HTTP server.
-- Always use `--json` for agent workflows.
-- Installed templates default to `~/.efp/template/visual`; use `--template-dir <templates/visual>` only when the catalog lives in a workspace or release artifact.
-- First inspect categories with `visual template categories --json`; do not infer templates from the file tree.
-- Select a category, then run `visual template list --category <category> --json`, `visual template get <template-id> --json`, and `visual template schema <template-id> --json`.
-- The built-in semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, `evidence`, `matrix`, and `spatial`.
-- Do not invent template paths.
-- Template selection strategy: UML sequence/class/state/activity/component work uses `uml`; dependency/topology/lineage work uses `relationship`; replay/timeline/history work uses `temporal`; process/pipeline/approval/data movement work uses `flow`; layered/tree/ownership/containment work uses `hierarchy`; claim/source/root-cause/decision work uses `evidence`; KPI/risk/capability/allocation work uses `matrix`; 3D landscape/codebase/service/agent-fleet work uses `spatial`.
-- Each template has a declared `effects` contract for its local Three.js scene, including camera, particles, material, motion, and interactions. Prefer selecting the right template and input data over generating custom JavaScript.
-- Each template also returns `visual_design` guidance. For large graph inputs, give every node a short `label` or `name`, use groups or node `parent_id`/`group_id`/`group`, give groups scenario-specific labels, start with an overview, and put noisy class/method/import edges behind `visibility: "detail"` or `visibility: "hidden"`.
-- Every template schema exposes a shared `visual` object. Fill `visual.goal`, `visual.initial_focus_ids`, `visual.hidden_detail_ids`, `visual.narrative_steps`, and `visual.annotations` with valid semantic ids. This is how the renderer knows what to emphasize, what to delay, and where to place explanatory callouts.
-- For graph event inputs, bind every meaningful event to an existing node with `events[].node_id` so replay and timeline views explain what changed in the 3D graph.
-- For `uml.sequence_3d`, provide semantic `participants`, unique numeric `messages[].order`, short `messages[].label`, and optional `phases`, `activations`, and `fragments`. For stronger 3D sequence diagrams, also provide participant `display_name`, `subtitle`, `lane_index`, `depth`, and `color`, plus message `curve`, `importance`, `label_priority`, `depth`, and `summary`. Do not convert a sequence diagram into generic graph nodes.
-- For other UML templates, use the declared semantic fields: `classes`/`relationships`, `states`/`transitions`, `actions`/`flows`, or `components`/`deployments`/`links`.
-- Do not invent the JSON shape. Always run `visual template schema <id> --json` before writing input JSON and again before each render if the selected id changed.
-- Before render, run `visual inspect-input --template <template-id> --input <input.json> --json`. If it reports `visual_guidance_missing`, `visual_focus_missing`, `visual_annotations_missing`, `visual_guidance_unknown_refs`, `missing_groups`, `missing_display_labels`, high `orphan_node_count`, high label pressure, high edge density, low `relation_coverage`, `groups_too_coarse`, `generic_group_labels`, low `event_node_coverage`, repetitive `dominant_edge_kinds`, long labels, missing `importance`, or missing edge `visibility`, revise the input before rendering.
-- Render to a workspace path with `visual render --template <template-id> --input <input.json> --out <workspace-output-dir> --json`.
+- `visual` is a terminal-invoked CLI. Always use `--json` for agent workflows.
+- Installed templates default to `~/.efp/template/visual`; use `--template-dir <templates/visual>` only for workspace or release artifact catalogs.
+- Do not infer templates from the file tree.
+- First inspect categories with `visual template categories --json`.
+- Select a category, then run:
+  1. `visual template list --category <category> --json`
+  2. `visual template get <template-id> --json`
+  3. `visual template schema <template-id> --json`
+  4. `visual template guide <template-id> --json`
+- Do not write input JSON until you have read the selected template's guide.
+- The template guide is authoritative for semantic construction rules, recommended fields, visual encoding, common mistakes, and the quality checklist.
+- Do not invent template paths or input shapes.
+- Do not convert semantic templates into generic graph nodes unless the selected template is actually graph-based.
+- Generate semantic input JSON only. Do not generate JavaScript, CSS, remote assets, CDN URLs, Node/npm runtime, or network APIs.
+- Use shared authoring fields from the selected template schema and guide: `importance`, `visibility`, `labelPriority`, `summary`, `details`, `presentation`, `visual`, `view`, and `renderHints` when they improve readability.
+- Fill `visual.goal`, `visual.initial_focus_ids`, `visual.hidden_detail_ids`, `visual.narrative_steps`, and `visual.annotations` with valid semantic ids when the input has more than a few objects.
+- Before render, run `visual inspect-input --template <template-id> --input <input.json> --json`.
+- If `inspect-input` returns warnings, revise input JSON according to each warning's `suggestion` and `auto_fix_hint` before rendering.
+- Render with `visual render --template <template-id> --input <input.json> --out <workspace-output-dir> --json`.
 - Return the generated `index.html` path from `data.artifact.entrypoint`.
-- Do not use remote assets, CDN URLs, runtime Node/npm, generated JavaScript, or network APIs.
-- Do not generate JavaScript for the artifact; generate input JSON only.
-- Outputs are `file://` safe because data is embedded in `data.js` and assets, including the local Three.js module bridge, use relative paths.
-- Outputs are Portal proxy safe via relative paths; do not require a fixed base URL.
+- Outputs are offline static artifacts and Portal proxy safe through relative paths.

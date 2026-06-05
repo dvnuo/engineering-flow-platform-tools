@@ -1,0 +1,310 @@
+{
+  "schema": "efp.visual.input.uml.sequence.v1",
+  "title": "Game Session Flow Sequence",
+  "participants": [
+    {
+      "id": "browser",
+      "label": "Player Browser",
+      "kind": "actor",
+      "summary": "Starts and observes the match"
+    },
+    {
+      "id": "view",
+      "label": "Game View",
+      "kind": "boundary",
+      "summary": "Renders board and player actions"
+    },
+    {
+      "id": "controller",
+      "label": "SampleViewController",
+      "kind": "controller",
+      "summary": "Coordinates setup and UI callbacks"
+    },
+    {
+      "id": "engine",
+      "label": "GameEngine",
+      "kind": "service",
+      "summary": "Applies rules and advances turns"
+    },
+    {
+      "id": "timer",
+      "label": "TTTManager",
+      "kind": "manager",
+      "summary": "Tracks session time and completion state"
+    },
+    {
+      "id": "api",
+      "label": "Game API",
+      "kind": "api",
+      "summary": "Persists score and session result"
+    },
+    {
+      "id": "audit",
+      "label": "Audit Stream",
+      "kind": "event_stream",
+      "summary": "Records visible result events"
+    }
+  ],
+  "phases": [
+    {
+      "id": "receive",
+      "label": "Receive",
+      "status": "running"
+    },
+    {
+      "id": "setup",
+      "label": "Setup",
+      "status": "running"
+    },
+    {
+      "id": "starting",
+      "label": "Starting",
+      "status": "warning"
+    },
+    {
+      "id": "session",
+      "label": "Session Running",
+      "status": "running"
+    },
+    {
+      "id": "finish",
+      "label": "Finish Result",
+      "status": "success"
+    },
+    {
+      "id": "cleanup",
+      "label": "Cleanup",
+      "status": "success"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "order": 1,
+      "from": "browser",
+      "to": "view",
+      "label": "tap Start Game",
+      "kind": "sync",
+      "status": "running"
+    },
+    {
+      "id": "m2",
+      "order": 2,
+      "from": "view",
+      "to": "controller",
+      "label": "startSession()",
+      "kind": "sync",
+      "status": "running"
+    },
+    {
+      "id": "m3",
+      "order": 3,
+      "from": "controller",
+      "to": "engine",
+      "label": "createBoard(size)",
+      "kind": "sync",
+      "status": "running"
+    },
+    {
+      "id": "m4",
+      "order": 4,
+      "from": "engine",
+      "to": "controller",
+      "label": "board ready",
+      "kind": "return",
+      "status": "running"
+    },
+    {
+      "id": "m5",
+      "order": 5,
+      "from": "controller",
+      "to": "timer",
+      "label": "beginTimer()",
+      "kind": "sync",
+      "status": "running"
+    },
+    {
+      "id": "m6",
+      "order": 6,
+      "from": "timer",
+      "to": "engine",
+      "label": "tick interval",
+      "kind": "async",
+      "status": "running"
+    },
+    {
+      "id": "m7",
+      "order": 7,
+      "from": "controller",
+      "to": "view",
+      "label": "renderBoard()",
+      "kind": "sync",
+      "status": "running"
+    },
+    {
+      "id": "m8",
+      "order": 8,
+      "from": "browser",
+      "to": "view",
+      "label": "place mark A1",
+      "kind": "sync",
+      "status": "running"
+    },
+    {
+      "id": "m9",
+      "order": 9,
+      "from": "view",
+      "to": "controller",
+      "label": "onCellSelected(A1)",
+      "kind": "sync",
+      "status": "running"
+    },
+    {
+      "id": "m10",
+      "order": 10,
+      "from": "controller",
+      "to": "engine",
+      "label": "applyMove(A1)",
+      "kind": "sync",
+      "status": "running"
+    },
+    {
+      "id": "m11",
+      "order": 11,
+      "from": "engine",
+      "to": "engine",
+      "label": "checkWinner()",
+      "kind": "self",
+      "status": "running"
+    },
+    {
+      "id": "m12",
+      "order": 12,
+      "from": "engine",
+      "to": "timer",
+      "label": "isComplete=false",
+      "kind": "return",
+      "status": "running"
+    },
+    {
+      "id": "m13",
+      "order": 13,
+      "from": "timer",
+      "to": "controller",
+      "label": "updateClock()",
+      "kind": "async",
+      "status": "running"
+    },
+    {
+      "id": "m14",
+      "order": 14,
+      "from": "browser",
+      "to": "view",
+      "label": "place mark B2",
+      "kind": "sync",
+      "status": "running"
+    },
+    {
+      "id": "m15",
+      "order": 15,
+      "from": "controller",
+      "to": "engine",
+      "label": "applyMove(B2)",
+      "kind": "sync",
+      "status": "running"
+    },
+    {
+      "id": "m16",
+      "order": 16,
+      "from": "engine",
+      "to": "engine",
+      "label": "resolveResult()",
+      "kind": "self",
+      "status": "success"
+    },
+    {
+      "id": "m17",
+      "order": 17,
+      "from": "engine",
+      "to": "timer",
+      "label": "isComplete=true",
+      "kind": "return",
+      "status": "success"
+    },
+    {
+      "id": "m18",
+      "order": 18,
+      "from": "timer",
+      "to": "api",
+      "label": "updateScore(A/B)",
+      "kind": "async",
+      "status": "success"
+    },
+    {
+      "id": "m19",
+      "order": 19,
+      "from": "api",
+      "to": "audit",
+      "label": "emit game.finished",
+      "kind": "async",
+      "status": "success"
+    },
+    {
+      "id": "m20",
+      "order": 20,
+      "from": "api",
+      "to": "timer",
+      "label": "score persisted",
+      "kind": "return",
+      "status": "success"
+    },
+    {
+      "id": "m21",
+      "order": 21,
+      "from": "timer",
+      "to": "controller",
+      "label": "finishAndReset()",
+      "kind": "async",
+      "status": "success"
+    },
+    {
+      "id": "m22",
+      "order": 22,
+      "from": "controller",
+      "to": "view",
+      "label": "showResultBanner()",
+      "kind": "sync",
+      "status": "success"
+    }
+  ],
+  "activations": [
+    {
+      "id": "act-view",
+      "participant_id": "view",
+      "start_order": 1,
+      "end_order": 22,
+      "label": "screen active"
+    },
+    {
+      "id": "act-engine",
+      "participant_id": "engine",
+      "start_order": 4,
+      "end_order": 18,
+      "label": "rules engine active"
+    },
+    {
+      "id": "act-timer",
+      "participant_id": "timer",
+      "start_order": 6,
+      "end_order": 20,
+      "label": "session timer active"
+    },
+    {
+      "id": "act-api",
+      "participant_id": "api",
+      "start_order": 14,
+      "end_order": 19,
+      "label": "result persistence"
+    }
+  ]
+}

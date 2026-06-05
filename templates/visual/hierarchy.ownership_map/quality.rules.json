@@ -1,0 +1,41 @@
+{
+  "schema": "efp.visual.template_quality_rules.v1",
+  "template_id": "hierarchy.ownership_map",
+  "label": {
+    "max_overview_label_chars": 32,
+    "max_detail_label_chars": 64,
+    "require_summary_for_long_labels": true
+  },
+  "required_for_quality": [
+    {
+      "path": "$.visual.goal",
+      "severity": "warning",
+      "code": "visual_goal_missing",
+      "suggestion": "Add visual.goal to explain what the viewer should understand first."
+    },
+    {
+      "path": "$.visual.initial_focus_ids",
+      "severity": "warning",
+      "code": "visual_focus_missing",
+      "suggestion": "Add visual.initial_focus_ids for the 2-5 most important semantic ids."
+    },
+    {
+      "path": "$.visual.annotations",
+      "severity": "warning",
+      "code": "visual_annotations_missing",
+      "suggestion": "Add annotations for critical path, risk, boundary, or result."
+    }
+  ],
+  "semantic_rules": [
+    {
+      "code": "graph_nodes_must_be_semantic_entities",
+      "severity": "warning",
+      "description": "Nodes should be services/modules/issues/etc. and edges must be typed relationships."
+    }
+  ],
+  "template_specific": {
+    "require_groups_over_nodes": 10,
+    "dominant_edge_kind_ratio": 0.65,
+    "max_visible_edges_overview": 80
+  }
+}

@@ -1,0 +1,168 @@
+{
+  "items": [
+    {
+      "group": "users",
+      "id": "item-01",
+      "kind": "users",
+      "label": "Active users",
+      "metadata": {
+        "owner": "users",
+        "review_date": "2026-06-03",
+        "sample_size": 120
+      },
+      "metrics": {
+        "delta": -0.07,
+        "value": 0.42
+      },
+      "status": "ok",
+      "x": 0.12,
+      "y": 0.16
+    },
+    {
+      "group": "conversion",
+      "id": "item-02",
+      "kind": "conversion",
+      "label": "Trial conversion",
+      "metadata": {
+        "owner": "conversion",
+        "review_date": "2026-06-03",
+        "sample_size": 137
+      },
+      "metrics": {
+        "delta": -0.03,
+        "value": 0.48
+      },
+      "status": "warning",
+      "x": 0.43,
+      "y": 0.16
+    },
+    {
+      "group": "revenue",
+      "id": "item-03",
+      "kind": "revenue",
+      "label": "Expansion revenue",
+      "metadata": {
+        "owner": "revenue",
+        "review_date": "2026-06-03",
+        "sample_size": 154
+      },
+      "metrics": {
+        "delta": 0,
+        "value": 0.54
+      },
+      "status": "success",
+      "x": 0.74,
+      "y": 0.16
+    },
+    {
+      "group": "support",
+      "id": "item-04",
+      "kind": "support",
+      "label": "Support tickets",
+      "metadata": {
+        "owner": "support",
+        "review_date": "2026-06-03",
+        "sample_size": 171
+      },
+      "metrics": {
+        "delta": 0.04,
+        "value": 0.6
+      },
+      "status": "running",
+      "x": 0.12,
+      "y": 0.4
+    },
+    {
+      "group": "sla",
+      "id": "item-05",
+      "kind": "sla",
+      "label": "SLA attainment",
+      "metadata": {
+        "owner": "sla",
+        "review_date": "2026-06-03",
+        "sample_size": 188
+      },
+      "metrics": {
+        "delta": 0.08,
+        "value": 0.66
+      },
+      "status": "blocked",
+      "x": 0.43,
+      "y": 0.4
+    },
+    {
+      "group": "churn",
+      "id": "item-06",
+      "kind": "churn",
+      "label": "Churn risk",
+      "metadata": {
+        "owner": "churn",
+        "review_date": "2026-06-03",
+        "sample_size": 205
+      },
+      "metrics": {
+        "delta": -0.07,
+        "value": 0.72
+      },
+      "status": "error",
+      "x": 0.74,
+      "y": 0.4
+    },
+    {
+      "group": "activation",
+      "id": "item-07",
+      "kind": "activation",
+      "label": "Activation time",
+      "metadata": {
+        "owner": "activation",
+        "review_date": "2026-06-03",
+        "sample_size": 222
+      },
+      "metrics": {
+        "delta": -0.03,
+        "value": 0.78
+      },
+      "status": "ok",
+      "x": 0.16,
+      "y": 0.64
+    },
+    {
+      "group": "adoption",
+      "id": "item-08",
+      "kind": "adoption",
+      "label": "Feature adoption",
+      "metadata": {
+        "owner": "adoption",
+        "review_date": "2026-06-03",
+        "sample_size": 239
+      },
+      "metrics": {
+        "delta": 0,
+        "value": 0.84
+      },
+      "status": "warning",
+      "x": 0.47,
+      "y": 0.64
+    },
+    {
+      "group": "escalation",
+      "id": "item-09",
+      "kind": "escalation",
+      "label": "Escalation queue",
+      "metadata": {
+        "owner": "escalation",
+        "review_date": "2026-06-03",
+        "sample_size": 256
+      },
+      "metrics": {
+        "delta": 0.04,
+        "value": 0.9
+      },
+      "status": "success",
+      "x": 0.78,
+      "y": 0.64
+    }
+  ],
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "KPI Control Matrix Scenario"
+}

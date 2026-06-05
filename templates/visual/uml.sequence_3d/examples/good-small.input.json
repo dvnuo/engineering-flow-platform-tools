@@ -1,0 +1,418 @@
+{
+  "schema": "efp.visual.input.uml.sequence.v1",
+  "title": "Checkout Authorization Sequence",
+  "participants": [
+    {
+      "id": "browser",
+      "label": "User Browser",
+      "kind": "actor",
+      "group": "client",
+      "metadata": {
+        "role": "starts checkout"
+      },
+      "display_name": "User Browser",
+      "subtitle": "actor",
+      "lane_index": 0,
+      "depth": -0.55,
+      "color": "#63a9ff"
+    },
+    {
+      "id": "portal",
+      "label": "Portal UI",
+      "kind": "boundary",
+      "group": "frontend",
+      "metadata": {
+        "route": "checkout confirmation"
+      },
+      "display_name": "Portal UI",
+      "subtitle": "boundary",
+      "lane_index": 1,
+      "depth": -0.25,
+      "color": "#a77cff"
+    },
+    {
+      "id": "api",
+      "label": "Order API",
+      "kind": "service",
+      "group": "backend",
+      "metrics": {
+        "latency_ms": 84
+      },
+      "display_name": "Order API",
+      "subtitle": "transaction core",
+      "lane_index": 2,
+      "depth": 0.0,
+      "color": "#35c2a1"
+    },
+    {
+      "id": "payment",
+      "label": "Payment Gateway",
+      "kind": "external",
+      "group": "provider",
+      "metadata": {
+        "sla": "high"
+      },
+      "display_name": "Payment Gateway",
+      "subtitle": "external provider",
+      "lane_index": 3,
+      "depth": 0.45,
+      "color": "#e5a84c"
+    },
+    {
+      "id": "inventory",
+      "label": "Inventory Service",
+      "kind": "service",
+      "group": "backend",
+      "display_name": "Inventory Service",
+      "subtitle": "reservation",
+      "lane_index": 4,
+      "depth": 0.2,
+      "color": "#47c477"
+    },
+    {
+      "id": "audit",
+      "label": "Audit Stream",
+      "kind": "event-log",
+      "group": "observability",
+      "display_name": "Audit Stream",
+      "subtitle": "event log",
+      "lane_index": 5,
+      "depth": 0.72,
+      "color": "#ee6b73"
+    }
+  ],
+  "phases": [
+    {
+      "id": "request",
+      "label": "Request",
+      "status": "running",
+      "color": "#63a9ff"
+    },
+    {
+      "id": "authorize",
+      "label": "Authorize",
+      "status": "warning",
+      "color": "#e5a84c"
+    },
+    {
+      "id": "commit",
+      "label": "Commit",
+      "status": "success",
+      "color": "#47c477"
+    },
+    {
+      "id": "notify",
+      "label": "Notify",
+      "status": "success",
+      "color": "#35c2a1"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "order": 1,
+      "from": "browser",
+      "to": "portal",
+      "label": "submitCheckout()",
+      "kind": "sync",
+      "phase": "request",
+      "status": "running",
+      "importance": 0.55,
+      "label_priority": 0.52,
+      "curve": "arc",
+      "depth": -0.16,
+      "summary": "Step 1 in the checkout authorization sequence."
+    },
+    {
+      "id": "m2",
+      "order": 2,
+      "from": "portal",
+      "to": "api",
+      "label": "POST order intent",
+      "kind": "sync",
+      "phase": "request",
+      "status": "running",
+      "importance": 0.63,
+      "label_priority": 0.59,
+      "curve": "arc",
+      "depth": -0.08,
+      "summary": "Step 2 in the checkout authorization sequence."
+    },
+    {
+      "id": "m3",
+      "order": 3,
+      "from": "api",
+      "to": "inventory",
+      "label": "reserveItems(orderId)",
+      "kind": "sync",
+      "phase": "authorize",
+      "status": "warning",
+      "importance": 0.95,
+      "label_priority": 0.66,
+      "curve": "arc",
+      "depth": 0.0,
+      "summary": "Step 3 in the checkout authorization sequence."
+    },
+    {
+      "id": "m4",
+      "order": 4,
+      "from": "inventory",
+      "to": "api",
+      "label": "reservation token",
+      "kind": "return",
+      "phase": "authorize",
+      "status": "success",
+      "importance": 0.79,
+      "label_priority": 0.73,
+      "curve": "return",
+      "depth": 0.08,
+      "summary": "Step 4 in the checkout authorization sequence."
+    },
+    {
+      "id": "m5",
+      "order": 5,
+      "from": "api",
+      "to": "payment",
+      "label": "authorizePayment()",
+      "kind": "sync",
+      "phase": "authorize",
+      "status": "warning",
+      "importance": 0.95,
+      "label_priority": 0.96,
+      "curve": "high_arc",
+      "depth": 0.16,
+      "summary": "Step 5 in the checkout authorization sequence."
+    },
+    {
+      "id": "m6",
+      "order": 6,
+      "from": "payment",
+      "to": "api",
+      "label": "auth approved",
+      "kind": "return",
+      "phase": "authorize",
+      "status": "success",
+      "importance": 0.95,
+      "label_priority": 0.52,
+      "curve": "return",
+      "depth": -0.16,
+      "summary": "Step 6 in the checkout authorization sequence."
+    },
+    {
+      "id": "m7",
+      "order": 7,
+      "from": "api",
+      "to": "inventory",
+      "label": "commitReservation()",
+      "kind": "sync",
+      "phase": "commit",
+      "status": "success",
+      "importance": 0.71,
+      "label_priority": 0.59,
+      "curve": "arc",
+      "depth": -0.08,
+      "summary": "Step 7 in the checkout authorization sequence."
+    },
+    {
+      "id": "m8",
+      "order": 8,
+      "from": "api",
+      "to": "audit",
+      "label": "emit order.authorized",
+      "kind": "async",
+      "phase": "notify",
+      "status": "success",
+      "importance": 0.79,
+      "label_priority": 0.66,
+      "curve": "high_arc",
+      "depth": 0.0,
+      "summary": "Step 8 in the checkout authorization sequence."
+    },
+    {
+      "id": "m9",
+      "order": 9,
+      "from": "api",
+      "to": "portal",
+      "label": "201 order confirmed",
+      "kind": "return",
+      "phase": "commit",
+      "status": "success",
+      "importance": 0.95,
+      "label_priority": 0.96,
+      "curve": "return",
+      "depth": 0.08,
+      "summary": "Step 9 in the checkout authorization sequence."
+    },
+    {
+      "id": "m10",
+      "order": 10,
+      "from": "portal",
+      "to": "browser",
+      "label": "render receipt",
+      "kind": "return",
+      "phase": "notify",
+      "status": "success",
+      "importance": 0.63,
+      "label_priority": 0.8,
+      "curve": "return",
+      "depth": 0.16,
+      "summary": "Step 10 in the checkout authorization sequence."
+    },
+    {
+      "id": "m11",
+      "order": 11,
+      "from": "audit",
+      "to": "api",
+      "label": "ack event offset",
+      "kind": "async",
+      "phase": "notify",
+      "status": "success",
+      "importance": 0.71,
+      "label_priority": 0.52,
+      "curve": "arc",
+      "depth": -0.16,
+      "summary": "Step 11 in the checkout authorization sequence."
+    },
+    {
+      "id": "m12",
+      "order": 12,
+      "from": "portal",
+      "to": "portal",
+      "label": "cache recent order",
+      "kind": "self",
+      "phase": "notify",
+      "status": "success",
+      "self": true,
+      "importance": 0.79,
+      "label_priority": 0.59,
+      "curve": "self",
+      "depth": -0.08,
+      "summary": "Step 12 in the checkout authorization sequence."
+    }
+  ],
+  "activations": [
+    {
+      "participant_id": "portal",
+      "start_order": 1,
+      "end_order": 10,
+      "label": "checkout screen active",
+      "phase": "request"
+    },
+    {
+      "participant_id": "api",
+      "start_order": 2,
+      "end_order": 9,
+      "label": "order transaction",
+      "phase": "authorize"
+    },
+    {
+      "participant_id": "payment",
+      "start_order": 5,
+      "end_order": 6,
+      "label": "payment authorization",
+      "phase": "authorize"
+    },
+    {
+      "participant_id": "inventory",
+      "start_order": 3,
+      "end_order": 7,
+      "label": "inventory reservation",
+      "phase": "commit"
+    }
+  ],
+  "fragments": [
+    {
+      "kind": "alt",
+      "condition": "payment approved vs declined",
+      "start_order": 5,
+      "end_order": 9
+    },
+    {
+      "kind": "loop",
+      "condition": "audit retry until ack",
+      "start_order": 8,
+      "end_order": 11
+    }
+  ],
+  "notes": [
+    "Use order to control vertical time placement.",
+    "Use fragments for loops, alternatives, and parallel regions."
+  ],
+  "visual": {
+    "goal": "Explain checkout authorization by making the API transaction core, payment authorization, and return path readable before secondary audit detail.",
+    "audience": "reviewer",
+    "initial_focus_ids": [
+      "api",
+      "m5",
+      "payment",
+      "m9"
+    ],
+    "hidden_detail_ids": [
+      "m11",
+      "m12"
+    ],
+    "emphasis": [
+      "lifeline depth",
+      "phase color",
+      "message importance",
+      "progressive replay"
+    ],
+    "narrative_steps": [
+      {
+        "id": "request",
+        "title": "Request enters the transaction core",
+        "summary": "Start with browser, portal, and Order API lifelines.",
+        "focus_ids": [
+          "browser",
+          "portal",
+          "api",
+          "m2"
+        ]
+      },
+      {
+        "id": "authorize",
+        "title": "Authorization crosses service boundaries",
+        "summary": "Highlight inventory reservation and payment authorization paths.",
+        "focus_ids": [
+          "m3",
+          "inventory",
+          "m5",
+          "payment"
+        ]
+      },
+      {
+        "id": "commit",
+        "title": "Commit and return the result",
+        "summary": "Show the successful commit and response path without expanding audit detail first.",
+        "focus_ids": [
+          "m7",
+          "m9",
+          "portal"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "note-core",
+        "target_id": "api",
+        "label": "Transaction core",
+        "summary": "Most critical lifeline; activation spans request through commit.",
+        "priority": 1
+      },
+      {
+        "id": "note-auth",
+        "target_id": "m5",
+        "label": "External authorization",
+        "summary": "High-risk crossing to the payment provider.",
+        "priority": 0.95
+      },
+      {
+        "id": "note-return",
+        "target_id": "m9",
+        "label": "Customer-visible result",
+        "summary": "This return determines what the user sees.",
+        "priority": 0.88
+      }
+    ]
+  }
+}

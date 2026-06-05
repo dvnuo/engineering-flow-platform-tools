@@ -139,3 +139,15 @@ Other UML templates use semantic inputs and transform them into the shared 3D gr
 - `spatial.codebase_galaxy`: Codebase Galaxy
 - `spatial.control_room`: Control Room Space
 - `spatial.service_city`: Service City Map
+
+## Agent Authoring Guides
+
+Every canonical template directory must include:
+
+- `agent-guide.md`: template-specific semantic construction guide.
+- `quality.rules.json`: machine-readable thresholds and warning text for `inspect-input`.
+- `examples/good-small.input.json`, `examples/good-medium.input.json`, `examples/bad-dense.input.json`, and `examples/fixed-dense.input.json`.
+
+Shared authoring conventions live in `templates/visual/_shared/agent-guidance/common-visual-quality.md`. Template guides must reference that shared guide and then define category-specific rules.
+
+Directory-level guides are authoritative. Agents should not infer a template from file paths or convert semantic templates to generic graph nodes unless the template is graph-based.

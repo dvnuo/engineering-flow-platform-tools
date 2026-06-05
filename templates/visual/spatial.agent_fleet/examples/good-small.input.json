@@ -1,0 +1,230 @@
+{
+  "items": [
+    {
+      "group": "fleet",
+      "id": "item-01",
+      "kind": "fleet",
+      "label": "Active agents",
+      "metadata": {
+        "owner": "fleet",
+        "review_date": "2026-06-03",
+        "sample_size": 120
+      },
+      "metrics": {
+        "delta": -0.07,
+        "value": 0.42
+      },
+      "status": "ok",
+      "x": 0.12,
+      "y": 0.16
+    },
+    {
+      "group": "queue",
+      "id": "item-02",
+      "kind": "queue",
+      "label": "Queued runs",
+      "metadata": {
+        "owner": "queue",
+        "review_date": "2026-06-03",
+        "sample_size": 137
+      },
+      "metrics": {
+        "delta": -0.03,
+        "value": 0.48
+      },
+      "status": "warning",
+      "x": 0.43,
+      "y": 0.16
+    },
+    {
+      "group": "latency",
+      "id": "item-03",
+      "kind": "latency",
+      "label": "Tool latency",
+      "metadata": {
+        "owner": "latency",
+        "review_date": "2026-06-03",
+        "sample_size": 154
+      },
+      "metrics": {
+        "delta": 0,
+        "value": 0.54
+      },
+      "status": "success",
+      "x": 0.74,
+      "y": 0.16
+    },
+    {
+      "group": "throughput",
+      "id": "item-04",
+      "kind": "throughput",
+      "label": "Render throughput",
+      "metadata": {
+        "owner": "throughput",
+        "review_date": "2026-06-03",
+        "sample_size": 171
+      },
+      "metrics": {
+        "delta": 0.04,
+        "value": 0.6
+      },
+      "status": "running",
+      "x": 0.12,
+      "y": 0.4
+    },
+    {
+      "group": "failure",
+      "id": "item-05",
+      "kind": "failure",
+      "label": "Failure rate",
+      "metadata": {
+        "owner": "failure",
+        "review_date": "2026-06-03",
+        "sample_size": 188
+      },
+      "metrics": {
+        "delta": 0.08,
+        "value": 0.66
+      },
+      "status": "blocked",
+      "x": 0.43,
+      "y": 0.4
+    },
+    {
+      "group": "retry",
+      "id": "item-06",
+      "kind": "retry",
+      "label": "Retry backlog",
+      "metadata": {
+        "owner": "retry",
+        "review_date": "2026-06-03",
+        "sample_size": 205
+      },
+      "metrics": {
+        "delta": -0.07,
+        "value": 0.72
+      },
+      "status": "error",
+      "x": 0.74,
+      "y": 0.4
+    },
+    {
+      "group": "capacity",
+      "id": "item-07",
+      "kind": "capacity",
+      "label": "Idle capacity",
+      "metadata": {
+        "owner": "capacity",
+        "review_date": "2026-06-03",
+        "sample_size": 222
+      },
+      "metrics": {
+        "delta": -0.03,
+        "value": 0.78
+      },
+      "status": "ok",
+      "x": 0.16,
+      "y": 0.64
+    },
+    {
+      "group": "sla",
+      "id": "item-08",
+      "kind": "sla",
+      "label": "SLA window",
+      "metadata": {
+        "owner": "sla",
+        "review_date": "2026-06-03",
+        "sample_size": 239
+      },
+      "metrics": {
+        "delta": 0,
+        "value": 0.84
+      },
+      "status": "warning",
+      "x": 0.47,
+      "y": 0.64
+    },
+    {
+      "group": "ownership",
+      "id": "item-09",
+      "kind": "ownership",
+      "label": "Escalation owner",
+      "metadata": {
+        "owner": "ownership",
+        "review_date": "2026-06-03",
+        "sample_size": 256
+      },
+      "metrics": {
+        "delta": 0.04,
+        "value": 0.9
+      },
+      "status": "success",
+      "x": 0.78,
+      "y": 0.64
+    }
+  ],
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Agent Fleet Space Scenario",
+  "initial_view": {
+    "mode": "overview",
+    "collapse_groups": true,
+    "max_nodes": 70,
+    "max_edges": 140
+  },
+  "visual": {
+    "goal": "Explain the agent fleet space by starting from the most important objects, then reveal supporting detail on demand.",
+    "audience": "reviewer",
+    "initial_focus_ids": [
+      "item-01",
+      "item-02",
+      "item-03"
+    ],
+    "hidden_detail_ids": [
+      "item-08",
+      "item-09"
+    ],
+    "emphasis": [
+      "first-view clarity",
+      "progressive detail",
+      "semantic focus"
+    ],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Start with the main actors",
+        "summary": "Show the core entities and the relationship the viewer should understand first.",
+        "focus_ids": [
+          "item-01",
+          "item-02",
+          "item-03"
+        ]
+      },
+      {
+        "id": "detail",
+        "title": "Reveal supporting detail",
+        "summary": "Use search, filters, or expansion for secondary evidence and implementation detail.",
+        "focus_ids": [
+          "item-03",
+          "item-04",
+          "item-05"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "note-1",
+        "target_id": "item-01",
+        "label": "Start here",
+        "summary": "Use item-01 as a visual anchor for the spatial agent fleet story.",
+        "priority": 1.0
+      },
+      {
+        "id": "note-2",
+        "target_id": "item-02",
+        "label": "Key relationship",
+        "summary": "Use item-02 as a visual anchor for the spatial agent fleet story.",
+        "priority": 0.82
+      }
+    ]
+  }
+}

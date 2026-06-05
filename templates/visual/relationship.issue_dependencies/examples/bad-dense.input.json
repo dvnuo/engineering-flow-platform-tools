@@ -1,0 +1,156 @@
+{
+  "edges": [
+    {
+      "from": "node-01",
+      "kind": "depends_on",
+      "label": "depends on",
+      "to": "node-02",
+      "weight": 1
+    },
+    {
+      "from": "node-02",
+      "kind": "depends_on",
+      "label": "emits",
+      "to": "node-03",
+      "weight": 2
+    },
+    {
+      "from": "node-03",
+      "kind": "depends_on",
+      "label": "validates",
+      "to": "node-04",
+      "weight": 3
+    },
+    {
+      "from": "node-04",
+      "kind": "depends_on",
+      "label": "hands off",
+      "to": "node-05",
+      "weight": 4
+    },
+    {
+      "from": "node-05",
+      "kind": "depends_on",
+      "label": "reports",
+      "to": "node-06",
+      "weight": 5
+    },
+    {
+      "from": "node-02",
+      "kind": "depends_on",
+      "label": "observes downstream",
+      "to": "node-06",
+      "weight": 2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node-01",
+      "kind": "jira",
+      "label": "Core",
+      "metadata": {
+        "owner": "epic",
+        "review_date": "2026-06-03",
+        "scenario": "Issue Dependency Graph"
+      },
+      "status": "running"
+    },
+    {
+      "id": "node-02",
+      "kind": "backend",
+      "label": "Policy",
+      "metadata": {
+        "owner": "backend",
+        "review_date": "2026-06-03",
+        "scenario": "Issue Dependency Graph"
+      },
+      "status": "success"
+    },
+    {
+      "id": "node-03",
+      "kind": "frontend",
+      "label": "Review",
+      "metadata": {
+        "owner": "frontend",
+        "review_date": "2026-06-03",
+        "scenario": "Issue Dependency Graph"
+      },
+      "status": "warning"
+    },
+    {
+      "id": "node-04",
+      "kind": "qa",
+      "label": "Risk",
+      "metadata": {
+        "owner": "qa",
+        "review_date": "2026-06-03",
+        "scenario": "Issue Dependency Graph"
+      },
+      "status": "ok"
+    },
+    {
+      "id": "node-05",
+      "kind": "release",
+      "label": "Release blocker",
+      "metadata": {
+        "owner": "blocker",
+        "review_date": "2026-06-03",
+        "scenario": "Issue Dependency Graph"
+      },
+      "status": "blocked"
+    },
+    {
+      "id": "node-06",
+      "kind": "product",
+      "label": "Product owner approval",
+      "metadata": {
+        "owner": "approval",
+        "review_date": "2026-06-03",
+        "scenario": "Issue Dependency Graph"
+      },
+      "status": "error"
+    },
+    {
+      "id": "orphan-0",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-1",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-2",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-3",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-4",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-5",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-6",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-7",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Issue Dependency Relationship Map Scenario"
+}

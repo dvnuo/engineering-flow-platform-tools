@@ -1,0 +1,208 @@
+{
+  "edges": [
+    {
+      "from": "node-01",
+      "kind": "depends_on",
+      "label": "depends on",
+      "to": "node-02",
+      "weight": 1
+    },
+    {
+      "from": "node-02",
+      "kind": "emits",
+      "label": "emits",
+      "to": "node-03",
+      "weight": 2
+    },
+    {
+      "from": "node-03",
+      "kind": "validates",
+      "label": "validates",
+      "to": "node-04",
+      "weight": 3
+    },
+    {
+      "from": "node-04",
+      "kind": "hands_off",
+      "label": "hands off",
+      "to": "node-05",
+      "weight": 4
+    },
+    {
+      "from": "node-05",
+      "kind": "reports",
+      "label": "reports",
+      "to": "node-06",
+      "weight": 5
+    },
+    {
+      "from": "node-02",
+      "kind": "observes",
+      "label": "observes downstream",
+      "to": "node-06",
+      "weight": 2
+    }
+  ],
+  "nodes": [
+    {
+      "group": "gateway",
+      "id": "node-01",
+      "kind": "portal",
+      "label": "Portal gateway",
+      "metadata": {
+        "owner": "gateway",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
+      },
+      "metrics": {
+        "confidence": 0.68,
+        "risk": 0.48
+      },
+      "status": "running"
+    },
+    {
+      "group": "service",
+      "id": "node-02",
+      "kind": "visual",
+      "label": "Visual CLI service",
+      "metadata": {
+        "owner": "service",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
+      },
+      "metrics": {
+        "confidence": 0.72,
+        "risk": 0.61
+      },
+      "status": "success"
+    },
+    {
+      "group": "registry",
+      "id": "node-03",
+      "kind": "template",
+      "label": "Template registry store",
+      "metadata": {
+        "owner": "registry",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
+      },
+      "metrics": {
+        "confidence": 0.76,
+        "risk": 0.74
+      },
+      "status": "warning"
+    },
+    {
+      "group": "worker",
+      "id": "node-04",
+      "kind": "render",
+      "label": "Render worker",
+      "metadata": {
+        "owner": "worker",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
+      },
+      "metrics": {
+        "confidence": 0.8,
+        "risk": 0.22
+      },
+      "status": "ok"
+    },
+    {
+      "group": "storage",
+      "id": "node-05",
+      "kind": "artifact",
+      "label": "Artifact directory",
+      "metadata": {
+        "owner": "storage",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
+      },
+      "metrics": {
+        "confidence": 0.84,
+        "risk": 0.35
+      },
+      "status": "blocked"
+    },
+    {
+      "group": "health",
+      "id": "node-06",
+      "kind": "health",
+      "label": "Health probe",
+      "metadata": {
+        "owner": "health",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Service Topology"
+      },
+      "metrics": {
+        "confidence": 0.88,
+        "risk": 0.48
+      },
+      "status": "error"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Service Topology Relationship Map Scenario",
+  "initial_view": {
+    "mode": "overview",
+    "collapse_groups": true,
+    "max_nodes": 70,
+    "max_edges": 140
+  },
+  "visual": {
+    "goal": "Explain the service topology relationship map by starting from the most important objects, then reveal supporting detail on demand.",
+    "audience": "reviewer",
+    "initial_focus_ids": [
+      "node-01",
+      "node-02",
+      "node-03"
+    ],
+    "hidden_detail_ids": [
+      "node-05->node-06",
+      "node-02->node-06"
+    ],
+    "emphasis": [
+      "first-view clarity",
+      "progressive detail",
+      "semantic focus"
+    ],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Start with the main actors",
+        "summary": "Show the core entities and the relationship the viewer should understand first.",
+        "focus_ids": [
+          "node-01",
+          "node-02",
+          "node-03"
+        ]
+      },
+      {
+        "id": "detail",
+        "title": "Reveal supporting detail",
+        "summary": "Use search, filters, or expansion for secondary evidence and implementation detail.",
+        "focus_ids": [
+          "node-03",
+          "node-04",
+          "node-05"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "note-1",
+        "target_id": "node-01",
+        "label": "Start here",
+        "summary": "Use node-01 as a visual anchor for the relationship service topology story.",
+        "priority": 1.0
+      },
+      {
+        "id": "note-2",
+        "target_id": "node-02",
+        "label": "Key relationship",
+        "summary": "Use node-02 as a visual anchor for the relationship service topology story.",
+        "priority": 0.82
+      }
+    ]
+  }
+}

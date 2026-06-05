@@ -1,0 +1,31 @@
+{
+  "schema": "efp.visual.template_quality_rules.v1",
+  "template_id": "uml.state_machine_3d",
+  "label": {
+    "max_overview_label_chars": 32,
+    "max_detail_label_chars": 64,
+    "require_summary_for_long_labels": true
+  },
+  "required_for_quality": [
+    {
+      "path": "$.visual.goal",
+      "severity": "warning",
+      "code": "visual_goal_missing",
+      "suggestion": "Add visual.goal to explain what the viewer should understand first."
+    },
+    {
+      "path": "$.visual.initial_focus_ids",
+      "severity": "warning",
+      "code": "visual_focus_missing",
+      "suggestion": "Add visual.initial_focus_ids for the 2-5 most important semantic ids."
+    },
+    {
+      "path": "$.visual.annotations",
+      "severity": "warning",
+      "code": "visual_annotations_missing",
+      "suggestion": "Add annotations for critical path, risk, boundary, or result."
+    }
+  ],
+  "semantic_rules": [],
+  "template_specific": {}
+}

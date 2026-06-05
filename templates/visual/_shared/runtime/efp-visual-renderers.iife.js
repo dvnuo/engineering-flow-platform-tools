@@ -266,7 +266,7 @@
   }
 
   function itemLabel(item) {
-    return String((item && (item.label || item.name || item.title || item.summary || item.text || item.id)) || "");
+    return String((item && (item.displayName || item.display_name || item.label || item.name || item.title || item.summary || item.text || item.id)) || "");
   }
 
   function itemMatchesQuery(item, query) {
@@ -302,15 +302,142 @@
 
   function readVisualHints(data) {
     var visual = data && data.visual && typeof data.visual === "object" ? data.visual : {};
+    var view = data && data.view && typeof data.view === "object" ? data.view : (data && data.initial_view && typeof data.initial_view === "object" ? data.initial_view : {});
+    var renderHints = data && data.renderHints && typeof data.renderHints === "object" ? data.renderHints : {};
     return {
       goal: String(visual.goal || ""),
       audience: String(visual.audience || ""),
-      initialFocusIDs: stringArray(visual.initial_focus_ids),
-      hiddenDetailIDs: stringArray(visual.hidden_detail_ids),
+      initialFocusIDs: stringArray(visual.initialFocusIds || visual.initial_focus_ids),
+      hiddenDetailIDs: stringArray(visual.hiddenDetailIds || visual.hidden_detail_ids),
       emphasis: stringArray(visual.emphasis),
-      narrativeSteps: Array.isArray(visual.narrative_steps) ? visual.narrative_steps : [],
-      annotations: Array.isArray(visual.annotations) ? visual.annotations : []
+      narrativeSteps: Array.isArray(visual.narrativeSteps) ? visual.narrativeSteps : (Array.isArray(visual.narrative_steps) ? visual.narrative_steps : []),
+      annotations: Array.isArray(visual.annotations) ? visual.annotations : [],
+      view: view,
+      renderHints: renderHints,
+      labelMode: String(view.labelMode || view.label_mode || renderHints.labelMode || renderHints.label_mode || "overview"),
+      showLegend: renderHints.showLegend !== false,
+      showAnnotations: renderHints.showAnnotations !== false
     };
+  }
+
+  function normalizeLabelPriorityValue(value) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      var n = value > 1 ? value / 100 : value;
+      if (n >= 0.85) return "always";
+      if (n >= 0.65) return "important";
+      if (n >= 0.35) return "normal";
+      if (n > 0) return "hover";
+      return "hidden";
+    }
+    var text = String(value || "").toLowerCase().trim();
+    if (text === "always" || text === "important" || text === "normal" || text === "hover" || text === "hidden") {
+      return text;
+    }
+    return "";
+  }
+
+  function normalizeVisibilityValue(value) {
+    var text = String(value || "").toLowerCase().trim();
+    if (text === "overview" || text === "normal" || text === "detail" || text === "hidden") return text;
+    if (text === "visible") return "overview";
+    if (text === "collapsed") return "detail";
+    return "";
+  }
+
+  function normalizeVisualQualityFields(item) {
+    item = item || {};
+    var presentation = item.presentation && typeof item.presentation === "object" ? item.presentation : {};
+    return {
+      id: String(item.id || ""),
+      label: itemLabel(item),
+      displayName: String(item.displayName || item.display_name || item.label || item.name || item.id || ""),
+      labelPriority: normalizeLabelPriorityValue(item.labelPriority !== undefined ? item.labelPriority : item.label_priority),
+      visibility: normalizeVisibilityValue(item.visibility),
+      importance: importanceValue(item, 0),
+      laneIndex: item.laneIndex !== undefined ? item.laneIndex : (item.lane_index !== undefined ? item.lane_index : presentation.laneIndex),
+      depth: item.depth !== undefined ? item.depth : presentation.depth,
+      color: item.color || presentation.color || "",
+      summary: String(item.summary || ""),
+      details: String(item.details || "")
+    };
+  }
+
+  function createLabelEngine(options) {
+    options = options || {};
+    var mode = String(options.mode || "overview").toLowerCase();
+    var focusIDs = options.focusIDs || {};
+    return {
+      shouldShow: function (item, fallback) {
+        var q = normalizeVisualQualityFields(item);
+        if (focusIDs[q.id]) return true;
+        if (q.visibility === "hidden") return false;
+        if (q.labelPriority === "hidden") return false;
+        if (mode === "minimal") return q.labelPriority === "always" || q.importance >= 0.85 || !!fallback;
+        if (mode === "overview") return q.labelPriority === "always" || q.labelPriority === "important" || q.importance >= 0.65 || !!fallback;
+        if (mode === "normal") return q.labelPriority !== "hover" || q.importance >= 0.55 || !!fallback;
+        if (mode === "detail") return q.visibility !== "hidden";
+        if (mode === "focus") return focusIDs[q.id] || !!fallback;
+        return !!fallback;
+      },
+      text: function (item, maxLength) {
+        var text = normalizeVisualQualityFields(item).label;
+        maxLength = maxLength || 42;
+        return text.length > maxLength ? text.slice(0, Math.max(8, maxLength - 1)) + "…" : text;
+      },
+      payload: function (item) {
+        var q = normalizeVisualQualityFields(item);
+        return { id: q.id, label: q.label, summary: q.summary, details: q.details, importance: q.importance, visibility: q.visibility, labelPriority: q.labelPriority, payload: item };
+      }
+    };
+  }
+
+  function createLegendOverlay(container, title, items, onToggle) {
+    if (!container || !items || !items.length) {
+      return null;
+    }
+    var legend = el("div", "visual-legend-overlay");
+    legend.appendChild(el("div", "visual-legend-title", title || "Legend"));
+    items.forEach(function (item) {
+      var id = String(item.id || item.value || item.label || "");
+      if (!id) return;
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "visual-legend-item";
+      var swatch = el("span", "visual-legend-swatch");
+      swatch.style.backgroundColor = item.color || "rgba(99, 169, 255, 0.85)";
+      button.appendChild(swatch);
+      button.appendChild(el("span", "", item.label || id));
+      button.addEventListener("click", function () {
+        button.classList.toggle("visual-legend-active");
+        if (onToggle) onToggle(id, button.classList.contains("visual-legend-active"));
+      });
+      legend.appendChild(button);
+    });
+    container.appendChild(legend);
+    return legend;
+  }
+
+  function createSelectionStore() {
+    return { selectedID: "", highlightIDs: {}, dimIDs: {}, focusIDs: {} };
+  }
+
+  function applyFocusState(entries, selectedID, relatedIDs) {
+    relatedIDs = relatedIDs || {};
+    (entries || []).forEach(function (entry) {
+      var id = entry && (entry.id || (entry.node && entry.node.id) || (entry.edge && entry.edge.id));
+      var element = entry && (entry.element || entry.node || entry.mesh);
+      if (!element || !element.classList) return;
+      var active = id === selectedID || relatedIDs[id];
+      element.classList.toggle("visual-focused", !!active);
+      element.classList.toggle("visual-dimmed", !!selectedID && !active);
+    });
+  }
+
+  function applyLabelMode(labels, engine) {
+    (labels || []).forEach(function (entry) {
+      if (!entry || !entry.element) return;
+      entry.element.hidden = !engine.shouldShow(entry.node || entry.edge || entry.payload, false);
+    });
   }
 
   function visualAnnotationsFor(hints, targetID) {
@@ -318,7 +445,7 @@
       return [];
     }
     return hints.annotations.filter(function (annotation) {
-      return annotation && String(annotation.target_id || "") === String(targetID);
+      return annotation && String(annotation.targetId || annotation.target_id || "") === String(targetID);
     }).sort(function (a, b) {
       return importanceValue(b, Number(b.priority || 0.5)) - importanceValue(a, Number(a.priority || 0.5));
     });
@@ -1027,6 +1154,8 @@
       var hoverID = "";
       var currentModel = { nodes: [], edges: [] };
       var currentFilters = {};
+      var labelEngine = createLabelEngine({ mode: state.visual.labelMode, focusIDs: state.visualFocus });
+      var selectionStore = createSelectionStore();
       var pointer = new THREE.Vector2();
       var raycaster = new THREE.Raycaster();
       var dragging = false;
@@ -1103,7 +1232,8 @@
       }
 
       function addLabel(node, mesh) {
-        var label = el("div", "visual-three-label" + (node.__group ? " visual-three-group-label" : "") + (state.visualFocus[node.id] ? " visual-three-focus-label" : ""), displayNodeLabel(node));
+        var label = el("div", "visual-three-label" + (node.__group ? " visual-three-group-label" : "") + (state.visualFocus[node.id] ? " visual-three-focus-label" : ""), labelEngine.text(node, node.__group ? 54 : 38));
+        label.hidden = !labelEngine.shouldShow(node, node.__group);
         labelLayer.appendChild(label);
         labels.push({ element: label, mesh: mesh, node: node });
       }
@@ -1876,6 +2006,7 @@
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
     var profile = decorateStage(shell.stage, manifest, data, preset);
     var state = buildGraphState(data, manifest);
+    var labelEngine = createLabelEngine({ mode: state.visual.labelMode, focusIDs: state.visualFocus });
     var threeGraph = isPrimaryThreeGraph(manifest, preset, profile) ? createThreeGraphScene(shell.stage, manifest, state, preset, profile, shell.inspector, function () {
       rebuildGraph();
     }) : null;
@@ -1903,6 +2034,14 @@
     shell.toolbar.appendChild(replay);
     shell.toolbar.appendChild(exportBtn);
     shell.toolbar.appendChild(countBadge);
+    if (state.visual.showLegend) {
+      createLegendOverlay(shell.stage, "Kinds", uniqueValues(state.rawNodes.concat(state.groupOrder.map(function (id) { return state.groups[id]; })), "kind").map(function (kind, index) {
+        return { id: kind, label: kind, color: colorStringFromHex(phaseColor(kind, index)) };
+      }), function (kind, active) {
+        kindFilter.value = active ? kind : "";
+        rebuildGraph();
+      });
+    }
 
     var width = Math.max(900, shell.stage.clientWidth || 900);
     var height = Math.max(620, shell.stage.clientHeight || 620);
@@ -1977,7 +2116,7 @@
         if (profile.particles && (preset === "flow_particles" || preset === "pipeline_flow" || preset === "sankey_3d" || preset === "graph_3d" || preset === "constellation")) {
           addFlowParticle(canvas, path, index, edge.status);
         }
-        if (edge.label && (currentModel.edges.length <= 80 || importanceValue(edge, 0) >= 0.65 || edge.aggregated)) {
+        if (edge.label && labelEngine.shouldShow(edge, currentModel.edges.length <= 40 || edge.aggregated)) {
           var edgeLabel = svg("text", { class: "visual-edge-label", x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 5 });
           edgeLabel.textContent = runtime.safeText(edge.label);
           canvas.appendChild(edgeLabel);
@@ -2016,9 +2155,9 @@
           sign.textContent = state.collapsed[node.id] ? hiddenText : "expanded";
           group.appendChild(sign);
         }
-        if (currentModel.nodes.length <= 60 || node.__group || importanceValue(node, 0) >= 0.7) {
+        if (labelEngine.shouldShow(node, currentModel.nodes.length <= 28 || node.__group)) {
           var label = svg("text", { x: pos.x, y: pos.y + (node.__group ? 52 : 46), "text-anchor": "middle" });
-          label.textContent = runtime.safeText(itemLabel(node));
+          label.textContent = runtime.safeText(labelEngine.text(node, 42));
           group.appendChild(label);
         }
         visualAnnotationsFor(state.visual, node.id).forEach(function (annotation, noteIndex) {
@@ -2434,11 +2573,11 @@
       layer.appendChild(renderer.domElement);
       var labelLayer = el("div", "visual-uml-label-layer");
       layer.appendChild(labelLayer);
-      if (phases.length) {
+      if (visual.showLegend && phases.length) {
         var legend = el("div", "visual-uml-phase-legend");
         legend.appendChild(el("div", "visual-uml-phase-title", "Phases"));
         phases.forEach(function (phase, index) {
-          var color = sequenceColor(phase.id || phase.label || phase.name, index);
+          var color = colorValue(phase.color, sequenceColor(phase.id || phase.label || phase.name, index));
           var item = el("div", "visual-uml-phase-item");
           var swatch = el("span", "visual-uml-phase-swatch");
           swatch.style.backgroundColor = colorStringFromHex(color);
@@ -2487,6 +2626,8 @@
         labels.push({ node: label, world: world.clone(), payload: payload });
         return label;
       }
+
+      var sequenceLabelEngine = createLabelEngine({ mode: visual.labelMode, focusIDs: visualFocus });
 
       function sequenceColor(value, index) {
         var entry = phaseByID[String(value || "")];

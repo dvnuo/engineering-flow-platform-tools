@@ -1,0 +1,156 @@
+{
+  "edges": [
+    {
+      "from": "codebase-ownership-map-node-1",
+      "kind": "depends_on",
+      "label": "feeds",
+      "to": "codebase-ownership-map-node-2",
+      "weight": 2
+    },
+    {
+      "from": "codebase-ownership-map-node-2",
+      "kind": "depends_on",
+      "label": "checks",
+      "to": "codebase-ownership-map-node-3",
+      "weight": 3
+    },
+    {
+      "from": "codebase-ownership-map-node-3",
+      "kind": "depends_on",
+      "label": "routes",
+      "to": "codebase-ownership-map-node-4",
+      "weight": 2
+    },
+    {
+      "from": "codebase-ownership-map-node-4",
+      "kind": "depends_on",
+      "label": "impacts",
+      "to": "codebase-ownership-map-node-5",
+      "weight": 4
+    },
+    {
+      "from": "codebase-ownership-map-node-5",
+      "kind": "depends_on",
+      "label": "reports",
+      "to": "codebase-ownership-map-node-6",
+      "weight": 2
+    },
+    {
+      "from": "codebase-ownership-map-node-2",
+      "kind": "depends_on",
+      "label": "observes",
+      "to": "codebase-ownership-map-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "id": "codebase-ownership-map-node-1",
+      "kind": "ownership",
+      "label": "Core",
+      "metadata": {
+        "detail": "Ownership Map signal 1",
+        "owner": "source",
+        "template_id": "codebase.ownership_map"
+      },
+      "status": "success"
+    },
+    {
+      "id": "codebase-ownership-map-node-2",
+      "kind": "map",
+      "label": "Policy",
+      "metadata": {
+        "detail": "Ownership Map signal 2",
+        "owner": "test",
+        "template_id": "codebase.ownership_map"
+      },
+      "status": "blocked"
+    },
+    {
+      "id": "codebase-ownership-map-node-3",
+      "kind": "release",
+      "label": "Review",
+      "metadata": {
+        "detail": "Ownership Map signal 3",
+        "owner": "release",
+        "template_id": "codebase.ownership_map"
+      },
+      "status": "error"
+    },
+    {
+      "id": "codebase-ownership-map-node-4",
+      "kind": "source",
+      "label": "Risk",
+      "metadata": {
+        "detail": "Ownership Map signal 4",
+        "owner": "source",
+        "template_id": "codebase.ownership_map"
+      },
+      "status": "running"
+    },
+    {
+      "id": "codebase-ownership-map-node-5",
+      "kind": "ownership",
+      "label": "Ownership Map Risk",
+      "metadata": {
+        "detail": "Ownership Map signal 5",
+        "owner": "test",
+        "template_id": "codebase.ownership_map"
+      },
+      "status": "ok"
+    },
+    {
+      "id": "codebase-ownership-map-node-6",
+      "kind": "map",
+      "label": "Map Ownership Outcome",
+      "metadata": {
+        "detail": "Ownership Map signal 6",
+        "owner": "release",
+        "template_id": "codebase.ownership_map"
+      },
+      "status": "warning"
+    },
+    {
+      "id": "orphan-0",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-1",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-2",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-3",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-4",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-5",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-6",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-7",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Ownership Hierarchy Map Scenario"
+}

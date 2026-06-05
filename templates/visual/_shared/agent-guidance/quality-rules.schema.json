@@ -1,0 +1,32 @@
+{
+  "schema": "efp.visual.template_quality_rules.schema.v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "template_id",
+    "label",
+    "required_for_quality",
+    "semantic_rules",
+    "template_specific"
+  ],
+  "properties": {
+    "schema": {
+      "const": "efp.visual.template_quality_rules.v1"
+    },
+    "template_id": {
+      "type": "string"
+    },
+    "label": {
+      "type": "object"
+    },
+    "required_for_quality": {
+      "type": "array"
+    },
+    "semantic_rules": {
+      "type": "array"
+    },
+    "template_specific": {
+      "type": "object"
+    }
+  }
+}

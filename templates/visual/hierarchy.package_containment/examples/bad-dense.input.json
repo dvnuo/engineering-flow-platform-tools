@@ -1,0 +1,156 @@
+{
+  "edges": [
+    {
+      "from": "foundation-radial-tree-node-1",
+      "kind": "depends_on",
+      "label": "feeds",
+      "to": "foundation-radial-tree-node-2",
+      "weight": 2
+    },
+    {
+      "from": "foundation-radial-tree-node-2",
+      "kind": "depends_on",
+      "label": "checks",
+      "to": "foundation-radial-tree-node-3",
+      "weight": 3
+    },
+    {
+      "from": "foundation-radial-tree-node-3",
+      "kind": "depends_on",
+      "label": "routes",
+      "to": "foundation-radial-tree-node-4",
+      "weight": 2
+    },
+    {
+      "from": "foundation-radial-tree-node-4",
+      "kind": "depends_on",
+      "label": "impacts",
+      "to": "foundation-radial-tree-node-5",
+      "weight": 4
+    },
+    {
+      "from": "foundation-radial-tree-node-5",
+      "kind": "depends_on",
+      "label": "reports",
+      "to": "foundation-radial-tree-node-6",
+      "weight": 2
+    },
+    {
+      "from": "foundation-radial-tree-node-2",
+      "kind": "depends_on",
+      "label": "observes",
+      "to": "foundation-radial-tree-node-6",
+      "weight": 1
+    }
+  ],
+  "nodes": [
+    {
+      "id": "foundation-radial-tree-node-1",
+      "kind": "radial",
+      "label": "Core",
+      "metadata": {
+        "detail": "Radial Tree signal 1",
+        "owner": "input",
+        "template_id": "foundation.radial_tree"
+      },
+      "status": "success"
+    },
+    {
+      "id": "foundation-radial-tree-node-2",
+      "kind": "tree",
+      "label": "Policy",
+      "metadata": {
+        "detail": "Radial Tree signal 2",
+        "owner": "layout",
+        "template_id": "foundation.radial_tree"
+      },
+      "status": "blocked"
+    },
+    {
+      "id": "foundation-radial-tree-node-3",
+      "kind": "output",
+      "label": "Review",
+      "metadata": {
+        "detail": "Radial Tree signal 3",
+        "owner": "output",
+        "template_id": "foundation.radial_tree"
+      },
+      "status": "error"
+    },
+    {
+      "id": "foundation-radial-tree-node-4",
+      "kind": "input",
+      "label": "Risk",
+      "metadata": {
+        "detail": "Radial Tree signal 4",
+        "owner": "input",
+        "template_id": "foundation.radial_tree"
+      },
+      "status": "running"
+    },
+    {
+      "id": "foundation-radial-tree-node-5",
+      "kind": "radial",
+      "label": "Radial Tree Risk",
+      "metadata": {
+        "detail": "Radial Tree signal 5",
+        "owner": "layout",
+        "template_id": "foundation.radial_tree"
+      },
+      "status": "ok"
+    },
+    {
+      "id": "foundation-radial-tree-node-6",
+      "kind": "tree",
+      "label": "Tree Radial Outcome",
+      "metadata": {
+        "detail": "Radial Tree signal 6",
+        "owner": "output",
+        "template_id": "foundation.radial_tree"
+      },
+      "status": "warning"
+    },
+    {
+      "id": "orphan-0",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-1",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-2",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-3",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-4",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-5",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-6",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-7",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    }
+  ],
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Package Containment Hierarchy Scenario"
+}

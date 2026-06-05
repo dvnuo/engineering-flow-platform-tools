@@ -1,0 +1,236 @@
+{
+  "edges": [
+    {
+      "from": "node-01",
+      "kind": "depends_on",
+      "label": "depends on",
+      "to": "node-02",
+      "weight": 1
+    },
+    {
+      "from": "node-02",
+      "kind": "depends_on",
+      "label": "emits",
+      "to": "node-03",
+      "weight": 2
+    },
+    {
+      "from": "node-03",
+      "kind": "depends_on",
+      "label": "validates",
+      "to": "node-04",
+      "weight": 3
+    },
+    {
+      "from": "node-04",
+      "kind": "depends_on",
+      "label": "hands off",
+      "to": "node-05",
+      "weight": 4
+    },
+    {
+      "from": "node-05",
+      "kind": "depends_on",
+      "label": "reports",
+      "to": "node-06",
+      "weight": 5
+    },
+    {
+      "from": "node-02",
+      "kind": "depends_on",
+      "label": "observes downstream",
+      "to": "node-06",
+      "weight": 2
+    }
+  ],
+  "events": [
+    {
+      "id": "event-01",
+      "kind": "producer",
+      "label": "Producer emitted session.updated",
+      "metadata": {
+        "sequence": 1,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-01",
+      "status": "running",
+      "summary": "Producer emitted session.updated during Runtime Event Bus Flow",
+      "time": "2026-06-03T09:05:00Z"
+    },
+    {
+      "id": "event-02",
+      "kind": "broker",
+      "label": "Broker routed event",
+      "metadata": {
+        "sequence": 2,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-02",
+      "status": "success",
+      "summary": "Broker routed event during Runtime Event Bus Flow",
+      "time": "2026-06-03T09:12:00Z"
+    },
+    {
+      "id": "event-03",
+      "kind": "render",
+      "label": "Render consumer applied update",
+      "metadata": {
+        "sequence": 3,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-03",
+      "status": "warning",
+      "summary": "Render consumer applied update during Runtime Event Bus Flow",
+      "time": "2026-06-03T09:19:00Z"
+    },
+    {
+      "id": "event-04",
+      "kind": "audit",
+      "label": "Audit consumer stored record",
+      "metadata": {
+        "sequence": 4,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-04",
+      "status": "running",
+      "summary": "Audit consumer stored record during Runtime Event Bus Flow",
+      "time": "2026-06-03T09:26:00Z"
+    },
+    {
+      "id": "event-05",
+      "kind": "dead",
+      "label": "Dead letter queue stayed empty",
+      "metadata": {
+        "sequence": 5,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-05",
+      "status": "error",
+      "summary": "Dead letter queue stayed empty during Runtime Event Bus Flow",
+      "time": "2026-06-03T09:33:00Z"
+    },
+    {
+      "id": "event-06",
+      "kind": "metrics",
+      "label": "Metrics sink recorded lag",
+      "metadata": {
+        "sequence": 6,
+        "source": "local visual smoke"
+      },
+      "node_id": "node-06",
+      "status": "success",
+      "summary": "Metrics sink recorded lag during Runtime Event Bus Flow",
+      "time": "2026-06-03T09:40:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node-01",
+      "kind": "session",
+      "label": "Core",
+      "metadata": {
+        "owner": "producer",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Event Bus Flow"
+      },
+      "status": "running"
+    },
+    {
+      "id": "node-02",
+      "kind": "event",
+      "label": "Policy",
+      "metadata": {
+        "owner": "broker",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Event Bus Flow"
+      },
+      "status": "success"
+    },
+    {
+      "id": "node-03",
+      "kind": "render",
+      "label": "Review",
+      "metadata": {
+        "owner": "consumer",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Event Bus Flow"
+      },
+      "status": "warning"
+    },
+    {
+      "id": "node-04",
+      "kind": "audit",
+      "label": "Risk",
+      "metadata": {
+        "owner": "audit",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Event Bus Flow"
+      },
+      "status": "ok"
+    },
+    {
+      "id": "node-05",
+      "kind": "dead",
+      "label": "Dead letter queue",
+      "metadata": {
+        "owner": "dead-letter",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Event Bus Flow"
+      },
+      "status": "blocked"
+    },
+    {
+      "id": "node-06",
+      "kind": "metrics",
+      "label": "Metrics sink",
+      "metadata": {
+        "owner": "metrics",
+        "review_date": "2026-06-03",
+        "scenario": "Runtime Event Bus Flow"
+      },
+      "status": "error"
+    },
+    {
+      "id": "orphan-0",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-1",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-2",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-3",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-4",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-5",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-6",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-7",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Runtime Data Flow Scenario"
+}

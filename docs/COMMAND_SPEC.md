@@ -517,3 +517,23 @@ Optional future/P1:
 - `schema <command> --json` returns usage, risk, arguments, flags, examples, and required fields.
 - Destructive commands require `--yes`.
 - Write commands support `--dry-run`.
+
+### visual template guide
+
+`visual template guide <template-id> --json` returns the selected template's agent authoring guide.
+
+The JSON `data` object includes:
+
+- `template_id`
+- `requested_id`
+- `canonical_id`
+- `guide_path`
+- `agent_guide_available`
+- `raw_markdown`
+- `guide` parsed by section
+- `guide_summary`
+- `missing_guide_sections`
+
+If a guide is missing, the command returns `ok=true` with `agent_guide_available=false` and a warning string so agents can fall back to schema and shared guidance without crashing.
+
+`visual inspect-input` warnings include `code`, `severity`, `path`, `message`, `suggestion`, `auto_fix_hint`, and optional `details`.

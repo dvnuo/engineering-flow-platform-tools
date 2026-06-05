@@ -189,3 +189,20 @@ confluence page get --id 123 --json
 ```
 
 Successful responses contain `ok=true` and `data`. Failed responses contain `ok=false`, `error.code`, and `error.message`; many failures also include `error.hint`.
+
+## Template-Level Authoring Workflow
+
+For visual generation, use this loop:
+
+1. `visual template categories --json`
+2. `visual template list --category <category> --json`
+3. `visual template get <template-id> --json`
+4. `visual template schema <template-id> --json`
+5. `visual template guide <template-id> --json`
+6. Write semantic input JSON. Do not generate JavaScript.
+7. `visual inspect-input --template <template-id> --input <input.json> --json`
+8. Revise JSON using warning `suggestion` and `auto_fix_hint`.
+9. `visual render --template <template-id> --input <input.json> --out <dir> --json`
+10. Return `data.artifact.entrypoint` to the user.
+
+Never write input JSON before reading the selected template guide. The guide is where template-specific construction rules live.

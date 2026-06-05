@@ -125,7 +125,7 @@ func TestVisualCommandsJSONContract(t *testing.T) {
 		m := objectMap(t, item)
 		names[m["name"].(string)] = true
 	}
-	for _, name := range []string{"render", "inspect-input", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
+	for _, name := range []string{"render", "inspect-input", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.guide", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
 		if !names[name] {
 			t.Fatalf("missing visual command %s in %#v", name, names)
 		}
@@ -222,6 +222,109 @@ func TestVisualTemplateDiscoveryCommands(t *testing.T) {
 	filtered := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--schema-kind", "uml_sequence_v1", "--renderer", "offline.uml.sequence.3d.v1", "--json")
 	if objectMap(t, filtered["data"])["matched_count"].(float64) != 1 {
 		t.Fatalf("expected one UML sequence match: %#v", filtered)
+	}
+}
+
+func TestVisualTemplateAgentGuideCommandAndMetadata(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+	guide := runVisualOK(t, "template", "guide", "uml.sequence_3d", "--template-dir", templateDir, "--json")
+	guideData := objectMap(t, guide["data"])
+	if guideData["template_id"] != "uml.sequence_3d" || guideData["agent_guide_available"] != true {
+		t.Fatalf("unexpected guide response: %#v", guideData)
+	}
+	if !strings.Contains(guideData["raw_markdown"].(string), "participant = semantic lifeline") {
+		t.Fatalf("uml.sequence_3d guide missing sequence semantic rules")
+	}
+	sections := objectMap(t, guideData["guide"])
+	for _, section := range []string{"when_to_use_this_template", "semantic_model", "required_construction_rules", "recommended_fields", "visual_encoding_rules", "common_mistakes_to_avoid", "quality_checklist_before_render", "minimal_good_example"} {
+		if strings.TrimSpace(sections[section].(string)) == "" {
+			t.Fatalf("guide section %s missing: %#v", section, sections)
+		}
+	}
+	get := runVisualOK(t, "template", "get", "uml.sequence_3d", "--template-dir", templateDir, "--json")
+	getData := objectMap(t, get["data"])
+	if getData["agent_guide_available"] != true || getData["quality_rules_available"] != true {
+		t.Fatalf("template get did not expose guide/rules metadata: %#v", getData)
+	}
+	schema := runVisualOK(t, "template", "schema", "uml.sequence_3d", "--template-dir", templateDir, "--json")
+	schemaData := objectMap(t, schema["data"])
+	if schemaData["agent_guide_available"] != true || len(schemaData["agent_guide_summary"].([]any)) == 0 {
+		t.Fatalf("template schema did not expose guide summary: %#v", schemaData)
+	}
+	cmdSchema := runVisualOK(t, "schema", "template.guide", "--json")
+	if objectMap(t, cmdSchema["data"])["command"] != "template.guide" {
+		t.Fatalf("template.guide command schema missing: %#v", cmdSchema)
+	}
+}
+
+func TestVisualAllTemplatesHaveAgentGuidesAndQualityRules(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+	registry := loadRegistry(t, templateDir)
+	for _, entry := range registry.Templates {
+		t.Run(entry.ID, func(t *testing.T) {
+			guidePath := filepath.Join(templateDir, entry.ID, "agent-guide.md")
+			guide := mustRead(t, guidePath)
+			for _, want := range []string{"## When to use this template", "## Semantic model", "## Required construction rules", "## Recommended fields", "## Visual encoding rules", "## Common mistakes to avoid", "## Quality checklist before render", "## Minimal good example", "common-visual-quality.md"} {
+				if !strings.Contains(guide, want) {
+					t.Fatalf("%s guide missing %q", entry.ID, want)
+				}
+			}
+			rules := loadJSONMap(t, filepath.Join(templateDir, entry.ID, "quality.rules.json"))
+			if rules["schema"] != "efp.visual.template_quality_rules.v1" || rules["template_id"] != entry.ID {
+				t.Fatalf("%s quality rules invalid: %#v", entry.ID, rules)
+			}
+			for _, example := range []string{"good-small.input.json", "good-medium.input.json", "bad-dense.input.json", "fixed-dense.input.json"} {
+				if _, err := os.Stat(filepath.Join(templateDir, entry.ID, "examples", example)); err != nil {
+					t.Fatalf("%s missing example %s: %v", entry.ID, example, err)
+				}
+			}
+		})
+	}
+	for _, shared := range []string{"common-visual-quality.md", "agent-guide.schema.json", "quality-rules.schema.json"} {
+		if _, err := os.Stat(filepath.Join(templateDir, "_shared", "agent-guidance", shared)); err != nil {
+			t.Fatalf("missing shared guidance file %s: %v", shared, err)
+		}
+	}
+}
+
+func TestVisualInspectInputTemplateQualityRulesWarnings(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+	badSeq := runVisualOK(t, "inspect-input", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "uml.sequence_3d", "examples", "bad-dense.input.json"), "--json")
+	badSeqCodes := warningCodeSet(t, badSeq)
+	for _, code := range []string{"participant_display_name_missing", "phase_color_missing", "message_label_priority_missing", "visual_guidance_missing", "message_phase_missing", "message_curve_missing"} {
+		if !badSeqCodes[code] {
+			t.Fatalf("bad sequence missing warning %s in %#v", code, badSeqCodes)
+		}
+	}
+	goodSeq := runVisualOK(t, "inspect-input", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "uml.sequence_3d", "examples", "game-session-flow.input.json"), "--json")
+	if len(warningCodes(t, goodSeq)) >= len(warningCodes(t, badSeq)) {
+		t.Fatalf("good sequence should have fewer warnings than bad sequence")
+	}
+	for _, forbidden := range []string{"visual_guidance_unknown_refs", "message_phase_missing", "unknown_participant_ref", "duplicate_order"} {
+		if warningCodeSet(t, goodSeq)[forbidden] {
+			t.Fatalf("good sequence unexpectedly has warning %s", forbidden)
+		}
+	}
+
+	badGraph := runVisualOK(t, "inspect-input", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "relationship.dependency_graph", "examples", "dependency-dense-bad.input.json"), "--json")
+	badGraphCodes := warningCodeSet(t, badGraph)
+	for _, code := range []string{"ungrouped_nodes_high", "dominant_edge_kind", "edge_visibility_missing", "node_importance_missing", "label_too_long"} {
+		if !badGraphCodes[code] {
+			t.Fatalf("bad graph missing warning %s in %#v", code, badGraphCodes)
+		}
+	}
+	for _, w := range objectMap(t, badGraph["data"])["warnings"].([]any) {
+		warning := objectMap(t, w)
+		if strings.TrimSpace(warning["suggestion"].(string)) == "" {
+			t.Fatalf("warning missing machine-readable suggestion: %#v", warning)
+		}
+	}
+	fixedGraph := runVisualOK(t, "inspect-input", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "relationship.dependency_graph", "examples", "dependency-dense-fixed.input.json"), "--json")
+	if len(warningCodes(t, fixedGraph)) >= len(warningCodes(t, badGraph)) {
+		t.Fatalf("fixed graph should have fewer warnings than bad graph")
 	}
 }
 
@@ -461,7 +564,7 @@ func TestVisualSmokeScriptsUseSemanticTemplates(t *testing.T) {
 	sh := mustRead(t, filepath.Join(root, "scripts", "smoke.sh"))
 	ps := mustRead(t, filepath.Join(root, "scripts", "smoke.ps1"))
 	for _, text := range []string{sh, ps} {
-		for _, want := range []string{"uml.sequence_3d", "relationship.dependency_graph", "temporal.event_trace", "template doctor", "template schema"} {
+		for _, want := range []string{"uml.sequence_3d", "relationship.dependency_graph", "temporal.event_trace", "template doctor", "template schema", "template guide"} {
 			if !strings.Contains(text, want) {
 				t.Fatalf("smoke script missing %s", want)
 			}
@@ -690,6 +793,30 @@ func decodeJSONFile(t *testing.T, path string, out any) {
 func semanticCategoryCountsHas(category string) bool {
 	_, ok := semanticCategoryCounts[category]
 	return ok
+}
+
+func warningCodes(t *testing.T, obj map[string]any) []string {
+	t.Helper()
+	data := objectMap(t, obj["data"])
+	raw, ok := data["warnings"].([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(raw))
+	for _, item := range raw {
+		warning := objectMap(t, item)
+		out = append(out, warning["code"].(string))
+	}
+	return out
+}
+
+func warningCodeSet(t *testing.T, obj map[string]any) map[string]bool {
+	t.Helper()
+	out := map[string]bool{}
+	for _, code := range warningCodes(t, obj) {
+		out[code] = true
+	}
+	return out
 }
 
 func objectMap(t *testing.T, value any) map[string]any {

@@ -1,0 +1,137 @@
+{
+  "schema": "efp.visual.input.uml.component_deployment.v1",
+  "title": "Portal Runtime Deployment Components",
+  "deployments": [
+    {
+      "id": "browser",
+      "label": "User Browser",
+      "kind": "client",
+      "status": "success"
+    },
+    {
+      "id": "portal-node",
+      "label": "Portal Node",
+      "kind": "server",
+      "status": "success",
+      "metrics": {
+        "cpu": 0.42
+      }
+    },
+    {
+      "id": "runtime-vm",
+      "label": "Runtime VM",
+      "kind": "worker",
+      "status": "warning"
+    },
+    {
+      "id": "artifact-store",
+      "label": "Artifact Store",
+      "kind": "storage",
+      "status": "success"
+    }
+  ],
+  "components": [
+    {
+      "id": "portal-ui",
+      "label": "Portal UI",
+      "kind": "component",
+      "deployment_id": "browser",
+      "interfaces": [
+        "artifact viewer"
+      ],
+      "responsibilities": [
+        "render visual output"
+      ],
+      "status": "success"
+    },
+    {
+      "id": "portal-api",
+      "label": "Portal API",
+      "kind": "component",
+      "deployment_id": "portal-node",
+      "interfaces": [
+        "session proxy",
+        "artifact proxy"
+      ],
+      "responsibilities": [
+        "route visual artifacts"
+      ],
+      "status": "success"
+    },
+    {
+      "id": "codex-runner",
+      "label": "Codex Runner",
+      "kind": "component",
+      "deployment_id": "runtime-vm",
+      "interfaces": [
+        "command execution"
+      ],
+      "responsibilities": [
+        "generate input json"
+      ],
+      "status": "warning"
+    },
+    {
+      "id": "visual-cli",
+      "label": "Visual CLI",
+      "kind": "component",
+      "deployment_id": "runtime-vm",
+      "interfaces": [
+        "render",
+        "inspect-input",
+        "doctor"
+      ],
+      "responsibilities": [
+        "validate and render templates"
+      ],
+      "status": "success"
+    },
+    {
+      "id": "static-artifact",
+      "label": "Static Artifact",
+      "kind": "component",
+      "deployment_id": "artifact-store",
+      "interfaces": [
+        "index.html",
+        "data.js"
+      ],
+      "responsibilities": [
+        "offline visual output"
+      ],
+      "status": "success"
+    }
+  ],
+  "links": [
+    {
+      "from": "browser",
+      "to": "portal-api",
+      "kind": "proxy",
+      "protocol": "portal proxy",
+      "label": "view artifact"
+    },
+    {
+      "from": "portal-api",
+      "to": "codex-runner",
+      "kind": "control",
+      "label": "start run"
+    },
+    {
+      "from": "codex-runner",
+      "to": "visual-cli",
+      "kind": "exec",
+      "label": "visual render"
+    },
+    {
+      "from": "visual-cli",
+      "to": "static-artifact",
+      "kind": "writes",
+      "label": "offline files"
+    },
+    {
+      "from": "portal-api",
+      "to": "static-artifact",
+      "kind": "serves",
+      "label": "relative static site"
+    }
+  ]
+}

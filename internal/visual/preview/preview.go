@@ -2,12 +2,14 @@ package preview
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 
+	"engineering-flow-platform-tools/internal/visual/authoring"
 	"engineering-flow-platform-tools/internal/visual/manifest"
 	"engineering-flow-platform-tools/internal/visual/metadata"
 	visualschema "engineering-flow-platform-tools/internal/visual/schema"
@@ -21,14 +23,18 @@ type Options struct {
 }
 
 type Result struct {
-	TemplateID      string                    `json:"template_id"`
-	TemplateDir     string                    `json:"template_dir"`
-	InputSummary    visualschema.InputSummary `json:"input_summary"`
-	QualityScore    int                       `json:"quality_score"`
-	Summary         Summary                   `json:"summary"`
-	Warnings        []Warning                 `json:"warnings"`
-	Recommendations Recommendations           `json:"recommendations"`
-	VisualDesign    manifest.VisualDesign     `json:"visual_design"`
+	TemplateID            string                    `json:"template_id"`
+	TemplateDir           string                    `json:"template_dir"`
+	AgentGuideAvailable   bool                      `json:"agent_guide_available"`
+	AgentGuidePath        string                    `json:"agent_guide_path,omitempty"`
+	QualityRulesAvailable bool                      `json:"quality_rules_available"`
+	QualityRulesPath      string                    `json:"quality_rules_path,omitempty"`
+	InputSummary          visualschema.InputSummary `json:"input_summary"`
+	QualityScore          int                       `json:"quality_score"`
+	Summary               Summary                   `json:"summary"`
+	Warnings              []Warning                 `json:"warnings"`
+	Recommendations       Recommendations           `json:"recommendations"`
+	VisualDesign          manifest.VisualDesign     `json:"visual_design"`
 }
 
 type Summary struct {
@@ -89,11 +95,14 @@ type Summary struct {
 }
 
 type Warning struct {
-	Code     string   `json:"code"`
-	Severity string   `json:"severity,omitempty"`
-	Message  string   `json:"message"`
-	Hint     string   `json:"hint"`
-	Details  []string `json:"details,omitempty"`
+	Code        string         `json:"code"`
+	Severity    string         `json:"severity,omitempty"`
+	Path        string         `json:"path,omitempty"`
+	Message     string         `json:"message"`
+	Hint        string         `json:"hint,omitempty"`
+	Suggestion  string         `json:"suggestion"`
+	AutoFixHint map[string]any `json:"auto_fix_hint,omitempty"`
+	Details     []string       `json:"details,omitempty"`
 }
 
 type Recommendations struct {
@@ -134,24 +143,37 @@ func Preview(opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	guide, err := authoring.LoadGuide(opts.TemplateDir, entry, false)
+	if err != nil {
+		return Result{}, err
+	}
+	rules, rulesAvailable, rulesPath, err := authoring.LoadQualityRules(opts.TemplateDir, entry)
+	if err != nil {
+		return Result{}, err
+	}
 	parsed, err := visualschema.ValidateInput(tpl.InputSchemaKind, raw, tpl.Limits)
 	if err != nil {
 		return Result{}, err
 	}
-	quality, summary, warnings, recommendations := Analyze(tpl, parsed.Data)
+	quality, summary, warnings, recommendations := Analyze(tpl, parsed.Data, rules)
+	warnings = normalizeWarnings(warnings)
 	return Result{
-		TemplateID:      tpl.ID,
-		TemplateDir:     opts.TemplateDir,
-		InputSummary:    parsed.Summary,
-		QualityScore:    quality,
-		Summary:         summary,
-		Warnings:        warnings,
-		Recommendations: recommendations,
-		VisualDesign:    tpl.VisualDesign,
+		TemplateID:            tpl.ID,
+		TemplateDir:           opts.TemplateDir,
+		AgentGuideAvailable:   guide.Available,
+		AgentGuidePath:        guide.GuidePath,
+		QualityRulesAvailable: rulesAvailable,
+		QualityRulesPath:      rulesPath,
+		InputSummary:          parsed.Summary,
+		QualityScore:          quality,
+		Summary:               summary,
+		Warnings:              warnings,
+		Recommendations:       recommendations,
+		VisualDesign:          tpl.VisualDesign,
 	}, nil
 }
 
-func Analyze(tpl manifest.TemplateManifest, data map[string]any) (int, Summary, []Warning, Recommendations) {
+func Analyze(tpl manifest.TemplateManifest, data map[string]any, rules authoring.QualityRules) (int, Summary, []Warning, Recommendations) {
 	design := tpl.VisualDesign
 	if design.InitialView == "" {
 		design.InitialView = "overview"
@@ -211,6 +233,7 @@ func Analyze(tpl manifest.TemplateManifest, data map[string]any) (int, Summary, 
 	case "uml_component_deployment_v1":
 		quality = analyzeSemanticCount(data, design, &summary, &warnings, "components", "links", "uml_component_dense", "Component deployment diagram has more components or links than the recommended first view.")
 	}
+	quality -= applyTemplateQualityRules(tpl, data, design, rules, &summary, &warnings, &recommendations)
 	quality -= analyzeVisualGuidance(data, tpl.InputSchemaKind, design, &summary, &warnings, &recommendations)
 	if quality < 0 {
 		quality = 0
@@ -613,6 +636,686 @@ func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Su
 	}
 	recommendations.FocusCandidates = topDegreeNodes(degree, 6)
 	return quality
+}
+
+func applyTemplateQualityRules(tpl manifest.TemplateManifest, data map[string]any, design manifest.VisualDesign, rules authoring.QualityRules, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
+	penalty := 0
+	penalty += analyzeGeneralQuality(data, rules, design, warnings, recommendations)
+	switch strings.ToLower(tpl.InputSchemaKind) {
+	case "uml_sequence_v1":
+		penalty += analyzeUMLSequenceQuality(data, rules, warnings, recommendations)
+	case "graph_v1", "graph_events_v1":
+		penalty += analyzeGraphQuality(data, tpl.Category, design, warnings, recommendations)
+	case "timeline_v1":
+		penalty += analyzeTimelineQuality(data, warnings, recommendations)
+	case "matrix_v1":
+		penalty += analyzeMatrixQuality(data, warnings, recommendations)
+	case "evidence_v1":
+		penalty += analyzeEvidenceQuality(data, warnings, recommendations)
+	}
+	return penalty
+}
+
+func analyzeGeneralQuality(data map[string]any, rules authoring.QualityRules, design manifest.VisualDesign, warnings *[]Warning, recommendations *Recommendations) int {
+	penalty := 0
+	maxOverview := rules.Label.MaxOverviewLabelChars
+	if maxOverview <= 0 {
+		maxOverview = 32
+	}
+	items := qualityObjects(data)
+	longLabels := []string{}
+	missingImportance := 0
+	visibleCount := 0
+	colors := map[string]int{}
+	for _, item := range items {
+		label := displayLabelField(item.Obj)
+		if label == "" {
+			label = stringField(item.Obj, "id")
+		}
+		if len(label) > maxOverview {
+			longLabels = appendCapped(longLabels, item.Path+"="+label, 10)
+			if rules.Label.RequireSummaryForLongLabel && stringField(item.Obj, "summary") == "" && stringField(item.Obj, "details") == "" {
+				penalty += 2
+				addWarning(warnings, Warning{Code: "summary_missing_for_long_label", Severity: "warning", Path: item.Path, Message: "A long label does not provide summary/details for hover or inspector use.", Suggestion: "Shorten the label and put the full explanation in summary or details.", AutoFixHint: map[string]any{"action": "add_summary", "path": item.Path}})
+			}
+		}
+		if !hasImportance(item.Obj) && item.Kind != "phase" {
+			missingImportance++
+		}
+		visibility := normalizeVisibility(firstString(item.Obj, "visibility"))
+		if visibility == "" || visibility == "overview" || visibility == "normal" {
+			visibleCount++
+		}
+		if color := firstString(item.Obj, "color"); color != "" {
+			colors[color]++
+		}
+		if isGenericKind(stringField(item.Obj, "kind")) {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "generic_kind", Severity: "warning", Path: item.Path + ".kind", Message: "An item uses a generic kind that does not explain its semantic role.", Suggestion: "Use a specific kind such as service, controller, event_stream, evidence, risk, milestone, validates, emits, or subscribes.", AutoFixHint: map[string]any{"action": "replace_generic_kind", "path": item.Path + ".kind"}})
+		}
+	}
+	if len(longLabels) > 0 {
+		penalty += 6
+		addWarning(warnings, Warning{Code: "label_too_long", Severity: "warning", Message: "Some labels are too long for an overview label layer.", Suggestion: "Keep overview labels short and move implementation signatures, paths, and explanations into summary/details.", Details: longLabels, AutoFixHint: map[string]any{"action": "shorten_labels"}})
+		recommendations.RewriteLabels = append(recommendations.RewriteLabels, longLabels...)
+	}
+	if missingImportance > len(items)/3 && len(items) > 10 {
+		penalty += 8
+		addWarning(warnings, Warning{Code: "importance_missing", Severity: "warning", Message: "Many semantic objects do not declare importance, so label and emphasis decisions are weak.", Suggestion: "Add importance 0..1 to overview-critical objects and leave low-value detail lower than 0.35.", AutoFixHint: map[string]any{"action": "add_importance"}})
+	}
+	if visibleCount > design.MaxInitialNodes && design.MaxInitialNodes > 0 {
+		penalty += 8
+		addWarning(warnings, Warning{Code: "too_many_visible_items", Severity: "warning", Message: "Too many objects are visible in the first view.", Suggestion: "Set visibility=detail/hidden for low-value objects and use visual.initial_focus_ids for the story path.", AutoFixHint: map[string]any{"action": "mark_low_value_detail"}})
+	}
+	if len(colors) > 12 {
+		penalty += 4
+		addWarning(warnings, Warning{Code: "too_many_colors", Severity: "info", Message: "The input uses many explicit colors, which can make the legend unstable.", Suggestion: "Use stable phase/kind/status palettes and reserve explicit colors for phases or major groups.", AutoFixHint: map[string]any{"action": "reduce_palette"}})
+	}
+	return penalty
+}
+
+func analyzeUMLSequenceQuality(data map[string]any, rules authoring.QualityRules, warnings *[]Warning, recommendations *Recommendations) int {
+	penalty := 0
+	participants := objectArray(data, "participants")
+	messages := objectArray(data, "messages")
+	phases := objectArray(data, "phases")
+	fragments := objectArray(data, "fragments")
+	participantIDs := map[string]bool{}
+	for i, participant := range participants {
+		id := stringField(participant, "id")
+		if id != "" {
+			participantIDs[id] = true
+		}
+		path := "$.participants[" + intString(i) + "]"
+		if firstString(participant, "display_name", "displayName") == "" {
+			penalty += 4
+			addWarning(warnings, Warning{Code: "participant_display_name_missing", Severity: "warning", Path: path, Message: "A participant does not define a display name.", Suggestion: "Set display_name/displayName to a short semantic lifeline label.", AutoFixHint: map[string]any{"action": "add_display_name", "participant_id": id}})
+		}
+		if stringField(participant, "subtitle") == "" {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "participant_subtitle_missing", Severity: "info", Path: path, Message: "A participant lacks subtitle context.", Suggestion: "Add subtitle to explain the lifeline role, such as screen, API, manager, event stream, or storage.", AutoFixHint: map[string]any{"action": "add_subtitle", "participant_id": id}})
+		}
+		if !hasLane(participant) {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "participant_lane_missing", Severity: "info", Path: path, Message: "A participant lacks lane_index/presentation.laneIndex.", Suggestion: "Set lane_index so related lifelines are laid out in stable left-to-right order.", AutoFixHint: map[string]any{"action": "add_lane_index", "participant_id": id}})
+		}
+		if !hasDepth(participant) {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "participant_depth_missing", Severity: "info", Path: path, Message: "A participant lacks depth/presentation.depth.", Suggestion: "Set depth to encode frontend/backend/provider/runtime tier instead of random 3D placement.", AutoFixHint: map[string]any{"action": "add_depth", "participant_id": id}})
+		}
+		if firstString(participant, "color") == "" && !nestedStringExists(participant, "presentation", "color") {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "participant_color_missing", Severity: "info", Path: path, Message: "A participant lacks a stable color.", Suggestion: "Set color/presentation.color for major lifelines so labels and cylinders stay recognizable.", AutoFixHint: map[string]any{"action": "add_participant_color", "participant_id": id}})
+		}
+	}
+	phaseIDs := map[string]bool{}
+	phaseColorMissing := 0
+	for i, phase := range phases {
+		id := firstString(phase, "id", "label", "name")
+		if id != "" {
+			phaseIDs[id] = true
+		}
+		if firstString(phase, "color") == "" {
+			phaseColorMissing++
+			addWarning(warnings, Warning{Code: "phase_color_missing", Severity: "warning", Path: "$.phases[" + intString(i) + "].color", Message: "A sequence phase does not define a color.", Suggestion: "Add phases[].color so the renderer can create a stable legend and phase-coded message paths.", AutoFixHint: map[string]any{"action": "add_phase_color", "phase_id": id}})
+		}
+	}
+	penalty += minInt(18, phaseColorMissing*3)
+	orders := map[string]bool{}
+	pairCounts := map[string]int{}
+	importanceValues := map[string]int{}
+	phaseValues := map[string]int{}
+	calls := map[string]int{}
+	loopMessages := 0
+	returnMessages := 0
+	for i, message := range messages {
+		path := "$.messages[" + intString(i) + "]"
+		order := intStringFromAny(message["order"])
+		if order != "" {
+			if orders[order] {
+				penalty += 8
+				addWarning(warnings, Warning{Code: "duplicate_order", Severity: "error", Path: path + ".order", Message: "Two sequence messages use the same order.", Suggestion: "Assign unique message order values so vertical time placement is deterministic.", AutoFixHint: map[string]any{"action": "renumber_messages"}})
+			}
+			orders[order] = true
+		}
+		from := stringField(message, "from")
+		to := stringField(message, "to")
+		if !participantIDs[from] || !participantIDs[to] {
+			penalty += 8
+			addWarning(warnings, Warning{Code: "unknown_participant_ref", Severity: "error", Path: path, Message: "A sequence message references an unknown participant.", Suggestion: "Set from/to to participant ids declared in participants[].id.", AutoFixHint: map[string]any{"action": "fix_participant_ref", "message_id": stringField(message, "id")}})
+		}
+		if from != "" || to != "" {
+			pairCounts[from+"->"+to]++
+		}
+		phase := stringField(message, "phase")
+		if phase == "" {
+			penalty += 3
+			addWarning(warnings, Warning{Code: "message_phase_missing", Severity: "warning", Path: path + ".phase", Message: "A message does not declare a phase.", Suggestion: "Set messages[].phase to one of phases[].id so color and legend encode the story stage.", AutoFixHint: map[string]any{"action": "add_message_phase", "message_id": stringField(message, "id")}})
+		} else {
+			phaseValues[phase]++
+			if len(phaseIDs) > 0 && !phaseIDs[phase] {
+				addWarning(warnings, Warning{Code: "message_phase_unknown", Severity: "warning", Path: path + ".phase", Message: "A message phase is not declared in phases[].", Suggestion: "Add the phase to phases[] with a label and color, or change messages[].phase to an existing phase id.", AutoFixHint: map[string]any{"action": "add_phase", "phase_id": phase}})
+			}
+		}
+		if stringField(message, "kind") == "" {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "message_kind_missing", Severity: "warning", Path: path + ".kind", Message: "A message does not declare kind.", Suggestion: "Set kind to sync, call, return, async, self, or loop.", AutoFixHint: map[string]any{"action": "add_message_kind", "message_id": stringField(message, "id")}})
+		}
+		curve := normalizeCurve(stringField(message, "curve"))
+		if curve == "" {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "message_curve_missing", Severity: "warning", Path: path + ".curve", Message: "A message does not declare a curve strategy.", Suggestion: "Set curve to arc, high_arc, return, self, loop, or straight to control 3D path shape.", AutoFixHint: map[string]any{"action": "add_message_curve", "message_id": stringField(message, "id")}})
+		}
+		if !hasImportance(message) {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "message_importance_missing", Severity: "warning", Path: path + ".importance", Message: "A message lacks importance.", Suggestion: "Set importance 0..1 so thickness/glow and label visibility can distinguish key calls from detail.", AutoFixHint: map[string]any{"action": "add_message_importance", "message_id": stringField(message, "id")}})
+		} else {
+			importanceValues[importanceBucket(message)]++
+		}
+		if normalizeLabelPriority(message) == "" {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "message_label_priority_missing", Severity: "warning", Path: path + ".labelPriority", Message: "A message lacks label priority.", Suggestion: "Set labelPriority or label_priority so overview mode shows only important labels.", AutoFixHint: map[string]any{"action": "add_label_priority", "message_id": stringField(message, "id")}})
+		}
+		kind := strings.ToLower(stringField(message, "kind"))
+		if kind == "loop" || curve == "loop" {
+			loopMessages++
+		}
+		if kind == "return" || curve == "return" {
+			returnMessages++
+		} else if from != "" && to != "" {
+			calls[from+"->"+to]++
+		}
+	}
+	for pair, count := range pairCounts {
+		if count > intRule(rules, "warn_messages_same_pair_over", 4) {
+			penalty += 4
+			addWarning(warnings, Warning{Code: "too_many_messages_same_pair", Severity: "info", Message: "Many messages repeat the same participant pair.", Suggestion: "Aggregate repetitive calls with a loop fragment or hide low-value detail messages.", Details: []string{pair + "=" + intString(count)}, AutoFixHint: map[string]any{"action": "aggregate_repeated_pair", "pair": pair}})
+		}
+	}
+	if loopMessages > 0 && len(fragments) == 0 {
+		penalty += 6
+		addWarning(warnings, Warning{Code: "loop_without_fragment", Severity: "warning", Message: "Loop-like messages are present without a loop fragment.", Suggestion: "Add a fragment with kind=loop, start_order, end_order, and condition to explain repetition.", AutoFixHint: map[string]any{"action": "add_loop_fragment"}})
+	}
+	for i, fragment := range fragments {
+		if strings.TrimSpace(firstString(fragment, "condition", "label", "summary")) == "" {
+			penalty += 3
+			addWarning(warnings, Warning{Code: "fragment_without_condition", Severity: "warning", Path: "$.fragments[" + intString(i) + "]", Message: "A sequence fragment lacks a condition or explanation.", Suggestion: "Add condition/summary so loop, alt, opt, or parallel regions are readable.", AutoFixHint: map[string]any{"action": "add_fragment_condition", "fragment_id": stringField(fragment, "id")}})
+		}
+	}
+	if returnMessages > 0 && len(calls) == 0 {
+		penalty += 4
+		addWarning(warnings, Warning{Code: "return_without_matching_call", Severity: "info", Message: "Return messages appear without clear preceding call messages.", Suggestion: "Pair return messages with call/sync messages or lower their visibility as detail.", AutoFixHint: map[string]any{"action": "pair_return_messages"}})
+	}
+	if len(importanceValues) <= 1 && len(messages) > 6 {
+		penalty += 6
+		addWarning(warnings, Warning{Code: "all_messages_same_importance", Severity: "warning", Message: "All sequence messages have the same importance level.", Suggestion: "Use higher importance for the critical path and lower importance for repetitive or return detail.", AutoFixHint: map[string]any{"action": "vary_message_importance"}})
+	}
+	if len(phaseValues) <= 1 && len(messages) > 6 {
+		penalty += 6
+		addWarning(warnings, Warning{Code: "all_messages_same_phase", Severity: "warning", Message: "All sequence messages use one phase, so the story has no color-coded stages.", Suggestion: "Split the sequence into receive, validate, setup, running, finalize, cleanup, notify, or error phases.", AutoFixHint: map[string]any{"action": "split_message_phases"}})
+	}
+	return penalty
+}
+
+func analyzeGraphQuality(data map[string]any, category string, design manifest.VisualDesign, warnings *[]Warning, recommendations *Recommendations) int {
+	penalty := 0
+	nodes := objectArray(data, "nodes")
+	edges := objectArray(data, "edges")
+	groups := objectArray(data, "groups")
+	grouped := 0
+	nodeImportanceMissing := 0
+	edgeImportanceMissing := 0
+	edgeVisibilityMissing := 0
+	edgeKinds := map[string]int{}
+	degree := map[string]int{}
+	genericLabels := []string{}
+	for i, node := range nodes {
+		id := stringField(node, "id")
+		if groupKeyField(node) != "" {
+			grouped++
+		}
+		if !hasImportance(node) {
+			nodeImportanceMissing++
+		}
+		if isGenericEntityLabel(displayLabelField(node)) {
+			genericLabels = appendCapped(genericLabels, "$.nodes["+intString(i)+"]", 8)
+		}
+		if id != "" {
+			degree[id] += 0
+		}
+	}
+	for _, edge := range edges {
+		if kind := stringField(edge, "kind"); kind != "" {
+			edgeKinds[kind]++
+		}
+		if !hasImportance(edge) {
+			edgeImportanceMissing++
+		}
+		if normalizeVisibility(stringField(edge, "visibility")) == "" {
+			edgeVisibilityMissing++
+		}
+		degree[stringField(edge, "from")]++
+		degree[stringField(edge, "to")]++
+	}
+	if len(nodes) > 0 && (len(groups) == 0 || float64(grouped)/float64(len(nodes)) < 0.5) && len(nodes) > 10 {
+		penalty += 10
+		addWarning(warnings, Warning{Code: "ungrouped_nodes_high", Severity: "warning", Message: "Many graph nodes are not assigned to semantic groups.", Suggestion: "Add groups[] and set nodes[].group/group_id/parent_id so the first view can collapse subsystems.", AutoFixHint: map[string]any{"action": "add_groups"}})
+	}
+	if nodeImportanceMissing > len(nodes)/3 && len(nodes) > 6 {
+		penalty += 6
+		addWarning(warnings, Warning{Code: "node_importance_missing", Severity: "warning", Message: "Many graph nodes lack importance.", Suggestion: "Add nodes[].importance so hubs and critical entities are emphasized in overview.", AutoFixHint: map[string]any{"action": "add_node_importance"}})
+	}
+	if edgeImportanceMissing > len(edges)/3 && len(edges) > 4 {
+		penalty += 6
+		addWarning(warnings, Warning{Code: "edge_importance_missing", Severity: "warning", Message: "Many graph edges lack importance.", Suggestion: "Add edges[].importance so the renderer can hide low-value relationships first.", AutoFixHint: map[string]any{"action": "add_edge_importance"}})
+	}
+	if edgeVisibilityMissing > len(edges)/3 && len(edges) > 4 {
+		penalty += 6
+		addWarning(warnings, Warning{Code: "edge_visibility_missing", Severity: "warning", Message: "Many graph edges lack visibility.", Suggestion: "Set edges[].visibility to overview, detail, or hidden to avoid rendering every relationship at once.", AutoFixHint: map[string]any{"action": "add_edge_visibility"}})
+	}
+	if dominantRatio(edgeKinds, len(edges)) >= 0.65 && len(edges) > 8 {
+		penalty += 8
+		addWarning(warnings, Warning{Code: "dominant_edge_kind", Severity: "warning", Message: "Most graph relationships use one edge kind.", Suggestion: "Use typed relationship kinds such as calls, owns, reads, writes, emits, subscribes, validates, deploys, observes, or blocks.", Details: countNames(topCounts(edgeKinds, 3)), AutoFixHint: map[string]any{"action": "split_edge_kinds"}})
+	}
+	if densityLabel(len(nodes), len(edges)) == "high" {
+		penalty += 10
+		addWarning(warnings, Warning{Code: "high_edge_density", Severity: "error", Message: "The graph has high edge density.", Suggestion: "Aggregate repeated relationships, hide detail edges, and keep only critical overview edges visible.", AutoFixHint: map[string]any{"action": "reduce_edge_density"}})
+	}
+	orphan := 0
+	for id, d := range degree {
+		if strings.TrimSpace(id) != "" && d == 0 {
+			orphan++
+		}
+	}
+	if orphan >= 3 {
+		penalty += 6
+		addWarning(warnings, Warning{Code: "orphan_node_count_high", Severity: "warning", Message: "Several graph nodes have no relationships.", Suggestion: "Connect isolated nodes to meaningful hubs/groups or hide them from overview.", AutoFixHint: map[string]any{"action": "connect_or_hide_orphans"}})
+	}
+	if len(genericLabels) > 0 {
+		penalty += 4
+		addWarning(warnings, Warning{Code: "generic_node_labels", Severity: "warning", Message: "Some graph nodes use generic labels.", Suggestion: "Replace labels such as Core, Policy, Review, Risk, or Step with scenario-specific names.", Details: genericLabels, AutoFixHint: map[string]any{"action": "replace_generic_labels"}})
+	}
+	if strings.ToLower(category) == "flow" {
+		penalty += analyzeFlowQuality(data, warnings, recommendations)
+	}
+	return penalty
+}
+
+func analyzeTimelineQuality(data map[string]any, warnings *[]Warning, recommendations *Recommendations) int {
+	penalty := 0
+	events := objectArray(data, "events")
+	laneCounts := map[string]int{}
+	milestones := 0
+	labels := map[string]int{}
+	for i, event := range events {
+		path := "$.events[" + intString(i) + "]"
+		if firstString(event, "time", "start", "end") == "" && intStringFromAny(event["order"]) == "" {
+			penalty += 4
+			addWarning(warnings, Warning{Code: "event_time_or_order_missing", Severity: "warning", Path: path, Message: "A timeline event lacks time/order placement.", Suggestion: "Add time, start/end, or order so the event has deterministic temporal placement.", AutoFixHint: map[string]any{"action": "add_event_time_or_order"}})
+		}
+		lane := firstString(event, "lane", "group", "category", "source")
+		if lane == "" {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "event_lane_missing", Severity: "info", Path: path, Message: "A timeline event lacks a lane.", Suggestion: "Set lane to actor, system, category, source, or phase for scanning.", AutoFixHint: map[string]any{"action": "add_event_lane"}})
+		} else {
+			laneCounts[lane]++
+		}
+		if importanceValueGo(event, 0) >= 0.75 {
+			milestones++
+		}
+		labels[displayLabelField(event)]++
+	}
+	for lane, count := range laneCounts {
+		if count > 12 {
+			penalty += 3
+			addWarning(warnings, Warning{Code: "too_many_events_same_lane", Severity: "info", Message: "Many events share one timeline lane.", Suggestion: "Split dense lanes by actor/category or aggregate repeated low-value events.", Details: []string{lane + "=" + intString(count)}, AutoFixHint: map[string]any{"action": "split_dense_lane", "lane": lane}})
+		}
+	}
+	if milestones == 0 && len(events) > 4 {
+		penalty += 6
+		addWarning(warnings, Warning{Code: "milestones_missing", Severity: "warning", Message: "Timeline has no high-importance milestones.", Suggestion: "Set importance >= 0.75 on turning points, root cause, resolution, or user-visible events.", AutoFixHint: map[string]any{"action": "mark_milestones"}})
+	}
+	if len(duplicateNames(labels, 6)) > 0 {
+		penalty += 3
+		addWarning(warnings, Warning{Code: "repeated_events_not_aggregated", Severity: "info", Message: "Timeline contains repeated event labels.", Suggestion: "Aggregate repetitive events with count/summary rather than rendering each log line.", Details: duplicateNames(labels, 6), AutoFixHint: map[string]any{"action": "aggregate_repeated_events"}})
+	}
+	return penalty
+}
+
+func analyzeMatrixQuality(data map[string]any, warnings *[]Warning, recommendations *Recommendations) int {
+	penalty := 0
+	items := objectArray(data, "items")
+	if _, ok := data["scale"]; !ok {
+		if _, ok := data["thresholds"]; !ok {
+			if _, ok := data["legend"]; !ok && len(items) > 6 {
+				penalty += 6
+				addWarning(warnings, Warning{Code: "matrix_scale_missing", Severity: "warning", Message: "Matrix input does not define a scale, thresholds, or legend.", Suggestion: "Add scale/thresholds/legend so colors and values have an interpretation.", AutoFixHint: map[string]any{"action": "add_matrix_scale"}})
+			}
+		}
+	}
+	visibleLabels := 0
+	for i, item := range items {
+		path := "$.items[" + intString(i) + "]"
+		if stringField(item, "summary") == "" {
+			penalty += 1
+			addWarning(warnings, Warning{Code: "cell_summary_missing", Severity: "info", Path: path, Message: "A matrix item lacks summary.", Suggestion: "Add summary so hover/inspector explains score, allocation, risk, or capability meaning.", AutoFixHint: map[string]any{"action": "add_cell_summary"}})
+		}
+		if normalizeLabelPriority(item) != "hidden" && normalizeVisibility(stringField(item, "visibility")) != "hidden" {
+			visibleLabels++
+		}
+	}
+	if visibleLabels > 40 {
+		penalty += 4
+		addWarning(warnings, Warning{Code: "too_many_visible_cell_labels", Severity: "info", Message: "Too many matrix labels may be visible at once.", Suggestion: "Use labelPriority=hover/detail for low-value cells and annotate only important cells.", AutoFixHint: map[string]any{"action": "lower_cell_label_priority"}})
+	}
+	if len(items) > 12 && !hasAnyGrouping(items) {
+		penalty += 4
+		addWarning(warnings, Warning{Code: "row_or_column_group_missing", Severity: "info", Message: "Large matrix input lacks grouping hints.", Suggestion: "Add group, row_group, column_group, or kind to organize rows/columns.", AutoFixHint: map[string]any{"action": "add_matrix_grouping"}})
+	}
+	return penalty
+}
+
+func analyzeEvidenceQuality(data map[string]any, warnings *[]Warning, recommendations *Recommendations) int {
+	penalty := 0
+	claims := objectArray(data, "claims")
+	sources := objectArray(data, "sources")
+	links := objectArray(data, "links")
+	for i, claim := range claims {
+		if stringField(claim, "summary") == "" && len(displayLabelField(claim)) > 44 {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "claim_summary_missing", Severity: "info", Path: "$.claims[" + intString(i) + "]", Message: "A long claim lacks summary.", Suggestion: "Make claim text concise and put explanation in summary/details.", AutoFixHint: map[string]any{"action": "add_claim_summary"}})
+		}
+		if !hasImportance(claim) && !hasField(claim, "confidence") {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "confidence_missing", Severity: "warning", Path: "$.claims[" + intString(i) + "]", Message: "A claim lacks confidence.", Suggestion: "Set confidence 0..1 to encode claim strength separately from importance.", AutoFixHint: map[string]any{"action": "add_claim_confidence"}})
+		}
+	}
+	for i, source := range sources {
+		if stringField(source, "summary") == "" {
+			penalty += 1
+			addWarning(warnings, Warning{Code: "source_summary_missing", Severity: "info", Path: "$.sources[" + intString(i) + "]", Message: "A source lacks summary.", Suggestion: "Add source summary so evidence cards explain why the source matters.", AutoFixHint: map[string]any{"action": "add_source_summary"}})
+		}
+	}
+	relations := map[string]int{}
+	for _, link := range links {
+		relations[firstString(link, "relation", "kind")]++
+	}
+	if dominantRatio(relations, len(links)) >= 0.9 && len(links) > 3 {
+		penalty += 4
+		addWarning(warnings, Warning{Code: "evidence_relation_semantics_flat", Severity: "warning", Message: "Most evidence links use one relation type.", Suggestion: "Use supports, contradicts/refutes, qualifies, mentions, or depends_on where appropriate.", AutoFixHint: map[string]any{"action": "split_evidence_relations"}})
+	}
+	return penalty
+}
+
+func analyzeFlowQuality(data map[string]any, warnings *[]Warning, recommendations *Recommendations) int {
+	penalty := 0
+	nodes := objectArray(data, "nodes")
+	edges := objectArray(data, "edges")
+	if len(nodes) > 9 {
+		penalty += 4
+		addWarning(warnings, Warning{Code: "too_many_stages", Severity: "info", Message: "Flow diagram has many stages for an overview.", Suggestion: "Keep stable stages to roughly 5-9 and hide subprocess details behind groups or detail visibility.", AutoFixHint: map[string]any{"action": "aggregate_flow_stages"}})
+	}
+	mainPath := false
+	for i, edge := range edges {
+		if !hasImportance(edge) && !hasField(edge, "weight") && !hasField(edge, "amount") {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "flow_weight_missing", Severity: "warning", Path: "$.edges[" + intString(i) + "]", Message: "A flow edge lacks weight/amount/importance.", Suggestion: "Add weight, amount, or importance so path thickness reflects volume or priority without inventing business metrics.", AutoFixHint: map[string]any{"action": "add_flow_weight"}})
+		}
+		if importanceValueGo(edge, 0) >= 0.75 || normalizeVisibility(stringField(edge, "visibility")) == "overview" {
+			mainPath = true
+		}
+		status := strings.ToLower(firstString(edge, "status", "kind"))
+		if (strings.Contains(status, "error") || strings.Contains(status, "fail") || strings.Contains(status, "drop")) && stringField(edge, "summary") == "" {
+			penalty += 3
+			addWarning(warnings, Warning{Code: "dropoff_or_error_path_unexplained", Severity: "warning", Path: "$.edges[" + intString(i) + "]", Message: "An error/dropoff path lacks summary.", Suggestion: "Add summary explaining why this path fails, drops off, or needs attention.", AutoFixHint: map[string]any{"action": "add_error_path_summary"}})
+		}
+	}
+	if !mainPath && len(edges) > 3 {
+		penalty += 4
+		addWarning(warnings, Warning{Code: "main_path_missing", Severity: "warning", Message: "Flow input does not identify a main path.", Suggestion: "Set importance >= 0.75 or visibility=overview on the core happy path edges.", AutoFixHint: map[string]any{"action": "mark_main_path"}})
+	}
+	for i, node := range nodes {
+		label := strings.ToLower(displayLabelField(node))
+		if strings.Contains(label, "func") || strings.Contains(label, "method") {
+			penalty += 2
+			addWarning(warnings, Warning{Code: "stage_too_granular", Severity: "info", Path: "$.nodes[" + intString(i) + "]", Message: "A flow stage looks like a low-level function or method.", Suggestion: "Use stable process stages or system boundaries, not every call.", AutoFixHint: map[string]any{"action": "aggregate_stage"}})
+		}
+	}
+	return penalty
+}
+
+func addWarning(warnings *[]Warning, warning Warning) {
+	*warnings = append(*warnings, warning)
+}
+
+func normalizeWarnings(warnings []Warning) []Warning {
+	for i := range warnings {
+		if strings.TrimSpace(warnings[i].Severity) == "" {
+			warnings[i].Severity = "warning"
+		}
+		if strings.TrimSpace(warnings[i].Suggestion) == "" {
+			warnings[i].Suggestion = strings.TrimSpace(warnings[i].Hint)
+		}
+		if strings.TrimSpace(warnings[i].Hint) == "" {
+			warnings[i].Hint = warnings[i].Suggestion
+		}
+		if warnings[i].AutoFixHint == nil && strings.TrimSpace(warnings[i].Code) != "" {
+			warnings[i].AutoFixHint = map[string]any{"action": warnings[i].Code}
+		}
+	}
+	return warnings
+}
+
+type qualityObject struct {
+	Kind string
+	Path string
+	Obj  map[string]any
+}
+
+func qualityObjects(data map[string]any) []qualityObject {
+	fields := []string{"groups", "nodes", "edges", "events", "claims", "sources", "links", "items", "participants", "messages", "phases", "activations", "fragments", "classes", "relationships", "states", "transitions", "actions", "flows", "components", "deployments"}
+	var out []qualityObject
+	for _, field := range fields {
+		for i, obj := range objectArray(data, field) {
+			out = append(out, qualityObject{Kind: strings.TrimSuffix(field, "s"), Path: "$." + field + "[" + intString(i) + "]", Obj: obj})
+		}
+	}
+	return out
+}
+
+func normalizeLabelPriority(obj map[string]any) string {
+	for _, name := range []string{"labelPriority", "label_priority"} {
+		if value, ok := obj[name]; ok {
+			switch v := value.(type) {
+			case string:
+				vv := strings.ToLower(strings.TrimSpace(v))
+				switch vv {
+				case "always", "important", "normal", "hover", "hidden":
+					return vv
+				}
+			case float64:
+				return labelPriorityFromNumber(v)
+			case int:
+				return labelPriorityFromNumber(float64(v))
+			}
+		}
+	}
+	return ""
+}
+
+func labelPriorityFromNumber(value float64) string {
+	if value > 1 {
+		value = value / 100
+	}
+	switch {
+	case value >= 0.85:
+		return "always"
+	case value >= 0.65:
+		return "important"
+	case value >= 0.35:
+		return "normal"
+	case value > 0:
+		return "hover"
+	default:
+		return "hidden"
+	}
+}
+
+func normalizeVisibility(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "overview", "normal", "detail", "hidden":
+		return value
+	case "visible":
+		return "overview"
+	case "collapsed":
+		return "detail"
+	default:
+		return ""
+	}
+}
+
+func normalizeCurve(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "arc", "high_arc", "return", "self", "loop", "straight":
+		return value
+	default:
+		return ""
+	}
+}
+
+func importanceValueGo(obj map[string]any, fallback float64) float64 {
+	if value, ok := numericValue(obj["importance"]); ok {
+		if value > 1 {
+			return value / 100
+		}
+		return value
+	}
+	metrics, _ := obj["metrics"].(map[string]any)
+	if metrics != nil {
+		for _, name := range []string{"importance", "impact", "risk", "score", "weight"} {
+			if value, ok := numericValue(metrics[name]); ok {
+				if value > 1 {
+					return value / 100
+				}
+				return value
+			}
+		}
+	}
+	return fallback
+}
+
+func numericValue(value any) (float64, bool) {
+	switch v := value.(type) {
+	case float64:
+		return v, true
+	case int:
+		return float64(v), true
+	case json.Number:
+		f, err := v.Float64()
+		return f, err == nil
+	default:
+		return 0, false
+	}
+}
+
+func importanceBucket(obj map[string]any) string {
+	v := importanceValueGo(obj, 0)
+	switch {
+	case v >= 0.75:
+		return "high"
+	case v >= 0.35:
+		return "medium"
+	default:
+		return "low"
+	}
+}
+
+func hasLane(obj map[string]any) bool {
+	if _, ok := obj["lane_index"]; ok {
+		return true
+	}
+	if _, ok := obj["laneIndex"]; ok {
+		return true
+	}
+	presentation, _ := obj["presentation"].(map[string]any)
+	if presentation == nil {
+		return false
+	}
+	_, ok := presentation["laneIndex"]
+	return ok
+}
+
+func hasDepth(obj map[string]any) bool {
+	if _, ok := obj["depth"]; ok {
+		return true
+	}
+	presentation, _ := obj["presentation"].(map[string]any)
+	if presentation == nil {
+		return false
+	}
+	_, ok := presentation["depth"]
+	return ok
+}
+
+func nestedStringExists(obj map[string]any, parent, child string) bool {
+	m, _ := obj[parent].(map[string]any)
+	if m == nil {
+		return false
+	}
+	return strings.TrimSpace(stringField(m, child)) != ""
+}
+
+func intStringFromAny(value any) string {
+	switch v := value.(type) {
+	case float64:
+		if v == float64(int(v)) {
+			return intString(int(v))
+		}
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case int:
+		return intString(v)
+	case string:
+		return strings.TrimSpace(v)
+	default:
+		return ""
+	}
+}
+
+func intRule(rules authoring.QualityRules, name string, fallback int) int {
+	if rules.TemplateSpecific == nil {
+		return fallback
+	}
+	if value, ok := numericValue(rules.TemplateSpecific[name]); ok && value > 0 {
+		return int(value)
+	}
+	return fallback
+}
+
+func hasAnyGrouping(items []map[string]any) bool {
+	for _, item := range items {
+		if firstString(item, "group", "row_group", "column_group", "kind") != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func hasField(obj map[string]any, name string) bool {
+	_, ok := obj[name]
+	return ok
+}
+
+func isGenericKind(value string) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	return value == "item" || value == "node" || value == "edge" || value == "thing" || value == "object" || value == "misc" || value == "other" || value == "related_to"
+}
+
+func isGenericEntityLabel(value string) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	value = strings.Trim(value, " .:-_#")
+	return value == "core" || value == "policy" || value == "review" || value == "risk" || value == "step" || value == "stage" || value == "system" || value == "module"
 }
 
 func readInput(path string, stdin io.Reader) ([]byte, error) {

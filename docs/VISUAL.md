@@ -162,3 +162,13 @@ For the built-in semantic catalog, doctor must report:
 - `offline: true`
 
 Use `--dry-run` on `visual render` to preview `planned_files` without creating `--out`.
+
+## Template Agent Guides
+
+Visual templates now carry their own authoring contract in `templates/visual/<template-id>/agent-guide.md` and `quality.rules.json`. The global CLI instructions intentionally stay short: agents discover a template, read its schema, then read `visual template guide <template-id> --json` before writing semantic input JSON.
+
+`visual template guide` returns the guide path, raw markdown, parsed sections, and a compact summary. `visual template get` and `visual template schema` also expose whether the guide and quality rules are available.
+
+`inspect-input` reads the selected template schema, agent guide, and quality rules. Warnings are machine-readable and include `code`, `severity`, `path`, `suggestion`, and usually `auto_fix_hint`. Agents should revise input JSON until bad-density warnings are resolved or intentionally accepted.
+
+The current deep renderer consumption is strongest for `uml.sequence_3d` and graph-based relationship/spatial/flow/hierarchy templates. Other templates have guides and quality checks first; more renderer-specific consumption can be added without changing the agent workflow.

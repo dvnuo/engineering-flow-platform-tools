@@ -74,6 +74,7 @@ It reads local templates from ~/.efp/template/visual by default, with checkout a
 			`visual template list --template-dir ./templates/visual --json`,
 			`visual template list --template-dir ./templates/visual --category uml --json`,
 			`visual template schema uml.sequence_3d --template-dir ./templates/visual --json`,
+			`visual template guide uml.sequence_3d --template-dir ./templates/visual --json`,
 			`visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json`,
 			`visual render --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --out ./out/sequence --title "Checkout Sequence" --json`,
 		},

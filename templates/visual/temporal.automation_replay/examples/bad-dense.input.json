@@ -1,0 +1,236 @@
+{
+  "edges": [
+    {
+      "from": "planning-automation-run-replay-node-1",
+      "kind": "depends_on",
+      "label": "feeds",
+      "to": "planning-automation-run-replay-node-2",
+      "weight": 2
+    },
+    {
+      "from": "planning-automation-run-replay-node-2",
+      "kind": "depends_on",
+      "label": "checks",
+      "to": "planning-automation-run-replay-node-3",
+      "weight": 3
+    },
+    {
+      "from": "planning-automation-run-replay-node-3",
+      "kind": "depends_on",
+      "label": "routes",
+      "to": "planning-automation-run-replay-node-4",
+      "weight": 2
+    },
+    {
+      "from": "planning-automation-run-replay-node-4",
+      "kind": "depends_on",
+      "label": "impacts",
+      "to": "planning-automation-run-replay-node-5",
+      "weight": 4
+    },
+    {
+      "from": "planning-automation-run-replay-node-5",
+      "kind": "depends_on",
+      "label": "reports",
+      "to": "planning-automation-run-replay-node-6",
+      "weight": 2
+    },
+    {
+      "from": "planning-automation-run-replay-node-2",
+      "kind": "depends_on",
+      "label": "observes",
+      "to": "planning-automation-run-replay-node-6",
+      "weight": 1
+    }
+  ],
+  "events": [
+    {
+      "id": "planning-automation-run-replay-event-1",
+      "kind": "start",
+      "label": "Automation Run Replay Opened",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "planning.automation_run_replay"
+      },
+      "node_id": "planning-automation-run-replay-node-1",
+      "status": "running",
+      "summary": "Automation Run Replay event 1 references Automation Run Intake.",
+      "time": "2026-06-03T14:14:00Z"
+    },
+    {
+      "id": "planning-automation-run-replay-event-2",
+      "kind": "tool",
+      "label": "Automation Run Replay Triaged",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "planning.automation_run_replay"
+      },
+      "node_id": "planning-automation-run-replay-node-2",
+      "status": "success",
+      "summary": "Automation Run Replay event 2 references Run Replay Core.",
+      "time": "2026-06-03T14:25:00Z"
+    },
+    {
+      "id": "planning-automation-run-replay-event-3",
+      "kind": "checkpoint",
+      "label": "Automation Run Replay Mapped",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "planning.automation_run_replay"
+      },
+      "node_id": "planning-automation-run-replay-node-3",
+      "status": "warning",
+      "summary": "Automation Run Replay event 3 references Replay Automation Policy.",
+      "time": "2026-06-03T14:36:00Z"
+    },
+    {
+      "id": "planning-automation-run-replay-event-4",
+      "kind": "decision",
+      "label": "Automation Run Replay Acted",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "planning.automation_run_replay"
+      },
+      "node_id": "planning-automation-run-replay-node-4",
+      "status": "running",
+      "summary": "Automation Run Replay event 4 references Automation Run Execution.",
+      "time": "2026-06-03T14:47:00Z"
+    },
+    {
+      "id": "planning-automation-run-replay-event-5",
+      "kind": "recovery",
+      "label": "Automation Run Replay Checked",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "planning.automation_run_replay"
+      },
+      "node_id": "planning-automation-run-replay-node-5",
+      "status": "error",
+      "summary": "Automation Run Replay event 5 references Run Replay Risk.",
+      "time": "2026-06-03T14:58:00Z"
+    },
+    {
+      "id": "planning-automation-run-replay-event-6",
+      "kind": "finish",
+      "label": "Automation Run Replay Recovered",
+      "metadata": {
+        "layout": "replay_stage",
+        "template_id": "planning.automation_run_replay"
+      },
+      "node_id": "planning-automation-run-replay-node-6",
+      "status": "success",
+      "summary": "Automation Run Replay event 6 references Replay Automation Outcome.",
+      "time": "2026-06-03T15:09:00Z"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "planning-automation-run-replay-node-1",
+      "kind": "automation",
+      "label": "Core",
+      "metadata": {
+        "detail": "Automation Run Replay signal 1",
+        "owner": "goal",
+        "template_id": "planning.automation_run_replay"
+      },
+      "status": "blocked"
+    },
+    {
+      "id": "planning-automation-run-replay-node-2",
+      "kind": "run",
+      "label": "Policy",
+      "metadata": {
+        "detail": "Automation Run Replay signal 2",
+        "owner": "task",
+        "template_id": "planning.automation_run_replay"
+      },
+      "status": "error"
+    },
+    {
+      "id": "planning-automation-run-replay-node-3",
+      "kind": "replay",
+      "label": "Review",
+      "metadata": {
+        "detail": "Automation Run Replay signal 3",
+        "owner": "automation",
+        "template_id": "planning.automation_run_replay"
+      },
+      "status": "running"
+    },
+    {
+      "id": "planning-automation-run-replay-node-4",
+      "kind": "goal",
+      "label": "Risk",
+      "metadata": {
+        "detail": "Automation Run Replay signal 4",
+        "owner": "goal",
+        "template_id": "planning.automation_run_replay"
+      },
+      "status": "ok"
+    },
+    {
+      "id": "planning-automation-run-replay-node-5",
+      "kind": "automation",
+      "label": "Run Replay Risk",
+      "metadata": {
+        "detail": "Automation Run Replay signal 5",
+        "owner": "task",
+        "template_id": "planning.automation_run_replay"
+      },
+      "status": "warning"
+    },
+    {
+      "id": "planning-automation-run-replay-node-6",
+      "kind": "run",
+      "label": "Replay Automation Outcome",
+      "metadata": {
+        "detail": "Automation Run Replay signal 6",
+        "owner": "automation",
+        "template_id": "planning.automation_run_replay"
+      },
+      "status": "success"
+    },
+    {
+      "id": "orphan-0",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-1",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-2",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-3",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-4",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-5",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-6",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    },
+    {
+      "id": "orphan-7",
+      "label": "Unconnected implementation detail with a very long generated label that should not be visible in overview",
+      "kind": "node"
+    }
+  ],
+  "schema": "efp.visual.input.graph_events.v1",
+  "title": "Automation Run Replay Scenario"
+}

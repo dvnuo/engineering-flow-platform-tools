@@ -914,3 +914,62 @@ select {
     height: 520px;
   }
 }
+
+.visual-legend-overlay {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 6;
+  min-width: 150px;
+  max-width: 260px;
+  padding: 10px;
+  border: 1px solid rgba(132, 168, 207, 0.24);
+  border-radius: 8px;
+  background: rgba(8, 14, 24, 0.76);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+}
+
+.visual-legend-title {
+  margin: 0 0 7px;
+  color: rgba(220, 232, 249, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.visual-legend-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 0;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(229, 237, 249, 0.86);
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+
+.visual-legend-item:hover,
+.visual-legend-active {
+  border-color: rgba(99, 169, 255, 0.36);
+  background: rgba(99, 169, 255, 0.12);
+}
+
+.visual-legend-swatch {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.visual-dimmed {
+  opacity: 0.26;
+}

@@ -1,0 +1,230 @@
+{
+  "items": [
+    {
+      "group": "edge",
+      "id": "runtime-capability-matrix-item-1",
+      "kind": "capability",
+      "label": "Capability Matrix North",
+      "metadata": {
+        "note": "Capability Matrix matrix cell 1",
+        "quadrant": "q1",
+        "template_id": "runtime.capability_matrix"
+      },
+      "metrics": {
+        "confidence": 0.55,
+        "impact": 0.4
+      },
+      "status": "ok",
+      "x": 0.17,
+      "y": 0.29
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-capability-matrix-item-2",
+      "kind": "matrix",
+      "label": "Matrix Capability East",
+      "metadata": {
+        "note": "Capability Matrix matrix cell 2",
+        "quadrant": "q2",
+        "template_id": "runtime.capability_matrix"
+      },
+      "metrics": {
+        "confidence": 0.59,
+        "impact": 0.46
+      },
+      "status": "warning",
+      "x": 0.4,
+      "y": 0.6
+    },
+    {
+      "group": "service",
+      "id": "runtime-capability-matrix-item-3",
+      "kind": "service",
+      "label": "Capability Matrix South",
+      "metadata": {
+        "note": "Capability Matrix matrix cell 3",
+        "quadrant": "q3",
+        "template_id": "runtime.capability_matrix"
+      },
+      "metrics": {
+        "confidence": 0.63,
+        "impact": 0.52
+      },
+      "status": "success",
+      "x": 0.63,
+      "y": 0.02
+    },
+    {
+      "group": "edge",
+      "id": "runtime-capability-matrix-item-4",
+      "kind": "edge",
+      "label": "Matrix Capability West",
+      "metadata": {
+        "note": "Capability Matrix matrix cell 4",
+        "quadrant": "q4",
+        "template_id": "runtime.capability_matrix"
+      },
+      "metrics": {
+        "confidence": 0.67,
+        "impact": 0.58
+      },
+      "status": "blocked",
+      "x": 0.86,
+      "y": 0.33
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-capability-matrix-item-5",
+      "kind": "capability",
+      "label": "Capability Matrix Signal",
+      "metadata": {
+        "note": "Capability Matrix matrix cell 5",
+        "quadrant": "q1",
+        "template_id": "runtime.capability_matrix"
+      },
+      "metrics": {
+        "confidence": 0.71,
+        "impact": 0.64
+      },
+      "status": "error",
+      "x": 0.18,
+      "y": 0.64
+    },
+    {
+      "group": "service",
+      "id": "runtime-capability-matrix-item-6",
+      "kind": "matrix",
+      "label": "Matrix Capability Review",
+      "metadata": {
+        "note": "Capability Matrix matrix cell 6",
+        "quadrant": "q2",
+        "template_id": "runtime.capability_matrix"
+      },
+      "metrics": {
+        "confidence": 0.75,
+        "impact": 0.7
+      },
+      "status": "running",
+      "x": 0.41,
+      "y": 0.06
+    },
+    {
+      "group": "edge",
+      "id": "runtime-capability-matrix-item-7",
+      "kind": "service",
+      "label": "Capability Matrix Ready",
+      "metadata": {
+        "note": "Capability Matrix matrix cell 7",
+        "quadrant": "q3",
+        "template_id": "runtime.capability_matrix"
+      },
+      "metrics": {
+        "confidence": 0.79,
+        "impact": 0.76
+      },
+      "status": "idle",
+      "x": 0.64,
+      "y": 0.37
+    },
+    {
+      "group": "adapter",
+      "id": "runtime-capability-matrix-item-8",
+      "kind": "edge",
+      "label": "Matrix Capability Watch",
+      "metadata": {
+        "note": "Capability Matrix matrix cell 8",
+        "quadrant": "q4",
+        "template_id": "runtime.capability_matrix"
+      },
+      "metrics": {
+        "confidence": 0.83,
+        "impact": 0.82
+      },
+      "status": "ok",
+      "x": 0.87,
+      "y": 0.68
+    },
+    {
+      "group": "service",
+      "id": "runtime-capability-matrix-item-9",
+      "kind": "capability",
+      "label": "Capability Matrix Owner",
+      "metadata": {
+        "note": "Capability Matrix matrix cell 9",
+        "quadrant": "q1",
+        "template_id": "runtime.capability_matrix"
+      },
+      "metrics": {
+        "confidence": 0.87,
+        "impact": 0.88
+      },
+      "status": "warning",
+      "x": 0.19,
+      "y": 0.1
+    }
+  ],
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Capability Matrix Scenario",
+  "initial_view": {
+    "mode": "overview",
+    "collapse_groups": true,
+    "max_nodes": 70,
+    "max_edges": 140
+  },
+  "visual": {
+    "goal": "Explain the capability matrix by starting from the most important objects, then reveal supporting detail on demand.",
+    "audience": "reviewer",
+    "initial_focus_ids": [
+      "runtime-capability-matrix-item-1",
+      "runtime-capability-matrix-item-2",
+      "runtime-capability-matrix-item-3"
+    ],
+    "hidden_detail_ids": [
+      "runtime-capability-matrix-item-8",
+      "runtime-capability-matrix-item-9"
+    ],
+    "emphasis": [
+      "first-view clarity",
+      "progressive detail",
+      "semantic focus"
+    ],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Start with the main actors",
+        "summary": "Show the core entities and the relationship the viewer should understand first.",
+        "focus_ids": [
+          "runtime-capability-matrix-item-1",
+          "runtime-capability-matrix-item-2",
+          "runtime-capability-matrix-item-3"
+        ]
+      },
+      {
+        "id": "detail",
+        "title": "Reveal supporting detail",
+        "summary": "Use search, filters, or expansion for secondary evidence and implementation detail.",
+        "focus_ids": [
+          "runtime-capability-matrix-item-3",
+          "runtime-capability-matrix-item-4",
+          "runtime-capability-matrix-item-5"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "note-1",
+        "target_id": "runtime-capability-matrix-item-1",
+        "label": "Start here",
+        "summary": "Use runtime-capability-matrix-item-1 as a visual anchor for the matrix capability story.",
+        "priority": 1.0
+      },
+      {
+        "id": "note-2",
+        "target_id": "runtime-capability-matrix-item-2",
+        "label": "Key relationship",
+        "summary": "Use runtime-capability-matrix-item-2 as a visual anchor for the matrix capability story.",
+        "priority": 0.82
+      }
+    ]
+  }
+}

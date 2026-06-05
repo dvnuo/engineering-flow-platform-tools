@@ -32,6 +32,7 @@ go run ./cmd/visual template categories --template-dir ./templates/visual --json
 go run ./cmd/visual template list --template-dir ./templates/visual --json | Out-Null
 go run ./cmd/visual template list --template-dir ./templates/visual --category uml --json | Out-Null
 go run ./cmd/visual template schema uml.sequence_3d --template-dir ./templates/visual --json | Out-Null
+go run ./cmd/visual template guide uml.sequence_3d --template-dir ./templates/visual --json | Out-Null
 go run ./cmd/visual template schema relationship.dependency_graph --template-dir ./templates/visual --json | Out-Null
 go run ./cmd/visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json | Out-Null
 go run ./cmd/visual template doctor --template-dir ./templates/visual --json | Out-Null

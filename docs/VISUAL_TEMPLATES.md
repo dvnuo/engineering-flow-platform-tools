@@ -147,6 +147,7 @@ Every canonical template directory must include:
 - `agent-guide.md`: template-specific semantic construction guide.
 - `quality.rules.json`: machine-readable thresholds and warning text for `inspect-input`.
 - `inspect-plan` contract: quality rules and guides are compiled into a normalized visual plan so agents can check first-view focus, labels, disclosure, and render readiness before writing artifacts.
+- `inspect-render` contract: rendered artifacts are re-inspected against manifest/data consistency, offline assets, and rebuilt visual plans before they are handed to users.
 - `examples/good-small.input.json`, `examples/good-medium.input.json`, `examples/bad-dense.input.json`, and `examples/fixed-dense.input.json`.
 
 Shared authoring conventions live in `templates/visual/_shared/agent-guidance/common-visual-quality.md`. Template guides must reference that shared guide and then define category-specific rules.

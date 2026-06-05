@@ -60,7 +60,7 @@ func NewRoot() *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "Plan the operation without writing files")
 	cmd.PersistentFlags().BoolVar(&o.OfflineStrict, "offline-strict", true, "Reject remote URLs, network APIs, and absolute asset references")
 
-	cmd.AddCommand(renderCmd(o), inspectInputCmd(o), inspectPlanCmd(o), validateCmd(o), templateCmd(o), inspectOutputCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	cmd.AddCommand(renderCmd(o), inspectInputCmd(o), inspectPlanCmd(o), inspectRenderCmd(o), validateCmd(o), templateCmd(o), inspectOutputCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
 	clihelp.ApplyCatalogHelp(cmd, clihelp.ProductHelp{
 		Product: "visual",
 		Binary:  "visual",
@@ -77,6 +77,7 @@ It reads local templates from ~/.efp/template/visual by default, with checkout a
 			`visual template guide uml.sequence_3d --template-dir ./templates/visual --json`,
 			`visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json`,
 			`visual inspect-plan --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --json`,
+			`visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json`,
 			`visual render --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --title "Checkout Sequence" --json`,
 		},
 		Instructions: "copy cmd/visual/visual-cli.instructions.md to ~/.copilot/instructions/visual-cli.instructions.md.",

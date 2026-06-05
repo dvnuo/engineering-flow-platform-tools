@@ -171,6 +171,7 @@ inspect-image schema inspect --json
 visual schema render --json
 visual schema inspect-input --json
 visual schema inspect-plan --json
+visual schema inspect-render --json
 ```
 
 The `required` field lists mandatory arguments and flags. The `flags` field includes type and description metadata suitable for tool planning.
@@ -206,6 +207,7 @@ For visual generation, use this loop:
 8. `visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json`
 9. Revise JSON using warning `suggestion`, `auto_fix_hint`, and `visual_plan.quality_loop`.
 10. `visual render --template <template-id> --input <input.json> --out <dir> --json`
-11. Return `data.artifact.entrypoint` to the user.
+11. `visual inspect-render --out <dir> --json`
+12. Return `data.artifact.entrypoint` to the user only when `inspect-render` reports `ready=true`, or return the warnings with the artifact if the user wants to review a draft.
 
 Never write input JSON before reading the selected template guide. The guide is where template-specific construction rules live.

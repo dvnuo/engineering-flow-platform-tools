@@ -19,6 +19,7 @@ go run ./cmd/inspect-image schema inspect --json | Out-Null
 go run ./cmd/visual schema render --json | Out-Null
 go run ./cmd/visual schema inspect-input --json | Out-Null
 go run ./cmd/visual schema inspect-plan --json | Out-Null
+go run ./cmd/visual schema inspect-render --json | Out-Null
 go run ./cmd/inspect-image help llm | Out-Null
 go run ./cmd/inspect-image models --json | Out-Null
 go run ./cmd/inspect-image auth status --json | Out-Null
@@ -56,4 +57,5 @@ foreach ($template in $templates) {
   $inputPath = Join-Path (Join-Path (Join-Path 'templates' 'visual') $template) (Join-Path 'examples' 'basic.input.json')
   go run ./cmd/visual render --template $template --template-dir ./templates/visual --input $inputPath --out $out --title "Smoke $template" --json | Out-Null
   if (-not (Test-Path (Join-Path $out 'index.html'))) { throw "visual smoke did not create index.html for $template" }
+  go run ./cmd/visual inspect-render --template-dir ./templates/visual --out $out --json | Out-Null
 }

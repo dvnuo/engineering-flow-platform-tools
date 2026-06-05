@@ -26,6 +26,7 @@
 - visual validate
 - visual inspect-input
 - visual inspect-plan
+- visual inspect-render
 - visual render
 - visual inspect-output
 - visual commands
@@ -54,6 +55,10 @@ Semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, 
 ### Visual Plan
 
 `visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json` validates the same input and compiles an agent-readable pre-render plan. The response includes `visual_plan.schema=efp.visual.plan.v1`, normalized `visual_plan.ir` objects/relationships/events, first-view budgets, label buckets, legend hints, disclosure strategy, selection behavior, quality-loop actions, and the exact render command shape. It does not inspect pixels or screenshots; use it to revise dense or unclear input before rendering.
+
+### Render Inspection
+
+`visual inspect-render --out <dir> --json` reads a generated artifact, validates required files and offline safety, loads `manifest.json` and `data.js`, rebuilds the normalized visual plan, and returns `ready`, `render_score`, `checks`, `warnings`, `visual_plan`, and `next_actions`. This is artifact-level readability inspection, not screenshot or pixel analysis.
 
 ### Render Artifact Output
 

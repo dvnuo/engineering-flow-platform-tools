@@ -72,6 +72,7 @@ visual template schema uml.sequence_3d --template-dir ./templates/visual --json
 visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json
 visual inspect-plan --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --json
 visual render --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --title "Checkout Sequence" --json
+visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json
 ```
 
 Agents must read `visual template schema <id> --json` before writing input JSON. Do not invent JSON shape. Do not infer templates from directories.
@@ -106,6 +107,8 @@ For UML sequence inputs, provide participants as semantic lifelines, use unique 
 `visual inspect-plan` is the pre-render planning step for agents. It validates input, runs the same quality rules as `inspect-input`, and returns `visual_plan.schema=efp.visual.plan.v1`. The plan contains a normalized `visual_plan.ir` with objects, relationships, events, and counts; a first-view budget with focus ids and hidden detail ids; label buckets; legend hints; disclosure strategy; selection behavior; quality-loop actions; and render command hints.
 
 Use `inspect-plan` after fixing `inspect-input` warnings and before `visual render`. It does not analyze screenshots or rendered pixels; it tells the agent whether the semantic input is likely to produce a readable first view.
+
+`visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read.
 
 ## Render Output Contract
 
@@ -154,6 +157,7 @@ Artifacts must be fully offline:
 visual validate --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json
 visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json
 visual inspect-plan --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --json
+visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json
 visual template doctor --template-dir ./templates/visual --json
 visual inspect-output --out ./out/sequence --json
 ```

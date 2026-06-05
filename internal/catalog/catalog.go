@@ -609,6 +609,8 @@ func visualExplicit(name string) (explicitMeta, bool) {
 			Flags: append([]string{"template", "input"}, common...), Required: []string{"template", "input"}, Risk: "read", Example: "visual inspect-input --template relationship.dependency_graph --template-dir ./templates/visual --input ./templates/visual/relationship.dependency_graph/examples/basic.input.json --json"},
 		"inspect-plan": {Description: "Compile validated visual input into a normalized visual IR, first-view plan, disclosure plan, quality loop, and render command hints before rendering.",
 			Flags: append([]string{"template", "input", "out"}, common...), Required: []string{"template", "input"}, Risk: "read", Example: "visual inspect-plan --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --json"},
+		"inspect-render": {Description: "Inspect a rendered visual artifact for offline safety, manifest/data consistency, and first-view readability.",
+			Flags: append([]string{"out"}, common...), Required: []string{"out"}, Risk: "read", Example: "visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json"},
 		"validate": {Description: "Validate visual input JSON against the selected template input contract.",
 			Flags: append([]string{"template", "input"}, common...), Required: []string{"template", "input"}, Risk: "read", Example: "visual validate --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json"},
 		"template.list": {Description: "List visual templates from templates/visual/registry.json.",

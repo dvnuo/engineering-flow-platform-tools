@@ -125,7 +125,7 @@ func TestVisualCommandsJSONContract(t *testing.T) {
 		m := objectMap(t, item)
 		names[m["name"].(string)] = true
 	}
-	for _, name := range []string{"render", "inspect-input", "inspect-plan", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.guide", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
+	for _, name := range []string{"render", "inspect-input", "inspect-plan", "inspect-render", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.guide", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
 		if !names[name] {
 			t.Fatalf("missing visual command %s in %#v", name, names)
 		}
@@ -417,6 +417,57 @@ func TestVisualInspectPlanContract(t *testing.T) {
 	}
 }
 
+func TestVisualInspectRenderContract(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+
+	cmdSchema := runVisualOK(t, "schema", "inspect-render", "--json")
+	cmdData := objectMap(t, cmdSchema["data"])
+	if cmdData["command"] != "inspect-render" {
+		t.Fatalf("inspect-render command schema missing: %#v", cmdData)
+	}
+	required := stringSetFromAny(cmdData["required"].([]any))
+	if !required["out"] {
+		t.Fatalf("inspect-render schema missing required out: %#v", cmdData)
+	}
+
+	goodOut := filepath.Join(t.TempDir(), "sequence")
+	runVisualOK(t, "render", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "uml.sequence_3d", "examples", "game-session-flow.input.json"), "--out", goodOut, "--json")
+	good := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", goodOut, "--json")
+	goodData := objectMap(t, good["data"])
+	if goodData["ready"] != true || goodData["render_score"].(float64) < 90 {
+		t.Fatalf("good inspect-render should be ready with high score: %#v", goodData)
+	}
+	checks := objectMap(t, goodData["checks"])
+	for _, field := range []string{"output_files", "offline_scan", "runtime_assets", "three_asset", "renderer_contract_match", "template_version_match", "plan_ready", "focus_declared", "first_view_objects_within_budget", "first_view_relationships_within_budget", "labels_bounded", "relationships_visible"} {
+		if checks[field] != true {
+			t.Fatalf("inspect-render good output check %s failed: %#v", field, checks)
+		}
+	}
+	plan := objectMap(t, goodData["visual_plan"])
+	if plan["schema"] != "efp.visual.plan.v1" || objectMap(t, plan["ir"])["schema"] != "efp.visual.ir.v1" {
+		t.Fatalf("inspect-render missing visual plan contract: %#v", plan)
+	}
+
+	badOut := filepath.Join(t.TempDir(), "bad-graph")
+	runVisualOK(t, "render", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "relationship.dependency_graph", "examples", "dependency-dense-bad.input.json"), "--out", badOut, "--json")
+	bad := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", badOut, "--json")
+	badData := objectMap(t, bad["data"])
+	if badData["ready"] != false || badData["render_score"].(float64) >= 70 {
+		t.Fatalf("bad inspect-render should not be ready: %#v", badData)
+	}
+	badChecks := objectMap(t, badData["checks"])
+	if badChecks["plan_ready"] != false || badChecks["labels_bounded"] != false {
+		t.Fatalf("bad inspect-render checks should report plan and label problems: %#v", badChecks)
+	}
+	codes := warningCodeSet(t, bad)
+	for _, code := range []string{"visual_guidance_missing", "dominant_edge_kind", "render_plan_not_ready", "render_label_pressure_high"} {
+		if !codes[code] {
+			t.Fatalf("bad inspect-render missing warning %s in %#v", code, codes)
+		}
+	}
+}
+
 func TestVisualUMLTemplateSchemaInspectAndRender(t *testing.T) {
 	root := repoRoot(t)
 	templateDir := filepath.Join(root, "templates", "visual")
@@ -653,7 +704,7 @@ func TestVisualSmokeScriptsUseSemanticTemplates(t *testing.T) {
 	sh := mustRead(t, filepath.Join(root, "scripts", "smoke.sh"))
 	ps := mustRead(t, filepath.Join(root, "scripts", "smoke.ps1"))
 	for _, text := range []string{sh, ps} {
-		for _, want := range []string{"uml.sequence_3d", "relationship.dependency_graph", "temporal.event_trace", "template doctor", "template schema", "template guide", "inspect-plan"} {
+		for _, want := range []string{"uml.sequence_3d", "relationship.dependency_graph", "temporal.event_trace", "template doctor", "template schema", "template guide", "inspect-plan", "inspect-render"} {
 			if !strings.Contains(text, want) {
 				t.Fatalf("smoke script missing %s", want)
 			}

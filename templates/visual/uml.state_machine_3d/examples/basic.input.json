@@ -92,5 +92,61 @@
       "trigger": "missing repo access",
       "status": "blocked"
     }
-  ]
+  ],
+  "visual": {
+    "goal": "Explain the uml state machine 3d by starting from the most important objects, then reveal supporting detail on demand.",
+    "audience": "reviewer",
+    "initial_focus_ids": [
+      "queued",
+      "planning",
+      "editing"
+    ],
+    "hidden_detail_ids": [
+      "verifying->complete",
+      "planning->blocked"
+    ],
+    "emphasis": [
+      "first-view clarity",
+      "progressive detail",
+      "semantic focus"
+    ],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Start with the main actors",
+        "summary": "Show the core entities and the relationship the viewer should understand first.",
+        "focus_ids": [
+          "queued",
+          "planning",
+          "editing"
+        ]
+      },
+      {
+        "id": "detail",
+        "title": "Reveal supporting detail",
+        "summary": "Use search, filters, or expansion for secondary evidence and implementation detail.",
+        "focus_ids": [
+          "editing",
+          "verifying",
+          "blocked"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "note-1",
+        "target_id": "queued",
+        "label": "Start here",
+        "summary": "Use queued as a visual anchor for the uml state machine 3d story.",
+        "priority": 1.0
+      },
+      {
+        "id": "note-2",
+        "target_id": "planning",
+        "label": "Key relationship",
+        "summary": "Use planning as a visual anchor for the uml state machine 3d story.",
+        "priority": 0.82
+      }
+    ]
+  }
 }

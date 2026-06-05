@@ -229,6 +229,62 @@
       "collapse_groups": true,
       "max_nodes": 70,
       "max_edges": 140
+    },
+    "visual": {
+      "goal": "Explain the release history timeline by starting from the most important objects, then reveal supporting detail on demand.",
+      "audience": "reviewer",
+      "initial_focus_ids": [
+        "project-release-train-node-1",
+        "project-release-train-node-2",
+        "project-release-train-node-3"
+      ],
+      "hidden_detail_ids": [
+        "project-release-train-event-5",
+        "project-release-train-event-6"
+      ],
+      "emphasis": [
+        "first-view clarity",
+        "progressive detail",
+        "semantic focus"
+      ],
+      "narrative_steps": [
+        {
+          "id": "overview",
+          "title": "Start with the main actors",
+          "summary": "Show the core entities and the relationship the viewer should understand first.",
+          "focus_ids": [
+            "project-release-train-node-1",
+            "project-release-train-node-2",
+            "project-release-train-node-3"
+          ]
+        },
+        {
+          "id": "detail",
+          "title": "Reveal supporting detail",
+          "summary": "Use search, filters, or expansion for secondary evidence and implementation detail.",
+          "focus_ids": [
+            "project-release-train-node-3",
+            "project-release-train-node-4",
+            "project-release-train-node-5"
+          ]
+        }
+      ],
+      "annotations": [
+        {
+          "id": "note-1",
+          "target_id": "project-release-train-node-1",
+          "label": "Start here",
+          "summary": "Use project-release-train-node-1 as a visual anchor for the temporal release history story.",
+          "priority": 1.0
+        },
+        {
+          "id": "note-2",
+          "target_id": "project-release-train-node-2",
+          "label": "Key relationship",
+          "summary": "Use project-release-train-node-2 as a visual anchor for the temporal release history story.",
+          "priority": 0.82
+        }
+      ]
     }
   },
   "input_schema_kind": "graph_events_v1",
@@ -565,6 +621,98 @@
       },
       "title": {
         "type": "string"
+      },
+      "visual": {
+        "type": "object",
+        "description": "Visual authoring guidance for agents. Use this to control the first readable view, focus, hidden detail, narrative steps, and annotations without generating JavaScript.",
+        "properties": {
+          "goal": {
+            "type": "string",
+            "description": "One sentence describing what the viewer should understand first."
+          },
+          "audience": {
+            "type": "string",
+            "description": "Primary viewer, such as reviewer, operator, engineer, or stakeholder."
+          },
+          "initial_focus_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "IDs that should be emphasized in the initial view."
+          },
+          "hidden_detail_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Low-value detail IDs that may stay collapsed, muted, or hidden until search/focus."
+          },
+          "emphasis": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Short visual emphasis words such as bottleneck, risk, handoff, phase, or dependency."
+          },
+          "narrative_steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "title"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "focus_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "description": "Ordered story beats the renderer and inspector can use to explain the diagram progressively."
+          },
+          "annotations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "target_id",
+                "label"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "priority": {
+                  "type": "number"
+                }
+              }
+            },
+            "description": "Short callouts attached to existing semantic IDs."
+          }
+        }
       }
     },
     "required": [

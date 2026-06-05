@@ -48,7 +48,7 @@ Semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, 
 
 ### Input Inspection
 
-`visual inspect-input --template <template-id> --input <input.json> --json` validates the input and returns `quality_score`, `summary`, `warnings`, `recommendations`, and the template `visual_design`. Use it after writing input JSON and before render, especially for large graphs. Graph summaries include relationship coverage, orphan nodes, dominant edge kinds, long labels, missing importance fields, and missing edge visibility fields. Warnings include severity and optional details so agents can revise the input before rendering. It does not write files. `visual preview` is a compatibility alias for the same command.
+`visual inspect-input --template <template-id> --input <input.json> --json` validates the input and returns `quality_score`, `summary`, `warnings`, `recommendations`, and the template `visual_design`. Use it after writing input JSON and before render. All semantic templates support shared `visual` guidance; summaries include `visual_focus_ids`, `visual_hidden_details`, `visual_narrative_steps`, `visual_annotations`, and visual reference coverage when present. Warnings include `visual_guidance_missing`, `visual_focus_missing`, `visual_annotations_missing`, and `visual_guidance_unknown_refs` so agents can revise first-view focus and annotations before rendering. Graph summaries also include relationship coverage, orphan nodes, dominant edge kinds, long labels, missing importance fields, and missing edge visibility fields. It does not write files. `visual preview` is a compatibility alias for the same command.
 
 ### Render Artifact Output
 

@@ -283,6 +283,54 @@
     return text.indexOf(query) >= 0;
   }
 
+  function stringArray(value) {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.map(function (item) {
+      return String(item || "").trim();
+    }).filter(Boolean);
+  }
+
+  function idSet(items) {
+    var out = {};
+    stringArray(items).forEach(function (id) {
+      out[id] = true;
+    });
+    return out;
+  }
+
+  function readVisualHints(data) {
+    var visual = data && data.visual && typeof data.visual === "object" ? data.visual : {};
+    return {
+      goal: String(visual.goal || ""),
+      audience: String(visual.audience || ""),
+      initialFocusIDs: stringArray(visual.initial_focus_ids),
+      hiddenDetailIDs: stringArray(visual.hidden_detail_ids),
+      emphasis: stringArray(visual.emphasis),
+      narrativeSteps: Array.isArray(visual.narrative_steps) ? visual.narrative_steps : [],
+      annotations: Array.isArray(visual.annotations) ? visual.annotations : []
+    };
+  }
+
+  function visualAnnotationsFor(hints, targetID) {
+    if (!hints || !targetID) {
+      return [];
+    }
+    return hints.annotations.filter(function (annotation) {
+      return annotation && String(annotation.target_id || "") === String(targetID);
+    }).sort(function (a, b) {
+      return importanceValue(b, Number(b.priority || 0.5)) - importanceValue(a, Number(a.priority || 0.5));
+    });
+  }
+
+  function visualAnnotationText(annotation) {
+    if (!annotation) {
+      return "";
+    }
+    return String(annotation.label || annotation.summary || annotation.id || "").trim();
+  }
+
   function groupIDForNode(node, design) {
     if (!node) {
       return "";
@@ -319,6 +367,8 @@
 
   function buildGraphState(data, manifest) {
     var design = visualDesign(manifest);
+    var visual = readVisualHints(data);
+    var visualFocus = idSet(visual.initialFocusIDs);
     var rawNodes = Array.isArray(data && data.nodes) ? data.nodes.slice() : [];
     var rawEdges = Array.isArray(data && data.edges) ? data.edges.slice() : [];
     var explicitGroups = Array.isArray(data && data.groups) ? data.groups : [];
@@ -352,9 +402,15 @@
     groupOrder.forEach(function (id) {
       var group = groups[id];
       collapsed[id] = group.collapsed !== undefined ? !!group.collapsed : design.defaultCollapseDepth > 0;
+      if ((group.children || []).some(function (child) { return child && visualFocus[child.id]; })) {
+        collapsed[id] = false;
+      }
     });
     return {
       design: design,
+      visual: visual,
+      visualFocus: visualFocus,
+      visualHidden: idSet(visual.hiddenDetailIDs),
       rawNodes: rawNodes,
       rawEdges: rawEdges,
       groups: groups,
@@ -376,12 +432,17 @@
   function visibleGraph(state, filters) {
     filters = filters || {};
     var query = String(filters.query || "").toLowerCase();
+    var focusIDs = state.visualFocus || {};
+    var hiddenIDs = state.visualHidden || {};
     var visibleIDs = {};
     var visibleNodes = [];
     var groupMatches = {};
     var hasGroups = state.groupOrder.length > 0;
 
     function passesNode(node) {
+      if (!query && hiddenIDs[node.id] && !focusIDs[node.id]) {
+        return false;
+      }
       return (!filters.status || node.status === filters.status) && (!filters.kind || node.kind === filters.kind) && itemMatchesQuery(node, query);
     }
 
@@ -430,7 +491,14 @@
 
     var maxNodes = query ? Math.max(state.design.maxInitialNodes, visibleNodes.length) : state.design.maxInitialNodes;
     if (visibleNodes.length > maxNodes) {
-      visibleNodes = visibleNodes.slice(0, maxNodes);
+      visibleNodes = visibleNodes.slice().sort(function (a, b) {
+        var af = focusIDs[a.id] ? 1 : 0;
+        var bf = focusIDs[b.id] ? 1 : 0;
+        if (af !== bf) {
+          return bf - af;
+        }
+        return compareImportance(a, b);
+      }).slice(0, maxNodes);
       visibleIDs = {};
       visibleNodes.forEach(function (node) {
         visibleIDs[node.id] = true;
@@ -441,6 +509,9 @@
     var visibleEdges = [];
     state.rawEdges.forEach(function (edge) {
       if (filters.edgeKind && edge.kind !== filters.edgeKind) {
+        return;
+      }
+      if (!query && edge.id && hiddenIDs[edge.id]) {
         return;
       }
       if (edge.visibility === "hidden") {
@@ -483,6 +554,17 @@
     var sources = Array.isArray(data && data.sources) ? data.sources : [];
     var items = Array.isArray(data && data.items) ? data.items : [];
     var design = visualDesign(manifest);
+    var visual = readVisualHints(data);
+    var hiddenIDs = idSet(visual.hiddenDetailIDs);
+    var focusIDs = idSet(visual.initialFocusIDs);
+    function notHidden(item) {
+      return !item || !item.id || !hiddenIDs[item.id] || focusIDs[item.id];
+    }
+    nodes = nodes.filter(notHidden);
+    events = events.filter(notHidden);
+    claims = claims.filter(notHidden);
+    sources = sources.filter(notHidden);
+    items = items.filter(notHidden);
     if (groups.length && nodes.length > design.maxInitialNodes) {
       groups.slice().sort(compareImportance).forEach(function (item) {
         out.push({ type: "group", id: item.id, label: item.label || item.name || item.title || item.id, status: item.status, kind: item.kind || "group", payload: item });
@@ -493,7 +575,14 @@
       return out;
     }
     if (nodes.length > design.maxInitialNodes) {
-      nodes = nodes.slice().sort(compareImportance).slice(0, design.maxInitialNodes);
+      nodes = nodes.slice().sort(function (a, b) {
+        var af = focusIDs[a.id] ? 1 : 0;
+        var bf = focusIDs[b.id] ? 1 : 0;
+        if (af !== bf) {
+          return bf - af;
+        }
+        return compareImportance(a, b);
+      }).slice(0, design.maxInitialNodes);
     }
     nodes.forEach(function (item) {
       out.push({ type: "node", id: item.id, label: item.label || item.name || item.title || item.id, status: item.status, kind: item.kind, payload: item });
@@ -845,6 +934,35 @@
     }
   }
 
+  function addThreeGrid(THREE, root, size, divisions, y, color) {
+    if (THREE.GridHelper) {
+      var helper = new THREE.GridHelper(size, divisions, color || 0x2d4254, 0x172434);
+      helper.position.y = y || 0;
+      root.add(helper);
+      return helper;
+    }
+    var group = new THREE.Group();
+    var material = new THREE.LineBasicMaterial({
+      color: color || 0x2d4254,
+      transparent: true,
+      opacity: 0.42
+    });
+    var half = size / 2;
+    var step = size / Math.max(1, divisions);
+    for (var i = 0; i <= divisions; i += 1) {
+      var p = -half + i * step;
+      var gx = new THREE.BufferGeometry();
+      gx.setFromPoints([new THREE.Vector3(-half, 0, p), new THREE.Vector3(half, 0, p)]);
+      group.add(new THREE.Line(gx, material));
+      var gz = new THREE.BufferGeometry();
+      gz.setFromPoints([new THREE.Vector3(p, 0, -half), new THREE.Vector3(p, 0, half)]);
+      group.add(new THREE.Line(gz, material));
+    }
+    group.position.y = y || 0;
+    root.add(group);
+    return group;
+  }
+
   function createThreeGraphScene(stage, manifest, state, preset, profile, inspector, onGraphChange) {
     var effects = effectSpec(manifest);
     if (effects.engine !== "three.v1") {
@@ -904,6 +1022,7 @@
       var edgeItems = [];
       var labels = [];
       var edgeLabels = [];
+      var annotationLabels = [];
       var selectedID = "";
       var hoverID = "";
       var currentModel = { nodes: [], edges: [] };
@@ -944,6 +1063,7 @@
         edgeItems = [];
         labels = [];
         edgeLabels = [];
+        annotationLabels = [];
         while (labelLayer.firstChild) {
           labelLayer.removeChild(labelLayer.firstChild);
         }
@@ -983,9 +1103,22 @@
       }
 
       function addLabel(node, mesh) {
-        var label = el("div", "visual-three-label" + (node.__group ? " visual-three-group-label" : ""), displayNodeLabel(node));
+        var label = el("div", "visual-three-label" + (node.__group ? " visual-three-group-label" : "") + (state.visualFocus[node.id] ? " visual-three-focus-label" : ""), displayNodeLabel(node));
         labelLayer.appendChild(label);
         labels.push({ element: label, mesh: mesh, node: node });
+      }
+
+      function addVisualAnnotation(annotation, mesh) {
+        var text = visualAnnotationText(annotation);
+        if (!text || !mesh) {
+          return;
+        }
+        var label = el("div", "visual-three-annotation-label", text);
+        if (annotation.summary) {
+          label.setAttribute("title", String(annotation.summary));
+        }
+        labelLayer.appendChild(label);
+        annotationLabels.push({ element: label, mesh: mesh, annotation: annotation });
       }
 
       function addEdgeLabel(edge) {
@@ -1249,12 +1382,19 @@
         currentModel.nodes.forEach(function (node) {
           var geometry = node.__group ? groupSphere : preset === "graph_2_5d" ? panel : sphere;
           var material = createThreeMaterial(THREE, node, effects);
+          var visualFocus = !!state.visualFocus[node.id];
+          if (visualFocus && material.emissiveIntensity !== undefined) {
+            material.emissiveIntensity = Math.max(material.emissiveIntensity || 0, 0.46);
+          }
           material.transparent = true;
-          material.opacity = node.__group ? 0.9 : 0.82;
+          material.opacity = node.__group || visualFocus ? 0.92 : 0.82;
           var mesh = new THREE.Mesh(geometry, material);
           var targetPosition = (positions[node.id] || new THREE.Vector3(0, 0, 0)).clone();
           mesh.position.copy(startPositionForNode(node, targetPosition, previousPositions));
           var scale = node.__group ? 1 + Math.min(1.7, (node.child_count || 1) / 18) : 0.72 + importanceValue(node, 0.35) * 0.7;
+          if (visualFocus) {
+            scale *= 1.22;
+          }
           mesh.scale.setScalar(0.04);
           mesh.userData = {
             id: node.id,
@@ -1272,8 +1412,14 @@
           nodeRoot.add(mesh);
           objects.push(mesh);
           nodeMap[node.id] = { mesh: mesh, node: node };
-          if (node.__group || currentModel.nodes.length <= 28 || importanceValue(node, 0) >= 0.72) {
+          if (node.__group || visualFocus || currentModel.nodes.length <= 28 || importanceValue(node, 0) >= 0.72) {
             addLabel(node, mesh);
+          }
+        });
+        (state.visual.annotations || []).forEach(function (annotation) {
+          var target = nodeMap[String(annotation.target_id || "")];
+          if (target && target.mesh) {
+            addVisualAnnotation(annotation, target.mesh);
           }
         });
         currentModel.edges.forEach(function (edge) {
@@ -1507,12 +1653,26 @@
           item.mesh.parent.localToWorld(pos);
           pos.project(camera);
           var visible = pos.z < 1 && pos.x >= -1.18 && pos.x <= 1.18 && pos.y >= -1.18 && pos.y <= 1.18;
-          var important = item.node.__group || item.node.id === selectedID || item.node.id === hoverID || importanceValue(item.node, 0) >= 0.72 || labels.length <= 28;
+          var important = item.node.__group || state.visualFocus[item.node.id] || item.node.id === selectedID || item.node.id === hoverID || importanceValue(item.node, 0) >= 0.72 || labels.length <= 28;
           item.element.hidden = !visible || !important;
           if (!item.element.hidden) {
             item.element.style.left = ((pos.x * 0.5 + 0.5) * width).toFixed(1) + "px";
             item.element.style.top = ((-pos.y * 0.5 + 0.5) * height).toFixed(1) + "px";
             item.element.toggleAttribute("data-selected", item.node.id === selectedID);
+          }
+        });
+        annotationLabels.forEach(function (item) {
+          var pos = item.mesh.position.clone();
+          item.mesh.parent.localToWorld(pos);
+          pos.y += 0.42;
+          pos.project(camera);
+          var visible = pos.z < 1 && pos.x >= -1.12 && pos.x <= 1.12 && pos.y >= -1.12 && pos.y <= 1.12;
+          var targetID = String(item.annotation.target_id || "");
+          var active = !selectedID || selectedID === targetID || state.visualFocus[targetID];
+          item.element.hidden = !visible || !active;
+          if (!item.element.hidden) {
+            item.element.style.left = ((pos.x * 0.5 + 0.5) * width).toFixed(1) + "px";
+            item.element.style.top = ((-pos.y * 0.5 + 0.5) * height).toFixed(1) + "px";
           }
         });
         edgeLabels.forEach(function (item) {
@@ -1826,7 +1986,7 @@
 
       currentModel.nodes.forEach(function (node, index) {
         var pos = positions[node.id] || { x: width / 2, y: height / 2 };
-        var className = "visual-node" + (node.__group ? " visual-group-node" : "");
+        var className = "visual-node" + (node.__group ? " visual-group-node" : "") + (state.visualFocus[node.id] ? " visual-focused" : "");
         var group = svg("g", { class: className, tabindex: "0" });
         var depth = nodeDepth(node, index, preset);
         var zLift = Math.round(depth * 34);
@@ -1861,6 +2021,11 @@
           label.textContent = runtime.safeText(itemLabel(node));
           group.appendChild(label);
         }
+        visualAnnotationsFor(state.visual, node.id).forEach(function (annotation, noteIndex) {
+          var note = svg("text", { x: pos.x, y: pos.y - 42 - noteIndex * 14, "text-anchor": "middle", class: "visual-svg-annotation-label" });
+          note.textContent = runtime.safeText(visualAnnotationText(annotation));
+          group.appendChild(note);
+        });
         group.addEventListener("click", function () {
           if (node.__group) {
             state.collapsed[node.id] = !state.collapsed[node.id];
@@ -1941,7 +2106,12 @@
 
   function renderTimeline(ctx) {
     var data = ctx.data || {};
-    var events = Array.isArray(data.events) ? data.events : [];
+    var visual = readVisualHints(data);
+    var focusIDs = idSet(visual.initialFocusIDs);
+    var hiddenIDs = idSet(visual.hiddenDetailIDs);
+    var events = (Array.isArray(data.events) ? data.events : []).filter(function (event) {
+      return !event || !event.id || !hiddenIDs[event.id] || focusIDs[event.id];
+    });
     var manifest = ctx.manifest || {};
     var shell = appShell(ctx.container, manifest);
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
@@ -1953,7 +2123,7 @@
     var lane = el("div", "timeline-lane visual-timeline-3d");
     lane.appendChild(el("div", "timeline-track"));
     events.forEach(function (event, index) {
-      var card = el("article", "visual-card timeline-event");
+      var card = el("article", "visual-card timeline-event" + (focusIDs[event.id] ? " visual-card-focus" : ""));
       card.style.setProperty("--event-z", Math.round(((index % 6) / 5) * 64) + "px");
       card.style.setProperty("--event-delay", (index * 0.05).toFixed(2) + "s");
       card.appendChild(el("span", "timeline-dot"));
@@ -1961,6 +2131,9 @@
       var status = runtime.formatStatus(event.status || event.kind);
       card.appendChild(el("span", status.className, status.label));
       card.appendChild(el("div", "visual-card-meta", [event.time, event.kind, event.summary].filter(Boolean).join(" · ")));
+      visualAnnotationsFor(visual, event.id).forEach(function (annotation) {
+        card.appendChild(el("div", "visual-card-annotation", visualAnnotationText(annotation)));
+      });
       card.addEventListener("click", function () {
         shell.inspector.show(event.label || event.id, event);
       });
@@ -1974,8 +2147,15 @@
 
   function renderEvidence(ctx) {
     var data = ctx.data || {};
-    var claims = Array.isArray(data.claims) ? data.claims : [];
-    var sources = Array.isArray(data.sources) ? data.sources : [];
+    var visual = readVisualHints(data);
+    var focusIDs = idSet(visual.initialFocusIDs);
+    var hiddenIDs = idSet(visual.hiddenDetailIDs);
+    var claims = (Array.isArray(data.claims) ? data.claims : []).filter(function (claim) {
+      return !claim || !claim.id || !hiddenIDs[claim.id] || focusIDs[claim.id];
+    });
+    var sources = (Array.isArray(data.sources) ? data.sources : []).filter(function (source) {
+      return !source || !source.id || !hiddenIDs[source.id] || focusIDs[source.id];
+    });
     var links = Array.isArray(data.links) ? data.links : [];
     var manifest = ctx.manifest || {};
     var shell = appShell(ctx.container, manifest);
@@ -2003,11 +2183,16 @@
     });
     sources.forEach(function (source) {
       var pos = sourcePos[source.id];
-      var group = svg("g", { class: "visual-node" });
+      var group = svg("g", { class: "visual-node" + (focusIDs[source.id] ? " visual-focused" : "") });
       group.appendChild(svg("rect", { x: pos.x - 58, y: pos.y - 26, width: 116, height: 52, rx: 8, fill: "#202832" }));
       var label = svg("text", { x: pos.x, y: pos.y + 4, "text-anchor": "middle" });
       label.textContent = runtime.safeText(source.title || source.id);
       group.appendChild(label);
+      visualAnnotationsFor(visual, source.id).forEach(function (annotation, noteIndex) {
+        var note = svg("text", { x: pos.x, y: pos.y - 38 - noteIndex * 14, "text-anchor": "middle", class: "visual-svg-annotation-label" });
+        note.textContent = runtime.safeText(visualAnnotationText(annotation));
+        group.appendChild(note);
+      });
       group.addEventListener("click", function () {
         shell.inspector.show(source.title || source.id, source);
       });
@@ -2015,7 +2200,7 @@
     });
     claims.forEach(function (claim) {
       var pos = claimPos[claim.id];
-      var group = svg("g", { class: "visual-node" });
+      var group = svg("g", { class: "visual-node" + (focusIDs[claim.id] ? " visual-focused" : "") });
       group.appendChild(svg("rect", { x: pos.x - 84, y: pos.y - 34, width: 168, height: 68, rx: 8, fill: nodeColor(claim.status) }));
       var label = svg("text", { x: pos.x, y: pos.y - 2, "text-anchor": "middle" });
       label.textContent = runtime.safeText(claim.text || claim.id).slice(0, 34);
@@ -2023,6 +2208,11 @@
       conf.textContent = "confidence " + runtime.safeText(claim.confidence);
       group.appendChild(label);
       group.appendChild(conf);
+      visualAnnotationsFor(visual, claim.id).forEach(function (annotation, noteIndex) {
+        var note = svg("text", { x: pos.x, y: pos.y - 48 - noteIndex * 14, "text-anchor": "middle", class: "visual-svg-annotation-label" });
+        note.textContent = runtime.safeText(visualAnnotationText(annotation));
+        group.appendChild(note);
+      });
       group.addEventListener("click", function () {
         shell.inspector.show(claim.id, claim);
       });
@@ -2032,7 +2222,12 @@
 
   function renderMatrix(ctx) {
     var data = ctx.data || {};
-    var items = Array.isArray(data.items) ? data.items : [];
+    var visual = readVisualHints(data);
+    var focusIDs = idSet(visual.initialFocusIDs);
+    var hiddenIDs = idSet(visual.hiddenDetailIDs);
+    var items = (Array.isArray(data.items) ? data.items : []).filter(function (item) {
+      return !item || !item.id || !hiddenIDs[item.id] || focusIDs[item.id];
+    });
     var manifest = ctx.manifest || {};
     var shell = appShell(ctx.container, manifest);
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
@@ -2045,7 +2240,7 @@
       var x = typeof item.x === "number" ? item.x : 0.5;
       var y = typeof item.y === "number" ? item.y : 0.5;
       var z = item.metrics && Number.isFinite(Number(item.metrics.z || item.metrics.impact || item.metrics.risk)) ? Number(item.metrics.z || item.metrics.impact || item.metrics.risk) : index % 7;
-      var card = el("article", "visual-card matrix-item");
+      var card = el("article", "visual-card matrix-item" + (focusIDs[item.id] ? " visual-card-focus" : ""));
       card.style.left = Math.max(8, Math.min(92, x * 100)) + "%";
       card.style.top = Math.max(8, Math.min(92, (1 - y) * 100)) + "%";
       var zDepth = Math.max(0, Math.min(1, z > 1 ? z / 100 : z / 7));
@@ -2055,6 +2250,9 @@
       var status = runtime.formatStatus(item.status || item.kind);
       card.appendChild(el("span", status.className, status.label));
       card.appendChild(el("div", "visual-card-meta", item.kind || ""));
+      visualAnnotationsFor(visual, item.id).forEach(function (annotation) {
+        card.appendChild(el("div", "visual-card-annotation", visualAnnotationText(annotation)));
+      });
       card.addEventListener("click", function () {
         shell.inspector.show(item.label || item.id, item);
       });
@@ -2095,6 +2293,17 @@
 
   function colorStringFromHex(value) {
     return "#" + ("000000" + value.toString(16)).slice(-6);
+  }
+
+  function colorValue(value, fallback) {
+    var text = String(value || "").trim();
+    if (text.charAt(0) === "#") {
+      text = text.slice(1);
+    }
+    if (/^[0-9a-fA-F]{6}$/.test(text)) {
+      return parseInt(text, 16);
+    }
+    return fallback;
   }
 
   function sequenceOrderBounds(messages, activations, fragments) {
@@ -2174,6 +2383,19 @@
     var activations = Array.isArray(data.activations) ? data.activations : [];
     var fragments = Array.isArray(data.fragments) ? data.fragments : [];
     var phases = Array.isArray(data.phases) ? data.phases : [];
+    var visual = readVisualHints(data);
+    var visualFocus = idSet(visual.initialFocusIDs);
+    var visualHidden = idSet(visual.hiddenDetailIDs);
+    messages = messages.filter(function (message) {
+      return !message || !message.id || !visualHidden[message.id] || visualFocus[message.id];
+    });
+    var phaseByID = {};
+    phases.forEach(function (phase, index) {
+      var id = phase.id || phase.label || phase.name || "";
+      if (id) {
+        phaseByID[id] = { phase: phase, index: index };
+      }
+    });
     var phaseSelect = selectControl("All phases", phases.map(function (phase) {
       return phase.id || phase.label || phase.name || "";
     }).filter(Boolean));
@@ -2212,6 +2434,20 @@
       layer.appendChild(renderer.domElement);
       var labelLayer = el("div", "visual-uml-label-layer");
       layer.appendChild(labelLayer);
+      if (phases.length) {
+        var legend = el("div", "visual-uml-phase-legend");
+        legend.appendChild(el("div", "visual-uml-phase-title", "Phases"));
+        phases.forEach(function (phase, index) {
+          var color = sequenceColor(phase.id || phase.label || phase.name, index);
+          var item = el("div", "visual-uml-phase-item");
+          var swatch = el("span", "visual-uml-phase-swatch");
+          swatch.style.backgroundColor = colorStringFromHex(color);
+          item.appendChild(swatch);
+          item.appendChild(el("span", "", phase.label || phase.name || phase.id || ("Phase " + (index + 1))));
+          legend.appendChild(item);
+        });
+        layer.appendChild(legend);
+      }
 
       var scene = new THREE.Scene();
       var camera = new THREE.PerspectiveCamera(44, width / height, 0.1, 160);
@@ -2225,9 +2461,7 @@
       scene.add(fill);
       var root = new THREE.Group();
       scene.add(root);
-      var grid = new THREE.GridHelper(10, 18, 0x2d4254, 0x172434);
-      grid.position.y = -3.1;
-      root.add(grid);
+      addThreeGrid(THREE, root, 10, 18, -3.1, 0x2d4254);
 
       var bounds = sequenceOrderBounds(messages, activations, fragments);
       var participantPositions = {};
@@ -2254,18 +2488,35 @@
         return label;
       }
 
-      function participantPosition(index) {
+      function sequenceColor(value, index) {
+        var entry = phaseByID[String(value || "")];
+        if (entry && entry.phase) {
+          return colorValue(entry.phase.color, phaseColor(entry.phase.id || entry.phase.label || value, entry.index));
+        }
+        return phaseColor(value, index);
+      }
+
+      function participantLabel(participant) {
+        return participant.display_name || participant.label || participant.name || participant.id;
+      }
+
+      function participantPosition(participant, index) {
         var center = (participantCount - 1) / 2;
-        var x = (index - center) * xSpacing;
-        var z = ((index % 3) - 1) * 0.58 + (index % 2 ? 0.22 : -0.12);
+        var lane = Number(participant.lane_index);
+        if (!Number.isFinite(lane)) {
+          lane = index;
+        }
+        var x = (lane - center) * xSpacing;
+        var depth = Number(participant.depth);
+        var z = Number.isFinite(depth) ? depth : ((index % 3) - 1) * 0.58 + (index % 2 ? 0.22 : -0.12);
         return new THREE.Vector3(x, 0, z);
       }
 
       participants.forEach(function (participant, index) {
-        var pos = participantPosition(index);
+        var pos = participantPosition(participant, index);
         participantPositions[participant.id] = pos;
-        var color = phaseColor(participant.kind || participant.group || participant.id, index);
-        var geometry = new THREE.CylinderGeometry(0.065, 0.065, sequenceHeight + 0.85, 18);
+        var color = colorValue(participant.color, phaseColor(participant.kind || participant.group || participant.id, index));
+        var geometry = THREE.CylinderGeometry ? new THREE.CylinderGeometry(0.065, 0.065, sequenceHeight + 0.85, 18) : new THREE.BoxGeometry(0.14, sequenceHeight + 0.85, 0.14);
         var material = new THREE.MeshPhysicalMaterial({
           color: color,
           emissive: color,
@@ -2283,7 +2534,13 @@
         objects.push(mesh);
         pickables.push(mesh);
         basePickables.push(mesh);
-        addHTMLLabel(participant.label || participant.name || participant.id, new THREE.Vector3(pos.x, 3.15, pos.z), "visual-uml-participant-label", { __static_label: true, payload: participant });
+        var label = addHTMLLabel(participantLabel(participant), new THREE.Vector3(pos.x, 3.15, pos.z), "visual-uml-participant-label" + (visualFocus[participant.id] ? " visual-uml-focus-label" : ""), { __static_label: true, payload: participant });
+        if (participant.subtitle) {
+          label.appendChild(el("span", "visual-uml-participant-subtitle", participant.subtitle));
+        }
+        visualAnnotationsFor(visual, participant.id).forEach(function (annotation) {
+          addHTMLLabel(visualAnnotationText(annotation), new THREE.Vector3(pos.x, 2.72, pos.z + 0.22), "visual-uml-annotation-label", annotation);
+        });
       });
 
       activations.forEach(function (activation, index) {
@@ -2294,7 +2551,7 @@
         var startY = yForOrder(activation.start_order);
         var endY = yForOrder(activation.end_order);
         var length = Math.max(0.22, Math.abs(endY - startY));
-        var color = phaseColor(activation.phase || activation.kind || activation.participant_id, index);
+        var color = sequenceColor(activation.phase || activation.kind || activation.participant_id, index);
         var box = new THREE.Mesh(new THREE.BoxGeometry(0.18, length, 0.13), new THREE.MeshPhysicalMaterial({
           color: color,
           emissive: color,
@@ -2341,20 +2598,33 @@
           }
           var order = message.order !== undefined ? message.order : index + 1;
           var y = yForOrder(order);
-          var color = phaseColor(message.phase || message.kind || message.status, index);
+          var color = sequenceColor(message.phase || message.kind || message.status, index);
           var a = new THREE.Vector3(from.x, y, from.z);
           var b = new THREE.Vector3(to.x, y, to.z);
           if (message.self === true || message.from === message.to) {
             b = new THREE.Vector3(from.x + 0.62, y - 0.28, from.z + 0.45);
           }
           var mid = a.clone().lerp(b, 0.5);
-          mid.y += message.kind === "return" ? -0.1 : 0.22;
+          var curveKind = String(message.curve || message.kind || "").toLowerCase();
+          mid.y += curveKind === "return" ? -0.1 : 0.22 + importanceValue(message, 0) * 0.28;
+          if (curveKind === "high_arc" || curveKind === "arc") {
+            mid.y += 0.42;
+            mid.z += 0.34;
+          } else if (curveKind === "loop" || curveKind === "self") {
+            mid.x += 0.32;
+            mid.z += 0.52;
+          }
+          mid.z += Number(message.depth || 0) || 0;
           var geometry = new THREE.BufferGeometry();
-          geometry.setFromPoints([a, mid, b]);
+          var routePoints = [a, mid, b];
+          if (THREE.CatmullRomCurve3) {
+            routePoints = new THREE.CatmullRomCurve3(routePoints).getPoints(18);
+          }
+          geometry.setFromPoints(routePoints);
           var line = new THREE.Line(geometry, new THREE.LineBasicMaterial({
             color: color,
             transparent: true,
-            opacity: message.kind === "return" ? 0.58 : 0.88,
+            opacity: visualFocus[message.id] ? 0.98 : message.kind === "return" ? 0.58 : 0.88,
             linewidth: 2
           }));
           line.userData = { label: message.label || message.name || message.id, payload: message };
@@ -2368,7 +2638,13 @@
           cone.userData = line.userData;
           messageRoot.add(cone);
           pickables.push(cone);
-          addHTMLLabel((message.order ? message.order + ". " : "") + (message.label || message.name || message.id), mid, "visual-uml-message-label", message);
+          var messageLabel = addHTMLLabel((message.order ? message.order + ". " : "") + (message.label || message.name || message.id), mid, "visual-uml-message-label" + (visualFocus[message.id] ? " visual-uml-focus-label" : ""), message);
+          visualAnnotationsFor(visual, message.id).forEach(function (annotation) {
+            addHTMLLabel(visualAnnotationText(annotation), mid.clone().add(new THREE.Vector3(0, 0.32, 0.16)), "visual-uml-annotation-label", annotation);
+          });
+          if (message.summary && visualFocus[message.id]) {
+            messageLabel.setAttribute("title", String(message.summary));
+          }
         });
       }
 

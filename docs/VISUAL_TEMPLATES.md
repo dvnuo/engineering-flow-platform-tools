@@ -43,7 +43,9 @@ Do not add unregistered examples, legacy alias directories, or ad-hoc template f
 - `title` and `description` must be scenario-specific.
 - `description` must not be a generic "visualize X as an offline view" sentence.
 - `schema.input.json` must contain `template_id`, `input_schema_kind`, `json_schema`, and `example`.
+- `schema.input.json` must expose the shared `visual` object with `goal`, `initial_focus_ids`, `hidden_detail_ids`, `narrative_steps`, and `annotations`.
 - `examples/basic.input.json` must have a meaningful title.
+- `examples/basic.input.json` must fill `visual` with valid semantic ids so agents learn first-view focus, delayed detail, and annotation behavior.
 - `style.css` must be non-empty.
 - `template.yaml` must declare `effects.engine: three.v1`, a scene id, `visual_design`, local assets, and offline settings.
 - Large graph-like examples should include groups, readable labels, relationship types, metadata, and visibility/importance hints.

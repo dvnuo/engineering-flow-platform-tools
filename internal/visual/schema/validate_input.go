@@ -17,30 +17,34 @@ type ParsedInput struct {
 }
 
 type InputSummary struct {
-	Schema        string `json:"schema,omitempty"`
-	Kind          string `json:"kind"`
-	Title         string `json:"title,omitempty"`
-	Groups        int    `json:"groups,omitempty"`
-	Nodes         int    `json:"nodes,omitempty"`
-	Edges         int    `json:"edges,omitempty"`
-	Events        int    `json:"events,omitempty"`
-	Claims        int    `json:"claims,omitempty"`
-	Sources       int    `json:"sources,omitempty"`
-	Links         int    `json:"links,omitempty"`
-	Items         int    `json:"items,omitempty"`
-	Participants  int    `json:"participants,omitempty"`
-	Messages      int    `json:"messages,omitempty"`
-	Phases        int    `json:"phases,omitempty"`
-	Activations   int    `json:"activations,omitempty"`
-	Fragments     int    `json:"fragments,omitempty"`
-	Classes       int    `json:"classes,omitempty"`
-	Relationships int    `json:"relationships,omitempty"`
-	States        int    `json:"states,omitempty"`
-	Transitions   int    `json:"transitions,omitempty"`
-	Actions       int    `json:"actions,omitempty"`
-	Flows         int    `json:"flows,omitempty"`
-	Components    int    `json:"components,omitempty"`
-	Deployments   int    `json:"deployments,omitempty"`
+	Schema               string `json:"schema,omitempty"`
+	Kind                 string `json:"kind"`
+	Title                string `json:"title,omitempty"`
+	Groups               int    `json:"groups,omitempty"`
+	Nodes                int    `json:"nodes,omitempty"`
+	Edges                int    `json:"edges,omitempty"`
+	Events               int    `json:"events,omitempty"`
+	Claims               int    `json:"claims,omitempty"`
+	Sources              int    `json:"sources,omitempty"`
+	Links                int    `json:"links,omitempty"`
+	Items                int    `json:"items,omitempty"`
+	Participants         int    `json:"participants,omitempty"`
+	Messages             int    `json:"messages,omitempty"`
+	Phases               int    `json:"phases,omitempty"`
+	Activations          int    `json:"activations,omitempty"`
+	Fragments            int    `json:"fragments,omitempty"`
+	Classes              int    `json:"classes,omitempty"`
+	Relationships        int    `json:"relationships,omitempty"`
+	States               int    `json:"states,omitempty"`
+	Transitions          int    `json:"transitions,omitempty"`
+	Actions              int    `json:"actions,omitempty"`
+	Flows                int    `json:"flows,omitempty"`
+	Components           int    `json:"components,omitempty"`
+	Deployments          int    `json:"deployments,omitempty"`
+	VisualFocusIDs       int    `json:"visual_focus_ids,omitempty"`
+	VisualHiddenDetails  int    `json:"visual_hidden_details,omitempty"`
+	VisualNarrativeSteps int    `json:"visual_narrative_steps,omitempty"`
+	VisualAnnotations    int    `json:"visual_annotations,omitempty"`
 }
 
 func ValidateInput(kind string, raw []byte, limits manifest.LimitsSpec) (ParsedInput, error) {
@@ -156,6 +160,14 @@ func ValidateInput(kind string, raw []byte, limits manifest.LimitsSpec) (ParsedI
 	default:
 		return ParsedInput{}, invalid("visual input schema kind is not supported: "+kind, "Use a supported semantic visual input schema kind.")
 	}
+	visualCounts, err := validateVisualHints(data, collectVisualReferenceIDs(kind, data))
+	if err != nil {
+		return ParsedInput{}, err
+	}
+	summary.VisualFocusIDs = visualCounts.focusIDs
+	summary.VisualHiddenDetails = visualCounts.hiddenDetails
+	summary.VisualNarrativeSteps = visualCounts.narrativeSteps
+	summary.VisualAnnotations = visualCounts.annotations
 	return ParsedInput{Data: data, Title: summary.Title, Summary: summary}, nil
 }
 
@@ -714,6 +726,144 @@ func validateUMLComponentDeployment(data map[string]any, limits manifest.LimitsS
 		}
 	}
 	return umlComponentCounts{components: len(components), deployments: len(deployments), links: len(links)}, nil
+}
+
+type visualHintCounts struct {
+	focusIDs       int
+	hiddenDetails  int
+	narrativeSteps int
+	annotations    int
+}
+
+func validateVisualHints(data map[string]any, knownIDs map[string]bool) (visualHintCounts, error) {
+	value, ok := data["visual"]
+	if !ok || value == nil {
+		return visualHintCounts{}, nil
+	}
+	visual, ok := value.(map[string]any)
+	if !ok {
+		return visualHintCounts{}, invalid("visual guidance must be an object.", "Set visual to an object with goal, initial_focus_ids, narrative_steps, and annotations.")
+	}
+	counts := visualHintCounts{}
+	var err error
+	if counts.focusIDs, err = validateVisualStringArray(visual, "initial_focus_ids", knownIDs); err != nil {
+		return visualHintCounts{}, err
+	}
+	if counts.hiddenDetails, err = validateVisualStringArray(visual, "hidden_detail_ids", knownIDs); err != nil {
+		return visualHintCounts{}, err
+	}
+	if _, err = validateVisualStringArray(visual, "emphasis", nil); err != nil {
+		return visualHintCounts{}, err
+	}
+	steps, err := optionalArray(visual, "narrative_steps")
+	if err != nil {
+		return visualHintCounts{}, err
+	}
+	counts.narrativeSteps = len(steps)
+	for i, item := range steps {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return visualHintCounts{}, invalid(fmt.Sprintf("visual narrative step at index %d must be an object.", i), "Each visual.narrative_steps item must contain id, title, and optional focus_ids.")
+		}
+		if stringField(obj, "id") == "" || stringField(obj, "title") == "" {
+			return visualHintCounts{}, invalid(fmt.Sprintf("visual narrative step at index %d is missing id or title.", i), "Set visual.narrative_steps[].id and title to non-empty strings.")
+		}
+		if _, err := validateVisualStringArray(obj, "focus_ids", knownIDs); err != nil {
+			return visualHintCounts{}, err
+		}
+	}
+	annotations, err := optionalArray(visual, "annotations")
+	if err != nil {
+		return visualHintCounts{}, err
+	}
+	counts.annotations = len(annotations)
+	for i, item := range annotations {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return visualHintCounts{}, invalid(fmt.Sprintf("visual annotation at index %d must be an object.", i), "Each visual.annotations item must contain id, target_id, and label.")
+		}
+		if stringField(obj, "id") == "" || stringField(obj, "target_id") == "" || stringField(obj, "label") == "" {
+			return visualHintCounts{}, invalid(fmt.Sprintf("visual annotation at index %d is missing id, target_id, or label.", i), "Set visual.annotations[].id, target_id, and label to non-empty strings.")
+		}
+		targetID := stringField(obj, "target_id")
+		if len(knownIDs) > 0 && !knownIDs[targetID] {
+			return visualHintCounts{}, invalid("visual annotation references an unknown target_id: "+targetID, "Set visual.annotations[].target_id to an existing semantic id from the selected template input.")
+		}
+		if priority, ok := obj["priority"]; ok && !isNumber(priority) {
+			return visualHintCounts{}, invalid("visual annotation priority must be numeric.", "Set visual.annotations[].priority to a number between 0 and 1.")
+		}
+	}
+	return counts, nil
+}
+
+func validateVisualStringArray(data map[string]any, name string, knownIDs map[string]bool) (int, error) {
+	items, err := optionalArray(data, name)
+	if err != nil {
+		return 0, err
+	}
+	for i, item := range items {
+		value, ok := item.(string)
+		if !ok || strings.TrimSpace(value) == "" {
+			return 0, invalid("visual "+name+" must contain non-empty strings.", "Set visual."+name+" to an array of existing semantic ids or short words.")
+		}
+		if knownIDs != nil && len(knownIDs) > 0 && !knownIDs[strings.TrimSpace(value)] {
+			return 0, invalid("visual "+name+" references an unknown id: "+strings.TrimSpace(value), "Use ids that exist in the selected template input.")
+		}
+		if i > 80 {
+			return 0, invalid("visual "+name+" has too many entries.", "Keep visual guidance concise and focused on the first readable view.")
+		}
+	}
+	return len(items), nil
+}
+
+func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool {
+	ids := map[string]bool{}
+	fieldsByKind := map[string][]string{
+		"graph_v1":                    {"groups", "nodes", "edges"},
+		"graph_events_v1":             {"groups", "nodes", "edges", "events"},
+		"timeline_v1":                 {"events"},
+		"evidence_v1":                 {"claims", "sources", "links"},
+		"matrix_v1":                   {"items"},
+		"uml_sequence_v1":             {"participants", "messages", "phases", "activations", "fragments"},
+		"uml_class_v1":                {"classes", "relationships"},
+		"uml_state_machine_v1":        {"states", "transitions"},
+		"uml_activity_v1":             {"actions", "flows"},
+		"uml_component_deployment_v1": {"components", "deployments", "links"},
+	}
+	for _, field := range fieldsByKind[kind] {
+		for _, item := range objectArrayFromAny(data[field]) {
+			for _, id := range visualIDsForObject(item) {
+				ids[id] = true
+			}
+		}
+	}
+	return ids
+}
+
+func objectArrayFromAny(value any) []map[string]any {
+	items, ok := value.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		if obj, ok := item.(map[string]any); ok {
+			out = append(out, obj)
+		}
+	}
+	return out
+}
+
+func visualIDsForObject(obj map[string]any) []string {
+	if id := stringField(obj, "id"); id != "" {
+		return []string{id}
+	}
+	from := firstStringField(obj, "from", "claim_id")
+	to := firstStringField(obj, "to", "source_id")
+	if from != "" && to != "" {
+		return []string{from + "->" + to}
+	}
+	return nil
 }
 
 func collectObjectIDs(items []any, noun string) (map[string]bool, error) {

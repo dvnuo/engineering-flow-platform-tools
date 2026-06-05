@@ -32,54 +32,60 @@ type Result struct {
 }
 
 type Summary struct {
-	Nodes                  int      `json:"nodes,omitempty"`
-	Edges                  int      `json:"edges,omitempty"`
-	Groups                 int      `json:"groups,omitempty"`
-	VisibleNodes           int      `json:"visible_nodes,omitempty"`
-	VisibleEdges           int      `json:"visible_edges,omitempty"`
-	Events                 int      `json:"events,omitempty"`
-	Participants           int      `json:"participants,omitempty"`
-	Messages               int      `json:"messages,omitempty"`
-	Phases                 int      `json:"phases,omitempty"`
-	Activations            int      `json:"activations,omitempty"`
-	Fragments              int      `json:"fragments,omitempty"`
-	Classes                int      `json:"classes,omitempty"`
-	Relationships          int      `json:"relationships,omitempty"`
-	States                 int      `json:"states,omitempty"`
-	Transitions            int      `json:"transitions,omitempty"`
-	Actions                int      `json:"actions,omitempty"`
-	Flows                  int      `json:"flows,omitempty"`
-	Components             int      `json:"components,omitempty"`
-	Deployments            int      `json:"deployments,omitempty"`
-	Claims                 int      `json:"claims,omitempty"`
-	Sources                int      `json:"sources,omitempty"`
-	Links                  int      `json:"links,omitempty"`
-	Items                  int      `json:"items,omitempty"`
-	EdgeDensity            string   `json:"edge_density,omitempty"`
-	LabelPressure          string   `json:"label_pressure,omitempty"`
-	GroupCoverage          float64  `json:"group_coverage,omitempty"`
-	RelationCoverage       float64  `json:"relation_coverage,omitempty"`
-	EdgeKindCount          int      `json:"edge_kind_count,omitempty"`
-	DominantEdgeKinds      []Count  `json:"dominant_edge_kinds,omitempty"`
-	OrphanNodes            []string `json:"orphan_nodes,omitempty"`
-	OrphanNodeCount        int      `json:"orphan_node_count,omitempty"`
-	LargestGroupSize       int      `json:"largest_group_size,omitempty"`
-	LargeGroups            []string `json:"large_groups,omitempty"`
-	GenericGroups          []string `json:"generic_groups,omitempty"`
-	MissingLabels          int      `json:"missing_labels,omitempty"`
-	FallbackIDLabels       []string `json:"fallback_id_labels,omitempty"`
-	LongLabels             []string `json:"long_labels,omitempty"`
-	DuplicateLabels        []string `json:"duplicate_labels,omitempty"`
-	EventsWithoutNodeID    int      `json:"events_without_node_id,omitempty"`
-	EventsWithoutKnownNode int      `json:"events_without_known_node,omitempty"`
-	EventNodeCoverage      float64  `json:"event_node_coverage,omitempty"`
-	MessagesWithoutPhase   int      `json:"messages_without_phase,omitempty"`
-	ParticipantFanout      []string `json:"participant_fanout,omitempty"`
-	MissingImportance      int      `json:"missing_importance,omitempty"`
-	MissingVisibility      int      `json:"missing_visibility,omitempty"`
-	HighFanoutNodes        []string `json:"high_fanout_nodes,omitempty"`
-	InitialView            string   `json:"initial_view,omitempty"`
-	CollapseByDefault      bool     `json:"collapse_by_default,omitempty"`
+	Nodes                   int      `json:"nodes,omitempty"`
+	Edges                   int      `json:"edges,omitempty"`
+	Groups                  int      `json:"groups,omitempty"`
+	VisibleNodes            int      `json:"visible_nodes,omitempty"`
+	VisibleEdges            int      `json:"visible_edges,omitempty"`
+	Events                  int      `json:"events,omitempty"`
+	Participants            int      `json:"participants,omitempty"`
+	Messages                int      `json:"messages,omitempty"`
+	Phases                  int      `json:"phases,omitempty"`
+	Activations             int      `json:"activations,omitempty"`
+	Fragments               int      `json:"fragments,omitempty"`
+	Classes                 int      `json:"classes,omitempty"`
+	Relationships           int      `json:"relationships,omitempty"`
+	States                  int      `json:"states,omitempty"`
+	Transitions             int      `json:"transitions,omitempty"`
+	Actions                 int      `json:"actions,omitempty"`
+	Flows                   int      `json:"flows,omitempty"`
+	Components              int      `json:"components,omitempty"`
+	Deployments             int      `json:"deployments,omitempty"`
+	Claims                  int      `json:"claims,omitempty"`
+	Sources                 int      `json:"sources,omitempty"`
+	Links                   int      `json:"links,omitempty"`
+	Items                   int      `json:"items,omitempty"`
+	EdgeDensity             string   `json:"edge_density,omitempty"`
+	LabelPressure           string   `json:"label_pressure,omitempty"`
+	GroupCoverage           float64  `json:"group_coverage,omitempty"`
+	RelationCoverage        float64  `json:"relation_coverage,omitempty"`
+	EdgeKindCount           int      `json:"edge_kind_count,omitempty"`
+	DominantEdgeKinds       []Count  `json:"dominant_edge_kinds,omitempty"`
+	OrphanNodes             []string `json:"orphan_nodes,omitempty"`
+	OrphanNodeCount         int      `json:"orphan_node_count,omitempty"`
+	LargestGroupSize        int      `json:"largest_group_size,omitempty"`
+	LargeGroups             []string `json:"large_groups,omitempty"`
+	GenericGroups           []string `json:"generic_groups,omitempty"`
+	MissingLabels           int      `json:"missing_labels,omitempty"`
+	FallbackIDLabels        []string `json:"fallback_id_labels,omitempty"`
+	LongLabels              []string `json:"long_labels,omitempty"`
+	DuplicateLabels         []string `json:"duplicate_labels,omitempty"`
+	EventsWithoutNodeID     int      `json:"events_without_node_id,omitempty"`
+	EventsWithoutKnownNode  int      `json:"events_without_known_node,omitempty"`
+	EventNodeCoverage       float64  `json:"event_node_coverage,omitempty"`
+	MessagesWithoutPhase    int      `json:"messages_without_phase,omitempty"`
+	ParticipantFanout       []string `json:"participant_fanout,omitempty"`
+	MissingImportance       int      `json:"missing_importance,omitempty"`
+	MissingVisibility       int      `json:"missing_visibility,omitempty"`
+	VisualFocusIDs          int      `json:"visual_focus_ids,omitempty"`
+	VisualHiddenDetails     int      `json:"visual_hidden_details,omitempty"`
+	VisualNarrativeSteps    int      `json:"visual_narrative_steps,omitempty"`
+	VisualAnnotations       int      `json:"visual_annotations,omitempty"`
+	VisualReferenceCoverage float64  `json:"visual_reference_coverage,omitempty"`
+	VisualUnknownRefs       []string `json:"visual_unknown_refs,omitempty"`
+	HighFanoutNodes         []string `json:"high_fanout_nodes,omitempty"`
+	InitialView             string   `json:"initial_view,omitempty"`
+	CollapseByDefault       bool     `json:"collapse_by_default,omitempty"`
 }
 
 type Warning struct {
@@ -205,10 +211,88 @@ func Analyze(tpl manifest.TemplateManifest, data map[string]any) (int, Summary, 
 	case "uml_component_deployment_v1":
 		quality = analyzeSemanticCount(data, design, &summary, &warnings, "components", "links", "uml_component_dense", "Component deployment diagram has more components or links than the recommended first view.")
 	}
+	quality -= analyzeVisualGuidance(data, tpl.InputSchemaKind, design, &summary, &warnings, &recommendations)
 	if quality < 0 {
 		quality = 0
 	}
 	return quality, summary, warnings, recommendations
+}
+
+func analyzeVisualGuidance(data map[string]any, kind string, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
+	knownIDs := collectVisualReferenceIDs(kind, data)
+	total := countSemanticItems(data)
+	visual, _ := data["visual"].(map[string]any)
+	if visual == nil {
+		if total > maxInt(10, design.MaxInitialNodes/2) {
+			*warnings = append(*warnings, Warning{Code: "visual_guidance_missing", Severity: "warning", Message: "Input does not include visual guidance for first-view focus, hidden detail, or annotations.", Hint: "Add visual.goal, visual.initial_focus_ids, visual.hidden_detail_ids, visual.narrative_steps, and visual.annotations so the renderer does not have to show everything at once."})
+			recommendations.AddFields = appendUnique(recommendations.AddFields, "visual")
+			recommendations.AddFields = appendUnique(recommendations.AddFields, "visual.initial_focus_ids")
+			recommendations.AddFields = appendUnique(recommendations.AddFields, "visual.annotations")
+			return 12
+		}
+		return 0
+	}
+	penalty := 0
+	focusIDs, focusUnknown := visualStringRefs(visual, "initial_focus_ids", knownIDs)
+	hiddenIDs, hiddenUnknown := visualStringRefs(visual, "hidden_detail_ids", knownIDs)
+	annotations := objectArrayFromValue(visual["annotations"])
+	steps := objectArrayFromValue(visual["narrative_steps"])
+	summary.VisualFocusIDs = len(focusIDs)
+	summary.VisualHiddenDetails = len(hiddenIDs)
+	summary.VisualNarrativeSteps = len(steps)
+	summary.VisualAnnotations = len(annotations)
+	unknownRefs := append([]string{}, focusUnknown...)
+	unknownRefs = append(unknownRefs, hiddenUnknown...)
+	for _, step := range steps {
+		_, unknown := visualStringRefs(step, "focus_ids", knownIDs)
+		unknownRefs = append(unknownRefs, unknown...)
+	}
+	for _, annotation := range annotations {
+		targetID := stringField(annotation, "target_id")
+		if targetID != "" && len(knownIDs) > 0 && !knownIDs[targetID] {
+			unknownRefs = appendCapped(unknownRefs, targetID, 12)
+		}
+	}
+	if len(knownIDs) > 0 {
+		knownVisualRefs := len(focusIDs) + len(hiddenIDs)
+		for _, annotation := range annotations {
+			if targetID := stringField(annotation, "target_id"); targetID != "" && knownIDs[targetID] {
+				knownVisualRefs++
+			}
+		}
+		summary.VisualReferenceCoverage = round2(float64(knownVisualRefs) / float64(maxInt(1, knownVisualRefs+len(unknownRefs))))
+	}
+	if len(unknownRefs) > 0 {
+		penalty += 18
+		summary.VisualUnknownRefs = duplicateFree(unknownRefs, 12)
+		*warnings = append(*warnings, Warning{Code: "visual_guidance_unknown_refs", Severity: "error", Message: "Some visual guidance ids do not exist in the input.", Hint: "Use ids from the selected template schema objects when filling visual focus, hidden detail, narrative steps, and annotations.", Details: summary.VisualUnknownRefs})
+	}
+	if strings.TrimSpace(stringField(visual, "goal")) == "" && total > 8 {
+		penalty += 6
+		*warnings = append(*warnings, Warning{Code: "visual_goal_missing", Severity: "info", Message: "Visual guidance does not state what the viewer should understand first.", Hint: "Set visual.goal to one clear sentence describing the intended first impression."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "visual.goal")
+	}
+	if len(focusIDs) == 0 && total > 8 {
+		penalty += 10
+		*warnings = append(*warnings, Warning{Code: "visual_focus_missing", Severity: "warning", Message: "Visual guidance does not name initial focus ids.", Hint: "Set visual.initial_focus_ids to the 2-5 entities, messages, events, claims, or items that should be emphasized first."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "visual.initial_focus_ids")
+	}
+	if len(hiddenIDs) == 0 && total > design.MaxInitialNodes/2 {
+		penalty += 6
+		*warnings = append(*warnings, Warning{Code: "visual_hidden_detail_missing", Severity: "info", Message: "Visual guidance does not mark secondary detail for delayed reveal.", Hint: "Set visual.hidden_detail_ids for noisy leaf nodes, repetitive events, or low-value implementation details."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "visual.hidden_detail_ids")
+	}
+	if len(annotations) == 0 && total > 8 {
+		penalty += 8
+		*warnings = append(*warnings, Warning{Code: "visual_annotations_missing", Severity: "warning", Message: "Visual guidance has no annotations, so the first view has no explanation anchors.", Hint: "Add 1-4 visual.annotations with target_id, label, summary, and priority."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "visual.annotations")
+	}
+	if len(steps) == 0 && total > 12 {
+		penalty += 6
+		*warnings = append(*warnings, Warning{Code: "visual_narrative_missing", Severity: "info", Message: "Visual guidance has no narrative steps for progressive interpretation.", Hint: "Add visual.narrative_steps so the agent explains overview first and detail second."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "visual.narrative_steps")
+	}
+	return penalty
 }
 
 func analyzeUMLSequence(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
@@ -695,6 +779,31 @@ func appendUnique(items []string, value string) []string {
 	return append(items, value)
 }
 
+func duplicateFree(items []string, limit int) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if item == "" || seen[item] {
+			continue
+		}
+		seen[item] = true
+		out = append(out, item)
+		if len(out) >= limit {
+			return out
+		}
+	}
+	return out
+}
+
+func countSemanticItems(data map[string]any) int {
+	total := 0
+	for _, name := range []string{"groups", "nodes", "edges", "events", "claims", "sources", "links", "items", "participants", "messages", "phases", "activations", "fragments", "classes", "relationships", "states", "transitions", "actions", "flows", "components", "deployments"} {
+		total += len(array(data, name))
+	}
+	return total
+}
+
 func topDegreeNodes(degree map[string]int, limit int) []string {
 	counts := topCounts(degree, limit)
 	var out []string
@@ -722,6 +831,44 @@ func objectArray(data map[string]any, name string) []map[string]any {
 	return out
 }
 
+func objectArrayFromValue(value any) []map[string]any {
+	raw, ok := value.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]any, 0, len(raw))
+	for _, item := range raw {
+		if obj, ok := item.(map[string]any); ok {
+			out = append(out, obj)
+		}
+	}
+	return out
+}
+
+func visualStringRefs(data map[string]any, name string, knownIDs map[string]bool) ([]string, []string) {
+	raw, ok := data[name].([]any)
+	if !ok {
+		return nil, nil
+	}
+	refs := []string{}
+	unknown := []string{}
+	for _, item := range raw {
+		value, ok := item.(string)
+		if !ok {
+			continue
+		}
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		refs = append(refs, value)
+		if len(knownIDs) > 0 && !knownIDs[value] {
+			unknown = appendCapped(unknown, value, 12)
+		}
+	}
+	return refs, unknown
+}
+
 func stringField(obj map[string]any, name string) string {
 	value, _ := obj[name].(string)
 	return strings.TrimSpace(value)
@@ -734,6 +881,42 @@ func firstString(obj map[string]any, names ...string) string {
 		}
 	}
 	return ""
+}
+
+func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool {
+	fieldsByKind := map[string][]string{
+		"graph_v1":                    {"groups", "nodes", "edges"},
+		"graph_events_v1":             {"groups", "nodes", "edges", "events"},
+		"timeline_v1":                 {"events"},
+		"evidence_v1":                 {"claims", "sources", "links"},
+		"matrix_v1":                   {"items"},
+		"uml_sequence_v1":             {"participants", "messages", "phases", "activations", "fragments"},
+		"uml_class_v1":                {"classes", "relationships"},
+		"uml_state_machine_v1":        {"states", "transitions"},
+		"uml_activity_v1":             {"actions", "flows"},
+		"uml_component_deployment_v1": {"components", "deployments", "links"},
+	}
+	ids := map[string]bool{}
+	for _, field := range fieldsByKind[strings.ToLower(kind)] {
+		for _, item := range objectArray(data, field) {
+			for _, id := range visualIDsForObject(item) {
+				ids[id] = true
+			}
+		}
+	}
+	return ids
+}
+
+func visualIDsForObject(obj map[string]any) []string {
+	if id := stringField(obj, "id"); id != "" {
+		return []string{id}
+	}
+	from := firstString(obj, "from", "claim_id")
+	to := firstString(obj, "to", "source_id")
+	if from != "" && to != "" {
+		return []string{from + "->" + to}
+	}
+	return nil
 }
 
 func densityLabel(nodes, edges int) string {

@@ -170,5 +170,61 @@
     "collapse_groups": true,
     "max_nodes": 70,
     "max_edges": 140
+  },
+  "visual": {
+    "goal": "Explain the resource allocation matrix by starting from the most important objects, then reveal supporting detail on demand.",
+    "audience": "reviewer",
+    "initial_focus_ids": [
+      "planning-resource-allocation-board-item-1",
+      "planning-resource-allocation-board-item-2",
+      "planning-resource-allocation-board-item-3"
+    ],
+    "hidden_detail_ids": [
+      "planning-resource-allocation-board-item-8",
+      "planning-resource-allocation-board-item-9"
+    ],
+    "emphasis": [
+      "first-view clarity",
+      "progressive detail",
+      "semantic focus"
+    ],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Start with the main actors",
+        "summary": "Show the core entities and the relationship the viewer should understand first.",
+        "focus_ids": [
+          "planning-resource-allocation-board-item-1",
+          "planning-resource-allocation-board-item-2",
+          "planning-resource-allocation-board-item-3"
+        ]
+      },
+      {
+        "id": "detail",
+        "title": "Reveal supporting detail",
+        "summary": "Use search, filters, or expansion for secondary evidence and implementation detail.",
+        "focus_ids": [
+          "planning-resource-allocation-board-item-3",
+          "planning-resource-allocation-board-item-4",
+          "planning-resource-allocation-board-item-5"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "note-1",
+        "target_id": "planning-resource-allocation-board-item-1",
+        "label": "Start here",
+        "summary": "Use planning-resource-allocation-board-item-1 as a visual anchor for the matrix resource allocation story.",
+        "priority": 1.0
+      },
+      {
+        "id": "note-2",
+        "target_id": "planning-resource-allocation-board-item-2",
+        "label": "Key relationship",
+        "summary": "Use planning-resource-allocation-board-item-2 as a visual anchor for the matrix resource allocation story.",
+        "priority": 0.82
+      }
+    ]
   }
 }

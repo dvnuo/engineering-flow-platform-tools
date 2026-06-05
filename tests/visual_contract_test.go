@@ -236,14 +236,30 @@ func TestVisualUMLTemplateSchemaInspectAndRender(t *testing.T) {
 	}
 	jsonSchema := objectMap(t, data["json_schema"])
 	properties := objectMap(t, jsonSchema["properties"])
-	for _, field := range []string{"participants", "messages", "activations", "fragments", "phases"} {
+	for _, field := range []string{"participants", "messages", "activations", "fragments", "phases", "visual"} {
 		if _, ok := properties[field]; !ok {
 			t.Fatalf("uml.sequence_3d schema missing %s: %#v", field, properties)
+		}
+	}
+	participantProps := objectMap(t, objectMap(t, objectMap(t, properties["participants"])["items"])["properties"])
+	for _, field := range []string{"display_name", "subtitle", "lane_index", "depth", "color"} {
+		if _, ok := participantProps[field]; !ok {
+			t.Fatalf("uml sequence participant schema missing %s: %#v", field, participantProps)
+		}
+	}
+	messageProps := objectMap(t, objectMap(t, objectMap(t, properties["messages"])["items"])["properties"])
+	for _, field := range []string{"summary", "importance", "label_priority", "curve", "depth"} {
+		if _, ok := messageProps[field]; !ok {
+			t.Fatalf("uml sequence message schema missing %s: %#v", field, messageProps)
 		}
 	}
 	example := objectMap(t, data["example"])
 	if len(example["participants"].([]any)) < 6 || len(example["messages"].([]any)) < 12 {
 		t.Fatalf("uml sequence example is too small: %#v", example)
+	}
+	visual := objectMap(t, example["visual"])
+	if len(visual["initial_focus_ids"].([]any)) < 3 || len(visual["annotations"].([]any)) < 2 {
+		t.Fatalf("uml sequence example visual guidance is weak: %#v", visual)
 	}
 
 	inspect := runVisualOK(t, "inspect-input", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", input, "--json")
@@ -251,6 +267,11 @@ func TestVisualUMLTemplateSchemaInspectAndRender(t *testing.T) {
 	for field, want := range map[string]float64{"participants": 6, "messages": 12, "phases": 4, "activations": 4, "fragments": 2} {
 		if summary[field].(float64) != want {
 			t.Fatalf("inspect-input summary missing %s=%v: %#v", field, want, summary)
+		}
+	}
+	for _, field := range []string{"visual_focus_ids", "visual_annotations", "visual_narrative_steps"} {
+		if _, ok := summary[field]; !ok {
+			t.Fatalf("inspect-input summary missing visual field %s: %#v", field, summary)
 		}
 	}
 
@@ -268,6 +289,39 @@ func TestVisualUMLTemplateSchemaInspectAndRender(t *testing.T) {
 	inspected := runVisualOK(t, "inspect-output", "--out", out, "--json")
 	inspectArtifact := objectMap(t, objectMap(t, inspected["data"])["artifact"])
 	assertArtifactContract(t, inspectArtifact, "", "")
+}
+
+func TestVisualAllTemplatesExposeVisualAuthoringContract(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+	registry := loadRegistry(t, templateDir)
+	for _, entry := range registry.Templates {
+		t.Run(entry.ID, func(t *testing.T) {
+			schemaDoc := loadJSONMap(t, filepath.Join(templateDir, entry.ID, "schema.input.json"))
+			jsonSchema := objectMap(t, schemaDoc["json_schema"])
+			properties := objectMap(t, jsonSchema["properties"])
+			visualSchema, ok := properties["visual"].(map[string]any)
+			if !ok {
+				t.Fatalf("%s schema missing visual authoring contract: %#v", entry.ID, properties)
+			}
+			visualProps := objectMap(t, visualSchema["properties"])
+			for _, field := range []string{"goal", "initial_focus_ids", "hidden_detail_ids", "narrative_steps", "annotations"} {
+				if _, ok := visualProps[field]; !ok {
+					t.Fatalf("%s visual schema missing %s: %#v", entry.ID, field, visualProps)
+				}
+			}
+			example := loadJSONMap(t, filepath.Join(templateDir, entry.ID, "examples", "basic.input.json"))
+			visual := objectMap(t, example["visual"])
+			if visual["goal"] == "" || len(visual["initial_focus_ids"].([]any)) == 0 || len(visual["narrative_steps"].([]any)) == 0 || len(visual["annotations"].([]any)) == 0 {
+				t.Fatalf("%s example visual guidance incomplete: %#v", entry.ID, visual)
+			}
+			inspect := runVisualOK(t, "inspect-input", "--template", entry.ID, "--template-dir", templateDir, "--input", filepath.Join(templateDir, entry.ID, "examples", "basic.input.json"), "--json")
+			summary := objectMap(t, objectMap(t, inspect["data"])["summary"])
+			if summary["visual_focus_ids"] == nil || summary["visual_annotations"] == nil {
+				t.Fatalf("%s inspect-input did not report visual guidance counts: %#v", entry.ID, summary)
+			}
+		})
+	}
 }
 
 func TestVisualUMLFamilyExamplesValidateAndRender(t *testing.T) {
@@ -439,6 +493,30 @@ func TestVisualGraphInteractionKeepsCameraStableForNodeDragAndExpand(t *testing.
             orbit.phi -= dy * 0.005;
           }`) {
 		t.Fatal("node drag fallback can still fall through into orbit camera movement")
+	}
+}
+
+func TestVisualRendererConsumesVisualAuthoringHints(t *testing.T) {
+	root := repoRoot(t)
+	renderer := mustRead(t, filepath.Join(root, "templates", "visual", "_shared", "runtime", "efp-visual-renderers.iife.js"))
+	for _, want := range []string{
+		"function readVisualHints(data)",
+		"initial_focus_ids",
+		"hidden_detail_ids",
+		"visual-three-annotation-label",
+		"visual-uml-phase-legend",
+		"lane_index",
+		"CatmullRomCurve3",
+	} {
+		if !strings.Contains(renderer, want) {
+			t.Fatalf("visual renderer missing shared visual hint support %q", want)
+		}
+	}
+	css := mustRead(t, filepath.Join(root, "templates", "visual", "_shared", "runtime", "efp-visual-runtime.css"))
+	for _, want := range []string{"visual-card-focus", "visual-card-annotation", "visual-three-annotation-label", "visual-uml-annotation-label"} {
+		if !strings.Contains(css, want) {
+			t.Fatalf("visual runtime css missing %s", want)
+		}
 	}
 }
 

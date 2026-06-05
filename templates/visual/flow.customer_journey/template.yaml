@@ -42,6 +42,8 @@ visual_design:
     - label_lod
     - export_json
   agent_guidance:
+    - Put secondary or noisy details behind hidden_detail_ids, detail visibility, or collapsed groups instead of showing everything at once.
+    - Fill visual.goal, visual.initial_focus_ids, visual.hidden_detail_ids, visual.narrative_steps, and visual.annotations so the first view tells a readable story.
     - Choose this template only when the input matches its semantic contract.
     - Keep the first view readable by grouping detail and marking low-value links as detail.
     - Run visual template schema before inventing input JSON fields.

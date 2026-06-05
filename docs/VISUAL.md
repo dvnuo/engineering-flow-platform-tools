@@ -75,6 +75,16 @@ visual render --template uml.sequence_3d --template-dir ./templates/visual --inp
 
 Agents must read `visual template schema <id> --json` before writing input JSON. Do not invent JSON shape. Do not infer templates from directories.
 
+Every semantic input schema includes a shared `visual` object. Use it to tell the renderer how to make the first view readable instead of asking the agent to generate JavaScript:
+
+- `visual.goal`: what the viewer should understand first
+- `visual.initial_focus_ids`: semantic ids emphasized in the first view
+- `visual.hidden_detail_ids`: secondary detail that can stay collapsed, muted, or hidden until search/focus
+- `visual.narrative_steps`: progressive explanation beats with `focus_ids`
+- `visual.annotations`: callouts attached to existing `target_id` values
+
+Graph, timeline, matrix, evidence, and UML renderers use this guidance for focus styling, delayed detail, labels, and annotations.
+
 ## Visual Design Guidance
 
 Each template declares `visual_design` in `template.yaml`. The schema command returns this guidance so agents can create readable inputs:
@@ -88,7 +98,7 @@ Each template declares `visual_design` in `template.yaml`. The schema command re
 
 For large graph-like inputs, use short display labels, put full names and paths in `metadata`, add groups or `parent_id`/`group_id`/`group`, keep overview relationships visible, and mark noisy detail edges with `visibility: "detail"` or `visibility: "hidden"`.
 
-For UML sequence inputs, provide participants as semantic lifelines, use unique numeric `messages[].order`, add concise message labels, define phases when a flow has stages, and use fragments for `alt`, `loop`, `opt`, or `par` regions.
+For UML sequence inputs, provide participants as semantic lifelines, use unique numeric `messages[].order`, add concise message labels, define phases when a flow has stages, and use fragments for `alt`, `loop`, `opt`, or `par` regions. For a stronger 3D sequence scene, also provide participant `display_name`, `subtitle`, `lane_index`, `depth`, and `color`; provide message `curve`, `importance`, `label_priority`, `depth`, and `summary`; then use `visual.initial_focus_ids` and `visual.annotations` to explain the high-value paths.
 
 ## Render Output Contract
 

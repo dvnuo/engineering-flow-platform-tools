@@ -15,9 +15,10 @@ const threeModuleSource = "_shared/vendor/three/efp-three.module.min.js"
 const threeModuleOutput = "assets/vendor/three/efp-three.module.min.js"
 
 var sharedAssetFiles = map[string]string{
-	"_shared/asset-registry.json":    "assets/asset-registry.json",
-	"_shared/mark-registry.json":     "assets/mark-registry.json",
-	"_shared/assets/ATTRIBUTIONS.md": "assets/ATTRIBUTIONS.md",
+	"_shared/agent-guidance/mark-grammar.md": "assets/agent-guidance/mark-grammar.md",
+	"_shared/asset-registry.json":            "assets/asset-registry.json",
+	"_shared/mark-registry.json":             "assets/mark-registry.json",
+	"_shared/assets/ATTRIBUTIONS.md":         "assets/ATTRIBUTIONS.md",
 }
 
 func copyAssets(templateDir string, entry manifest.RegistryEntry, tpl manifest.TemplateManifest, outDir string) ([]string, error) {

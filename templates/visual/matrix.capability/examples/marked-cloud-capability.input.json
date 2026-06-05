@@ -1,0 +1,215 @@
+{
+  "schema": "efp.visual.input.matrix.v1",
+  "title": "Cloud Capability Readiness Matrix",
+  "view": {
+    "colorBy": "provider"
+  },
+  "renderHints": {
+    "colorBy": "provider",
+    "palette": "cloud_provider",
+    "showLegend": true,
+    "iconMode": "billboard"
+  },
+  "legend": {
+    "provider": "Color identifies the provider or managed platform used by each capability."
+  },
+  "items": [
+    {
+      "id": "edge-entry",
+      "label": "Edge Entry",
+      "kind": "external",
+      "provider": "aws",
+      "service": "cloudfront",
+      "group": "edge",
+      "status": "ok",
+      "summary": "CloudFront is ready as the public capability boundary.",
+      "metrics": {
+        "confidence": 0.86,
+        "impact": 0.72
+      },
+      "x": 0.14,
+      "y": 0.74
+    },
+    {
+      "id": "orders-api",
+      "label": "Orders API",
+      "kind": "api",
+      "provider": "aws",
+      "service": "api_gateway",
+      "group": "api",
+      "status": "success",
+      "summary": "API Gateway has high readiness and strong implementation confidence.",
+      "metrics": {
+        "confidence": 0.82,
+        "impact": 0.84
+      },
+      "x": 0.35,
+      "y": 0.82
+    },
+    {
+      "id": "billing-worker",
+      "label": "Billing Worker",
+      "kind": "service",
+      "provider": "aws",
+      "service": "lambda",
+      "group": "compute",
+      "status": "warning",
+      "summary": "Lambda worker is capable but needs idempotency hardening before launch.",
+      "metrics": {
+        "confidence": 0.63,
+        "impact": 0.78
+      },
+      "x": 0.56,
+      "y": 0.76
+    },
+    {
+      "id": "ledger-store",
+      "label": "Ledger Store",
+      "kind": "database",
+      "provider": "aws",
+      "service": "rds",
+      "group": "data",
+      "status": "blocked",
+      "summary": "RDS migration is blocked on retention and failover signoff.",
+      "metrics": {
+        "confidence": 0.38,
+        "impact": 0.88
+      },
+      "x": 0.76,
+      "y": 0.86
+    },
+    {
+      "id": "event-bus",
+      "label": "Event Bus",
+      "kind": "event_stream",
+      "provider": "aws",
+      "service": "eventbridge",
+      "group": "integration",
+      "status": "ok",
+      "summary": "EventBridge covers domain event routing with acceptable operational confidence.",
+      "metrics": {
+        "confidence": 0.71,
+        "impact": 0.58
+      },
+      "x": 0.45,
+      "y": 0.55
+    },
+    {
+      "id": "retry-queue",
+      "label": "Retry Queue",
+      "kind": "queue",
+      "provider": "aws",
+      "service": "sqs",
+      "group": "integration",
+      "status": "warning",
+      "summary": "SQS retry handling exists, but dead-letter alarms need ownership.",
+      "metrics": {
+        "confidence": 0.58,
+        "impact": 0.48
+      },
+      "x": 0.64,
+      "y": 0.43
+    },
+    {
+      "id": "audit-archive",
+      "label": "Audit Archive",
+      "kind": "storage",
+      "provider": "aws",
+      "service": "s3",
+      "group": "data",
+      "status": "success",
+      "summary": "S3 archive capability is ready and covered by retention policy tests.",
+      "metrics": {
+        "confidence": 0.9,
+        "impact": 0.39
+      },
+      "x": 0.24,
+      "y": 0.36
+    },
+    {
+      "id": "secret-rotation",
+      "label": "Secret Rotation",
+      "kind": "risk",
+      "provider": "aws",
+      "service": "secrets_manager",
+      "group": "security",
+      "status": "error",
+      "summary": "Secrets Manager rotation is the highest risk gap in the capability map.",
+      "metrics": {
+        "confidence": 0.28,
+        "impact": 0.69
+      },
+      "x": 0.82,
+      "y": 0.61
+    },
+    {
+      "id": "release-gate",
+      "label": "Release Gate",
+      "kind": "job",
+      "platform": "jenkins",
+      "group": "delivery",
+      "status": "ok",
+      "summary": "Jenkins deployment gate is stable enough for controlled rollout.",
+      "metrics": {
+        "confidence": 0.77,
+        "impact": 0.28
+      },
+      "x": 0.52,
+      "y": 0.22
+    }
+  ],
+  "visual": {
+    "goal": "Show which cloud capabilities are ready, risky, or blocked before launch.",
+    "audience": "platform reviewers",
+    "initial_focus_ids": [
+      "orders-api",
+      "ledger-store",
+      "secret-rotation"
+    ],
+    "hidden_detail_ids": [],
+    "emphasis": [
+      "provider",
+      "readiness",
+      "risk"
+    ],
+    "narrative_steps": [
+      {
+        "id": "readiness",
+        "title": "Readiness hotspots",
+        "summary": "Start with the high-impact API, database, and security capabilities.",
+        "focus_ids": [
+          "orders-api",
+          "ledger-store",
+          "secret-rotation"
+        ]
+      },
+      {
+        "id": "supporting-platform",
+        "title": "Supporting platform",
+        "summary": "Then compare eventing, storage, queueing, and release support.",
+        "focus_ids": [
+          "event-bus",
+          "retry-queue",
+          "audit-archive",
+          "release-gate"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "blocked-db",
+        "target_id": "ledger-store",
+        "label": "Migration blocker",
+        "summary": "Retention and failover signoff are required before launch.",
+        "priority": 1.0
+      },
+      {
+        "id": "rotation-risk",
+        "target_id": "secret-rotation",
+        "label": "Risk gap",
+        "summary": "Rotation coverage is below the launch threshold.",
+        "priority": 0.92
+      }
+    ]
+  }
+}

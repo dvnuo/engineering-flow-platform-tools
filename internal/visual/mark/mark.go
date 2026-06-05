@@ -323,9 +323,9 @@ func Analyze(templateDir, inputSchemaKind string, data map[string]any) Stats {
 
 func shapeQualityApplies(kind string) bool {
 	switch strings.ToLower(kind) {
-	case "graph_v1", "graph_events_v1", "uml_class_v1", "uml_state_machine_v1", "uml_activity_v1", "uml_component_deployment_v1":
+	case "graph_v1", "graph_events_v1", "matrix_v1", "uml_class_v1", "uml_state_machine_v1", "uml_activity_v1", "uml_component_deployment_v1":
 		return true
-	case "timeline_v1":
+	case "timeline_v1", "evidence_v1":
 		return true
 	default:
 		return false

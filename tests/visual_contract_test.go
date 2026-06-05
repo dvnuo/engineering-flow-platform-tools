@@ -589,6 +589,27 @@ func TestVisualAllTemplatesExposeVisualAuthoringContract(t *testing.T) {
 	}
 }
 
+func TestVisualAllTemplatesExposeMarkSystemAuthoringContract(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+	registry := loadRegistry(t, templateDir)
+	for _, entry := range registry.Templates {
+		t.Run(entry.ID, func(t *testing.T) {
+			schemaDoc := loadJSONMap(t, filepath.Join(templateDir, entry.ID, "schema.input.json"))
+			jsonSchema := objectMap(t, schemaDoc["json_schema"])
+			properties := objectMap(t, jsonSchema["properties"])
+			for _, field := range markObjectArrays(entry.InputSchemaKind) {
+				assertObjectArrayMarkPresentation(t, entry.ID, properties, field)
+			}
+			for _, field := range []string{"edges", "relationships", "messages", "links", "flows", "transitions"} {
+				if _, ok := properties[field]; ok {
+					assertRelationshipArrayMarkPresentation(t, entry.ID, properties, field)
+				}
+			}
+		})
+	}
+}
+
 func TestVisualUMLFamilyExamplesValidateAndRender(t *testing.T) {
 	root := repoRoot(t)
 	templateDir := filepath.Join(root, "templates", "visual")
@@ -770,6 +791,8 @@ func TestVisualRendererConsumesVisualAuthoringHints(t *testing.T) {
 		"function createMarkMesh",
 		"function resolveEdgeSpec",
 		"function createArrowHead",
+		"renderMatrix(ctx)",
+		"data-mark-shape",
 		"TubeGeometry",
 		"initial_focus_ids",
 		"hidden_detail_ids",
@@ -903,6 +926,7 @@ func TestVisualMarkSystemCloudArchitectureContract(t *testing.T) {
 	assertArtifactContract(t, artifact, "relationship.dependency_graph", "")
 	files := stringSetFromAny(artifact["files"].([]any))
 	for _, rel := range []string{
+		"assets/agent-guidance/mark-grammar.md",
 		"assets/asset-registry.json",
 		"assets/mark-registry.json",
 		"assets/ATTRIBUTIONS.md",
@@ -1022,6 +1046,125 @@ func TestVisualTimelineAndEvidenceMarkContracts(t *testing.T) {
 	for _, field := range []string{"shape_diversity", "arrows_visible", "color_diversity", "legend_present", "icon_assets_present", "attributions_present"} {
 		if evidenceChecks[field] != true {
 			t.Fatalf("marked evidence inspect-render check %s failed: %#v", field, evidenceChecks)
+		}
+	}
+}
+
+func TestVisualMatrixMarkSystemContract(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+	input := filepath.Join(templateDir, "matrix.capability", "examples", "marked-cloud-capability.input.json")
+	out := filepath.Join(t.TempDir(), "marked-matrix")
+
+	planObj := runVisualOK(t, "inspect-plan", "--template", "matrix.capability", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
+	planData := objectMap(t, planObj["data"])
+	if planData["ready"] != true || planData["quality_score"].(float64) < 90 {
+		t.Fatalf("marked matrix inspect-plan should be ready with high quality: %#v", planData)
+	}
+	plan := objectMap(t, planData["visual_plan"])
+	marks := objectMap(t, plan["marks"])
+	if marks["fallback_sphere_count"].(float64) != 0 {
+		t.Fatalf("marked matrix should not fall back to spheres: %#v", marks)
+	}
+	shapeCounts := objectMap(t, marks["shape_counts"])
+	for _, shape := range []string{"service_box", "hex_service", "database_cylinder", "queue_capsule", "event_bus", "bucket", "cloud_plate", "warning_prism", "ci_card"} {
+		if shapeCounts[shape] == nil {
+			t.Fatalf("marked matrix shape_counts missing %s in %#v", shape, shapeCounts)
+		}
+	}
+	colors := objectMap(t, plan["colors"])
+	if colors["colorBy"] != "provider" || colors["single_color"] == true || len(colors["legend_items"].([]any)) < 6 {
+		t.Fatalf("marked matrix should expose provider color legend: %#v", colors)
+	}
+	assets := objectMap(t, plan["assets"])
+	iconsUsed := stringSetFromAny(assets["icons_used"].([]any))
+	for _, icon := range []string{"aws.api_gateway", "aws.lambda", "aws.rds", "aws.sqs", "aws.eventbridge", "aws.s3", "aws.secrets_manager", "jenkins"} {
+		if !iconsUsed[icon] {
+			t.Fatalf("marked matrix asset plan missing icon %s in %#v", icon, iconsUsed)
+		}
+	}
+	if anyArrayLen(assets["missing_icons"]) != 0 || anyArrayLen(assets["attributions"]) == 0 {
+		t.Fatalf("marked matrix should include local icons and attributions: %#v", assets)
+	}
+
+	rendered := runVisualOK(t, "render", "--template", "matrix.capability", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
+	artifact := objectMap(t, objectMap(t, rendered["data"])["artifact"])
+	assertArtifactContract(t, artifact, "matrix.capability", "")
+	files := stringSetFromAny(artifact["files"].([]any))
+	for _, rel := range []string{"assets/agent-guidance/mark-grammar.md", "assets/asset-registry.json", "assets/mark-registry.json", "assets/icons/aws/api_gateway.svg", "assets/icons/aws/rds.svg", "assets/icons/jenkins/jenkins.svg"} {
+		if !files[rel] {
+			t.Fatalf("marked matrix artifact missing mark asset %s in %#v", rel, files)
+		}
+	}
+
+	inspected := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", out, "--json")
+	renderData := objectMap(t, inspected["data"])
+	if renderData["ready"] != true || renderData["render_score"].(float64) < 90 {
+		t.Fatalf("marked matrix inspect-render should be ready: %#v", renderData)
+	}
+	checks := objectMap(t, renderData["checks"])
+	for _, field := range []string{"shape_diversity", "color_diversity", "legend_present", "icon_assets_present", "attributions_present"} {
+		if checks[field] != true {
+			t.Fatalf("marked matrix inspect-render check %s failed: %#v", field, checks)
+		}
+	}
+}
+
+func markObjectArrays(kind string) []string {
+	switch kind {
+	case "graph_v1":
+		return []string{"nodes"}
+	case "graph_events_v1":
+		return []string{"nodes", "events"}
+	case "timeline_v1":
+		return []string{"events"}
+	case "evidence_v1":
+		return []string{"claims", "sources"}
+	case "matrix_v1":
+		return []string{"items"}
+	case "uml_sequence_v1":
+		return []string{"participants"}
+	case "uml_class_v1":
+		return []string{"classes"}
+	case "uml_state_machine_v1":
+		return []string{"states"}
+	case "uml_activity_v1":
+		return []string{"actions"}
+	case "uml_component_deployment_v1":
+		return []string{"components", "deployments"}
+	default:
+		return nil
+	}
+}
+
+func assertObjectArrayMarkPresentation(t *testing.T, templateID string, properties map[string]any, field string) {
+	t.Helper()
+	fieldSchema, ok := properties[field].(map[string]any)
+	if !ok {
+		t.Fatalf("%s schema missing object array %s: %#v", templateID, field, properties)
+	}
+	itemProps := objectMap(t, objectMap(t, fieldSchema["items"])["properties"])
+	presentation := objectMap(t, itemProps["presentation"])
+	presentationProps := objectMap(t, presentation["properties"])
+	for _, name := range []string{"shape", "icon", "color"} {
+		if _, ok := presentationProps[name]; !ok {
+			t.Fatalf("%s %s[] presentation missing %s: %#v", templateID, field, name, presentationProps)
+		}
+	}
+}
+
+func assertRelationshipArrayMarkPresentation(t *testing.T, templateID string, properties map[string]any, field string) {
+	t.Helper()
+	fieldSchema := objectMap(t, properties[field])
+	itemProps := objectMap(t, objectMap(t, fieldSchema["items"])["properties"])
+	if _, ok := itemProps["directed"]; !ok {
+		t.Fatalf("%s %s[] missing directed field: %#v", templateID, field, itemProps)
+	}
+	presentation := objectMap(t, itemProps["presentation"])
+	presentationProps := objectMap(t, presentation["properties"])
+	for _, name := range []string{"arrow", "color"} {
+		if _, ok := presentationProps[name]; !ok {
+			t.Fatalf("%s %s[] presentation missing %s: %#v", templateID, field, name, presentationProps)
 		}
 	}
 }

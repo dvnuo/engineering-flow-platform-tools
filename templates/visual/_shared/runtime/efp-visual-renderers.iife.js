@@ -665,6 +665,20 @@
     return normalizeMarkKey(view.colorBy || view.color_by || hints.colorBy || hints.color_by || "kind");
   }
 
+  function hasDeclaredColorBy(visual) {
+    var view = visual && visual.view ? visual.view : {};
+    var hints = visual && visual.renderHints ? visual.renderHints : {};
+    return !!(view.colorBy || view.color_by || hints.colorBy || hints.color_by);
+  }
+
+  function shouldShowSemanticLegend(visual) {
+    var hints = visual && visual.renderHints ? visual.renderHints : {};
+    if (hints.showLegend === false || hints.show_legend === false) {
+      return false;
+    }
+    return hasDeclaredColorBy(visual) || hints.showLegend === true || hints.show_legend === true;
+  }
+
   function legendValueForItem(item, colorBy) {
     item = item || {};
     if (colorBy === "provider") {
@@ -713,6 +727,17 @@
       return { id: id, label: id, count: counts[id], color: colors[id] || colorStringFromHex(phaseColor(id, 0)) };
     });
     return { title: colorBy === "provider" ? "Providers" : colorBy.charAt(0).toUpperCase() + colorBy.slice(1), items: items };
+  }
+
+  function colorSpecForPolicy(item, context, colorBy, markSpec) {
+    var colorSpec = resolveColorSpec(item, context);
+    if (colorBy === "status") {
+      return { color: nodeColor(item && item.status), source: "status" };
+    }
+    if (colorBy === "provider" || colorBy === "service" || colorBy === "platform" || colorBy === "kind") {
+      return { color: markSpec && markSpec.color || colorSpec.color, source: colorBy };
+    }
+    return colorSpec;
   }
 
   function createSelectionStore() {
@@ -2841,6 +2866,12 @@
     var shell = appShell(ctx.container, manifest);
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
     var profile = decorateStage(shell.stage, manifest, data, preset);
+    var markContext = createMarkContext(manifest, data);
+    var colorBy = colorByFromVisual(visual);
+    if (shouldShowSemanticLegend(visual)) {
+      var legendSpec = buildLegendItems(data, { visual: visual, rawNodes: items, rawEdges: [] }, markContext);
+      createLegendOverlay(shell.stage, legendSpec.title, legendSpec.items);
+    }
     createThreeScene(shell.stage, manifest, data, preset, profile, shell.inspector);
     var board = el("div", "matrix-stage visual-matrix-3d");
     board.appendChild(el("div", "matrix-axis-y", "Impact"));
@@ -2853,12 +2884,35 @@
       card.style.left = Math.max(8, Math.min(92, x * 100)) + "%";
       card.style.top = Math.max(8, Math.min(92, (1 - y) * 100)) + "%";
       var zDepth = Math.max(0, Math.min(1, z > 1 ? z / 100 : z / 7));
+      var markSpec = resolveMarkSpec(item, markContext);
+      var colorSpec = colorSpecForPolicy(item, markContext, colorBy, markSpec);
+      var markColor = normalizeColorString(colorSpec.color || markSpec.color);
+      var iconPath = iconPathFor(markSpec, markContext);
       card.style.setProperty("--item-z-offset", Math.round(zDepth * 88) + "px");
       card.style.setProperty("--item-shadow-offset", Math.round(zDepth * 22) + "px");
-      card.appendChild(el("div", "visual-card-title", item.label || item.id));
+      card.style.setProperty("--mark-color", markColor);
+      card.setAttribute("data-mark-shape", markSpec.shape || "");
+      card.setAttribute("data-mark-icon", markSpec.icon || "");
+      card.setAttribute("data-mark-color", markColor);
+      var markRow = el("div", "matrix-mark-row");
+      var emblem = el("span", "visual-mark-emblem visual-mark-shape-" + safeClass(markSpec.shape));
+      emblem.style.backgroundColor = markColor;
+      emblem.setAttribute("aria-hidden", "true");
+      if (iconPath) {
+        var icon = document.createElement("img");
+        icon.className = "visual-mark-icon";
+        icon.src = iconPath;
+        icon.alt = "";
+        emblem.appendChild(icon);
+      }
+      var textBox = el("div", "matrix-mark-text");
+      textBox.appendChild(el("div", "visual-card-title", item.label || item.id));
+      textBox.appendChild(el("div", "visual-card-meta", [item.kind, item.provider && item.service ? item.provider + "." + item.service : item.provider || item.platform || item.service].filter(Boolean).join(" · ")));
+      markRow.appendChild(emblem);
+      markRow.appendChild(textBox);
+      card.appendChild(markRow);
       var status = runtime.formatStatus(item.status || item.kind);
       card.appendChild(el("span", status.className, status.label));
-      card.appendChild(el("div", "visual-card-meta", item.kind || ""));
       visualAnnotationsFor(visual, item.id).forEach(function (annotation) {
         card.appendChild(el("div", "visual-card-annotation", visualAnnotationText(annotation)));
       });

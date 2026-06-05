@@ -673,7 +673,9 @@ select {
 
 .visual-matrix-3d .matrix-item {
   transform: translate(-50%, -50%) translateZ(var(--item-z-offset, 36px));
-  box-shadow: var(--item-shadow-offset, 12px) var(--item-shadow-offset, 12px) 0 rgb(0 0 0 / 0.24);
+  box-shadow:
+    inset 3px 0 0 var(--mark-color, var(--accent)),
+    var(--item-shadow-offset, 12px) var(--item-shadow-offset, 12px) 0 rgb(0 0 0 / 0.24);
 }
 
 .visual-effect-documents .visual-svg,
@@ -829,9 +831,99 @@ select {
 
 .matrix-item {
   position: absolute;
-  width: 170px;
-  min-height: 68px;
+  width: 188px;
+  min-height: 88px;
+  border-color: var(--mark-color, var(--line));
+  box-shadow:
+    inset 3px 0 0 var(--mark-color, var(--accent)),
+    0 12px 34px rgb(0 0 0 / 0.22);
   transform: translate(-50%, -50%);
+}
+
+.matrix-mark-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+}
+
+.matrix-mark-text {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.matrix-item .visual-card-title {
+  margin-bottom: 3px;
+}
+
+.matrix-item .visual-card-meta {
+  min-height: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.matrix-item .visual-badge {
+  margin-top: 8px;
+}
+
+.visual-mark-emblem {
+  position: relative;
+  display: inline-flex;
+  width: 31px;
+  height: 27px;
+  flex: 0 0 31px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 0.32);
+  border-radius: 7px;
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--mark-color, var(--accent)) 42%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
+
+.visual-mark-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.4));
+}
+
+.visual-mark-shape-hex_service {
+  clip-path: polygon(24% 0, 76% 0, 100% 50%, 76% 100%, 24% 100%, 0 50%);
+}
+
+.visual-mark-shape-database_cylinder,
+.visual-mark-shape-bucket {
+  height: 30px;
+  border-radius: 50% 50% 9px 9px / 24% 24% 12px 12px;
+}
+
+.visual-mark-shape-queue_capsule,
+.visual-mark-shape-event_bus,
+.visual-mark-shape-stream_rail {
+  height: 22px;
+  margin-top: 3px;
+  border-radius: 999px;
+}
+
+.visual-mark-shape-cloud_plate {
+  width: 34px;
+  border-radius: 999px;
+}
+
+.visual-mark-shape-actor_card {
+  width: 29px;
+  height: 29px;
+  border-radius: 999px;
+}
+
+.visual-mark-shape-diamond {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.visual-mark-shape-warning_prism {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
 
 @keyframes visual-flow {

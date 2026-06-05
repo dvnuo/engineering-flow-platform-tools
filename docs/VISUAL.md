@@ -104,7 +104,7 @@ For UML sequence inputs, provide participants as semantic lifelines, use unique 
 
 ## Visual Mark System
 
-Graph-like, UML component/activity/state, and sequence renderers use the shared Visual Mark System. The agent-facing grammar lives in `templates/visual/_shared/agent-guidance/mark-grammar.md`; runtime defaults live in `_shared/mark-registry.json`; local icon/model metadata lives in `_shared/asset-registry.json`.
+Graph-like, matrix, UML component/activity/state, and sequence renderers use the shared Visual Mark System. The agent-facing grammar lives in `templates/visual/_shared/agent-guidance/mark-grammar.md`; runtime defaults live in `_shared/mark-registry.json`; local icon/model metadata lives in `_shared/asset-registry.json`.
 
 Object marks are resolved from `presentation.mesh` or `presentation.shape`, then `presentation.icon`, then `provider + service`, `platform`, `kind`, `group`, and finally fallback. Use these fields so a service can render as a box, an API as a hex service, a database or storage object as a cylinder, a queue or stream as a capsule, a user as an actor card, an external system as a cloud plate, and a decision or risk as a diamond or warning prism.
 
@@ -135,6 +135,7 @@ Successful render output includes:
 - `assets/runtime/efp-visual-runtime.css`
 - `assets/vendor/three/efp-three.module.min.js` when the renderer uses Three.js
 - `assets/templates/<template-id>/style.css`
+- `assets/agent-guidance/mark-grammar.md`
 - `assets/mark-registry.json`
 - `assets/asset-registry.json`
 - `assets/ATTRIBUTIONS.md`
@@ -202,4 +203,4 @@ Visual templates now carry their own authoring contract in `templates/visual/<te
 
 `inspect-input` reads the selected template schema, agent guide, and quality rules. Warnings are machine-readable and include `code`, `severity`, `path`, `suggestion`, and usually `auto_fix_hint`. Agents should revise input JSON until bad-density warnings are resolved or intentionally accepted.
 
-The current deep mark consumption is strongest for graph-based relationship/spatial/flow/hierarchy templates, UML component/activity/state templates, and `uml.sequence_3d` message arrows. Evidence, matrix, and timeline templates use shared guidance, color policy, and inspection first; more renderer-specific shape/icon consumption can be added without changing the agent workflow.
+The current deep mark consumption is strongest for graph-based relationship/spatial/flow/hierarchy templates, matrix templates, UML component/activity/state templates, and `uml.sequence_3d` message arrows. Evidence and timeline templates use shared guidance, color policy, and inspection first; more renderer-specific shape/icon consumption can be added without changing the agent workflow.

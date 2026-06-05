@@ -125,7 +125,7 @@ func TestVisualCommandsJSONContract(t *testing.T) {
 		m := objectMap(t, item)
 		names[m["name"].(string)] = true
 	}
-	for _, name := range []string{"render", "inspect-input", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.guide", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
+	for _, name := range []string{"render", "inspect-input", "inspect-plan", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.guide", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
 		if !names[name] {
 			t.Fatalf("missing visual command %s in %#v", name, names)
 		}
@@ -325,6 +325,95 @@ func TestVisualInspectInputTemplateQualityRulesWarnings(t *testing.T) {
 	fixedGraph := runVisualOK(t, "inspect-input", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "relationship.dependency_graph", "examples", "dependency-dense-fixed.input.json"), "--json")
 	if len(warningCodes(t, fixedGraph)) >= len(warningCodes(t, badGraph)) {
 		t.Fatalf("fixed graph should have fewer warnings than bad graph")
+	}
+}
+
+func TestVisualInspectPlanContract(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+
+	cmdSchema := runVisualOK(t, "schema", "inspect-plan", "--json")
+	cmdData := objectMap(t, cmdSchema["data"])
+	if cmdData["command"] != "inspect-plan" {
+		t.Fatalf("inspect-plan command schema missing: %#v", cmdData)
+	}
+	required := stringSetFromAny(cmdData["required"].([]any))
+	for _, name := range []string{"template", "input"} {
+		if !required[name] {
+			t.Fatalf("inspect-plan schema missing required %s: %#v", name, cmdData)
+		}
+	}
+	flags := map[string]map[string]any{}
+	for _, item := range cmdData["flags"].([]any) {
+		flag := objectMap(t, item)
+		flags[flag["name"].(string)] = flag
+	}
+	for _, name := range []string{"template", "input", "out"} {
+		if flags[name] == nil {
+			t.Fatalf("inspect-plan schema missing flag %s: %#v", name, flags)
+		}
+	}
+	if flags["template"]["required"] != true || flags["input"]["required"] != true || flags["out"]["required"] == true {
+		t.Fatalf("inspect-plan required flag metadata invalid: %#v", flags)
+	}
+
+	good := runVisualOK(t, "inspect-plan", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "uml.sequence_3d", "examples", "game-session-flow.input.json"), "--out", filepath.Join(t.TempDir(), "sequence"), "--json")
+	data := objectMap(t, good["data"])
+	if data["ready"] != true || data["quality_score"].(float64) < 90 {
+		t.Fatalf("good inspect-plan should be ready with high quality: %#v", data)
+	}
+	plan := objectMap(t, data["visual_plan"])
+	if plan["schema"] != "efp.visual.plan.v1" || plan["template_id"] != "uml.sequence_3d" {
+		t.Fatalf("visual plan contract mismatch: %#v", plan)
+	}
+	ir := objectMap(t, plan["ir"])
+	if ir["schema"] != "efp.visual.ir.v1" || ir["kind"] != "uml_sequence_v1" {
+		t.Fatalf("visual IR contract mismatch: %#v", ir)
+	}
+	counts := objectMap(t, ir["counts"])
+	if counts["objects"].(float64) < 15 || counts["relationships"].(float64) < 18 {
+		t.Fatalf("visual IR too small for sequence example: %#v", counts)
+	}
+	view := objectMap(t, plan["view"])
+	if len(view["initial_focus_ids"].([]any)) == 0 || view["max_initial_objects"].(float64) == 0 {
+		t.Fatalf("visual plan view missing focus or budgets: %#v", view)
+	}
+	labels := objectMap(t, plan["labels"])
+	if labels["mode"] == "" {
+		t.Fatalf("visual plan labels missing mode: %#v", labels)
+	}
+	legend := objectMap(t, plan["legend"])
+	if legend["show"] != true || len(legend["items"].([]any)) == 0 {
+		t.Fatalf("visual plan legend missing items: %#v", legend)
+	}
+	render := objectMap(t, plan["render"])
+	command := render["command"].([]any)
+	if len(command) < 9 || command[0] != "visual" || command[1] != "render" || render["offline"] != true {
+		t.Fatalf("visual plan render hints invalid: %#v", render)
+	}
+	actions := plan["agent_next_actions"].([]any)
+	if len(actions) == 0 {
+		t.Fatalf("visual plan missing agent next actions: %#v", plan)
+	}
+
+	bad := runVisualOK(t, "inspect-plan", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "relationship.dependency_graph", "examples", "dependency-dense-bad.input.json"), "--json")
+	badData := objectMap(t, bad["data"])
+	if badData["ready"] != false || badData["quality_score"].(float64) >= 70 {
+		t.Fatalf("bad inspect-plan should not be ready: %#v", badData)
+	}
+	qualityLoop := objectMap(t, badData["visual_plan"])["quality_loop"].([]any)
+	if len(qualityLoop) == 0 {
+		t.Fatalf("bad inspect-plan missing quality loop: %#v", badData)
+	}
+	codes := map[string]bool{}
+	for _, item := range qualityLoop {
+		code := objectMap(t, item)["code"].(string)
+		codes[code] = true
+	}
+	for _, code := range []string{"ungrouped_nodes_high", "edge_visibility_missing", "dominant_edge_kind", "visual_guidance_missing"} {
+		if !codes[code] {
+			t.Fatalf("bad inspect-plan missing quality loop code %s in %#v", code, codes)
+		}
 	}
 }
 
@@ -564,7 +653,7 @@ func TestVisualSmokeScriptsUseSemanticTemplates(t *testing.T) {
 	sh := mustRead(t, filepath.Join(root, "scripts", "smoke.sh"))
 	ps := mustRead(t, filepath.Join(root, "scripts", "smoke.ps1"))
 	for _, text := range []string{sh, ps} {
-		for _, want := range []string{"uml.sequence_3d", "relationship.dependency_graph", "temporal.event_trace", "template doctor", "template schema", "template guide"} {
+		for _, want := range []string{"uml.sequence_3d", "relationship.dependency_graph", "temporal.event_trace", "template doctor", "template schema", "template guide", "inspect-plan"} {
 			if !strings.Contains(text, want) {
 				t.Fatalf("smoke script missing %s", want)
 			}

@@ -18,6 +18,7 @@ go run ./cmd/jenkins schema job.build --json | Out-Null
 go run ./cmd/inspect-image schema inspect --json | Out-Null
 go run ./cmd/visual schema render --json | Out-Null
 go run ./cmd/visual schema inspect-input --json | Out-Null
+go run ./cmd/visual schema inspect-plan --json | Out-Null
 go run ./cmd/inspect-image help llm | Out-Null
 go run ./cmd/inspect-image models --json | Out-Null
 go run ./cmd/inspect-image auth status --json | Out-Null
@@ -36,6 +37,8 @@ go run ./cmd/visual template guide uml.sequence_3d --template-dir ./templates/vi
 go run ./cmd/visual template schema relationship.dependency_graph --template-dir ./templates/visual --json | Out-Null
 go run ./cmd/visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json | Out-Null
 go run ./cmd/visual template doctor --template-dir ./templates/visual --json | Out-Null
+$planOut = Join-Path ([System.IO.Path]::GetTempPath()) "visual-plan-smoke"
+go run ./cmd/visual inspect-plan --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out $planOut --json | Out-Null
 
 $tmp = New-Item -ItemType Directory -Force -Path (Join-Path ([System.IO.Path]::GetTempPath()) ("visual-" + [System.Guid]::NewGuid().ToString("N")))
 $templates = @(

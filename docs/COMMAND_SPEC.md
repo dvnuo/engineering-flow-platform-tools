@@ -25,6 +25,7 @@
 - visual template doctor
 - visual validate
 - visual inspect-input
+- visual inspect-plan
 - visual render
 - visual inspect-output
 - visual commands
@@ -49,6 +50,10 @@ Semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, 
 ### Input Inspection
 
 `visual inspect-input --template <template-id> --input <input.json> --json` validates the input and returns `quality_score`, `summary`, `warnings`, `recommendations`, and the template `visual_design`. Use it after writing input JSON and before render. All semantic templates support shared `visual` guidance; summaries include `visual_focus_ids`, `visual_hidden_details`, `visual_narrative_steps`, `visual_annotations`, and visual reference coverage when present. Warnings include `visual_guidance_missing`, `visual_focus_missing`, `visual_annotations_missing`, and `visual_guidance_unknown_refs` so agents can revise first-view focus and annotations before rendering. Graph summaries also include relationship coverage, orphan nodes, dominant edge kinds, long labels, missing importance fields, and missing edge visibility fields. It does not write files. `visual preview` is a compatibility alias for the same command.
+
+### Visual Plan
+
+`visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json` validates the same input and compiles an agent-readable pre-render plan. The response includes `visual_plan.schema=efp.visual.plan.v1`, normalized `visual_plan.ir` objects/relationships/events, first-view budgets, label buckets, legend hints, disclosure strategy, selection behavior, quality-loop actions, and the exact render command shape. It does not inspect pixels or screenshots; use it to revise dense or unclear input before rendering.
 
 ### Render Artifact Output
 
@@ -537,3 +542,5 @@ The JSON `data` object includes:
 If a guide is missing, the command returns `ok=true` with `agent_guide_available=false` and a warning string so agents can fall back to schema and shared guidance without crashing.
 
 `visual inspect-input` warnings include `code`, `severity`, `path`, `message`, `suggestion`, `auto_fix_hint`, and optional `details`.
+
+`visual inspect-plan` returns `ready`, `quality_score`, `visual_plan.schema=efp.visual.plan.v1`, normalized `visual_plan.ir`, `visual_plan.view`, `visual_plan.labels`, `visual_plan.legend`, `visual_plan.disclosure`, `visual_plan.quality_loop`, and `visual_plan.agent_next_actions` so agents can revise semantic input before rendering.

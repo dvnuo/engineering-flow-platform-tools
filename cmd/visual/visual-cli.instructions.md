@@ -18,6 +18,8 @@
 - Fill `visual.goal`, `visual.initial_focus_ids`, `visual.hidden_detail_ids`, `visual.narrative_steps`, and `visual.annotations` with valid semantic ids when the input has more than a few objects.
 - Before render, run `visual inspect-input --template <template-id> --input <input.json> --json`.
 - If `inspect-input` returns warnings, revise input JSON according to each warning's `suggestion` and `auto_fix_hint` before rendering.
+- Then run `visual inspect-plan --template <template-id> --input <input.json> --out <workspace-output-dir> --json` and use `visual_plan.ir`, `visual_plan.view`, `visual_plan.disclosure`, and `visual_plan.quality_loop` to confirm the first view is explainable.
+- If `inspect-plan` returns `ready=false`, revise input JSON before rendering.
 - Render with `visual render --template <template-id> --input <input.json> --out <workspace-output-dir> --json`.
 - Return the generated `index.html` path from `data.artifact.entrypoint`.
 - Outputs are offline static artifacts and Portal proxy safe through relative paths.

@@ -32,6 +32,7 @@
 - For graph inputs larger than a small overview, include short node `label` or `name` values, include `groups` or node `parent_id`/`group_id`/`group` fields, give groups scenario-specific labels, set `initial_view.mode: "overview"`, and mark noisy low-value edges with `visibility: "detail"` or `visibility: "hidden"`.
 - For graph event inputs, bind each meaningful event to an existing node with `events[].node_id`; replay views should explain which object changed instead of listing detached events.
 - Before validation/render, run `visual inspect-input --template <template-id> --input <input.json> --json` and use `data.warnings`, `data.summary`, and `data.recommendations` to reduce clutter. Fix `visual_guidance_missing`, `visual_focus_missing`, `visual_annotations_missing`, and `visual_guidance_unknown_refs` before rendering. For graph inputs, also fix `missing_display_labels`, high `orphan_node_count`, low `relation_coverage`, coarse `large_groups`, `generic_group_labels`, low `event_node_coverage`, repetitive `dominant_edge_kinds`, long labels, missing `importance`, and missing edge `visibility`.
+- Then run `visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json` and use `data.visual_plan.ir`, `data.visual_plan.view`, `data.visual_plan.disclosure`, and `data.visual_plan.quality_loop` to confirm the first view is explainable before render.
 - Validate with `visual validate --template <template-id> --input <input.json> --json`, using `--template-dir` only when the catalog is not installed at `~/.efp/template/visual`.
 - Render to a new output directory with `visual render --template <template-id> --input <input.json> --out <dir> --json`.
 - Return `data.artifact.entrypoint` to the user.
@@ -169,6 +170,7 @@ jenkins schema api.get --json
 inspect-image schema inspect --json
 visual schema render --json
 visual schema inspect-input --json
+visual schema inspect-plan --json
 ```
 
 The `required` field lists mandatory arguments and flags. The `flags` field includes type and description metadata suitable for tool planning.
@@ -201,8 +203,9 @@ For visual generation, use this loop:
 5. `visual template guide <template-id> --json`
 6. Write semantic input JSON. Do not generate JavaScript.
 7. `visual inspect-input --template <template-id> --input <input.json> --json`
-8. Revise JSON using warning `suggestion` and `auto_fix_hint`.
-9. `visual render --template <template-id> --input <input.json> --out <dir> --json`
-10. Return `data.artifact.entrypoint` to the user.
+8. `visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json`
+9. Revise JSON using warning `suggestion`, `auto_fix_hint`, and `visual_plan.quality_loop`.
+10. `visual render --template <template-id> --input <input.json> --out <dir> --json`
+11. Return `data.artifact.entrypoint` to the user.
 
 Never write input JSON before reading the selected template guide. The guide is where template-specific construction rules live.

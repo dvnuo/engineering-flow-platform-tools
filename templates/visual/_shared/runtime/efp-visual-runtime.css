@@ -744,6 +744,17 @@ select {
   cursor: pointer;
 }
 
+.visual-inline-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.visual-svg-icon {
+  pointer-events: none;
+}
+
 .visual-card-focus {
   border-color: rgb(226 184 79 / 0.62);
   box-shadow: 0 0 24px rgb(226 184 79 / 0.14);
@@ -789,6 +800,8 @@ select {
   position: relative;
   margin-left: 72px;
   margin-bottom: 16px;
+  border-color: var(--mark-color, var(--line));
+  box-shadow: inset 3px 0 0 var(--mark-color, transparent);
 }
 
 .timeline-dot {
@@ -799,6 +812,29 @@ select {
   height: 12px;
   border-radius: 50%;
   background: var(--accent);
+}
+
+.timeline-mark-dot {
+  box-shadow: 0 0 16px var(--mark-color, var(--accent));
+}
+
+.timeline-event-icon {
+  float: left;
+  margin: 0 9px 4px 0;
+}
+
+.visual-evidence-node polygon,
+.visual-evidence-node ellipse {
+  stroke: rgba(198, 216, 238, 0.34);
+}
+
+.visual-evidence-node .visual-svg-icon {
+  opacity: 0.9;
+  filter: drop-shadow(0 0 8px rgb(0 0 0 / 0.3));
+}
+
+.visual-evidence-relation-refutes {
+  animation: none;
 }
 
 .matrix-stage {

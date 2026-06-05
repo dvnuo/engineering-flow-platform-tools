@@ -941,6 +941,91 @@ func TestVisualMarkSystemCloudArchitectureContract(t *testing.T) {
 	}
 }
 
+func TestVisualTimelineAndEvidenceMarkContracts(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+
+	timelineInput := filepath.Join(templateDir, "temporal.incident_timeline", "examples", "marked-event-trace.input.json")
+	timelineOut := filepath.Join(t.TempDir(), "marked-timeline")
+	timelinePlanObj := runVisualOK(t, "inspect-plan", "--template", "temporal.incident_timeline", "--template-dir", templateDir, "--input", timelineInput, "--out", timelineOut, "--json")
+	timelineData := objectMap(t, timelinePlanObj["data"])
+	if timelineData["ready"] != true {
+		t.Fatalf("marked timeline inspect-plan should be ready: %#v", timelineData)
+	}
+	timelinePlan := objectMap(t, timelineData["visual_plan"])
+	timelineMarks := objectMap(t, timelinePlan["marks"])
+	timelineShapes := objectMap(t, timelineMarks["shape_counts"])
+	if len(timelineShapes) < 5 || timelineMarks["fallback_sphere_count"].(float64) > 1 {
+		t.Fatalf("marked timeline should expose diverse non-fallback marks: %#v", timelineMarks)
+	}
+	timelineColors := objectMap(t, timelinePlan["colors"])
+	if timelineColors["colorBy"] != "provider" || len(timelineColors["legend_items"].([]any)) < 4 {
+		t.Fatalf("marked timeline should expose provider color legend: %#v", timelineColors)
+	}
+	if objectMap(t, timelinePlan["legend"])["show"] != true {
+		t.Fatalf("marked timeline legend should be present: %#v", timelinePlan["legend"])
+	}
+	timelineAssets := objectMap(t, timelinePlan["assets"])
+	if anyArrayLen(timelineAssets["icons_used"]) == 0 || anyArrayLen(timelineAssets["missing_icons"]) != 0 {
+		t.Fatalf("marked timeline should use local registered icons: %#v", timelineAssets)
+	}
+	runVisualOK(t, "render", "--template", "temporal.incident_timeline", "--template-dir", templateDir, "--input", timelineInput, "--out", timelineOut, "--json")
+	timelineRender := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", timelineOut, "--json")
+	timelineRenderData := objectMap(t, timelineRender["data"])
+	if timelineRenderData["ready"] != true {
+		t.Fatalf("marked timeline inspect-render should be ready: %#v", timelineRenderData)
+	}
+	timelineChecks := objectMap(t, timelineRenderData["checks"])
+	for _, field := range []string{"shape_diversity", "color_diversity", "legend_present", "icon_assets_present", "attributions_present"} {
+		if timelineChecks[field] != true {
+			t.Fatalf("marked timeline inspect-render check %s failed: %#v", field, timelineChecks)
+		}
+	}
+
+	evidenceInput := filepath.Join(templateDir, "evidence.claim_source_board", "examples", "marked-evidence-board.input.json")
+	evidenceOut := filepath.Join(t.TempDir(), "marked-evidence")
+	evidencePlanObj := runVisualOK(t, "inspect-plan", "--template", "evidence.claim_source_board", "--template-dir", templateDir, "--input", evidenceInput, "--out", evidenceOut, "--json")
+	evidenceData := objectMap(t, evidencePlanObj["data"])
+	if evidenceData["ready"] != true {
+		t.Fatalf("marked evidence inspect-plan should be ready: %#v", evidenceData)
+	}
+	evidencePlan := objectMap(t, evidenceData["visual_plan"])
+	evidenceMarks := objectMap(t, evidencePlan["marks"])
+	evidenceShapes := objectMap(t, evidenceMarks["shape_counts"])
+	for _, shape := range []string{"hex_service", "queue_capsule", "warning_prism", "diamond", "database_cylinder", "ci_card"} {
+		if evidenceShapes[shape] == nil {
+			t.Fatalf("marked evidence plan missing shape %s in %#v", shape, evidenceShapes)
+		}
+	}
+	evidenceAssets := objectMap(t, evidencePlan["assets"])
+	evidenceIcons := stringSetFromAny(evidenceAssets["icons_used"].([]any))
+	for _, icon := range []string{"generic.api", "generic.warning", "generic.decision", "aws.sqs", "jenkins"} {
+		if !evidenceIcons[icon] {
+			t.Fatalf("marked evidence plan missing icon %s in %#v", icon, evidenceIcons)
+		}
+	}
+	evidenceEdges := objectMap(t, evidencePlan["edges"])
+	if evidenceEdges["directed_count"].(float64) < 7 || evidenceEdges["arrow_count"].(float64) < 7 {
+		t.Fatalf("marked evidence should count directed relation arrows: %#v", evidenceEdges)
+	}
+	evidenceColors := objectMap(t, evidencePlan["colors"])
+	if evidenceColors["colorBy"] != "relation" || len(evidenceColors["legend_items"].([]any)) < 3 {
+		t.Fatalf("marked evidence should expose relation color legend: %#v", evidenceColors)
+	}
+	runVisualOK(t, "render", "--template", "evidence.claim_source_board", "--template-dir", templateDir, "--input", evidenceInput, "--out", evidenceOut, "--json")
+	evidenceRender := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", evidenceOut, "--json")
+	evidenceRenderData := objectMap(t, evidenceRender["data"])
+	if evidenceRenderData["ready"] != true {
+		t.Fatalf("marked evidence inspect-render should be ready: %#v", evidenceRenderData)
+	}
+	evidenceChecks := objectMap(t, evidenceRenderData["checks"])
+	for _, field := range []string{"shape_diversity", "arrows_visible", "color_diversity", "legend_present", "icon_assets_present", "attributions_present"} {
+		if evidenceChecks[field] != true {
+			t.Fatalf("marked evidence inspect-render check %s failed: %#v", field, evidenceChecks)
+		}
+	}
+}
+
 func assertRegistryEntryQuality(t *testing.T, entry visualRegistryEntry) {
 	t.Helper()
 	if entry.Title == "" || entry.Description == "" {

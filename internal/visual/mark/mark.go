@@ -325,6 +325,8 @@ func shapeQualityApplies(kind string) bool {
 	switch strings.ToLower(kind) {
 	case "graph_v1", "graph_events_v1", "uml_class_v1", "uml_state_machine_v1", "uml_activity_v1", "uml_component_deployment_v1":
 		return true
+	case "timeline_v1":
+		return true
 	default:
 		return false
 	}
@@ -382,6 +384,8 @@ func collectNodes(kind string, data map[string]any) []nodeItem {
 		out := objectItems(data, "deployments")
 		out = append(out, objectItems(data, "components")...)
 		return out
+	case "timeline_v1":
+		return objectItems(data, "events")
 	case "matrix_v1":
 		return objectItems(data, "items")
 	case "evidence_v1":
@@ -702,6 +706,9 @@ func colorForLegend(value, colorBy string, registry MarkRegistry) string {
 			return normalizeColor(spec.Color)
 		}
 	}
+	if spec, ok := registry.EdgeKinds[value]; ok && spec.Color != "" {
+		return normalizeColor(spec.Color)
+	}
 	if spec, ok := registry.Kinds[value]; ok && spec.Color != "" {
 		return normalizeColor(spec.Color)
 	}
@@ -715,6 +722,7 @@ func needsDirection(obj map[string]any) bool {
 		"emits": true, "subscribes": true, "deploys": true, "deploys_to": true,
 		"validates": true, "blocks": true, "depends_on": true, "sends": true,
 		"returns": true, "async": true, "event": true, "observes": true,
+		"supports": true, "refutes": true, "mentions": true,
 	}
 	return directedKinds[kind]
 }

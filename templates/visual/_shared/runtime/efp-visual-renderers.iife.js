@@ -581,6 +581,28 @@
     return icon && icon.path ? String(icon.path) : "";
   }
 
+  function createInlineIcon(spec, context, className) {
+    var path = iconPathFor(spec, context);
+    if (!path) {
+      return null;
+    }
+    var icon = el("img", className || "visual-inline-icon");
+    icon.src = path;
+    icon.alt = "";
+    icon.setAttribute("aria-hidden", "true");
+    return icon;
+  }
+
+  function appendSvgIcon(parent, spec, context, x, y, size) {
+    var path = iconPathFor(spec, context);
+    if (!path) {
+      return null;
+    }
+    var icon = svg("image", { class: "visual-svg-icon", x: x, y: y, width: size, height: size, href: path });
+    parent.appendChild(icon);
+    return icon;
+  }
+
   function createIconBillboard(spec, item, THREE, context) {
     var path = iconPathFor(spec, context);
     if (!path || !THREE.TextureLoader) {
@@ -659,10 +681,23 @@
     return legend;
   }
 
-  function colorByFromVisual(visual) {
+  function explicitColorByFromVisual(visual) {
     var view = visual && visual.view ? visual.view : {};
     var hints = visual && visual.renderHints ? visual.renderHints : {};
-    return normalizeMarkKey(view.colorBy || view.color_by || hints.colorBy || hints.color_by || "kind");
+    return normalizeMarkKey(view.colorBy || view.color_by || hints.colorBy || hints.color_by || "");
+  }
+
+  function colorByFromVisual(visual) {
+    return explicitColorByFromVisual(visual) || "kind";
+  }
+
+  function explicitlyRequestsLegend(visual) {
+    var hints = visual && visual.renderHints ? visual.renderHints : {};
+    return hints.showLegend === true || hints.show_legend === true;
+  }
+
+  function shouldShowSemanticLegend(visual) {
+    return !!(visual && visual.showLegend && (explicitColorByFromVisual(visual) || explicitlyRequestsLegend(visual)));
   }
 
   function legendValueForItem(item, colorBy) {
@@ -690,22 +725,24 @@
     var colorBy = colorByFromVisual(state.visual || {});
     var counts = {};
     var colors = {};
-    function add(item) {
+    function add(item, isEdge) {
       var value = legendValueForItem(item, colorBy);
       if (!value) {
         return;
       }
       counts[value] = (counts[value] || 0) + 1;
       if (!colors[value]) {
-        if (colorBy === "provider" || colorBy === "service" || colorBy === "kind") {
+        if (isEdge && (colorBy === "relation" || colorBy === "kind" || colorBy === "type")) {
+          colors[value] = resolveEdgeSpec(item, context).color;
+        } else if (colorBy === "provider" || colorBy === "service" || colorBy === "kind") {
           colors[value] = resolveMarkSpec(item, context).color;
         } else {
           colors[value] = resolveColorSpec(item, context).color;
         }
       }
     }
-    (state.rawNodes || []).forEach(add);
-    (state.rawEdges || []).forEach(add);
+    (state.rawNodes || []).forEach(function (item) { add(item, false); });
+    (state.rawEdges || []).forEach(function (item) { add(item, true); });
     var items = Object.keys(counts).sort(function (a, b) {
       if (counts[a] === counts[b]) return a.localeCompare(b);
       return counts[b] - counts[a];
@@ -1407,7 +1444,10 @@
       depends_on: true,
       sends: true,
       returns: true,
-      observes: true
+      observes: true,
+      supports: true,
+      refutes: true,
+      mentions: true
     }[kind] === true;
   }
 
@@ -2725,17 +2765,36 @@
     var shell = appShell(ctx.container, manifest);
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
     var profile = decorateStage(shell.stage, manifest, data, preset);
+    var markContext = createMarkContext(manifest, data);
     createThreeScene(shell.stage, manifest, data, preset, profile, shell.inspector);
     var exportBtn = document.createElement("button");
     exportBtn.textContent = "Export";
     shell.toolbar.appendChild(exportBtn);
+    if (shouldShowSemanticLegend(visual)) {
+      var legendSpec = buildLegendItems(data, { visual: visual, rawNodes: events, rawEdges: [] }, markContext);
+      createLegendOverlay(shell.stage, legendSpec.title, legendSpec.items);
+    }
     var lane = el("div", "timeline-lane visual-timeline-3d");
     lane.appendChild(el("div", "timeline-track"));
     events.forEach(function (event, index) {
-      var card = el("article", "visual-card timeline-event" + (focusIDs[event.id] ? " visual-card-focus" : ""));
+      var markSpec = resolveMarkSpec(event, markContext);
+      var colorSpec = resolveColorSpec(event, markContext);
+      var eventColor = normalizeColorString(markSpec.color || colorSpec.color);
+      var card = el("article", "visual-card timeline-event visual-mark-shape-" + safeClass(markSpec.shape) + (focusIDs[event.id] ? " visual-card-focus" : ""));
+      card.setAttribute("data-mark-shape", markSpec.shape || "");
+      card.setAttribute("data-mark-mesh", markSpec.mesh || "");
+      card.setAttribute("data-mark-icon", markSpec.icon || "");
+      card.style.setProperty("--mark-color", eventColor);
+      card.style.borderColor = eventColor;
       card.style.setProperty("--event-z", Math.round(((index % 6) / 5) * 64) + "px");
       card.style.setProperty("--event-delay", (index * 0.05).toFixed(2) + "s");
-      card.appendChild(el("span", "timeline-dot"));
+      var dot = el("span", "timeline-dot timeline-mark-dot");
+      dot.style.backgroundColor = eventColor;
+      card.appendChild(dot);
+      var icon = createInlineIcon(markSpec, markContext, "visual-inline-icon timeline-event-icon");
+      if (icon) {
+        card.appendChild(icon);
+      }
       card.appendChild(el("div", "visual-card-title", event.label || event.summary || event.id));
       var status = runtime.formatStatus(event.status || event.kind);
       card.appendChild(el("span", status.className, status.label));
@@ -2770,11 +2829,75 @@
     var shell = appShell(ctx.container, manifest);
     var preset = normalizePreset(manifest.layout && manifest.layout.preset);
     var profile = decorateStage(shell.stage, manifest, data, preset);
+    var markContext = createMarkContext(manifest, data);
     createThreeScene(shell.stage, manifest, data, preset, profile, shell.inspector);
     var width = Math.max(900, shell.stage.clientWidth || 900);
     var height = Math.max(620, shell.stage.clientHeight || 620);
     var canvas = svg("svg", { class: "visual-svg", viewBox: "0 0 " + width + " " + height });
     shell.stage.appendChild(canvas);
+    var defs = svg("defs", {});
+    canvas.appendChild(defs);
+    if (shouldShowSemanticLegend(visual)) {
+      var legendSpec = buildLegendItems(data, { visual: visual, rawNodes: claims.concat(sources), rawEdges: links }, markContext);
+      createLegendOverlay(shell.stage, legendSpec.title, legendSpec.items);
+    }
+
+    function addArrowMarker(id, color) {
+      var marker = svg("marker", {
+        id: id,
+        viewBox: "0 0 10 10",
+        refX: 8.5,
+        refY: 5,
+        markerWidth: 8,
+        markerHeight: 8,
+        orient: "auto-start-reverse"
+      });
+      marker.appendChild(svg("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: color || "#63a9ff" }));
+      defs.appendChild(marker);
+    }
+
+    function evidenceDash(edgeSpec, relation) {
+      relation = normalizeMarkKey(relation);
+      if (edgeSpec.lineStyle === "dotted") {
+        return "2 7";
+      }
+      if (edgeSpec.lineStyle === "dashed" || relation === "mentions") {
+        return "10 8";
+      }
+      return "";
+    }
+
+    function appendEvidenceShape(group, pos, widthValue, heightValue, spec, color, role) {
+      var left = pos.x - widthValue / 2;
+      var top = pos.y - heightValue / 2;
+      var shape = normalizeMarkKey((spec && spec.shape) || (spec && spec.mesh));
+      var attrs = { fill: color, stroke: "rgba(198, 216, 238, 0.34)", "stroke-width": role === "claim" ? 1.8 : 1.4 };
+      if (shape === "diamond" || shape === "octahedron") {
+        group.appendChild(svg("polygon", Object.assign({
+          points: pos.x + "," + top + " " + (left + widthValue) + "," + pos.y + " " + pos.x + "," + (top + heightValue) + " " + left + "," + pos.y
+        }, attrs)));
+      } else if (shape === "warning_prism" || shape === "cone") {
+        group.appendChild(svg("polygon", Object.assign({
+          points: pos.x + "," + top + " " + (left + widthValue) + "," + (top + heightValue) + " " + left + "," + (top + heightValue)
+        }, attrs)));
+      } else if (shape === "queue_capsule" || shape === "stream_rail" || shape === "event_bus" || shape === "capsule") {
+        group.appendChild(svg("rect", Object.assign({ x: left, y: top, width: widthValue, height: heightValue, rx: Math.round(heightValue / 2) }, attrs)));
+      } else if (shape === "cloud_plate" || shape === "cloud") {
+        group.appendChild(svg("ellipse", Object.assign({ cx: pos.x, cy: pos.y, rx: widthValue / 2, ry: heightValue / 2 }, attrs)));
+      } else if (shape === "database_cylinder" || shape === "bucket" || shape === "cylinder") {
+        group.appendChild(svg("rect", Object.assign({ x: left, y: top + 5, width: widthValue, height: heightValue - 10, rx: 12 }, attrs)));
+        group.appendChild(svg("ellipse", Object.assign({ cx: pos.x, cy: top + 7, rx: widthValue / 2, ry: 10 }, attrs)));
+        group.appendChild(svg("ellipse", { cx: pos.x, cy: top + heightValue - 7, rx: widthValue / 2, ry: 10, fill: "none", stroke: "rgba(198, 216, 238, 0.28)", "stroke-width": 1.2 }));
+      } else if (shape === "hex_service" || shape === "hex_prism") {
+        var inset = Math.min(22, widthValue * 0.16);
+        group.appendChild(svg("polygon", Object.assign({
+          points: (left + inset) + "," + top + " " + (left + widthValue - inset) + "," + top + " " + (left + widthValue) + "," + pos.y + " " + (left + widthValue - inset) + "," + (top + heightValue) + " " + (left + inset) + "," + (top + heightValue) + " " + left + "," + pos.y
+        }, attrs)));
+      } else {
+        group.appendChild(svg("rect", Object.assign({ x: left, y: top, width: widthValue, height: heightValue, rx: 8 }, attrs)));
+      }
+    }
+
     var claimPos = {};
     var sourcePos = {};
     claims.forEach(function (claim, index) {
@@ -2787,13 +2910,47 @@
       var a = sourcePos[link.source_id];
       var b = claimPos[link.claim_id];
       if (a && b) {
-        canvas.appendChild(svg("path", { class: "visual-edge visual-evidence-beam", d: edgePath(a, b, preset, links.indexOf(link)) }));
+        var edgeSpec = resolveEdgeSpec(link, markContext);
+        var markerID = "visual-evidence-arrow-" + safeClass(link.relation || link.kind || "edge") + "-" + links.indexOf(link);
+        if (edgeSpec.directed && edgeSpec.arrow !== "none") {
+          addArrowMarker(markerID, edgeSpec.color);
+        }
+        var attrs = {
+          class: "visual-edge visual-evidence-beam visual-evidence-relation-" + safeClass(link.relation || link.kind),
+          d: edgePath(a, b, preset, links.indexOf(link)),
+          stroke: edgeSpec.color,
+          "stroke-width": (1.4 + Math.max(0, Math.min(1, Number(link.weight || 0))) * 1.6).toFixed(2),
+          opacity: edgeSpec.opacity,
+          "data-relation": link.relation || link.kind || "",
+          "data-arrow": edgeSpec.arrow
+        };
+        var dash = evidenceDash(edgeSpec, link.relation || link.kind);
+        if (dash) {
+          attrs["stroke-dasharray"] = dash;
+        }
+        if (edgeSpec.directed && edgeSpec.arrow !== "none") {
+          if (edgeSpec.arrow === "reverse") {
+            attrs["marker-start"] = "url(#" + markerID + ")";
+          } else {
+            attrs["marker-end"] = "url(#" + markerID + ")";
+          }
+        }
+        canvas.appendChild(svg("path", attrs));
       }
     });
     sources.forEach(function (source) {
       var pos = sourcePos[source.id];
-      var group = svg("g", { class: "visual-node" + (focusIDs[source.id] ? " visual-focused" : "") });
-      group.appendChild(svg("rect", { x: pos.x - 58, y: pos.y - 26, width: 116, height: 52, rx: 8, fill: "#202832" }));
+      var spec = resolveMarkSpec(source, markContext);
+      var colorSpec = resolveColorSpec(source, markContext);
+      var color = normalizeColorString(spec.color || colorSpec.color);
+      var group = svg("g", {
+        class: "visual-node visual-evidence-node visual-evidence-source visual-mark-shape-" + safeClass(spec.shape) + (focusIDs[source.id] ? " visual-focused" : ""),
+        "data-mark-shape": spec.shape || "",
+        "data-mark-icon": spec.icon || "",
+        "data-kind": source.kind || ""
+      });
+      appendEvidenceShape(group, pos, 124, 54, spec, color, "source");
+      appendSvgIcon(group, spec, markContext, pos.x - 54, pos.y - 12, 20);
       var label = svg("text", { x: pos.x, y: pos.y + 4, "text-anchor": "middle" });
       label.textContent = runtime.safeText(source.title || source.id);
       group.appendChild(label);
@@ -2809,8 +2966,17 @@
     });
     claims.forEach(function (claim) {
       var pos = claimPos[claim.id];
-      var group = svg("g", { class: "visual-node" + (focusIDs[claim.id] ? " visual-focused" : "") });
-      group.appendChild(svg("rect", { x: pos.x - 84, y: pos.y - 34, width: 168, height: 68, rx: 8, fill: nodeColor(claim.status) }));
+      var spec = resolveMarkSpec(claim, markContext);
+      var colorSpec = resolveColorSpec(claim, markContext);
+      var color = normalizeColorString(spec.color || colorSpec.color);
+      var group = svg("g", {
+        class: "visual-node visual-evidence-node visual-evidence-claim visual-mark-shape-" + safeClass(spec.shape) + (focusIDs[claim.id] ? " visual-focused" : ""),
+        "data-mark-shape": spec.shape || "",
+        "data-mark-icon": spec.icon || "",
+        "data-status": claim.status || ""
+      });
+      appendEvidenceShape(group, pos, 174, 70, spec, color, "claim");
+      appendSvgIcon(group, spec, markContext, pos.x - 76, pos.y - 14, 22);
       var label = svg("text", { x: pos.x, y: pos.y - 2, "text-anchor": "middle" });
       label.textContent = runtime.safeText(claim.text || claim.id).slice(0, 34);
       var conf = svg("text", { x: pos.x, y: pos.y + 17, "text-anchor": "middle" });

@@ -1,0 +1,287 @@
+{
+  "claims": [
+    {
+      "confidence": 0.91,
+      "id": "claim-api",
+      "importance": 0.93,
+      "kind": "api",
+      "label": "API throttling symptom",
+      "presentation": {
+        "icon": "generic.api",
+        "shape": "hex_service"
+      },
+      "status": "supported",
+      "summary": "API Gateway throttling was the first customer-visible symptom during the incident.",
+      "text": "API throttling symptom"
+    },
+    {
+      "confidence": 0.84,
+      "id": "claim-queue",
+      "importance": 0.86,
+      "kind": "queue",
+      "label": "Queue backlog stabilized",
+      "presentation": {
+        "icon": "generic.queue",
+        "shape": "queue_capsule"
+      },
+      "status": "supported",
+      "summary": "Queue backlog stopped increasing after Lambda concurrency was capped.",
+      "text": "Queue backlog stabilized"
+    },
+    {
+      "confidence": 0.73,
+      "id": "claim-risk",
+      "importance": 0.78,
+      "kind": "risk",
+      "label": "Failover not required",
+      "presentation": {
+        "icon": "generic.warning",
+        "shape": "warning_prism"
+      },
+      "status": "warning",
+      "summary": "Database latency was elevated but stayed below the failover threshold.",
+      "text": "Failover not required"
+    },
+    {
+      "confidence": 0.66,
+      "id": "claim-rollback",
+      "importance": 0.82,
+      "kind": "decision",
+      "label": "Rollback unnecessary",
+      "presentation": {
+        "icon": "generic.decision",
+        "shape": "diamond"
+      },
+      "status": "refuted",
+      "summary": "Rollback logs and release artifacts refute the claim that rollback was unnecessary.",
+      "text": "Rollback unnecessary"
+    }
+  ],
+  "links": [
+    {
+      "claim_id": "claim-api",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.9,
+      "relation": "supports",
+      "source_id": "src-cloudwatch",
+      "weight": 0.93
+    },
+    {
+      "claim_id": "claim-api",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "dashed"
+      },
+      "importance": 0.58,
+      "relation": "mentions",
+      "source_id": "src-api-gateway",
+      "weight": 0.72
+    },
+    {
+      "claim_id": "claim-queue",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.86,
+      "relation": "supports",
+      "source_id": "src-sqs",
+      "weight": 0.88
+    },
+    {
+      "claim_id": "claim-risk",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.74,
+      "relation": "supports",
+      "source_id": "src-rds",
+      "weight": 0.79
+    },
+    {
+      "claim_id": "claim-risk",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "dashed"
+      },
+      "importance": 0.48,
+      "relation": "mentions",
+      "source_id": "src-runbook",
+      "weight": 0.61
+    },
+    {
+      "claim_id": "claim-rollback",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.84,
+      "relation": "refutes",
+      "source_id": "src-jenkins",
+      "weight": 0.86
+    },
+    {
+      "claim_id": "claim-rollback",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.7,
+      "relation": "refutes",
+      "source_id": "src-s3",
+      "weight": 0.75
+    }
+  ],
+  "schema": "efp.visual.input.evidence.v1",
+  "sources": [
+    {
+      "id": "src-cloudwatch",
+      "importance": 0.9,
+      "kind": "event_stream",
+      "provider": "aws",
+      "reliability": 0.95,
+      "service": "cloudwatch",
+      "summary": "Alarm history identifies the incident start and severity threshold.",
+      "title": "CloudWatch alarm history"
+    },
+    {
+      "id": "src-api-gateway",
+      "importance": 0.72,
+      "kind": "api",
+      "provider": "aws",
+      "reliability": 0.89,
+      "service": "api_gateway",
+      "summary": "Throttle dashboard confirms the API symptom but is secondary to the alarm.",
+      "title": "API Gateway throttle dashboard"
+    },
+    {
+      "id": "src-sqs",
+      "importance": 0.87,
+      "kind": "queue",
+      "provider": "aws",
+      "reliability": 0.9,
+      "service": "sqs",
+      "summary": "Backlog metric shows mitigation impact after Lambda concurrency was capped.",
+      "title": "SQS backlog metric"
+    },
+    {
+      "id": "src-rds",
+      "importance": 0.74,
+      "kind": "database",
+      "provider": "aws",
+      "reliability": 0.87,
+      "service": "rds",
+      "summary": "Latency chart shows elevated writes without crossing the failover threshold.",
+      "title": "RDS latency chart"
+    },
+    {
+      "id": "src-jenkins",
+      "importance": 0.84,
+      "kind": "job",
+      "platform": "jenkins",
+      "reliability": 0.82,
+      "summary": "Rollback job log proves the rollback path was executed.",
+      "title": "Rollback job log"
+    },
+    {
+      "id": "src-s3",
+      "importance": 0.7,
+      "kind": "storage",
+      "provider": "aws",
+      "reliability": 0.8,
+      "service": "s3",
+      "summary": "Release bundle manifest confirms the exact artifact used for rollback.",
+      "title": "S3 release bundle manifest"
+    },
+    {
+      "id": "src-runbook",
+      "importance": 0.52,
+      "kind": "external",
+      "presentation": {
+        "icon": "generic.external",
+        "shape": "cloud_plate"
+      },
+      "reliability": 0.7,
+      "summary": "Runbook provides the failover criteria used to interpret database latency.",
+      "title": "Incident failover runbook"
+    }
+  ],
+  "title": "Marked Claim Source Evidence Board",
+  "view": {
+    "colorBy": "relation"
+  },
+  "renderHints": {
+    "colorBy": "relation",
+    "showLegend": true
+  },
+  "visual": {
+    "goal": "Show which evidence supports or refutes the checkout incident claims.",
+    "audience": "incident reviewer",
+    "initial_focus_ids": [
+      "claim-api",
+      "claim-queue",
+      "claim-risk",
+      "claim-rollback",
+      "src-cloudwatch",
+      "src-sqs",
+      "src-jenkins"
+    ],
+    "hidden_detail_ids": [],
+    "emphasis": [
+      "support",
+      "refute",
+      "source reliability",
+      "relation direction"
+    ],
+    "narrative_steps": [
+      {
+        "id": "strongest-evidence",
+        "title": "Start with strongest evidence",
+        "summary": "Review the support links from monitoring and queue metrics.",
+        "focus_ids": [
+          "claim-api",
+          "claim-queue",
+          "src-cloudwatch",
+          "src-sqs"
+        ]
+      },
+      {
+        "id": "decision-check",
+        "title": "Check rollback decision",
+        "summary": "Use refuting evidence to evaluate the rollback claim.",
+        "focus_ids": [
+          "claim-rollback",
+          "src-jenkins",
+          "src-s3"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "note-supports",
+        "target_id": "claim-api",
+        "label": "Supported",
+        "summary": "Monitoring evidence points directly at the API symptom.",
+        "priority": 1
+      },
+      {
+        "id": "note-refutes",
+        "target_id": "claim-rollback",
+        "label": "Refuted",
+        "summary": "Rollback logs and release artifacts contradict the claim.",
+        "priority": 0.9
+      }
+    ]
+  }
+}

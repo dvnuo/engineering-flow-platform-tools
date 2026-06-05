@@ -308,6 +308,27 @@
       "flow": false,
       "color": "#94a3b8"
     },
+    "supports": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": false,
+      "color": "#47c477"
+    },
+    "refutes": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": false,
+      "color": "#ee6b73"
+    },
+    "mentions": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": false,
+      "color": "#63a9ff"
+    },
     "observes": {
       "directed": true,
       "arrow": "forward",

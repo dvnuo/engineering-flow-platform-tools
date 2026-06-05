@@ -20,6 +20,7 @@ import (
 type Options struct {
 	TemplateDir   string
 	OutDir        string
+	Screenshot    string
 	OfflineStrict bool
 }
 
@@ -36,6 +37,7 @@ type Result struct {
 	Checks          Checks                    `json:"checks"`
 	Warnings        []preview.Warning         `json:"warnings"`
 	VisualPlan      plan.VisualPlan           `json:"visual_plan"`
+	Screenshot      ScreenshotInspection      `json:"screenshot,omitempty"`
 	NextActions     []Action                  `json:"next_actions"`
 }
 
@@ -55,6 +57,10 @@ type Checks struct {
 	FirstViewRelationshipsWithinBudget bool `json:"first_view_relationships_within_budget"`
 	LabelsBounded                      bool `json:"labels_bounded"`
 	RelationshipsVisible               bool `json:"relationships_visible"`
+	ScreenshotReadable                 bool `json:"screenshot_readable"`
+	ScreenshotNonBlank                 bool `json:"screenshot_non_blank"`
+	ScreenshotContrast                 bool `json:"screenshot_contrast"`
+	ScreenshotCoverage                 bool `json:"screenshot_coverage"`
 }
 
 type Action struct {
@@ -108,13 +114,18 @@ func Inspect(opts Options) (Result, error) {
 	}
 	quality, summary, warnings, recommendations := preview.Analyze(tpl, parsed.Data, rules)
 	warnings = normalizeWarnings(warnings)
+	screenshot, screenshotWarnings, err := inspectScreenshot(opts.Screenshot)
+	if err != nil {
+		return Result{}, err
+	}
 	visualPlan := plan.Build(tpl, parsed.Data, summary, warnings, recommendations, opts.OutDir)
-	checks := buildChecks(outputInspection, outputManifest, tpl, visualPlan, summary)
+	checks := buildChecks(outputInspection, outputManifest, tpl, visualPlan, summary, screenshot)
 	renderWarnings := inspectRenderWarnings(checks, outputManifest, tpl, visualPlan, summary)
 	warnings = append(warnings, renderWarnings...)
+	warnings = append(warnings, screenshotWarnings...)
 	warnings = normalizeWarnings(warnings)
 	renderScore := scoreRender(quality, warnings)
-	ready := renderScore >= 70 && checks.AllCriticalOK() && !hasErrorWarnings(warnings)
+	ready := renderScore >= 70 && checks.AllCriticalOK(screenshot.Provided) && !hasErrorWarnings(warnings)
 	return Result{
 		Artifact:        outputInspection.Artifact,
 		TemplateID:      tpl.ID,
@@ -128,12 +139,14 @@ func Inspect(opts Options) (Result, error) {
 		Checks:          checks,
 		Warnings:        warnings,
 		VisualPlan:      visualPlan,
+		Screenshot:      screenshot,
 		NextActions:     nextActions(ready, warnings),
 	}, nil
 }
 
-func (c Checks) AllCriticalOK() bool {
-	return c.OutputFiles && c.ManifestJSON && c.ManifestJS && c.DataJS && c.RuntimeAssets && c.ThreeAsset && c.RendererContractMatch && c.TemplateVersionMatch && c.PlanReady && c.FirstViewObjectsWithinBudget && c.FirstViewRelationshipsWithinBudget && c.LabelsBounded && c.RelationshipsVisible
+func (c Checks) AllCriticalOK(withScreenshot bool) bool {
+	base := c.OutputFiles && c.ManifestJSON && c.ManifestJS && c.DataJS && c.RuntimeAssets && c.ThreeAsset && c.RendererContractMatch && c.TemplateVersionMatch && c.PlanReady && c.FirstViewObjectsWithinBudget && c.FirstViewRelationshipsWithinBudget && c.LabelsBounded && c.RelationshipsVisible
+	return base && (!withScreenshot || c.ScreenshotReadable)
 }
 
 func readOutputManifest(outDir string) (manifest.OutputManifest, error) {
@@ -182,7 +195,7 @@ func parseJSAssignment(b []byte, variable, file string) (map[string]any, error) 
 	return out, nil
 }
 
-func buildChecks(outputInspection render.Inspection, outputManifest manifest.OutputManifest, tpl manifest.TemplateManifest, visualPlan plan.VisualPlan, summary preview.Summary) Checks {
+func buildChecks(outputInspection render.Inspection, outputManifest manifest.OutputManifest, tpl manifest.TemplateManifest, visualPlan plan.VisualPlan, summary preview.Summary, screenshot ScreenshotInspection) Checks {
 	files := set(outputInspection.Artifact.Files)
 	checks := Checks{
 		OutputFiles:                        outputInspection.Checks.IndexHTML && outputInspection.Checks.ManifestJSON && outputInspection.Checks.ManifestJS && outputInspection.Checks.DataJS && outputInspection.Checks.RuntimeJS && outputInspection.Checks.RuntimeRenderersJS && outputInspection.Checks.RuntimeCSS,
@@ -200,6 +213,10 @@ func buildChecks(outputInspection render.Inspection, outputManifest manifest.Out
 		FirstViewRelationshipsWithinBudget: withinBudget(len(visualPlan.View.OverviewRelationshipIDs), visualPlan.View.MaxInitialRelationships),
 		LabelsBounded:                      labelsBounded(visualPlan, summary),
 		RelationshipsVisible:               relationshipsVisible(visualPlan),
+		ScreenshotReadable:                 !screenshot.Provided || screenshot.NonBlank && screenshot.ContrastOK && screenshot.CoverageOK,
+		ScreenshotNonBlank:                 !screenshot.Provided || screenshot.NonBlank,
+		ScreenshotContrast:                 !screenshot.Provided || screenshot.ContrastOK,
+		ScreenshotCoverage:                 !screenshot.Provided || screenshot.CoverageOK,
 	}
 	if tpl.Effects.Engine == "three.v1" {
 		checks.ThreeAsset = files["assets/vendor/three/efp-three.module.min.js"]

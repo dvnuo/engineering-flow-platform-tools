@@ -21,6 +21,6 @@
 - Then run `visual inspect-plan --template <template-id> --input <input.json> --out <workspace-output-dir> --json` and use `visual_plan.ir`, `visual_plan.view`, `visual_plan.disclosure`, and `visual_plan.quality_loop` to confirm the first view is explainable.
 - If `inspect-plan` returns `ready=false`, revise input JSON before rendering.
 - Render with `visual render --template <template-id> --input <input.json> --out <workspace-output-dir> --json`.
-- Then run `visual inspect-render --out <workspace-output-dir> --json`; if it returns `ready=false`, revise input JSON using the warnings and render again.
+- Then run `visual inspect-render --out <workspace-output-dir> --json`; if a screenshot is available, add `--screenshot <png|jpg|gif>`. If it returns `ready=false`, revise input JSON using the warnings and render again.
 - Return the generated `index.html` path from `data.artifact.entrypoint`.
 - Outputs are offline static artifacts and Portal proxy safe through relative paths.

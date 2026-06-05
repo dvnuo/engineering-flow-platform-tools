@@ -108,7 +108,7 @@ For UML sequence inputs, provide participants as semantic lifelines, use unique 
 
 Use `inspect-plan` after fixing `inspect-input` warnings and before `visual render`. It does not analyze screenshots or rendered pixels; it tells the agent whether the semantic input is likely to produce a readable first view.
 
-`visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read.
+`visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read. If a screenshot is available, pass `--screenshot <png|jpg|gif>` to add blankness, contrast, and visible coverage checks.
 
 ## Render Output Contract
 

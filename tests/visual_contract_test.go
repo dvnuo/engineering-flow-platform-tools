@@ -2,6 +2,9 @@ package tests
 
 import (
 	"encoding/json"
+	"image"
+	"image/color"
+	"image/png"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -430,6 +433,14 @@ func TestVisualInspectRenderContract(t *testing.T) {
 	if !required["out"] {
 		t.Fatalf("inspect-render schema missing required out: %#v", cmdData)
 	}
+	flags := map[string]map[string]any{}
+	for _, item := range cmdData["flags"].([]any) {
+		flag := objectMap(t, item)
+		flags[flag["name"].(string)] = flag
+	}
+	if flags["screenshot"] == nil || flags["screenshot"]["required"] == true {
+		t.Fatalf("inspect-render schema missing optional screenshot flag: %#v", flags)
+	}
 
 	goodOut := filepath.Join(t.TempDir(), "sequence")
 	runVisualOK(t, "render", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "uml.sequence_3d", "examples", "game-session-flow.input.json"), "--out", goodOut, "--json")
@@ -447,6 +458,17 @@ func TestVisualInspectRenderContract(t *testing.T) {
 	plan := objectMap(t, goodData["visual_plan"])
 	if plan["schema"] != "efp.visual.plan.v1" || objectMap(t, plan["ir"])["schema"] != "efp.visual.ir.v1" {
 		t.Fatalf("inspect-render missing visual plan contract: %#v", plan)
+	}
+
+	blankScreenshot := filepath.Join(t.TempDir(), "blank.png")
+	writeSolidPNG(t, blankScreenshot, 320, 180, color.RGBA{R: 8, G: 8, B: 8, A: 255})
+	blank := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", goodOut, "--screenshot", blankScreenshot, "--json")
+	blankData := objectMap(t, blank["data"])
+	if blankData["ready"] != false || objectMap(t, blankData["checks"])["screenshot_non_blank"] != false {
+		t.Fatalf("blank screenshot should make inspect-render not ready: %#v", blankData)
+	}
+	if !warningCodeSet(t, blank)["screenshot_blank"] {
+		t.Fatalf("blank screenshot did not report screenshot_blank: %#v", blankData["warnings"])
 	}
 
 	badOut := filepath.Join(t.TempDir(), "bad-graph")
@@ -976,6 +998,24 @@ func stringSetFromAny(items []any) map[string]bool {
 		}
 	}
 	return out
+}
+
+func writeSolidPNG(t *testing.T, path string, width, height int, fill color.Color) {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			img.Set(x, y, fill)
+		}
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if err := png.Encode(f, img); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func mustRead(t *testing.T, path string) string {

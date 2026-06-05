@@ -284,8 +284,8 @@ func Build(templateDir string, tpl manifest.TemplateManifest, data map[string]an
 	}
 	labels := buildLabelPlan(labelMode, ir, hiddenIDs)
 	overviewObjects, overviewRelationships := overviewIDs(ir, focusIDs, hiddenIDs, recommendations.MaxInitialNodes, recommendations.MaxInitialEdges)
-	legend := buildLegendPlan(tpl, data, ir, renderHints)
 	markStats := mark.Analyze(templateDir, tpl.InputSchemaKind, data)
+	legend := buildLegendPlan(tpl, data, ir, renderHints, markStats)
 	plan := VisualPlan{
 		Schema:          "efp.visual.plan.v1",
 		TemplateID:      tpl.ID,
@@ -549,9 +549,16 @@ func overviewIDs(ir VisualIR, focusIDs, hiddenIDs []string, maxObjects, maxRelat
 	return objectIDs, relIDs
 }
 
-func buildLegendPlan(tpl manifest.TemplateManifest, data map[string]any, ir VisualIR, renderHints map[string]any) LegendPlan {
+func buildLegendPlan(tpl manifest.TemplateManifest, data map[string]any, ir VisualIR, renderHints map[string]any, markStats mark.Stats) LegendPlan {
 	if boolValue(renderHints["showLegend"]) == false && renderHints["showLegend"] != nil {
 		return LegendPlan{Show: false, Kind: "none"}
+	}
+	if len(markStats.LegendItems) > 0 {
+		kind := nonEmpty(markStats.ColorBy, "kind")
+		if strings.ToLower(tpl.InputSchemaKind) == "uml_sequence_v1" && markStats.ColorBy == "" {
+			kind = "phase"
+		}
+		return LegendPlan{Show: true, Kind: kind, Items: legendItemsFromMark(markStats.LegendItems)}
 	}
 	counts := map[string]int{}
 	kind := "kind"
@@ -572,6 +579,11 @@ func buildLegendPlan(tpl manifest.TemplateManifest, data map[string]any, ir Visu
 		for _, obj := range ir.Objects {
 			if obj.Kind != "" {
 				counts[obj.Kind]++
+			}
+		}
+		for _, event := range ir.Events {
+			if event.Kind != "" {
+				counts[event.Kind]++
 			}
 		}
 		for _, rel := range ir.Relationships {

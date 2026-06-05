@@ -1,0 +1,191 @@
+{
+  "events": [
+    {
+      "id": "evt-01",
+      "importance": 0.94,
+      "kind": "warning",
+      "label": "Checkout error budget alert",
+      "lane": "detection",
+      "provider": "aws",
+      "service": "cloudwatch",
+      "status": "warning",
+      "summary": "CloudWatch reported checkout error rate above the incident threshold.",
+      "time": "2026-06-03T09:05:00Z"
+    },
+    {
+      "id": "evt-02",
+      "importance": 0.72,
+      "kind": "api",
+      "label": "API gateway throttling confirmed",
+      "lane": "detection",
+      "provider": "aws",
+      "service": "api_gateway",
+      "status": "warning",
+      "summary": "The public checkout API showed throttling during the first investigation pass.",
+      "time": "2026-06-03T09:10:00Z"
+    },
+    {
+      "id": "evt-03",
+      "importance": 0.82,
+      "kind": "service",
+      "label": "Lambda concurrency capped",
+      "lane": "mitigation",
+      "provider": "aws",
+      "service": "lambda",
+      "status": "running",
+      "summary": "Checkout orchestration Lambda was capped to protect downstream dependencies.",
+      "time": "2026-06-03T09:16:00Z"
+    },
+    {
+      "id": "evt-04",
+      "importance": 0.64,
+      "kind": "queue",
+      "label": "SQS backlog stabilized",
+      "lane": "mitigation",
+      "provider": "aws",
+      "service": "sqs",
+      "status": "running",
+      "summary": "Order event queue backlog stopped growing after concurrency was capped.",
+      "time": "2026-06-03T09:23:00Z"
+    },
+    {
+      "id": "evt-05",
+      "importance": 0.58,
+      "kind": "database",
+      "label": "RDS write latency inspected",
+      "lane": "diagnosis",
+      "provider": "aws",
+      "service": "rds",
+      "status": "warning",
+      "summary": "Database write latency remained elevated but below failover criteria.",
+      "time": "2026-06-03T09:31:00Z"
+    },
+    {
+      "id": "evt-06",
+      "importance": 0.9,
+      "kind": "decision",
+      "label": "Rollback decision approved",
+      "lane": "decision",
+      "presentation": {
+        "icon": "generic.decision",
+        "shape": "diamond"
+      },
+      "status": "success",
+      "summary": "Incident command approved rollback of the latest checkout adapter release.",
+      "time": "2026-06-03T09:42:00Z"
+    },
+    {
+      "id": "evt-07",
+      "importance": 0.84,
+      "kind": "job",
+      "label": "Jenkins rollback job started",
+      "lane": "rollback",
+      "platform": "jenkins",
+      "status": "running",
+      "summary": "The rollback pipeline began deploying the previous checkout adapter build.",
+      "time": "2026-06-03T09:48:00Z"
+    },
+    {
+      "id": "evt-08",
+      "importance": 0.63,
+      "kind": "storage",
+      "label": "S3 release bundle verified",
+      "lane": "rollback",
+      "provider": "aws",
+      "service": "s3",
+      "status": "success",
+      "summary": "The rollback job verified the immutable release bundle before promotion.",
+      "time": "2026-06-03T09:55:00Z"
+    },
+    {
+      "id": "evt-09",
+      "importance": 0.67,
+      "kind": "event_stream",
+      "label": "EventBridge replay paused",
+      "lane": "recovery",
+      "provider": "aws",
+      "service": "eventbridge",
+      "status": "blocked",
+      "summary": "Replay was paused until checkout write latency returned to baseline.",
+      "time": "2026-06-03T10:04:00Z"
+    },
+    {
+      "id": "evt-10",
+      "importance": 0.78,
+      "kind": "user",
+      "label": "Customer status update posted",
+      "lane": "communication",
+      "presentation": {
+        "icon": "generic.user",
+        "shape": "actor_card"
+      },
+      "status": "success",
+      "summary": "Support posted an updated customer-facing incident status note.",
+      "time": "2026-06-03T10:11:00Z"
+    }
+  ],
+  "schema": "efp.visual.input.timeline.v1",
+  "title": "Marked Checkout Incident Timeline",
+  "view": {
+    "colorBy": "provider"
+  },
+  "renderHints": {
+    "colorBy": "provider",
+    "showLegend": true
+  },
+  "visual": {
+    "goal": "Show the checkout incident response as provider and role-specific timeline marks.",
+    "audience": "incident reviewer",
+    "initial_focus_ids": [
+      "evt-01",
+      "evt-03",
+      "evt-06",
+      "evt-07"
+    ],
+    "hidden_detail_ids": [],
+    "emphasis": [
+      "incident",
+      "rollback",
+      "provider",
+      "status"
+    ],
+    "narrative_steps": [
+      {
+        "id": "detection",
+        "title": "Detect the failure",
+        "summary": "Start with the alert, API throttling, and Lambda mitigation.",
+        "focus_ids": [
+          "evt-01",
+          "evt-02",
+          "evt-03"
+        ]
+      },
+      {
+        "id": "rollback",
+        "title": "Rollback and recover",
+        "summary": "Follow the rollback decision, job execution, and customer update.",
+        "focus_ids": [
+          "evt-06",
+          "evt-07",
+          "evt-10"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "note-alert",
+        "target_id": "evt-01",
+        "label": "First signal",
+        "summary": "The first mark establishes the incident entry point.",
+        "priority": 1
+      },
+      {
+        "id": "note-rollback",
+        "target_id": "evt-06",
+        "label": "Decision point",
+        "summary": "Rollback approval changes the response path.",
+        "priority": 0.9
+      }
+    ]
+  }
+}

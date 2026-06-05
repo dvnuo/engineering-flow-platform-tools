@@ -102,13 +102,25 @@ For large graph-like inputs, use short display labels, put full names and paths 
 
 For UML sequence inputs, provide participants as semantic lifelines, use unique numeric `messages[].order`, add concise message labels, define phases when a flow has stages, and use fragments for `alt`, `loop`, `opt`, or `par` regions. For a stronger 3D sequence scene, also provide participant `display_name`, `subtitle`, `lane_index`, `depth`, and `color`; provide message `curve`, `importance`, `label_priority`, `depth`, and `summary`; then use `visual.initial_focus_ids` and `visual.annotations` to explain the high-value paths.
 
+## Visual Mark System
+
+Graph-like, UML component/activity/state, and sequence renderers use the shared Visual Mark System. The agent-facing grammar lives in `templates/visual/_shared/agent-guidance/mark-grammar.md`; runtime defaults live in `_shared/mark-registry.json`; local icon/model metadata lives in `_shared/asset-registry.json`.
+
+Object marks are resolved from `presentation.mesh` or `presentation.shape`, then `presentation.icon`, then `provider + service`, `platform`, `kind`, `group`, and finally fallback. Use these fields so a service can render as a box, an API as a hex service, a database or storage object as a cylinder, a queue or stream as a capsule, a user as an actor card, an external system as a cloud plate, and a decision or risk as a diamond or warning prism.
+
+Relationship marks are resolved from `edge.kind`, `directed`, and `edge.presentation`. Directional relationship kinds such as `calls`, `writes`, `reads`, `emits`, `subscribes`, `deploys`, `validates`, `blocks`, `depends_on`, `sends`, and `returns` render with visible arrows by default. Set `presentation.arrow`, `presentation.lineStyle`, `presentation.curve`, `presentation.flow`, and `presentation.color` when direction or motion carries meaning.
+
+Color and legend are semantic, not random. Use `view.colorBy` or `renderHints.colorBy` with values such as `provider`, `kind`, `status`, `group`, `phase`, `risk`, or `severity`, and set `renderHints.showLegend=true` when color has meaning. `inspect-input` warns on `generic_sphere_overuse`, `mark_shape_missing`, `provider_service_unknown`, `asset_icon_unknown`, `edge_direction_missing`, `arrow_encoding_missing`, `single_color_detected`, `color_encoding_missing`, `legend_missing`, and `provider_icon_without_attribution`.
+
+The bundled AWS and Jenkins icon ids are local styled placeholders for offline visualization. They are not official vendor logos. If official assets are vendored later, update `_shared/assets/ATTRIBUTIONS.md`, `_shared/asset-registry.json`, tests, and release notes together.
+
 ## Visual Plan
 
-`visual inspect-plan` is the pre-render planning step for agents. It validates input, runs the same quality rules as `inspect-input`, and returns `visual_plan.schema=efp.visual.plan.v1`. The plan contains a normalized `visual_plan.ir` with objects, relationships, events, and counts; a first-view budget with focus ids and hidden detail ids; label buckets; legend hints; disclosure strategy; selection behavior; quality-loop actions; and render command hints.
+`visual inspect-plan` is the pre-render planning step for agents. It validates input, runs the same quality rules as `inspect-input`, and returns `visual_plan.schema=efp.visual.plan.v1`. The plan contains a normalized `visual_plan.ir` with objects, relationships, events, and counts; a first-view budget with focus ids and hidden detail ids; label buckets; legend hints; disclosure strategy; selection behavior; mark statistics, edge direction counts, color/legend analysis, asset usage, quality-loop actions, and render command hints.
 
 Use `inspect-plan` after fixing `inspect-input` warnings and before `visual render`. It does not analyze screenshots or rendered pixels; it tells the agent whether the semantic input is likely to produce a readable first view.
 
-`visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read. If a screenshot is available, pass `--screenshot <png|jpg|gif>` to add blankness, contrast, and visible coverage checks.
+`visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, shape diversity, visible arrows, color diversity, legend presence, local icon assets, attributions, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read. If a screenshot is available, pass `--screenshot <png|jpg|gif>` to add blankness, contrast, and visible coverage checks.
 
 ## Render Output Contract
 
@@ -123,6 +135,11 @@ Successful render output includes:
 - `assets/runtime/efp-visual-runtime.css`
 - `assets/vendor/three/efp-three.module.min.js` when the renderer uses Three.js
 - `assets/templates/<template-id>/style.css`
+- `assets/mark-registry.json`
+- `assets/asset-registry.json`
+- `assets/ATTRIBUTIONS.md`
+- `assets/icons/**`
+- `assets/models/**`
 
 The JSON response returns `data.artifact`:
 
@@ -137,6 +154,8 @@ The JSON response returns `data.artifact`:
 - `file_url_safe`
 - `http_subpath_safe`
 - `files`
+
+`manifest.json` also includes `assets.icons`, `assets.models`, `assets.attributions`, and embedded `assets.mark_registry` / `assets.asset_registry` objects so Portal/runtime and `inspect-render` can explain which local marks and assets were used.
 
 ## Offline Contract
 
@@ -183,4 +202,4 @@ Visual templates now carry their own authoring contract in `templates/visual/<te
 
 `inspect-input` reads the selected template schema, agent guide, and quality rules. Warnings are machine-readable and include `code`, `severity`, `path`, `suggestion`, and usually `auto_fix_hint`. Agents should revise input JSON until bad-density warnings are resolved or intentionally accepted.
 
-The current deep renderer consumption is strongest for `uml.sequence_3d` and graph-based relationship/spatial/flow/hierarchy templates. Other templates have guides and quality checks first; more renderer-specific consumption can be added without changing the agent workflow.
+The current deep mark consumption is strongest for graph-based relationship/spatial/flow/hierarchy templates, UML component/activity/state templates, and `uml.sequence_3d` message arrows. Evidence, matrix, and timeline templates use shared guidance, color policy, and inspection first; more renderer-specific shape/icon consumption can be added without changing the agent workflow.

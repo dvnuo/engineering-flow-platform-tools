@@ -10,6 +10,7 @@ import (
 
 	"engineering-flow-platform-tools/internal/visual/authoring"
 	"engineering-flow-platform-tools/internal/visual/manifest"
+	"engineering-flow-platform-tools/internal/visual/mark"
 	"engineering-flow-platform-tools/internal/visual/metadata"
 	"engineering-flow-platform-tools/internal/visual/preview"
 	visualschema "engineering-flow-platform-tools/internal/visual/schema"
@@ -50,6 +51,10 @@ type VisualPlan struct {
 	View             ViewPlan         `json:"view"`
 	Labels           LabelPlan        `json:"labels"`
 	Legend           LegendPlan       `json:"legend"`
+	Marks            MarkPlan         `json:"marks"`
+	Edges            EdgeEncodingPlan `json:"edges"`
+	Colors           ColorPlan        `json:"colors"`
+	Assets           AssetPlan        `json:"assets"`
 	Disclosure       DisclosurePlan   `json:"disclosure"`
 	Selection        SelectionPlan    `json:"selection"`
 	Render           RenderPlan       `json:"render"`
@@ -125,6 +130,31 @@ type LegendItem struct {
 	ID    string `json:"id"`
 	Label string `json:"label"`
 	Count int    `json:"count"`
+	Color string `json:"color,omitempty"`
+}
+
+type MarkPlan struct {
+	ShapeCounts         map[string]int `json:"shape_counts"`
+	IconCounts          map[string]int `json:"icon_counts"`
+	FallbackSphereCount int            `json:"fallback_sphere_count"`
+}
+
+type EdgeEncodingPlan struct {
+	DirectedCount   int `json:"directed_count"`
+	ArrowCount      int `json:"arrow_count"`
+	UndirectedCount int `json:"undirected_count"`
+}
+
+type ColorPlan struct {
+	ColorBy     string       `json:"colorBy,omitempty"`
+	LegendItems []LegendItem `json:"legend_items"`
+	SingleColor bool         `json:"single_color"`
+}
+
+type AssetPlan struct {
+	IconsUsed    []string           `json:"icons_used"`
+	MissingIcons []string           `json:"missing_icons"`
+	Attributions []mark.Attribution `json:"attributions"`
 }
 
 type DisclosurePlan struct {
@@ -201,10 +231,10 @@ func Inspect(opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	quality, summary, warnings, recommendations := preview.Analyze(tpl, parsed.Data, rules)
+	quality, summary, warnings, recommendations := preview.Analyze(opts.TemplateDir, tpl, parsed.Data, rules)
 	warnings = normalizeWarnings(warnings)
 	blocking := blockingWarningCodes(warnings)
-	visualPlan := Build(tpl, parsed.Data, summary, warnings, recommendations, opts.OutDir)
+	visualPlan := Build(opts.TemplateDir, tpl, parsed.Data, summary, warnings, recommendations, opts.OutDir)
 	return Result{
 		TemplateID:            tpl.ID,
 		TemplateDir:           opts.TemplateDir,
@@ -223,7 +253,7 @@ func Inspect(opts Options) (Result, error) {
 	}, nil
 }
 
-func Build(tpl manifest.TemplateManifest, data map[string]any, summary preview.Summary, warnings []preview.Warning, recommendations preview.Recommendations, outDir string) VisualPlan {
+func Build(templateDir string, tpl manifest.TemplateManifest, data map[string]any, summary preview.Summary, warnings []preview.Warning, recommendations preview.Recommendations, outDir string) VisualPlan {
 	visual := object(data, "visual")
 	view := object(data, "view")
 	if len(view) == 0 {
@@ -255,6 +285,7 @@ func Build(tpl manifest.TemplateManifest, data map[string]any, summary preview.S
 	labels := buildLabelPlan(labelMode, ir, hiddenIDs)
 	overviewObjects, overviewRelationships := overviewIDs(ir, focusIDs, hiddenIDs, recommendations.MaxInitialNodes, recommendations.MaxInitialEdges)
 	legend := buildLegendPlan(tpl, data, ir, renderHints)
+	markStats := mark.Analyze(templateDir, tpl.InputSchemaKind, data)
 	plan := VisualPlan{
 		Schema:          "efp.visual.plan.v1",
 		TemplateID:      tpl.ID,
@@ -276,6 +307,26 @@ func Build(tpl manifest.TemplateManifest, data map[string]any, summary preview.S
 		},
 		Labels: labels,
 		Legend: legend,
+		Marks: MarkPlan{
+			ShapeCounts:         markStats.ShapeCounts,
+			IconCounts:          markStats.IconCounts,
+			FallbackSphereCount: markStats.FallbackSphereCount,
+		},
+		Edges: EdgeEncodingPlan{
+			DirectedCount:   markStats.DirectedCount,
+			ArrowCount:      markStats.ArrowCount,
+			UndirectedCount: markStats.UndirectedCount,
+		},
+		Colors: ColorPlan{
+			ColorBy:     markStats.ColorBy,
+			LegendItems: legendItemsFromMark(markStats.LegendItems),
+			SingleColor: markStats.SingleColor,
+		},
+		Assets: AssetPlan{
+			IconsUsed:    markStats.IconsUsed,
+			MissingIcons: markStats.MissingIcons,
+			Attributions: markStats.Attributions,
+		},
 		Disclosure: DisclosurePlan{
 			Strategy:       disclosureStrategy(tpl, summary),
 			HiddenIDs:      hiddenIDs,
@@ -294,6 +345,14 @@ func Build(tpl manifest.TemplateManifest, data map[string]any, summary preview.S
 		AgentNextActions: nextActions(tpl.ID, outDir, warnings),
 	}
 	return plan
+}
+
+func legendItemsFromMark(items []mark.LegendItem) []LegendItem {
+	out := make([]LegendItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, LegendItem{ID: item.ID, Label: item.Label, Count: item.Count, Color: item.Color})
+	}
+	return out
 }
 
 func buildIR(kind string, data map[string]any) VisualIR {

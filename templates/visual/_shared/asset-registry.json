@@ -1,0 +1,176 @@
+{
+  "schema": "efp.visual.asset_registry.v1",
+  "icons": {
+    "generic.service": {
+      "path": "assets/icons/generic/service.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.api": {
+      "path": "assets/icons/generic/api.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.database": {
+      "path": "assets/icons/generic/database.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.storage": {
+      "path": "assets/icons/generic/storage.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.queue": {
+      "path": "assets/icons/generic/queue.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.stream": {
+      "path": "assets/icons/generic/stream.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.pipeline": {
+      "path": "assets/icons/generic/pipeline.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.job": {
+      "path": "assets/icons/generic/job.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.user": {
+      "path": "assets/icons/generic/user.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.external": {
+      "path": "assets/icons/generic/external.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.warning": {
+      "path": "assets/icons/generic/warning.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.decision": {
+      "path": "assets/icons/generic/decision.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "aws.lambda": {
+      "path": "assets/icons/aws/lambda.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.s3": {
+      "path": "assets/icons/aws/s3.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.rds": {
+      "path": "assets/icons/aws/rds.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.dynamodb": {
+      "path": "assets/icons/aws/dynamodb.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.ec2": {
+      "path": "assets/icons/aws/ec2.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.eks": {
+      "path": "assets/icons/aws/eks.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.sqs": {
+      "path": "assets/icons/aws/sqs.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.sns": {
+      "path": "assets/icons/aws/sns.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.eventbridge": {
+      "path": "assets/icons/aws/eventbridge.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.api_gateway": {
+      "path": "assets/icons/aws/api_gateway.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.cloudfront": {
+      "path": "assets/icons/aws/cloudfront.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.cloudwatch": {
+      "path": "assets/icons/aws/cloudwatch.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.secrets_manager": {
+      "path": "assets/icons/aws/secrets_manager.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "jenkins": {
+      "path": "assets/icons/jenkins/jenkins.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-jenkins-generic"
+    }
+  },
+  "models": {
+    "generic.placeholder": {
+      "path": "assets/models/generic/placeholder.json",
+      "kind": "placeholder",
+      "attribution_id": "efp-generic"
+    }
+  },
+  "attributions": [
+    {
+      "id": "efp-generic",
+      "name": "EFP generic visual symbols",
+      "license": "Original local vector shapes for this repository.",
+      "source": "engineering-flow-platform-tools templates visual shared assets"
+    },
+    {
+      "id": "efp-aws-generic",
+      "name": "AWS service semantic placeholders",
+      "license": "Local generic cloud-service glyphs, not official AWS Architecture Icons.",
+      "source": "EFP local asset set"
+    },
+    {
+      "id": "efp-jenkins-generic",
+      "name": "Jenkins CI semantic placeholder",
+      "license": "Local generic CI glyph, not Jenkins project artwork.",
+      "source": "EFP local asset set"
+    }
+  ]
+}

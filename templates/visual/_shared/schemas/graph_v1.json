@@ -7,11 +7,35 @@
       "edges": {
         "items": {
           "properties": {
+            "directed": {
+              "type": "boolean"
+            },
             "importance": {
               "description": "0..1 priority used when the renderer caps the initial edge count.",
               "type": "number"
             },
             "metadata": {
+              "type": "object"
+            },
+            "presentation": {
+              "additionalProperties": true,
+              "properties": {
+                "arrow": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "string"
+                },
+                "curve": {
+                  "type": "string"
+                },
+                "flow": {
+                  "type": "boolean"
+                },
+                "lineStyle": {
+                  "type": "string"
+                }
+              },
               "type": "object"
             },
             "visibility": {
@@ -122,12 +146,72 @@
               "description": "Logical group id for collapsed overview rendering.",
               "type": "string"
             },
+            "platform": {
+              "type": "string"
+            },
+            "presentation": {
+              "additionalProperties": true,
+              "properties": {
+                "color": {
+                  "type": "string"
+                },
+                "depth": {
+                  "type": "number"
+                },
+                "icon": {
+                  "type": "string"
+                },
+                "lane": {
+                  "type": "string"
+                },
+                "mesh": {
+                  "type": "string"
+                },
+                "shape": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "provider": {
+              "type": "string"
+            },
+            "service": {
+              "type": "string"
+            },
             "visible": {
               "description": "Set false for low-value detail nodes in the initial overview.",
               "type": "boolean"
             }
           }
         }
+      },
+      "renderHints": {
+        "additionalProperties": true,
+        "properties": {
+          "colorBy": {
+            "type": "string"
+          },
+          "iconMode": {
+            "type": "string"
+          },
+          "palette": {
+            "type": "string"
+          },
+          "showLegend": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "view": {
+        "additionalProperties": true,
+        "properties": {
+          "colorBy": {
+            "type": "string"
+          }
+        },
+        "type": "object"
       }
     },
     "required": [

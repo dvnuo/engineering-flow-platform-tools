@@ -766,10 +766,16 @@ func TestVisualRendererConsumesVisualAuthoringHints(t *testing.T) {
 	renderer := mustRead(t, filepath.Join(root, "templates", "visual", "_shared", "runtime", "efp-visual-renderers.iife.js"))
 	for _, want := range []string{
 		"function readVisualHints(data)",
+		"function resolveMarkSpec",
+		"function createMarkMesh",
+		"function resolveEdgeSpec",
+		"function createArrowHead",
+		"TubeGeometry",
 		"initial_focus_ids",
 		"hidden_detail_ids",
 		"visual-three-annotation-label",
 		"visual-uml-phase-legend",
+		"visual-legend-overlay",
 		"lane_index",
 		"CatmullRomCurve3",
 	} {
@@ -781,6 +787,156 @@ func TestVisualRendererConsumesVisualAuthoringHints(t *testing.T) {
 	for _, want := range []string{"visual-card-focus", "visual-card-annotation", "visual-three-annotation-label", "visual-uml-annotation-label"} {
 		if !strings.Contains(css, want) {
 			t.Fatalf("visual runtime css missing %s", want)
+		}
+	}
+}
+
+func TestVisualMarkSystemCloudArchitectureContract(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+	shared := filepath.Join(templateDir, "_shared")
+	for _, rel := range []string{
+		"agent-guidance/mark-grammar.md",
+		"mark-registry.json",
+		"asset-registry.json",
+		"assets/ATTRIBUTIONS.md",
+		"assets/models/generic/placeholder.json",
+	} {
+		if info, err := os.Stat(filepath.Join(shared, filepath.FromSlash(rel))); err != nil || info.IsDir() || info.Size() == 0 {
+			t.Fatalf("missing non-empty shared mark asset %s", rel)
+		}
+	}
+	for _, rel := range []string{
+		"assets/icons/generic/service.svg",
+		"assets/icons/generic/api.svg",
+		"assets/icons/generic/database.svg",
+		"assets/icons/generic/storage.svg",
+		"assets/icons/generic/queue.svg",
+		"assets/icons/generic/stream.svg",
+		"assets/icons/generic/pipeline.svg",
+		"assets/icons/generic/job.svg",
+		"assets/icons/generic/user.svg",
+		"assets/icons/generic/external.svg",
+		"assets/icons/generic/warning.svg",
+		"assets/icons/generic/decision.svg",
+		"assets/icons/aws/lambda.svg",
+		"assets/icons/aws/s3.svg",
+		"assets/icons/aws/rds.svg",
+		"assets/icons/aws/dynamodb.svg",
+		"assets/icons/aws/ec2.svg",
+		"assets/icons/aws/eks.svg",
+		"assets/icons/aws/sqs.svg",
+		"assets/icons/aws/sns.svg",
+		"assets/icons/aws/eventbridge.svg",
+		"assets/icons/aws/api_gateway.svg",
+		"assets/icons/aws/cloudfront.svg",
+		"assets/icons/aws/cloudwatch.svg",
+		"assets/icons/aws/secrets_manager.svg",
+		"assets/icons/jenkins/jenkins.svg",
+	} {
+		if info, err := os.Stat(filepath.Join(shared, filepath.FromSlash(rel))); err != nil || info.IsDir() || info.Size() == 0 {
+			t.Fatalf("missing non-empty mark icon %s", rel)
+		}
+	}
+
+	badInput := filepath.Join(templateDir, "relationship.dependency_graph", "examples", "cloud-architecture-bad.input.json")
+	goodInput := filepath.Join(templateDir, "relationship.dependency_graph", "examples", "cloud-architecture-good.input.json")
+	bad := runVisualOK(t, "inspect-input", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", badInput, "--json")
+	badCodes := warningCodeSet(t, bad)
+	for _, code := range []string{"generic_sphere_overuse", "mark_shape_missing", "edge_direction_missing", "arrow_encoding_missing", "color_encoding_missing", "legend_missing", "asset_icon_unknown"} {
+		if !badCodes[code] {
+			t.Fatalf("cloud bad example missing mark warning %s in %#v", code, badCodes)
+		}
+	}
+	good := runVisualOK(t, "inspect-input", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", goodInput, "--json")
+	if objectMap(t, objectMap(t, good["data"]))["quality_score"].(float64) <= objectMap(t, objectMap(t, bad["data"]))["quality_score"].(float64) {
+		t.Fatalf("cloud good example should score higher than bad")
+	}
+	goodCodes := warningCodeSet(t, good)
+	for _, code := range []string{"generic_sphere_overuse", "edge_direction_missing", "arrow_encoding_missing", "color_encoding_missing", "legend_missing", "asset_icon_unknown"} {
+		if goodCodes[code] {
+			t.Fatalf("cloud good example unexpectedly has warning %s in %#v", code, goodCodes)
+		}
+	}
+
+	out := filepath.Join(t.TempDir(), "cloud-arch")
+	planObj := runVisualOK(t, "inspect-plan", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", goodInput, "--out", out, "--json")
+	planData := objectMap(t, planObj["data"])
+	if planData["ready"] != true || planData["quality_score"].(float64) < 90 {
+		t.Fatalf("cloud inspect-plan should be ready with high quality: %#v", planData)
+	}
+	plan := objectMap(t, planData["visual_plan"])
+	marks := objectMap(t, plan["marks"])
+	if marks["fallback_sphere_count"].(float64) != 0 {
+		t.Fatalf("cloud mark plan should not fall back to spheres: %#v", marks)
+	}
+	shapeCounts := objectMap(t, marks["shape_counts"])
+	for _, shape := range []string{"service_box", "database_cylinder", "queue_capsule", "cloud_plate", "ci_card"} {
+		if shapeCounts[shape] == nil {
+			t.Fatalf("cloud mark plan missing shape %s in %#v", shape, shapeCounts)
+		}
+	}
+	if len(shapeCounts) < 5 {
+		t.Fatalf("cloud mark plan should use diverse shapes: %#v", shapeCounts)
+	}
+	edges := objectMap(t, plan["edges"])
+	if edges["directed_count"].(float64) < 8 || edges["arrow_count"].(float64) < 8 || edges["undirected_count"].(float64) != 0 {
+		t.Fatalf("cloud edge plan should use visible directed arrows: %#v", edges)
+	}
+	colors := objectMap(t, plan["colors"])
+	if colors["colorBy"] != "provider" || colors["single_color"] == true || len(colors["legend_items"].([]any)) < 4 {
+		t.Fatalf("cloud color plan should expose provider legend: %#v", colors)
+	}
+	assets := objectMap(t, plan["assets"])
+	iconsUsed := stringSetFromAny(assets["icons_used"].([]any))
+	for _, icon := range []string{"aws.lambda", "aws.rds", "aws.sqs", "jenkins"} {
+		if !iconsUsed[icon] {
+			t.Fatalf("cloud asset plan missing icon %s in %#v", icon, iconsUsed)
+		}
+	}
+	if anyArrayLen(assets["missing_icons"]) != 0 || anyArrayLen(assets["attributions"]) == 0 {
+		t.Fatalf("cloud asset plan should include icons and attributions: %#v", assets)
+	}
+
+	rendered := runVisualOK(t, "render", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", goodInput, "--out", out, "--json")
+	artifact := objectMap(t, objectMap(t, rendered["data"])["artifact"])
+	assertArtifactContract(t, artifact, "relationship.dependency_graph", "")
+	files := stringSetFromAny(artifact["files"].([]any))
+	for _, rel := range []string{
+		"assets/asset-registry.json",
+		"assets/mark-registry.json",
+		"assets/ATTRIBUTIONS.md",
+		"assets/icons/generic/database.svg",
+		"assets/icons/aws/lambda.svg",
+		"assets/icons/aws/rds.svg",
+		"assets/icons/aws/sqs.svg",
+		"assets/icons/jenkins/jenkins.svg",
+	} {
+		if !files[rel] {
+			t.Fatalf("cloud artifact missing mark asset %s in %#v", rel, files)
+		}
+	}
+	manifest := loadJSONMap(t, filepath.Join(out, "manifest.json"))
+	manifestAssets := objectMap(t, manifest["assets"])
+	if len(manifestAssets["icons"].([]any)) < 20 || len(manifestAssets["attributions"].([]any)) == 0 {
+		t.Fatalf("output manifest missing mark asset metadata: %#v", manifestAssets)
+	}
+	if _, ok := manifestAssets["mark_registry"].(map[string]any); !ok {
+		t.Fatalf("output manifest missing embedded mark registry: %#v", manifestAssets)
+	}
+	if _, ok := manifestAssets["asset_registry"].(map[string]any); !ok {
+		t.Fatalf("output manifest missing embedded asset registry: %#v", manifestAssets)
+	}
+
+	inspected := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", out, "--json")
+	renderData := objectMap(t, inspected["data"])
+	if renderData["ready"] != true || renderData["render_score"].(float64) < 90 {
+		t.Fatalf("cloud inspect-render should be ready: %#v", renderData)
+	}
+	checks := objectMap(t, renderData["checks"])
+	for _, field := range []string{"shape_diversity", "arrows_visible", "color_diversity", "legend_present", "icon_assets_present", "attributions_present"} {
+		if checks[field] != true {
+			t.Fatalf("cloud inspect-render check %s failed: %#v", field, checks)
 		}
 	}
 }
@@ -998,6 +1154,11 @@ func stringSetFromAny(items []any) map[string]bool {
 		}
 	}
 	return out
+}
+
+func anyArrayLen(value any) int {
+	items, _ := value.([]any)
+	return len(items)
 }
 
 func writeSolidPNG(t *testing.T, path string, width, height int, fill color.Color) {

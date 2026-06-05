@@ -81,9 +81,25 @@ type OutputManifest struct {
 	Effects      EffectsSpec    `json:"effects,omitempty"`
 	VisualDesign VisualDesign   `json:"visual_design,omitempty"`
 	Interactions []string       `json:"interactions"`
+	Assets       OutputAssets   `json:"assets,omitempty"`
 }
 
 type OutputTemplate struct {
 	ID      string `json:"id"`
 	Version string `json:"version"`
+}
+
+type OutputAssets struct {
+	Icons         []string           `json:"icons,omitempty"`
+	Models        []string           `json:"models,omitempty"`
+	Attributions  []AssetAttribution `json:"attributions,omitempty"`
+	AssetRegistry map[string]any     `json:"asset_registry,omitempty"`
+	MarkRegistry  map[string]any     `json:"mark_registry,omitempty"`
+}
+
+type AssetAttribution struct {
+	ID      string `json:"id"`
+	Name    string `json:"name,omitempty"`
+	License string `json:"license,omitempty"`
+	Source  string `json:"source,omitempty"`
 }

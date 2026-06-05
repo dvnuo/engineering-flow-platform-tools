@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="aws rds placeholder">
+  <ellipse cx="32" cy="16" rx="22" ry="9" fill="#1b2f59" stroke="#527fff" stroke-width="3"/>
+  <path d="M10 16v30c0 5 10 9 22 9s22-4 22-9V16" fill="#17233f" stroke="#527fff" stroke-width="3"/>
+  <text x="32" y="38" text-anchor="middle" font-size="13" font-family="Arial, sans-serif" font-weight="700" fill="#dbe7ff">RDS</text>
+</svg>

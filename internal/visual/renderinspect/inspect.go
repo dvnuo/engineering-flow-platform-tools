@@ -57,6 +57,12 @@ type Checks struct {
 	FirstViewRelationshipsWithinBudget bool `json:"first_view_relationships_within_budget"`
 	LabelsBounded                      bool `json:"labels_bounded"`
 	RelationshipsVisible               bool `json:"relationships_visible"`
+	ShapeDiversity                     bool `json:"shape_diversity"`
+	ArrowsVisible                      bool `json:"arrows_visible"`
+	ColorDiversity                     bool `json:"color_diversity"`
+	LegendPresent                      bool `json:"legend_present"`
+	IconAssetsPresent                  bool `json:"icon_assets_present"`
+	AttributionsPresent                bool `json:"attributions_present"`
 	ScreenshotReadable                 bool `json:"screenshot_readable"`
 	ScreenshotNonBlank                 bool `json:"screenshot_non_blank"`
 	ScreenshotContrast                 bool `json:"screenshot_contrast"`
@@ -112,13 +118,13 @@ func Inspect(opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	quality, summary, warnings, recommendations := preview.Analyze(tpl, parsed.Data, rules)
+	quality, summary, warnings, recommendations := preview.Analyze(opts.TemplateDir, tpl, parsed.Data, rules)
 	warnings = normalizeWarnings(warnings)
 	screenshot, screenshotWarnings, err := inspectScreenshot(opts.Screenshot)
 	if err != nil {
 		return Result{}, err
 	}
-	visualPlan := plan.Build(tpl, parsed.Data, summary, warnings, recommendations, opts.OutDir)
+	visualPlan := plan.Build(opts.TemplateDir, tpl, parsed.Data, summary, warnings, recommendations, opts.OutDir)
 	checks := buildChecks(outputInspection, outputManifest, tpl, visualPlan, summary, screenshot)
 	renderWarnings := inspectRenderWarnings(checks, outputManifest, tpl, visualPlan, summary)
 	warnings = append(warnings, renderWarnings...)
@@ -213,6 +219,12 @@ func buildChecks(outputInspection render.Inspection, outputManifest manifest.Out
 		FirstViewRelationshipsWithinBudget: withinBudget(len(visualPlan.View.OverviewRelationshipIDs), visualPlan.View.MaxInitialRelationships),
 		LabelsBounded:                      labelsBounded(visualPlan, summary),
 		RelationshipsVisible:               relationshipsVisible(visualPlan),
+		ShapeDiversity:                     shapeDiversity(visualPlan),
+		ArrowsVisible:                      arrowsVisible(visualPlan),
+		ColorDiversity:                     !visualPlan.Colors.SingleColor,
+		LegendPresent:                      legendPresent(visualPlan),
+		IconAssetsPresent:                  len(visualPlan.Assets.MissingIcons) == 0,
+		AttributionsPresent:                len(visualPlan.Assets.IconsUsed) == 0 || len(visualPlan.Assets.Attributions) > 0,
 		ScreenshotReadable:                 !screenshot.Provided || screenshot.NonBlank && screenshot.ContrastOK && screenshot.CoverageOK,
 		ScreenshotNonBlank:                 !screenshot.Provided || screenshot.NonBlank,
 		ScreenshotContrast:                 !screenshot.Provided || screenshot.ContrastOK,
@@ -256,9 +268,55 @@ func inspectRenderWarnings(checks Checks, outputManifest manifest.OutputManifest
 	if !checks.RelationshipsVisible {
 		add("render_relationships_not_visible", "warning", "The rendered plan does not expose relationships in the overview even though the template expects connected objects.", "Add or keep meaningful relationships visible so the viewer can understand why objects are connected.")
 	}
+	if !checks.ShapeDiversity {
+		add("shape_diversity_low", "warning", "Rendered marks do not use enough shape diversity for the number of objects.", "Add kind/provider/service/presentation.shape so services, APIs, databases, queues, external systems, decisions, and risks render differently.")
+	}
+	if !checks.ArrowsVisible {
+		add("arrows_not_visible", "warning", "Directed relationships are present but the visual plan has no arrow encodings.", "Set directed=true or presentation.arrow=forward on causal, dependency, call, data-flow, event, write, or read relationships.")
+	}
+	if !checks.ColorDiversity {
+		add("color_diversity_low", "warning", "Rendered marks resolve to a single color policy.", "Use view.colorBy/renderHints.colorBy or explicit semantic colors with a legend.")
+	}
+	if !checks.LegendPresent {
+		add("legend_not_present", "warning", "Color encodes semantics but no legend is available in the visual plan.", "Set renderHints.showLegend=true and choose a colorBy field that exists on the input objects.")
+	}
+	if !checks.IconAssetsPresent {
+		add("icon_assets_missing", "warning", "Some requested icon IDs are missing from the local asset registry.", "Use local icon IDs from assets/asset-registry.json or remove unknown presentation.icon values.")
+	}
+	if !checks.AttributionsPresent {
+		add("asset_attributions_missing", "warning", "Icons are used but no asset attribution entries are present.", "Ensure manifest.json assets.attributions and assets/ATTRIBUTIONS.md are included in the artifact.")
+	}
 	_ = outputManifest
 	_ = tpl
 	return warnings
+}
+
+func shapeDiversity(visualPlan plan.VisualPlan) bool {
+	total := 0
+	for _, count := range visualPlan.Marks.ShapeCounts {
+		total += count
+	}
+	if total <= 6 {
+		return true
+	}
+	if visualPlan.Marks.FallbackSphereCount*100 >= total*80 {
+		return false
+	}
+	return len(visualPlan.Marks.ShapeCounts) >= 2
+}
+
+func arrowsVisible(visualPlan plan.VisualPlan) bool {
+	if visualPlan.Edges.DirectedCount == 0 {
+		return true
+	}
+	return visualPlan.Edges.ArrowCount > 0
+}
+
+func legendPresent(visualPlan plan.VisualPlan) bool {
+	if visualPlan.Colors.ColorBy == "" {
+		return true
+	}
+	return visualPlan.Legend.Show || len(visualPlan.Colors.LegendItems) > 0
 }
 
 func normalizeWarnings(warnings []preview.Warning) []preview.Warning {

@@ -50,3 +50,11 @@ Position maps row/column or x/y. Color maps status/threshold. Size/emphasis maps
 ```json
 {"items":[{"id":"auth-api","label":"Auth API","x":0.2,"y":0.8,"kind":"capability","status":"warning","importance":0.8,"summary":"Needs token refresh hardening"}]}
 ```
+
+## Visual Mark System
+
+Read `../_shared/agent-guidance/mark-grammar.md` before writing input JSON. Do not rely on generic sphere nodes for semantic entities. Use `kind`, `provider`, `service`, `platform`, and `presentation.icon` so the renderer can choose service boxes, database cylinders, queue capsules, cloud plates, actor cards, decision diamonds, warning prisms, and local icon billboards.
+
+For causal, dependency, call, data-flow, event, read/write, deploy, validate, block, send, or return relationships, set `directed=true` and `presentation.arrow=forward` or `reverse`. Use `presentation.lineStyle=dashed` and `presentation.flow=true` for async/event movement.
+
+When color has meaning, set `view.colorBy` or `renderHints.colorBy` and `renderHints.showLegend=true`. Do not use random colors; choose provider, kind, status, group, phase, risk, or severity as the color policy.

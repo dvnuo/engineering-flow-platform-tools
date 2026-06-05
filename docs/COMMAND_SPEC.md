@@ -50,15 +50,15 @@ Semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, 
 
 ### Input Inspection
 
-`visual inspect-input --template <template-id> --input <input.json> --json` validates the input and returns `quality_score`, `summary`, `warnings`, `recommendations`, and the template `visual_design`. Use it after writing input JSON and before render. All semantic templates support shared `visual` guidance; summaries include `visual_focus_ids`, `visual_hidden_details`, `visual_narrative_steps`, `visual_annotations`, and visual reference coverage when present. Warnings include `visual_guidance_missing`, `visual_focus_missing`, `visual_annotations_missing`, and `visual_guidance_unknown_refs` so agents can revise first-view focus and annotations before rendering. Graph summaries also include relationship coverage, orphan nodes, dominant edge kinds, long labels, missing importance fields, and missing edge visibility fields. It does not write files. `visual preview` is a compatibility alias for the same command.
+`visual inspect-input --template <template-id> --input <input.json> --json` validates the input and returns `quality_score`, `summary`, `warnings`, `recommendations`, and the template `visual_design`. Use it after writing input JSON and before render. All semantic templates support shared `visual` guidance; summaries include `visual_focus_ids`, `visual_hidden_details`, `visual_narrative_steps`, `visual_annotations`, and visual reference coverage when present. Warnings include `visual_guidance_missing`, `visual_focus_missing`, `visual_annotations_missing`, and `visual_guidance_unknown_refs` so agents can revise first-view focus and annotations before rendering. Graph summaries also include relationship coverage, orphan nodes, dominant edge kinds, long labels, missing importance fields, and missing edge visibility fields. Mark warnings include `generic_sphere_overuse`, `mark_shape_missing`, `provider_service_unknown`, `asset_icon_unknown`, `edge_direction_missing`, `arrow_encoding_missing`, `single_color_detected`, `color_encoding_missing`, `legend_missing`, and `provider_icon_without_attribution`. It does not write files. `visual preview` is a compatibility alias for the same command.
 
 ### Visual Plan
 
-`visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json` validates the same input and compiles an agent-readable pre-render plan. The response includes `visual_plan.schema=efp.visual.plan.v1`, normalized `visual_plan.ir` objects/relationships/events, first-view budgets, label buckets, legend hints, disclosure strategy, selection behavior, quality-loop actions, and the exact render command shape. It does not inspect pixels or screenshots; use it to revise dense or unclear input before rendering.
+`visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json` validates the same input and compiles an agent-readable pre-render plan. The response includes `visual_plan.schema=efp.visual.plan.v1`, normalized `visual_plan.ir` objects/relationships/events, first-view budgets, label buckets, legend hints, disclosure strategy, selection behavior, quality-loop actions, and the exact render command shape. It also includes `visual_plan.marks.shape_counts`, `visual_plan.marks.icon_counts`, `visual_plan.marks.fallback_sphere_count`, `visual_plan.edges.directed_count`, `visual_plan.edges.arrow_count`, `visual_plan.edges.undirected_count`, `visual_plan.colors.colorBy`, `visual_plan.colors.legend_items`, `visual_plan.colors.single_color`, `visual_plan.assets.icons_used`, `visual_plan.assets.missing_icons`, and `visual_plan.assets.attributions`. It does not inspect pixels or screenshots; use it to revise dense or unclear input before rendering.
 
 ### Render Inspection
 
-`visual inspect-render --out <dir> --json` reads a generated artifact, validates required files and offline safety, loads `manifest.json` and `data.js`, rebuilds the normalized visual plan, and returns `ready`, `render_score`, `checks`, `warnings`, `visual_plan`, and `next_actions`. Add `--screenshot <png|jpg|gif>` when a browser screenshot is available; the command then also checks blankness, contrast, and visible content coverage with standard-library image decoding.
+`visual inspect-render --out <dir> --json` reads a generated artifact, validates required files and offline safety, loads `manifest.json` and `data.js`, rebuilds the normalized visual plan, and returns `ready`, `render_score`, `checks`, `warnings`, `visual_plan`, and `next_actions`. Checks include `shape_diversity`, `arrows_visible`, `color_diversity`, `legend_present`, `icon_assets_present`, and `attributions_present` in addition to output, offline, runtime, plan, label, relationship, and screenshot checks. Add `--screenshot <png|jpg|gif>` when a browser screenshot is available; the command then also checks blankness, contrast, and visible content coverage with standard-library image decoding.
 
 ### Render Artifact Output
 
@@ -75,6 +75,8 @@ Semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, 
 - `file_url_safe`
 - `http_subpath_safe`
 - `files`
+
+Rendered artifacts also copy the shared Visual Mark System into the output. `manifest.json` includes `assets.icons`, `assets.models`, `assets.attributions`, embedded `assets.mark_registry`, and embedded `assets.asset_registry`; output files include `assets/mark-registry.json`, `assets/asset-registry.json`, `assets/ATTRIBUTIONS.md`, `assets/icons/**`, and `assets/models/**`.
 
 ## Jira
 
@@ -548,4 +550,4 @@ If a guide is missing, the command returns `ok=true` with `agent_guide_available
 
 `visual inspect-input` warnings include `code`, `severity`, `path`, `message`, `suggestion`, `auto_fix_hint`, and optional `details`.
 
-`visual inspect-plan` returns `ready`, `quality_score`, `visual_plan.schema=efp.visual.plan.v1`, normalized `visual_plan.ir`, `visual_plan.view`, `visual_plan.labels`, `visual_plan.legend`, `visual_plan.disclosure`, `visual_plan.quality_loop`, and `visual_plan.agent_next_actions` so agents can revise semantic input before rendering.
+`visual inspect-plan` returns `ready`, `quality_score`, `visual_plan.schema=efp.visual.plan.v1`, normalized `visual_plan.ir`, `visual_plan.view`, `visual_plan.labels`, `visual_plan.legend`, `visual_plan.marks`, `visual_plan.edges`, `visual_plan.colors`, `visual_plan.assets`, `visual_plan.disclosure`, `visual_plan.quality_loop`, and `visual_plan.agent_next_actions` so agents can revise semantic input before rendering.

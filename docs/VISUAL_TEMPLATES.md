@@ -44,12 +44,32 @@ Do not add unregistered examples, legacy alias directories, or ad-hoc template f
 - `description` must not be a generic "visualize X as an offline view" sentence.
 - `schema.input.json` must contain `template_id`, `input_schema_kind`, `json_schema`, and `example`.
 - `schema.input.json` must expose the shared `visual` object with `goal`, `initial_focus_ids`, `hidden_detail_ids`, `narrative_steps`, and `annotations`.
+- Graph-like schemas must expose semantic mark fields: node `provider`, `service`, `platform`, `presentation.shape`, `presentation.mesh`, `presentation.icon`, `presentation.color`, and edge `directed`, `presentation.arrow`, `presentation.lineStyle`, `presentation.curve`, `presentation.flow`, `presentation.color`.
 - `examples/basic.input.json` must have a meaningful title.
 - `examples/basic.input.json` must fill `visual` with valid semantic ids so agents learn first-view focus, delayed detail, and annotation behavior.
 - `style.css` must be non-empty.
 - `template.yaml` must declare `effects.engine: three.v1`, a scene id, `visual_design`, local assets, and offline settings.
-- Large graph-like examples should include groups, readable labels, relationship types, metadata, and visibility/importance hints.
+- Large graph-like examples should include groups, readable labels, relationship types, metadata, visibility/importance hints, directed edges, semantic kind/provider/service/platform values, and a `view.colorBy` or `renderHints.colorBy` legend policy.
 - UML examples must use the UML semantic schema, not generic graph nodes.
+
+## Visual Mark System
+
+The shared mark files are part of the template contract:
+
+- `_shared/agent-guidance/mark-grammar.md`: authoring grammar for agents.
+- `_shared/mark-registry.json`: semantic mapping from kind/provider/platform/edge kind to shape, mesh, icon, color, arrow, line style, and flow defaults.
+- `_shared/asset-registry.json`: local icon/model registry and attribution ids.
+- `_shared/assets/icons/**`: local SVG icons copied into every render output.
+- `_shared/assets/models/**`: local model placeholders copied into every render output.
+- `_shared/assets/ATTRIBUTIONS.md`: attribution text copied into every render output.
+
+Renderer mark priority is `presentation.mesh` or `presentation.shape`, then `presentation.icon`, then `provider + service`, `platform`, `kind`, `group`, and fallback. Do not rely on fallback spheres for semantic service, API, database, queue, actor, external, decision, or risk objects.
+
+Edge mark priority is `presentation.arrow`, `directed`, and `edge.kind`. Directional relationship kinds such as `calls`, `writes`, `reads`, `emits`, `subscribes`, `deploys`, `validates`, `blocks`, `depends_on`, `sends`, and `returns` should render with arrowheads. Use `presentation.flow=true` for event/data movement when animated flow particles help.
+
+Color must carry meaning. Prefer `view.colorBy` or `renderHints.colorBy` with `renderHints.showLegend=true`; avoid random colors or single fallback colors on dense scenes.
+
+The current AWS and Jenkins icons are local styled placeholders for offline visual grammar. They are not official vendor logos. If official vendor assets are added, update `_shared/assets/ATTRIBUTIONS.md`, `_shared/asset-registry.json`, source-guard tests, and release notes in the same change.
 
 ## Categories
 
@@ -153,3 +173,10 @@ Every canonical template directory must include:
 Shared authoring conventions live in `templates/visual/_shared/agent-guidance/common-visual-quality.md`. Template guides must reference that shared guide and then define category-specific rules.
 
 Directory-level guides are authoritative. Agents should not infer a template from file paths or convert semantic templates to generic graph nodes unless the template is graph-based.
+
+Cloud mark examples are available for agent testing:
+
+- `relationship.dependency_graph/examples/cloud-architecture-good.input.json`
+- `relationship.dependency_graph/examples/cloud-architecture-bad.input.json`
+- `flow.data_flow/examples/aws-event-driven.input.json`
+- `uml.component_deployment_3d/examples/cloud-deployment.input.json`

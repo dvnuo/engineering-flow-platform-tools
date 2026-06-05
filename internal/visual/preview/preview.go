@@ -11,6 +11,7 @@ import (
 
 	"engineering-flow-platform-tools/internal/visual/authoring"
 	"engineering-flow-platform-tools/internal/visual/manifest"
+	"engineering-flow-platform-tools/internal/visual/mark"
 	"engineering-flow-platform-tools/internal/visual/metadata"
 	visualschema "engineering-flow-platform-tools/internal/visual/schema"
 )
@@ -155,7 +156,7 @@ func Preview(opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	quality, summary, warnings, recommendations := Analyze(tpl, parsed.Data, rules)
+	quality, summary, warnings, recommendations := Analyze(opts.TemplateDir, tpl, parsed.Data, rules)
 	warnings = normalizeWarnings(warnings)
 	return Result{
 		TemplateID:            tpl.ID,
@@ -173,7 +174,7 @@ func Preview(opts Options) (Result, error) {
 	}, nil
 }
 
-func Analyze(tpl manifest.TemplateManifest, data map[string]any, rules authoring.QualityRules) (int, Summary, []Warning, Recommendations) {
+func Analyze(templateDir string, tpl manifest.TemplateManifest, data map[string]any, rules authoring.QualityRules) (int, Summary, []Warning, Recommendations) {
 	design := tpl.VisualDesign
 	if design.InitialView == "" {
 		design.InitialView = "overview"
@@ -235,10 +236,43 @@ func Analyze(tpl manifest.TemplateManifest, data map[string]any, rules authoring
 	}
 	quality -= applyTemplateQualityRules(tpl, data, design, rules, &summary, &warnings, &recommendations)
 	quality -= analyzeVisualGuidance(data, tpl.InputSchemaKind, design, &summary, &warnings, &recommendations)
+	markStats := mark.Analyze(templateDir, tpl.InputSchemaKind, data)
+	for _, warning := range markStats.Warnings {
+		warnings = append(warnings, Warning{
+			Code:        warning.Code,
+			Severity:    warning.Severity,
+			Path:        warning.Path,
+			Message:     warning.Message,
+			Suggestion:  warning.Suggestion,
+			AutoFixHint: warning.AutoFixHint,
+			Details:     warning.Details,
+		})
+	}
+	quality -= markQualityPenalty(markStats.Warnings)
 	if quality < 0 {
 		quality = 0
 	}
 	return quality, summary, warnings, recommendations
+}
+
+func markQualityPenalty(warnings []mark.Warning) int {
+	penalty := 0
+	for _, warning := range warnings {
+		switch strings.ToLower(warning.Severity) {
+		case "error":
+			penalty += 10
+		case "warning":
+			penalty += 4
+		case "info":
+			penalty += 1
+		default:
+			penalty += 2
+		}
+	}
+	if penalty > 22 {
+		return 22
+	}
+	return penalty
 }
 
 func analyzeVisualGuidance(data map[string]any, kind string, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {

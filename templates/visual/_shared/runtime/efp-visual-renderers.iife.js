@@ -362,6 +362,248 @@
     };
   }
 
+  function presentationOf(item) {
+    item = item || {};
+    return item.presentation && typeof item.presentation === "object" ? item.presentation : {};
+  }
+
+  function markRegistryFromManifest(manifest) {
+    var assets = manifest && manifest.assets && typeof manifest.assets === "object" ? manifest.assets : {};
+    var registry = assets.mark_registry && typeof assets.mark_registry === "object" ? assets.mark_registry : {};
+    return {
+      defaults: registry.defaults || { unknown: { shape: "sphere", mesh: "sphere", color: "#63a9ff", iconFallback: "generic.service" } },
+      kinds: registry.kinds || {},
+      providers: registry.providers || {},
+      platforms: registry.platforms || {},
+      edgeKinds: registry.edge_kinds || {},
+      palettes: registry.palettes || {}
+    };
+  }
+
+  function assetRegistryFromManifest(manifest) {
+    var assets = manifest && manifest.assets && typeof manifest.assets === "object" ? manifest.assets : {};
+    var registry = assets.asset_registry && typeof assets.asset_registry === "object" ? assets.asset_registry : {};
+    return { icons: registry.icons || {}, models: registry.models || {}, attributions: registry.attributions || [] };
+  }
+
+  function createMarkContext(manifest, data) {
+    return {
+      manifest: manifest || {},
+      data: data || {},
+      markRegistry: markRegistryFromManifest(manifest),
+      assetRegistry: assetRegistryFromManifest(manifest)
+    };
+  }
+
+  function normalizeMarkKey(value) {
+    return String(value || "").trim().toLowerCase().replace(/-/g, "_");
+  }
+
+  function mergeMarkSpec(base, next) {
+    base = Object.assign({}, base || {});
+    next = next || {};
+    ["shape", "mesh", "icon", "iconFallback", "color"].forEach(function (key) {
+      if (!base[key] && next[key]) {
+        base[key] = next[key];
+      }
+    });
+    return base;
+  }
+
+  function kindAlias(kind) {
+    var aliases = {
+      db: "database",
+      rds: "database",
+      dynamodb: "database",
+      bucket: "storage",
+      s3: "storage",
+      event: "event_stream",
+      event_bus: "event_stream",
+      stream: "event_stream",
+      broker: "event_stream",
+      lambda: "service",
+      controller: "api",
+      endpoint: "api",
+      deployment: "service",
+      build: "job",
+      runner: "job",
+      external_provider: "external",
+      client: "user",
+      gate: "decision",
+      branch: "decision",
+      error: "risk",
+      class: "class",
+      module: "module",
+      component: "component"
+    };
+    return aliases[kind] || "";
+  }
+
+  function providerServiceKey(item) {
+    var provider = normalizeMarkKey(item && item.provider);
+    var service = normalizeMarkKey(item && item.service);
+    if (provider && service) {
+      return provider + "." + service;
+    }
+    return provider;
+  }
+
+  function resolveMarkSpec(item, context) {
+    var source = item && item.payload && typeof item.payload === "object" ? item.payload : item;
+    source = source || {};
+    var presentation = presentationOf(source);
+    var registry = context && context.markRegistry ? context.markRegistry : markRegistryFromManifest({});
+    var spec = {};
+    var explicitShape = presentation.mesh || presentation.shape;
+    if (explicitShape) {
+      spec.shape = presentation.shape || presentation.mesh;
+      spec.mesh = presentation.mesh || presentation.shape;
+    }
+    if (presentation.icon) {
+      spec.icon = presentation.icon;
+    }
+    var providerKey = providerServiceKey(source);
+    if (providerKey && registry.providers[providerKey]) {
+      spec = mergeMarkSpec(spec, registry.providers[providerKey]);
+    }
+    var platform = normalizeMarkKey(source.platform);
+    if (platform && registry.platforms[platform]) {
+      spec = mergeMarkSpec(spec, registry.platforms[platform]);
+    }
+    var provider = normalizeMarkKey(source.provider);
+    if (provider && registry.platforms[provider]) {
+      spec = mergeMarkSpec(spec, registry.platforms[provider]);
+    }
+    var kind = normalizeMarkKey(source.kind || source.type || source.stereotype || item && item.kind);
+    if (kind && registry.kinds[kind]) {
+      spec = mergeMarkSpec(spec, registry.kinds[kind]);
+    } else if (kindAlias(kind) && registry.kinds[kindAlias(kind)]) {
+      spec = mergeMarkSpec(spec, registry.kinds[kindAlias(kind)]);
+    }
+    if (source.__group && !explicitShape) {
+      spec = mergeMarkSpec(spec, { shape: "group_hull", mesh: "box", iconFallback: "generic.service", color: "#63a9ff" });
+    }
+    if (!spec.shape) {
+      var unknown = registry.defaults && registry.defaults.unknown ? registry.defaults.unknown : {};
+      spec = mergeMarkSpec(spec, unknown);
+    }
+    spec.shape = spec.shape || "sphere";
+    spec.mesh = spec.mesh || spec.shape || "sphere";
+    spec.icon = presentation.icon || spec.icon || spec.iconFallback || "";
+    spec.color = normalizeColorString(presentation.color || source.color || spec.color || resolveColorSpec(source, context).color);
+    spec.depth = presentation.depth !== undefined ? presentation.depth : source.depth;
+    spec.lane = presentation.lane || source.lane || source.group || source.module || "";
+    return spec;
+  }
+
+  function normalizeColorString(value) {
+    var text = String(value || "").trim();
+    if (!text) {
+      return "#63a9ff";
+    }
+    if (text.charAt(0) !== "#") {
+      return colorStringFromHex(phaseColor(text, 0));
+    }
+    return text;
+  }
+
+  function resolveColorSpec(item, context) {
+    item = item || {};
+    var presentation = presentationOf(item);
+    if (presentation.color || item.color) {
+      return { color: normalizeColorString(presentation.color || item.color), source: "presentation" };
+    }
+    var registry = context && context.markRegistry ? context.markRegistry : markRegistryFromManifest({});
+    var providerKey = providerServiceKey(item);
+    if (providerKey && registry.providers[providerKey] && registry.providers[providerKey].color) {
+      return { color: registry.providers[providerKey].color, source: "provider" };
+    }
+    var kind = normalizeMarkKey(item.kind || item.type || item.stereotype);
+    if (kind && registry.kinds[kind] && registry.kinds[kind].color) {
+      return { color: registry.kinds[kind].color, source: "kind" };
+    }
+    if (kindAlias(kind) && registry.kinds[kindAlias(kind)] && registry.kinds[kindAlias(kind)].color) {
+      return { color: registry.kinds[kindAlias(kind)].color, source: "kind" };
+    }
+    return { color: nodeColor(item.status), source: item.status ? "status" : "fallback" };
+  }
+
+  function createMarkGeometry(THREE, spec, item) {
+    var mesh = normalizeMarkKey(spec && spec.mesh);
+    if (mesh === "box" || mesh === "service_box") {
+      return new THREE.BoxGeometry(0.52, item && item.__group ? 0.44 : 0.34, 0.34);
+    }
+    if (mesh === "card") {
+      return new THREE.BoxGeometry(0.66, 0.38, 0.09);
+    }
+    if (mesh === "hex_prism") {
+      return new THREE.CylinderGeometry(0.29, 0.29, 0.35, 6);
+    }
+    if (mesh === "cylinder") {
+      return new THREE.CylinderGeometry(0.24, 0.24, 0.42, 28);
+    }
+    if (mesh === "capsule") {
+      if (THREE.CapsuleGeometry) {
+        return new THREE.CapsuleGeometry(0.19, 0.32, 8, 18);
+      }
+      return new THREE.CylinderGeometry(0.19, 0.19, 0.52, 20);
+    }
+    if (mesh === "cloud") {
+      return new THREE.DodecahedronGeometry(0.3, 1);
+    }
+    if (mesh === "octahedron" || mesh === "diamond") {
+      return new THREE.OctahedronGeometry(0.32, 0);
+    }
+    if (mesh === "cone" || mesh === "warning_prism") {
+      return new THREE.ConeGeometry(0.28, 0.5, 5);
+    }
+    return new THREE.IcosahedronGeometry(0.22, 2);
+  }
+
+  function createMarkMesh(spec, item, THREE, effects) {
+    var geometry = createMarkGeometry(THREE, spec, item);
+    var material = createThreeMaterial(THREE, item, effects || {}, spec);
+    var mesh = new THREE.Mesh(geometry, material);
+    if (normalizeMarkKey(spec.mesh) === "cloud") {
+      mesh.scale.set(1.15, 0.72, 0.88);
+    } else if (normalizeMarkKey(spec.mesh) === "card") {
+      mesh.scale.set(1.08, 1, 1);
+    }
+    return mesh;
+  }
+
+  function iconPathFor(spec, context) {
+    if (!spec || !spec.icon) {
+      return "";
+    }
+    var registry = context && context.assetRegistry ? context.assetRegistry : assetRegistryFromManifest({});
+    var icon = registry.icons && registry.icons[spec.icon];
+    return icon && icon.path ? String(icon.path) : "";
+  }
+
+  function createIconBillboard(spec, item, THREE, context) {
+    var path = iconPathFor(spec, context);
+    if (!path || !THREE.TextureLoader) {
+      return null;
+    }
+    var texture = new THREE.TextureLoader().load(path);
+    if (THREE.SRGBColorSpace) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+    }
+    var material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.92,
+      depthTest: false,
+      depthWrite: false
+    });
+    var plane = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.28), material);
+    plane.position.set(0, 0.02, 0.24);
+    plane.renderOrder = 6;
+    plane.userData = { icon: spec.icon, label: itemLabel(item), payload: item };
+    return plane;
+  }
+
   function createLabelEngine(options) {
     options = options || {};
     var mode = String(options.mode || "overview").toLowerCase();
@@ -415,6 +657,62 @@
     });
     container.appendChild(legend);
     return legend;
+  }
+
+  function colorByFromVisual(visual) {
+    var view = visual && visual.view ? visual.view : {};
+    var hints = visual && visual.renderHints ? visual.renderHints : {};
+    return normalizeMarkKey(view.colorBy || view.color_by || hints.colorBy || hints.color_by || "kind");
+  }
+
+  function legendValueForItem(item, colorBy) {
+    item = item || {};
+    if (colorBy === "provider") {
+      var key = providerServiceKey(item);
+      return key || normalizeMarkKey(item.platform);
+    }
+    if (colorBy === "group") {
+      return normalizeMarkKey(item.group || item.group_id || item.parent_id || item.module || item.package || item.lane);
+    }
+    if (colorBy === "service") {
+      return normalizeMarkKey(item.service);
+    }
+    if (colorBy === "status") {
+      return normalizeMarkKey(item.status);
+    }
+    if (colorBy === "phase") {
+      return normalizeMarkKey(item.phase);
+    }
+    return normalizeMarkKey(item[colorBy] || item.kind || item.type);
+  }
+
+  function buildLegendItems(data, state, context) {
+    var colorBy = colorByFromVisual(state.visual || {});
+    var counts = {};
+    var colors = {};
+    function add(item) {
+      var value = legendValueForItem(item, colorBy);
+      if (!value) {
+        return;
+      }
+      counts[value] = (counts[value] || 0) + 1;
+      if (!colors[value]) {
+        if (colorBy === "provider" || colorBy === "service" || colorBy === "kind") {
+          colors[value] = resolveMarkSpec(item, context).color;
+        } else {
+          colors[value] = resolveColorSpec(item, context).color;
+        }
+      }
+    }
+    (state.rawNodes || []).forEach(add);
+    (state.rawEdges || []).forEach(add);
+    var items = Object.keys(counts).sort(function (a, b) {
+      if (counts[a] === counts[b]) return a.localeCompare(b);
+      return counts[b] - counts[a];
+    }).slice(0, 14).map(function (id) {
+      return { id: id, label: id, count: counts[id], color: colors[id] || colorStringFromHex(phaseColor(id, 0)) };
+    });
+    return { title: colorBy === "provider" ? "Providers" : colorBy.charAt(0).toUpperCase() + colorBy.slice(1), items: items };
   }
 
   function createSelectionStore() {
@@ -766,8 +1064,8 @@
     return new THREE.Vector3(x, y, z);
   }
 
-  function createThreeMaterial(THREE, item, effects) {
-    var color = hexColor(item.status);
+  function createThreeMaterial(THREE, item, effects, markSpec) {
+    var color = colorValue(markSpec && markSpec.color, hexColor(item.status));
     var material = safeClass(effects.material);
     var params = {
       color: color,
@@ -834,24 +1132,16 @@
       scene.add(root);
       scene.add(particleRoot);
       var items = collectThreeItems(data, manifest);
+      var markContext = createMarkContext(manifest, data);
       var objects = [];
       var positions = {};
-      var sphere = new THREE.IcosahedronGeometry(0.19, 1);
-      var box = new THREE.BoxGeometry(0.36, 0.28, 0.36);
-      var panel = new THREE.BoxGeometry(0.64, 0.32, 0.08);
       items.forEach(function (item, index) {
         var pos = threePosition(THREE, item, index, items.length, effects, preset);
         positions[item.id] = pos;
-        var materialName = safeClass(effects.material);
-        var geometry = sphere;
-        if (materialName.indexOf("height") >= 0 || materialName.indexOf("city") >= 0 || item.type === "item") {
-          geometry = box;
-        } else if (materialName.indexOf("glass") >= 0 || item.type === "claim" || item.type === "source") {
-          geometry = panel;
-        }
-        var mesh = new THREE.Mesh(geometry, createThreeMaterial(THREE, item, effects));
+        var markSpec = resolveMarkSpec(item.payload || item, markContext);
+        var mesh = createMarkMesh(markSpec, item.payload || item, THREE, effects);
         mesh.position.copy(pos);
-        if (geometry === box) {
+        if (safeClass(markSpec.mesh).indexOf("box") >= 0) {
           var lift = item.payload && item.payload.metrics ? Number(item.payload.metrics.risk || item.payload.metrics.impact || item.payload.metrics.score || item.payload.metrics.value) : NaN;
           if (!Number.isFinite(lift)) {
             lift = index % 6;
@@ -860,6 +1150,10 @@
           mesh.position.y += mesh.scale.y * 0.08;
         }
         mesh.userData = { label: item.label, payload: item.payload || item };
+        var icon = createIconBillboard(markSpec, item.payload || item, THREE, markContext);
+        if (icon) {
+          mesh.add(icon);
+        }
         root.add(mesh);
         objects.push(mesh);
       });
@@ -1090,6 +1384,179 @@
     return group;
   }
 
+  function edgePresentation(edge) {
+    return edge && edge.presentation && typeof edge.presentation === "object" ? edge.presentation : {};
+  }
+
+  function directedEdgeKind(kind) {
+    kind = normalizeMarkKey(kind);
+    return {
+      call: true,
+      calls: true,
+      sync: true,
+      async: true,
+      writes: true,
+      reads: true,
+      emits: true,
+      subscribes: true,
+      event: true,
+      deploys: true,
+      deploys_to: true,
+      validates: true,
+      blocks: true,
+      depends_on: true,
+      sends: true,
+      returns: true,
+      observes: true
+    }[kind] === true;
+  }
+
+  function resolveEdgeSpec(edge, context) {
+    edge = edge || {};
+    var presentation = edgePresentation(edge);
+    var registry = context && context.markRegistry ? context.markRegistry : markRegistryFromManifest({});
+    var kind = normalizeMarkKey(edge.kind || edge.relation || edge.type);
+    var base = registry.edgeKinds && registry.edgeKinds[kind] ? Object.assign({}, registry.edgeKinds[kind]) : {};
+    var directed = edge.directed === true || directedEdgeKind(kind) || !!presentation.arrow;
+    var arrow = normalizeMarkKey(presentation.arrow || base.arrow || (directed ? "forward" : "none"));
+    if (arrow === "none") {
+      directed = false;
+    }
+    var lineStyle = normalizeMarkKey(presentation.lineStyle || presentation.line_style || base.lineStyle || base.line_style || (kind === "async" || kind === "emits" || kind === "subscribes" || kind === "observes" ? "dashed" : "solid"));
+    var color = normalizeColorString(presentation.color || edge.color || base.color || nodeColor(edge.status));
+    return {
+      directed: directed,
+      arrow: arrow,
+      lineStyle: lineStyle,
+      curve: normalizeMarkKey(presentation.curve || edge.curve || base.curve || (lineStyle === "dashed" ? "arc" : "straight")),
+      flow: presentation.flow !== undefined ? !!presentation.flow : !!base.flow || kind === "emits" || kind === "subscribes" || kind === "writes" || kind === "reads" || kind === "calls",
+      color: color,
+      opacity: edge.aggregated ? 0.86 : 0.68
+    };
+  }
+
+  function edgeCurveFor(THREE, from, to, edge, edgeSpec, index) {
+    var a = from.clone();
+    var b = to.clone();
+    var mid = a.clone().lerp(b, 0.5);
+    if (edgeSpec.curve === "arc" || edgeSpec.curve === "high_arc" || edgeSpec.flow) {
+      var direction = b.clone().sub(a);
+      var lift = edgeSpec.curve === "high_arc" ? 0.55 : 0.28;
+      mid.y += lift + importanceValue(edge, 0) * 0.22;
+      mid.z += ((index || 0) % 3 - 1) * 0.13;
+      if (direction.length() > 0.01) {
+        var side = new THREE.Vector3(-direction.z, 0, direction.x).normalize().multiplyScalar(((index || 0) % 2 ? 1 : -1) * 0.08);
+        mid.add(side);
+      }
+      return THREE.CatmullRomCurve3 ? new THREE.CatmullRomCurve3([a, mid, b]) : { getPoint: function (t) { return t < 0.5 ? a.clone().lerp(mid, t * 2) : mid.clone().lerp(b, (t - 0.5) * 2); } };
+    }
+    return { getPoint: function (t) { return a.clone().lerp(b, t); } };
+  }
+
+  function curvePoints(curve, segments) {
+    if (curve.getPoints) {
+      return curve.getPoints(segments || 16);
+    }
+    var out = [];
+    for (var i = 0; i <= (segments || 16); i += 1) {
+      out.push(curve.getPoint(i / (segments || 16)));
+    }
+    return out;
+  }
+
+  function createEdgeTube(THREE, curve, edgeSpec, radius) {
+    var color = colorValue(edgeSpec.color, 0x63a9ff);
+    var geometry = THREE.TubeGeometry ? new THREE.TubeGeometry(curve, 18, radius || 0.012, 8, false) : new THREE.BufferGeometry().setFromPoints(curvePoints(curve, 18));
+    var material = THREE.TubeGeometry ? new THREE.MeshBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending
+    }) : new THREE.LineBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending
+    });
+    material.depthTest = false;
+    material.depthWrite = false;
+    var object = THREE.TubeGeometry ? new THREE.Mesh(geometry, material) : new THREE.Line(geometry, material);
+    object.renderOrder = 1;
+    object.userData.isEdgeTube = true;
+    object.userData.baseOpacity = edgeSpec.opacity;
+    object.userData.targetOpacity = edgeSpec.opacity;
+    return object;
+  }
+
+  function createArrowHead(THREE, curve, edgeSpec) {
+    if (!edgeSpec.directed || edgeSpec.arrow === "none") {
+      return null;
+    }
+    var t = edgeSpec.arrow === "reverse" ? 0.06 : 0.94;
+    var tail = curve.getPoint(edgeSpec.arrow === "reverse" ? 0.14 : 0.86);
+    var tip = curve.getPoint(t);
+    var direction = tip.clone().sub(tail).normalize();
+    if (direction.length() < 0.001) {
+      direction.set(0, 1, 0);
+    }
+    var geometry = new THREE.ConeGeometry(0.055, 0.18, 18);
+    var material = new THREE.MeshBasicMaterial({
+      color: colorValue(edgeSpec.color, 0x63a9ff),
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending
+    });
+    material.depthTest = false;
+    material.depthWrite = false;
+    var cone = new THREE.Mesh(geometry, material);
+    cone.position.copy(tip);
+    cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+    cone.renderOrder = 3;
+    cone.userData.baseOpacity = Math.min(1, edgeSpec.opacity + 0.1);
+    cone.userData.targetOpacity = cone.userData.baseOpacity;
+    return cone;
+  }
+
+  function createFlowParticles(THREE, curve, edgeSpec, count) {
+    if (!edgeSpec.flow && edgeSpec.lineStyle !== "dashed") {
+      return [];
+    }
+    var particles = [];
+    var material = new THREE.MeshBasicMaterial({
+      color: colorValue(edgeSpec.color, 0x63a9ff),
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending
+    });
+    material.depthTest = false;
+    material.depthWrite = false;
+    var geometry = new THREE.SphereGeometry(edgeSpec.lineStyle === "dashed" ? 0.032 : 0.04, 10, 8);
+    for (var i = 0; i < Math.max(1, count || 1); i += 1) {
+      var marker = new THREE.Mesh(geometry, material.clone());
+      marker.position.copy(curve.getPoint(i / Math.max(1, count || 1)));
+      marker.renderOrder = 2;
+      marker.userData = {
+        curve: curve,
+        phase: i / Math.max(1, count || 1),
+        speed: edgeSpec.flow ? 0.18 + i * 0.025 : 0.08,
+        baseOpacity: edgeSpec.lineStyle === "dashed" ? 0.58 : 0.82,
+        targetOpacity: edgeSpec.lineStyle === "dashed" ? 0.58 : 0.82,
+        baseScale: 1,
+        targetScale: 1
+      };
+      particles.push(marker);
+    }
+    return particles;
+  }
+
+  function createDirectedEdge(THREE, endpoints, edge, edgeSpec, index) {
+    var curve = edgeCurveFor(THREE, endpoints.from.position, endpoints.to.position, edge, edgeSpec, index);
+    var tube = createEdgeTube(THREE, curve, edgeSpec, edge.aggregated ? 0.02 : 0.012);
+    var arrow = createArrowHead(THREE, curve, edgeSpec);
+    var markers = createFlowParticles(THREE, curve, edgeSpec, edgeSpec.flow ? 2 : edgeSpec.lineStyle === "dashed" ? 3 : 1);
+    return { line: tube, arrow: arrow, markers: markers, curve: curve, edgeSpec: edgeSpec };
+  }
+
   function createThreeGraphScene(stage, manifest, state, preset, profile, inspector, onGraphChange) {
     var effects = effectSpec(manifest);
     if (effects.engine !== "three.v1") {
@@ -1154,6 +1621,7 @@
       var hoverID = "";
       var currentModel = { nodes: [], edges: [] };
       var currentFilters = {};
+      var markContext = createMarkContext(manifest, state.rawNodes && state.rawNodes.length ? { nodes: state.rawNodes, edges: state.rawEdges } : {});
       var labelEngine = createLabelEngine({ mode: state.visual.labelMode, focusIDs: state.visualFocus });
       var selectionStore = createSelectionStore();
       var pointer = new THREE.Vector2();
@@ -1335,13 +1803,27 @@
         if (!endpoints) {
           return;
         }
-        item.line.geometry.setFromPoints([endpoints.from.position, endpoints.to.position]);
-        if (item.line.geometry.computeBoundingSphere) {
-          item.line.geometry.computeBoundingSphere();
+        var edgeSpec = item.edgeSpec || resolveEdgeSpec(item.edge, markContext);
+        var curve = edgeCurveFor(THREE, endpoints.from.position, endpoints.to.position, item.edge, edgeSpec, item.index || 0);
+        item.curve = curve;
+        if (item.line && item.line.geometry) {
+          if (item.line.geometry.dispose) {
+            item.line.geometry.dispose();
+          }
+          item.line.geometry = THREE.TubeGeometry ? new THREE.TubeGeometry(curve, 18, item.edge && item.edge.aggregated ? 0.02 : 0.012, 8, false) : new THREE.BufferGeometry().setFromPoints(curvePoints(curve, 18));
+          if (item.line.geometry.computeBoundingSphere) {
+            item.line.geometry.computeBoundingSphere();
+          }
+        }
+        if (item.arrow) {
+          var tip = curve.getPoint(edgeSpec.arrow === "reverse" ? 0.06 : 0.94);
+          var tail = curve.getPoint(edgeSpec.arrow === "reverse" ? 0.14 : 0.86);
+          var direction = tip.clone().sub(tail).normalize();
+          item.arrow.position.copy(tip);
+          item.arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.length() > 0.001 ? direction : new THREE.Vector3(0, 1, 0));
         }
         (item.markers || []).forEach(function (marker) {
-          marker.userData.from.copy(endpoints.from.position);
-          marker.userData.to.copy(endpoints.to.position);
+          marker.userData.curve = curve;
         });
       }
 
@@ -1478,6 +1960,9 @@
         edgeItems.forEach(function (item) {
           var active = id && (item.edge.from === id || item.edge.to === id);
           item.line.userData.targetOpacity = active ? 0.98 : id ? 0.2 : item.line.userData.baseOpacity;
+          if (item.arrow) {
+            item.arrow.userData.targetOpacity = active ? 1 : id ? 0.16 : item.arrow.userData.baseOpacity;
+          }
           (item.markers || []).forEach(function (marker) {
             marker.userData.targetOpacity = active ? 0.92 : id ? 0.12 : marker.userData.baseOpacity;
             marker.userData.targetScale = active ? marker.userData.baseScale * 1.35 : marker.userData.baseScale;
@@ -1506,19 +1991,24 @@
         clearGraph();
         var positions = layoutGraphNodes3D(THREE, currentModel.nodes, preset);
         anchorExpandedLayout(positions);
-        var sphere = new THREE.IcosahedronGeometry(0.22, 2);
-        var groupSphere = new THREE.SphereGeometry(0.34, 24, 16);
-        var panel = new THREE.BoxGeometry(0.46, 0.34, 0.22);
         currentModel.nodes.forEach(function (node) {
-          var geometry = node.__group ? groupSphere : preset === "graph_2_5d" ? panel : sphere;
-          var material = createThreeMaterial(THREE, node, effects);
+          var markSpec = resolveMarkSpec(node, markContext);
+          if (node.__group && !node.presentation) {
+            markSpec.shape = "group_hull";
+            markSpec.mesh = "box";
+          }
+          if (preset === "graph_2_5d" && markSpec.mesh === "sphere") {
+            markSpec.mesh = "card";
+            markSpec.shape = "node_card";
+          }
+          var mesh = createMarkMesh(markSpec, node, THREE, effects);
+          var material = mesh.material;
           var visualFocus = !!state.visualFocus[node.id];
           if (visualFocus && material.emissiveIntensity !== undefined) {
             material.emissiveIntensity = Math.max(material.emissiveIntensity || 0, 0.46);
           }
           material.transparent = true;
           material.opacity = node.__group || visualFocus ? 0.92 : 0.82;
-          var mesh = new THREE.Mesh(geometry, material);
           var targetPosition = (positions[node.id] || new THREE.Vector3(0, 0, 0)).clone();
           mesh.position.copy(startPositionForNode(node, targetPosition, previousPositions));
           var scale = node.__group ? 1 + Math.min(1.7, (node.child_count || 1) / 18) : 0.72 + importanceValue(node, 0.35) * 0.7;
@@ -1538,6 +2028,10 @@
             targetEmissive: material.emissiveIntensity || 0.14,
             targetPosition: targetPosition
           };
+          var icon = createIconBillboard(markSpec, node, THREE, markContext);
+          if (icon) {
+            mesh.add(icon);
+          }
           material.opacity = 0;
           nodeRoot.add(mesh);
           objects.push(mesh);
@@ -1552,52 +2046,22 @@
             addVisualAnnotation(annotation, target.mesh);
           }
         });
-        currentModel.edges.forEach(function (edge) {
+        currentModel.edges.forEach(function (edge, edgeIndex) {
           var endpoints = endpointMeshes(edge);
           if (!endpoints) {
             return;
           }
-          var lineGeo = new THREE.BufferGeometry();
-          lineGeo.setFromPoints([endpoints.from.position, endpoints.to.position]);
-          var baseOpacity = edge.aggregated ? 0.86 : 0.64;
-          var line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
-            color: hexColor(edge.status),
-            transparent: true,
-            opacity: 0,
-            blending: THREE.AdditiveBlending
-          }));
-          line.material.depthTest = false;
-          line.material.depthWrite = false;
-          line.renderOrder = 1;
-          line.userData = { baseOpacity: baseOpacity, targetOpacity: baseOpacity };
-          edgeRoot.add(line);
-          var markers = [];
-          var markerMaterial = new THREE.MeshBasicMaterial({
-            color: hexColor(edge.status),
-            transparent: true,
-            opacity: 0,
-            blending: THREE.AdditiveBlending
+          var edgeSpec = resolveEdgeSpec(edge, markContext);
+          var visualEdge = createDirectedEdge(THREE, endpoints, edge, edgeSpec, edgeIndex);
+          edgeRoot.add(visualEdge.line);
+          if (visualEdge.arrow) {
+            edgeRoot.add(visualEdge.arrow);
+          }
+          (visualEdge.markers || []).forEach(function (marker) {
+            edgeRoot.add(marker);
           });
-          markerMaterial.depthTest = false;
-          markerMaterial.depthWrite = false;
-          var markerGeometry = new THREE.SphereGeometry(edge.aggregated ? 0.055 : 0.04, 12, 8);
-          var marker = new THREE.Mesh(markerGeometry, markerMaterial);
-          marker.position.copy(endpoints.from.position);
-          marker.renderOrder = 2;
-          marker.userData = {
-            from: endpoints.from.position.clone(),
-            to: endpoints.to.position.clone(),
-            phase: (edgeItems.length % 17) / 17,
-            speed: 0.18 + (edgeItems.length % 5) * 0.025,
-            baseOpacity: edge.aggregated ? 0.86 : 0.64,
-            targetOpacity: edge.aggregated ? 0.86 : 0.64,
-            baseScale: edge.aggregated ? 1.25 : 1,
-            targetScale: edge.aggregated ? 1.25 : 1
-          };
-          edgeRoot.add(marker);
-          markers.push(marker);
           addEdgeLabel(edge);
-          edgeItems.push({ line: line, edge: edge, markers: markers });
+          edgeItems.push({ line: visualEdge.line, arrow: visualEdge.arrow, edge: edge, markers: visualEdge.markers, curve: visualEdge.curve, edgeSpec: edgeSpec, index: edgeIndex });
         });
         buildParticles(currentModel.nodes.length + currentModel.edges.length);
         applyFocus(selectedID && nodeMap[selectedID] ? selectedID : "");
@@ -1848,11 +2312,16 @@
         edgeItems.forEach(function (item) {
           updateEdgeGeometry(item);
           item.line.material.opacity = easeValue(item.line.material.opacity, item.line.userData.targetOpacity, 0.1);
+          if (item.arrow) {
+            item.arrow.material.opacity = easeValue(item.arrow.material.opacity, item.arrow.userData.targetOpacity, 0.12);
+          }
           (item.markers || []).forEach(function (marker) {
             marker.material.opacity = easeValue(marker.material.opacity, marker.userData.targetOpacity, 0.12);
             var p = (t * marker.userData.speed + marker.userData.phase) % 1;
             p = 0.18 + p * 0.64;
-            marker.position.copy(marker.userData.from).lerp(marker.userData.to, p);
+            if (marker.userData.curve && marker.userData.curve.getPoint) {
+              marker.position.copy(marker.userData.curve.getPoint(p));
+            }
             var targetScale = marker.userData.targetScale || marker.userData.baseScale || 1;
             var currentScale = marker.scale.x || 1;
             marker.scale.setScalar(easeValue(currentScale, targetScale, 0.12));
@@ -2035,11 +2504,12 @@
     shell.toolbar.appendChild(exportBtn);
     shell.toolbar.appendChild(countBadge);
     if (state.visual.showLegend) {
-      createLegendOverlay(shell.stage, "Kinds", uniqueValues(state.rawNodes.concat(state.groupOrder.map(function (id) { return state.groups[id]; })), "kind").map(function (kind, index) {
-        return { id: kind, label: kind, color: colorStringFromHex(phaseColor(kind, index)) };
-      }), function (kind, active) {
-        kindFilter.value = active ? kind : "";
-        rebuildGraph();
+      var legendSpec = buildLegendItems(data, state, createMarkContext(manifest, data));
+      createLegendOverlay(shell.stage, legendSpec.title, legendSpec.items, function (value, active) {
+        if (colorByFromVisual(state.visual) === "kind") {
+          kindFilter.value = active ? value : "";
+          rebuildGraph();
+        }
       });
     }
 
@@ -2523,6 +2993,7 @@
     var fragments = Array.isArray(data.fragments) ? data.fragments : [];
     var phases = Array.isArray(data.phases) ? data.phases : [];
     var visual = readVisualHints(data);
+    var sequenceMarkContext = createMarkContext(manifest, data);
     var visualFocus = idSet(visual.initialFocusIDs);
     var visualHidden = idSet(visual.hiddenDetailIDs);
     messages = messages.filter(function (message) {
@@ -2739,7 +3210,9 @@
           }
           var order = message.order !== undefined ? message.order : index + 1;
           var y = yForOrder(order);
-          var color = sequenceColor(message.phase || message.kind || message.status, index);
+          var edgeSpec = resolveEdgeSpec(message, sequenceMarkContext);
+          var phaseBasedColor = sequenceColor(message.phase || message.kind || message.status, index);
+          var color = colorValue(edgePresentation(message).color || message.color, colorValue(edgeSpec.color, phaseBasedColor));
           var a = new THREE.Vector3(from.x, y, from.z);
           var b = new THREE.Vector3(to.x, y, to.z);
           if (message.self === true || message.from === message.to) {
@@ -2772,13 +3245,22 @@
           messageRoot.add(line);
           pickables.push(line);
           var direction = b.clone().sub(mid).normalize();
-          var coneGeometry = THREE.ConeGeometry ? new THREE.ConeGeometry(0.08, 0.24, 18) : new THREE.IcosahedronGeometry(0.08, 1);
-          var cone = new THREE.Mesh(coneGeometry, new THREE.MeshBasicMaterial({ color: color }));
-          cone.position.copy(b);
-          cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
-          cone.userData = line.userData;
-          messageRoot.add(cone);
-          pickables.push(cone);
+          if (edgeSpec.arrow !== "none") {
+            var coneGeometry = THREE.ConeGeometry ? new THREE.ConeGeometry(0.08, 0.24, 18) : new THREE.IcosahedronGeometry(0.08, 1);
+            var cone = new THREE.Mesh(coneGeometry, new THREE.MeshBasicMaterial({ color: color }));
+            cone.position.copy(edgeSpec.arrow === "reverse" ? a : b);
+            cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), edgeSpec.arrow === "reverse" ? direction.clone().multiplyScalar(-1) : direction);
+            cone.userData = line.userData;
+            messageRoot.add(cone);
+            pickables.push(cone);
+          }
+          if (edgeSpec.flow && THREE.SphereGeometry) {
+            var flowParticle = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.72, blending: THREE.AdditiveBlending }));
+            flowParticle.position.copy(mid);
+            flowParticle.userData = line.userData;
+            messageRoot.add(flowParticle);
+            pickables.push(flowParticle);
+          }
           var messageLabel = addHTMLLabel((message.order ? message.order + ". " : "") + (message.label || message.name || message.id), mid, "visual-uml-message-label" + (visualFocus[message.id] ? " visual-uml-focus-label" : ""), message);
           visualAnnotationsFor(visual, message.id).forEach(function (annotation) {
             addHTMLLabel(visualAnnotationText(annotation), mid.clone().add(new THREE.Vector3(0, 0.32, 0.16)), "visual-uml-annotation-label", annotation);

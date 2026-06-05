@@ -131,6 +131,10 @@ func Render(opts Options) (Result, error) {
 	if _, err := copyAssets(opts.TemplateDir, entry, tpl, opts.OutDir); err != nil {
 		return Result{}, err
 	}
+	outputAssets, err := BuildOutputAssets(opts.TemplateDir)
+	if err != nil {
+		return Result{}, err
+	}
 	outputManifest := manifest.OutputManifest{
 		Schema: "efp.visual.output.manifest.v1",
 		Template: manifest.OutputTemplate{
@@ -146,6 +150,7 @@ func Render(opts Options) (Result, error) {
 		Effects:      tpl.Effects,
 		VisualDesign: tpl.VisualDesign,
 		Interactions: tpl.Interactions,
+		Assets:       outputAssets,
 	}
 	if err := writeJSONFile(filepath.Join(opts.OutDir, "manifest.json"), outputManifest); err != nil {
 		return Result{}, err

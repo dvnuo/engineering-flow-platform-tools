@@ -1,0 +1,53 @@
+{
+  "schema": "efp.visual.input.graph.v1",
+  "title": "Cloud Architecture With Missing Visual Semantics",
+  "nodes": [
+    {"id": "n1", "label": "Frontend"},
+    {"id": "n2", "label": "Gateway"},
+    {"id": "n3", "label": "Function"},
+    {"id": "n4", "label": "Store"},
+    {"id": "n5", "label": "Queue"},
+    {"id": "n6", "label": "Events"},
+    {"id": "n7", "label": "CI"},
+    {"id": "n8", "label": "Monitoring"},
+    {"id": "n9", "label": "External"},
+    {
+      "id": "n10",
+      "label": "Unknown Icon",
+      "presentation": {
+        "icon": "aws.unknown_service"
+      }
+    }
+  ],
+  "edges": [
+    {"from": "n1", "to": "n2", "kind": "calls", "label": "calls"},
+    {"from": "n2", "to": "n3", "kind": "calls", "label": "calls"},
+    {"from": "n3", "to": "n4", "kind": "writes", "label": "writes"},
+    {"from": "n3", "to": "n5", "kind": "sends", "label": "sends"},
+    {"from": "n3", "to": "n6", "kind": "emits", "label": "emits"},
+    {"from": "n7", "to": "n3", "kind": "deploys", "label": "deploys"},
+    {"from": "n8", "to": "n3", "kind": "observes", "label": "observes"},
+    {"from": "n3", "to": "n9", "kind": "calls", "label": "calls"}
+  ],
+  "renderHints": {
+    "showLegend": true
+  },
+  "visual": {
+    "goal": "This intentionally weak input lacks mark and color grammar.",
+    "initial_focus_ids": ["n3"],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Weak overview",
+        "focus_ids": ["n3"]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "a1",
+        "target_id": "n3",
+        "label": "No semantic mark"
+      }
+    ]
+  }
+}

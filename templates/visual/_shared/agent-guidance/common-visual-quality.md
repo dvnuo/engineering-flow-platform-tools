@@ -41,7 +41,23 @@ Legacy `label_priority` numeric values are accepted and normalized: `>=0.85` alw
 
 ## presentation
 
-`presentation` contains optional visual hints such as `color`, `lane`, `laneIndex`, `depth`, and `positionHint`. Renderers may use these hints, but agents must not rely on presentation to fix incorrect semantics.
+`presentation` contains optional visual hints such as `shape`, `mesh`, `icon`, `color`, `arrow`, `lineStyle`, `flow`, `lane`, `laneIndex`, `depth`, and `positionHint`. Renderers may use these hints, but agents must not rely on presentation to fix incorrect semantics.
+
+For object marks:
+
+- `presentation.shape`: semantic shape such as service_box, database_cylinder, queue_capsule, cloud_plate, actor_card, diamond, or warning_prism.
+- `presentation.mesh`: Three.js primitive hint such as box, card, cylinder, capsule, cloud, octahedron, cone, hex_prism, or sphere.
+- `presentation.icon`: local icon id from `asset-registry.json`, such as generic.database, aws.lambda, aws.s3, aws.rds, aws.sqs, aws.eventbridge, aws.api_gateway, or jenkins.
+- `provider`, `service`, and `platform`: semantic provider fields used before falling back to kind.
+
+For relationship marks:
+
+- `directed`: true when direction matters.
+- `presentation.arrow`: forward, reverse, or none.
+- `presentation.lineStyle`: solid, dashed, or dotted.
+- `presentation.flow`: true when particles should show data, event, call, or causal movement.
+
+Do not rely on generic sphere nodes for semantic entities. Read `mark-grammar.md` before authoring large graph, flow, component, or spatial inputs.
 
 ## visual
 
@@ -62,6 +78,7 @@ Legacy `label_priority` numeric values are accepted and normalized: `>=0.85` alw
 - `labelMode`: minimal, overview, normal, detail, focus.
 - `focusMode`: selected, neighborhood, path, phase.
 - `cameraPreset`: overview, left_to_right, top_down, timeline, orbit.
+- `colorBy`: semantic color policy, such as kind, provider, status, group, phase, risk, or severity.
 
 Legacy `initial_view` is accepted for older inputs.
 
@@ -73,3 +90,6 @@ Legacy `initial_view` is accepted for older inputs.
 - `routeStrategy`: straight, arc, bundled, orthogonal, timeline.
 - `showLegend`: true/false.
 - `showAnnotations`: true/false.
+- `palette`: semantic_dark, cloud_provider, status, phase, or risk.
+- `colorBy`: semantic color policy if not set in view.
+- `iconMode`: billboard or none.

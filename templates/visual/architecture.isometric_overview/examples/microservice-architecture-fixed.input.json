@@ -1,0 +1,182 @@
+{
+  "schema": "efp.visual.input.isometric_architecture.v1",
+  "title": "Fixed Microservice Architecture Draft",
+  "subtitle": "Repaired zones, typed entities, positions, directed links, grid, and routes",
+  "goal": "Show the basic client-to-edge-to-service-to-state architecture path.",
+  "theme": "architecture_light",
+  "canvas": {
+    "grid": {
+      "enabled": true,
+      "step": 1
+    }
+  },
+  "zones": [
+    {
+      "id": "client-zone",
+      "label": "Client",
+      "bounds": {
+        "x": 0,
+        "y": 2,
+        "w": 3,
+        "h": 4
+      },
+      "style": "dashed"
+    },
+    {
+      "id": "edge-zone",
+      "label": "Edge",
+      "bounds": {
+        "x": 4,
+        "y": 2,
+        "w": 4,
+        "h": 4
+      },
+      "style": "dashed"
+    },
+    {
+      "id": "service-zone",
+      "label": "Services",
+      "bounds": {
+        "x": 9,
+        "y": 2,
+        "w": 5,
+        "h": 4
+      },
+      "style": "dashed"
+    },
+    {
+      "id": "state-zone",
+      "label": "State",
+      "bounds": {
+        "x": 15,
+        "y": 2,
+        "w": 5,
+        "h": 4
+      },
+      "style": "dashed"
+    }
+  ],
+  "entities": [
+    {
+      "id": "pc",
+      "label": "PC",
+      "kind": "pc",
+      "zone": "client-zone",
+      "position": {
+        "x": 1.5,
+        "y": 4
+      },
+      "importance": 0.8
+    },
+    {
+      "id": "nginx",
+      "label": "Nginx",
+      "kind": "nginx",
+      "zone": "edge-zone",
+      "position": {
+        "x": 6,
+        "y": 4
+      },
+      "importance": 0.9
+    },
+    {
+      "id": "service-a",
+      "label": "Service A",
+      "kind": "microservice",
+      "zone": "service-zone",
+      "position": {
+        "x": 11.5,
+        "y": 4
+      },
+      "importance": 0.9
+    },
+    {
+      "id": "redis",
+      "label": "Redis",
+      "kind": "redis",
+      "zone": "state-zone",
+      "position": {
+        "x": 16.3,
+        "y": 3.4
+      },
+      "importance": 0.7
+    },
+    {
+      "id": "mysql",
+      "label": "MySQL",
+      "kind": "mysql",
+      "zone": "state-zone",
+      "position": {
+        "x": 18.4,
+        "y": 4.7
+      },
+      "importance": 0.8
+    }
+  ],
+  "links": [
+    {
+      "id": "pc-to-nginx",
+      "from": "pc",
+      "to": "nginx",
+      "label": "API",
+      "directed": true,
+      "kind": "api_call",
+      "routeStyle": "orthogonal"
+    },
+    {
+      "id": "nginx-to-service-a",
+      "from": "nginx",
+      "to": "service-a",
+      "label": "Proxy",
+      "directed": true,
+      "kind": "reverse_proxy",
+      "routeStyle": "orthogonal"
+    },
+    {
+      "id": "service-a-to-redis",
+      "from": "service-a",
+      "to": "redis",
+      "label": "Cache",
+      "directed": true,
+      "kind": "data_cache",
+      "routeStyle": "orthogonal"
+    },
+    {
+      "id": "service-a-to-mysql",
+      "from": "service-a",
+      "to": "mysql",
+      "label": "Store",
+      "directed": true,
+      "kind": "data_storage",
+      "routeStyle": "orthogonal"
+    }
+  ],
+  "controls": [
+    "overview",
+    "reset_camera",
+    "focus",
+    "isolate",
+    "hide_others",
+    "show_all",
+    "toggle_labels",
+    "toggle_boundaries",
+    "toggle_arrows",
+    "export_json"
+  ],
+  "visual": {
+    "assumptions": [
+      "The original draft did not specify zones, so the repaired layout uses conventional left-to-right request flow."
+    ],
+    "initial_focus_ids": [
+      "pc",
+      "nginx",
+      "service-a",
+      "mysql"
+    ]
+  },
+  "view": {
+    "labelMode": "overview",
+    "showBoundaries": true,
+    "showArrows": true
+  }
+}

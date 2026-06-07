@@ -1,9 +1,10 @@
 {
   "version": 3,
   "expected": {
-    "canonical_count": 37,
+    "canonical_count": 38,
     "categories": {
       "uml": 5,
+      "architecture": 1,
       "relationship": 4,
       "temporal": 4,
       "flow": 4,
@@ -607,6 +608,25 @@
         "service",
         "city",
         "topology"
+      ]
+    },
+    {
+      "id": "architecture.isometric_overview",
+      "version": "1.0.0",
+      "category": "architecture",
+      "path": "architecture.isometric_overview/template.yaml",
+      "title": "Isometric Architecture Overview",
+      "description": "Renders zones, typed infrastructure entities, and directional architecture links as an offline Three.js isometric scene.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "isometric_architecture_v1",
+      "renderer": "offline.architecture.isometric.v1",
+      "layout_preset": "isometric_architecture",
+      "tags": [
+        "architecture",
+        "isometric",
+        "three",
+        "topology",
+        "microservices"
       ]
     },
     {

@@ -1,0 +1,67 @@
+{
+  "schema": "efp.visual.input.studio.v1",
+  "title": "Service Explorer Studio",
+  "goal": "Explain services, components, queues, owners, risks, and evidence in one explorer page.",
+  "audience": "service owner",
+  "assumptions": ["Ownership comes from service catalog metadata.", "Risk levels are inferred from latest review notes."],
+  "hero": {
+    "type": "entity_explorer",
+    "title": "Checkout Entity Explorer",
+    "summary": "Inspectable services, state, queue, owner, and risk panels.",
+    "data": {
+      "nodes": [
+        {"id": "api", "label": "Order API", "kind": "api", "provider": "aws", "service": "api_gateway", "platform": "aws", "status": "ok", "importance": 0.9, "summary": "Public order ingress.", "presentation": {"shape": "hex_service", "icon": "aws.api_gateway", "color": "#38bdf8"}},
+        {"id": "orders", "label": "Orders", "kind": "service", "provider": "aws", "service": "lambda", "platform": "aws", "status": "ok", "importance": 0.94, "summary": "Owns order orchestration.", "presentation": {"shape": "service_box", "icon": "aws.lambda", "color": "#22c55e"}},
+        {"id": "db", "label": "Orders DB", "kind": "database", "provider": "aws", "service": "rds", "platform": "aws", "status": "ok", "importance": 0.82, "summary": "Stores order state.", "presentation": {"shape": "database_cylinder", "icon": "aws.rds", "color": "#60a5fa"}},
+        {"id": "queue", "label": "Fulfillment Queue", "kind": "queue", "provider": "aws", "service": "sqs", "platform": "aws", "status": "warning", "importance": 0.84, "summary": "Buffers fulfillment work.", "presentation": {"shape": "queue_capsule", "icon": "aws.sqs", "color": "#f59e0b"}},
+        {"id": "events", "label": "Events", "kind": "event_stream", "provider": "aws", "service": "eventbridge", "platform": "aws", "status": "ok", "importance": 0.72, "summary": "Publishes order lifecycle.", "presentation": {"shape": "event_bus", "icon": "aws.eventbridge", "color": "#a78bfa"}},
+        {"id": "risk", "label": "Queue Age Risk", "kind": "risk", "provider": "aws", "service": "cloudwatch", "platform": "aws", "status": "warning", "importance": 0.8, "summary": "Queue age can delay fulfillment.", "presentation": {"shape": "warning_prism", "icon": "generic.warning", "color": "#fb7185"}}
+      ],
+      "edges": [
+        {"id": "api-to-orders", "from": "api", "to": "orders", "kind": "calls", "label": "calls", "directed": true, "importance": 0.9, "summary": "API invokes Orders.", "presentation": {"arrow": "forward", "lineStyle": "solid", "flow": true}},
+        {"id": "orders-to-db", "from": "orders", "to": "db", "kind": "writes", "label": "writes", "directed": true, "importance": 0.84, "summary": "Orders persists state.", "presentation": {"arrow": "forward", "lineStyle": "solid", "flow": true}},
+        {"id": "orders-to-queue", "from": "orders", "to": "queue", "kind": "emits", "label": "queues", "directed": true, "importance": 0.82, "summary": "Orders queues fulfillment.", "presentation": {"arrow": "forward", "lineStyle": "dashed", "flow": true}},
+        {"id": "orders-to-events", "from": "orders", "to": "events", "kind": "emits", "label": "publishes", "directed": true, "importance": 0.72, "summary": "Orders publishes lifecycle event.", "presentation": {"arrow": "forward", "lineStyle": "dashed", "flow": true}},
+        {"id": "queue-to-risk", "from": "queue", "to": "risk", "kind": "blocks", "label": "can delay", "directed": true, "importance": 0.78, "summary": "Queue age creates fulfillment delay risk.", "presentation": {"arrow": "forward", "lineStyle": "dotted", "flow": false}}
+      ],
+      "items": [
+        {"id": "owner-checkout", "label": "Checkout Team", "kind": "user", "provider": "aws", "service": "cloudfront", "platform": "aws", "status": "ok", "importance": 0.7, "summary": "Owner team for Orders.", "presentation": {"shape": "actor_card", "icon": "generic.user", "color": "#e5a84c"}}
+      ]
+    }
+  },
+  "navigation": [
+    {"id": "nav-overview", "label": "Overview", "target_id": "overview-panel", "icon": "generic.service", "summary": "Explorer summary."},
+    {"id": "nav-orders", "label": "Orders", "target_id": "orders-panel", "icon": "aws.lambda", "summary": "Entity detail."},
+    {"id": "nav-risk", "label": "Risk", "target_id": "risk-panel", "icon": "generic.warning", "summary": "Risk detail."}
+  ],
+  "panels": [
+    {"id": "overview-panel", "type": "overview", "title": "Explorer Overview", "target_refs": ["api", "orders", "db", "queue"], "summary": "Orders is the core entity between ingress, state, queue, and events.", "items": [{"label": "owner", "value": "checkout team"}], "metrics": [{"label": "entities", "value": "7"}], "evidence": [{"label": "catalog", "source": "service catalog"}], "content": {"scope": "order creation"}, "presentation": {"shape": "service_box", "icon": "generic.service"}},
+    {"id": "orders-panel", "type": "entity", "title": "Orders Service", "target_refs": ["orders", "api-to-orders", "orders-to-db", "owner-checkout"], "summary": "Orders owns orchestration, persistence, and lifecycle events.", "items": [{"label": "owner", "value": "checkout team"}], "metrics": [{"label": "slo", "value": "99.9"}], "evidence": [{"label": "runbook", "source": "orders"}], "content": {"interface": "POST /orders"}, "presentation": {"shape": "service_box", "icon": "aws.lambda"}},
+    {"id": "risk-panel", "type": "risk", "title": "Queue Age Risk", "target_refs": ["queue", "risk", "queue-to-risk"], "summary": "Queue age can delay fulfillment and needs monitoring.", "items": [{"label": "risk", "value": "delayed fulfillment"}], "metrics": [{"label": "oldest message", "value": "12m"}], "evidence": [{"label": "alarm", "source": "cloudwatch"}], "content": {"next_action": "Watch queue age and scale worker."}, "presentation": {"shape": "warning_prism", "icon": "generic.warning"}},
+    {"id": "evidence-panel", "type": "evidence", "title": "Evidence And Assumptions", "target_refs": ["owner-checkout", "events"], "summary": "Catalog and event traces support the explorer.", "items": [{"label": "confidence", "value": "high"}], "metrics": [{"label": "source count", "value": "3"}], "evidence": [{"label": "catalog", "source": "service catalog"}, {"label": "trace", "source": "otel"}], "content": {"assumption": "Risk score inferred from queue age."}, "presentation": {"shape": "diamond", "icon": "generic.decision"}}
+  ],
+  "controls": [
+    {"id": "search-entity", "label": "Search", "type": "search", "target": "hero", "action": "search"},
+    {"id": "filter-kind", "label": "By kind", "type": "filter", "target": "kind", "action": "service"},
+    {"id": "focus-risk", "label": "Risk path", "type": "focus", "target": "risk", "action": "focus_path"}
+  ],
+  "annotations": [
+    {"id": "anno-orders", "label": "Core", "target_id": "orders", "summary": "Orders owns orchestration."},
+    {"id": "anno-risk", "label": "Risk", "target_id": "risk", "summary": "Queue age risk is the watch item."}
+  ],
+  "view": {"colorBy": "provider", "mode": "overview", "labelMode": "overview"},
+  "renderHints": {"showLegend": true, "palette": "cloud_provider", "iconMode": "billboard", "colorBy": "provider"},
+  "visual": {
+    "goal": "Start with Orders and its state plus queue risk.",
+    "initial_focus_ids": ["api", "orders", "queue", "orders-panel"],
+    "hidden_detail_ids": ["orders-to-events"],
+    "narrative_steps": [
+      {"id": "overview", "title": "Explore core entity", "summary": "Orders connects ingress, state, and async work.", "focus_ids": ["api", "orders", "db", "queue"]},
+      {"id": "risk", "title": "Inspect risk", "summary": "Queue age risk delays fulfillment.", "focus_ids": ["queue", "risk", "risk-panel"]}
+    ],
+    "annotations": [
+      {"id": "visual-orders", "label": "Core entity", "target_id": "orders", "summary": "Orders owns orchestration.", "priority": 0.9},
+      {"id": "visual-risk", "label": "Queue risk", "target_id": "risk", "summary": "Fulfillment delay risk.", "priority": 0.82}
+    ]
+  }
+}

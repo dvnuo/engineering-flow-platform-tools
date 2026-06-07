@@ -1,0 +1,41 @@
+{
+  "schema": "efp.visual.template_quality_rules.v1",
+  "template_id": "studio.service_topology",
+  "label": {
+    "max_overview_label_chars": 32,
+    "max_detail_label_chars": 64,
+    "require_summary_for_long_labels": true
+  },
+  "required_for_quality": [
+    {
+      "path": "$.panels",
+      "severity": "warning",
+      "code": "studio_panels_missing",
+      "suggestion": "Add panels for ingress, core service, state, async path, and operational risk."
+    },
+    {
+      "path": "$.controls",
+      "severity": "warning",
+      "code": "studio_controls_missing",
+      "suggestion": "Add controls for domain, provider, status, and critical path focus."
+    },
+    {
+      "path": "$.renderHints.showLegend",
+      "severity": "warning",
+      "code": "legend_missing",
+      "suggestion": "Set renderHints.showLegend=true when color encodes provider, domain, or risk."
+    }
+  ],
+  "semantic_rules": [
+    {
+      "code": "studio_topology_panels_must_explain_operations",
+      "severity": "warning",
+      "description": "Service topology panels should explain ownership, dependencies, health, evidence, and risks."
+    }
+  ],
+  "template_specific": {
+    "require_panels": 4,
+    "require_controls": 2,
+    "dominant_edge_kind_ratio": 0.65
+  }
+}

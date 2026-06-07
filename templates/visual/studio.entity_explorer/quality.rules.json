@@ -1,0 +1,41 @@
+{
+  "schema": "efp.visual.template_quality_rules.v1",
+  "template_id": "studio.entity_explorer",
+  "label": {
+    "max_overview_label_chars": 32,
+    "max_detail_label_chars": 64,
+    "require_summary_for_long_labels": true
+  },
+  "required_for_quality": [
+    {
+      "path": "$.panels",
+      "severity": "warning",
+      "code": "studio_panels_missing",
+      "suggestion": "Add overview, entity detail, dependency/risk, evidence, and assumption panels."
+    },
+    {
+      "path": "$.controls",
+      "severity": "warning",
+      "code": "studio_controls_missing",
+      "suggestion": "Add controls for search, kind filtering, status filtering, and relationship focus."
+    },
+    {
+      "path": "$.renderHints.showLegend",
+      "severity": "warning",
+      "code": "legend_missing",
+      "suggestion": "Set renderHints.showLegend=true when color encodes kind, provider, status, or risk."
+    }
+  ],
+  "semantic_rules": [
+    {
+      "code": "studio_entity_panels_must_explain_context",
+      "severity": "warning",
+      "description": "Entity explorer panels should explain role, ownership, relationships, metrics, evidence, and assumptions."
+    }
+  ],
+  "template_specific": {
+    "require_panels": 4,
+    "require_controls": 2,
+    "dominant_edge_kind_ratio": 0.65
+  }
+}

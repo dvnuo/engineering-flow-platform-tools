@@ -87,6 +87,7 @@ var semanticCategoryCounts = map[string]int{
 	"evidence":     4,
 	"matrix":       4,
 	"spatial":      4,
+	"studio":       4,
 }
 
 var semanticSchemaKinds = map[string]bool{
@@ -95,6 +96,7 @@ var semanticSchemaKinds = map[string]bool{
 	"timeline_v1":                 true,
 	"evidence_v1":                 true,
 	"matrix_v1":                   true,
+	"studio_v1":                   true,
 	"uml_sequence_v1":             true,
 	"uml_class_v1":                true,
 	"uml_state_machine_v1":        true,
@@ -107,11 +109,42 @@ var semanticRenderers = map[string]bool{
 	"offline.timeline.v1":         true,
 	"offline.evidence.v1":         true,
 	"offline.matrix.v1":           true,
+	"offline.studio.v1":           true,
 	"offline.uml.sequence.3d.v1":  true,
 	"offline.uml.class.2_5d.v1":   true,
 	"offline.uml.state.3d.v1":     true,
 	"offline.uml.activity.3d.v1":  true,
 	"offline.uml.component.3d.v1": true,
+}
+
+var semanticLayoutPresets = map[string]bool{
+	"activity_swimlanes":          true,
+	"city_map":                    true,
+	"class_cards":                 true,
+	"component_deployment":        true,
+	"control_room":                true,
+	"decision_matrix":             true,
+	"evidence_board":              true,
+	"flow_particles":              true,
+	"galaxy":                      true,
+	"graph_2_5d":                  true,
+	"heatmap":                     true,
+	"incident_timeline":           true,
+	"journey":                     true,
+	"layered_stack":               true,
+	"matrix_board":                true,
+	"permission_gate":             true,
+	"pipeline_flow":               true,
+	"radial_tree":                 true,
+	"replay_stage":                true,
+	"sequence_lifelines":          true,
+	"service_map":                 true,
+	"state_machine":               true,
+	"studio_entity_explorer":      true,
+	"studio_pipeline":             true,
+	"studio_sequence_walkthrough": true,
+	"studio_topology":             true,
+	"timeline_tunnel":             true,
 }
 
 var genericDescriptionPatterns = []*regexp.Regexp{
@@ -128,7 +161,7 @@ func TestVisualCommandsJSONContract(t *testing.T) {
 		m := objectMap(t, item)
 		names[m["name"].(string)] = true
 	}
-	for _, name := range []string{"render", "inspect-input", "inspect-plan", "inspect-render", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.guide", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
+	for _, name := range []string{"render", "inspect-input", "inspect-plan", "inspect-render", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.guide", "template.panel-grammar", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
 		if !names[name] {
 			t.Fatalf("missing visual command %s in %#v", name, names)
 		}
@@ -142,8 +175,8 @@ func TestVisualSemanticCatalogContract(t *testing.T) {
 	if registry.Version != 3 {
 		t.Fatalf("expected registry version 3, got %d", registry.Version)
 	}
-	if registry.Expected.CanonicalCount != 33 || len(registry.Templates) != 33 {
-		t.Fatalf("expected 33 semantic templates, got expected=%#v len=%d", registry.Expected, len(registry.Templates))
+	if registry.Expected.CanonicalCount != 37 || len(registry.Templates) != 37 {
+		t.Fatalf("expected 37 semantic templates, got expected=%#v len=%d", registry.Expected, len(registry.Templates))
 	}
 	for category, want := range semanticCategoryCounts {
 		if got := registry.Expected.Categories[category]; got != want {
@@ -202,7 +235,7 @@ func TestVisualTemplateDiscoveryCommands(t *testing.T) {
 	templateDir := filepath.Join(root, "templates", "visual")
 	categories := runVisualOK(t, "template", "categories", "--template-dir", templateDir, "--json")
 	catData := objectMap(t, categories["data"])
-	if catData["canonical_count"].(float64) != 33 || catData["total_count"].(float64) != 33 || catData["alias_count"].(float64) != 0 {
+	if catData["canonical_count"].(float64) != 37 || catData["total_count"].(float64) != 37 || catData["alias_count"].(float64) != 0 {
 		t.Fatalf("unexpected categories counts: %#v", catData)
 	}
 	items := catData["categories"].([]any)
@@ -225,6 +258,10 @@ func TestVisualTemplateDiscoveryCommands(t *testing.T) {
 	filtered := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--schema-kind", "uml_sequence_v1", "--renderer", "offline.uml.sequence.3d.v1", "--json")
 	if objectMap(t, filtered["data"])["matched_count"].(float64) != 1 {
 		t.Fatalf("expected one UML sequence match: %#v", filtered)
+	}
+	studio := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--category", "studio", "--json")
+	if objectMap(t, studio["data"])["matched_count"].(float64) != 4 {
+		t.Fatalf("expected four Studio templates: %#v", studio)
 	}
 }
 
@@ -250,14 +287,38 @@ func TestVisualTemplateAgentGuideCommandAndMetadata(t *testing.T) {
 	if getData["agent_guide_available"] != true || getData["quality_rules_available"] != true {
 		t.Fatalf("template get did not expose guide/rules metadata: %#v", getData)
 	}
+	if getData["panel_grammar_available"] == nil || getData["panel_grammar_path"] == nil {
+		t.Fatalf("template get did not expose panel grammar metadata: %#v", getData)
+	}
 	schema := runVisualOK(t, "template", "schema", "uml.sequence_3d", "--template-dir", templateDir, "--json")
 	schemaData := objectMap(t, schema["data"])
 	if schemaData["agent_guide_available"] != true || len(schemaData["agent_guide_summary"].([]any)) == 0 {
 		t.Fatalf("template schema did not expose guide summary: %#v", schemaData)
 	}
+	if schemaData["panel_grammar_available"] == nil || schemaData["panel_grammar_path"] == nil {
+		t.Fatalf("template schema did not expose panel grammar metadata: %#v", schemaData)
+	}
 	cmdSchema := runVisualOK(t, "schema", "template.guide", "--json")
 	if objectMap(t, cmdSchema["data"])["command"] != "template.guide" {
 		t.Fatalf("template.guide command schema missing: %#v", cmdSchema)
+	}
+	panelCmdSchema := runVisualOK(t, "schema", "template.panel-grammar", "--json")
+	panelCmdData := objectMap(t, panelCmdSchema["data"])
+	if panelCmdData["command"] != "template.panel-grammar" {
+		t.Fatalf("template.panel-grammar command schema missing: %#v", panelCmdSchema)
+	}
+	args := panelCmdData["argument_details"].([]any)
+	if len(args) == 0 || objectMap(t, args[0])["name"] != "template-id" || objectMap(t, args[0])["required"] != true {
+		t.Fatalf("template.panel-grammar schema missing positional template-id: %#v", panelCmdData)
+	}
+	flags := map[string]bool{}
+	for _, item := range panelCmdData["flags"].([]any) {
+		flags[objectMap(t, item)["name"].(string)] = true
+	}
+	for _, name := range []string{"template-dir", "json"} {
+		if !flags[name] {
+			t.Fatalf("template.panel-grammar schema missing flag %s: %#v", name, flags)
+		}
 	}
 }
 
@@ -278,6 +339,14 @@ func TestVisualAllTemplatesHaveAgentGuidesAndQualityRules(t *testing.T) {
 			if rules["schema"] != "efp.visual.template_quality_rules.v1" || rules["template_id"] != entry.ID {
 				t.Fatalf("%s quality rules invalid: %#v", entry.ID, rules)
 			}
+			if entry.Category == "studio" {
+				panelGrammar := mustRead(t, filepath.Join(templateDir, entry.ID, "panel-grammar.md"))
+				for _, want := range []string{"## When to use this template", "## Semantic model", "## Required construction rules", "## Recommended fields", "## Visual encoding rules", "## Common mistakes to avoid", "## Quality checklist before render", "## Minimal good example"} {
+					if !strings.Contains(panelGrammar, want) {
+						t.Fatalf("%s panel grammar missing %q", entry.ID, want)
+					}
+				}
+			}
 			for _, example := range []string{"good-small.input.json", "good-medium.input.json", "bad-dense.input.json", "fixed-dense.input.json"} {
 				if _, err := os.Stat(filepath.Join(templateDir, entry.ID, "examples", example)); err != nil {
 					t.Fatalf("%s missing example %s: %v", entry.ID, example, err)
@@ -285,10 +354,131 @@ func TestVisualAllTemplatesHaveAgentGuidesAndQualityRules(t *testing.T) {
 			}
 		})
 	}
-	for _, shared := range []string{"common-visual-quality.md", "agent-guide.schema.json", "quality-rules.schema.json"} {
+	for _, shared := range []string{"common-visual-quality.md", "panel-grammar.md", "agent-guide.schema.json", "quality-rules.schema.json"} {
 		if _, err := os.Stat(filepath.Join(templateDir, "_shared", "agent-guidance", shared)); err != nil {
 			t.Fatalf("missing shared guidance file %s: %v", shared, err)
 		}
+	}
+}
+
+func TestVisualStudioTemplateAuthoringContract(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+	studioTemplates := []string{
+		"studio.entity_explorer",
+		"studio.pipeline_release",
+		"studio.sequence_walkthrough",
+		"studio.service_topology",
+	}
+	requiredExamples := map[string][]string{
+		"studio.pipeline_release": {
+			"basic.input.json",
+			"good-small.input.json",
+			"good-medium.input.json",
+			"bad-empty-panels.input.json",
+			"fixed-rich.input.json",
+			"standard-pipeline-studio.input.json",
+		},
+		"studio.service_topology": {
+			"basic.input.json",
+			"good-small.input.json",
+			"good-medium.input.json",
+			"bad-empty-panels.input.json",
+			"fixed-rich.input.json",
+			"aws-order-processing-studio.input.json",
+		},
+		"studio.sequence_walkthrough": {
+			"basic.input.json",
+			"good-small.input.json",
+			"good-medium.input.json",
+			"bad-empty-panels.input.json",
+			"fixed-rich.input.json",
+			"game-session-walkthrough-studio.input.json",
+		},
+		"studio.entity_explorer": {
+			"basic.input.json",
+			"good-small.input.json",
+			"good-medium.input.json",
+			"bad-empty-panels.input.json",
+			"fixed-rich.input.json",
+			"service-explorer-studio.input.json",
+			"component-explorer-bad.input.json",
+			"component-explorer-fixed.input.json",
+		},
+	}
+	for _, templateID := range studioTemplates {
+		t.Run(templateID, func(t *testing.T) {
+			base := filepath.Join(templateDir, templateID)
+			for _, rel := range []string{"template.yaml", "schema.input.json", "style.css", "agent-guide.md", "panel-grammar.md", "quality.rules.json"} {
+				info, err := os.Stat(filepath.Join(base, filepath.FromSlash(rel)))
+				if err != nil || info.IsDir() || info.Size() == 0 {
+					t.Fatalf("%s missing non-empty %s", templateID, rel)
+				}
+			}
+			for _, example := range requiredExamples[templateID] {
+				info, err := os.Stat(filepath.Join(base, "examples", example))
+				if err != nil || info.IsDir() || info.Size() == 0 {
+					t.Fatalf("%s missing non-empty example %s", templateID, example)
+				}
+			}
+			schemaDoc := loadJSONMap(t, filepath.Join(base, "schema.input.json"))
+			jsonSchema := objectMap(t, schemaDoc["json_schema"])
+			props := objectMap(t, jsonSchema["properties"])
+			for _, field := range []string{"hero", "navigation", "panels", "controls", "annotations", "assumptions", "view", "renderHints", "visual"} {
+				if _, ok := props[field]; !ok {
+					t.Fatalf("%s studio schema missing %s", templateID, field)
+				}
+			}
+			heroProps := objectMap(t, objectMap(t, props["hero"])["properties"])
+			heroDataProps := objectMap(t, objectMap(t, heroProps["data"])["properties"])
+			for _, field := range []string{"nodes", "edges", "participants", "messages", "events", "items"} {
+				if _, ok := heroDataProps[field]; !ok {
+					t.Fatalf("%s hero.data schema missing %s", templateID, field)
+				}
+			}
+			defs := objectMap(t, jsonSchema["$defs"])
+			presentationProps := objectMap(t, objectMap(t, defs["presentation"])["properties"])
+			for _, field := range []string{"shape", "icon", "color"} {
+				if _, ok := presentationProps[field]; !ok {
+					t.Fatalf("%s studio object presentation missing %s", templateID, field)
+				}
+			}
+			studioEdgeProps := objectMap(t, objectMap(t, defs["studioEdge"])["properties"])
+			if _, ok := studioEdgeProps["directed"]; !ok {
+				t.Fatalf("%s studio edge missing directed", templateID)
+			}
+			if _, ok := presentationProps["arrow"]; !ok {
+				t.Fatalf("%s studio edge presentation missing arrow", templateID)
+			}
+			runVisualOK(t, "validate", "--template", templateID, "--template-dir", templateDir, "--input", filepath.Join(base, "examples", "basic.input.json"), "--json")
+		})
+	}
+
+	get := runVisualOK(t, "template", "get", "studio.pipeline_release", "--template-dir", templateDir, "--json")
+	getData := objectMap(t, get["data"])
+	if getData["category"] != "studio" || getData["input_schema_kind"] != "studio_v1" || objectMap(t, getData["renderer"])["contract"] != "offline.studio.v1" {
+		t.Fatalf("studio.pipeline_release get contract mismatch: %#v", getData)
+	}
+	if getData["panel_grammar_available"] != true || getData["panel_grammar_path"] != "studio.pipeline_release/panel-grammar.md" {
+		t.Fatalf("studio.pipeline_release get missing panel grammar metadata: %#v", getData)
+	}
+	schema := runVisualOK(t, "template", "schema", "studio.pipeline_release", "--template-dir", templateDir, "--json")
+	schemaData := objectMap(t, schema["data"])
+	if schemaData["panel_grammar_available"] != true || len(schemaData["panel_grammar_summary"].([]any)) == 0 {
+		t.Fatalf("studio.pipeline_release schema missing panel grammar summary: %#v", schemaData)
+	}
+	guide := runVisualOK(t, "template", "guide", "studio.pipeline_release", "--template-dir", templateDir, "--json")
+	if objectMap(t, guide["data"])["agent_guide_available"] != true {
+		t.Fatalf("studio.pipeline_release guide unavailable: %#v", guide)
+	}
+	panel := runVisualOK(t, "template", "panel-grammar", "studio.pipeline_release", "--template-dir", templateDir, "--json")
+	panelData := objectMap(t, panel["data"])
+	if panelData["template_id"] != "studio.pipeline_release" || panelData["panel_grammar_available"] != true || !strings.Contains(panelData["raw_markdown"].(string), "Canary Gate") {
+		t.Fatalf("studio.pipeline_release panel grammar response invalid: %#v", panelData)
+	}
+	sections := objectMap(t, panelData["panel_grammar"])
+	if strings.TrimSpace(sections["semantic_model"].(string)) == "" || len(panelData["panel_grammar_summary"].([]any)) == 0 {
+		t.Fatalf("studio.pipeline_release panel grammar sections invalid: %#v", panelData)
 	}
 }
 
@@ -640,12 +830,12 @@ func TestVisualDoctorRendersAllSemanticTemplates(t *testing.T) {
 	obj := runVisualOK(t, "template", "doctor", "--template-dir", templateDir, "--json")
 	data := objectMap(t, obj["data"])
 	for key, want := range map[string]float64{
-		"checked_templates":            33,
-		"checked_examples":             33,
-		"rendered_examples":            33,
-		"canonical_templates":          33,
-		"expected_canonical_templates": 33,
-		"canonical_template_dirs":      33,
+		"checked_templates":            37,
+		"checked_examples":             37,
+		"rendered_examples":            37,
+		"canonical_templates":          37,
+		"expected_canonical_templates": 37,
+		"canonical_template_dirs":      37,
 	} {
 		if data[key].(float64) != want {
 			t.Fatalf("doctor expected %s=%.0f, got %#v", key, want, data)
@@ -1188,6 +1378,9 @@ func assertRegistryEntryQuality(t *testing.T, entry visualRegistryEntry) {
 	if !semanticRenderers[entry.Renderer] {
 		t.Fatalf("unsupported renderer %s for %s", entry.Renderer, entry.ID)
 	}
+	if !semanticLayoutPresets[entry.LayoutPreset] {
+		t.Fatalf("unsupported layout preset %s for %s", entry.LayoutPreset, entry.ID)
+	}
 	if len(entry.Tags) < 3 {
 		t.Fatalf("%s should have at least 3 tags: %#v", entry.ID, entry.Tags)
 	}
@@ -1419,7 +1612,7 @@ func mustRead(t *testing.T, path string) string {
 func TestVisualRegistrySortedByCategoryThenID(t *testing.T) {
 	root := repoRoot(t)
 	registry := loadRegistry(t, filepath.Join(root, "templates", "visual"))
-	categoryOrder := map[string]int{"uml": 0, "relationship": 1, "temporal": 2, "flow": 3, "hierarchy": 4, "evidence": 5, "matrix": 6, "spatial": 7}
+	categoryOrder := map[string]int{"uml": 0, "relationship": 1, "temporal": 2, "flow": 3, "hierarchy": 4, "evidence": 5, "matrix": 6, "spatial": 7, "studio": 8}
 	for i := 1; i < len(registry.Templates); i++ {
 		prev := registry.Templates[i-1]
 		cur := registry.Templates[i]

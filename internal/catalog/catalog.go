@@ -619,6 +619,8 @@ func visualExplicit(name string) (explicitMeta, bool) {
 			Flags: common, Required: []string{"template-id"}, Risk: "read", Example: "visual template get uml.sequence_3d --template-dir ./templates/visual --json"},
 		"template.schema": {Description: "Show one visual template input JSON schema and basic example.",
 			Flags: common, Required: []string{"template_id"}, Risk: "read", Example: "visual template schema uml.sequence_3d --template-dir ./templates/visual --json"},
+		"template.panel-grammar": {Description: "Show one Studio visual template panel grammar as raw markdown, sections, and summary.",
+			Flags: common, Required: []string{"template-id"}, Risk: "read", Example: "visual template panel-grammar studio.pipeline_release --template-dir ./templates/visual --json"},
 		"template.doctor": {Description: "Validate template registry, manifests, schemas, examples, rendered outputs, and offline safety.",
 			Flags: common, Risk: "read", Example: "visual template doctor --template-dir ./templates/visual --json"},
 		"inspect-output": {Description: "Inspect a generated visual output directory for required files and offline safety.",

@@ -62,6 +62,7 @@ type Summary struct {
 	Sources                 int      `json:"sources,omitempty"`
 	Links                   int      `json:"links,omitempty"`
 	Items                   int      `json:"items,omitempty"`
+	Panels                  int      `json:"panels,omitempty"`
 	EdgeDensity             string   `json:"edge_density,omitempty"`
 	LabelPressure           string   `json:"label_pressure,omitempty"`
 	GroupCoverage           float64  `json:"group_coverage,omitempty"`
@@ -223,6 +224,8 @@ func Analyze(templateDir string, tpl manifest.TemplateManifest, data map[string]
 			quality -= 20
 			warnings = append(warnings, Warning{Code: "matrix_items_high", Message: "Matrix has more items than the recommended initial view.", Hint: "Use filters, categories, or high-importance items for the first view."})
 		}
+	case "studio_v1":
+		quality = analyzeStudio(data, design, &summary, &warnings, &recommendations)
 	case "uml_sequence_v1":
 		quality = analyzeUMLSequence(data, design, &summary, &warnings, &recommendations)
 	case "uml_class_v1":
@@ -446,6 +449,44 @@ func analyzeSemanticCount(data map[string]any, design manifest.VisualDesign, sum
 		return 78
 	}
 	return 100
+}
+
+func analyzeStudio(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
+	heroData := studioHeroData(data)
+	summary.Nodes = len(array(heroData, "nodes"))
+	summary.Edges = len(array(heroData, "edges"))
+	summary.Events = len(array(heroData, "events"))
+	summary.Items = len(array(heroData, "items"))
+	summary.Participants = len(array(heroData, "participants"))
+	summary.Messages = len(array(heroData, "messages"))
+	summary.Panels = len(array(data, "panels"))
+	totalHeroItems := summary.Nodes + summary.Items + summary.Events + summary.Participants + summary.Messages
+	quality := 100
+	if summary.Panels == 0 {
+		quality -= 30
+		*warnings = append(*warnings, Warning{Code: "studio_panels_missing", Severity: "error", Message: "Studio input has no panels for explanatory detail.", Hint: "Add panels[] with id, type, title, target_refs, summary, content, metrics, or evidence."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "panels[]")
+	}
+	if len(array(data, "controls")) == 0 {
+		quality -= 8
+		*warnings = append(*warnings, Warning{Code: "studio_controls_missing", Severity: "warning", Message: "Studio input has no controls for exploration.", Hint: "Add controls[] for filter, focus, step, search, or toggle actions tied to panels or hero data."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "controls[]")
+	}
+	if len(array(data, "navigation")) == 0 && summary.Panels > 1 {
+		quality -= 6
+		*warnings = append(*warnings, Warning{Code: "studio_navigation_missing", Severity: "info", Message: "Studio input has multiple panels but no navigation.", Hint: "Add navigation[] entries that point to important panel ids or hero object ids."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "navigation[]")
+	}
+	if len(array(data, "annotations")) == 0 && totalHeroItems > 8 {
+		quality -= 6
+		*warnings = append(*warnings, Warning{Code: "studio_annotations_missing", Severity: "info", Message: "Studio hero has enough content to need callouts.", Hint: "Add annotations[] for important risks, transitions, or entities in the explorable page."})
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "annotations[]")
+	}
+	if totalHeroItems > design.MaxInitialNodes && design.MaxInitialNodes > 0 {
+		quality -= 12
+		*warnings = append(*warnings, Warning{Code: "studio_hero_dense", Severity: "warning", Message: "Studio hero contains more semantic objects than the recommended first view.", Hint: "Move lower-value objects into panels, mark detail visibility, or focus the hero on the main story path."})
+	}
+	return quality
 }
 
 func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
@@ -1154,6 +1195,18 @@ func qualityObjects(data map[string]any) []qualityObject {
 			out = append(out, qualityObject{Kind: strings.TrimSuffix(field, "s"), Path: "$." + field + "[" + intString(i) + "]", Obj: obj})
 		}
 	}
+	if heroData := studioHeroData(data); len(heroData) > 0 {
+		for _, field := range []string{"nodes", "edges", "events", "items", "participants", "messages"} {
+			for i, obj := range objectArray(heroData, field) {
+				out = append(out, qualityObject{Kind: strings.TrimSuffix(field, "s"), Path: "$.hero.data." + field + "[" + intString(i) + "]", Obj: obj})
+			}
+		}
+	}
+	for _, field := range []string{"navigation", "panels", "controls", "annotations"} {
+		for i, obj := range objectArray(data, field) {
+			out = append(out, qualityObject{Kind: strings.TrimSuffix(field, "s"), Path: "$." + field + "[" + intString(i) + "]", Obj: obj})
+		}
+	}
 	return out
 }
 
@@ -1538,6 +1591,14 @@ func countSemanticItems(data map[string]any) int {
 	for _, name := range []string{"groups", "nodes", "edges", "events", "claims", "sources", "links", "items", "participants", "messages", "phases", "activations", "fragments", "classes", "relationships", "states", "transitions", "actions", "flows", "components", "deployments"} {
 		total += len(array(data, name))
 	}
+	if heroData := studioHeroData(data); len(heroData) > 0 {
+		for _, name := range []string{"nodes", "edges", "events", "items", "participants", "messages"} {
+			total += len(array(heroData, name))
+		}
+	}
+	for _, name := range []string{"navigation", "panels", "controls", "annotations"} {
+		total += len(array(data, name))
+	}
 	return total
 }
 
@@ -1621,6 +1682,9 @@ func firstString(obj map[string]any, names ...string) string {
 }
 
 func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool {
+	if strings.ToLower(kind) == "studio_v1" {
+		return collectStudioReferenceIDs(data)
+	}
 	fieldsByKind := map[string][]string{
 		"graph_v1":                    {"groups", "nodes", "edges"},
 		"graph_events_v1":             {"groups", "nodes", "edges", "events"},
@@ -1642,6 +1706,37 @@ func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool
 		}
 	}
 	return ids
+}
+
+func collectStudioReferenceIDs(data map[string]any) map[string]bool {
+	ids := map[string]bool{}
+	collect := func(items []map[string]any) {
+		for _, item := range items {
+			for _, id := range visualIDsForObject(item) {
+				ids[id] = true
+			}
+		}
+	}
+	heroData := studioHeroData(data)
+	for _, field := range []string{"nodes", "edges", "events", "items", "participants", "messages"} {
+		collect(objectArray(heroData, field))
+	}
+	for _, field := range []string{"navigation", "panels", "controls", "annotations"} {
+		collect(objectArray(data, field))
+	}
+	return ids
+}
+
+func studioHeroData(data map[string]any) map[string]any {
+	hero, _ := data["hero"].(map[string]any)
+	if hero == nil {
+		return map[string]any{}
+	}
+	heroData, _ := hero["data"].(map[string]any)
+	if heroData == nil {
+		return map[string]any{}
+	}
+	return heroData
 }
 
 func visualIDsForObject(obj map[string]any) []string {

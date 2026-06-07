@@ -13,6 +13,7 @@ import (
 
 const (
 	AgentGuideFile   = "agent-guide.md"
+	PanelGrammarFile = "panel-grammar.md"
 	QualityRulesFile = "quality.rules.json"
 )
 
@@ -61,6 +62,14 @@ func GuidePath(templateDir string, entry manifest.RegistryEntry) string {
 	return filepath.Join(TemplateBaseDir(templateDir, entry), AgentGuideFile)
 }
 
+func PanelGrammarRelPath(entry manifest.RegistryEntry) string {
+	return filepath.ToSlash(filepath.Join(filepath.Dir(filepath.Clean(entry.Path)), PanelGrammarFile))
+}
+
+func PanelGrammarPath(templateDir string, entry manifest.RegistryEntry) string {
+	return filepath.Join(TemplateBaseDir(templateDir, entry), PanelGrammarFile)
+}
+
 func QualityRulesRelPath(entry manifest.RegistryEntry) string {
 	return filepath.ToSlash(filepath.Join(filepath.Dir(filepath.Clean(entry.Path)), QualityRulesFile))
 }
@@ -74,6 +83,11 @@ func GuideAvailable(templateDir string, entry manifest.RegistryEntry) bool {
 	return err == nil && !info.IsDir() && info.Size() > 0
 }
 
+func PanelGrammarAvailable(templateDir string, entry manifest.RegistryEntry) bool {
+	info, err := os.Stat(PanelGrammarPath(templateDir, entry))
+	return err == nil && !info.IsDir() && info.Size() > 0
+}
+
 func QualityRulesAvailable(templateDir string, entry manifest.RegistryEntry) bool {
 	info, err := os.Stat(QualityRulesPath(templateDir, entry))
 	return err == nil && !info.IsDir() && info.Size() > 0
@@ -82,6 +96,26 @@ func QualityRulesAvailable(templateDir string, entry manifest.RegistryEntry) boo
 func LoadGuide(templateDir string, entry manifest.RegistryEntry, includeRaw bool) (Guide, error) {
 	path := GuidePath(templateDir, entry)
 	guide := Guide{TemplateID: entry.ID, GuidePath: GuideRelPath(entry), Available: false, Sections: map[string]string{}}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return guide, nil
+		}
+		return guide, err
+	}
+	text := strings.TrimSpace(string(raw))
+	guide.Available = text != ""
+	guide.Sections = ParseGuideSections(text)
+	guide.Summary = GuideSummary(guide.Sections)
+	if includeRaw {
+		guide.Raw = text
+	}
+	return guide, nil
+}
+
+func LoadPanelGrammar(templateDir string, entry manifest.RegistryEntry, includeRaw bool) (Guide, error) {
+	path := PanelGrammarPath(templateDir, entry)
+	guide := Guide{TemplateID: entry.ID, GuidePath: PanelGrammarRelPath(entry), Available: false, Sections: map[string]string{}}
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {

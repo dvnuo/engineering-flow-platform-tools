@@ -3,13 +3,17 @@
 - `visual` is a terminal-invoked CLI. Always use `--json` for agent workflows.
 - Installed templates default to `~/.efp/template/visual`; use `--template-dir <templates/visual>` only for workspace or release artifact catalogs.
 - Do not infer templates from the file tree.
+- Discover templates only through `categories`, `list`, `get`, `schema`, `guide`, and `panel-grammar`; never list directories to pick a template.
+- When the user asks to explain, walkthrough, studio, dashboard, page, or explorable, prefer the `studio` category first.
 - First inspect categories with `visual template categories --json`.
 - Select a category, then run:
   1. `visual template list --category <category> --json`
   2. `visual template get <template-id> --json`
   3. `visual template schema <template-id> --json`
   4. `visual template guide <template-id> --json`
+  5. `visual template panel-grammar <template-id> --json` for Studio templates
 - Do not write input JSON until you have read the selected template's guide.
+- For Studio templates, do not write `panels[]` until you have read the selected template's panel grammar.
 - The template guide is authoritative for semantic construction rules, recommended fields, visual encoding, common mistakes, and the quality checklist.
 - Do not invent template paths or input shapes.
 - Do not convert semantic templates into generic graph nodes unless the selected template is actually graph-based.

@@ -1,0 +1,31 @@
+{
+  "schema": "efp.visual.input.studio.v1",
+  "title": "Component Explorer Bad Example",
+  "goal": "Trigger authoring warnings for missing controls, color policy, marks, and arrows.",
+  "audience": "service owner",
+  "hero": {
+    "type": "entity_explorer",
+    "title": "Component Explorer Bad",
+    "summary": "This example keeps one panel so inspect-input can report quality warnings.",
+    "data": {
+      "nodes": [
+        {"id": "api", "label": "API"},
+        {"id": "worker", "label": "Worker"},
+        {"id": "db", "label": "DB"}
+      ],
+      "edges": [
+        {"id": "api-worker", "from": "api", "to": "worker", "kind": "calls", "label": "calls"},
+        {"id": "worker-db", "from": "worker", "to": "db", "kind": "writes", "label": "writes"}
+      ]
+    }
+  },
+  "panels": [
+    {"id": "overview-panel", "type": "overview", "title": "Component Overview", "target_refs": ["api", "worker"], "summary": "One panel exists, but controls and mark grammar are missing."}
+  ],
+  "visual": {
+    "goal": "Show warning-producing component explorer input.",
+    "initial_focus_ids": ["api", "worker", "overview-panel"],
+    "narrative_steps": [{"id": "overview", "title": "Incomplete", "focus_ids": ["api", "worker"]}],
+    "annotations": [{"id": "missing", "label": "Missing marks", "target_id": "worker", "summary": "Worker has no semantic mark."}]
+  }
+}

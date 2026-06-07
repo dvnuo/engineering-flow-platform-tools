@@ -118,6 +118,17 @@ func ValidateInput(kind string, raw []byte, limits manifest.LimitsSpec) (ParsedI
 			return ParsedInput{}, err
 		}
 		summary.Items = len(items)
+	case "studio_v1":
+		counts, err := validateStudio(data, limits)
+		if err != nil {
+			return ParsedInput{}, err
+		}
+		summary.Nodes = counts.nodes
+		summary.Edges = counts.edges
+		summary.Events = counts.events
+		summary.Items = counts.items
+		summary.Participants = counts.participants
+		summary.Messages = counts.messages
 	case "uml_sequence_v1":
 		counts, err := validateUMLSequence(data, limits)
 		if err != nil {
@@ -178,6 +189,7 @@ func validateSchemaField(kind string, data map[string]any) error {
 		"timeline_v1":                 "efp.visual.input.timeline.v1",
 		"evidence_v1":                 "efp.visual.input.evidence.v1",
 		"matrix_v1":                   "efp.visual.input.matrix.v1",
+		"studio_v1":                   "efp.visual.input.studio.v1",
 		"uml_sequence_v1":             "efp.visual.input.uml.sequence.v1",
 		"uml_class_v1":                "efp.visual.input.uml.class.v1",
 		"uml_state_machine_v1":        "efp.visual.input.uml.state_machine.v1",
@@ -186,12 +198,103 @@ func validateSchemaField(kind string, data map[string]any) error {
 	}
 	value, ok := data["schema"].(string)
 	if !ok || strings.TrimSpace(value) == "" {
+		if kind == "studio_v1" {
+			return invalid("studio input is missing schema.", "Set schema to efp.visual.input.studio.v1.")
+		}
 		return nil
 	}
 	if expected[kind] != "" && value != expected[kind] {
 		return invalid("visual input schema does not match template kind.", "Use schema "+expected[kind]+" for "+kind+".")
 	}
 	return nil
+}
+
+type studioCounts struct {
+	nodes        int
+	edges        int
+	events       int
+	items        int
+	participants int
+	messages     int
+}
+
+func validateStudio(data map[string]any, limits manifest.LimitsSpec) (studioCounts, error) {
+	hero, err := requiredObject(data, "hero")
+	if err != nil {
+		return studioCounts{}, err
+	}
+	heroData, err := requiredObject(hero, "data")
+	if err != nil {
+		return studioCounts{}, err
+	}
+	nodes, err := optionalArray(heroData, "nodes")
+	if err != nil {
+		return studioCounts{}, err
+	}
+	edges, err := optionalArray(heroData, "edges")
+	if err != nil {
+		return studioCounts{}, err
+	}
+	events, err := optionalArray(heroData, "events")
+	if err != nil {
+		return studioCounts{}, err
+	}
+	items, err := optionalArray(heroData, "items")
+	if err != nil {
+		return studioCounts{}, err
+	}
+	participants, err := optionalArray(heroData, "participants")
+	if err != nil {
+		return studioCounts{}, err
+	}
+	messages, err := optionalArray(heroData, "messages")
+	if err != nil {
+		return studioCounts{}, err
+	}
+	if len(nodes)+len(items)+len(events)+len(participants)+len(messages) == 0 {
+		return studioCounts{}, invalid("studio hero.data must contain at least one semantic array.", "Add non-empty hero.data.nodes, items, events, participants, or messages so the Studio hero has inspectable content.")
+	}
+	if len(nodes) > limitOrDefault(limits.MaxNodes, 1000) {
+		return studioCounts{}, invalid("studio input has too many nodes.", "Reduce hero.data.nodes or raise template max_nodes.")
+	}
+	if len(edges) > limitOrDefault(limits.MaxEdges, 3000) {
+		return studioCounts{}, invalid("studio input has too many edges.", "Reduce hero.data.edges or raise template max_edges.")
+	}
+	if len(events) > limitOrDefault(limits.MaxEvents, 5000) || len(messages) > limitOrDefault(limits.MaxEvents, 5000) {
+		return studioCounts{}, invalid("studio input has too many events or messages.", "Reduce hero.data.events/messages or raise template max_events.")
+	}
+	if len(items) > limitOrDefault(limits.MaxItems, 2000) {
+		return studioCounts{}, invalid("studio input has too many items.", "Reduce hero.data.items or raise template max_items.")
+	}
+	panels, err := requiredArray(data, "panels")
+	if err != nil {
+		return studioCounts{}, err
+	}
+	if len(panels) == 0 {
+		return studioCounts{}, invalid("studio input must contain at least one panel.", "Add panels[] with id, type, title, target_refs, and content.")
+	}
+	for i, item := range panels {
+		panel, ok := item.(map[string]any)
+		if !ok {
+			return studioCounts{}, invalid(fmt.Sprintf("studio panel at index %d must be an object.", i), "Each panels[] item must contain id, type, and title.")
+		}
+		if stringField(panel, "id") == "" || stringField(panel, "type") == "" || stringField(panel, "title") == "" {
+			return studioCounts{}, invalid(fmt.Sprintf("studio panel at index %d is missing id, type, or title.", i), "Set panels[].id, panels[].type, and panels[].title to non-empty strings.")
+		}
+	}
+	for _, name := range []string{"navigation", "controls", "annotations", "assumptions"} {
+		if _, err := optionalArray(data, name); err != nil {
+			return studioCounts{}, err
+		}
+	}
+	return studioCounts{
+		nodes:        len(nodes),
+		edges:        len(edges),
+		events:       len(events),
+		items:        len(items),
+		participants: len(participants),
+		messages:     len(messages),
+	}, nil
 }
 
 type graphCounts struct {
@@ -817,6 +920,9 @@ func validateVisualStringArray(data map[string]any, name string, knownIDs map[st
 }
 
 func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool {
+	if kind == "studio_v1" {
+		return collectStudioReferenceIDs(data)
+	}
 	ids := map[string]bool{}
 	fieldsByKind := map[string][]string{
 		"graph_v1":                    {"groups", "nodes", "edges"},
@@ -836,6 +942,28 @@ func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool
 				ids[id] = true
 			}
 		}
+	}
+	return ids
+}
+
+func collectStudioReferenceIDs(data map[string]any) map[string]bool {
+	ids := map[string]bool{}
+	collect := func(value any) {
+		for _, item := range objectArrayFromAny(value) {
+			for _, id := range visualIDsForObject(item) {
+				ids[id] = true
+			}
+		}
+	}
+	if hero, ok := data["hero"].(map[string]any); ok {
+		if heroData, ok := hero["data"].(map[string]any); ok {
+			for _, field := range []string{"nodes", "edges", "events", "items", "participants", "messages"} {
+				collect(heroData[field])
+			}
+		}
+	}
+	for _, field := range []string{"navigation", "panels", "controls", "annotations"} {
+		collect(data[field])
 	}
 	return ids
 }
@@ -907,6 +1035,18 @@ func optionalArray(data map[string]any, name string) ([]any, error) {
 		return nil, invalid("visual input field "+name+" must be an array.", "Set "+name+" to a JSON array or omit it.")
 	}
 	return arr, nil
+}
+
+func requiredObject(data map[string]any, name string) (map[string]any, error) {
+	value, ok := data[name]
+	if !ok {
+		return nil, invalid("visual input is missing required object "+name+".", "Add "+name+" as a JSON object.")
+	}
+	obj, ok := value.(map[string]any)
+	if !ok || obj == nil {
+		return nil, invalid("visual input field "+name+" must be an object.", "Set "+name+" to a JSON object.")
+	}
+	return obj, nil
 }
 
 func stringField(data map[string]any, name string) string {

@@ -1,0 +1,66 @@
+{
+  "schema": "efp.visual.input.studio.v1",
+  "title": "Game Session Walkthrough Studio",
+  "goal": "Explain session start, allocation, event publication, and retry inspection.",
+  "audience": "gameplay engineer",
+  "assumptions": ["Retry branch is included as a panel rather than the first hero path."],
+  "hero": {
+    "type": "sequence",
+    "title": "Game Session Walkthrough",
+    "summary": "Participants, messages, events, panels, and controls for session start.",
+    "data": {
+      "participants": [
+        {"id": "player", "label": "Player", "kind": "user", "provider": "aws", "service": "cloudfront", "platform": "aws", "status": "ok", "importance": 0.78, "summary": "Player starts session.", "presentation": {"shape": "actor_card", "icon": "generic.user", "color": "#e5a84c"}},
+        {"id": "gateway", "label": "Gateway", "kind": "api", "provider": "aws", "service": "api_gateway", "platform": "aws", "status": "ok", "importance": 0.86, "summary": "Accepts session request.", "presentation": {"shape": "hex_service", "icon": "aws.api_gateway", "color": "#38bdf8"}},
+        {"id": "matchmaker", "label": "Matchmaker", "kind": "service", "provider": "aws", "service": "lambda", "platform": "aws", "status": "ok", "importance": 0.94, "summary": "Allocates match slot.", "presentation": {"shape": "service_box", "icon": "aws.lambda", "color": "#22c55e"}},
+        {"id": "session-db", "label": "Session DB", "kind": "database", "provider": "aws", "service": "dynamodb", "platform": "aws", "status": "ok", "importance": 0.8, "summary": "Stores session state.", "presentation": {"shape": "database_cylinder", "icon": "aws.dynamodb", "color": "#60a5fa"}},
+        {"id": "events", "label": "Session Events", "kind": "event_stream", "provider": "aws", "service": "eventbridge", "platform": "aws", "status": "ok", "importance": 0.76, "summary": "Publishes lifecycle events.", "presentation": {"shape": "event_bus", "icon": "aws.eventbridge", "color": "#a78bfa"}}
+      ],
+      "messages": [
+        {"id": "msg-request", "from": "player", "to": "gateway", "kind": "calls", "label": "POST /session", "phase": "request", "directed": true, "importance": 0.82, "summary": "Player requests a session.", "presentation": {"arrow": "forward", "lineStyle": "solid", "flow": true}},
+        {"id": "msg-allocate", "from": "gateway", "to": "matchmaker", "kind": "calls", "label": "allocate", "phase": "match", "directed": true, "importance": 0.9, "summary": "Gateway asks for allocation.", "presentation": {"arrow": "forward", "lineStyle": "solid", "flow": true}},
+        {"id": "msg-write", "from": "matchmaker", "to": "session-db", "kind": "writes", "label": "write state", "phase": "persist", "directed": true, "importance": 0.84, "summary": "Session state is persisted.", "presentation": {"arrow": "forward", "lineStyle": "solid", "flow": true}},
+        {"id": "msg-publish", "from": "matchmaker", "to": "events", "kind": "emits", "label": "session.started", "phase": "publish", "directed": true, "importance": 0.8, "summary": "Session started event is published.", "presentation": {"arrow": "forward", "lineStyle": "dashed", "flow": true}},
+        {"id": "msg-return", "from": "gateway", "to": "player", "kind": "returns", "label": "200 session", "phase": "return", "directed": true, "importance": 0.72, "summary": "Client receives accepted session.", "presentation": {"arrow": "forward", "lineStyle": "solid", "flow": false}}
+      ],
+      "events": [
+        {"id": "retry-risk", "label": "Retry branch", "kind": "risk", "status": "warning", "summary": "Retry branch is available if allocation times out.", "presentation": {"shape": "warning_prism", "icon": "generic.warning", "color": "#f59e0b"}}
+      ]
+    }
+  },
+  "navigation": [
+    {"id": "nav-overview", "label": "Overview", "target_id": "overview-panel", "icon": "generic.pipeline", "summary": "Walkthrough summary."},
+    {"id": "nav-match", "label": "Match", "target_id": "match-panel", "icon": "aws.lambda", "summary": "Allocation details."},
+    {"id": "nav-retry", "label": "Retry", "target_id": "retry-panel", "icon": "generic.warning", "summary": "Retry branch."}
+  ],
+  "panels": [
+    {"id": "overview-panel", "type": "overview", "title": "Walkthrough Overview", "target_refs": ["player", "gateway", "matchmaker"], "summary": "The session starts at the player and resolves through gateway and matchmaker.", "items": [{"label": "messages", "value": "5"}], "metrics": [{"label": "p95", "value": "180ms"}], "evidence": [{"label": "trace", "source": "game-session"}], "content": {"expected_result": "accepted session"}, "presentation": {"shape": "service_box", "icon": "generic.pipeline"}},
+    {"id": "match-panel", "type": "phase", "title": "Allocation Phase", "target_refs": ["msg-allocate", "matchmaker", "session-db"], "summary": "Matchmaker allocates and persists session state.", "items": [{"label": "state write", "value": "required"}], "metrics": [{"label": "allocation p95", "value": "95ms"}], "evidence": [{"label": "trace span", "source": "otel"}], "content": {"phase": "match"}, "presentation": {"shape": "service_box", "icon": "aws.lambda"}},
+    {"id": "retry-panel", "type": "branch", "title": "Retry Branch", "target_refs": ["retry-risk", "msg-allocate"], "summary": "Timeout retry is a detail branch hidden from the first view.", "items": [{"label": "trigger", "value": "allocation timeout"}], "metrics": [{"label": "retry budget", "value": "2"}], "evidence": [{"label": "runbook", "source": "gameplay"}], "content": {"expected_result": "retry once then fail closed"}, "presentation": {"shape": "warning_prism", "icon": "generic.warning"}}
+  ],
+  "controls": [
+    {"id": "step-request", "label": "Step request", "type": "step", "target": "msg-request", "action": "next"},
+    {"id": "focus-matchmaker", "label": "Matchmaker", "type": "focus", "target": "matchmaker", "action": "focus"},
+    {"id": "show-retry", "label": "Retry branch", "type": "toggle", "target": "retry-panel", "action": "show"}
+  ],
+  "annotations": [
+    {"id": "anno-matchmaker", "label": "Allocator", "target_id": "matchmaker", "summary": "Allocation is the core decision."},
+    {"id": "anno-retry", "label": "Detail branch", "target_id": "retry-risk", "summary": "Retry branch stays behind a control."}
+  ],
+  "view": {"colorBy": "provider", "mode": "overview", "labelMode": "overview"},
+  "renderHints": {"showLegend": true, "palette": "cloud_provider", "iconMode": "billboard", "colorBy": "provider"},
+  "visual": {
+    "goal": "Start with request, allocation, persistence, and event publication.",
+    "initial_focus_ids": ["player", "gateway", "matchmaker", "match-panel"],
+    "hidden_detail_ids": ["retry-risk", "retry-panel"],
+    "narrative_steps": [
+      {"id": "request", "title": "Request session", "summary": "Player enters through the gateway.", "focus_ids": ["player", "gateway", "msg-request"]},
+      {"id": "allocate", "title": "Allocate match", "summary": "Matchmaker allocates and writes state.", "focus_ids": ["matchmaker", "session-db", "match-panel"]},
+      {"id": "publish", "title": "Publish event", "summary": "EventBridge announces the session.", "focus_ids": ["events", "msg-publish"]}
+    ],
+    "annotations": [
+      {"id": "visual-allocate", "label": "Core decision", "target_id": "matchmaker", "summary": "Matchmaker decides the session.", "priority": 0.9},
+      {"id": "visual-retry", "label": "Retry detail", "target_id": "retry-risk", "summary": "Retry branch is available on timeout.", "priority": 0.72}
+    ]
+  }
+}

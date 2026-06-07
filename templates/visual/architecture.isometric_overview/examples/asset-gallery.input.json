@@ -1,0 +1,593 @@
+{
+  "schema": "efp.visual.input.isometric_architecture.v1",
+  "title": "Local Logo Badge Gallery",
+  "subtitle": "Development review scene for generated logo badges, SVG label icons, and fallback readability.",
+  "goal": "Verify that the local icon and generated model badge layer makes common infrastructure entities recognizable without remote assets.",
+  "theme": "architecture_light",
+  "canvas": {
+    "grid": {
+      "enabled": true,
+      "step": 1,
+      "subdivisions": 4
+    },
+    "padding": 2
+  },
+  "camera": {
+    "mode": "orthographic_isometric",
+    "constrainedOrbit": true,
+    "zoom": 1.08
+  },
+  "zones": [
+    {
+      "id": "edge-runtime",
+      "label": "Edge And Runtime",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 9,
+        "h": 5
+      },
+      "presentation": {
+        "boundary": "solid",
+        "color": "#dbeafe"
+      }
+    },
+    {
+      "id": "data-layer",
+      "label": "Data Layer",
+      "bounds": {
+        "x": 9.8,
+        "y": 0,
+        "w": 8.2,
+        "h": 5
+      },
+      "presentation": {
+        "boundary": "dashed",
+        "color": "#dcfce7"
+      }
+    },
+    {
+      "id": "event-layer",
+      "label": "Messaging And Events",
+      "bounds": {
+        "x": 0,
+        "y": 5.8,
+        "w": 9,
+        "h": 5
+      },
+      "presentation": {
+        "boundary": "dashed",
+        "color": "#fef3c7"
+      }
+    },
+    {
+      "id": "operations",
+      "label": "Operations",
+      "bounds": {
+        "x": 9.8,
+        "y": 5.8,
+        "w": 8.2,
+        "h": 5
+      },
+      "presentation": {
+        "boundary": "solid",
+        "color": "#ede9fe"
+      }
+    }
+  ],
+  "entities": [
+    {
+      "id": "nginx",
+      "label": "Nginx",
+      "kind": "nginx",
+      "zone": "edge-runtime",
+      "position": {
+        "x": 1.3,
+        "y": 1.2
+      },
+      "importance": 0.96,
+      "summary": "Reverse proxy and static route entry.",
+      "presentation": {
+        "icon": "nginx",
+        "model": "nginx.logo3d",
+        "color": "#009639"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "spring",
+      "label": "Spring Service",
+      "kind": "microservice",
+      "zone": "edge-runtime",
+      "position": {
+        "x": 3.6,
+        "y": 1.2
+      },
+      "importance": 0.92,
+      "summary": "Spring Boot application service.",
+      "presentation": {
+        "icon": "spring",
+        "model": "spring.logo3d",
+        "color": "#6db33f"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "docker",
+      "label": "Docker Runtime",
+      "kind": "service",
+      "zone": "edge-runtime",
+      "position": {
+        "x": 5.9,
+        "y": 1.2
+      },
+      "importance": 0.86,
+      "summary": "Container runtime boundary.",
+      "presentation": {
+        "icon": "docker",
+        "model": "docker.logo3d",
+        "color": "#2496ed"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "kubernetes",
+      "label": "Kubernetes",
+      "kind": "kubernetes",
+      "zone": "edge-runtime",
+      "position": {
+        "x": 7.5,
+        "y": 3.3
+      },
+      "importance": 0.94,
+      "summary": "Cluster orchestration surface.",
+      "presentation": {
+        "icon": "kubernetes",
+        "model": "kubernetes.logo3d",
+        "color": "#326ce5"
+      },
+      "size": {
+        "w": 1.25,
+        "d": 1.05,
+        "h": 0.78
+      }
+    },
+    {
+      "id": "mysql",
+      "label": "MySQL",
+      "kind": "mysql",
+      "zone": "data-layer",
+      "position": {
+        "x": 11.1,
+        "y": 1.2
+      },
+      "importance": 0.96,
+      "summary": "Relational system of record.",
+      "presentation": {
+        "icon": "mysql",
+        "model": "mysql.logo3d",
+        "color": "#4479a1"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "postgresql",
+      "label": "PostgreSQL",
+      "kind": "postgres",
+      "zone": "data-layer",
+      "position": {
+        "x": 13.4,
+        "y": 1.2
+      },
+      "importance": 0.9,
+      "summary": "Analytical relational database.",
+      "presentation": {
+        "icon": "postgresql",
+        "model": "postgresql.logo3d",
+        "color": "#4169e1"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "mongodb",
+      "label": "MongoDB",
+      "kind": "mongodb",
+      "zone": "data-layer",
+      "position": {
+        "x": 15.6,
+        "y": 1.2
+      },
+      "importance": 0.86,
+      "summary": "Document persistence tier.",
+      "presentation": {
+        "icon": "mongodb",
+        "model": "mongodb.logo3d",
+        "color": "#47a248"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "redis",
+      "label": "Redis",
+      "kind": "redis",
+      "zone": "data-layer",
+      "position": {
+        "x": 12.3,
+        "y": 3.5
+      },
+      "importance": 0.94,
+      "summary": "Low-latency cache and coordination store.",
+      "presentation": {
+        "icon": "redis",
+        "model": "redis.logo3d",
+        "color": "#dc382d"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "elasticsearch",
+      "label": "Elasticsearch",
+      "kind": "elasticsearch",
+      "zone": "data-layer",
+      "position": {
+        "x": 15,
+        "y": 3.5
+      },
+      "importance": 0.88,
+      "summary": "Search and log index.",
+      "presentation": {
+        "icon": "elasticsearch",
+        "model": "elasticsearch.logo3d",
+        "color": "#005571"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "kafka",
+      "label": "Kafka",
+      "kind": "kafka",
+      "zone": "event-layer",
+      "position": {
+        "x": 1.4,
+        "y": 7.1
+      },
+      "importance": 0.92,
+      "summary": "Event streaming backbone.",
+      "presentation": {
+        "icon": "kafka",
+        "model": "kafka.logo3d",
+        "color": "#111827"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "rabbitmq",
+      "label": "RabbitMQ",
+      "kind": "rabbitmq",
+      "zone": "event-layer",
+      "position": {
+        "x": 3.9,
+        "y": 7.1
+      },
+      "importance": 0.9,
+      "summary": "Work queue and retry broker.",
+      "presentation": {
+        "icon": "rabbitmq",
+        "model": "rabbitmq.logo3d",
+        "color": "#ff6600"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "jenkins",
+      "label": "Jenkins",
+      "kind": "job",
+      "zone": "operations",
+      "position": {
+        "x": 11.1,
+        "y": 7.1
+      },
+      "importance": 0.9,
+      "summary": "CI automation controller.",
+      "presentation": {
+        "icon": "jenkins",
+        "model": "jenkins.logo3d",
+        "color": "#d33833"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "prometheus",
+      "label": "Prometheus",
+      "kind": "log",
+      "zone": "operations",
+      "position": {
+        "x": 13.5,
+        "y": 7.1
+      },
+      "importance": 0.86,
+      "summary": "Metric scraping and alert source.",
+      "presentation": {
+        "icon": "prometheus",
+        "model": "prometheus.logo3d",
+        "color": "#e6522c"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    },
+    {
+      "id": "grafana",
+      "label": "Grafana",
+      "kind": "admin",
+      "zone": "operations",
+      "position": {
+        "x": 15.8,
+        "y": 7.1
+      },
+      "importance": 0.86,
+      "summary": "Dashboard and observability UI.",
+      "presentation": {
+        "icon": "grafana",
+        "model": "grafana.logo3d",
+        "color": "#f46800"
+      },
+      "size": {
+        "w": 1.05,
+        "d": 0.92,
+        "h": 0.72
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "nginx-to-spring",
+      "from": "nginx",
+      "to": "spring",
+      "kind": "reverse_proxy",
+      "label": "routes",
+      "directed": true,
+      "importance": 0.8,
+      "summary": "Nginx forwards API traffic to the service tier.",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid",
+        "flow": true,
+        "color": "#2563eb"
+      }
+    },
+    {
+      "id": "spring-to-mysql",
+      "from": "spring",
+      "to": "mysql",
+      "kind": "data_storage",
+      "label": "writes",
+      "directed": true,
+      "importance": 0.8,
+      "summary": "Application writes transactional data to MySQL.",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid",
+        "flow": true,
+        "color": "#16a34a"
+      }
+    },
+    {
+      "id": "spring-to-redis",
+      "from": "spring",
+      "to": "redis",
+      "kind": "data_cache",
+      "label": "caches",
+      "directed": true,
+      "importance": 0.75,
+      "summary": "Application uses Redis for hot cache reads.",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid",
+        "flow": true,
+        "color": "#dc2626"
+      }
+    },
+    {
+      "id": "spring-to-kafka",
+      "from": "spring",
+      "to": "kafka",
+      "kind": "event_stream",
+      "label": "emits",
+      "directed": true,
+      "importance": 0.74,
+      "summary": "Domain events are emitted to Kafka.",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "dashed",
+        "flow": true,
+        "color": "#111827"
+      }
+    },
+    {
+      "id": "jenkins-to-kubernetes",
+      "from": "jenkins",
+      "to": "kubernetes",
+      "kind": "deploys",
+      "label": "deploys",
+      "directed": true,
+      "importance": 0.72,
+      "summary": "Jenkins deploys release artifacts to Kubernetes.",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid",
+        "flow": true,
+        "color": "#7c3aed"
+      }
+    },
+    {
+      "id": "prometheus-to-grafana",
+      "from": "prometheus",
+      "to": "grafana",
+      "kind": "observes",
+      "label": "visualizes",
+      "directed": true,
+      "importance": 0.66,
+      "summary": "Grafana reads Prometheus metrics for dashboards.",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "dashed",
+        "flow": false,
+        "color": "#f97316"
+      }
+    }
+  ],
+  "legend": {
+    "items": [
+      {
+        "id": "runtime",
+        "label": "Runtime",
+        "kind": "zone",
+        "color": "#2563eb"
+      },
+      {
+        "id": "data",
+        "label": "Data",
+        "kind": "zone",
+        "color": "#16a34a"
+      },
+      {
+        "id": "events",
+        "label": "Events",
+        "kind": "zone",
+        "color": "#111827"
+      },
+      {
+        "id": "ops",
+        "label": "Operations",
+        "kind": "zone",
+        "color": "#7c3aed"
+      }
+    ]
+  },
+  "controls": [
+    "overview",
+    "reset_camera",
+    "focus",
+    "toggle_labels",
+    "toggle_boundaries",
+    "toggle_arrows",
+    "export_json"
+  ],
+  "visual": {
+    "goal": "Review whether each local logo/model badge is visually readable in the isometric renderer.",
+    "initial_focus_ids": [
+      "nginx",
+      "spring",
+      "mysql",
+      "redis",
+      "kafka",
+      "jenkins"
+    ],
+    "annotations": [
+      {
+        "id": "badge-review-note",
+        "target_id": "nginx",
+        "label": "Every entity should show a top label icon and a readable local badge."
+      }
+    ],
+    "assumptions": [
+      "This gallery is intentionally sparse so badge readability can be inspected without relationship clutter."
+    ],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Read the local asset coverage",
+        "summary": "Scan the four zones to confirm every entity has a top label icon and local model badge.",
+        "focus_ids": [
+          "nginx",
+          "spring",
+          "mysql",
+          "redis",
+          "kafka",
+          "jenkins"
+        ]
+      },
+      {
+        "id": "data-and-ops",
+        "title": "Compare data and operations logos",
+        "summary": "Check database, cache, messaging, CI, and observability badges for readability at the default camera angle.",
+        "focus_ids": [
+          "mysql",
+          "postgresql",
+          "mongodb",
+          "redis",
+          "prometheus",
+          "grafana"
+        ]
+      }
+    ]
+  },
+  "view": {
+    "labelMode": "detail",
+    "maxInitialObjects": 18,
+    "maxInitialRelationships": 8
+  },
+  "renderHints": {
+    "colorBy": "kind",
+    "routeCollisionAvoidance": "basic",
+    "preferExplicitRoutes": true,
+    "showLegend": true,
+    "badgeMode": "icon_and_model",
+    "badgeSize": "large",
+    "badgePlacement": "front",
+    "labelIcon": true
+  }
+}

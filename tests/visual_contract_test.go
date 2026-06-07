@@ -348,7 +348,7 @@ func TestVisualArchitectureTemplateAuthoringContract(t *testing.T) {
 			t.Fatalf("%s missing non-empty %s", templateID, rel)
 		}
 	}
-	for _, example := range []string{"basic.input.json", "good-small.input.json", "good-medium.input.json", "bad-dense.input.json", "fixed-dense.input.json", "bad-generic.input.json"} {
+	for _, example := range []string{"basic.input.json", "good-small.input.json", "good-medium.input.json", "bad-dense.input.json", "fixed-dense.input.json", "bad-generic.input.json", "asset-gallery.input.json"} {
 		info, err := os.Stat(filepath.Join(base, "examples", example))
 		if err != nil || info.IsDir() || info.Size() == 0 {
 			t.Fatalf("%s missing non-empty example %s", templateID, example)
@@ -387,7 +387,14 @@ func TestVisualArchitectureTemplateAuthoringContract(t *testing.T) {
 			t.Fatalf("%s architecture presentation missing %s", templateID, field)
 		}
 	}
+	renderHintProps := objectMap(t, objectMap(t, props["renderHints"])["properties"])
+	for _, field := range []string{"badgeMode", "badgeSize", "badgePlacement", "labelIcon"} {
+		if _, ok := renderHintProps[field]; !ok {
+			t.Fatalf("%s architecture renderHints missing %s", templateID, field)
+		}
+	}
 	runVisualOK(t, "validate", "--template", templateID, "--template-dir", templateDir, "--input", filepath.Join(base, "examples", "basic.input.json"), "--json")
+	runVisualOK(t, "validate", "--template", templateID, "--template-dir", templateDir, "--input", filepath.Join(base, "examples", "asset-gallery.input.json"), "--json")
 
 	get := runVisualOK(t, "template", "get", templateID, "--template-dir", templateDir, "--json")
 	getData := objectMap(t, get["data"])
@@ -720,6 +727,22 @@ func TestVisualInspectRenderContract(t *testing.T) {
 			t.Fatalf("isometric inspect-render check %s failed: %#v", field, isometricChecks)
 		}
 	}
+	galleryOut := filepath.Join(t.TempDir(), "asset-gallery")
+	runVisualOK(t, "render", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "architecture.isometric_overview", "examples", "asset-gallery.input.json"), "--out", galleryOut, "--json")
+	gallery := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", galleryOut, "--json")
+	galleryData := objectMap(t, gallery["data"])
+	if galleryData["ready"] != true {
+		t.Fatalf("asset gallery inspect-render should be ready: %#v", galleryData)
+	}
+	galleryPlan := objectMap(t, galleryData["visual_plan"])
+	galleryAssets := objectMap(t, galleryPlan["assets"])
+	if anyArrayLen(galleryAssets["models_used"]) < 14 || anyArrayLen(galleryAssets["icons_used"]) < 14 || galleryAssets["fallback_badges"].(float64) != 0 {
+		t.Fatalf("asset gallery should exercise all local badge assets without fallback: %#v", galleryAssets)
+	}
+	galleryMarks := objectMap(t, galleryPlan["marks"])
+	if galleryMarks["model_badge_count"].(float64) < 14 || galleryMarks["svg_icon_badge_count"].(float64) < 14 {
+		t.Fatalf("asset gallery should count readable model and SVG icon badges: %#v", galleryMarks)
+	}
 
 	blankScreenshot := filepath.Join(t.TempDir(), "blank.png")
 	writeSolidPNG(t, blankScreenshot, 320, 180, color.RGBA{R: 8, G: 8, B: 8, A: 255})
@@ -900,7 +923,7 @@ func TestVisualIsometricRuntimeAndInspectionContracts(t *testing.T) {
 	if strings.Contains(renderers, "studioShell") || strings.Contains(renderers, "renderStudio(") || strings.Contains(renderers, "studio-app") {
 		t.Fatalf("runtime renderers still contain legacy Studio renderer code")
 	}
-	for _, snippet := range []string{"function labelBudget", "function rectOverlaps", "function insideViewport", "function createDashedPolyline", "function createVerticalDashedLeader", "function decorateIsometricEntity", "function isometricLinkPathPoints", "function modelPathFor", "function createModelBadge", "isGeneratedModelBadge", "data-low-priority", "visual-isometric-label-icon", "edgeSpec.lightBackground = true", "THREE.NormalBlending", "THREE.DoubleSide"} {
+	for _, snippet := range []string{"function labelBudget", "function rectOverlaps", "function insideViewport", "function createDashedPolyline", "function createVerticalDashedLeader", "function decorateIsometricEntity", "function isometricLinkPathPoints", "function modelPathFor", "function badgeSettings", "function badgeInitials", "function createBadgeTexture", "function createModelBadge", "isGeneratedModelBadge", "isGeneratedModelBadgeLabel", "isIconBillboard", "data-low-priority", "visual-isometric-label-icon", "edgeSpec.lightBackground = true", "THREE.NormalBlending", "THREE.DoubleSide"} {
 		if !strings.Contains(renderers, snippet) {
 			t.Fatalf("isometric runtime missing readability snippet %q", snippet)
 		}

@@ -390,6 +390,7 @@
     return {
       manifest: manifest || {},
       data: data || {},
+      renderHints: data && data.renderHints && typeof data.renderHints === "object" ? data.renderHints : {},
       markRegistry: markRegistryFromManifest(manifest),
       assetRegistry: assetRegistryFromManifest(manifest)
     };
@@ -594,6 +595,75 @@
     return model && model.path ? String(model.path) : "";
   }
 
+  function badgeSettings(context) {
+    var hints = context && context.renderHints && typeof context.renderHints === "object" ? context.renderHints : {};
+    var mode = normalizeMarkKey(hints.badgeMode || hints.badge_mode || "icon_and_model");
+    if (["icon_and_model", "icon", "model", "none"].indexOf(mode) < 0) mode = "icon_and_model";
+    var size = normalizeMarkKey(hints.badgeSize || hints.badge_size || "medium");
+    if (["small", "medium", "large"].indexOf(size) < 0) size = "medium";
+    var placement = normalizeMarkKey(hints.badgePlacement || hints.badge_placement || "front");
+    if (["front", "top", "side"].indexOf(placement) < 0) placement = "front";
+    return {
+      mode: mode,
+      size: size,
+      placement: placement,
+      labelIcon: hints.labelIcon !== false && hints.label_icon !== false
+    };
+  }
+
+  function badgeScale(settings) {
+    if (!settings) return 1;
+    if (settings.size === "small") return 0.78;
+    if (settings.size === "large") return 1.28;
+    return 1;
+  }
+
+  function badgeInitials(spec, item) {
+    var text = String(spec && spec.model || spec && spec.icon || itemLabel(item) || item && item.kind || "APP");
+    text = text.replace(/\.logo3d$/i, "").replace(/^generic\./i, "").replace(/^simple-icons\./i, "");
+    text = text.split(/[._:/-]+/).filter(Boolean).slice(-1)[0] || text;
+    text = text.replace(/[^A-Za-z0-9]+/g, "").toUpperCase();
+    if (text.length > 7) text = text.slice(0, 7);
+    return text || "APP";
+  }
+
+  function createBadgeTexture(THREE, text, color) {
+    if (!THREE.CanvasTexture || typeof document === "undefined") return null;
+    var canvas = document.createElement("canvas");
+    canvas.width = 384;
+    canvas.height = 128;
+    var ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(255,255,255,0.96)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = color || "#334155";
+    ctx.lineWidth = 12;
+    ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
+    ctx.fillStyle = color || "#334155";
+    ctx.font = "800 58px system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 2);
+    var texture = new THREE.CanvasTexture(canvas);
+    if (THREE.SRGBColorSpace) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+    }
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  function badgePosition(settings, size, kind) {
+    var top = kind === "icon" ? 0.12 : 0;
+    if (settings && settings.placement === "top") {
+      return { x: 0, y: size.h * (kind === "icon" ? 0.68 : 0.58), z: kind === "icon" ? size.d * 0.08 : size.d * 0.04 };
+    }
+    if (settings && settings.placement === "side") {
+      return { x: size.w * 0.34, y: size.h * (kind === "icon" ? 0.34 : 0.3), z: size.d * (kind === "icon" ? 0.1 : 0.04) };
+    }
+    return { x: 0, y: size.h * (kind === "icon" ? 0.48 + top : 0.34), z: size.d * (kind === "icon" ? 0.43 : 0.34) };
+  }
+
   function createInlineIcon(spec, context, className) {
     var path = iconPathFor(spec, context);
     if (!path) {
@@ -616,7 +686,11 @@
     return icon;
   }
 
-  function createIconBillboard(spec, item, THREE, context) {
+  function createIconBillboard(spec, item, THREE, context, size) {
+    var settings = badgeSettings(context);
+    if (settings.mode === "none" || settings.mode === "model") {
+      return null;
+    }
     var path = iconPathFor(spec, context);
     if (!path || !THREE.TextureLoader) {
       return null;
@@ -628,23 +702,46 @@
     var material = new THREE.MeshBasicMaterial({
       map: texture,
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.98,
       depthTest: false,
       depthWrite: false
     });
-    var plane = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.28), material);
-    plane.position.set(0, 0.02, 0.24);
+    var group = new THREE.Group();
+    var factor = badgeScale(settings);
+    var iconSize = Math.max(0.26, Math.min(0.46, (size ? Math.min(size.w, size.h) : 0.7) * 0.34 * factor));
+    var backing = new THREE.Mesh(new THREE.PlaneGeometry(iconSize * 1.22, iconSize * 1.22), new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.9,
+      depthTest: false,
+      depthWrite: false
+    }));
+    backing.position.set(0, 0, -0.004);
+    backing.renderOrder = 7;
+    group.add(backing);
+    var plane = new THREE.Mesh(new THREE.PlaneGeometry(iconSize, iconSize), material);
+    plane.position.set(0, 0, 0);
     plane.renderOrder = 6;
     plane.userData = { icon: spec.icon, label: itemLabel(item), payload: item };
-    return plane;
+    group.add(plane);
+    var pos = badgePosition(settings, size || { w: 0.9, h: 0.7, d: 0.7 }, "icon");
+    group.position.set(pos.x, pos.y, pos.z);
+    group.renderOrder = 8;
+    group.userData = { isIconBillboard: true, icon: spec.icon, label: itemLabel(item), payload: item };
+    return group;
   }
 
   function createModelBadge(THREE, spec, item, size, context) {
+    var settings = badgeSettings(context);
+    if (settings.mode === "none" || settings.mode === "icon") {
+      return null;
+    }
     var path = modelPathFor(spec, context);
     if (!path) {
       return null;
     }
     var group = new THREE.Group();
+    var factor = badgeScale(settings);
     var color = colorValue(spec.color, 0x64748b);
     var baseMaterial = new THREE.MeshStandardMaterial({
       color: color,
@@ -653,18 +750,36 @@
       emissive: color,
       emissiveIntensity: 0.04
     });
-    var plate = new THREE.Mesh(new THREE.BoxGeometry(size.w * 0.52, size.h * 0.08, size.d * 0.16), baseMaterial);
-    plate.position.set(0, size.h * 0.36, size.d * 0.28);
+    var plateW = size.w * 0.56 * factor;
+    var plateH = Math.max(size.h * 0.1, 0.07) * factor;
+    var plateD = size.d * 0.18 * factor;
+    var plate = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMaterial);
+    var pos = badgePosition(settings, size, "model");
+    plate.position.set(0, 0, 0);
     plate.userData = { isGeneratedModelBadge: true, model: spec.model, modelPath: path, payload: item };
     group.add(plate);
-    var shine = new THREE.Mesh(new THREE.BoxGeometry(size.w * 0.34, size.h * 0.018, size.d * 0.025), new THREE.MeshBasicMaterial({
+    var shine = new THREE.Mesh(new THREE.BoxGeometry(plateW * 0.7, Math.max(plateH * 0.22, 0.012), plateD * 0.18), new THREE.MeshBasicMaterial({
       color: 0xffffff,
       transparent: true,
       opacity: 0.54
     }));
-    shine.position.set(0, size.h * 0.42, size.d * 0.365);
+    shine.position.set(0, plateH * 0.12, plateD * 0.58);
     shine.userData = plate.userData;
     group.add(shine);
+    var texture = createBadgeTexture(THREE, badgeInitials(spec, item), spec.color || "#334155");
+    if (texture) {
+      var textPlane = new THREE.Mesh(new THREE.PlaneGeometry(plateW * 0.88, plateH * 1.8), new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false
+      }));
+      textPlane.position.set(0, plateH * 0.08, plateD * 0.68);
+      textPlane.renderOrder = 9;
+      textPlane.userData = Object.assign({ isGeneratedModelBadgeLabel: true }, plate.userData);
+      group.add(textPlane);
+    }
+    group.position.set(pos.x, pos.y, pos.z);
     group.userData = { isGeneratedModelBadge: true, model: spec.model, modelPath: path, payload: item };
     return group;
   }
@@ -4107,15 +4222,18 @@
     if (modelBadge) {
       group.add(modelBadge);
     }
-    var icon = createIconBillboard(spec, item, THREE, markContext);
+    var settings = badgeSettings(markContext);
+    var icon = createIconBillboard(spec, item, THREE, markContext, size);
     if (icon) {
-      icon.position.set(0, modelBadge ? size.h * 0.43 : size.h * 0.3, modelBadge ? size.d * 0.39 : size.d * 0.22);
-      icon.scale.set(modelBadge ? 1.18 : 1.5, modelBadge ? 1.18 : 1.5, modelBadge ? 1.18 : 1.5);
+      if (modelBadge && settings.placement === "front") {
+        icon.position.y += size.h * 0.18;
+        icon.position.z += size.d * 0.12;
+      }
       group.add(icon);
     }
     group.userData = { label: itemLabel(item), payload: item, id: item.id, mark: { icon: spec.icon || "", model: spec.model || "", modelPath: modelPathFor(spec, markContext) || "" } };
     group.traverse(function (child) {
-      child.userData = group.userData;
+      child.userData = Object.assign({}, group.userData, child.userData || {});
     });
     return group;
   }
@@ -4294,7 +4412,7 @@
       entityByID[item.id] = { object: object, item: item, pos: pos, world: new THREE.Vector3(world.x, size.h * 0.22, world.z), size: size };
       var label = labelHTML("visual-isometric-label", itemLabel(item) || item.id);
       label.setAttribute("data-entity-label", item.id || "");
-      var inlineIcon = createInlineIcon(spec, markContext, "visual-isometric-label-icon");
+      var inlineIcon = badgeSettings(markContext).labelIcon ? createInlineIcon(spec, markContext, "visual-isometric-label-icon") : null;
       if (inlineIcon) {
         label.textContent = "";
         label.appendChild(inlineIcon);
@@ -4585,8 +4703,10 @@
         }
       });
       entityRoot.children.forEach(function (object) {
-        object.children.forEach(function (child) {
-          if (child.isMesh && child.material && child.material.map) {
+        object.traverse(function (child) {
+          if (child.userData && (child.userData.isIconBillboard || child.userData.isGeneratedModelBadgeLabel)) {
+            child.quaternion.copy(camera.quaternion);
+          } else if (child.isMesh && child.material && child.material.map) {
             child.quaternion.copy(camera.quaternion);
           }
         });

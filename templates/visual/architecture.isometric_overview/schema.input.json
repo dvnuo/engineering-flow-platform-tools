@@ -301,6 +301,42 @@
           "preferExplicitRoutes": {
             "type": "boolean",
             "default": true
+          },
+          "badgeMode": {
+            "type": "string",
+            "enum": [
+              "icon_and_model",
+              "icon",
+              "model",
+              "none"
+            ],
+            "default": "icon_and_model",
+            "description": "Controls whether architecture entities show SVG icon badges, generated model badges, both, or neither."
+          },
+          "badgeSize": {
+            "type": "string",
+            "enum": [
+              "small",
+              "medium",
+              "large"
+            ],
+            "default": "medium",
+            "description": "Relative visual size for entity badges. Use medium by default; use large only for asset gallery or sparse diagrams."
+          },
+          "badgePlacement": {
+            "type": "string",
+            "enum": [
+              "front",
+              "top",
+              "side"
+            ],
+            "default": "front",
+            "description": "Preferred badge placement on the entity body."
+          },
+          "labelIcon": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show local SVG icon inside the top HTML label when an icon is available."
           }
         }
       }

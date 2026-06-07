@@ -1199,6 +1199,10 @@
     "colorBy": "kind",
     "routeCollisionAvoidance": "basic",
     "preferExplicitRoutes": true,
-    "showLegend": true
+    "showLegend": true,
+    "badgeMode": "icon_and_model",
+    "badgeSize": "medium",
+    "badgePlacement": "front",
+    "labelIcon": true
   }
 }

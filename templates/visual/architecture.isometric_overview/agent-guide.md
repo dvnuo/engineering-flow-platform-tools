@@ -39,13 +39,14 @@ Use these exact kinds where possible: `client`, `pc`, `mobile`, `cdn`, `gateway`
 
 Use these exact link kinds where possible: `api_call`, `static_resource`, `reverse_proxy`, `load_balancing`, `register`, `registering_service`, `pull_consumption`, `health_check`, `data_cache`, `data_storage`, `replication`, `distributed_file_service`, `feign_call`, `log_collection`.
 
-Prefer `visual.initial_focus_ids`, `visual.narrative_steps`, `visual.annotations`, `renderHints.colorBy`, `renderHints.showLegend`, and explicit `route` bend points for dense architecture maps.
+Prefer `visual.initial_focus_ids`, `visual.narrative_steps`, `visual.annotations`, `renderHints.colorBy`, `renderHints.showLegend`, `renderHints.badgeMode`, `renderHints.badgeSize`, `renderHints.badgePlacement`, `renderHints.labelIcon`, and explicit `route` bend points for dense architecture maps.
 
 ## Visual encoding rules
 
 - Entity `kind`, `provider`, `service`, `platform`, and `presentation` drive 3D geometry, local icon selection, and generated model badges.
 - Use `presentation.icon` and `presentation.model` only with local registry IDs. Examples: `nginx` + `nginx.logo3d`, `redis` + `redis.logo3d`, `mysql` + `mysql.logo3d`, `elasticsearch` + `elasticsearch.logo3d`, `kubernetes` + `kubernetes.logo3d`, `spring` + `spring.logo3d`.
 - Do not invent vendor logo URLs or remote model URLs. If a product logo is not locally registered, use a generic icon such as `generic.service`, `generic.database`, `generic.storage`, or `generic.registry`.
+- Use `renderHints.badgeMode: "icon_and_model"`, `renderHints.badgeSize: "medium"`, `renderHints.badgePlacement: "front"`, and `renderHints.labelIcon: true` by default. Use `badgeSize: "large"` only for sparse architecture maps or asset gallery review.
 - Zone `bounds` and `presentation.boundary` drive floor plates and solid/dashed/dotted boundaries.
 - Link `kind`, `directed`, `presentation.arrow`, `presentation.lineStyle`, and `presentation.color` drive thick arrows, line style, and route color.
 - Use `theme: architecture_light`; do not choose dark starfield or decorative particle effects for this renderer.

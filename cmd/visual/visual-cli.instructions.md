@@ -24,6 +24,7 @@
 - Give directional relationships `directed=true` and `presentation.arrow`; use `presentation.lineStyle`, `presentation.curve`, and `presentation.flow` for data movement, events, calls, reads, writes, dependencies, returns, and blocking edges.
 - Use `view.colorBy` or `renderHints.colorBy` plus `renderHints.showLegend=true` when color means provider, kind, status, group, phase, risk, or severity.
 - Use only local icon/model ids from `asset-registry.json`. Do not use external image or model URLs. AWS icon ids are local styled placeholders, and generated `*.logo3d` files are local visualization badges, not official vendor 3D models.
+- For `architecture.isometric_overview`, keep badge readability explicit: use `renderHints.badgeMode="icon_and_model"`, `renderHints.badgeSize="medium"`, `renderHints.badgePlacement="front"`, and `renderHints.labelIcon=true` for normal diagrams.
 - If a required logo is missing, do not invent a URL. Ask for it to be added through `scripts/assets/logo_catalog.json`, `fetch_logo_assets.mjs`, and `convert_svg_to_3d.mjs`, or use a generic fallback icon.
 - Fill `visual.goal`, `visual.initial_focus_ids`, `visual.hidden_detail_ids`, `visual.narrative_steps`, and `visual.annotations` with valid semantic ids when the input has more than a few objects.
 - Before render, run `visual inspect-input --template <template-id> --input <input.json> --json`.

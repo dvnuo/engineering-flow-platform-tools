@@ -98,7 +98,7 @@ body {
   position: absolute;
   transform: translate(-50%, -100%);
   max-width: 180px;
-  padding: 5px 8px;
+  padding: 6px 9px;
   border: 1px solid rgb(100 116 139 / 0.24);
   border-radius: 6px;
   background: rgb(255 255 255 / 0.94);
@@ -123,12 +123,12 @@ body {
 .visual-isometric-label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .visual-isometric-label-icon {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
   object-fit: contain;
 }

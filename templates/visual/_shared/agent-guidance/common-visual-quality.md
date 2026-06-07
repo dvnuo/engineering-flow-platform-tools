@@ -53,6 +53,8 @@ For object marks:
 
 Do not place remote image or model URLs in `presentation.icon` or `presentation.model`. Use the local asset registry IDs only.
 
+For `architecture.isometric_overview`, use `renderHints.badgeMode`, `renderHints.badgeSize`, `renderHints.badgePlacement`, and `renderHints.labelIcon` to keep local icon/model badges readable. Default to `icon_and_model`, `medium`, `front`, and `true`; reserve `large` for sparse asset gallery review scenes.
+
 For relationship marks:
 
 - `directed`: true when direction matters.

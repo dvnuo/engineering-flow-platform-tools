@@ -136,6 +136,8 @@ The bundled AWS icon ids are local styled placeholders for offline visualization
 
 The build-time asset pipeline lives under `scripts/assets/`: `logo_catalog.json` is the allowlist, `fetch_logo_assets.mjs` vendors SVGs, `convert_svg_to_3d.mjs` creates local GLB badges, `vecto3d_adapter.mjs` probes an optional vecto3d checkout/command, `optimize_generated_models.mjs` records model size, and `validate_asset_registry.mjs` checks local paths and attribution metadata. Runtime render never downloads assets.
 
+For `architecture.isometric_overview`, badge readability is controlled by `renderHints.badgeMode`, `renderHints.badgeSize`, `renderHints.badgePlacement`, and `renderHints.labelIcon`. Use `icon_and_model`, `medium`, `front`, and `true` for normal architecture diagrams. Use `badgeSize=large` mainly for sparse reviews such as `templates/visual/architecture.isometric_overview/examples/asset-gallery.input.json`, which is the development gallery for checking whether vendored SVG icons and generated `*.logo3d` badges are visually recognizable.
+
 ## Visual Plan
 
 `visual inspect-plan` is the pre-render planning step for agents. It validates input, runs the same quality rules as `inspect-input`, and returns `visual_plan.schema=efp.visual.plan.v1`. The plan contains a normalized `visual_plan.ir` with objects, relationships, events, and counts; a first-view budget with focus ids and hidden detail ids; label buckets; legend hints; disclosure strategy; selection behavior; mark statistics, edge direction counts, color/legend analysis, asset usage, quality-loop actions, and render command hints.

@@ -21,6 +21,10 @@ var sharedAssetFiles = map[string]string{
 	"_shared/assets/ATTRIBUTIONS.md":         "assets/ATTRIBUTIONS.md",
 }
 
+var optionalSharedAssetFiles = map[string]string{
+	"_shared/agent-guidance/panel-grammar.md": "assets/agent-guidance/panel-grammar.md",
+}
+
 func copyAssets(templateDir string, entry manifest.RegistryEntry, tpl manifest.TemplateManifest, outDir string) ([]string, error) {
 	var files []string
 	for _, asset := range tpl.Assets {
@@ -85,6 +89,24 @@ func copySharedVisualAssets(templateDir, outDir string) ([]string, error) {
 		}
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return nil, metadata.NewError("output_write_failed", "failed to create shared asset directory: "+err.Error(), "Check --out permissions.", 500)
+		}
+		if err := copyFile(dst, src); err != nil {
+			return nil, err
+		}
+		files = append(files, ToArtifactPath(dstRel))
+	}
+	for srcRel, dstRel := range optionalSharedAssetFiles {
+		src := filepath.Join(templateDir, filepath.FromSlash(srcRel))
+		info, err := os.Stat(src)
+		if err != nil || info.IsDir() {
+			continue
+		}
+		dst, err := safeOutputPath(outDir, dstRel)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return nil, metadata.NewError("output_write_failed", "failed to create optional shared asset directory: "+err.Error(), "Check --out permissions.", 500)
 		}
 		if err := copyFile(dst, src); err != nil {
 			return nil, err
@@ -247,6 +269,9 @@ func plannedFiles(tpl manifest.TemplateManifest) []string {
 		add(threeModuleOutput)
 	}
 	for _, rel := range sharedAssetFiles {
+		add(rel)
+	}
+	for _, rel := range optionalSharedAssetFiles {
 		add(rel)
 	}
 	add("assets/icons/generic/service.svg")

@@ -14,6 +14,11 @@ import (
 	"testing"
 
 	"engineering-flow-platform-tools/internal/testutil"
+	"engineering-flow-platform-tools/internal/visual/authoring"
+	"engineering-flow-platform-tools/internal/visual/manifest"
+	"engineering-flow-platform-tools/internal/visual/mark"
+	"engineering-flow-platform-tools/internal/visual/preview"
+	"engineering-flow-platform-tools/internal/visual/renderinspect"
 	"gopkg.in/yaml.v3"
 )
 
@@ -800,6 +805,102 @@ func TestVisualAllTemplatesExposeMarkSystemAuthoringContract(t *testing.T) {
 	}
 }
 
+func TestVisualStudioRuntimeAndInspectionContracts(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+
+	markRegistry := loadJSONMap(t, filepath.Join(templateDir, "_shared", "mark-registry.json"))
+	kinds := objectMap(t, markRegistry["kinds"])
+	for _, kind := range []string{"state", "initial", "final", "transition", "action", "control", "merge", "fork", "join", "artifact", "server", "client", "deployment", "gate", "stage", "evidence", "result"} {
+		if _, ok := kinds[kind]; !ok {
+			t.Fatalf("mark registry missing Studio kind %s", kind)
+		}
+	}
+
+	renderers := mustRead(t, filepath.Join(templateDir, "_shared", "runtime", "efp-visual-renderers.iife.js"))
+	if !strings.Contains(renderers, `runtime.registerRenderer("offline.studio.v1", { render: renderStudio })`) {
+		t.Fatalf("runtime renderers do not register offline.studio.v1")
+	}
+	css := mustRead(t, filepath.Join(templateDir, "_shared", "runtime", "efp-visual-runtime.css"))
+	for _, className := range []string{".studio-app", ".studio-hero-stage", ".studio-nav", ".studio-inspector", ".studio-bottom-panels"} {
+		if !strings.Contains(css, className) {
+			t.Fatalf("runtime CSS missing %s", className)
+		}
+	}
+
+	checks := renderinspect.Checks{
+		StudioLayoutPresent:      true,
+		HeroStagePresent:         true,
+		NavigationPresent:        true,
+		InspectorPresent:         true,
+		BottomPanelsPresent:      true,
+		ControlsPresent:          true,
+		PanelsNotEmpty:           true,
+		TargetRefsResolvable:     true,
+		HeroNotBareGraph:         true,
+		StudioAssumptionsVisible: true,
+		IconLabelsVisible:        true,
+		DirectedArrowsVisible:    true,
+		LegendPresentWhenColorBy: true,
+	}
+	checkJSON, err := json.Marshal(checks)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"studio_layout_present", "hero_stage_present", "navigation_present", "inspector_present", "bottom_panels_present", "controls_present", "panels_not_empty", "target_refs_resolvable", "hero_not_bare_graph", "studio_assumptions_visible", "icon_labels_visible", "directed_arrows_visible", "legend_present_when_color_by"} {
+		if !strings.Contains(string(checkJSON), field) {
+			t.Fatalf("Checks JSON missing %s: %s", field, string(checkJSON))
+		}
+	}
+}
+
+func TestVisualStudioMarkAndPreviewAnalysis(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+
+	stats := mark.Analyze(templateDir, "studio_v1", studioGoodInput())
+	if stats.ShapeCounts["service_box"] == 0 || stats.ShapeCounts["actor_card"] == 0 {
+		t.Fatalf("Studio mark analysis did not resolve expected shapes: %#v", stats.ShapeCounts)
+	}
+	if stats.ArrowCount == 0 || stats.DirectedCount == 0 {
+		t.Fatalf("Studio mark analysis did not count directed arrows: %#v", stats)
+	}
+	if len(stats.LegendItems) == 0 {
+		t.Fatalf("Studio mark analysis did not build legend items: %#v", stats)
+	}
+
+	tpl := manifest.TemplateManifest{
+		ID:              "studio.presentation",
+		InputSchemaKind: "studio_v1",
+		Renderer:        manifest.RendererSpec{Contract: "offline.studio.v1"},
+		VisualDesign:    manifest.VisualDesign{MaxInitialNodes: 60, MaxInitialEdges: 120},
+	}
+	_, _, badWarnings, _ := preview.Analyze(templateDir, tpl, studioBadInput(), authoring.QualityRules{})
+	badCodes := previewWarningCodes(badWarnings)
+	for _, code := range []string{"studio_goal_missing", "studio_assumptions_missing_for_inferred_content", "studio_navigation_missing", "studio_detail_panel_missing", "studio_story_missing", "studio_target_refs_unknown", "studio_panel_empty", "studio_panel_text_too_long", "studio_evidence_without_source", "studio_compare_requested_but_missing", "studio_risk_requested_but_missing", "studio_control_unbound", "studio_mark_fields_missing", "studio_edge_arrows_missing"} {
+		if !badCodes[code] {
+			t.Fatalf("bad Studio input missing warning %s in %#v", code, badCodes)
+		}
+	}
+	for _, warning := range badWarnings {
+		if strings.HasPrefix(warning.Code, "studio_") {
+			if warning.Severity == "" || warning.Path == "" || warning.Message == "" || warning.Suggestion == "" || warning.AutoFixHint == nil {
+				t.Fatalf("Studio warning missing required fields: %#v", warning)
+			}
+		}
+	}
+	_, _, goodWarnings, _ := preview.Analyze(templateDir, tpl, studioGoodInput(), authoring.QualityRules{})
+	if len(goodWarnings) >= len(badWarnings) {
+		t.Fatalf("good Studio input should produce fewer warnings: good=%d bad=%d", len(goodWarnings), len(badWarnings))
+	}
+	goodCodes := previewWarningCodes(goodWarnings)
+	for _, forbidden := range []string{"studio_target_refs_unknown", "studio_panel_empty", "studio_edge_arrows_missing", "studio_assumptions_missing_for_inferred_content"} {
+		if goodCodes[forbidden] {
+			t.Fatalf("good Studio input unexpectedly has %s in %#v", forbidden, goodCodes)
+		}
+	}
+}
+
 func TestVisualUMLFamilyExamplesValidateAndRender(t *testing.T) {
 	root := repoRoot(t)
 	templateDir := filepath.Join(root, "templates", "visual")
@@ -1556,6 +1657,102 @@ func warningCodeSet(t *testing.T, obj map[string]any) map[string]bool {
 		out[code] = true
 	}
 	return out
+}
+
+func previewWarningCodes(warnings []preview.Warning) map[string]bool {
+	out := map[string]bool{}
+	for _, warning := range warnings {
+		out[warning.Code] = true
+	}
+	return out
+}
+
+func studioGoodInput() map[string]any {
+	return map[string]any{
+		"title":            "Release Readiness Studio",
+		"goal":             "Explain whether the release is ready to promote.",
+		"inferred_content": true,
+		"assumptions":      []any{"Risk posture is inferred from CI evidence and approval state."},
+		"view":             map[string]any{"colorBy": "kind"},
+		"renderHints":      map[string]any{"showLegend": true},
+		"visual": map[string]any{
+			"goal":              "Show the release decision path first.",
+			"initial_focus_ids": []any{"client", "api", "gate"},
+			"narrative_steps": []any{
+				map[string]any{"title": "Entry path", "focus_ids": []any{"client", "api"}},
+			},
+			"annotations": []any{
+				map[string]any{"target_id": "gate", "label": "Promotion decision"},
+			},
+		},
+		"hero": map[string]any{
+			"title": "Release path",
+			"data": map[string]any{
+				"nodes": []any{
+					map[string]any{"id": "client", "label": "Client app", "kind": "client", "importance": 0.9},
+					map[string]any{"id": "api", "label": "API server", "kind": "server", "importance": 0.8},
+					map[string]any{"id": "gate", "label": "Release gate", "kind": "gate", "importance": 0.85},
+					map[string]any{"id": "artifact", "label": "Build artifact", "kind": "artifact"},
+				},
+				"edges": []any{
+					map[string]any{"id": "client-api", "from": "client", "to": "api", "kind": "calls", "directed": true, "presentation": map[string]any{"arrow": "forward"}},
+					map[string]any{"id": "api-gate", "from": "api", "to": "gate", "kind": "validates", "directed": true, "presentation": map[string]any{"arrow": "forward"}},
+					map[string]any{"id": "artifact-gate", "from": "artifact", "to": "gate", "kind": "deploys", "directed": true, "presentation": map[string]any{"arrow": "forward"}},
+				},
+			},
+		},
+		"navigation": map[string]any{"items": []any{
+			map[string]any{"label": "Client", "target_id": "client"},
+			map[string]any{"label": "API", "target_id": "api"},
+			map[string]any{"label": "Gate", "target_id": "gate"},
+		}},
+		"panels": []any{
+			map[string]any{"id": "detail", "type": "detail", "target_id": "api", "body": "API server validates release health and exposes the selected service state."},
+			map[string]any{"id": "evidence", "type": "evidence", "slot": "bottom", "items": []any{map[string]any{"label": "CI run passed", "source": "ci-run-123"}}},
+			map[string]any{"id": "risk", "type": "risk", "slot": "bottom", "body": "Risk is mitigated by the release gate and rollback artifact."},
+			map[string]any{"id": "comparison", "type": "comparison", "slot": "bottom", "body": "Compare pre-gate and post-gate readiness signals."},
+		},
+		"controls": []any{
+			map[string]any{"id": "reset", "label": "Reset", "action": "reset"},
+			map[string]any{"id": "isolate-api", "label": "Isolate API", "action": "isolate", "target_id": "api"},
+		},
+		"story": map[string]any{"steps": []any{
+			map[string]any{"title": "Start at client demand", "target_id": "client"},
+			map[string]any{"title": "Inspect release gate", "target_id": "gate"},
+		}},
+		"annotations": []any{
+			map[string]any{"target_id": "api", "label": "Runtime owner"},
+		},
+	}
+}
+
+func studioBadInput() map[string]any {
+	return map[string]any{
+		"title":            "Component Explorer Bad",
+		"inferred_content": true,
+		"hero": map[string]any{
+			"data": map[string]any{
+				"nodes": []any{
+					map[string]any{"id": "api", "label": "API"},
+					map[string]any{"id": "db", "label": "Database"},
+				},
+				"edges": []any{
+					map[string]any{"from": "api", "to": "db", "kind": "calls"},
+				},
+			},
+		},
+		"panels": []any{
+			map[string]any{"id": "empty", "type": "result"},
+			map[string]any{"id": "notes", "type": "notes", "target_id": "missing-node", "body": strings.Repeat("compare risk detail ", 90)},
+			map[string]any{"id": "evidence", "type": "evidence", "items": []any{map[string]any{"label": "Claim without provenance"}}},
+		},
+		"annotations": []any{
+			map[string]any{"target_id": "missing-node", "label": "Risk compare callout"},
+		},
+		"controls": []any{
+			map[string]any{"label": "Replay selected thing"},
+		},
+	}
 }
 
 func objectMap(t *testing.T, value any) map[string]any {

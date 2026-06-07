@@ -118,6 +118,9 @@ func Analyze(templateDir, inputSchemaKind string, data map[string]any) Stats {
 	if stats.ColorBy == "" && strings.ToLower(inputSchemaKind) == "uml_sequence_v1" {
 		stats.ColorBy = "phase"
 	}
+	if stats.ColorBy == "" && strings.ToLower(inputSchemaKind) == "studio_v1" {
+		stats.ColorBy = studioDefaultColorBy(data)
+	}
 	nodes := collectNodes(inputSchemaKind, data)
 	edges := collectEdges(inputSchemaKind, data)
 	stats.NodeCount = len(nodes)
@@ -372,6 +375,13 @@ func loadAssetRegistry(templateDir string) AssetRegistry {
 
 func collectNodes(kind string, data map[string]any) []nodeItem {
 	switch strings.ToLower(kind) {
+	case "studio_v1":
+		heroData := studioHeroData(data)
+		out := objectItemsFrom(heroData, "nodes", "$.hero.data.nodes")
+		out = append(out, objectItemsFrom(heroData, "items", "$.hero.data.items")...)
+		out = append(out, objectItemsFrom(heroData, "events", "$.hero.data.events")...)
+		out = append(out, objectItemsFrom(heroData, "participants", "$.hero.data.participants")...)
+		return out
 	case "uml_sequence_v1":
 		return objectItems(data, "participants")
 	case "uml_class_v1":
@@ -388,14 +398,6 @@ func collectNodes(kind string, data map[string]any) []nodeItem {
 		return objectItems(data, "events")
 	case "matrix_v1":
 		return objectItems(data, "items")
-	case "studio_v1":
-		heroData := studioHeroData(data)
-		out := objectItemsFrom(heroData, "nodes", "$.hero.data.nodes")
-		out = append(out, objectItemsFrom(heroData, "items", "$.hero.data.items")...)
-		out = append(out, objectItemsFrom(heroData, "events", "$.hero.data.events")...)
-		out = append(out, objectItemsFrom(heroData, "participants", "$.hero.data.participants")...)
-		out = append(out, objectItems(data, "panels")...)
-		return out
 	case "evidence_v1":
 		out := objectItems(data, "claims")
 		out = append(out, objectItems(data, "sources")...)
@@ -407,6 +409,13 @@ func collectNodes(kind string, data map[string]any) []nodeItem {
 
 func collectEdges(kind string, data map[string]any) []edgeItem {
 	switch strings.ToLower(kind) {
+	case "studio_v1":
+		heroData := studioHeroData(data)
+		out := edgeItemsFrom(heroData, "edges", "$.hero.data.edges")
+		out = append(out, edgeItemsFrom(heroData, "messages", "$.hero.data.messages")...)
+		out = append(out, edgeItemsFrom(heroData, "flows", "$.hero.data.flows")...)
+		out = append(out, edgeItemsFrom(heroData, "links", "$.hero.data.links")...)
+		return out
 	case "uml_sequence_v1":
 		return edgeItems(data, "messages")
 	case "uml_class_v1":
@@ -419,11 +428,6 @@ func collectEdges(kind string, data map[string]any) []edgeItem {
 		return edgeItems(data, "links")
 	case "evidence_v1":
 		return edgeItems(data, "links")
-	case "studio_v1":
-		heroData := studioHeroData(data)
-		out := edgeItemsFrom(heroData, "edges", "$.hero.data.edges")
-		out = append(out, edgeItemsFrom(heroData, "messages", "$.hero.data.messages")...)
-		return out
 	default:
 		return edgeItems(data, "edges")
 	}
@@ -457,18 +461,6 @@ func edgeItemsFrom(data map[string]any, field, pathPrefix string) []edgeItem {
 		}
 	}
 	return out
-}
-
-func studioHeroData(data map[string]any) map[string]any {
-	hero, _ := data["hero"].(map[string]any)
-	if hero == nil {
-		return map[string]any{}
-	}
-	heroData, _ := hero["data"].(map[string]any)
-	if heroData == nil {
-		return map[string]any{}
-	}
-	return heroData
 }
 
 func resolveNode(registry MarkRegistry, obj map[string]any) resolvedMark {
@@ -700,6 +692,38 @@ func colorBy(data map[string]any) string {
 	return normalize(firstString(data, "colorBy", "color_by"))
 }
 
+func studioDefaultColorBy(data map[string]any) string {
+	hero := object(data, "hero")
+	for _, obj := range []map[string]any{object(hero, "view"), object(hero, "renderHints")} {
+		if value := firstString(obj, "colorBy", "color_by"); value != "" {
+			return normalize(value)
+		}
+	}
+	heroData := studioHeroData(data)
+	for _, field := range []string{"nodes", "items", "events", "participants", "edges", "messages", "flows", "links"} {
+		for _, item := range objectItemsFrom(heroData, field, "$.hero.data") {
+			if firstString(item.Obj, "kind", "type") != "" {
+				return "kind"
+			}
+		}
+		for _, item := range edgeItemsFrom(heroData, field, "$.hero.data") {
+			if firstString(item.Obj, "kind", "type", "relation") != "" {
+				return "kind"
+			}
+		}
+	}
+	return "kind"
+}
+
+func studioHeroData(data map[string]any) map[string]any {
+	hero := object(data, "hero")
+	heroData := object(hero, "data")
+	if len(heroData) > 0 {
+		return heroData
+	}
+	return map[string]any{}
+}
+
 func showLegend(data map[string]any) bool {
 	renderHints := object(data, "renderHints")
 	if value, ok := boolValue(renderHints["showLegend"]); ok {
@@ -751,10 +775,16 @@ func colorForLegend(value, colorBy string, registry MarkRegistry) string {
 func needsDirection(obj map[string]any) bool {
 	kind := normalize(firstString(obj, "kind", "relation", "type"))
 	directedKinds := map[string]bool{
-		"call": true, "calls": true, "sync": true, "writes": true, "reads": true,
-		"emits": true, "subscribes": true, "deploys": true, "deploys_to": true,
-		"validates": true, "blocks": true, "depends_on": true, "sends": true,
-		"returns": true, "async": true, "event": true, "observes": true,
+		"call": true, "calls": true, "sync": true, "async": true,
+		"write": true, "writes": true, "read": true, "reads": true,
+		"emit": true, "emits": true, "publish": true, "publishes": true,
+		"subscribe": true, "subscribes": true,
+		"deploy": true, "deploys": true, "deploys_to": true,
+		"validate": true, "validates": true, "block": true, "blocks": true,
+		"depend": true, "depends": true, "depends_on": true, "dependency": true,
+		"send": true, "sends": true, "return": true, "returns": true,
+		"event": true, "message": true, "flow": true, "transition": true,
+		"observes": true,
 		"supports": true, "refutes": true, "mentions": true,
 	}
 	return directedKinds[kind]

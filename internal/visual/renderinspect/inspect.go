@@ -63,6 +63,19 @@ type Checks struct {
 	LegendPresent                      bool `json:"legend_present"`
 	IconAssetsPresent                  bool `json:"icon_assets_present"`
 	AttributionsPresent                bool `json:"attributions_present"`
+	StudioLayoutPresent                bool `json:"studio_layout_present"`
+	HeroStagePresent                   bool `json:"hero_stage_present"`
+	NavigationPresent                  bool `json:"navigation_present"`
+	InspectorPresent                   bool `json:"inspector_present"`
+	BottomPanelsPresent                bool `json:"bottom_panels_present"`
+	ControlsPresent                    bool `json:"controls_present"`
+	PanelsNotEmpty                     bool `json:"panels_not_empty"`
+	TargetRefsResolvable               bool `json:"target_refs_resolvable"`
+	HeroNotBareGraph                   bool `json:"hero_not_bare_graph"`
+	StudioAssumptionsVisible           bool `json:"studio_assumptions_visible"`
+	IconLabelsVisible                  bool `json:"icon_labels_visible"`
+	DirectedArrowsVisible              bool `json:"directed_arrows_visible"`
+	LegendPresentWhenColorBy           bool `json:"legend_present_when_color_by"`
 	ScreenshotReadable                 bool `json:"screenshot_readable"`
 	ScreenshotNonBlank                 bool `json:"screenshot_non_blank"`
 	ScreenshotContrast                 bool `json:"screenshot_contrast"`
@@ -152,6 +165,7 @@ func Inspect(opts Options) (Result, error) {
 
 func (c Checks) AllCriticalOK(withScreenshot bool) bool {
 	base := c.OutputFiles && c.ManifestJSON && c.ManifestJS && c.DataJS && c.RuntimeAssets && c.ThreeAsset && c.RendererContractMatch && c.TemplateVersionMatch && c.PlanReady && c.FirstViewObjectsWithinBudget && c.FirstViewRelationshipsWithinBudget && c.LabelsBounded && c.RelationshipsVisible
+	base = base && c.StudioLayoutPresent && c.HeroStagePresent && c.NavigationPresent && c.InspectorPresent && c.BottomPanelsPresent && c.ControlsPresent && c.PanelsNotEmpty && c.TargetRefsResolvable && c.HeroNotBareGraph && c.StudioAssumptionsVisible && c.IconLabelsVisible && c.DirectedArrowsVisible && c.LegendPresentWhenColorBy
 	return base && (!withScreenshot || c.ScreenshotReadable)
 }
 
@@ -225,6 +239,19 @@ func buildChecks(outputInspection render.Inspection, outputManifest manifest.Out
 		LegendPresent:                      legendPresent(visualPlan),
 		IconAssetsPresent:                  len(visualPlan.Assets.MissingIcons) == 0,
 		AttributionsPresent:                len(visualPlan.Assets.IconsUsed) == 0 || len(visualPlan.Assets.Attributions) > 0,
+		StudioLayoutPresent:                true,
+		HeroStagePresent:                   true,
+		NavigationPresent:                  true,
+		InspectorPresent:                   true,
+		BottomPanelsPresent:                true,
+		ControlsPresent:                    true,
+		PanelsNotEmpty:                     true,
+		TargetRefsResolvable:               true,
+		HeroNotBareGraph:                   true,
+		StudioAssumptionsVisible:           true,
+		IconLabelsVisible:                  true,
+		DirectedArrowsVisible:              true,
+		LegendPresentWhenColorBy:           true,
 		ScreenshotReadable:                 !screenshot.Provided || screenshot.NonBlank && screenshot.ContrastOK && screenshot.CoverageOK,
 		ScreenshotNonBlank:                 !screenshot.Provided || screenshot.NonBlank,
 		ScreenshotContrast:                 !screenshot.Provided || screenshot.ContrastOK,
@@ -233,7 +260,29 @@ func buildChecks(outputInspection render.Inspection, outputManifest manifest.Out
 	if tpl.Effects.Engine == "three.v1" {
 		checks.ThreeAsset = files["assets/vendor/three/efp-three.module.min.js"]
 	}
+	applyStudioChecks(&checks, tpl, visualPlan)
 	return checks
+}
+
+func applyStudioChecks(checks *Checks, tpl manifest.TemplateManifest, visualPlan plan.VisualPlan) {
+	if strings.ToLower(tpl.InputSchemaKind) != "studio_v1" {
+		return
+	}
+	studio := visualPlan.Studio
+	slots := studio.Slots
+	checks.StudioLayoutPresent = strings.TrimSpace(studio.Layout) != ""
+	checks.HeroStagePresent = slots["hero"] && slots["hero_stage"]
+	checks.NavigationPresent = slots["navigation"]
+	checks.InspectorPresent = slots["inspector"]
+	checks.BottomPanelsPresent = slots["bottom_panels"]
+	checks.ControlsPresent = slots["controls"]
+	checks.PanelsNotEmpty = studio.PanelCounts["empty"] == 0
+	checks.TargetRefsResolvable = studio.TargetRefCoverage >= 1
+	checks.HeroNotBareGraph = !(checks.HeroStagePresent && !checks.NavigationPresent && !checks.InspectorPresent && !checks.BottomPanelsPresent && !checks.ControlsPresent && !slots["story"] && !slots["annotations"])
+	checks.StudioAssumptionsVisible = !studio.InferredContent || studio.AssumptionsCount > 0
+	checks.IconLabelsVisible = visualPlan.IR.Counts["objects"] == 0 || len(visualPlan.Marks.IconCounts) > 0
+	checks.DirectedArrowsVisible = visualPlan.Edges.DirectedCount == 0 || visualPlan.Edges.ArrowCount > 0
+	checks.LegendPresentWhenColorBy = visualPlan.Colors.ColorBy == "" || visualPlan.Legend.Show || len(visualPlan.Colors.LegendItems) > 0
 }
 
 func inspectRenderWarnings(checks Checks, outputManifest manifest.OutputManifest, tpl manifest.TemplateManifest, visualPlan plan.VisualPlan, summary preview.Summary) []preview.Warning {
@@ -286,8 +335,48 @@ func inspectRenderWarnings(checks Checks, outputManifest manifest.OutputManifest
 	if !checks.AttributionsPresent {
 		add("asset_attributions_missing", "warning", "Icons are used but no asset attribution entries are present.", "Ensure manifest.json assets.attributions and assets/ATTRIBUTIONS.md are included in the artifact.")
 	}
+	if strings.ToLower(tpl.InputSchemaKind) == "studio_v1" {
+		if !checks.StudioLayoutPresent {
+			add("studio_layout_missing", "error", "Studio layout metadata is missing from the visual plan.", "Add a Studio layout and render with a Studio template.")
+		}
+		if !checks.HeroStagePresent {
+			add("studio_hero_missing", "error", "Rendered Studio plan is missing the hero stage.", "Add hero.data with primary stage objects and relationships.")
+		}
+		if !checks.NavigationPresent {
+			add("studio_navigation_missing", "warning", "Rendered Studio plan is missing navigation.", "Add navigation.items[] bound to hero.data target ids.")
+		}
+		if !checks.InspectorPresent {
+			add("studio_inspector_missing", "warning", "Rendered Studio plan is missing an inspector/detail panel.", "Add a detail or inspector panel for selected hero objects.")
+		}
+		if !checks.BottomPanelsPresent {
+			add("studio_bottom_panels_missing", "warning", "Rendered Studio plan is missing bottom panels.", "Add bottom panels for story, evidence, risks, comparison, or results.")
+		}
+		if !checks.ControlsPresent {
+			add("studio_controls_missing", "warning", "Rendered Studio plan is missing controls.", "Add controls for reset, isolate, hide, show, replay, and export.")
+		}
+		if !checks.PanelsNotEmpty {
+			add("studio_panels_empty", "warning", "Rendered Studio plan contains empty panels.", "Fill or remove empty panels before rendering.")
+		}
+		if !checks.TargetRefsResolvable {
+			add("studio_target_refs_unresolved", "error", "Rendered Studio plan has unresolved target refs.", "Bind navigation, annotations, panels, and controls to ids from hero.data.")
+		}
+		if !checks.HeroNotBareGraph {
+			add("studio_hero_bare_graph", "warning", "Studio hero is present but surrounding presentation slots are missing.", "Add navigation, inspector, bottom panels, controls, story, and annotations around the hero stage.")
+		}
+		if !checks.StudioAssumptionsVisible {
+			add("studio_assumptions_not_visible", "warning", "Inferred Studio content does not expose assumptions.", "Add assumptions[] so the rendered Studio page lists inference boundaries.")
+		}
+		if !checks.IconLabelsVisible {
+			add("studio_icon_labels_missing", "warning", "Studio marks do not provide visible icon labels.", "Add kind/provider/service or presentation.icon so nav, inspector, legend, and hero labels can show icons.")
+		}
+		if !checks.DirectedArrowsVisible {
+			add("studio_directed_arrows_missing", "warning", "Studio directed relationships are missing visible arrow encodings.", "Set directed=true or presentation.arrow=forward on directional Studio edges.")
+		}
+		if !checks.LegendPresentWhenColorBy {
+			add("studio_legend_missing", "warning", "Studio colorBy is set but no legend is planned.", "Set renderHints.showLegend=true and use a colorBy field available on hero objects.")
+		}
+	}
 	_ = outputManifest
-	_ = tpl
 	return warnings
 }
 

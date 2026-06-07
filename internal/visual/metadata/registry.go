@@ -7,6 +7,7 @@ const (
 	RendererTimeline = "offline.timeline.v1"
 	RendererEvidence = "offline.evidence.v1"
 	RendererMatrix   = "offline.matrix.v1"
+	RendererStudio   = "offline.studio.v1"
 
 	RendererUMLSequence  = "offline.uml.sequence.3d.v1"
 	RendererUMLClass     = "offline.uml.class.2_5d.v1"
@@ -20,6 +21,7 @@ var SupportedRenderers = map[string]bool{
 	RendererTimeline: true,
 	RendererEvidence: true,
 	RendererMatrix:   true,
+	RendererStudio:   true,
 
 	RendererUMLSequence:  true,
 	RendererUMLClass:     true,

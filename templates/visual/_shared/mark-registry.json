@@ -128,6 +128,108 @@
       "mesh": "cone",
       "iconFallback": "generic.warning",
       "color": "#ee6b73"
+    },
+    "state": {
+      "shape": "diamond",
+      "mesh": "octahedron",
+      "iconFallback": "generic.decision",
+      "color": "#63a9ff"
+    },
+    "initial": {
+      "shape": "event_bus",
+      "mesh": "capsule",
+      "iconFallback": "generic.stream",
+      "color": "#47c477"
+    },
+    "final": {
+      "shape": "warning_prism",
+      "mesh": "cone",
+      "iconFallback": "generic.warning",
+      "color": "#ee6b73"
+    },
+    "transition": {
+      "shape": "stream_rail",
+      "mesh": "capsule",
+      "iconFallback": "generic.stream",
+      "color": "#35c2a1"
+    },
+    "action": {
+      "shape": "gear_card",
+      "mesh": "box",
+      "iconFallback": "generic.job",
+      "color": "#35c2a1"
+    },
+    "control": {
+      "shape": "hex_service",
+      "mesh": "hex_prism",
+      "iconFallback": "generic.api",
+      "color": "#e5a84c"
+    },
+    "merge": {
+      "shape": "diamond",
+      "mesh": "octahedron",
+      "iconFallback": "generic.decision",
+      "color": "#e5a84c"
+    },
+    "fork": {
+      "shape": "pipeline_stage",
+      "mesh": "box",
+      "iconFallback": "generic.pipeline",
+      "color": "#a166ff"
+    },
+    "join": {
+      "shape": "pipeline_stage",
+      "mesh": "box",
+      "iconFallback": "generic.pipeline",
+      "color": "#a166ff"
+    },
+    "artifact": {
+      "shape": "bucket",
+      "mesh": "cylinder",
+      "iconFallback": "generic.storage",
+      "color": "#527fff"
+    },
+    "server": {
+      "shape": "service_box",
+      "mesh": "box",
+      "iconFallback": "generic.service",
+      "color": "#63a9ff"
+    },
+    "client": {
+      "shape": "actor_card",
+      "mesh": "card",
+      "iconFallback": "generic.user",
+      "color": "#cbd5e1"
+    },
+    "deployment": {
+      "shape": "cloud_plate",
+      "mesh": "cloud",
+      "iconFallback": "generic.external",
+      "color": "#94a3b8"
+    },
+    "gate": {
+      "shape": "diamond",
+      "mesh": "octahedron",
+      "iconFallback": "generic.decision",
+      "color": "#e5a84c"
+    },
+    "stage": {
+      "shape": "pipeline_stage",
+      "mesh": "box",
+      "iconFallback": "generic.pipeline",
+      "color": "#35c2a1"
+    },
+    "evidence": {
+      "shape": "class_card",
+      "mesh": "card",
+      "iconFallback": "generic.decision",
+      "color": "#e5a84c"
+    },
+    "result": {
+      "shape": "component_card",
+      "mesh": "box",
+      "iconFallback": "generic.service",
+      "color": "#47c477"
     }
   },
   "providers": {
@@ -293,6 +395,13 @@
       "lineStyle": "solid",
       "flow": false,
       "color": "#63a9ff"
+    },
+    "sends": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#35c2a1"
     },
     "returns": {
       "directed": true,

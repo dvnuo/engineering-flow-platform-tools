@@ -223,6 +223,8 @@ func Analyze(templateDir string, tpl manifest.TemplateManifest, data map[string]
 			quality -= 20
 			warnings = append(warnings, Warning{Code: "matrix_items_high", Message: "Matrix has more items than the recommended initial view.", Hint: "Use filters, categories, or high-importance items for the first view."})
 		}
+	case "studio_v1":
+		quality = analyzeStudio(data, design, &summary, &warnings, &recommendations)
 	case "uml_sequence_v1":
 		quality = analyzeUMLSequence(data, design, &summary, &warnings, &recommendations)
 	case "uml_class_v1":
@@ -350,6 +352,504 @@ func analyzeVisualGuidance(data map[string]any, kind string, design manifest.Vis
 		recommendations.AddFields = appendUnique(recommendations.AddFields, "visual.narrative_steps")
 	}
 	return penalty
+}
+
+type studioRef struct {
+	Path  string
+	Value string
+}
+
+func analyzeStudio(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
+	_ = design
+	quality := 100
+	penalty := 0
+	add := func(code, severity, path, message, suggestion string) {
+		*warnings = append(*warnings, studioWarning(code, severity, path, message, suggestion))
+		penalty += studioWarningPenalty(severity)
+	}
+	hero, hasHero := studioObjectField(data, "hero")
+	heroData, hasHeroDataObject := studioObjectField(hero, "data")
+	hasHeroData := hasHeroDataObject && studioHasHeroData(heroData)
+	nodes := studioHeroObjects(heroData)
+	edges := studioHeroRelationships(heroData)
+	panels := objectArray(data, "panels")
+	annotations := studioAnnotationObjects(data)
+	controls := objectArray(data, "controls")
+	navItems := studioNavigationObjects(data)
+	knownIDs := studioKnownTargetIDs(heroData)
+
+	summary.Nodes = len(objectArray(heroData, "nodes"))
+	summary.Items = len(objectArray(heroData, "items"))
+	summary.Events = len(objectArray(heroData, "events"))
+	summary.Participants = len(objectArray(heroData, "participants"))
+	summary.Edges = len(objectArray(heroData, "edges"))
+	summary.Messages = len(objectArray(heroData, "messages"))
+	summary.Flows = len(objectArray(heroData, "flows"))
+	summary.Links = len(objectArray(heroData, "links"))
+	summary.VisualAnnotations = len(annotations)
+
+	if strings.TrimSpace(studioGoalText(data)) == "" {
+		add("studio_goal_missing", "warning", "$.goal", "Studio input does not state the presentation goal.", "Add goal or visual.goal so the Studio page has a clear first-view purpose.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "goal")
+	}
+	if studioHasInferredContent(data) && len(array(data, "assumptions")) == 0 {
+		add("studio_assumptions_missing_for_inferred_content", "warning", "$.assumptions", "Studio content appears to contain inferred material but assumptions are not listed.", "Add assumptions[] explaining what was inferred and why.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "assumptions[]")
+	}
+	if !hasHero {
+		add("studio_hero_missing", "error", "$.hero", "Studio input does not provide a hero section.", "Add hero with title, summary, and hero.data for the primary stage.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "hero")
+	}
+	if !hasHeroData {
+		add("studio_hero_data_missing", "error", "$.hero.data", "Studio hero does not provide stage data.", "Add hero.data.nodes/items/events/participants and hero.data.edges/messages/flows/links.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "hero.data")
+	}
+	hasNavigation := len(navItems) > 0
+	hasDetailPanel := studioHasDetailPanel(data, panels)
+	hasBottomPanels := studioHasBottomPanels(panels)
+	hasControls := len(controls) > 0
+	hasStory := studioHasStory(data)
+	if hasHeroData && !hasNavigation && !hasDetailPanel && !hasBottomPanels && !hasControls && !hasStory && len(annotations) == 0 {
+		add("studio_bare_graph", "warning", "$", "Studio input looks like a bare graph without presentation slots.", "Add navigation, detail panels, bottom panels, controls, story steps, annotations, and assumptions around the hero stage.")
+	}
+	if !hasNavigation {
+		add("studio_navigation_missing", "warning", "$.navigation", "Studio input does not define left navigation.", "Add navigation.items[] with labels and target refs for the important hero objects.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "navigation.items[]")
+	}
+	if !hasDetailPanel {
+		add("studio_detail_panel_missing", "warning", "$.panels", "Studio input has no detail or inspector panel.", "Add a panel with type=detail or type=inspector so selection has explanatory content.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "panels[].type=detail")
+	}
+	if !hasBottomPanels {
+		add("studio_bottom_panels_missing", "warning", "$.panels", "Studio input has no bottom panels for story, evidence, risks, or comparison.", "Add bottom panels with concise content for evidence, risks, comparisons, or results.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "panels[]")
+	}
+	if !hasControls {
+		add("studio_controls_missing", "info", "$.controls", "Studio input does not declare controls.", "Add controls[] for reset, isolate, hide, show, replay, and export actions.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "controls[]")
+	}
+	if !hasStory {
+		add("studio_story_missing", "warning", "$.story", "Studio input does not define a narrative story.", "Add story.steps[] or visual.narrative_steps[] to explain the presentation sequence.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "story.steps[]")
+	}
+	if len(annotations) == 0 {
+		add("studio_annotations_missing", "warning", "$.annotations", "Studio input has no annotations for focus anchors.", "Add annotations[] with target_id and short labels for key decisions, risks, or evidence.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "annotations[]")
+	}
+	unknownRefs := []string{}
+	for _, ref := range studioTargetRefs(data, navItems, panels, annotations, controls) {
+		if ref.Value != "" && len(knownIDs) > 0 && !knownIDs[ref.Value] {
+			unknownRefs = appendCapped(unknownRefs, ref.Path+"="+ref.Value, 12)
+		}
+	}
+	if len(unknownRefs) > 0 {
+		add("studio_target_refs_unknown", "error", "$", "Some Studio target refs do not exist in hero.data.", "Use ids from hero.data nodes, items, events, participants, or relationships when binding navigation, annotations, panels, and controls.")
+		(*warnings)[len(*warnings)-1].Details = duplicateFree(unknownRefs, 12)
+		summary.VisualUnknownRefs = duplicateFree(unknownRefs, 12)
+	}
+	if len(knownIDs) > 0 {
+		totalRefs := len(studioTargetRefs(data, navItems, panels, annotations, controls))
+		unknownCount := len(unknownRefs)
+		summary.VisualReferenceCoverage = round2(float64(maxInt(0, totalRefs-unknownCount)) / float64(maxInt(1, totalRefs)))
+	}
+	for i, panel := range panels {
+		path := "$.panels[" + intString(i) + "]"
+		text := studioPanelText(panel)
+		if strings.TrimSpace(text) == "" && len(objectArrayFromValue(panel["items"])) == 0 {
+			add("studio_panel_empty", "warning", path, "A Studio panel is empty.", "Add concise panel text or items, or remove the empty panel.")
+		}
+		if len(text) > 1200 {
+			add("studio_panel_text_too_long", "info", path, "A Studio panel has too much text for a scannable presentation layer.", "Shorten panel copy and move long evidence or implementation detail into items or summaries.")
+		}
+	}
+	for _, evidence := range studioEvidenceItems(data, panels) {
+		if !studioEvidenceHasSource(evidence.Obj) {
+			add("studio_evidence_without_source", "warning", evidence.Path, "An evidence item does not identify its source.", "Add source, source_id, citation, reference, or provenance to evidence items.")
+		}
+	}
+	if studioCompareRequested(data) && !studioHasPanelType(panels, "compare", "comparison") {
+		add("studio_compare_requested_but_missing", "warning", "$.panels", "Studio content asks for comparison but no comparison panel is present.", "Add a compare/comparison panel with the options, deltas, or before/after result.")
+	}
+	if studioRiskRequested(data) && !studioHasPanelType(panels, "risk", "risks") {
+		add("studio_risk_requested_but_missing", "warning", "$.panels", "Studio content mentions risk but no risk panel is present.", "Add a risk panel with impact, likelihood, mitigation, and evidence refs.")
+	}
+	for i, control := range controls {
+		if firstString(control, "action", "command", "target_id", "targetId", "target_ref", "targetRef") == "" {
+			add("studio_control_unbound", "warning", "$.controls["+intString(i)+"]", "A Studio control is not bound to an action or target.", "Set controls[].action or controls[].target_id so runtime controls have deterministic behavior.")
+		}
+	}
+	missingMarkFields := []string{}
+	for i, node := range nodes {
+		if !studioHasMarkFields(node) {
+			missingMarkFields = appendCapped(missingMarkFields, studioNodePath(node, i), 12)
+		}
+	}
+	if len(missingMarkFields) > 0 {
+		add("studio_mark_fields_missing", "warning", "$.hero.data", "Some Studio hero objects lack semantic mark fields.", "Add kind, provider/service, platform, or presentation.shape/icon so Studio can render meaningful icons and shapes.")
+		(*warnings)[len(*warnings)-1].Details = missingMarkFields
+	}
+	missingArrows := []string{}
+	for i, edge := range edges {
+		if studioEdgeNeedsArrow(edge) && !studioEdgeHasArrow(edge) {
+			missingArrows = appendCapped(missingArrows, studioEdgePath(edge, i), 12)
+		}
+	}
+	if len(missingArrows) > 0 {
+		add("studio_edge_arrows_missing", "warning", "$.hero.data", "Some directed Studio relationships do not declare visible arrows.", "Set directed=true or presentation.arrow=forward on directional calls, reads, writes, emits, sends, returns, deploys, validates, blocks, or depends_on edges.")
+		(*warnings)[len(*warnings)-1].Details = missingArrows
+	}
+	quality -= penalty
+	if quality < 0 {
+		return 0
+	}
+	return quality
+}
+
+func studioWarning(code, severity, path, message, suggestion string) Warning {
+	if path == "" {
+		path = "$"
+	}
+	return Warning{
+		Code:       code,
+		Severity:   severity,
+		Path:       path,
+		Message:    message,
+		Suggestion: suggestion,
+		Hint:       suggestion,
+		AutoFixHint: map[string]any{
+			"action": code,
+			"path":   path,
+		},
+	}
+}
+
+func studioWarningPenalty(severity string) int {
+	switch strings.ToLower(severity) {
+	case "error":
+		return 12
+	case "warning":
+		return 5
+	case "info":
+		return 2
+	default:
+		return 3
+	}
+}
+
+func studioObjectField(data map[string]any, name string) (map[string]any, bool) {
+	obj, ok := data[name].(map[string]any)
+	if !ok || obj == nil {
+		return map[string]any{}, false
+	}
+	return obj, true
+}
+
+func studioHeroData(data map[string]any) map[string]any {
+	hero, ok := studioObjectField(data, "hero")
+	if !ok {
+		return map[string]any{}
+	}
+	heroData, ok := studioObjectField(hero, "data")
+	if !ok {
+		return map[string]any{}
+	}
+	return heroData
+}
+
+func studioHasHeroData(heroData map[string]any) bool {
+	for _, field := range []string{"nodes", "items", "events", "participants", "edges", "messages", "flows", "links"} {
+		if len(objectArray(heroData, field)) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func studioHeroObjects(heroData map[string]any) []map[string]any {
+	var out []map[string]any
+	for _, field := range []string{"nodes", "items", "events", "participants"} {
+		for _, obj := range objectArray(heroData, field) {
+			obj["_studio_source"] = field
+			out = append(out, obj)
+		}
+	}
+	return out
+}
+
+func studioHeroRelationships(heroData map[string]any) []map[string]any {
+	var out []map[string]any
+	for _, field := range []string{"edges", "messages", "flows", "links"} {
+		for _, obj := range objectArray(heroData, field) {
+			obj["_studio_source"] = field
+			out = append(out, obj)
+		}
+	}
+	return out
+}
+
+func studioGoalText(data map[string]any) string {
+	visual, _ := data["visual"].(map[string]any)
+	story, _ := data["story"].(map[string]any)
+	return firstString(data, "goal", "objective", "purpose") + firstString(visual, "goal") + firstString(story, "goal")
+}
+
+func studioHasInferredContent(data map[string]any) bool {
+	if boolFieldAny(data, "inferred", "inferred_content", "inferredContent") {
+		return true
+	}
+	text := strings.ToLower(firstString(data, "content_source", "source"))
+	if strings.Contains(text, "inferred") {
+		return true
+	}
+	for _, item := range qualityObjects(studioHeroData(data)) {
+		if boolFieldAny(item.Obj, "inferred", "generated", "estimated") {
+			return true
+		}
+	}
+	return false
+}
+
+func boolFieldAny(obj map[string]any, names ...string) bool {
+	for _, name := range names {
+		if value, ok := obj[name].(bool); ok && value {
+			return true
+		}
+	}
+	return false
+}
+
+func studioNavigationObjects(data map[string]any) []map[string]any {
+	if items := objectArray(data, "navigation"); len(items) > 0 {
+		return items
+	}
+	if items := objectArray(data, "nav"); len(items) > 0 {
+		return items
+	}
+	for _, name := range []string{"navigation", "nav"} {
+		if obj, ok := data[name].(map[string]any); ok {
+			if items := objectArrayFromValue(obj["items"]); len(items) > 0 {
+				return items
+			}
+		}
+	}
+	return nil
+}
+
+func studioAnnotationObjects(data map[string]any) []map[string]any {
+	var out []map[string]any
+	out = append(out, objectArray(data, "annotations")...)
+	hero, _ := data["hero"].(map[string]any)
+	out = append(out, objectArray(hero, "annotations")...)
+	visual, _ := data["visual"].(map[string]any)
+	out = append(out, objectArray(visual, "annotations")...)
+	return out
+}
+
+func studioHasDetailPanel(data map[string]any, panels []map[string]any) bool {
+	if _, ok := data["inspector"].(map[string]any); ok {
+		return true
+	}
+	return studioHasPanelType(panels, "detail", "details", "inspector")
+}
+
+func studioHasBottomPanels(panels []map[string]any) bool {
+	for _, panel := range panels {
+		slot := strings.ToLower(firstString(panel, "slot", "placement"))
+		typ := strings.ToLower(firstString(panel, "type", "kind"))
+		if slot == "bottom" || (typ != "" && typ != "detail" && typ != "inspector") {
+			return true
+		}
+	}
+	return false
+}
+
+func studioHasStory(data map[string]any) bool {
+	if len(objectArray(data, "story")) > 0 {
+		return true
+	}
+	if story, ok := data["story"].(map[string]any); ok {
+		if strings.TrimSpace(firstString(story, "title", "summary", "goal")) != "" || len(objectArrayFromValue(story["steps"])) > 0 || len(objectArrayFromValue(story["items"])) > 0 {
+			return true
+		}
+	}
+	visual, _ := data["visual"].(map[string]any)
+	return len(objectArrayFromValue(visual["narrative_steps"])) > 0 || len(objectArrayFromValue(visual["narrativeSteps"])) > 0
+}
+
+func studioKnownTargetIDs(heroData map[string]any) map[string]bool {
+	ids := map[string]bool{}
+	for _, obj := range append(studioHeroObjects(heroData), studioHeroRelationships(heroData)...) {
+		for _, id := range visualIDsForObject(obj) {
+			ids[id] = true
+		}
+		if id := firstString(obj, "id"); id != "" {
+			ids[id] = true
+		}
+	}
+	return ids
+}
+
+func studioTargetRefs(data map[string]any, navItems, panels, annotations, controls []map[string]any) []studioRef {
+	var refs []studioRef
+	addRefs := func(path string, obj map[string]any) {
+		for _, value := range studioRefsFromObject(obj) {
+			refs = append(refs, studioRef{Path: path, Value: value})
+		}
+	}
+	for i, item := range navItems {
+		addRefs("$.navigation.items["+intString(i)+"]", item)
+	}
+	for i, panel := range panels {
+		addRefs("$.panels["+intString(i)+"]", panel)
+	}
+	for i, annotation := range annotations {
+		addRefs("$.annotations["+intString(i)+"]", annotation)
+	}
+	for i, control := range controls {
+		addRefs("$.controls["+intString(i)+"]", control)
+	}
+	visual, _ := data["visual"].(map[string]any)
+	for _, name := range []string{"initial_focus_ids", "initialFocusIds", "hidden_detail_ids", "hiddenDetailIds"} {
+		for _, value := range stringListFromAny(visual[name]) {
+			refs = append(refs, studioRef{Path: "$.visual." + name, Value: value})
+		}
+	}
+	return refs
+}
+
+func studioRefsFromObject(obj map[string]any) []string {
+	var refs []string
+	for _, name := range []string{"target_id", "targetId", "target_ref", "targetRef", "node_id", "nodeId"} {
+		if value := firstString(obj, name); value != "" {
+			refs = append(refs, value)
+		}
+	}
+	for _, name := range []string{"targets", "target_ids", "targetIds", "target_refs", "targetRefs", "focus_ids", "focusIds"} {
+		refs = append(refs, stringListFromAny(obj[name])...)
+	}
+	return refs
+}
+
+func stringListFromAny(value any) []string {
+	raw, ok := value.([]any)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, item := range raw {
+		if s, ok := item.(string); ok && strings.TrimSpace(s) != "" {
+			out = append(out, strings.TrimSpace(s))
+		}
+	}
+	return out
+}
+
+func studioPanelText(panel map[string]any) string {
+	parts := []string{firstString(panel, "body", "text", "summary", "description")}
+	for _, item := range objectArrayFromValue(panel["items"]) {
+		parts = append(parts, firstString(item, "label", "title", "summary", "text", "body"))
+	}
+	return strings.TrimSpace(strings.Join(parts, "\n"))
+}
+
+type studioEvidenceItem struct {
+	Path string
+	Obj  map[string]any
+}
+
+func studioEvidenceItems(data map[string]any, panels []map[string]any) []studioEvidenceItem {
+	var out []studioEvidenceItem
+	for i, item := range objectArray(data, "evidence") {
+		out = append(out, studioEvidenceItem{Path: "$.evidence[" + intString(i) + "]", Obj: item})
+	}
+	for i, panel := range panels {
+		typ := strings.ToLower(firstString(panel, "type", "kind"))
+		if typ != "evidence" {
+			continue
+		}
+		for j, item := range objectArrayFromValue(panel["items"]) {
+			out = append(out, studioEvidenceItem{Path: "$.panels[" + intString(i) + "].items[" + intString(j) + "]", Obj: item})
+		}
+	}
+	return out
+}
+
+func studioEvidenceHasSource(obj map[string]any) bool {
+	return firstString(obj, "source", "source_id", "sourceId", "citation", "reference", "provenance") != ""
+}
+
+func studioCompareRequested(data map[string]any) bool {
+	text := studioSearchableText(data)
+	return strings.Contains(text, "compare") || strings.Contains(text, "comparison") || strings.Contains(text, "delta") || strings.Contains(text, "before/after")
+}
+
+func studioRiskRequested(data map[string]any) bool {
+	text := studioSearchableText(data)
+	return strings.Contains(text, "risk") || strings.Contains(text, "mitigation") || strings.Contains(text, "failure")
+}
+
+func studioSearchableText(data map[string]any) string {
+	b, _ := json.Marshal(data)
+	return strings.ToLower(string(b))
+}
+
+func studioHasPanelType(panels []map[string]any, types ...string) bool {
+	wanted := map[string]bool{}
+	for _, typ := range types {
+		wanted[strings.ToLower(typ)] = true
+	}
+	for _, panel := range panels {
+		if wanted[strings.ToLower(firstString(panel, "type", "kind", "slot"))] {
+			return true
+		}
+	}
+	return false
+}
+
+func studioHasMarkFields(obj map[string]any) bool {
+	if firstString(obj, "kind", "type", "provider", "service", "platform") != "" {
+		return true
+	}
+	presentation, _ := obj["presentation"].(map[string]any)
+	return firstString(presentation, "shape", "mesh", "icon") != ""
+}
+
+func studioNodePath(obj map[string]any, fallback int) string {
+	field := firstString(obj, "_studio_source")
+	if field == "" {
+		field = "nodes"
+	}
+	return "$.hero.data." + field + "[" + intString(fallback) + "]"
+}
+
+func studioEdgePath(obj map[string]any, fallback int) string {
+	field := firstString(obj, "_studio_source")
+	if field == "" {
+		field = "edges"
+	}
+	return "$.hero.data." + field + "[" + intString(fallback) + "]"
+}
+
+func studioEdgeNeedsArrow(edge map[string]any) bool {
+	kind := strings.ToLower(firstString(edge, "kind", "relation", "type"))
+	directed := map[string]bool{
+		"call": true, "calls": true, "sync": true, "async": true,
+		"write": true, "writes": true, "read": true, "reads": true,
+		"emit": true, "emits": true, "send": true, "sends": true,
+		"return": true, "returns": true, "deploy": true, "deploys": true,
+		"validate": true, "validates": true, "block": true, "blocks": true,
+		"depends_on": true, "message": true, "flow": true, "transition": true,
+	}
+	return directed[kind]
+}
+
+func studioEdgeHasArrow(edge map[string]any) bool {
+	if value, ok := edge["directed"].(bool); ok && value {
+		return true
+	}
+	presentation, _ := edge["presentation"].(map[string]any)
+	arrow := strings.ToLower(firstString(presentation, "arrow"))
+	return arrow != "" && arrow != "none"
 }
 
 func analyzeUMLSequence(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
@@ -1632,10 +2132,15 @@ func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool
 		"uml_state_machine_v1":        {"states", "transitions"},
 		"uml_activity_v1":             {"actions", "flows"},
 		"uml_component_deployment_v1": {"components", "deployments", "links"},
+		"studio_v1":                   {"nodes", "items", "events", "participants", "edges", "messages", "flows", "links"},
 	}
 	ids := map[string]bool{}
+	source := data
+	if strings.ToLower(kind) == "studio_v1" {
+		source = studioHeroData(data)
+	}
 	for _, field := range fieldsByKind[strings.ToLower(kind)] {
-		for _, item := range objectArray(data, field) {
+		for _, item := range objectArray(source, field) {
 			for _, id := range visualIDsForObject(item) {
 				ids[id] = true
 			}
@@ -1648,8 +2153,8 @@ func visualIDsForObject(obj map[string]any) []string {
 	if id := stringField(obj, "id"); id != "" {
 		return []string{id}
 	}
-	from := firstString(obj, "from", "claim_id")
-	to := firstString(obj, "to", "source_id")
+	from := firstString(obj, "from", "source", "source_id", "sourceId", "claim_id", "claimId")
+	to := firstString(obj, "to", "target", "target_id", "targetId", "source_id", "sourceId")
 	if from != "" && to != "" {
 		return []string{from + "->" + to}
 	}

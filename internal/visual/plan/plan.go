@@ -55,6 +55,7 @@ type VisualPlan struct {
 	Edges            EdgeEncodingPlan `json:"edges"`
 	Colors           ColorPlan        `json:"colors"`
 	Assets           AssetPlan        `json:"assets"`
+	Studio           StudioPlan       `json:"studio"`
 	Disclosure       DisclosurePlan   `json:"disclosure"`
 	Selection        SelectionPlan    `json:"selection"`
 	Render           RenderPlan       `json:"render"`
@@ -155,6 +156,15 @@ type AssetPlan struct {
 	IconsUsed    []string           `json:"icons_used"`
 	MissingIcons []string           `json:"missing_icons"`
 	Attributions []mark.Attribution `json:"attributions"`
+}
+
+type StudioPlan struct {
+	Layout            string          `json:"layout,omitempty"`
+	Slots             map[string]bool `json:"slots"`
+	PanelCounts       map[string]int  `json:"panel_counts"`
+	TargetRefCoverage float64         `json:"target_ref_coverage"`
+	InferredContent   bool            `json:"inferred_content"`
+	AssumptionsCount  int             `json:"assumptions_count"`
 }
 
 type DisclosurePlan struct {
@@ -327,6 +337,7 @@ func Build(templateDir string, tpl manifest.TemplateManifest, data map[string]an
 			MissingIcons: markStats.MissingIcons,
 			Attributions: markStats.Attributions,
 		},
+		Studio: buildStudioPlan(tpl.InputSchemaKind, data, ir),
 		Disclosure: DisclosurePlan{
 			Strategy:       disclosureStrategy(tpl, summary),
 			HiddenIDs:      hiddenIDs,
@@ -347,6 +358,230 @@ func Build(templateDir string, tpl manifest.TemplateManifest, data map[string]an
 	return plan
 }
 
+func buildStudioPlan(kind string, data map[string]any, ir VisualIR) StudioPlan {
+	out := StudioPlan{
+		Slots:             map[string]bool{},
+		PanelCounts:       map[string]int{},
+		TargetRefCoverage: 1,
+	}
+	if strings.ToLower(kind) != "studio_v1" {
+		return out
+	}
+	hero := object(data, "hero")
+	heroData := studioHeroData(data)
+	panels := objects(data, "panels")
+	controls := objects(data, "controls")
+	annotations := studioAnnotations(data)
+	navItems := studioNavigation(data)
+	assumptions, _ := data["assumptions"].([]any)
+	layout := firstString(data, "layout")
+	if layout == "" {
+		layout = firstString(object(data, "layout"), "mode", "preset", "name")
+	}
+	if layout == "" {
+		layout = firstString(hero, "layout")
+	}
+	if layout == "" {
+		layout = "studio_shell"
+	}
+	out.Layout = layout
+	out.AssumptionsCount = len(assumptions)
+	out.InferredContent = studioInferredContent(data)
+	out.Slots["hero"] = len(hero) > 0
+	out.Slots["hero_stage"] = studioHasHeroData(heroData)
+	out.Slots["navigation"] = len(navItems) > 0
+	out.Slots["inspector"] = studioHasDetailPanel(data, panels)
+	out.Slots["bottom_panels"] = studioHasBottomPanels(panels)
+	out.Slots["controls"] = len(controls) > 0
+	out.Slots["legend"] = studioLegendPresent(data)
+	out.Slots["assumptions"] = out.AssumptionsCount > 0
+	out.Slots["story"] = studioHasStory(data)
+	out.Slots["annotations"] = len(annotations) > 0
+	out.PanelCounts["total"] = len(panels)
+	for _, panel := range panels {
+		typ := firstString(panel, "type", "kind", "slot")
+		if typ == "" {
+			typ = "panel"
+		}
+		out.PanelCounts[typ]++
+		if strings.TrimSpace(studioPanelText(panel)) == "" && len(studioObjectsFromAny(panel["items"])) == 0 {
+			out.PanelCounts["empty"]++
+		}
+	}
+	known := map[string]bool{}
+	for _, obj := range ir.Objects {
+		if obj.ID != "" {
+			known[obj.ID] = true
+		}
+	}
+	for _, rel := range ir.Relationships {
+		if rel.ID != "" {
+			known[rel.ID] = true
+		}
+		if rel.From != "" && rel.To != "" {
+			known[rel.From+"->"+rel.To] = true
+		}
+	}
+	refs := studioTargetRefs(data, navItems, panels, annotations, controls)
+	if len(refs) > 0 {
+		resolved := 0
+		for _, ref := range refs {
+			if known[ref] {
+				resolved++
+			}
+		}
+		out.TargetRefCoverage = round2(float64(resolved) / float64(len(refs)))
+	}
+	return out
+}
+
+func studioHeroData(data map[string]any) map[string]any {
+	hero := object(data, "hero")
+	heroData := object(hero, "data")
+	if len(heroData) == 0 {
+		return map[string]any{}
+	}
+	return heroData
+}
+
+func studioHasHeroData(heroData map[string]any) bool {
+	for _, field := range []string{"nodes", "items", "events", "participants", "edges", "messages", "flows", "links"} {
+		if len(objects(heroData, field)) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func studioRelationshipEndpoints(rel map[string]any) (string, string) {
+	from := firstString(rel, "from", "source", "source_id", "sourceId", "claim_id", "claimId")
+	to := firstString(rel, "to", "target", "target_id", "targetId", "source_id", "sourceId")
+	return from, to
+}
+
+func studioNavigation(data map[string]any) []map[string]any {
+	if items := objects(data, "navigation"); len(items) > 0 {
+		return items
+	}
+	if items := objects(data, "nav"); len(items) > 0 {
+		return items
+	}
+	for _, name := range []string{"navigation", "nav"} {
+		obj := object(data, name)
+		if items := studioObjectsFromAny(obj["items"]); len(items) > 0 {
+			return items
+		}
+	}
+	return nil
+}
+
+func studioAnnotations(data map[string]any) []map[string]any {
+	var out []map[string]any
+	out = append(out, objects(data, "annotations")...)
+	out = append(out, objects(object(data, "hero"), "annotations")...)
+	out = append(out, objects(object(data, "visual"), "annotations")...)
+	return out
+}
+
+func studioHasDetailPanel(data map[string]any, panels []map[string]any) bool {
+	if len(object(data, "inspector")) > 0 {
+		return true
+	}
+	for _, panel := range panels {
+		typ := strings.ToLower(firstString(panel, "type", "kind", "slot"))
+		if typ == "detail" || typ == "details" || typ == "inspector" {
+			return true
+		}
+	}
+	return false
+}
+
+func studioHasBottomPanels(panels []map[string]any) bool {
+	for _, panel := range panels {
+		typ := strings.ToLower(firstString(panel, "type", "kind"))
+		slot := strings.ToLower(firstString(panel, "slot", "placement"))
+		if slot == "bottom" || (typ != "" && typ != "detail" && typ != "details" && typ != "inspector") {
+			return true
+		}
+	}
+	return false
+}
+
+func studioLegendPresent(data map[string]any) bool {
+	if len(object(data, "legend")) > 0 {
+		return true
+	}
+	view := object(data, "view")
+	hints := object(data, "renderHints")
+	return firstString(view, "colorBy", "color_by") != "" || firstString(hints, "colorBy", "color_by") != "" || boolValue(hints["showLegend"]) || boolValue(hints["show_legend"])
+}
+
+func studioHasStory(data map[string]any) bool {
+	if len(objects(data, "story")) > 0 {
+		return true
+	}
+	story := object(data, "story")
+	if firstString(story, "title", "summary", "goal") != "" || len(studioObjectsFromAny(story["steps"])) > 0 || len(studioObjectsFromAny(story["items"])) > 0 {
+		return true
+	}
+	visual := object(data, "visual")
+	return len(studioObjectsFromAny(visual["narrative_steps"])) > 0 || len(studioObjectsFromAny(visual["narrativeSteps"])) > 0
+}
+
+func studioInferredContent(data map[string]any) bool {
+	for _, name := range []string{"inferred", "inferred_content", "inferredContent"} {
+		if boolValue(data[name]) {
+			return true
+		}
+	}
+	return false
+}
+
+func studioPanelText(panel map[string]any) string {
+	parts := []string{firstString(panel, "body", "text", "summary", "description")}
+	for _, item := range studioObjectsFromAny(panel["items"]) {
+		parts = append(parts, firstString(item, "label", "title", "summary", "text", "body"))
+	}
+	return strings.TrimSpace(strings.Join(parts, "\n"))
+}
+
+func studioTargetRefs(data map[string]any, navItems, panels, annotations, controls []map[string]any) []string {
+	var refs []string
+	add := func(obj map[string]any) {
+		for _, name := range []string{"target_id", "targetId", "target_ref", "targetRef", "node_id", "nodeId"} {
+			if value := firstString(obj, name); value != "" {
+				refs = append(refs, value)
+			}
+		}
+		for _, name := range []string{"targets", "target_ids", "targetIds", "target_refs", "targetRefs", "focus_ids", "focusIds"} {
+			refs = append(refs, stringArray(obj[name])...)
+		}
+	}
+	for _, items := range [][]map[string]any{navItems, panels, annotations, controls} {
+		for _, item := range items {
+			add(item)
+		}
+	}
+	visual := object(data, "visual")
+	refs = append(refs, stringArray(firstPresent(visual["initial_focus_ids"], visual["initialFocusIds"]))...)
+	refs = append(refs, stringArray(firstPresent(visual["hidden_detail_ids"], visual["hiddenDetailIds"]))...)
+	return refs
+}
+
+func studioObjectsFromAny(value any) []map[string]any {
+	raw, ok := value.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]any, 0, len(raw))
+	for _, item := range raw {
+		if obj, ok := item.(map[string]any); ok {
+			out = append(out, obj)
+		}
+	}
+	return out
+}
+
 func legendItemsFromMark(items []mark.LegendItem) []LegendItem {
 	out := make([]LegendItem, 0, len(items))
 	for _, item := range items {
@@ -358,6 +593,18 @@ func legendItemsFromMark(items []mark.LegendItem) []LegendItem {
 func buildIR(kind string, data map[string]any) VisualIR {
 	ir := VisualIR{Schema: "efp.visual.ir.v1", Kind: kind, Counts: map[string]int{}}
 	switch strings.ToLower(kind) {
+	case "studio_v1":
+		heroData := studioHeroData(data)
+		addObjects(&ir, heroData, "nodes", "state")
+		addObjects(&ir, heroData, "items", "artifact")
+		addObjects(&ir, heroData, "events", "stage")
+		addObjects(&ir, heroData, "participants", "actor")
+		for _, field := range []string{"edges", "messages", "flows", "links"} {
+			for i, rel := range objects(heroData, field) {
+				from, to := studioRelationshipEndpoints(rel)
+				ir.Relationships = append(ir.Relationships, relationshipFrom(rel, field, i, from, to))
+			}
+		}
 	case "uml_sequence_v1":
 		addObjects(&ir, data, "participants", "participant")
 		addObjects(&ir, data, "phases", "phase")
@@ -881,6 +1128,12 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+func round2(v float64) float64 {
+	if v < 0 {
+		return float64(int(v*100-0.5)) / 100
+	}
+	return float64(int(v*100+0.5)) / 100
 }
 func set(items []string) map[string]bool {
 	out := map[string]bool{}

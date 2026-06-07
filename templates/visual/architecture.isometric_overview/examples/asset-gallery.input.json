@@ -15,7 +15,7 @@
   "camera": {
     "mode": "orthographic_isometric",
     "constrainedOrbit": true,
-    "zoom": 1.08
+    "zoom": 1
   },
   "zones": [
     {
@@ -83,7 +83,7 @@
       "zone": "edge-runtime",
       "position": {
         "x": 1.3,
-        "y": 1.2
+        "y": 2
       },
       "importance": 0.96,
       "summary": "Reverse proxy and static route entry.",
@@ -105,7 +105,7 @@
       "zone": "edge-runtime",
       "position": {
         "x": 3.6,
-        "y": 1.2
+        "y": 2
       },
       "importance": 0.92,
       "summary": "Spring Boot application service.",
@@ -127,7 +127,7 @@
       "zone": "edge-runtime",
       "position": {
         "x": 5.9,
-        "y": 1.2
+        "y": 2
       },
       "importance": 0.86,
       "summary": "Container runtime boundary.",
@@ -149,7 +149,7 @@
       "zone": "edge-runtime",
       "position": {
         "x": 7.5,
-        "y": 3.3
+        "y": 3.8
       },
       "importance": 0.94,
       "summary": "Cluster orchestration surface.",
@@ -171,7 +171,7 @@
       "zone": "data-layer",
       "position": {
         "x": 11.1,
-        "y": 1.2
+        "y": 2
       },
       "importance": 0.96,
       "summary": "Relational system of record.",
@@ -193,14 +193,19 @@
       "zone": "data-layer",
       "position": {
         "x": 13.4,
-        "y": 1.2
+        "y": 2
       },
       "importance": 0.9,
       "summary": "Analytical relational database.",
       "presentation": {
         "icon": "postgresql",
         "model": "postgresql.logo3d",
-        "color": "#4169e1"
+        "color": "#4169e1",
+        "label_offset": {
+          "x": 0.7,
+          "y": 0.22,
+          "z": -0.55
+        }
       },
       "size": {
         "w": 1.05,
@@ -215,7 +220,7 @@
       "zone": "data-layer",
       "position": {
         "x": 15.6,
-        "y": 1.2
+        "y": 2
       },
       "importance": 0.86,
       "summary": "Document persistence tier.",
@@ -237,14 +242,19 @@
       "zone": "data-layer",
       "position": {
         "x": 12.3,
-        "y": 3.5
+        "y": 4
       },
       "importance": 0.94,
       "summary": "Low-latency cache and coordination store.",
       "presentation": {
         "icon": "redis",
         "model": "redis.logo3d",
-        "color": "#dc382d"
+        "color": "#dc382d",
+        "label_offset": {
+          "x": -0.7,
+          "y": 0.2,
+          "z": 0.28
+        }
       },
       "size": {
         "w": 1.05,
@@ -259,14 +269,19 @@
       "zone": "data-layer",
       "position": {
         "x": 15,
-        "y": 3.5
+        "y": 4
       },
       "importance": 0.88,
       "summary": "Search and log index.",
       "presentation": {
         "icon": "elasticsearch",
         "model": "elasticsearch.logo3d",
-        "color": "#005571"
+        "color": "#005571",
+        "label_offset": {
+          "x": -0.45,
+          "y": 0.26,
+          "z": 0.55
+        }
       },
       "size": {
         "w": 1.05,
@@ -281,7 +296,7 @@
       "zone": "event-layer",
       "position": {
         "x": 1.4,
-        "y": 7.1
+        "y": 7.8
       },
       "importance": 0.92,
       "summary": "Event streaming backbone.",
@@ -303,14 +318,19 @@
       "zone": "event-layer",
       "position": {
         "x": 3.9,
-        "y": 7.1
+        "y": 7.8
       },
       "importance": 0.9,
       "summary": "Work queue and retry broker.",
       "presentation": {
         "icon": "rabbitmq",
         "model": "rabbitmq.logo3d",
-        "color": "#ff6600"
+        "color": "#ff6600",
+        "label_offset": {
+          "x": 0.62,
+          "y": 0.18,
+          "z": -0.28
+        }
       },
       "size": {
         "w": 1.05,
@@ -325,14 +345,19 @@
       "zone": "operations",
       "position": {
         "x": 11.1,
-        "y": 7.1
+        "y": 7.8
       },
       "importance": 0.9,
       "summary": "CI automation controller.",
       "presentation": {
         "icon": "jenkins",
         "model": "jenkins.logo3d",
-        "color": "#d33833"
+        "color": "#d33833",
+        "label_offset": {
+          "x": -0.85,
+          "y": 0.24,
+          "z": -0.45
+        }
       },
       "size": {
         "w": 1.05,
@@ -347,14 +372,19 @@
       "zone": "operations",
       "position": {
         "x": 13.5,
-        "y": 7.1
+        "y": 7.8
       },
       "importance": 0.86,
       "summary": "Metric scraping and alert source.",
       "presentation": {
         "icon": "prometheus",
         "model": "prometheus.logo3d",
-        "color": "#e6522c"
+        "color": "#e6522c",
+        "label_offset": {
+          "x": -0.4,
+          "y": 0.2,
+          "z": 0.55
+        }
       },
       "size": {
         "w": 1.05,
@@ -369,14 +399,19 @@
       "zone": "operations",
       "position": {
         "x": 15.8,
-        "y": 7.1
+        "y": 7.8
       },
       "importance": 0.86,
       "summary": "Dashboard and observability UI.",
       "presentation": {
         "icon": "grafana",
         "model": "grafana.logo3d",
-        "color": "#f46800"
+        "color": "#f46800",
+        "label_offset": {
+          "x": 0.55,
+          "y": 0.2,
+          "z": 0.38
+        }
       },
       "size": {
         "w": 1.05,

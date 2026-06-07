@@ -48,6 +48,7 @@ const consoleErrors = [];
 const networkErrors = [];
 const remoteRequests = [];
 const requests = [];
+const requestByID = new Map();
 
 function remaining() {
   return Math.max(1, deadline - Date.now());
@@ -111,13 +112,16 @@ class CDP {
       }
       if (msg.method === "Network.requestWillBeSent") {
         const requestURL = String(msg.params?.request?.url || "");
+        if (msg.params?.requestId) requestByID.set(msg.params.requestId, requestURL);
         requests.push(requestURL);
         if (requestURL && !requestURL.startsWith(new URL(url).origin)) {
           remoteRequests.push(requestURL);
         }
       }
       if (msg.method === "Network.loadingFailed") {
-        networkErrors.push(String(msg.params?.errorText || "Network loading failed"));
+        const requestURL = requestByID.get(msg.params?.requestId) || "";
+        if (requestURL.endsWith("/favicon.ico")) return;
+        networkErrors.push(`${requestURL || msg.params?.requestId || "request"}: ${String(msg.params?.errorText || "Network loading failed")}`);
       }
     });
   }
@@ -151,6 +155,46 @@ class CDP {
 const expression = `(() => {
   const q = (selector) => document.querySelector(selector);
   const qa = (selector) => Array.from(document.querySelectorAll(selector));
+  const rect = (node) => {
+    if (!node) return null;
+    const r = node.getBoundingClientRect();
+    return { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) };
+  };
+  const isVisible = (node) => {
+    if (!node) return false;
+    const style = getComputedStyle(node);
+    const r = node.getBoundingClientRect();
+    return style.visibility !== "hidden" && style.display !== "none" && Number(style.opacity || 1) > 0.01 && r.width > 0 && r.height > 0;
+  };
+  const labelIconNodes = qa(".visual-isometric-label-icon");
+  const entityLabelNodes = qa(".visual-isometric-entity-label");
+  const imageLoaded = (node) => !(node instanceof HTMLImageElement) || (node.complete && node.naturalWidth > 0 && node.naturalHeight > 0);
+  const imageBroken = (node) => node instanceof HTMLImageElement && (!node.complete || node.naturalWidth === 0 || node.naturalHeight === 0);
+  const approximateLabelRect = (node) => {
+    const r = node.getBoundingClientRect();
+    const w = Math.max(28, node.offsetWidth || r.width || 80);
+    const h = Math.max(18, node.offsetHeight || r.height || 28);
+    const match = String(node.style.transform || "").match(/translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
+    if (match) {
+      const x = Number(match[1]);
+      const y = Number(match[2]);
+      return { left: x - w / 2, right: x + w / 2, top: y - h, bottom: y };
+    }
+    return r;
+  };
+  const visibleLabels = entityLabelNodes
+    .filter(isVisible)
+    .map(approximateLabelRect);
+  let overlapCount = 0;
+  for (let i = 0; i < visibleLabels.length; i += 1) {
+    for (let j = i + 1; j < visibleLabels.length; j += 1) {
+      const a = visibleLabels[i];
+      const b = visibleLabels[j];
+      if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) overlapCount += 1;
+    }
+  }
+  const canvas = q("canvas");
+  const layer = q(".visual-isometric-label-layer");
   const summary = {
     title: document.title || "",
     template: q("[data-visual-template]")?.getAttribute("data-visual-template") || "",
@@ -162,12 +206,20 @@ const expression = `(() => {
     linkLabels: qa("[data-link-id]").length,
     zoneLabels: qa("[data-zone-id]").length,
     labelIcons: qa('[data-has-label-icon="true"]').length,
+    labelIconsLoaded: labelIconNodes.filter(imageLoaded).length,
+    brokenLabelIcons: labelIconNodes.filter(imageBroken).length,
+    visibleEntityLabels: entityLabelNodes.filter(isVisible).length,
+    visibleLabelIcons: labelIconNodes.filter((node) => isVisible(node.closest(".visual-isometric-entity-label") || node) && imageLoaded(node)).length,
     modelBadges: qa('[data-has-model-badge="true"]').length,
     svgBillboards: qa('[data-has-svg-billboard="true"]').length,
     fallbackBadges: qa('[data-icon-id=""], [data-model-id=""]').length,
     controls: qa(".visual-isometric-control").length,
     controlBar: !!q(".visual-isometric-control-bar"),
     canvas: qa("canvas").length,
+    approximateLabelOverlapCount: overlapCount,
+    labelLayerBounds: rect(layer),
+    canvasBounds: rect(canvas),
+    screenshotSize: { width: Math.round(window.innerWidth || 0), height: Math.round(window.innerHeight || 0) },
     ready: !!q("[data-visual-template='architecture.isometric_overview'][data-visual-renderer='offline.architecture.isometric.v1']") &&
       !!q(".visual-isometric-ready") &&
       !!q(".visual-isometric-label-layer") &&
@@ -222,6 +274,8 @@ try {
     if (summary.ready) break;
   }
   await sleep(350);
+  const finalResult = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }).catch(() => ({}));
+  summary = finalResult.result?.value || summary;
   const shot = await cdp.send("Page.captureScreenshot", { format: "png", fromSurface: true, captureBeyondViewport: false });
   await writeFile(screenshot, Buffer.from(shot.data || "", "base64"));
   cdp.close();

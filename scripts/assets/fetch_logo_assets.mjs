@@ -74,6 +74,10 @@ function normalizeSVG(svg, logo) {
   out = out.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, "");
   out = out.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, "");
   out = out.replace(/https?:\/\//gi, "");
+  out = out.replace(/\bxmlns=["']www\.w3\.org\/2000\/svg["']/i, `xmlns="http:&#47;&#47;www.w3.org/2000/svg"`);
+  if (!/\bxmlns=/i.test(out)) {
+    out = out.replace(/<svg\b/i, `<svg xmlns="http:&#47;&#47;www.w3.org/2000/svg"`);
+  }
   out = out.replace(/<svg\b/i, `<svg data-efp-logo-id="${escapeAttr(logo.id)}"`);
   if (!/fill=/i.test(out) && logo.color) {
     out = out.replace(/<svg\b/i, `<svg fill="${escapeAttr(logo.color)}"`);

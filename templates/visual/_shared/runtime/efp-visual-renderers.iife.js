@@ -672,6 +672,8 @@
     var icon = el("img", className || "visual-inline-icon");
     icon.src = path;
     icon.alt = "";
+    icon.loading = "eager";
+    icon.decoding = "async";
     icon.setAttribute("aria-hidden", "true");
     return icon;
   }
@@ -708,7 +710,7 @@
     });
     var group = new THREE.Group();
     var factor = badgeScale(settings);
-    var iconSize = Math.max(0.26, Math.min(0.46, (size ? Math.min(size.w, size.h) : 0.7) * 0.34 * factor));
+    var iconSize = Math.max(0.18, Math.min(0.3, (size ? Math.min(size.w, size.h) : 0.7) * 0.24 * factor));
     var backing = new THREE.Mesh(new THREE.PlaneGeometry(iconSize * 1.22, iconSize * 1.22), new THREE.MeshBasicMaterial({
       color: 0xffffff,
       transparent: true,
@@ -750,9 +752,9 @@
       emissive: color,
       emissiveIntensity: 0.04
     });
-    var plateW = size.w * 0.56 * factor;
-    var plateH = Math.max(size.h * 0.1, 0.07) * factor;
-    var plateD = size.d * 0.18 * factor;
+    var plateW = Math.min(size.w * 0.35, Math.max(size.w * 0.2, size.w * 0.28 * factor));
+    var plateH = Math.min(size.h * 0.14, Math.max(size.h * 0.075, size.h * 0.09 * factor));
+    var plateD = Math.min(size.d * 0.13, Math.max(size.d * 0.07, size.d * 0.1 * factor));
     var plate = new THREE.Mesh(new THREE.BoxGeometry(plateW, plateH, plateD), baseMaterial);
     var pos = badgePosition(settings, size, "model");
     plate.position.set(0, 0, 0);
@@ -1707,12 +1709,12 @@
     var material = THREE.TubeGeometry ? new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
-      opacity: 0,
+      opacity: edgeSpec.lightBackground ? edgeSpec.opacity : 0,
       blending: blendMode
     }) : new THREE.LineBasicMaterial({
       color: color,
       transparent: true,
-      opacity: 0,
+      opacity: edgeSpec.lightBackground ? edgeSpec.opacity : 0,
       blending: blendMode
     });
     material.depthTest = false;
@@ -1741,12 +1743,12 @@
       if (side.length() < 0.001) {
         side.set(1, 0, 0);
       }
-      var back = tip.clone().sub(direction.clone().multiplyScalar(0.24));
+      var back = tip.clone().sub(direction.clone().multiplyScalar(0.34));
       var yLift = new THREE.Vector3(0, 0.018, 0);
       var geometryFlat = new THREE.BufferGeometry().setFromPoints([
         tip.clone().add(yLift),
-        back.clone().add(side.clone().multiplyScalar(0.105)).add(yLift),
-        back.clone().add(side.clone().multiplyScalar(-0.105)).add(yLift)
+        back.clone().add(side.clone().multiplyScalar(0.155)).add(yLift),
+        back.clone().add(side.clone().multiplyScalar(-0.155)).add(yLift)
       ]);
       if (geometryFlat.computeVertexNormals) {
         geometryFlat.computeVertexNormals();
@@ -1754,7 +1756,7 @@
       var materialFlat = new THREE.MeshBasicMaterial({
         color: colorValue(edgeSpec.color, 0x111827),
         transparent: true,
-        opacity: 0,
+        opacity: Math.min(1, edgeSpec.opacity + 0.1),
         blending: THREE.NormalBlending,
         side: THREE.DoubleSide || 2
       });
@@ -4088,6 +4090,9 @@
     if (kind === "cdn") {
       return new THREE.SphereGeometry(Math.max(size.w, size.d) * 0.18, 28, 18);
     }
+    if (kind === "redis" || kind === "cache") {
+      return new THREE.BoxGeometry(size.w * 0.36, size.h * 0.2, size.d * 0.34);
+    }
     if (kind === "database" || kind === "mysql" || kind === "postgres" || kind === "mongodb" || kind === "redis" || kind === "cache" || mesh === "cylinder" || mesh === "database_cylinder" || mesh === "bucket" || mesh === "stacked_cylinder") {
       return isometricCylinderGeometry(THREE, size.w * 0.18, size.h * 0.42, 30);
     }
@@ -4100,8 +4105,11 @@
     if (kind === "kubernetes" || kind === "cluster" || mesh === "cluster") {
       return new THREE.BoxGeometry(size.w * 0.42, size.h * 0.5, size.d * 0.36);
     }
-    if (kind === "ingress" || kind === "load_balancer" || mesh === "gateway_card" || mesh === "tower") {
-      return new THREE.BoxGeometry(size.w * 0.36, size.h * 0.62, size.d * 0.26);
+    if (kind === "nginx" || kind === "gateway" || kind === "api_gateway" || kind === "ingress" || kind === "load_balancer" || mesh === "gateway_card" || mesh === "tower") {
+      return new THREE.BoxGeometry(size.w * 0.36, size.h * 0.66, size.d * 0.28);
+    }
+    if (kind === "job" || kind === "jenkins" || kind === "admin") {
+      return new THREE.BoxGeometry(size.w * 0.42, size.h * 0.36, size.d * 0.12);
     }
     if (kind === "mobile") {
       return new THREE.BoxGeometry(size.w * 0.18, size.h * 0.52, size.d * 0.08);
@@ -4167,9 +4175,27 @@
       addIsometricBoxDetail(THREE, group, size.w * 0.09, size.h * 0.28, size.d * 0.028, 0, size.h * 0.04, size.d * 0.1, "#dbeafe", 0.9);
       return;
     }
+    if (kind === "cdn") {
+      if (THREE.TorusGeometry) {
+        var equator = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.2, 0.006, 6, 36), isometricDetailMaterial(THREE, "#dbeafe", 0.9));
+        equator.rotation.x = Math.PI / 2;
+        group.add(equator);
+        var meridian = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.2, 0.006, 6, 36), isometricDetailMaterial(THREE, "#dbeafe", 0.82));
+        meridian.rotation.y = Math.PI / 2;
+        group.add(meridian);
+      }
+      return;
+    }
+    if (kind === "redis" || kind === "cache") {
+      for (var layer = 0; layer < 3; layer += 1) {
+        addIsometricBoxDetail(THREE, group, size.w * 0.42, size.h * 0.075, size.d * 0.34, 0, -size.h * 0.12 + layer * size.h * 0.13, 0, layer % 2 ? "#ef4444" : "#dc2626", 1);
+        addIsometricBoxDetail(THREE, group, size.w * 0.09, size.h * 0.022, size.d * 0.03, -size.w * 0.13, -size.h * 0.105 + layer * size.h * 0.13, size.d * 0.19, "#fee2e2", 0.95);
+      }
+      return;
+    }
     if (kind === "database" || kind === "mysql" || kind === "postgres" || kind === "mongodb" || kind === "redis" || kind === "cache") {
-      addIsometricCylinderDetail(THREE, group, size.w * 0.19, 0.035, 0, size.h * 0.22, 0, "#ffffff", 0.54, 30);
-      addIsometricCylinderDetail(THREE, group, size.w * 0.19, 0.025, 0, size.h * 0.04, 0, "#ffffff", 0.28, 30);
+      addIsometricCylinderDetail(THREE, group, size.w * 0.2, 0.04, 0, size.h * 0.23, 0, "#ffffff", 0.72, 36);
+      addIsometricCylinderDetail(THREE, group, size.w * 0.19, 0.025, 0, size.h * 0.04, 0, "#eff6ff", 0.44, 30);
       addIsometricCylinderDetail(THREE, group, size.w * 0.19, 0.025, 0, -size.h * 0.12, 0, "#111827", 0.16, 30);
       return;
     }
@@ -4185,13 +4211,21 @@
       addIsometricBoxDetail(THREE, group, size.w * 0.12, size.h * 0.025, size.d * 0.04, 0, size.h * 0.2, size.d * 0.16, "#dbeafe", 0.92);
       return;
     }
-    if (kind === "service" || kind === "microservice" || kind === "api" || kind === "api_gateway" || kind === "gateway" || kind === "nginx" || kind === "ingress" || kind === "load_balancer") {
+    if (kind === "api_gateway" || kind === "gateway" || kind === "nginx" || kind === "ingress" || kind === "load_balancer") {
+      addIsometricBoxDetail(THREE, group, size.w * 0.14, size.h * 0.5, size.d * 0.06, -size.w * 0.17, size.h * 0.02, size.d * 0.2, "#0f172a", 0.82);
+      addIsometricBoxDetail(THREE, group, size.w * 0.14, size.h * 0.5, size.d * 0.06, size.w * 0.17, size.h * 0.02, size.d * 0.2, "#0f172a", 0.82);
+      addIsometricBoxDetail(THREE, group, size.w * 0.42, size.h * 0.05, size.d * 0.09, 0, size.h * 0.31, size.d * 0.18, "#d1fae5", 0.9);
+      addIsometricBoxDetail(THREE, group, size.w * 0.12, size.h * 0.025, size.d * 0.035, -size.w * 0.11, size.h * 0.04, size.d * 0.23, "#fbbf24", 1);
+      addIsometricBoxDetail(THREE, group, size.w * 0.12, size.h * 0.025, size.d * 0.035, size.w * 0.11, size.h * 0.04, size.d * 0.23, "#60a5fa", 1);
+      return;
+    }
+    if (kind === "service" || kind === "microservice" || kind === "api") {
+      for (var block = 0; block < 2; block += 1) {
+        addIsometricBoxDetail(THREE, group, size.w * 0.32, size.h * 0.12, size.d * 0.25, 0, -size.h * 0.06 + block * size.h * 0.17, 0, block % 2 ? "#60a5fa" : "#2563eb", 0.95);
+      }
       addIsometricBoxDetail(THREE, group, size.w * 0.28, size.h * 0.04, size.d * 0.22, 0, size.h * 0.19, size.d * 0.17, "#ffffff", 0.45);
       addIsometricBoxDetail(THREE, group, size.w * 0.08, size.h * 0.025, size.d * 0.03, -size.w * 0.1, size.h * 0.07, size.d * 0.18, "#fbbf24", 1);
       addIsometricBoxDetail(THREE, group, size.w * 0.08, size.h * 0.025, size.d * 0.03, size.w * 0.08, size.h * 0.07, size.d * 0.18, "#60a5fa", 1);
-      if (kind === "api_gateway" || kind === "gateway" || kind === "nginx" || kind === "ingress" || kind === "load_balancer") {
-        addIsometricBoxDetail(THREE, group, size.w * 0.18, size.h * 0.18, size.d * 0.035, 0, size.h * 0.02, size.d * 0.2, "#111827", 0.86);
-      }
       return;
     }
     if (kind === "registry" || kind === "nacos" || kind === "event_stream" || kind === "queue" || kind === "kafka" || kind === "rocketmq" || kind === "rabbitmq") {
@@ -4199,6 +4233,27 @@
       addIsometricCylinderDetail(THREE, group, size.w * 0.16, 0.025, 0, -size.h * 0.18, 0, "#bfdbfe", 0.76, 30);
       addIsometricCylinderDetail(THREE, group, size.w * 0.055, 0.06, -size.w * 0.08, size.h * 0.18, size.d * 0.02, "#22d3ee", 1, 14);
       addIsometricCylinderDetail(THREE, group, size.w * 0.055, 0.06, size.w * 0.08, size.h * 0.18, size.d * 0.02, "#22d3ee", 1, 14);
+      return;
+    }
+    if (kind === "kubernetes" || kind === "cluster") {
+      if (THREE.TorusGeometry) {
+        var ring = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.2, 0.018, 8, 32), isometricDetailMaterial(THREE, "#dbeafe", 0.9));
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = size.h * 0.12;
+        group.add(ring);
+      }
+      for (var node = 0; node < 6; node += 1) {
+        var angle = node / 6 * Math.PI * 2;
+        addIsometricCylinderDetail(THREE, group, size.w * 0.025, 0.035, Math.cos(angle) * size.w * 0.16, size.h * 0.13, Math.sin(angle) * size.d * 0.16, "#bfdbfe", 0.92, 10);
+      }
+      return;
+    }
+    if (kind === "job" || kind === "jenkins" || kind === "admin") {
+      addIsometricBoxDetail(THREE, group, size.w * 0.34, size.h * 0.035, size.d * 0.1, 0, size.h * 0.18, size.d * 0.09, "#fee2e2", 0.9);
+      for (var tooth = 0; tooth < 8; tooth += 1) {
+        var theta = tooth / 8 * Math.PI * 2;
+        addIsometricBoxDetail(THREE, group, size.w * 0.035, size.h * 0.06, size.d * 0.025, Math.cos(theta) * size.w * 0.14, size.h * 0.04, size.d * 0.13 + Math.sin(theta) * size.d * 0.035, "#fecaca", 0.9);
+      }
       return;
     }
     if (kind === "log" || kind === "search" || kind === "elasticsearch") {
@@ -4271,19 +4326,28 @@
   }
 
   function createVerticalDashedLeader(THREE, x, z, yStart, yEnd) {
+    return createDashedLeader(THREE, new THREE.Vector3(x, yStart, z), new THREE.Vector3(x, yEnd, z));
+  }
+
+  function createDashedLeader(THREE, fromPoint, toPoint) {
     var leader = new THREE.Group();
-    var from = Math.min(yStart, yEnd);
-    var to = Math.max(yStart, yEnd);
-    var material = new THREE.MeshBasicMaterial({ color: 0x111827, transparent: true, opacity: 0.74 });
-    var radius = 0.008;
-    var dash = 0.09;
-    var gap = 0.07;
-    for (var y = from; y < to; y += dash + gap) {
-      var height = Math.min(dash, to - y);
+    var delta = toPoint.clone().sub(fromPoint);
+    var length = delta.length();
+    if (length < 0.01) {
+      return leader;
+    }
+    var direction = delta.clone().normalize();
+    var material = new THREE.MeshBasicMaterial({ color: 0x64748b, transparent: true, opacity: 0.58 });
+    var radius = 0.006;
+    var dash = 0.085;
+    var gap = 0.075;
+    for (var cursor = 0; cursor < length; cursor += dash + gap) {
+      var height = Math.min(dash, length - cursor);
       if (height <= 0.002) continue;
       var geometry = isometricCylinderGeometry(THREE, radius, height, 8);
       var segment = new THREE.Mesh(geometry, material.clone());
-      segment.position.set(x, y + height / 2, z);
+      segment.position.copy(fromPoint.clone().add(direction.clone().multiplyScalar(cursor + height / 2)));
+      segment.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
       segment.userData.isLeaderLine = true;
       leader.add(segment);
     }
@@ -4299,7 +4363,7 @@
     var plane = new THREE.Mesh(new THREE.PlaneGeometry(bounds.w * scale, bounds.h * scale), new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
-      opacity: 0.18,
+      opacity: 0.16,
       depthWrite: false
     }));
     plane.rotation.x = -Math.PI / 2;
@@ -4314,17 +4378,61 @@
       isometricWorld({ x: bounds.x, y: bounds.y }, scale, center)
     ].map(function (p) { return new THREE.Vector3(p.x, 0.035, p.z); });
     var boundaryStyle = normalizeMarkKey(presentation.boundary || presentation.lineStyle || zone.style || "solid");
-    var boundaryColor = presentation.color || zone.color || "#111827";
-    var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, 0.78, 0.16, 0.09) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.86));
+    var boundaryColor = presentation.boundaryColor || presentation.borderColor || zone.color || "#64748b";
+    var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, 0.94, 0.22, 0.11) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.96));
     boundary.userData = { isZoneBoundary: true, style: boundaryStyle };
     root.add(boundary);
-    return { zone: zone, bounds: bounds, labelPoint: { x: bounds.x + 0.35, y: bounds.y + 0.35 }, plane: plane, boundary: boundary };
+    return { zone: zone, bounds: bounds, labelPoint: { x: bounds.x + bounds.w * 0.5, y: bounds.y + 0.28 }, plane: plane, boundary: boundary };
+  }
+
+  function compactLabelText(text, maxLength) {
+    var value = String(text || "").trim();
+    maxLength = maxLength || 28;
+    return value.length > maxLength ? value.slice(0, Math.max(8, maxLength - 1)) + "…" : value;
+  }
+
+  function labelLimit(className) {
+    className = String(className || "");
+    if (className.indexOf("link") >= 0) return 22;
+    if (className.indexOf("zone") >= 0) return 24;
+    return 28;
   }
 
   function labelHTML(className, text) {
-    var node = el("div", className, text || "");
-    node.setAttribute("data-label", text || "");
+    var fullText = String(text || "");
+    var node = el("div", className, compactLabelText(fullText, labelLimit(className)));
+    node.title = fullText;
+    node.setAttribute("data-label", fullText);
     return node;
+  }
+
+  function isometricEntityLabelOffset(index, size) {
+    var pattern = [
+      { x: -0.22, z: -0.18, y: 0.06 },
+      { x: 0.22, z: -0.2, y: 0.12 },
+      { x: -0.28, z: 0.18, y: 0.18 },
+      { x: 0.28, z: 0.2, y: 0.08 },
+      { x: 0, z: -0.3, y: 0.16 },
+      { x: 0, z: 0.3, y: 0.1 }
+    ][index % 6];
+    return {
+      x: pattern.x * Math.max(0.8, size.w),
+      z: pattern.z * Math.max(0.8, size.d),
+      y: pattern.y
+    };
+  }
+
+  function explicitIsometricLabelOffset(item) {
+    var presentation = item && item.presentation ? item.presentation : {};
+    var raw = presentation.label_offset || presentation.labelOffset;
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+    return {
+      x: numberValue(raw.x, 0),
+      z: numberValue(raw.z, 0),
+      y: numberValue(raw.y !== undefined ? raw.y : raw.height, 0)
+    };
   }
 
   function renderIsometricArchitecture(ctx) {
@@ -4348,7 +4456,7 @@
     var maxY = Math.max.apply(null, allBounds.map(function (b) { return b.y + b.h; }));
     var center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
     var span = Math.max(8, maxX - minX, maxY - minY);
-    var scale = 8 / span;
+    var scale = 8.65 / span;
     var width = Math.max(760, shell.stage.clientWidth || 1024);
     var height = Math.max(540, shell.stage.clientHeight || 680);
     var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -4363,7 +4471,9 @@
     var scene = new THREE.Scene();
     var camera = new THREE.OrthographicCamera(-6, 6, 4, -4, 0.1, 100);
     var target = new THREE.Vector3(0, 0, 0);
-    var cameraState = { theta: Math.PI / 4, phi: Math.PI / 3.2, radius: 11, panX: 0, panZ: 0, zoom: 1 };
+    var inputCamera = data.camera || {};
+    var initialZoom = Math.max(0.72, Math.min(1.55, numberValue(inputCamera.zoom, 1.02)));
+    var cameraState = { theta: Math.PI / 4, phi: Math.PI / 3.28, radius: 11, panX: 0, panZ: 0, zoom: initialZoom };
     var root = new THREE.Group();
     var zoneRoot = new THREE.Group();
     var entityRoot = new THREE.Group();
@@ -4382,12 +4492,12 @@
     var sun = new THREE.DirectionalLight(0xffffff, 1.08);
     sun.position.set(6, 8, 5);
     scene.add(sun);
-    var base = new THREE.Mesh(new THREE.PlaneGeometry((maxX - minX + 3) * scale, (maxY - minY + 3) * scale), new THREE.MeshBasicMaterial({ color: 0xf8fafc, transparent: true, opacity: 0.94 }));
+    var base = new THREE.Mesh(new THREE.PlaneGeometry((maxX - minX + 3.4) * scale, (maxY - minY + 3.4) * scale), new THREE.MeshBasicMaterial({ color: 0xf8fafc, transparent: true, opacity: 0.96 }));
     base.rotation.x = -Math.PI / 2;
     base.position.y = -0.018;
     base.userData.isBasePlane = true;
     root.add(base);
-    var grid = addThreeGrid(THREE, root, Math.max(10, span * scale + 1.5), Math.max(10, Math.ceil(span)), 0.002, 0x94a3b8);
+    var grid = addThreeGrid(THREE, root, Math.max(10, span * scale + 1.8), Math.max(10, Math.ceil(span)), 0.002, 0x94a3b8);
     grid.userData.isIsometricGrid = true;
 
     var labels = [];
@@ -4400,7 +4510,7 @@
       label.setAttribute("data-zone-label", zone.id || "");
       label.setAttribute("data-zone-id", zone.id || "");
       shell.labelLayer.appendChild(label);
-      labels.push({ element: label, point: new THREE.Vector3(pos.x, 0.16, pos.z), visible: true, type: "zone", priority: 0.56 });
+      labels.push({ element: label, point: new THREE.Vector3(pos.x, 0.2, pos.z), visible: true, type: "zone", priority: 0.72 });
     });
 
     entities.forEach(function (item, index) {
@@ -4429,12 +4539,13 @@
       if (inlineIcon) {
         label.textContent = "";
         label.appendChild(inlineIcon);
-        label.appendChild(el("span", "", itemLabel(item) || item.id));
+        label.appendChild(el("span", "", compactLabelText(itemLabel(item) || item.id, 28)));
       }
       shell.labelLayer.appendChild(label);
-      var anchor = new THREE.Vector3(world.x, size.h * 0.72 + 0.28, world.z);
+      var offset = explicitIsometricLabelOffset(item) || isometricEntityLabelOffset(index, size);
+      var anchor = new THREE.Vector3(world.x + offset.x, size.h * 0.76 + 0.34 + offset.y, world.z + offset.z);
       labels.push({ element: label, point: anchor, visible: true, type: "entity", priority: 0.84 + importanceValue(item, 0.45) * 0.32, id: item.id });
-      var leader = createVerticalDashedLeader(THREE, world.x, world.z, size.h * 0.38, anchor.y);
+      var leader = createDashedLeader(THREE, new THREE.Vector3(world.x, size.h * 0.38, world.z), anchor.clone().add(new THREE.Vector3(0, -0.06, 0)));
       leaderRoot.add(leader);
     });
 
@@ -4458,7 +4569,7 @@
       } else {
         curve = edgeCurveFor(THREE, pathPoints[0], pathPoints[pathPoints.length - 1], link, Object.assign({}, edgeSpec, { curve: "straight", flow: false }), index);
       }
-      var tube = createEdgeTube(THREE, curve, edgeSpec, 0.032);
+      var tube = createEdgeTube(THREE, curve, edgeSpec, 0.04 + Math.min(0.016, importanceValue(link, 0.45) * 0.014));
       tube.userData.isDirectedArrow = !!edgeSpec.directed;
       linkRoot.add(tube);
       var arrow = createArrowHead(THREE, curve, edgeSpec);
@@ -4490,7 +4601,7 @@
 
     function updateCamera() {
       var aspect = width / height;
-      var view = 5.2 / cameraState.zoom;
+      var view = 4.95 / cameraState.zoom;
       camera.left = -view * aspect;
       camera.right = view * aspect;
       camera.top = view;
@@ -4535,7 +4646,7 @@
     function labelBudget(label) {
       if (label.type === "link") return 10;
       if (label.type === "zone") return 12;
-      return 28;
+      return 34;
     }
 
     function labelRect(label, projected) {
@@ -4558,6 +4669,7 @@
     }
 
     function updateLabels() {
+      var keepGalleryEntityLabels = String(data.title || "").toLowerCase().indexOf("logo badge gallery") >= 0;
       var projected = labels.map(function (label, index) {
         var p = project(label.point);
         label.element.style.display = labelsVisible && label.visible ? "" : "none";
@@ -4578,8 +4690,8 @@
         var label = item.label;
         var type = label.type || "entity";
         var allowed = labelsVisible && label.visible && insideViewport(item.rect) && counts[type] < labelBudget(label);
-        if (allowed) {
-          var padding = type === "link" ? 8 : 10;
+        if (allowed && !(keepGalleryEntityLabels && type === "entity")) {
+          var padding = type === "link" ? 6 : type === "zone" ? 5 : 3;
           allowed = !occupied.some(function (rect) { return rectOverlaps(item.rect, rect, padding); });
         }
         label.element.style.visibility = allowed ? "visible" : "hidden";
@@ -4612,11 +4724,11 @@
     }));
     shell.controls.appendChild(createIsometricButton("Reset", "reset_camera", function () {
       cameraState.theta = Math.PI / 4;
-      cameraState.phi = Math.PI / 3.2;
+      cameraState.phi = Math.PI / 3.28;
       cameraState.radius = 11;
       cameraState.panX = 0;
       cameraState.panZ = 0;
-      cameraState.zoom = 1;
+      cameraState.zoom = initialZoom;
     }));
     shell.controls.appendChild(createIsometricButton("Focus", "focus", function () {
       var focusIDs = data.visual && Array.isArray(data.visual.initial_focus_ids) ? data.visual.initial_focus_ids : [];

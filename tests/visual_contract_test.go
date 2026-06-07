@@ -806,7 +806,7 @@ func TestVisualInspectBrowserContract(t *testing.T) {
 	input := filepath.Join(templateDir, "architecture.isometric_overview", "examples", "asset-gallery.input.json")
 	runVisualOK(t, "render", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
 	screenshot := filepath.Join(out, "screenshot.png")
-	inspected := runVisualOK(t, "inspect-browser", "--template-dir", templateDir, "--out", out, "--screenshot", screenshot, "--browser", browserPath, "--timeout", "60", "--json")
+	inspected := runVisualOK(t, "inspect-browser", "--template-dir", templateDir, "--out", out, "--screenshot", screenshot, "--browser", browserPath, "--timeout", "90", "--json")
 	data := objectMap(t, inspected["data"])
 	if data["ready"] != true || data["browser_ready"] != true || data["render_ready"] != true || data["render_score"].(float64) < 90 {
 		t.Fatalf("inspect-browser asset gallery should be ready: %#v", data)
@@ -825,8 +825,12 @@ func TestVisualInspectBrowserContract(t *testing.T) {
 		}
 	}
 	dom := objectMap(t, data["dom"])
-	if dom["entity_labels"].(float64) < 14 || dom["label_icons"].(float64) < 14 || dom["model_badges"].(float64) < 14 || dom["svg_billboards"].(float64) < 14 || dom["fallback_badges"].(float64) != 0 {
+	if dom["entity_labels"].(float64) < 14 || dom["visible_entity_labels"].(float64) < 14 || dom["label_icons"].(float64) < 14 || dom["label_icons_loaded"].(float64) < 14 || dom["visible_label_icons"].(float64) < 14 || dom["broken_label_icons"].(float64) != 0 || dom["model_badges"].(float64) < 14 || dom["svg_billboards"].(float64) < 14 || dom["fallback_badges"].(float64) != 0 {
 		t.Fatalf("inspect-browser DOM summary missing gallery badge hooks: %#v", dom)
+	}
+	summary := objectMap(t, data["visual_summary"])
+	if summary["entity_label_count"].(float64) < 14 || summary["visible_entity_label_count"].(float64) < 14 || summary["label_icon_loaded_count"].(float64) < 14 || summary["visible_label_icon_count"].(float64) < 14 || summary["broken_label_icon_count"].(float64) != 0 || summary["approximate_label_overlap_count"] == nil || summary["screenshot_size"] == nil {
+		t.Fatalf("inspect-browser visual summary missing visual quality fields: %#v", summary)
 	}
 	rendered := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", out, "--screenshot", screenshot, "--json")
 	renderedData := objectMap(t, rendered["data"])

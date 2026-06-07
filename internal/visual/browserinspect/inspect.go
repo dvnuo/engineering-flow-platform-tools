@@ -40,6 +40,7 @@ type Result struct {
 	RenderReady    bool              `json:"render_ready"`
 	RenderScore    int               `json:"render_score"`
 	VisualChecks   Checks            `json:"visual_checks"`
+	VisualSummary  VisualSummary     `json:"visual_summary"`
 	Warnings       []preview.Warning `json:"warnings"`
 	DOM            DOMSummary        `json:"dom"`
 	Requests       []string          `json:"requests"`
@@ -77,12 +78,43 @@ type DOMSummary struct {
 	LinkLabels           int    `json:"link_labels"`
 	ZoneLabels           int    `json:"zone_labels"`
 	LabelIcons           int    `json:"label_icons"`
+	LabelIconsLoaded     int    `json:"label_icons_loaded"`
+	BrokenLabelIcons     int    `json:"broken_label_icons"`
+	VisibleEntityLabels  int    `json:"visible_entity_labels"`
+	VisibleLabelIcons    int    `json:"visible_label_icons"`
 	ModelBadges          int    `json:"model_badges"`
 	SvgBillboards        int    `json:"svg_billboards"`
 	FallbackBadges       int    `json:"fallback_badges"`
 	Controls             int    `json:"controls"`
 	Canvas               int    `json:"canvas"`
 	RuntimeDataRequested bool   `json:"runtime_data_requested"`
+}
+
+type Rect struct {
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+type VisualSummary struct {
+	Template                     string `json:"template"`
+	ScreenshotPath               string `json:"screenshot_path"`
+	EntityLabelCount             int    `json:"entity_label_count"`
+	LabelIconCount               int    `json:"label_icon_count"`
+	LabelIconLoadedCount         int    `json:"label_icon_loaded_count"`
+	BrokenLabelIconCount         int    `json:"broken_label_icon_count"`
+	VisibleEntityLabelCount      int    `json:"visible_entity_label_count"`
+	VisibleLabelIconCount        int    `json:"visible_label_icon_count"`
+	ModelBadgeCount              int    `json:"model_badge_count"`
+	SvgBillboardCount            int    `json:"svg_billboard_count"`
+	FallbackBadgeCount           int    `json:"fallback_badge_count"`
+	CanvasVisible                bool   `json:"canvas_visible"`
+	ControlsVisible              bool   `json:"controls_visible"`
+	ApproximateLabelOverlapCount int    `json:"approximate_label_overlap_count"`
+	LabelLayerBounds             *Rect  `json:"label_layer_bounds,omitempty"`
+	CanvasBounds                 *Rect  `json:"canvas_bounds,omitempty"`
+	ScreenshotSize               *Rect  `json:"screenshot_size,omitempty"`
 }
 
 func Inspect(opts Options) (Result, error) {
@@ -149,6 +181,10 @@ func Inspect(opts Options) (Result, error) {
 		LinkLabels:           nodeResult.Data.Summary.LinkLabels,
 		ZoneLabels:           nodeResult.Data.Summary.ZoneLabels,
 		LabelIcons:           nodeResult.Data.Summary.LabelIcons,
+		LabelIconsLoaded:     nodeResult.Data.Summary.LabelIconsLoaded,
+		BrokenLabelIcons:     nodeResult.Data.Summary.BrokenLabelIcons,
+		VisibleEntityLabels:  nodeResult.Data.Summary.VisibleEntityLabels,
+		VisibleLabelIcons:    nodeResult.Data.Summary.VisibleLabelIcons,
 		ModelBadges:          nodeResult.Data.Summary.ModelBadges,
 		SvgBillboards:        nodeResult.Data.Summary.SvgBillboards,
 		FallbackBadges:       nodeResult.Data.Summary.FallbackBadges,
@@ -171,6 +207,7 @@ func Inspect(opts Options) (Result, error) {
 		RenderReady:    renderResult != nil && renderResult.Ready,
 		RenderScore:    renderScore(renderResult),
 		VisualChecks:   checks,
+		VisualSummary:  buildVisualSummary(domSummary, screenshot, nodeResult, renderResult, checks),
 		Warnings:       warnings,
 		DOM:            domSummary,
 		Requests:       requests,
@@ -195,23 +232,31 @@ type browserSmokeOutput struct {
 }
 
 type browserDOMSummary struct {
-	Title          string `json:"title"`
-	Template       string `json:"template"`
-	Renderer       string `json:"renderer"`
-	IsometricReady bool   `json:"isometricReady"`
-	Stage          bool   `json:"stage"`
-	LabelLayer     bool   `json:"labelLayer"`
-	EntityLabels   int    `json:"entityLabels"`
-	LinkLabels     int    `json:"linkLabels"`
-	ZoneLabels     int    `json:"zoneLabels"`
-	LabelIcons     int    `json:"labelIcons"`
-	ModelBadges    int    `json:"modelBadges"`
-	SvgBillboards  int    `json:"svgBillboards"`
-	FallbackBadges int    `json:"fallbackBadges"`
-	Controls       int    `json:"controls"`
-	ControlBar     bool   `json:"controlBar"`
-	Canvas         int    `json:"canvas"`
-	Ready          bool   `json:"ready"`
+	Title                        string `json:"title"`
+	Template                     string `json:"template"`
+	Renderer                     string `json:"renderer"`
+	IsometricReady               bool   `json:"isometricReady"`
+	Stage                        bool   `json:"stage"`
+	LabelLayer                   bool   `json:"labelLayer"`
+	EntityLabels                 int    `json:"entityLabels"`
+	LinkLabels                   int    `json:"linkLabels"`
+	ZoneLabels                   int    `json:"zoneLabels"`
+	LabelIcons                   int    `json:"labelIcons"`
+	LabelIconsLoaded             int    `json:"labelIconsLoaded"`
+	BrokenLabelIcons             int    `json:"brokenLabelIcons"`
+	VisibleEntityLabels          int    `json:"visibleEntityLabels"`
+	VisibleLabelIcons            int    `json:"visibleLabelIcons"`
+	ModelBadges                  int    `json:"modelBadges"`
+	SvgBillboards                int    `json:"svgBillboards"`
+	FallbackBadges               int    `json:"fallbackBadges"`
+	Controls                     int    `json:"controls"`
+	ControlBar                   bool   `json:"controlBar"`
+	Canvas                       int    `json:"canvas"`
+	ApproximateLabelOverlapCount int    `json:"approximateLabelOverlapCount"`
+	LabelLayerBounds             *Rect  `json:"labelLayerBounds"`
+	CanvasBounds                 *Rect  `json:"canvasBounds"`
+	ScreenshotSize               *Rect  `json:"screenshotSize"`
+	Ready                        bool   `json:"ready"`
 }
 
 func (c Checks) AllOK() bool {
@@ -427,8 +472,9 @@ func buildChecks(summary DOMSummary, requests []string, screenshotPath string, n
 	if renderResult != nil {
 		renderChecks = renderResult.Checks
 	}
+	isAssetGallery := strings.Contains(summary.Title, "Local Logo Badge Gallery")
 	labelThreshold := 1
-	if strings.Contains(summary.Title, "Local Logo Badge Gallery") || summary.EntityLabels >= 14 {
+	if isAssetGallery {
 		labelThreshold = 14
 	}
 	return Checks{
@@ -441,18 +487,18 @@ func buildChecks(summary DOMSummary, requests []string, screenshotPath string, n
 		NoRemoteRequests:                noRemoteRequests(requests) && len(nodeResult.Data.RemoteRequests) == 0,
 		IsometricStagePresent:           nodeResult.Data.Summary.Stage,
 		LabelLayerPresent:               nodeResult.Data.Summary.LabelLayer,
-		EntityLabelsPresent:             summary.EntityLabels > 0,
+		EntityLabelsPresent:             summary.EntityLabels > 0 && summary.VisibleEntityLabels > 0,
 		LinkLabelsPresent:               summary.LinkLabels > 0,
 		ZoneLabelsPresent:               summary.ZoneLabels > 0,
-		LabelIconsPresent:               summary.LabelIcons >= labelThreshold,
+		LabelIconsPresent:               summary.LabelIcons >= labelThreshold && summary.LabelIconsLoaded >= labelThreshold && summary.VisibleLabelIcons >= labelThreshold && summary.BrokenLabelIcons == 0,
 		ModelBadgesResolved:             summary.ModelBadges >= labelThreshold,
 		SvgBillboardsResolved:           summary.SvgBillboards >= labelThreshold,
-		NoFallbackBadgesInGoodExample:   summary.FallbackBadges == 0,
+		NoFallbackBadgesInGoodExample:   !isAssetGallery || summary.FallbackBadges == 0,
 		ControlsPresent:                 summary.Controls > 0 && nodeResult.Data.Summary.ControlBar,
 		CanvasVisible:                   summary.Canvas > 0,
 		ScreenshotNonBlank:              renderChecks.ScreenshotNonBlank,
 		ScreenshotHasEnoughContrast:     renderChecks.ScreenshotContrast,
-		ScreenshotHasExpectedLabelCount: summary.EntityLabels >= labelThreshold,
+		ScreenshotHasExpectedLabelCount: summary.VisibleEntityLabels >= labelThreshold,
 	}
 }
 
@@ -475,6 +521,39 @@ func inspectRenderedScreenshot(opts Options, outDir, screenshot string) (*render
 		}}
 	}
 	return &result, nil
+}
+
+func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browserSmokeOutput, renderResult *renderinspect.Result, checks Checks) VisualSummary {
+	var screenshotSize *Rect
+	if renderResult != nil && renderResult.Screenshot.Provided {
+		screenshotSize = &Rect{
+			X:      0,
+			Y:      0,
+			Width:  renderResult.Screenshot.Width,
+			Height: renderResult.Screenshot.Height,
+		}
+	} else if nodeResult.Data.Summary.ScreenshotSize != nil {
+		screenshotSize = nodeResult.Data.Summary.ScreenshotSize
+	}
+	return VisualSummary{
+		Template:                     summary.Template,
+		ScreenshotPath:               screenshot,
+		EntityLabelCount:             summary.EntityLabels,
+		LabelIconCount:               summary.LabelIcons,
+		LabelIconLoadedCount:         summary.LabelIconsLoaded,
+		BrokenLabelIconCount:         summary.BrokenLabelIcons,
+		VisibleEntityLabelCount:      summary.VisibleEntityLabels,
+		VisibleLabelIconCount:        summary.VisibleLabelIcons,
+		ModelBadgeCount:              summary.ModelBadges,
+		SvgBillboardCount:            summary.SvgBillboards,
+		FallbackBadgeCount:           summary.FallbackBadges,
+		CanvasVisible:                checks.CanvasVisible,
+		ControlsVisible:              checks.ControlsPresent,
+		ApproximateLabelOverlapCount: nodeResult.Data.Summary.ApproximateLabelOverlapCount,
+		LabelLayerBounds:             nodeResult.Data.Summary.LabelLayerBounds,
+		CanvasBounds:                 nodeResult.Data.Summary.CanvasBounds,
+		ScreenshotSize:               screenshotSize,
+	}
 }
 
 func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
@@ -500,13 +579,20 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 		add("browser_entity_labels_missing", "error", "No architecture entity labels were found in the browser DOM.", "Ensure entities render data-entity-id labels in the label layer.", "fix_entity_label_hooks")
 	}
 	if !checks.LabelIconsPresent {
-		add("browser_label_icons_missing", "warning", "Expected local label icons were not resolved in the browser DOM.", "Use local presentation.icon IDs and renderHints.labelIcon=true.", "fix_label_icons")
+		if summary.BrokenLabelIcons > 0 {
+			add("browser_label_icons_broken", "error", "Some label icon images were present but failed to decode in the browser.", "Regenerate the artifact from valid local SVG assets and avoid stale output directories.", "rerender_with_valid_local_icons")
+		} else {
+			add("browser_label_icons_missing", "warning", "Expected local label icons were not resolved in the browser DOM.", "Use local presentation.icon IDs and renderHints.labelIcon=true.", "fix_label_icons")
+		}
 	}
 	if !checks.ModelBadgesResolved {
 		add("browser_model_badges_missing", "warning", "Expected generated model badges were not resolved in the browser DOM.", "Use local presentation.model IDs and renderHints.badgeMode=icon_and_model or model.", "fix_model_badges")
 	}
 	if !checks.NoRemoteRequests {
 		add("browser_remote_request_detected", "error", "The browser smoke found remote URL references or non-local requests.", "Vendor assets locally and reference relative asset paths only.", "remove_remote_assets")
+	}
+	if !checks.NoNetworkErrors {
+		add("browser_network_errors", "warning", "The headless browser reported local resource loading failures.", "Inspect local asset paths, copied template assets, and browser network logs.", "inspect_local_browser_requests")
 	}
 	if !checks.NoConsoleErrors {
 		add("browser_console_errors", "warning", "The headless browser reported JavaScript console errors.", "Open the artifact in Chrome DevTools or inspect runtime JS for thrown errors.", "inspect_console_errors")

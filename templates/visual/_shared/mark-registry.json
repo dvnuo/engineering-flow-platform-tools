@@ -316,6 +316,12 @@
       "mesh": "box",
       "icon": "jenkins",
       "color": "#d33833"
+    },
+    "jenkins.jenkins": {
+      "shape": "ci_card",
+      "mesh": "box",
+      "icon": "jenkins",
+      "color": "#d33833"
     }
   },
   "platforms": {

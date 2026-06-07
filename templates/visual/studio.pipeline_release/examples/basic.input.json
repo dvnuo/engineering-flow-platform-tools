@@ -83,7 +83,7 @@
   "panels": [
     {
       "id": "overview-panel",
-      "type": "overview",
+      "type": "detail",
       "title": "Release Readiness",
       "target_refs": ["build", "canary", "approval"],
       "summary": "Build is clear, canary is under watch, and approval is blocked.",

@@ -378,6 +378,11 @@ func analyzeStudio(data map[string]any, design manifest.VisualDesign, summary *S
 	controls := objectArray(data, "controls")
 	navItems := studioNavigationObjects(data)
 	knownIDs := studioKnownTargetIDs(heroData)
+	for _, panel := range panels {
+		if id := firstString(panel, "id"); id != "" {
+			knownIDs[id] = true
+		}
+	}
 
 	summary.Nodes = len(objectArray(heroData, "nodes"))
 	summary.Items = len(objectArray(heroData, "items"))
@@ -1214,7 +1219,7 @@ func analyzeGeneralQuality(data map[string]any, rules authoring.QualityRules, de
 				addWarning(warnings, Warning{Code: "summary_missing_for_long_label", Severity: "warning", Path: item.Path, Message: "A long label does not provide summary/details for hover or inspector use.", Suggestion: "Shorten the label and put the full explanation in summary or details.", AutoFixHint: map[string]any{"action": "add_summary", "path": item.Path}})
 			}
 		}
-		if !hasImportance(item.Obj) && item.Kind != "phase" {
+		if !hasImportance(item.Obj) && item.Kind != "phase" && !isStudioPresentationKind(item.Kind) {
 			missingImportance++
 		}
 		visibility := normalizeVisibility(firstString(item.Obj, "visibility"))
@@ -1668,6 +1673,15 @@ func qualityObjects(data map[string]any) []qualityObject {
 		}
 	}
 	return out
+}
+
+func isStudioPresentationKind(kind string) bool {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "navigation", "panel", "control", "annotation":
+		return true
+	default:
+		return false
+	}
 }
 
 func normalizeLabelPriority(obj map[string]any) string {

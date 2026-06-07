@@ -17,7 +17,14 @@
       ]
     }
   },
-  "panels": [],
+  "panels": [
+    {
+      "id": "empty-panel",
+      "type": "detail",
+      "title": "Empty Detail",
+      "target_refs": ["api"]
+    }
+  ],
   "visual": {
     "goal": "Show missing topology panel grammar.",
     "initial_focus_ids": ["api"],

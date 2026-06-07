@@ -17,7 +17,14 @@
       ]
     }
   },
-  "panels": [],
+  "panels": [
+    {
+      "id": "empty-panel",
+      "type": "detail",
+      "title": "Empty Detail",
+      "target_refs": ["api"]
+    }
+  ],
   "visual": {
     "goal": "Show missing explorer authoring fields.",
     "initial_focus_ids": ["api"],

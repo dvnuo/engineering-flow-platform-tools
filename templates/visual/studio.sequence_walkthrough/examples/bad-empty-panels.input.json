@@ -17,7 +17,14 @@
       ]
     }
   },
-  "panels": [],
+  "panels": [
+    {
+      "id": "empty-panel",
+      "type": "detail",
+      "title": "Empty Detail",
+      "target_refs": ["client"]
+    }
+  ],
   "visual": {
     "goal": "Show missing walkthrough panel grammar.",
     "initial_focus_ids": ["client"],

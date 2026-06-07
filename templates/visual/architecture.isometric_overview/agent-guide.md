@@ -35,7 +35,7 @@ Do not use it for Studio pages, narrative dashboards, generic graph exploration,
 
 ## Recommended fields
 
-Use these exact kinds where possible: `client`, `pc`, `mobile`, `cdn`, `gateway`, `nginx`, `api_gateway`, `service`, `microservice`, `registry`, `nacos`, `admin`, `database`, `mysql`, `cache`, `redis`, `storage`, `oss`, `file_storage`, `block_storage`, `queue`, `log`, `elasticsearch`, `security`, `external`.
+Use these exact kinds where possible: `client`, `pc`, `mobile`, `cdn`, `gateway`, `nginx`, `api_gateway`, `ingress`, `load_balancer`, `service`, `microservice`, `registry`, `nacos`, `admin`, `database`, `mysql`, `postgres`, `mongodb`, `cache`, `redis`, `storage`, `oss`, `minio`, `file_storage`, `block_storage`, `queue`, `kafka`, `rocketmq`, `rabbitmq`, `log`, `elasticsearch`, `security`, `external`, `kubernetes`, `pod`, `node`, `cluster`.
 
 Use these exact link kinds where possible: `api_call`, `static_resource`, `reverse_proxy`, `load_balancing`, `register`, `registering_service`, `pull_consumption`, `health_check`, `data_cache`, `data_storage`, `replication`, `distributed_file_service`, `feign_call`, `log_collection`.
 

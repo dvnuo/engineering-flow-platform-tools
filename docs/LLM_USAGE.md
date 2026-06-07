@@ -33,7 +33,7 @@
 - For class, state, activity, or component diagrams, use the matching `uml.*` template and semantic fields such as `classes`, `states`, `actions`, `components`, and their relationships.
 - For graph inputs larger than a small overview, include short node `label` or `name` values, include `groups` or node `parent_id`/`group_id`/`group` fields, give groups scenario-specific labels, set `initial_view.mode: "overview"`, and mark noisy low-value edges with `visibility: "detail"` or `visibility: "hidden"`.
 - For graph-like, flow, relationship, spatial, and UML component/activity/state inputs, use the Visual Mark System instead of generic spheres. Add node `kind`, `provider`, `service`, `platform`, or `presentation.shape` / `presentation.mesh` / `presentation.icon`; add edge `directed=true`, `presentation.arrow`, `presentation.lineStyle`, `presentation.curve`, and `presentation.flow` when the relationship has direction or movement.
-- For isometric architecture inputs, add `canvas.grid.enabled=true`, bounded `zones[]`, positioned and sized `entities[]`, entity `kind`, and `links[].directed=true` with `links[].presentation.arrow=forward`.
+- For isometric architecture inputs, apply the same mark concepts to `entities[]` and `links[]`, never `nodes[]` and `edges[]`. Add `canvas.grid.enabled=true`, bounded `zones[]`, positioned and sized `entities[]`, entity `kind` such as `nginx`, `api_gateway`, `microservice`, `mysql`, `postgres`, `redis`, `kafka`, `kubernetes`, `ingress`, or `load_balancer`, and `links[].directed=true` with short labels, route bend points, and `links[].presentation.arrow=forward`.
 - Use `view.colorBy` or `renderHints.colorBy` plus `renderHints.showLegend=true` whenever color carries meaning. Good defaults are `provider`, `kind`, `status`, `group`, `phase`, `risk`, and `severity`.
 - Use local icon ids from `templates/visual/_shared/asset-registry.json`. Do not use external image URLs. Current AWS and Jenkins icon ids are local styled placeholders, not official vendor logos.
 - For graph event inputs, bind each meaningful event to an existing node with `events[].node_id`; replay views should explain which object changed instead of listing detached events.
@@ -214,7 +214,7 @@ For visual generation, use this loop:
 8. `visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json`
 9. Revise JSON using warning `suggestion`, `auto_fix_hint`, `visual_plan.marks`, `visual_plan.edges`, `visual_plan.colors`, `visual_plan.assets`, and `visual_plan.quality_loop`.
 10. `visual render --template <template-id> --input <input.json> --out <dir> --json`
-11. `visual inspect-render --out <dir> --json`, optionally adding `--screenshot <png|jpg|gif>` after a browser screenshot is captured
+11. `visual inspect-render --out <dir> --json`, optionally adding `--screenshot <png|jpg|gif>` after a browser screenshot is captured. For isometric architecture, require the artifact hook checks such as `artifact_isometric_dom_hooks`, `artifact_entity_label_hooks`, `artifact_grid_hook`, and `artifact_arrow_hook` to pass.
 12. Return `data.artifact.entrypoint` to the user only when `inspect-render` reports `ready=true`, or return the warnings with the artifact if the user wants to review a draft.
 
 Never write input JSON before reading the selected template guide. The guide is where template-specific construction rules live.

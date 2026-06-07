@@ -1577,7 +1577,7 @@
     if (direction.length() < 0.001) {
       direction.set(0, 1, 0);
     }
-    var geometry = new THREE.ConeGeometry(0.055, 0.18, 18);
+    var geometry = THREE.ConeGeometry ? new THREE.ConeGeometry(0.055, 0.18, 18) : new THREE.IcosahedronGeometry(0.08, 1);
     var material = new THREE.MeshBasicMaterial({
       color: colorValue(edgeSpec.color, 0x63a9ff),
       transparent: true,
@@ -3809,604 +3809,6 @@
     renderGraph({ container: ctx.container, manifest: cloneManifestWith(ctx.manifest, "offline.graph.v1", "component_deployment"), data: graphFromUMLComponent(ctx.data || {}) });
   }
 
-  function studioShell(container, manifest, data) {
-    container.textContent = "";
-    var app = el("div", "studio-app");
-    var header = el("header", "studio-header");
-    var headerMain = el("div", "studio-header-main");
-    headerMain.appendChild(el("h1", "studio-title", data.title || manifest.title || "Studio"));
-    headerMain.appendChild(el("div", "studio-subtitle", studioGoal(data) || (manifest.template && manifest.template.id ? manifest.template.id : "legacy visual renderer")));
-    header.appendChild(headerMain);
-    var meta = el("div", "studio-header-meta", (manifest.renderer && manifest.renderer.contract ? manifest.renderer.contract : "legacy visual renderer"));
-    header.appendChild(meta);
-
-    var controls = el("div", "studio-controls");
-    var workspace = el("main", "studio-workspace");
-    var nav = el("nav", "studio-nav");
-    nav.setAttribute("aria-label", "Studio navigation");
-    var hero = el("section", "studio-hero");
-    var heroStage = el("div", "studio-hero-stage visual-stage preset-graph-2-5d");
-    heroStage.setAttribute("data-preset", "graph_2_5d");
-    hero.appendChild(heroStage);
-    var inspector = el("aside", "studio-inspector visual-inspector");
-    inspector.setAttribute("aria-label", "Studio inspector");
-    workspace.appendChild(nav);
-    workspace.appendChild(hero);
-    workspace.appendChild(inspector);
-    var bottom = el("section", "studio-bottom-panels");
-    app.appendChild(header);
-    app.appendChild(controls);
-    app.appendChild(workspace);
-    app.appendChild(bottom);
-    container.appendChild(app);
-    return { app: app, header: header, controls: controls, workspace: workspace, nav: nav, hero: hero, stage: heroStage, inspector: inspector, bottom: bottom };
-  }
-
-  function studioGoal(data) {
-    var visual = data && data.visual && typeof data.visual === "object" ? data.visual : {};
-    return String(data.goal || visual.goal || data.story && data.story.goal || "").trim();
-  }
-
-  function studioHero(data) {
-    return data && data.hero && typeof data.hero === "object" ? data.hero : {};
-  }
-
-  function studioHeroData(data) {
-    var hero = studioHero(data);
-    if (hero.data && typeof hero.data === "object") {
-      return hero.data;
-    }
-    return data && (Array.isArray(data.nodes) || Array.isArray(data.items) || Array.isArray(data.events) || Array.isArray(data.participants)) ? data : {};
-  }
-
-  function studioObjectsFrom(data, field, fallbackKind) {
-    var raw = Array.isArray(data && data[field]) ? data[field] : [];
-    return raw.map(function (item, index) {
-      var obj = item && typeof item === "object" ? Object.assign({}, item) : { label: String(item || "") };
-      obj.id = String(obj.id || field + ":" + index);
-      obj.kind = obj.kind || fallbackKind;
-      obj.__studioSource = field;
-      return obj;
-    });
-  }
-
-  function studioEdgesFrom(data, field, fallbackKind) {
-    var raw = Array.isArray(data && data[field]) ? data[field] : [];
-    return raw.map(function (item, index) {
-      var edge = item && typeof item === "object" ? Object.assign({}, item) : {};
-      edge.from = String(edge.from || edge.source || edge.source_id || edge.sourceId || edge.claim_id || edge.claimId || "");
-      edge.to = String(edge.to || edge.target || edge.target_id || edge.targetId || edge.source_id || edge.sourceId || "");
-      edge.kind = edge.kind || edge.relation || edge.type || fallbackKind;
-      edge.id = String(edge.id || (edge.from && edge.to ? edge.from + "->" + edge.to + ":" + edge.kind : field + ":" + index));
-      edge.__studioSource = field;
-      return edge;
-    }).filter(function (edge) {
-      return edge.from && edge.to;
-    });
-  }
-
-  function studioGraph(data) {
-    var heroData = studioHeroData(data);
-    var nodes = []
-      .concat(studioObjectsFrom(heroData, "nodes", "state"))
-      .concat(studioObjectsFrom(heroData, "items", "artifact"))
-      .concat(studioObjectsFrom(heroData, "events", "stage"))
-      .concat(studioObjectsFrom(heroData, "participants", "actor"));
-    var edges = []
-      .concat(studioEdgesFrom(heroData, "edges", "depends_on"))
-      .concat(studioEdgesFrom(heroData, "messages", "sends"))
-      .concat(studioEdgesFrom(heroData, "flows", "flows"))
-      .concat(studioEdgesFrom(heroData, "links", "depends_on"));
-    return { nodes: nodes, edges: edges };
-  }
-
-  function studioAnnotations(data) {
-    var hero = studioHero(data);
-    var visual = data && data.visual && typeof data.visual === "object" ? data.visual : {};
-    return []
-      .concat(Array.isArray(data.annotations) ? data.annotations : [])
-      .concat(Array.isArray(hero.annotations) ? hero.annotations : [])
-      .concat(Array.isArray(visual.annotations) ? visual.annotations : []);
-  }
-
-  function studioAssumptions(data) {
-    var raw = Array.isArray(data.assumptions) ? data.assumptions : [];
-    return raw.map(function (item) {
-      if (item && typeof item === "object") {
-        return String(item.label || item.summary || item.text || item.id || "").trim();
-      }
-      return String(item || "").trim();
-    }).filter(Boolean);
-  }
-
-  function studioPanelArray(data) {
-    var raw = Array.isArray(data.panels) ? data.panels : [];
-    if (!raw.length && data.panel && typeof data.panel === "object") {
-      raw = [data.panel];
-    }
-    return raw.filter(function (panel) { return panel && typeof panel === "object"; });
-  }
-
-  function studioNavItems(data, nodes) {
-    var nav = data.navigation || data.nav || {};
-    var raw = Array.isArray(nav) ? nav : (Array.isArray(nav.items) ? nav.items : []);
-    if (!raw.length) {
-      raw = nodes.slice(0, 16).map(function (node) {
-        return { id: "nav-" + node.id, label: itemLabel(node), target_id: node.id, kind: node.kind };
-      });
-    }
-    return raw.map(function (item, index) {
-      item = item && typeof item === "object" ? item : { label: String(item || "") };
-      return {
-        id: String(item.id || "nav:" + index),
-        label: String(item.label || item.title || item.name || item.target_id || item.targetId || ""),
-        targetID: String(item.target_id || item.targetId || item.target_ref || item.targetRef || item.id || ""),
-        kind: String(item.kind || item.type || "")
-      };
-    }).filter(function (item) { return item.label || item.targetID; });
-  }
-
-  function studioTargetID(item) {
-    return String(item && (item.target_id || item.targetId || item.target_ref || item.targetRef || item.node_id || item.nodeId) || "").trim();
-  }
-
-  function studioPanelTitle(panel) {
-    return String(panel.title || panel.label || panel.type || panel.id || "Panel");
-  }
-
-  function studioPanelText(panel) {
-    if (!panel) return "";
-    if (panel.body !== undefined) return String(panel.body || "");
-    if (panel.text !== undefined) return String(panel.text || "");
-    if (panel.summary !== undefined) return String(panel.summary || "");
-    if (Array.isArray(panel.items)) {
-      return panel.items.map(function (item) {
-        return item && typeof item === "object" ? String(item.label || item.summary || item.text || item.id || "") : String(item || "");
-      }).filter(Boolean).join("\n");
-    }
-    return "";
-  }
-
-  function studioStoryItems(data) {
-    var story = data.story;
-    if (Array.isArray(story)) return story;
-    if (story && typeof story === "object") {
-      if (Array.isArray(story.steps)) return story.steps;
-      if (Array.isArray(story.items)) return story.items;
-      return [story];
-    }
-    var visual = data.visual && typeof data.visual === "object" ? data.visual : {};
-    return Array.isArray(visual.narrative_steps) ? visual.narrative_steps : [];
-  }
-
-  function studioCreateButton(label, action, handler) {
-    var button = document.createElement("button");
-    button.type = "button";
-    button.className = "studio-control";
-    button.setAttribute("data-action", action);
-    button.textContent = label;
-    button.addEventListener("click", handler);
-    return button;
-  }
-
-  function studioLegendSample(id, nodes, edges, colorBy) {
-    for (var i = 0; i < nodes.length; i += 1) {
-      if (legendValueForItem(nodes[i], colorBy) === id) return nodes[i];
-    }
-    for (var j = 0; j < edges.length; j += 1) {
-      if (legendValueForItem(edges[j], colorBy) === id) return edges[j];
-    }
-    return { kind: id, id: id };
-  }
-
-  function renderStudioLegend(container, legendSpec, nodes, edges, context, visual) {
-    if (!legendSpec || !legendSpec.items || !legendSpec.items.length) {
-      return;
-    }
-    var legend = el("section", "studio-legend");
-    legend.appendChild(el("h2", "", legendSpec.title || "Legend"));
-    var colorBy = colorByFromVisual(visual || {});
-    legendSpec.items.forEach(function (item) {
-      var row = el("div", "studio-legend-row");
-      var sample = studioLegendSample(String(item.id || ""), nodes, edges, colorBy);
-      var markSpec = resolveMarkSpec(sample, context);
-      var icon = createInlineIcon(markSpec, context, "studio-inline-icon");
-      if (icon) row.appendChild(icon);
-      var swatch = el("span", "studio-legend-swatch");
-      swatch.style.backgroundColor = item.color || markSpec.color;
-      row.appendChild(swatch);
-      row.appendChild(el("span", "studio-legend-label", item.label || item.id));
-      row.appendChild(el("span", "studio-legend-count", String(item.count || "")));
-      legend.appendChild(row);
-    });
-    container.appendChild(legend);
-  }
-
-  function renderStudioInspector(container, selected, context, annotations, detailPanels) {
-    container.textContent = "";
-    var targetAnnotations = annotations.filter(function (annotation) {
-      return studioTargetID(annotation) && selected && studioTargetID(annotation) === selected.id;
-    });
-    var header = el("div", "studio-inspector-heading");
-    if (selected) {
-      var spec = resolveMarkSpec(selected, context);
-      var icon = createInlineIcon(spec, context, "studio-inline-icon");
-      if (icon) header.appendChild(icon);
-      header.appendChild(el("h2", "", itemLabel(selected) || selected.id));
-    } else {
-      header.appendChild(el("h2", "", "Inspector"));
-    }
-    container.appendChild(header);
-    if (!selected) {
-      container.appendChild(el("p", "studio-muted", "Select an item to inspect details."));
-      return;
-    }
-    var meta = el("dl", "studio-inspector-meta");
-    [
-      ["ID", selected.id],
-      ["Kind", selected.kind || selected.type],
-      ["Status", selected.status],
-      ["Source", selected.__studioSource]
-    ].forEach(function (row) {
-      if (!row[1]) return;
-      meta.appendChild(el("dt", "", row[0]));
-      meta.appendChild(el("dd", "", row[1]));
-    });
-    container.appendChild(meta);
-    if (selected.summary || selected.details) {
-      container.appendChild(el("p", "studio-inspector-summary", selected.summary || selected.details));
-    }
-    targetAnnotations.forEach(function (annotation) {
-      container.appendChild(el("div", "studio-inspector-note", visualAnnotationText(annotation)));
-    });
-    detailPanels.forEach(function (panel) {
-      var block = el("section", "studio-inspector-panel");
-      block.appendChild(el("h3", "", studioPanelTitle(panel)));
-      block.appendChild(el("p", "", studioPanelText(panel)));
-      container.appendChild(block);
-    });
-    var pre = el("pre", "", JSON.stringify(selected, null, 2));
-    container.appendChild(pre);
-  }
-
-  function addStudioArrowMarker(defs, id, color) {
-    var marker = svg("marker", {
-      id: id,
-      viewBox: "0 0 10 10",
-      refX: "8.6",
-      refY: "5",
-      markerWidth: "7",
-      markerHeight: "7",
-      orient: "auto-start-reverse"
-    });
-    marker.appendChild(svg("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: color || "#63a9ff", class: "studio-arrow-head" }));
-    defs.appendChild(marker);
-  }
-
-  function studioDrawShape(group, x, y, spec, color) {
-    var shape = normalizeMarkKey(spec.shape || spec.mesh);
-    if (shape === "diamond") {
-      group.appendChild(svg("polygon", { class: "studio-node-shape", points: x + "," + (y - 30) + " " + (x + 36) + "," + y + " " + x + "," + (y + 30) + " " + (x - 36) + "," + y, fill: color }));
-    } else if (shape === "warning_prism") {
-      group.appendChild(svg("polygon", { class: "studio-node-shape", points: x + "," + (y - 32) + " " + (x + 34) + "," + (y + 30) + " " + (x - 34) + "," + (y + 30), fill: color }));
-    } else if (shape === "actor_card") {
-      group.appendChild(svg("circle", { class: "studio-node-shape", cx: x, cy: y, r: 31, fill: color }));
-    } else if (shape === "database_cylinder" || shape === "bucket") {
-      group.appendChild(svg("rect", { class: "studio-node-shape", x: x - 34, y: y - 24, width: 68, height: 52, rx: 18, fill: color }));
-      group.appendChild(svg("ellipse", { class: "studio-node-cap", cx: x, cy: y - 24, rx: 34, ry: 10, fill: color }));
-    } else {
-      group.appendChild(svg("rect", { class: "studio-node-shape", x: x - 42, y: y - 27, width: 84, height: 54, rx: 8, fill: color }));
-    }
-  }
-
-  function renderStudioBottom(shell, data, panels, assumptions, annotations, focusTarget) {
-    shell.bottom.textContent = "";
-    var storyItems = studioStoryItems(data);
-    var story = el("section", "studio-panel studio-story-panel");
-    story.appendChild(el("h2", "", "Story"));
-    if (storyItems.length) {
-      storyItems.slice(0, 8).forEach(function (step) {
-        var item = step && typeof step === "object" ? step : { label: String(step || "") };
-        var button = document.createElement("button");
-        button.type = "button";
-        button.className = "studio-panel-action";
-        button.textContent = item.title || item.label || item.summary || item.id || "Step";
-        var target = studioTargetID(item) || (Array.isArray(item.focus_ids) && item.focus_ids[0]) || "";
-        button.addEventListener("click", function () { if (target) focusTarget(target); });
-        story.appendChild(button);
-      });
-    } else {
-      story.appendChild(el("p", "studio-muted", "No story steps."));
-    }
-    shell.bottom.appendChild(story);
-
-    panels.filter(function (panel) {
-      var type = String(panel.type || panel.slot || "").toLowerCase();
-      return type !== "detail" && type !== "inspector";
-    }).slice(0, 6).forEach(function (panel) {
-      var block = el("section", "studio-panel studio-data-panel");
-      block.appendChild(el("h2", "", studioPanelTitle(panel)));
-      var body = studioPanelText(panel);
-      block.appendChild(el("p", body ? "" : "studio-muted", body || "No panel content."));
-      var target = studioTargetID(panel);
-      if (target) {
-        var button = studioCreateButton("Focus", "focus-panel", function () { focusTarget(target); });
-        block.appendChild(button);
-      }
-      shell.bottom.appendChild(block);
-    });
-
-    var notes = el("section", "studio-panel studio-annotations-panel");
-    notes.appendChild(el("h2", "", "Annotations"));
-    if (annotations.length) {
-      annotations.slice(0, 8).forEach(function (annotation) {
-        var targetID = studioTargetID(annotation);
-        var button = studioCreateButton(visualAnnotationText(annotation) || targetID || "Annotation", "focus-annotation", function () {
-          if (targetID) focusTarget(targetID);
-        });
-        notes.appendChild(button);
-      });
-    } else {
-      notes.appendChild(el("p", "studio-muted", "No annotations."));
-    }
-    shell.bottom.appendChild(notes);
-
-    var assumptionPanel = el("section", "studio-panel studio-assumptions-panel");
-    assumptionPanel.appendChild(el("h2", "", "Assumptions"));
-    if (assumptions.length) {
-      var list = el("ul", "studio-assumptions-list");
-      assumptions.forEach(function (assumption) {
-        list.appendChild(el("li", "", assumption));
-      });
-      assumptionPanel.appendChild(list);
-    } else {
-      assumptionPanel.appendChild(el("p", "studio-muted", "No assumptions declared."));
-    }
-    shell.bottom.appendChild(assumptionPanel);
-  }
-
-  function renderStudio(ctx) {
-    var data = ctx.data || {};
-    var manifest = ctx.manifest || {};
-    var shell = studioShell(ctx.container, manifest, data);
-    var graph = studioGraph(data);
-    var nodes = graph.nodes;
-    var edges = graph.edges;
-    var nodeByID = {};
-    nodes.forEach(function (node) { nodeByID[node.id] = node; });
-    var annotations = studioAnnotations(data);
-    var assumptions = studioAssumptions(data);
-    var panels = studioPanelArray(data);
-    var detailPanels = panels.filter(function (panel) {
-      var type = String(panel.type || panel.slot || "").toLowerCase();
-      return type === "detail" || type === "inspector";
-    });
-    var visual = readVisualHints(data);
-    var markContext = createMarkContext(manifest, { nodes: nodes, edges: edges });
-    var state = { selectedID: "", isolatedID: "", hidden: {}, replayTimer: 0 };
-    var nodeEntries = {};
-    var edgeEntries = [];
-    var navButtons = {};
-    var width = Math.max(760, shell.stage.clientWidth || 920);
-    var height = Math.max(480, shell.stage.clientHeight || 560);
-    attachStageInteraction(shell.stage);
-    decorateStage(shell.stage, manifest, { nodes: nodes, edges: edges }, "graph_2_5d");
-    var canvas = svg("svg", { class: "studio-hero-svg visual-svg", viewBox: "0 0 " + width + " " + height, role: "img" });
-    shell.stage.appendChild(canvas);
-
-    function selectedNode() {
-      return state.selectedID && nodeByID[state.selectedID] ? nodeByID[state.selectedID] : null;
-    }
-
-    function focusTarget(id) {
-      if (!id || !nodeByID[id]) {
-        return;
-      }
-      state.selectedID = id;
-      renderStudioInspector(shell.inspector, selectedNode(), markContext, annotations, detailPanels);
-      rebuild();
-    }
-
-    function clearCanvas() {
-      while (canvas.firstChild) {
-        canvas.removeChild(canvas.firstChild);
-      }
-    }
-
-    function visibleNodes() {
-      return nodes.filter(function (node) {
-        if (state.hidden[node.id]) return false;
-        if (state.isolatedID && node.id !== state.isolatedID) {
-          return edges.some(function (edge) {
-            return (edge.from === state.isolatedID && edge.to === node.id) || (edge.to === state.isolatedID && edge.from === node.id);
-          });
-        }
-        return true;
-      });
-    }
-
-    function visibleEdges(ids) {
-      return edges.filter(function (edge) {
-        if (!ids[edge.from] || !ids[edge.to]) return false;
-        if (state.isolatedID && edge.from !== state.isolatedID && edge.to !== state.isolatedID) return false;
-        return true;
-      });
-    }
-
-    function rebuild() {
-      clearCanvas();
-      nodeEntries = {};
-      edgeEntries = [];
-      var defs = svg("defs", {});
-      canvas.appendChild(defs);
-      var shownNodes = visibleNodes();
-      var ids = {};
-      shownNodes.forEach(function (node) { ids[node.id] = true; });
-      var shownEdges = visibleEdges(ids);
-      var positions = layoutNodes(shownNodes, "graph_2_5d", width, height);
-      shownEdges.forEach(function (edge, index) {
-        var from = positions[edge.from];
-        var to = positions[edge.to];
-        if (!from || !to) return;
-        var edgeSpec = resolveEdgeSpec(edge, markContext);
-        var markerID = "studio-arrow-" + index + "-" + safeClass(edge.kind || "edge");
-        if (edgeSpec.directed && edgeSpec.arrow !== "none") {
-          addStudioArrowMarker(defs, markerID, edgeSpec.color);
-        }
-        var path = edgePath(from, to, "graph_2_5d", index);
-        var line = svg("path", {
-          class: "studio-edge visual-edge" + (edgeSpec.flow ? " visual-edge-flow" : ""),
-          d: path,
-          stroke: edgeSpec.color,
-          "data-directed": edgeSpec.directed ? "true" : "false"
-        });
-        if (edgeSpec.directed && edgeSpec.arrow !== "none") {
-          if (edgeSpec.arrow === "reverse") {
-            line.setAttribute("marker-start", "url(#" + markerID + ")");
-          } else {
-            line.setAttribute("marker-end", "url(#" + markerID + ")");
-          }
-        }
-        canvas.appendChild(line);
-        edgeEntries.push({ element: line, edge: edge });
-        if (edge.label || edge.kind) {
-          var label = svg("text", { class: "studio-edge-label visual-edge-label", x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 8, "text-anchor": "middle" });
-          label.textContent = runtime.safeText(edge.label || edge.kind);
-          canvas.appendChild(label);
-        }
-      });
-      shownNodes.forEach(function (node, index) {
-        var pos = positions[node.id] || { x: width / 2, y: height / 2 };
-        var depth = nodeDepth(node, index, "graph_2_5d");
-        var lift = Math.round(depth * 34);
-        canvas.appendChild(svg("ellipse", { class: "studio-node-shadow visual-node-shadow", cx: pos.x + lift * 0.54, cy: pos.y + 39 + lift * 0.25, rx: 42, ry: 10 }));
-        canvas.appendChild(svg("line", { class: "studio-depth-line visual-depth-line", x1: pos.x, y1: pos.y + 25, x2: pos.x + lift * 0.54, y2: pos.y + 39 + lift * 0.25 }));
-        var group = svg("g", { class: "studio-hero-node visual-node", tabindex: "0", "data-node-id": node.id });
-        if (node.id === state.selectedID) {
-          group.classList.add("visual-focused");
-        }
-        if (state.selectedID && node.id !== state.selectedID) {
-          var related = edges.some(function (edge) {
-            return edge.from === state.selectedID && edge.to === node.id || edge.to === state.selectedID && edge.from === node.id;
-          });
-          if (!related) group.classList.add("visual-dimmed");
-        }
-        if (lift) {
-          group.setAttribute("transform", "translate(" + (-lift * 0.22).toFixed(1) + " " + (-lift).toFixed(1) + ")");
-        }
-        var spec = resolveMarkSpec(node, markContext);
-        studioDrawShape(group, pos.x, pos.y, spec, spec.color);
-        appendSvgIcon(group, spec, markContext, pos.x - 13, pos.y - 13, 26);
-        var iconForLabel = appendSvgIcon(group, spec, markContext, pos.x - 48, pos.y + 39, 16);
-        if (iconForLabel) {
-          iconForLabel.classList.add("studio-label-icon");
-        }
-        var label = svg("text", { class: "studio-node-label", x: pos.x - 26, y: pos.y + 52 });
-        label.textContent = runtime.safeText(itemLabel(node) || node.id);
-        group.appendChild(label);
-        visualAnnotationsFor({ annotations: annotations }, node.id).forEach(function (annotation, noteIndex) {
-          var note = svg("text", { class: "studio-annotation-label visual-svg-annotation-label", x: pos.x, y: pos.y - 44 - noteIndex * 15, "text-anchor": "middle" });
-          note.textContent = runtime.safeText(visualAnnotationText(annotation));
-          note.addEventListener("click", function (event) {
-            event.stopPropagation();
-            focusTarget(node.id);
-          });
-          group.appendChild(note);
-        });
-        group.addEventListener("click", function () { focusTarget(node.id); });
-        group.addEventListener("keydown", function (event) {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            focusTarget(node.id);
-          }
-        });
-        canvas.appendChild(group);
-        nodeEntries[node.id] = { element: group, node: node };
-      });
-      Object.keys(navButtons).forEach(function (id) {
-        navButtons[id].classList.toggle("studio-nav-active", id === state.selectedID);
-      });
-      edgeEntries.forEach(function (entry) {
-        var active = state.selectedID && (entry.edge.from === state.selectedID || entry.edge.to === state.selectedID);
-        entry.element.classList.toggle("visual-focused", !!active);
-      });
-    }
-
-    studioNavItems(data, nodes).forEach(function (item) {
-      var target = nodeByID[item.targetID] ? nodeByID[item.targetID] : null;
-      var button = document.createElement("button");
-      button.type = "button";
-      button.className = "studio-nav-item";
-      var spec = resolveMarkSpec(target || { kind: item.kind || "stage" }, markContext);
-      var icon = createInlineIcon(spec, markContext, "studio-inline-icon");
-      if (icon) button.appendChild(icon);
-      button.appendChild(el("span", "studio-nav-label", item.label || item.targetID));
-      button.addEventListener("click", function () { focusTarget(item.targetID); });
-      shell.nav.appendChild(button);
-      navButtons[item.targetID] = button;
-    });
-    if (!shell.nav.childNodes.length) {
-      shell.nav.appendChild(el("div", "studio-muted", "No navigation items."));
-    }
-
-    shell.controls.appendChild(studioCreateButton("Reset", "reset", function () {
-      state.selectedID = "";
-      state.isolatedID = "";
-      state.hidden = {};
-      renderStudioInspector(shell.inspector, null, markContext, annotations, detailPanels);
-      rebuild();
-    }));
-    shell.controls.appendChild(studioCreateButton("Isolate", "isolate", function () {
-      if (state.selectedID) {
-        state.isolatedID = state.selectedID;
-        rebuild();
-      }
-    }));
-    shell.controls.appendChild(studioCreateButton("Hide", "hide", function () {
-      if (state.selectedID) {
-        state.hidden[state.selectedID] = true;
-        state.selectedID = "";
-        renderStudioInspector(shell.inspector, null, markContext, annotations, detailPanels);
-        rebuild();
-      }
-    }));
-    shell.controls.appendChild(studioCreateButton("Show", "show", function () {
-      state.hidden = {};
-      rebuild();
-    }));
-    shell.controls.appendChild(studioCreateButton("Replay", "replay", function () {
-      if (state.replayTimer) {
-        window.clearInterval(state.replayTimer);
-      }
-      var targets = annotations.map(studioTargetID).filter(function (id) { return !!nodeByID[id]; });
-      if (!targets.length) {
-        targets = nodes.map(function (node) { return node.id; });
-      }
-      var index = 0;
-      state.replayTimer = window.setInterval(function () {
-        if (!targets.length) {
-          window.clearInterval(state.replayTimer);
-          state.replayTimer = 0;
-          return;
-        }
-        focusTarget(targets[index % targets.length]);
-        index += 1;
-        if (index >= targets.length) {
-          window.clearInterval(state.replayTimer);
-          state.replayTimer = 0;
-        }
-      }, 700);
-    }));
-    shell.controls.appendChild(studioCreateButton("Export", "export", function () {
-      runtime.exportJSON(data, "visual-data.json");
-    }));
-
-    renderStudioLegend(shell.hero, buildLegendItems(data, { visual: visual, rawNodes: nodes, rawEdges: edges }, markContext), nodes, edges, markContext, visual);
-    renderStudioBottom(shell, data, panels, assumptions, annotations, focusTarget);
-    renderStudioInspector(shell.inspector, null, markContext, annotations, detailPanels);
-    rebuild();
-  }
-
   function isometricArray(data, field) {
     return Array.isArray(data && data[field]) ? data[field].filter(function (item) { return item && typeof item === "object"; }) : [];
   }
@@ -4494,14 +3896,20 @@
     if (kind === "cdn") {
       return new THREE.SphereGeometry(Math.max(size.w, size.d) * 0.18, 28, 18);
     }
-    if (kind === "database" || kind === "mysql" || kind === "redis" || mesh === "cylinder" || mesh === "database_cylinder" || mesh === "bucket") {
-      return new THREE.CylinderGeometry(size.w * 0.18, size.w * 0.18, size.h * 0.42, 30);
+    if (kind === "database" || kind === "mysql" || kind === "postgres" || kind === "mongodb" || kind === "redis" || kind === "cache" || mesh === "cylinder" || mesh === "database_cylinder" || mesh === "bucket" || mesh === "stacked_cylinder") {
+      return isometricCylinderGeometry(THREE, size.w * 0.18, size.h * 0.42, 30);
     }
-    if (kind === "queue" || kind === "event_stream" || kind === "registry" || mesh === "capsule") {
+    if (kind === "queue" || kind === "event_stream" || kind === "kafka" || kind === "rocketmq" || kind === "rabbitmq" || kind === "registry" || mesh === "capsule") {
       if (THREE.CapsuleGeometry) {
         return new THREE.CapsuleGeometry(size.d * 0.16, size.w * 0.25, 8, 18);
       }
-      return new THREE.CylinderGeometry(size.d * 0.16, size.d * 0.16, size.w * 0.5, 20);
+      return isometricCylinderGeometry(THREE, size.d * 0.16, size.w * 0.5, 20);
+    }
+    if (kind === "kubernetes" || kind === "cluster" || mesh === "cluster") {
+      return new THREE.BoxGeometry(size.w * 0.42, size.h * 0.5, size.d * 0.36);
+    }
+    if (kind === "ingress" || kind === "load_balancer" || mesh === "gateway_card" || mesh === "tower") {
+      return new THREE.BoxGeometry(size.w * 0.36, size.h * 0.62, size.d * 0.26);
     }
     if (kind === "mobile") {
       return new THREE.BoxGeometry(size.w * 0.18, size.h * 0.52, size.d * 0.08);
@@ -4510,9 +3918,23 @@
       return new THREE.OctahedronGeometry(size.w * 0.2, 0);
     }
     if (kind === "risk" || kind === "warning" || mesh === "cone") {
-      return new THREE.ConeGeometry(size.w * 0.18, size.h * 0.5, 5);
+      return isometricConeGeometry(THREE, size.w * 0.18, size.h * 0.5, 5);
     }
     return new THREE.BoxGeometry(size.w * 0.32, size.h * 0.42, size.d * 0.32);
+  }
+
+  function isometricCylinderGeometry(THREE, radius, height, segments) {
+    if (THREE.CylinderGeometry) {
+      return new THREE.CylinderGeometry(radius, radius, height, segments || 24);
+    }
+    return new THREE.BoxGeometry(radius * 1.8, height, radius * 1.8);
+  }
+
+  function isometricConeGeometry(THREE, radius, height, segments) {
+    if (THREE.ConeGeometry) {
+      return new THREE.ConeGeometry(radius, height, segments || 8);
+    }
+    return new THREE.IcosahedronGeometry(Math.max(radius, height * 0.28), 1);
   }
 
   function createIsometricEntity(THREE, item, spec, size, markContext) {
@@ -4536,8 +3958,8 @@
       screen.position.z = size.d * 0.19;
       group.add(screen);
     }
-    if (kind === "database" || kind === "mysql" || kind === "redis") {
-      var cap = new THREE.Mesh(new THREE.CylinderGeometry(size.w * 0.18, size.w * 0.18, 0.035, 30), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
+    if (kind === "database" || kind === "mysql" || kind === "postgres" || kind === "mongodb" || kind === "redis" || kind === "cache") {
+      var cap = new THREE.Mesh(isometricCylinderGeometry(THREE, size.w * 0.18, 0.035, 30), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
       cap.position.y = size.h * 0.22;
       group.add(cap);
     }
@@ -4561,7 +3983,8 @@
   function addIsometricZone(THREE, root, zone, scale, center) {
     var bounds = isometricBounds(zone);
     var world = isometricWorld({ x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 }, scale, center);
-    var color = colorValue(firstString(zone.presentation || {}, "color") || "#e6edf5", 0xe6edf5);
+    var presentation = zone && zone.presentation && typeof zone.presentation === "object" ? zone.presentation : {};
+    var color = colorValue(presentation.color || "#e6edf5", 0xe6edf5);
     var plane = new THREE.Mesh(new THREE.PlaneGeometry(bounds.w * scale, bounds.h * scale), new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
@@ -4579,8 +4002,8 @@
       isometricWorld({ x: bounds.x, y: bounds.y + bounds.h }, scale, center),
       isometricWorld({ x: bounds.x, y: bounds.y }, scale, center)
     ].map(function (p) { return new THREE.Vector3(p.x, 0.035, p.z); });
-    var boundary = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, firstString(zone.presentation || {}, "color") || "#64748b", 0.92));
-    boundary.userData = { isZoneBoundary: true, style: firstString(zone.presentation || {}, "boundary") || "solid" };
+    var boundary = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, presentation.color || "#64748b", 0.92));
+    boundary.userData = { isZoneBoundary: true, style: presentation.boundary || "solid" };
     root.add(boundary);
     return { zone: zone, bounds: bounds, labelPoint: { x: bounds.x + 0.35, y: bounds.y + 0.35 }, plane: plane, boundary: boundary };
   }
@@ -4638,7 +4061,11 @@
     root.add(entityRoot);
     root.add(leaderRoot);
     scene.add(root);
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 1.15));
+    if (THREE.HemisphereLight) {
+      scene.add(new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 1.15));
+    } else {
+      scene.add(new THREE.AmbientLight(0xffffff, 0.78));
+    }
     var sun = new THREE.DirectionalLight(0xffffff, 1.08);
     sun.position.set(6, 8, 5);
     scene.add(sun);

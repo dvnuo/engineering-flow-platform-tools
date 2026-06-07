@@ -10,102 +10,102 @@
     {
       "path": "$.zones",
       "severity": "error",
-      "code": "missing_zones",
+      "code": "isometric_zones_missing",
       "suggestion": "Add bounded architecture zones before placing entities."
     },
     {
       "path": "$.zones[*].bounds",
       "severity": "error",
-      "code": "zone_without_bounds",
+      "code": "isometric_zone_bounds_missing",
       "suggestion": "Every zone must declare numeric bounds.x, bounds.y, bounds.w, and bounds.h."
     },
     {
       "path": "$.entities[*].kind",
       "severity": "error",
-      "code": "entity_kind_missing",
+      "code": "isometric_entity_kind_missing",
       "suggestion": "Set an architecture entity kind such as nginx, microservice, nacos, redis, mysql, oss, or elasticsearch."
     },
     {
       "path": "$.entities[*].position",
       "severity": "warning",
-      "code": "entity_position_missing",
+      "code": "isometric_entity_position_missing",
       "suggestion": "Give important entities explicit x/y positions instead of relying on fallback placement."
     },
     {
       "path": "$.links[*].directed",
       "severity": "error",
-      "code": "link_direction_missing",
+      "code": "isometric_link_direction_missing",
       "suggestion": "Set every architecture link to directed=true."
     }
   ],
   "semantic_rules": [
     {
-      "code": "excessive_auto_layout",
+      "code": "isometric_too_many_auto_positions",
       "severity": "warning",
       "description": "Too many important entities are missing positions, so the diagram cannot preserve architecture intent."
     },
     {
-      "code": "entity_label_missing",
+      "code": "isometric_entity_label_missing",
       "severity": "error",
       "description": "Each entity must have a concise label."
     },
     {
-      "code": "top_label_missing",
+      "code": "isometric_top_label_missing",
       "severity": "warning",
       "description": "Visible entities should use top labels unless presentation.label.mode is intentionally hidden."
     },
     {
-      "code": "leader_line_missing",
+      "code": "isometric_leader_line_missing",
       "severity": "warning",
       "description": "Visible entities should retain leader lines so top labels remain anchored to objects."
     },
     {
-      "code": "link_arrow_missing",
+      "code": "isometric_link_arrow_missing",
       "severity": "error",
       "description": "Directional links must render visible arrowheads."
     },
     {
-      "code": "link_route_missing",
+      "code": "isometric_link_route_missing",
       "severity": "warning",
       "description": "Links should declare routeStyle or explicit route points."
     },
     {
-      "code": "link_label_too_long",
+      "code": "isometric_link_label_too_long",
       "severity": "warning",
       "description": "Link labels should be short architecture labels, not full sentences."
     },
     {
-      "code": "zone_overlap_risk",
+      "code": "isometric_zone_overlap_risk",
       "severity": "warning",
       "description": "Zone bounds appear to overlap or crowd labels."
     },
     {
-      "code": "entity_overlap_risk",
+      "code": "isometric_entity_overlap_risk",
       "severity": "warning",
       "description": "Entity positions appear too close for the chosen 3D models and top labels."
     },
     {
-      "code": "generic_graph_shape_detected",
+      "code": "isometric_generic_graph_detected",
       "severity": "error",
       "description": "Input uses generic graph nodes/edges or untyped graph shapes instead of architecture entities and links."
     },
     {
-      "code": "fallback_sphere_detected",
+      "code": "isometric_fallback_sphere_risk",
       "severity": "error",
       "description": "Renderer would fall back to a generic sphere for an architecture entity."
     },
     {
-      "code": "starfield_theme_detected",
+      "code": "isometric_starfield_theme_detected",
       "severity": "error",
       "description": "Architecture overviews must use the light base-plane theme, not starfield or dust themes."
     },
     {
-      "code": "missing_architecture_light_theme",
+      "code": "isometric_light_theme_missing",
       "severity": "error",
       "description": "Set theme to architecture_light."
     },
     {
-      "code": "too_many_links_without_routes",
+      "code": "isometric_too_many_links_without_routes",
       "severity": "warning",
       "description": "Dense diagrams need orthogonal routeStyle or explicit route points for readable arrows."
     }

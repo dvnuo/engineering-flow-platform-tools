@@ -77,10 +77,37 @@ type Checks struct {
 	ArchitectureLightTheme             bool `json:"architecture_light_theme"`
 	NoStarfieldTheme                   bool `json:"no_starfield_theme"`
 	NoStudioLayout                     bool `json:"no_studio_layout"`
+	ArtifactRuntimeWired               bool `json:"artifact_runtime_wired"`
+	ArtifactIsometricRuntimeHook       bool `json:"artifact_isometric_runtime_hook"`
+	ArtifactIsometricDOMHooks          bool `json:"artifact_isometric_dom_hooks"`
+	ArtifactEntityLabelHooks           bool `json:"artifact_entity_label_hooks"`
+	ArtifactLinkLabelHooks             bool `json:"artifact_link_label_hooks"`
+	ArtifactZoneLabelHooks             bool `json:"artifact_zone_label_hooks"`
+	ArtifactBasePlaneHook              bool `json:"artifact_base_plane_hook"`
+	ArtifactGridHook                   bool `json:"artifact_grid_hook"`
+	ArtifactLeaderLineHook             bool `json:"artifact_leader_line_hook"`
+	ArtifactArrowHook                  bool `json:"artifact_arrow_hook"`
+	ArtifactNoStudioRuntime            bool `json:"artifact_no_studio_runtime"`
+	ArtifactNoStarfieldRuntime         bool `json:"artifact_no_starfield_runtime"`
 	ScreenshotReadable                 bool `json:"screenshot_readable"`
 	ScreenshotNonBlank                 bool `json:"screenshot_non_blank"`
 	ScreenshotContrast                 bool `json:"screenshot_contrast"`
 	ScreenshotCoverage                 bool `json:"screenshot_coverage"`
+}
+
+type artifactEvidence struct {
+	RuntimeWired         bool
+	IsometricRuntimeHook bool
+	IsometricDOMHooks    bool
+	EntityLabelHooks     bool
+	LinkLabelHooks       bool
+	ZoneLabelHooks       bool
+	BasePlaneHook        bool
+	GridHook             bool
+	LeaderLineHook       bool
+	ArrowHook            bool
+	NoStudioRuntime      bool
+	NoStarfieldRuntime   bool
 }
 
 type Action struct {
@@ -139,7 +166,8 @@ func Inspect(opts Options) (Result, error) {
 		return Result{}, err
 	}
 	visualPlan := plan.Build(opts.TemplateDir, tpl, parsed.Data, summary, warnings, recommendations, opts.OutDir)
-	checks := buildChecks(outputInspection, outputManifest, tpl, visualPlan, summary, screenshot)
+	evidence := inspectArtifactEvidence(opts.OutDir, tpl)
+	checks := buildChecks(outputInspection, outputManifest, tpl, visualPlan, summary, screenshot, evidence)
 	renderWarnings := inspectRenderWarnings(checks, outputManifest, tpl, visualPlan, summary)
 	warnings = append(warnings, renderWarnings...)
 	warnings = append(warnings, screenshotWarnings...)
@@ -167,6 +195,7 @@ func Inspect(opts Options) (Result, error) {
 func (c Checks) AllCriticalOK(withScreenshot bool) bool {
 	base := c.OutputFiles && c.ManifestJSON && c.ManifestJS && c.DataJS && c.RuntimeAssets && c.ThreeAsset && c.RendererContractMatch && c.TemplateVersionMatch && c.PlanReady && c.FirstViewObjectsWithinBudget && c.FirstViewRelationshipsWithinBudget && c.LabelsBounded && c.RelationshipsVisible
 	base = base && c.IsometricRendererUsed && c.BasePlanePresent && c.GridPresent && c.ZonesPresent && c.ZoneBoundariesPresent && c.EntitiesPresent && c.EntityLabelsPresent && c.LeaderLinesPresent && c.DirectedArrowsPresent && c.LinkLabelsPresent && c.OrthographicCameraPlanned && c.ArchitectureLightTheme && c.NoStarfieldTheme && c.NoStudioLayout
+	base = base && c.ArtifactRuntimeWired && c.ArtifactIsometricRuntimeHook && c.ArtifactIsometricDOMHooks && c.ArtifactEntityLabelHooks && c.ArtifactLinkLabelHooks && c.ArtifactZoneLabelHooks && c.ArtifactBasePlaneHook && c.ArtifactGridHook && c.ArtifactLeaderLineHook && c.ArtifactArrowHook && c.ArtifactNoStudioRuntime && c.ArtifactNoStarfieldRuntime
 	return base && (!withScreenshot || c.ScreenshotReadable)
 }
 
@@ -216,7 +245,87 @@ func parseJSAssignment(b []byte, variable, file string) (map[string]any, error) 
 	return out, nil
 }
 
-func buildChecks(outputInspection render.Inspection, outputManifest manifest.OutputManifest, tpl manifest.TemplateManifest, visualPlan plan.VisualPlan, summary preview.Summary, screenshot ScreenshotInspection) Checks {
+func inspectArtifactEvidence(outDir string, tpl manifest.TemplateManifest) artifactEvidence {
+	evidence := artifactEvidence{
+		RuntimeWired:         true,
+		IsometricRuntimeHook: true,
+		IsometricDOMHooks:    true,
+		EntityLabelHooks:     true,
+		LinkLabelHooks:       true,
+		ZoneLabelHooks:       true,
+		BasePlaneHook:        true,
+		GridHook:             true,
+		LeaderLineHook:       true,
+		ArrowHook:            true,
+		NoStudioRuntime:      true,
+		NoStarfieldRuntime:   true,
+	}
+	if tpl.Renderer.Contract != "offline.architecture.isometric.v1" {
+		return evidence
+	}
+	indexHTML := readArtifactText(filepath.Join(outDir, "index.html"))
+	runtimeJS := readArtifactText(filepath.Join(outDir, "assets", "runtime", "efp-visual-renderers.iife.js"))
+	runtimeCSS := readArtifactText(filepath.Join(outDir, "assets", "runtime", "efp-visual-runtime.css"))
+	templateCSS := readArtifactText(filepath.Join(outDir, "assets", "templates", tpl.ID, "style.css"))
+	manifestJS := readArtifactText(filepath.Join(outDir, "manifest.js"))
+	dataJS := readArtifactText(filepath.Join(outDir, "data.js"))
+	isometricRuntime := isometricRuntimeBlock(runtimeJS)
+	combinedArtifact := strings.ToLower(indexHTML + "\n" + runtimeCSS + "\n" + templateCSS + "\n" + manifestJS + "\n" + dataJS + "\n" + isometricRuntime)
+
+	evidence.RuntimeWired = strings.Contains(indexHTML, "assets/runtime/efp-visual-runtime.iife.js") &&
+		strings.Contains(indexHTML, "assets/runtime/efp-visual-renderers.iife.js") &&
+		strings.Contains(indexHTML, "assets/vendor/three/efp-three.module.min.js") &&
+		strings.Contains(indexHTML, "manifest.js") &&
+		strings.Contains(indexHTML, "data.js")
+	evidence.IsometricRuntimeHook = strings.Contains(runtimeJS, "function renderIsometricArchitecture") &&
+		strings.Contains(runtimeJS, `runtime.registerRenderer("offline.architecture.isometric.v1"`)
+	evidence.IsometricDOMHooks = strings.Contains(isometricRuntime, "data-isometric-renderer") &&
+		strings.Contains(runtimeCSS+templateCSS, "visual-isometric-label-layer") &&
+		strings.Contains(runtimeCSS+templateCSS, "visual-isometric-stage")
+	evidence.EntityLabelHooks = strings.Contains(isometricRuntime, "data-entity-label") &&
+		strings.Contains(runtimeCSS+templateCSS, "visual-isometric-label")
+	evidence.LinkLabelHooks = strings.Contains(isometricRuntime, "data-link-label") &&
+		strings.Contains(runtimeCSS+templateCSS, "visual-isometric-link-label")
+	evidence.ZoneLabelHooks = strings.Contains(isometricRuntime, "data-zone-label") &&
+		strings.Contains(runtimeCSS+templateCSS, "visual-isometric-zone-label")
+	evidence.BasePlaneHook = strings.Contains(isometricRuntime, "isBasePlane")
+	evidence.GridHook = strings.Contains(isometricRuntime, "isIsometricGrid")
+	evidence.LeaderLineHook = strings.Contains(isometricRuntime, "isLeaderLine")
+	evidence.ArrowHook = strings.Contains(isometricRuntime, "createArrowHead") && strings.Contains(isometricRuntime, "isDirectedArrow")
+	evidence.NoStudioRuntime = !strings.Contains(combinedArtifact, "studio-") && !strings.Contains(combinedArtifact, "studioshell") && !strings.Contains(combinedArtifact, "renderstudio")
+	evidence.NoStarfieldRuntime = !strings.Contains(strings.ToLower(isometricRuntime), "visual-space-dot") &&
+		!strings.Contains(strings.ToLower(isometricRuntime+"\n"+templateCSS+"\n"+dataJS), "starfield")
+	return evidence
+}
+
+func readArtifactText(path string) string {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func isometricRuntimeBlock(runtimeJS string) string {
+	start := strings.Index(runtimeJS, "function isometricArray")
+	if start < 0 {
+		start = strings.Index(runtimeJS, "function createIsometricShell")
+	}
+	if start < 0 {
+		start = strings.Index(runtimeJS, "function renderIsometricArchitecture")
+	}
+	if start < 0 {
+		return ""
+	}
+	block := runtimeJS[start:]
+	end := strings.Index(block, `runtime.registerRenderer("offline.architecture.isometric.v1"`)
+	if end < 0 {
+		return block
+	}
+	return block[:end]
+}
+
+func buildChecks(outputInspection render.Inspection, outputManifest manifest.OutputManifest, tpl manifest.TemplateManifest, visualPlan plan.VisualPlan, summary preview.Summary, screenshot ScreenshotInspection, evidence artifactEvidence) Checks {
 	files := set(outputInspection.Artifact.Files)
 	checks := Checks{
 		OutputFiles:                        outputInspection.Checks.IndexHTML && outputInspection.Checks.ManifestJSON && outputInspection.Checks.ManifestJS && outputInspection.Checks.DataJS && outputInspection.Checks.RuntimeJS && outputInspection.Checks.RuntimeRenderersJS && outputInspection.Checks.RuntimeCSS,
@@ -254,6 +363,18 @@ func buildChecks(outputInspection render.Inspection, outputManifest manifest.Out
 		ArchitectureLightTheme:             true,
 		NoStarfieldTheme:                   true,
 		NoStudioLayout:                     true,
+		ArtifactRuntimeWired:               true,
+		ArtifactIsometricRuntimeHook:       true,
+		ArtifactIsometricDOMHooks:          true,
+		ArtifactEntityLabelHooks:           true,
+		ArtifactLinkLabelHooks:             true,
+		ArtifactZoneLabelHooks:             true,
+		ArtifactBasePlaneHook:              true,
+		ArtifactGridHook:                   true,
+		ArtifactLeaderLineHook:             true,
+		ArtifactArrowHook:                  true,
+		ArtifactNoStudioRuntime:            true,
+		ArtifactNoStarfieldRuntime:         true,
 		ScreenshotReadable:                 !screenshot.Provided || screenshot.NonBlank && screenshot.ContrastOK && screenshot.CoverageOK,
 		ScreenshotNonBlank:                 !screenshot.Provided || screenshot.NonBlank,
 		ScreenshotContrast:                 !screenshot.Provided || screenshot.ContrastOK,
@@ -262,11 +383,11 @@ func buildChecks(outputInspection render.Inspection, outputManifest manifest.Out
 	if tpl.Effects.Engine == "three.v1" {
 		checks.ThreeAsset = files["assets/vendor/three/efp-three.module.min.js"]
 	}
-	applyArchitectureChecks(&checks, tpl, visualPlan)
+	applyArchitectureChecks(&checks, tpl, visualPlan, evidence)
 	return checks
 }
 
-func applyArchitectureChecks(checks *Checks, tpl manifest.TemplateManifest, visualPlan plan.VisualPlan) {
+func applyArchitectureChecks(checks *Checks, tpl manifest.TemplateManifest, visualPlan plan.VisualPlan, evidence artifactEvidence) {
 	if tpl.Renderer.Contract != "offline.architecture.isometric.v1" {
 		return
 	}
@@ -300,6 +421,18 @@ func applyArchitectureChecks(checks *Checks, tpl manifest.TemplateManifest, visu
 	checks.OrthographicCameraPlanned = iso.Camera == "orthographic_isometric"
 	checks.ArchitectureLightTheme = iso.Theme == "" || strings.EqualFold(iso.Theme, "architecture_light")
 	checks.NoStarfieldTheme = !strings.Contains(strings.ToLower(iso.Theme), "starfield")
+	checks.ArtifactRuntimeWired = evidence.RuntimeWired
+	checks.ArtifactIsometricRuntimeHook = evidence.IsometricRuntimeHook
+	checks.ArtifactIsometricDOMHooks = evidence.IsometricDOMHooks
+	checks.ArtifactEntityLabelHooks = evidence.EntityLabelHooks
+	checks.ArtifactLinkLabelHooks = evidence.LinkLabelHooks
+	checks.ArtifactZoneLabelHooks = evidence.ZoneLabelHooks
+	checks.ArtifactBasePlaneHook = evidence.BasePlaneHook
+	checks.ArtifactGridHook = evidence.GridHook
+	checks.ArtifactLeaderLineHook = evidence.LeaderLineHook
+	checks.ArtifactArrowHook = evidence.ArrowHook
+	checks.ArtifactNoStudioRuntime = evidence.NoStudioRuntime
+	checks.ArtifactNoStarfieldRuntime = evidence.NoStarfieldRuntime
 }
 
 func inspectRenderWarnings(checks Checks, outputManifest manifest.OutputManifest, tpl manifest.TemplateManifest, visualPlan plan.VisualPlan, summary preview.Summary) []preview.Warning {
@@ -394,6 +527,42 @@ func inspectRenderWarnings(checks Checks, outputManifest manifest.OutputManifest
 		}
 		if !checks.NoStudioLayout {
 			add("architecture_studio_layout_detected", "error", "Architecture plan still references a Studio layout.", "Use layout preset isometric_architecture.")
+		}
+		if !checks.ArtifactRuntimeWired {
+			add("architecture_artifact_runtime_not_wired", "error", "The generated index.html does not wire the local runtime, Three.js vendor asset, manifest.js, and data.js.", "Run visual render again and inspect the generated index.html script tags.")
+		}
+		if !checks.ArtifactIsometricRuntimeHook {
+			add("architecture_artifact_renderer_hook_missing", "error", "The generated runtime asset does not expose the isometric architecture renderer hook.", "Ensure efp-visual-renderers.iife.js registers offline.architecture.isometric.v1 with renderIsometricArchitecture.")
+		}
+		if !checks.ArtifactIsometricDOMHooks {
+			add("architecture_artifact_dom_hooks_missing", "error", "The generated artifact lacks isometric DOM hooks for the stage and label layer.", "Ensure the renderer creates data-isometric-renderer and visual-isometric-label-layer elements.")
+		}
+		if !checks.ArtifactEntityLabelHooks {
+			add("architecture_artifact_entity_label_hooks_missing", "error", "The generated runtime/style assets do not expose entity label hooks.", "Ensure entity labels use data-entity-label and visual-isometric-label.")
+		}
+		if !checks.ArtifactLinkLabelHooks {
+			add("architecture_artifact_link_label_hooks_missing", "warning", "The generated runtime/style assets do not expose link label hooks.", "Ensure link labels use data-link-label and visual-isometric-link-label.")
+		}
+		if !checks.ArtifactZoneLabelHooks {
+			add("architecture_artifact_zone_label_hooks_missing", "warning", "The generated runtime/style assets do not expose zone label hooks.", "Ensure zone labels use data-zone-label and visual-isometric-zone-label.")
+		}
+		if !checks.ArtifactBasePlaneHook {
+			add("architecture_artifact_base_plane_hook_missing", "error", "The generated runtime does not expose a base-plane hook.", "Ensure the isometric renderer tags the base plane with isBasePlane.")
+		}
+		if !checks.ArtifactGridHook {
+			add("architecture_artifact_grid_hook_missing", "error", "The generated runtime does not expose a grid hook.", "Ensure the isometric renderer tags the grid with isIsometricGrid.")
+		}
+		if !checks.ArtifactLeaderLineHook {
+			add("architecture_artifact_leader_line_hook_missing", "error", "The generated runtime does not expose leader-line hooks.", "Ensure entity labels keep visible leader lines tagged with isLeaderLine.")
+		}
+		if !checks.ArtifactArrowHook {
+			add("architecture_artifact_arrow_hook_missing", "error", "The generated runtime does not expose directed arrow hooks.", "Ensure architecture links use createArrowHead and tag arrow geometry with isDirectedArrow.")
+		}
+		if !checks.ArtifactNoStudioRuntime {
+			add("architecture_artifact_studio_runtime_detected", "error", "The generated architecture artifact still contains Studio runtime or style hooks.", "Remove legacy Studio renderer/style code from shared runtime assets.")
+		}
+		if !checks.ArtifactNoStarfieldRuntime {
+			add("architecture_artifact_starfield_runtime_detected", "error", "The generated architecture artifact still contains starfield hooks in the isometric renderer path.", "Keep architecture.isometric_overview grounded on architecture_light base plane and grid.")
 		}
 	}
 	_ = outputManifest

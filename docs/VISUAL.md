@@ -98,7 +98,7 @@ Graph, timeline, matrix, evidence, UML, and architecture renderers use this guid
 The isometric architecture layer is a scene contract over the semantic Diagram/Mark layer. It does not replace graph, UML, timeline, evidence, matrix, or mark authoring. Instead, it maps systems into a grounded architecture scene:
 
 - zones define bounded infrastructure, runtime, data, network, or platform areas
-- entities define services, APIs, workers, queues, streams, databases, storage, users, gateways, and external systems
+- entities define services, APIs, workers, queues, streams, databases, storage, users, gateways, ingress/load balancers, Kubernetes objects, and external systems
 - links define directed calls, reads, writes, events, dependencies, deploys, validates, blocks, sends, and returns
 - canvas.grid defines the base plane and ground reference
 - camera defaults to orthographic isometric
@@ -140,7 +140,7 @@ The bundled AWS and Jenkins icon ids are local styled placeholders for offline v
 
 Use `inspect-plan` after fixing `inspect-input` warnings and before `visual render`. It does not analyze screenshots or rendered pixels; it tells the agent whether the semantic input is likely to produce a readable first view.
 
-`visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, shape diversity, visible arrows, color diversity, legend presence, local icon assets, attributions, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read. If a screenshot is available, pass `--screenshot <png|jpg|gif>` to add blankness, contrast, and visible coverage checks.
+`visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, shape diversity, visible arrows, color diversity, legend presence, local icon assets, attributions, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read. For `architecture.isometric_overview`, it also inspects generated artifact hooks in `index.html`, runtime JS/CSS, `manifest.js`, and `data.js`: runtime wiring, isometric renderer registration, label-layer hooks, entity/link/zone label hooks, base-plane/grid/leader-line/arrow hooks, and absence of Studio/starfield hooks in the isometric path. If a screenshot is available, pass `--screenshot <png|jpg|gif>` to add blankness, contrast, and visible coverage checks.
 
 ## Render Output Contract
 

@@ -18,19 +18,19 @@
     "pc": {
       "shape": "client_monitor",
       "mesh": "monitor",
-      "iconFallback": "generic.user",
+      "iconFallback": "generic.pc",
       "color": "#64748b"
     },
     "mobile": {
       "shape": "mobile_slab",
       "mesh": "slab",
-      "iconFallback": "generic.user",
+      "iconFallback": "generic.mobile",
       "color": "#475569"
     },
     "cdn": {
       "shape": "cdn_globe",
       "mesh": "globe",
-      "iconFallback": "generic.external",
+      "iconFallback": "generic.cdn",
       "color": "#38bdf8"
     },
     "gateway": {
@@ -42,7 +42,7 @@
     "nginx": {
       "shape": "nginx_tower",
       "mesh": "tower",
-      "iconFallback": "generic.api",
+      "iconFallback": "generic.nginx",
       "color": "#16a34a"
     },
     "api_gateway": {
@@ -66,13 +66,13 @@
     "nacos": {
       "shape": "registry_ring",
       "mesh": "ring_pedestal",
-      "iconFallback": "generic.service",
+      "iconFallback": "generic.nacos",
       "color": "#7c3aed"
     },
     "admin": {
       "shape": "admin_shield",
       "mesh": "shield",
-      "iconFallback": "generic.warning",
+      "iconFallback": "generic.admin",
       "color": "#f59e0b"
     },
     "api": {
@@ -108,7 +108,7 @@
     "mysql": {
       "shape": "database_cylinder",
       "mesh": "cylinder",
-      "iconFallback": "generic.database",
+      "iconFallback": "generic.mysql",
       "color": "#2563eb"
     },
     "cache": {
@@ -120,7 +120,7 @@
     "redis": {
       "shape": "redis_stack",
       "mesh": "stacked_cylinder",
-      "iconFallback": "generic.storage",
+      "iconFallback": "generic.redis",
       "color": "#ef4444"
     },
     "storage": {
@@ -132,7 +132,7 @@
     "oss": {
       "shape": "object_bucket",
       "mesh": "bucket",
-      "iconFallback": "generic.storage",
+      "iconFallback": "generic.oss",
       "color": "#16a34a"
     },
     "file_storage": {
@@ -204,13 +204,13 @@
     "log": {
       "shape": "log_glyph",
       "mesh": "log_stack",
-      "iconFallback": "generic.stream",
+      "iconFallback": "generic.log",
       "color": "#f97316"
     },
     "elasticsearch": {
       "shape": "search_glyph",
       "mesh": "search_cluster",
-      "iconFallback": "generic.stream",
+      "iconFallback": "generic.elasticsearch",
       "color": "#eab308"
     },
     "search": {
@@ -222,7 +222,7 @@
     "security": {
       "shape": "security_shield",
       "mesh": "shield",
-      "iconFallback": "generic.warning",
+      "iconFallback": "generic.security",
       "color": "#e11d48"
     },
     "cluster": {
@@ -362,6 +362,72 @@
       "mesh": "box",
       "iconFallback": "generic.service",
       "color": "#47c477"
+    },
+    "kafka": {
+      "shape": "event_bus",
+      "mesh": "capsule",
+      "iconFallback": "generic.kafka",
+      "color": "#8b5cf6"
+    },
+    "rocketmq": {
+      "shape": "queue_capsule",
+      "mesh": "capsule",
+      "iconFallback": "generic.rocketmq",
+      "color": "#f97316"
+    },
+    "rabbitmq": {
+      "shape": "queue_capsule",
+      "mesh": "capsule",
+      "iconFallback": "generic.rabbitmq",
+      "color": "#22c55e"
+    },
+    "postgres": {
+      "shape": "database_cylinder",
+      "mesh": "cylinder",
+      "iconFallback": "generic.postgres",
+      "color": "#336791"
+    },
+    "mongodb": {
+      "shape": "database_cylinder",
+      "mesh": "cylinder",
+      "iconFallback": "generic.mongodb",
+      "color": "#10b981"
+    },
+    "minio": {
+      "shape": "object_bucket",
+      "mesh": "bucket",
+      "iconFallback": "generic.minio",
+      "color": "#dc2626"
+    },
+    "kubernetes": {
+      "shape": "cluster_block",
+      "mesh": "cluster",
+      "iconFallback": "generic.kubernetes",
+      "color": "#326ce5"
+    },
+    "pod": {
+      "shape": "service_box",
+      "mesh": "box",
+      "iconFallback": "generic.pod",
+      "color": "#60a5fa"
+    },
+    "node": {
+      "shape": "server_block",
+      "mesh": "box",
+      "iconFallback": "generic.node",
+      "color": "#64748b"
+    },
+    "ingress": {
+      "shape": "gateway_card",
+      "mesh": "gateway_card",
+      "iconFallback": "generic.ingress",
+      "color": "#0d9488"
+    },
+    "load_balancer": {
+      "shape": "gateway_tower",
+      "mesh": "tower",
+      "iconFallback": "generic.load_balancer",
+      "color": "#2563eb"
     }
   },
   "providers": {
@@ -468,6 +534,12 @@
       "mesh": "cloud",
       "icon": "generic.external",
       "color": "#ff9900"
+    },
+    "kubernetes": {
+      "shape": "cluster_block",
+      "mesh": "cluster",
+      "icon": "generic.kubernetes",
+      "color": "#326ce5"
     }
   },
   "edge_kinds": {

@@ -144,6 +144,121 @@
       "kind": "vendor-styled-generic",
       "official": false,
       "attribution_id": "efp-jenkins-generic"
+    },
+    "generic.nginx": {
+      "path": "assets/icons/generic/api.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.mysql": {
+      "path": "assets/icons/generic/database.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.redis": {
+      "path": "assets/icons/generic/storage.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.nacos": {
+      "path": "assets/icons/generic/service.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.cdn": {
+      "path": "assets/icons/generic/external.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.pc": {
+      "path": "assets/icons/generic/user.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.mobile": {
+      "path": "assets/icons/generic/user.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.admin": {
+      "path": "assets/icons/generic/warning.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.security": {
+      "path": "assets/icons/generic/warning.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.log": {
+      "path": "assets/icons/generic/stream.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.elasticsearch": {
+      "path": "assets/icons/generic/stream.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.oss": {
+      "path": "assets/icons/generic/storage.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.kafka": {
+      "path": "assets/icons/generic/stream.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.rocketmq": {
+      "path": "assets/icons/generic/queue.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.rabbitmq": {
+      "path": "assets/icons/generic/queue.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.postgres": {
+      "path": "assets/icons/generic/database.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.mongodb": {
+      "path": "assets/icons/generic/database.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.minio": {
+      "path": "assets/icons/generic/storage.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.kubernetes": {
+      "path": "assets/icons/generic/service.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.pod": {
+      "path": "assets/icons/generic/service.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.node": {
+      "path": "assets/icons/generic/service.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.ingress": {
+      "path": "assets/icons/generic/api.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.load_balancer": {
+      "path": "assets/icons/generic/api.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
     }
   },
   "models": {

@@ -627,6 +627,20 @@ func TestVisualInspectRenderContract(t *testing.T) {
 		t.Fatalf("inspect-render missing visual plan contract: %#v", plan)
 	}
 
+	isometricOut := filepath.Join(t.TempDir(), "isometric")
+	runVisualOK(t, "render", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "architecture.isometric_overview", "examples", "microservice-architecture-good.input.json"), "--out", isometricOut, "--json")
+	isometric := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", isometricOut, "--json")
+	isometricData := objectMap(t, isometric["data"])
+	if isometricData["ready"] != true || isometricData["render_score"].(float64) < 90 {
+		t.Fatalf("isometric inspect-render should be ready with high score: %#v", isometricData)
+	}
+	isometricChecks := objectMap(t, isometricData["checks"])
+	for _, field := range []string{"isometric_renderer_used", "base_plane_present", "grid_present", "zones_present", "zone_boundaries_present", "entities_present", "entity_labels_present", "leader_lines_present", "directed_arrows_present", "link_labels_present", "orthographic_camera_planned", "architecture_light_theme", "no_starfield_theme", "no_studio_layout", "artifact_runtime_wired", "artifact_isometric_runtime_hook", "artifact_isometric_dom_hooks", "artifact_entity_label_hooks", "artifact_link_label_hooks", "artifact_zone_label_hooks", "artifact_base_plane_hook", "artifact_grid_hook", "artifact_leader_line_hook", "artifact_arrow_hook", "artifact_no_studio_runtime", "artifact_no_starfield_runtime"} {
+		if isometricChecks[field] != true {
+			t.Fatalf("isometric inspect-render check %s failed: %#v", field, isometricChecks)
+		}
+	}
+
 	blankScreenshot := filepath.Join(t.TempDir(), "blank.png")
 	writeSolidPNG(t, blankScreenshot, 320, 180, color.RGBA{R: 8, G: 8, B: 8, A: 255})
 	blank := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", goodOut, "--screenshot", blankScreenshot, "--json")
@@ -783,9 +797,16 @@ func TestVisualIsometricRuntimeAndInspectionContracts(t *testing.T) {
 
 	markRegistry := loadJSONMap(t, filepath.Join(templateDir, "_shared", "mark-registry.json"))
 	kinds := objectMap(t, markRegistry["kinds"])
-	for _, kind := range []string{"pc", "mobile", "cdn", "gateway", "nginx", "api_gateway", "microservice", "registry", "nacos", "admin", "mysql", "redis", "oss", "file_storage", "block_storage", "log", "search"} {
+	for _, kind := range []string{"pc", "mobile", "cdn", "gateway", "nginx", "api_gateway", "ingress", "load_balancer", "microservice", "registry", "nacos", "admin", "mysql", "postgres", "mongodb", "redis", "oss", "minio", "file_storage", "block_storage", "queue", "kafka", "rocketmq", "rabbitmq", "log", "search", "kubernetes", "pod", "node"} {
 		if _, ok := kinds[kind]; !ok {
 			t.Fatalf("mark registry missing isometric architecture kind %s", kind)
+		}
+	}
+	assetRegistry := loadJSONMap(t, filepath.Join(templateDir, "_shared", "asset-registry.json"))
+	icons := objectMap(t, assetRegistry["icons"])
+	for _, icon := range []string{"generic.nginx", "generic.mysql", "generic.redis", "generic.nacos", "generic.kafka", "generic.postgres", "generic.mongodb", "generic.kubernetes", "generic.ingress", "generic.load_balancer"} {
+		if _, ok := icons[icon]; !ok {
+			t.Fatalf("asset registry missing isometric semantic icon alias %s", icon)
 		}
 	}
 
@@ -793,34 +814,59 @@ func TestVisualIsometricRuntimeAndInspectionContracts(t *testing.T) {
 	if !strings.Contains(renderers, `runtime.registerRenderer("offline.architecture.isometric.v1", { render: renderIsometricArchitecture })`) {
 		t.Fatalf("runtime renderers do not register offline.architecture.isometric.v1")
 	}
+	if strings.Contains(renderers, "firstString(") {
+		t.Fatalf("isometric runtime must not call undefined firstString helper")
+	}
+	if strings.Contains(renderers, "studioShell") || strings.Contains(renderers, "renderStudio(") || strings.Contains(renderers, "studio-app") {
+		t.Fatalf("runtime renderers still contain legacy Studio renderer code")
+	}
+	threeBridge := mustRead(t, filepath.Join(templateDir, "_shared", "vendor", "three", "efp-three.module.min.js"))
+	if !strings.Contains(threeBridge, "OrthographicCamera:Li") {
+		t.Fatalf("local Three bridge must export OrthographicCamera for isometric architecture")
+	}
 	css := mustRead(t, filepath.Join(templateDir, "_shared", "runtime", "efp-visual-runtime.css"))
 	for _, className := range []string{".visual-isometric-app", ".visual-isometric-stage", ".visual-isometric-toolbar", ".visual-isometric-label-layer", ".visual-isometric-inspector"} {
 		if !strings.Contains(css, className) {
 			t.Fatalf("runtime CSS missing %s", className)
 		}
 	}
+	if strings.Contains(css, ".studio-") {
+		t.Fatalf("runtime CSS still contains legacy Studio selectors")
+	}
 
 	checks := renderinspect.Checks{
-		IsometricRendererUsed:     true,
-		BasePlanePresent:          true,
-		GridPresent:               true,
-		ZonesPresent:              true,
-		ZoneBoundariesPresent:     true,
-		EntitiesPresent:           true,
-		EntityLabelsPresent:       true,
-		LeaderLinesPresent:        true,
-		DirectedArrowsPresent:     true,
-		LinkLabelsPresent:         true,
-		OrthographicCameraPlanned: true,
-		ArchitectureLightTheme:    true,
-		NoStarfieldTheme:          true,
-		NoStudioLayout:            true,
+		IsometricRendererUsed:        true,
+		BasePlanePresent:             true,
+		GridPresent:                  true,
+		ZonesPresent:                 true,
+		ZoneBoundariesPresent:        true,
+		EntitiesPresent:              true,
+		EntityLabelsPresent:          true,
+		LeaderLinesPresent:           true,
+		DirectedArrowsPresent:        true,
+		LinkLabelsPresent:            true,
+		OrthographicCameraPlanned:    true,
+		ArchitectureLightTheme:       true,
+		NoStarfieldTheme:             true,
+		NoStudioLayout:               true,
+		ArtifactRuntimeWired:         true,
+		ArtifactIsometricRuntimeHook: true,
+		ArtifactIsometricDOMHooks:    true,
+		ArtifactEntityLabelHooks:     true,
+		ArtifactLinkLabelHooks:       true,
+		ArtifactZoneLabelHooks:       true,
+		ArtifactBasePlaneHook:        true,
+		ArtifactGridHook:             true,
+		ArtifactLeaderLineHook:       true,
+		ArtifactArrowHook:            true,
+		ArtifactNoStudioRuntime:      true,
+		ArtifactNoStarfieldRuntime:   true,
 	}
 	checkJSON, err := json.Marshal(checks)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, field := range []string{"isometric_renderer_used", "base_plane_present", "grid_present", "zones_present", "zone_boundaries_present", "entities_present", "entity_labels_present", "leader_lines_present", "directed_arrows_present", "link_labels_present", "orthographic_camera_planned", "architecture_light_theme", "no_starfield_theme", "no_studio_layout"} {
+	for _, field := range []string{"isometric_renderer_used", "base_plane_present", "grid_present", "zones_present", "zone_boundaries_present", "entities_present", "entity_labels_present", "leader_lines_present", "directed_arrows_present", "link_labels_present", "orthographic_camera_planned", "architecture_light_theme", "no_starfield_theme", "no_studio_layout", "artifact_runtime_wired", "artifact_isometric_runtime_hook", "artifact_isometric_dom_hooks", "artifact_entity_label_hooks", "artifact_link_label_hooks", "artifact_zone_label_hooks", "artifact_base_plane_hook", "artifact_grid_hook", "artifact_leader_line_hook", "artifact_arrow_hook", "artifact_no_studio_runtime", "artifact_no_starfield_runtime"} {
 		if !strings.Contains(string(checkJSON), field) {
 			t.Fatalf("Checks JSON missing %s: %s", field, string(checkJSON))
 		}

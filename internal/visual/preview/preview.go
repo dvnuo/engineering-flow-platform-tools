@@ -949,44 +949,6 @@ func analyzeSemanticCount(data map[string]any, design manifest.VisualDesign, sum
 	return 100
 }
 
-func analyzeStudio(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
-	heroData := studioHeroData(data)
-	summary.Nodes = len(array(heroData, "nodes"))
-	summary.Edges = len(array(heroData, "edges"))
-	summary.Events = len(array(heroData, "events"))
-	summary.Items = len(array(heroData, "items"))
-	summary.Participants = len(array(heroData, "participants"))
-	summary.Messages = len(array(heroData, "messages"))
-	summary.Panels = len(array(data, "panels"))
-	totalHeroItems := summary.Nodes + summary.Items + summary.Events + summary.Participants + summary.Messages
-	quality := 100
-	if summary.Panels == 0 {
-		quality -= 30
-		*warnings = append(*warnings, Warning{Code: "studio_panels_missing", Severity: "error", Message: "Studio input has no panels for explanatory detail.", Hint: "Add panels[] with id, type, title, target_refs, summary, content, metrics, or evidence."})
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "panels[]")
-	}
-	if len(array(data, "controls")) == 0 {
-		quality -= 8
-		*warnings = append(*warnings, Warning{Code: "studio_controls_missing", Severity: "warning", Message: "Studio input has no controls for exploration.", Hint: "Add controls[] for filter, focus, step, search, or toggle actions tied to panels or hero data."})
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "controls[]")
-	}
-	if len(array(data, "navigation")) == 0 && summary.Panels > 1 {
-		quality -= 6
-		*warnings = append(*warnings, Warning{Code: "studio_navigation_missing", Severity: "info", Message: "Studio input has multiple panels but no navigation.", Hint: "Add navigation[] entries that point to important panel ids or hero object ids."})
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "navigation[]")
-	}
-	if len(array(data, "annotations")) == 0 && totalHeroItems > 8 {
-		quality -= 6
-		*warnings = append(*warnings, Warning{Code: "studio_annotations_missing", Severity: "info", Message: "Studio hero has enough content to need callouts.", Hint: "Add annotations[] for important risks, transitions, or entities in the explorable page."})
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "annotations[]")
-	}
-	if totalHeroItems > design.MaxInitialNodes && design.MaxInitialNodes > 0 {
-		quality -= 12
-		*warnings = append(*warnings, Warning{Code: "studio_hero_dense", Severity: "warning", Message: "Studio hero contains more semantic objects than the recommended first view.", Hint: "Move lower-value objects into panels, mark detail visibility, or focus the hero on the main story path."})
-	}
-	return quality
-}
-
 func analyzeGraph(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
 	nodes := objectArray(data, "nodes")
 	edges := objectArray(data, "edges")
@@ -2228,18 +2190,6 @@ func collectStudioReferenceIDs(data map[string]any) map[string]bool {
 		collect(objectArray(data, field))
 	}
 	return ids
-}
-
-func studioHeroData(data map[string]any) map[string]any {
-	hero, _ := data["hero"].(map[string]any)
-	if hero == nil {
-		return map[string]any{}
-	}
-	heroData, _ := hero["data"].(map[string]any)
-	if heroData == nil {
-		return map[string]any{}
-	}
-	return heroData
 }
 
 func visualIDsForObject(obj map[string]any) []string {

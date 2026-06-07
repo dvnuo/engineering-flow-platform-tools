@@ -820,6 +820,11 @@ func TestVisualIsometricRuntimeAndInspectionContracts(t *testing.T) {
 	if strings.Contains(renderers, "studioShell") || strings.Contains(renderers, "renderStudio(") || strings.Contains(renderers, "studio-app") {
 		t.Fatalf("runtime renderers still contain legacy Studio renderer code")
 	}
+	for _, snippet := range []string{"function labelBudget", "function rectOverlaps", "function insideViewport", "data-low-priority", "visual-isometric-label-icon", "edgeSpec.lightBackground = true"} {
+		if !strings.Contains(renderers, snippet) {
+			t.Fatalf("isometric runtime missing readability snippet %q", snippet)
+		}
+	}
 	threeBridge := mustRead(t, filepath.Join(templateDir, "_shared", "vendor", "three", "efp-three.module.min.js"))
 	if !strings.Contains(threeBridge, "OrthographicCamera:Li") {
 		t.Fatalf("local Three bridge must export OrthographicCamera for isometric architecture")
@@ -832,6 +837,12 @@ func TestVisualIsometricRuntimeAndInspectionContracts(t *testing.T) {
 	}
 	if strings.Contains(css, ".studio-") {
 		t.Fatalf("runtime CSS still contains legacy Studio selectors")
+	}
+	templateCSS := mustRead(t, filepath.Join(templateDir, "architecture.isometric_overview", "style.css"))
+	for _, snippet := range []string{".visual-isometric-header", ".visual-isometric-title", ".visual-isometric-subtitle", ".visual-isometric-label-icon", ".visual-isometric-link-label[data-low-priority=\"true\"]"} {
+		if !strings.Contains(templateCSS, snippet) {
+			t.Fatalf("isometric template CSS missing readability selector %s", snippet)
+		}
 	}
 
 	checks := renderinspect.Checks{

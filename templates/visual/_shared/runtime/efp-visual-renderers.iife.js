@@ -1545,16 +1545,17 @@
   function createEdgeTube(THREE, curve, edgeSpec, radius) {
     var color = colorValue(edgeSpec.color, 0x63a9ff);
     var geometry = THREE.TubeGeometry ? new THREE.TubeGeometry(curve, 18, radius || 0.012, 8, false) : new THREE.BufferGeometry().setFromPoints(curvePoints(curve, 18));
+    var blendMode = edgeSpec.lightBackground ? THREE.NormalBlending : THREE.AdditiveBlending;
     var material = THREE.TubeGeometry ? new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
       opacity: 0,
-      blending: THREE.AdditiveBlending
+      blending: blendMode
     }) : new THREE.LineBasicMaterial({
       color: color,
       transparent: true,
       opacity: 0,
-      blending: THREE.AdditiveBlending
+      blending: blendMode
     });
     material.depthTest = false;
     material.depthWrite = false;
@@ -1577,12 +1578,12 @@
     if (direction.length() < 0.001) {
       direction.set(0, 1, 0);
     }
-    var geometry = THREE.ConeGeometry ? new THREE.ConeGeometry(0.055, 0.18, 18) : new THREE.IcosahedronGeometry(0.08, 1);
+    var geometry = THREE.ConeGeometry ? new THREE.ConeGeometry(0.075, 0.24, 18) : new THREE.IcosahedronGeometry(0.1, 1);
     var material = new THREE.MeshBasicMaterial({
       color: colorValue(edgeSpec.color, 0x63a9ff),
       transparent: true,
       opacity: 0,
-      blending: THREE.AdditiveBlending
+      blending: edgeSpec.lightBackground ? THREE.NormalBlending : THREE.AdditiveBlending
     });
     material.depthTest = false;
     material.depthWrite = false;
@@ -1604,7 +1605,7 @@
       color: colorValue(edgeSpec.color, 0x63a9ff),
       transparent: true,
       opacity: 0,
-      blending: THREE.AdditiveBlending
+      blending: edgeSpec.lightBackground ? THREE.NormalBlending : THREE.AdditiveBlending
     });
     material.depthTest = false;
     material.depthWrite = false;
@@ -4086,7 +4087,7 @@
       var label = labelHTML("visual-isometric-zone-label", itemLabel(zone) || zone.id);
       label.setAttribute("data-zone-label", zone.id || "");
       shell.labelLayer.appendChild(label);
-      labels.push({ element: label, point: new THREE.Vector3(pos.x, 0.16, pos.z), visible: true });
+      labels.push({ element: label, point: new THREE.Vector3(pos.x, 0.16, pos.z), visible: true, type: "zone", priority: 0.56 });
     });
 
     entities.forEach(function (item, index) {
@@ -4102,9 +4103,15 @@
       entityByID[item.id] = { object: object, item: item, pos: pos, world: new THREE.Vector3(world.x, size.h * 0.22, world.z), size: size };
       var label = labelHTML("visual-isometric-label", itemLabel(item) || item.id);
       label.setAttribute("data-entity-label", item.id || "");
+      var inlineIcon = createInlineIcon(spec, markContext, "visual-isometric-label-icon");
+      if (inlineIcon) {
+        label.textContent = "";
+        label.appendChild(inlineIcon);
+        label.appendChild(el("span", "", itemLabel(item) || item.id));
+      }
       shell.labelLayer.appendChild(label);
       var anchor = new THREE.Vector3(world.x, size.h * 0.72 + 0.28, world.z);
-      labels.push({ element: label, point: anchor, visible: true });
+      labels.push({ element: label, point: anchor, visible: true, type: "entity", priority: 0.84 + importanceValue(item, 0.45) * 0.32, id: item.id });
       var leader = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(world.x, size.h * 0.34, world.z), anchor]), isometricLineMaterial(THREE, "#475569", 0.5));
       leader.userData.isLeaderLine = true;
       leaderRoot.add(leader);
@@ -4117,6 +4124,8 @@
         return;
       }
       var edgeSpec = resolveEdgeSpec(link, markContext);
+      edgeSpec.opacity = Math.max(edgeSpec.opacity || 0.68, 0.82);
+      edgeSpec.lightBackground = true;
       var endpoints = {
         from: { position: from.world.clone().add(new THREE.Vector3(0, 0.22, 0)) },
         to: { position: to.world.clone().add(new THREE.Vector3(0, 0.22, 0)) }
@@ -4132,7 +4141,7 @@
       } else {
         curve = edgeCurveFor(THREE, endpoints.from.position, endpoints.to.position, link, edgeSpec, index);
       }
-      var tube = createEdgeTube(THREE, curve, edgeSpec, 0.018);
+      var tube = createEdgeTube(THREE, curve, edgeSpec, 0.026);
       tube.userData.isDirectedArrow = !!edgeSpec.directed;
       linkRoot.add(tube);
       var arrow = createArrowHead(THREE, curve, edgeSpec);
@@ -4145,8 +4154,11 @@
         var mid = curve.getPoint(0.52);
         var label = labelHTML("visual-isometric-link-label", link.label);
         label.setAttribute("data-link-label", link.id || "");
+        if (importanceValue(link, 0.35) < 0.74) {
+          label.setAttribute("data-low-priority", "true");
+        }
         shell.labelLayer.appendChild(label);
-        labels.push({ element: label, point: mid.clone().add(new THREE.Vector3(0, 0.18, 0)), visible: true });
+        labels.push({ element: label, point: mid.clone().add(new THREE.Vector3(0, 0.18, 0)), visible: true, type: "link", priority: 0.34 + importanceValue(link, 0.35) * 0.5, id: link.id });
       }
     });
 
@@ -4181,11 +4193,62 @@
       return { x: (projected.x * 0.5 + 0.5) * width, y: (-projected.y * 0.5 + 0.5) * height };
     }
 
+    function labelBudget(label) {
+      if (label.type === "link") return 10;
+      if (label.type === "zone") return 12;
+      return 28;
+    }
+
+    function labelRect(label, projected) {
+      var rect = label.element.getBoundingClientRect();
+      var w = Math.max(28, rect.width || 80);
+      var h = Math.max(18, rect.height || 28);
+      var mode = label.type === "link" || label.type === "zone" ? "center" : "top";
+      if (mode === "center") {
+        return { x: projected.x - w / 2, y: projected.y - h / 2, w: w, h: h };
+      }
+      return { x: projected.x - w / 2, y: projected.y - h, w: w, h: h };
+    }
+
+    function rectOverlaps(a, b, padding) {
+      return a.x < b.x + b.w + padding && a.x + a.w + padding > b.x && a.y < b.y + b.h + padding && a.y + a.h + padding > b.y;
+    }
+
+    function insideViewport(rect) {
+      return rect.x > 6 && rect.y > 6 && rect.x + rect.w < width - 6 && rect.y + rect.h < height - 6;
+    }
+
     function updateLabels() {
-      labels.forEach(function (label) {
-        label.element.style.display = labelsVisible && label.visible ? "" : "none";
+      var projected = labels.map(function (label, index) {
         var p = project(label.point);
-        label.element.style.transform = "translate(" + p.x.toFixed(1) + "px, " + p.y.toFixed(1) + "px) translate(-50%, -100%)";
+        label.element.style.display = labelsVisible && label.visible ? "" : "none";
+        label.element.style.visibility = "hidden";
+        var transformMode = label.type === "link" || label.type === "zone" ? "translate(-50%, -50%)" : "translate(-50%, -100%)";
+        label.element.style.transform = "translate(" + p.x.toFixed(1) + "px, " + p.y.toFixed(1) + "px) " + transformMode;
+        return { label: label, index: index, projected: p, rect: labelRect(label, p), priority: label.priority || 0.5 };
+      });
+      var selectedID = selected || "";
+      var counts = { entity: 0, link: 0, zone: 0 };
+      var occupied = [];
+      projected.sort(function (a, b) {
+        var aSelected = a.label.id && a.label.id === selectedID ? 1 : 0;
+        var bSelected = b.label.id && b.label.id === selectedID ? 1 : 0;
+        if (aSelected !== bSelected) return bSelected - aSelected;
+        return b.priority - a.priority;
+      }).forEach(function (item) {
+        var label = item.label;
+        var type = label.type || "entity";
+        var allowed = labelsVisible && label.visible && insideViewport(item.rect) && counts[type] < labelBudget(label);
+        if (allowed) {
+          var padding = type === "link" ? 8 : 10;
+          allowed = !occupied.some(function (rect) { return rectOverlaps(item.rect, rect, padding); });
+        }
+        label.element.style.visibility = allowed ? "visible" : "hidden";
+        label.element.style.opacity = allowed ? "1" : "0";
+        if (allowed) {
+          counts[type] += 1;
+          occupied.push(item.rect);
+        }
       });
     }
 

@@ -24,7 +24,7 @@ func templateCmd(o *Opts) *cobra.Command {
 		Use:   "template",
 		Short: "Inspect local visual templates",
 	}
-	c.AddCommand(templateCategoriesCmd(o), templateListCmd(o), templateGetCmd(o), templateSchemaCmd(o), templateGuideCmd(o), templatePanelGrammarCmd(o), templateDoctorCmd(o))
+	c.AddCommand(templateCategoriesCmd(o), templateListCmd(o), templateGetCmd(o), templateSchemaCmd(o), templateGuideCmd(o), templateDoctorCmd(o))
 	return c
 }
 
@@ -146,8 +146,6 @@ func templateGetCmd(o *Opts) *cobra.Command {
 				"aliases":                 entry.Aliases,
 				"agent_guide_available":   authoring.GuideAvailable(templateDir, entry),
 				"agent_guide_path":        authoring.GuideRelPath(entry),
-				"panel_grammar_available": authoring.PanelGrammarAvailable(templateDir, entry),
-				"panel_grammar_path":      authoring.PanelGrammarRelPath(entry),
 				"quality_rules_available": authoring.QualityRulesAvailable(templateDir, entry),
 				"quality_rules_path":      authoring.QualityRulesRelPath(entry),
 			}))
@@ -188,10 +186,6 @@ func templateSchemaCmd(o *Opts) *cobra.Command {
 			if guideErr != nil {
 				return print(cmd, o, failureFromError(guideErr, "template_manifest_invalid"))
 			}
-			panelGrammar, panelErr := authoring.LoadPanelGrammar(templateDir, entry, false)
-			if panelErr != nil {
-				return print(cmd, o, failureFromError(panelErr, "template_manifest_invalid"))
-			}
 			return print(cmd, o, output.Success("", map[string]any{
 				"template": map[string]any{
 					"requested_id":      requestedID,
@@ -212,12 +206,9 @@ func templateSchemaCmd(o *Opts) *cobra.Command {
 				"json_schema":             doc.JSONSchema,
 				"example_file":            templateExampleRel(entry),
 				"example":                 doc.Example,
-				"agent_guide_available":   authoring.GuideAvailable(templateDir, entry),
-				"agent_guide_path":        authoring.GuideRelPath(entry),
-				"agent_guide_summary":     guide.Summary,
-				"panel_grammar_available": panelGrammar.Available,
-				"panel_grammar_path":      authoring.PanelGrammarRelPath(entry),
-				"panel_grammar_summary":   panelGrammar.Summary,
+				"agent_guide_available": authoring.GuideAvailable(templateDir, entry),
+				"agent_guide_path":      authoring.GuideRelPath(entry),
+				"agent_guide_summary":   guide.Summary,
 			}))
 		},
 	}
@@ -265,53 +256,6 @@ func templateGuideCmd(o *Opts) *cobra.Command {
 			}
 			if !guide.Available {
 				data["warning"] = "Template agent guide is missing; fall back to visual template schema and common visual quality guidance."
-			}
-			return print(cmd, o, output.Success("", data))
-		},
-	}
-}
-
-func templatePanelGrammarCmd(o *Opts) *cobra.Command {
-	return &cobra.Command{
-		Use:   "panel-grammar <template-id>",
-		Short: "Show one Studio visual template panel grammar",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			templateDir, err := visualconfig.ResolveTemplateDir(o.TemplateDir, o.Config)
-			if err != nil {
-				return print(cmd, o, failureFromError(err, "template_dir_missing"))
-			}
-			registry, err := manifest.LoadRegistry(templateDir)
-			if err != nil {
-				return print(cmd, o, failureFromError(err, "template_registry_missing"))
-			}
-			entry, requestedID, ok := registry.Resolve(args[0])
-			if !ok {
-				return print(cmd, o, output.Failure("template_not_found", "Template "+args[0]+" was not found.", "Run visual template list --template-dir "+templateDir+" --json.", 404))
-			}
-			tpl, err := manifest.LoadTemplateManifest(templateDir, entry)
-			if err != nil {
-				return print(cmd, o, failureFromError(err, "template_manifest_invalid"))
-			}
-			if err := manifest.ValidateTemplateManifest(templateDir, entry, &tpl); err != nil {
-				return print(cmd, o, failureFromError(err, "template_manifest_invalid"))
-			}
-			panelGrammar, err := authoring.LoadPanelGrammar(templateDir, entry, true)
-			if err != nil {
-				return print(cmd, o, failureFromError(err, "template_manifest_invalid"))
-			}
-			data := map[string]any{
-				"template_id":             tpl.ID,
-				"requested_id":            requestedID,
-				"canonical_id":            tpl.ID,
-				"panel_grammar_path":      authoring.PanelGrammarRelPath(entry),
-				"panel_grammar_available": panelGrammar.Available,
-				"raw_markdown":            panelGrammar.Raw,
-				"panel_grammar":           panelGrammar.Sections,
-				"panel_grammar_summary":   panelGrammar.Summary,
-			}
-			if !panelGrammar.Available {
-				data["warning"] = "Template panel grammar is missing; fall back to visual template schema and agent guide."
 			}
 			return print(cmd, o, output.Success("", data))
 		},

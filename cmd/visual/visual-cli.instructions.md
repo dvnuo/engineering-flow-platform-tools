@@ -3,20 +3,20 @@
 - `visual` is a terminal-invoked CLI. Always use `--json` for agent workflows.
 - Installed templates default to `~/.efp/template/visual`; use `--template-dir <templates/visual>` only for workspace or release artifact catalogs.
 - Do not infer templates from the file tree.
-- Discover templates only through `categories`, `list`, `get`, `schema`, `guide`, and `panel-grammar`; never list directories to pick a template.
-- When the user asks to explain, walkthrough, studio, dashboard, page, or explorable, prefer the `studio` category first.
+- Discover templates only through `categories`, `list`, `get`, `schema`, and `guide`; never list directories to pick a template.
+- When the user asks for architecture, topology, deployment, service map, system map, infrastructure map, microservice, cloud, iCraft-like, or isometric architecture, prefer the `architecture` category first.
 - First inspect categories with `visual template categories --json`.
 - Select a category, then run:
   1. `visual template list --category <category> --json`
   2. `visual template get <template-id> --json`
   3. `visual template schema <template-id> --json`
   4. `visual template guide <template-id> --json`
-  5. `visual template panel-grammar <template-id> --json` for Studio templates
 - Do not write input JSON until you have read the selected template's guide.
-- For Studio templates, do not write `panels[]` until you have read the selected template's panel grammar.
 - The template guide is authoritative for semantic construction rules, recommended fields, visual encoding, common mistakes, and the quality checklist.
 - Do not invent template paths or input shapes.
 - Do not convert semantic templates into generic graph nodes unless the selected template is actually graph-based.
+- For `architecture.isometric_overview`, generate `zones[]`, `entities[]`, and `links[]`; do not generate generic `nodes[]` / `edges[]`.
+- For isometric architecture inputs, define `canvas.grid.enabled=true`, bounded zones, positioned/sized entities with `kind`, and directed links with visible arrows.
 - Generate semantic input JSON only. Do not generate JavaScript, CSS, remote assets, CDN URLs, Node/npm runtime, or network APIs.
 - Use shared authoring fields from the selected template schema and guide: `importance`, `visibility`, `labelPriority`, `summary`, `details`, `presentation`, `visual`, `view`, and `renderHints` when they improve readability.
 - Use the Visual Mark System for graph-like objects and relationships. Give nodes `kind`, `provider`, `service`, `platform`, or `presentation.shape` / `presentation.mesh` / `presentation.icon` so the renderer can choose boxes, cylinders, capsules, cloud plates, actor cards, diamonds, warnings, and icons instead of fallback spheres.

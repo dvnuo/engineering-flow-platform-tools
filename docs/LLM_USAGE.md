@@ -17,23 +17,23 @@
 - Always use `--json`.
 - Use the default `~/.efp/template/visual` catalog when it is installed there; use `--template-dir` when templates are in the workspace or release artifact.
 - Do not infer available templates from the `templates/visual` file tree.
-- Discover templates only with `visual template categories`, `visual template list`, `visual template get`, `visual template schema`, `visual template guide`, and `visual template panel-grammar`.
+- Discover templates only with `visual template categories`, `visual template list`, `visual template get`, `visual template schema`, and `visual template guide`.
 - Run `visual template categories --json`, or add `--template-dir ./templates/visual` in a source checkout.
 - Run `visual template list --category <category> --json`, or add `--template-dir ./templates/visual` in a source checkout.
 - Run `visual template get <template-id> --json`, or add `--template-dir ./templates/visual` in a source checkout.
 - Run `visual template schema <template-id> --json`, or add `--template-dir ./templates/visual` in a source checkout.
 - Run `visual template guide <template-id> --json`, or add `--template-dir ./templates/visual` in a source checkout.
-- For Studio templates, run `visual template panel-grammar <template-id> --json`, or add `--template-dir ./templates/visual` in a source checkout.
-- The built-in catalog has 37 semantic templates across `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, `evidence`, `matrix`, `spatial`, and `studio`.
+- The built-in catalog has 34 semantic templates across `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, `evidence`, `matrix`, `spatial`, and `architecture`.
 - Do not invent template paths.
 - Before every render, run `visual template schema <id> --json`, using `--template-dir` only when the catalog is not installed at `~/.efp/template/visual`.
 - Write input JSON that follows `data.json_schema` and the returned `data.template.visual_design`; do not invent the input shape and do not generate JavaScript code.
 - Always fill the shared `visual` object: set `visual.goal`, 2-5 `visual.initial_focus_ids`, low-value `visual.hidden_detail_ids`, progressive `visual.narrative_steps`, and 1-4 `visual.annotations` with valid `target_id` values.
 - For UML sequence diagrams, use `uml.sequence_3d` and provide `participants`, unique ordered `messages`, optional `phases`, `activations`, and `fragments`. For 3D sequence quality, also provide participant `display_name`, `subtitle`, `lane_index`, `depth`, and `color`, plus message `curve`, `importance`, `label_priority`, `depth`, and `summary`.
-- For explain, walkthrough, studio, dashboard, page, or explorable requests, prefer the `studio` category. Studio inputs use `studio_v1` with `hero`, `navigation`, `panels`, `controls`, `annotations`, `assumptions`, `view`, `renderHints`, and `visual`.
+- For architecture, topology, deployment, service map, system map, infrastructure map, microservice, cloud, iCraft-like, or isometric architecture requests, prefer the `architecture` category. Use `architecture.isometric_overview` with `zones`, `entities`, and `links`; do not write generic `nodes` and `edges` for that template.
 - For class, state, activity, or component diagrams, use the matching `uml.*` template and semantic fields such as `classes`, `states`, `actions`, `components`, and their relationships.
 - For graph inputs larger than a small overview, include short node `label` or `name` values, include `groups` or node `parent_id`/`group_id`/`group` fields, give groups scenario-specific labels, set `initial_view.mode: "overview"`, and mark noisy low-value edges with `visibility: "detail"` or `visibility: "hidden"`.
 - For graph-like, flow, relationship, spatial, and UML component/activity/state inputs, use the Visual Mark System instead of generic spheres. Add node `kind`, `provider`, `service`, `platform`, or `presentation.shape` / `presentation.mesh` / `presentation.icon`; add edge `directed=true`, `presentation.arrow`, `presentation.lineStyle`, `presentation.curve`, and `presentation.flow` when the relationship has direction or movement.
+- For isometric architecture inputs, add `canvas.grid.enabled=true`, bounded `zones[]`, positioned and sized `entities[]`, entity `kind`, and `links[].directed=true` with `links[].presentation.arrow=forward`.
 - Use `view.colorBy` or `renderHints.colorBy` plus `renderHints.showLegend=true` whenever color carries meaning. Good defaults are `provider`, `kind`, `status`, `group`, `phase`, `risk`, and `severity`.
 - Use local icon ids from `templates/visual/_shared/asset-registry.json`. Do not use external image URLs. Current AWS and Jenkins icon ids are local styled placeholders, not official vendor logos.
 - For graph event inputs, bind each meaningful event to an existing node with `events[].node_id`; replay views should explain which object changed instead of listing detached events.
@@ -57,7 +57,7 @@ Recommended template categories:
 - `evidence` for claim/source reasoning, root cause, risk decisions, and documentation freshness.
 - `matrix` for capability, KPI, risk, and resource allocation.
 - `spatial` for service maps, codebase galaxies, agent fleets, and control-room views.
-- `studio` for explorable pages with header/hero, navigation, inspector panels, controls, assumptions, and annotations.
+- `architecture` for isometric architecture, topology, deployment, service maps, system maps, infrastructure maps, microservices, cloud maps, and iCraft-like architecture scenes.
 
 ## Jenkins Automation
 
@@ -209,13 +209,12 @@ For visual generation, use this loop:
 3. `visual template get <template-id> --json`
 4. `visual template schema <template-id> --json`
 5. `visual template guide <template-id> --json`
-6. For Studio templates, `visual template panel-grammar <template-id> --json`
-7. Write semantic input JSON. Do not generate JavaScript.
-8. `visual inspect-input --template <template-id> --input <input.json> --json`
-9. `visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json`
-10. Revise JSON using warning `suggestion`, `auto_fix_hint`, `visual_plan.marks`, `visual_plan.edges`, `visual_plan.colors`, `visual_plan.assets`, and `visual_plan.quality_loop`.
-11. `visual render --template <template-id> --input <input.json> --out <dir> --json`
-12. `visual inspect-render --out <dir> --json`, optionally adding `--screenshot <png|jpg|gif>` after a browser screenshot is captured
-13. Return `data.artifact.entrypoint` to the user only when `inspect-render` reports `ready=true`, or return the warnings with the artifact if the user wants to review a draft.
+6. Write semantic input JSON. Do not generate JavaScript.
+7. `visual inspect-input --template <template-id> --input <input.json> --json`
+8. `visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json`
+9. Revise JSON using warning `suggestion`, `auto_fix_hint`, `visual_plan.marks`, `visual_plan.edges`, `visual_plan.colors`, `visual_plan.assets`, and `visual_plan.quality_loop`.
+10. `visual render --template <template-id> --input <input.json> --out <dir> --json`
+11. `visual inspect-render --out <dir> --json`, optionally adding `--screenshot <png|jpg|gif>` after a browser screenshot is captured
+12. Return `data.artifact.entrypoint` to the user only when `inspect-render` reports `ready=true`, or return the warnings with the artifact if the user wants to review a draft.
 
 Never write input JSON before reading the selected template guide. The guide is where template-specific construction rules live.

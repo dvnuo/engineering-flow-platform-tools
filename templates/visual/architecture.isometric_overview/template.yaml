@@ -1,0 +1,89 @@
+id: architecture.isometric_overview
+version: 1.0.0
+category: architecture
+title: Isometric Architecture Overview
+description: Maps zones, systems, services, infrastructure, and directional links onto an isometric architecture scene.
+input_schema: schema.input.json
+input_schema_kind: isometric_architecture_v1
+renderer:
+  contract: offline.architecture.isometric.v1
+layout:
+  preset: isometric_architecture
+  group_by: zone
+effects:
+  engine: three.v1
+  scene: architecture_isometric_overview
+  camera: orthographic_isometric
+  material: architectural
+  motion: subtle_pan
+  interaction:
+    - orbit_drag
+    - focus_entity
+    - toggle_labels
+    - export_json
+visual_design:
+  initial_view: overview
+  max_initial_nodes: 80
+  max_initial_edges: 120
+  default_collapse_depth: 0
+  group_by:
+    - zone
+    - kind
+    - provider
+    - status
+  supports:
+    - semantic_schema
+    - isometric_zones
+    - base_grid
+    - directed_links
+    - top_labels
+    - leader_lines
+    - export_json
+  agent_guidance:
+    - Use zones, entities, and links; do not write generic nodes and edges for this template.
+    - Define canvas.grid.enabled=true so the isometric base plane has a readable ground reference.
+    - Give every entity a kind, label, zone, position, size, and presentation shape or icon when possible.
+    - Set links[].directed=true and presentation.arrow=forward for calls, reads, writes, events, dependencies, and deployment flows.
+    - Use architecture_light unless the user explicitly asks for another local architecture theme; do not use starfield themes.
+offline:
+  required: true
+  forbid_network: true
+  data_mode: js-file
+assets:
+  - from: ../_shared/runtime/efp-visual-runtime.iife.js
+    to: assets/runtime/efp-visual-runtime.iife.js
+  - from: ../_shared/runtime/efp-visual-renderers.iife.js
+    to: assets/runtime/efp-visual-renderers.iife.js
+  - from: ../_shared/runtime/efp-visual-runtime.css
+    to: assets/runtime/efp-visual-runtime.css
+  - from: style.css
+    to: assets/templates/architecture.isometric_overview/style.css
+styles:
+  - assets/runtime/efp-visual-runtime.css
+  - assets/templates/architecture.isometric_overview/style.css
+scripts:
+  - manifest.js
+  - data.js
+  - assets/runtime/efp-visual-runtime.iife.js
+  - assets/runtime/efp-visual-renderers.iife.js
+interactions:
+  - hover_tooltip
+  - click_inspect
+  - focus_entity
+  - isolate_zone
+  - toggle_labels
+  - toggle_boundaries
+  - toggle_arrows
+  - reset_camera
+  - export_json
+limits:
+  max_nodes: 1000
+  max_edges: 3000
+  max_events: 5000
+  max_items: 2000
+tags:
+  - architecture
+  - isometric
+  - service-map
+  - infrastructure
+  - topology

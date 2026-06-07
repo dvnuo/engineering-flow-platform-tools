@@ -1,0 +1,568 @@
+{
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "architecture.isometric_overview",
+  "input_schema_kind": "isometric_architecture_v1",
+  "json_schema": {
+    "type": "object",
+    "required": [
+      "schema",
+      "title",
+      "zones",
+      "entities",
+      "links"
+    ],
+    "properties": {
+      "schema": {
+        "const": "efp.visual.input.isometric_architecture.v1"
+      },
+      "title": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "canvas": {
+        "type": "object",
+        "properties": {
+          "grid": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "spacing": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      },
+      "camera": {
+        "type": "object",
+        "properties": {
+          "preset": {
+            "type": "string",
+            "enum": [
+              "isometric",
+              "orthographic_isometric"
+            ]
+          }
+        }
+      },
+      "theme": {
+        "type": "string"
+      },
+      "zones": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/zone"
+        }
+      },
+      "entities": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/entity"
+        }
+      },
+      "links": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/link"
+        }
+      },
+      "controls": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/control"
+        }
+      },
+      "view": {
+        "type": "object"
+      },
+      "renderHints": {
+        "type": "object"
+      },
+      "visual": {
+        "$ref": "#/$defs/visual"
+      }
+    },
+    "$defs": {
+      "bounds": {
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "w": {
+            "type": "number"
+          },
+          "h": {
+            "type": "number"
+          }
+        }
+      },
+      "point": {
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          }
+        }
+      },
+      "size": {
+        "type": "object",
+        "properties": {
+          "w": {
+            "type": "number"
+          },
+          "d": {
+            "type": "number"
+          },
+          "h": {
+            "type": "number"
+          }
+        }
+      },
+      "presentation": {
+        "type": "object",
+        "properties": {
+          "shape": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "arrow": {
+            "type": "string"
+          },
+          "boundary": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "leaderLine": {
+            "type": "boolean"
+          }
+        }
+      },
+      "zone": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "bounds"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "bounds": {
+            "$ref": "#/$defs/bounds"
+          },
+          "presentation": {
+            "$ref": "#/$defs/presentation"
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      },
+      "entity": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "kind"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "zone": {
+            "type": "string"
+          },
+          "position": {
+            "$ref": "#/$defs/point"
+          },
+          "size": {
+            "$ref": "#/$defs/size"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "importance": {
+            "type": "number"
+          },
+          "visibility": {
+            "type": "string"
+          },
+          "presentation": {
+            "$ref": "#/$defs/presentation"
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      },
+      "link": {
+        "type": "object",
+        "required": [
+          "id",
+          "from",
+          "to",
+          "label",
+          "directed"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "directed": {
+            "type": "boolean"
+          },
+          "route": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/point"
+            }
+          },
+          "presentation": {
+            "$ref": "#/$defs/presentation"
+          },
+          "importance": {
+            "type": "number"
+          },
+          "visibility": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      },
+      "control": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          }
+        }
+      },
+      "visual": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string"
+          },
+          "initial_focus_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "hidden_detail_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "narrative_steps": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "annotations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  },
+  "example": {
+    "schema": "efp.visual.input.isometric_architecture.v1",
+    "title": "Order Platform Isometric Architecture",
+    "summary": "Isometric service map for checkout request flow.",
+    "theme": "architecture_light",
+    "canvas": {
+      "grid": {
+        "enabled": true,
+        "spacing": 4
+      }
+    },
+    "camera": {
+      "preset": "isometric"
+    },
+    "zones": [
+      {
+        "id": "edge",
+        "label": "Edge",
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 16,
+          "h": 12
+        },
+        "presentation": {
+          "boundary": "solid"
+        }
+      },
+      {
+        "id": "services",
+        "label": "Application Services",
+        "bounds": {
+          "x": 18,
+          "y": 0,
+          "w": 20,
+          "h": 18
+        },
+        "presentation": {
+          "boundary": "solid"
+        }
+      },
+      {
+        "id": "data",
+        "label": "Data Plane",
+        "bounds": {
+          "x": 18,
+          "y": 20,
+          "w": 20,
+          "h": 12
+        },
+        "presentation": {
+          "boundary": "dashed"
+        }
+      }
+    ],
+    "entities": [
+      {
+        "id": "client",
+        "label": "Client App",
+        "kind": "client",
+        "zone": "edge",
+        "position": {
+          "x": 4,
+          "y": 4
+        },
+        "size": {
+          "w": 3,
+          "d": 2,
+          "h": 1
+        },
+        "importance": 0.9,
+        "presentation": {
+          "shape": "actor_card",
+          "icon": "generic.user",
+          "label": "top",
+          "leaderLine": true
+        }
+      },
+      {
+        "id": "api",
+        "label": "Order API",
+        "kind": "api",
+        "zone": "services",
+        "position": {
+          "x": 22,
+          "y": 5
+        },
+        "size": {
+          "w": 4,
+          "d": 3,
+          "h": 2
+        },
+        "importance": 0.95,
+        "presentation": {
+          "shape": "hex_service",
+          "icon": "generic.api",
+          "label": "top",
+          "leaderLine": true
+        }
+      },
+      {
+        "id": "worker",
+        "label": "Fulfillment Worker",
+        "kind": "worker",
+        "zone": "services",
+        "position": {
+          "x": 31,
+          "y": 9
+        },
+        "size": {
+          "w": 4,
+          "d": 3,
+          "h": 2
+        },
+        "importance": 0.75,
+        "presentation": {
+          "shape": "service_box",
+          "icon": "generic.job",
+          "label": "top",
+          "leaderLine": true
+        }
+      },
+      {
+        "id": "orders-db",
+        "label": "Orders DB",
+        "kind": "database",
+        "zone": "data",
+        "position": {
+          "x": 24,
+          "y": 25
+        },
+        "size": {
+          "w": 4,
+          "d": 3,
+          "h": 3
+        },
+        "importance": 0.8,
+        "presentation": {
+          "shape": "database_cylinder",
+          "icon": "generic.database",
+          "label": "top",
+          "leaderLine": true
+        }
+      }
+    ],
+    "links": [
+      {
+        "id": "client-api",
+        "from": "client",
+        "to": "api",
+        "label": "places order",
+        "kind": "calls",
+        "directed": true,
+        "presentation": {
+          "arrow": "forward"
+        }
+      },
+      {
+        "id": "api-db",
+        "from": "api",
+        "to": "orders-db",
+        "label": "writes order",
+        "kind": "writes",
+        "directed": true,
+        "presentation": {
+          "arrow": "forward"
+        }
+      },
+      {
+        "id": "api-worker",
+        "from": "api",
+        "to": "worker",
+        "label": "dispatches fulfillment",
+        "kind": "emits",
+        "directed": true,
+        "presentation": {
+          "arrow": "forward"
+        }
+      }
+    ],
+    "controls": [
+      {
+        "id": "overview",
+        "label": "Overview",
+        "action": "overview"
+      },
+      {
+        "id": "labels",
+        "label": "Labels",
+        "action": "toggle_labels"
+      }
+    ],
+    "visual": {
+      "goal": "Show the checkout request path across edge, service, and data zones.",
+      "initial_focus_ids": [
+        "client",
+        "api",
+        "orders-db"
+      ],
+      "hidden_detail_ids": [
+        "api-worker"
+      ],
+      "narrative_steps": [
+        {
+          "id": "overview",
+          "title": "Request enters the platform",
+          "focus_ids": [
+            "client",
+            "api"
+          ]
+        }
+      ],
+      "annotations": [
+        {
+          "id": "api-note",
+          "target_id": "api",
+          "label": "Central routing service"
+        }
+      ]
+    }
+  }
+}

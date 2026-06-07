@@ -1,7 +1,7 @@
 {
   "version": 3,
   "expected": {
-    "canonical_count": 37,
+    "canonical_count": 34,
     "categories": {
       "uml": 5,
       "relationship": 4,
@@ -11,7 +11,7 @@
       "evidence": 4,
       "matrix": 4,
       "spatial": 4,
-      "studio": 4
+      "architecture": 1
     }
   },
   "templates": [
@@ -610,79 +610,22 @@
       ]
     },
     {
-      "id": "studio.entity_explorer",
+      "id": "architecture.isometric_overview",
       "version": "1.0.0",
-      "category": "studio",
-      "path": "studio.entity_explorer/template.yaml",
-      "title": "Entity Explorer Studio",
-      "description": "Builds an explorable entity page with hero objects, inspector panels, relationships, metrics, and evidence.",
+      "category": "architecture",
+      "path": "architecture.isometric_overview/template.yaml",
+      "title": "Isometric Architecture Overview",
+      "description": "Maps zones, systems, services, infrastructure, and directional links onto an isometric architecture scene.",
       "input_schema": "schema.input.json",
-      "input_schema_kind": "studio_v1",
-      "renderer": "offline.studio.v1",
-      "layout_preset": "studio_entity_explorer",
+      "input_schema_kind": "isometric_architecture_v1",
+      "renderer": "offline.architecture.isometric.v1",
+      "layout_preset": "isometric_architecture",
       "tags": [
-        "studio",
-        "entity",
-        "explorer",
-        "inspector",
-        "page"
-      ]
-    },
-    {
-      "id": "studio.pipeline_release",
-      "version": "1.0.0",
-      "category": "studio",
-      "path": "studio.pipeline_release/template.yaml",
-      "title": "Pipeline Release Studio",
-      "description": "Organizes release stages, gates, signals, and rollback evidence into an explorable Studio page.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "studio_v1",
-      "renderer": "offline.studio.v1",
-      "layout_preset": "studio_pipeline",
-      "tags": [
-        "studio",
-        "release",
-        "pipeline",
-        "dashboard",
-        "walkthrough"
-      ]
-    },
-    {
-      "id": "studio.sequence_walkthrough",
-      "version": "1.0.0",
-      "category": "studio",
-      "path": "studio.sequence_walkthrough/template.yaml",
-      "title": "Sequence Walkthrough Studio",
-      "description": "Turns participants, messages, events, and phases into a guided walkthrough page with panels.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "studio_v1",
-      "renderer": "offline.studio.v1",
-      "layout_preset": "studio_sequence_walkthrough",
-      "tags": [
-        "studio",
-        "sequence",
-        "walkthrough",
-        "explain",
-        "page"
-      ]
-    },
-    {
-      "id": "studio.service_topology",
-      "version": "1.0.0",
-      "category": "studio",
-      "path": "studio.service_topology/template.yaml",
-      "title": "Service Topology Studio",
-      "description": "Presents services, clouds, queues, databases, and operational panels as an explorable topology page.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "studio_v1",
-      "renderer": "offline.studio.v1",
-      "layout_preset": "studio_topology",
-      "tags": [
-        "studio",
-        "service",
-        "topology",
-        "operations",
-        "page"
+        "architecture",
+        "isometric",
+        "service-map",
+        "infrastructure",
+        "topology"
       ]
     }
   ]

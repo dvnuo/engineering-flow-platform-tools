@@ -92,7 +92,7 @@ var semanticCategoryCounts = map[string]int{
 	"evidence":     4,
 	"matrix":       4,
 	"spatial":      4,
-	"studio":       4,
+	"architecture": 1,
 }
 
 var semanticSchemaKinds = map[string]bool{
@@ -101,7 +101,7 @@ var semanticSchemaKinds = map[string]bool{
 	"timeline_v1":                 true,
 	"evidence_v1":                 true,
 	"matrix_v1":                   true,
-	"studio_v1":                   true,
+	"isometric_architecture_v1":    true,
 	"uml_sequence_v1":             true,
 	"uml_class_v1":                true,
 	"uml_state_machine_v1":        true,
@@ -114,7 +114,7 @@ var semanticRenderers = map[string]bool{
 	"offline.timeline.v1":         true,
 	"offline.evidence.v1":         true,
 	"offline.matrix.v1":           true,
-	"offline.studio.v1":           true,
+	"offline.architecture.isometric.v1": true,
 	"offline.uml.sequence.3d.v1":  true,
 	"offline.uml.class.2_5d.v1":   true,
 	"offline.uml.state.3d.v1":     true,
@@ -145,10 +145,7 @@ var semanticLayoutPresets = map[string]bool{
 	"sequence_lifelines":          true,
 	"service_map":                 true,
 	"state_machine":               true,
-	"studio_entity_explorer":      true,
-	"studio_pipeline":             true,
-	"studio_sequence_walkthrough": true,
-	"studio_topology":             true,
+	"isometric_architecture":       true,
 	"timeline_tunnel":             true,
 }
 
@@ -166,7 +163,7 @@ func TestVisualCommandsJSONContract(t *testing.T) {
 		m := objectMap(t, item)
 		names[m["name"].(string)] = true
 	}
-	for _, name := range []string{"render", "inspect-input", "inspect-plan", "inspect-render", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.guide", "template.panel-grammar", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
+	for _, name := range []string{"render", "inspect-input", "inspect-plan", "inspect-render", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.guide", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
 		if !names[name] {
 			t.Fatalf("missing visual command %s in %#v", name, names)
 		}
@@ -180,8 +177,8 @@ func TestVisualSemanticCatalogContract(t *testing.T) {
 	if registry.Version != 3 {
 		t.Fatalf("expected registry version 3, got %d", registry.Version)
 	}
-	if registry.Expected.CanonicalCount != 37 || len(registry.Templates) != 37 {
-		t.Fatalf("expected 37 semantic templates, got expected=%#v len=%d", registry.Expected, len(registry.Templates))
+	if registry.Expected.CanonicalCount != 34 || len(registry.Templates) != 34 {
+		t.Fatalf("expected 34 semantic templates, got expected=%#v len=%d", registry.Expected, len(registry.Templates))
 	}
 	for category, want := range semanticCategoryCounts {
 		if got := registry.Expected.Categories[category]; got != want {
@@ -240,7 +237,7 @@ func TestVisualTemplateDiscoveryCommands(t *testing.T) {
 	templateDir := filepath.Join(root, "templates", "visual")
 	categories := runVisualOK(t, "template", "categories", "--template-dir", templateDir, "--json")
 	catData := objectMap(t, categories["data"])
-	if catData["canonical_count"].(float64) != 37 || catData["total_count"].(float64) != 37 || catData["alias_count"].(float64) != 0 {
+	if catData["canonical_count"].(float64) != 34 || catData["total_count"].(float64) != 34 || catData["alias_count"].(float64) != 0 {
 		t.Fatalf("unexpected categories counts: %#v", catData)
 	}
 	items := catData["categories"].([]any)
@@ -264,9 +261,9 @@ func TestVisualTemplateDiscoveryCommands(t *testing.T) {
 	if objectMap(t, filtered["data"])["matched_count"].(float64) != 1 {
 		t.Fatalf("expected one UML sequence match: %#v", filtered)
 	}
-	studio := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--category", "studio", "--json")
-	if objectMap(t, studio["data"])["matched_count"].(float64) != 4 {
-		t.Fatalf("expected four Studio templates: %#v", studio)
+	architecture := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--category", "architecture", "--json")
+	if objectMap(t, architecture["data"])["matched_count"].(float64) != 1 {
+		t.Fatalf("expected one architecture template: %#v", architecture)
 	}
 }
 
@@ -292,38 +289,20 @@ func TestVisualTemplateAgentGuideCommandAndMetadata(t *testing.T) {
 	if getData["agent_guide_available"] != true || getData["quality_rules_available"] != true {
 		t.Fatalf("template get did not expose guide/rules metadata: %#v", getData)
 	}
-	if getData["panel_grammar_available"] == nil || getData["panel_grammar_path"] == nil {
-		t.Fatalf("template get did not expose panel grammar metadata: %#v", getData)
+	if getData["panel_grammar_available"] != nil || getData["panel_grammar_path"] != nil {
+		t.Fatalf("template get still exposes panel grammar metadata: %#v", getData)
 	}
 	schema := runVisualOK(t, "template", "schema", "uml.sequence_3d", "--template-dir", templateDir, "--json")
 	schemaData := objectMap(t, schema["data"])
 	if schemaData["agent_guide_available"] != true || len(schemaData["agent_guide_summary"].([]any)) == 0 {
 		t.Fatalf("template schema did not expose guide summary: %#v", schemaData)
 	}
-	if schemaData["panel_grammar_available"] == nil || schemaData["panel_grammar_path"] == nil {
-		t.Fatalf("template schema did not expose panel grammar metadata: %#v", schemaData)
+	if schemaData["panel_grammar_available"] != nil || schemaData["panel_grammar_path"] != nil || schemaData["panel_grammar_summary"] != nil {
+		t.Fatalf("template schema still exposes panel grammar metadata: %#v", schemaData)
 	}
 	cmdSchema := runVisualOK(t, "schema", "template.guide", "--json")
 	if objectMap(t, cmdSchema["data"])["command"] != "template.guide" {
 		t.Fatalf("template.guide command schema missing: %#v", cmdSchema)
-	}
-	panelCmdSchema := runVisualOK(t, "schema", "template.panel-grammar", "--json")
-	panelCmdData := objectMap(t, panelCmdSchema["data"])
-	if panelCmdData["command"] != "template.panel-grammar" {
-		t.Fatalf("template.panel-grammar command schema missing: %#v", panelCmdSchema)
-	}
-	args := panelCmdData["argument_details"].([]any)
-	if len(args) == 0 || objectMap(t, args[0])["name"] != "template-id" || objectMap(t, args[0])["required"] != true {
-		t.Fatalf("template.panel-grammar schema missing positional template-id: %#v", panelCmdData)
-	}
-	flags := map[string]bool{}
-	for _, item := range panelCmdData["flags"].([]any) {
-		flags[objectMap(t, item)["name"].(string)] = true
-	}
-	for _, name := range []string{"template-dir", "json"} {
-		if !flags[name] {
-			t.Fatalf("template.panel-grammar schema missing flag %s: %#v", name, flags)
-		}
 	}
 }
 
@@ -344,14 +323,6 @@ func TestVisualAllTemplatesHaveAgentGuidesAndQualityRules(t *testing.T) {
 			if rules["schema"] != "efp.visual.template_quality_rules.v1" || rules["template_id"] != entry.ID {
 				t.Fatalf("%s quality rules invalid: %#v", entry.ID, rules)
 			}
-			if entry.Category == "studio" {
-				panelGrammar := mustRead(t, filepath.Join(templateDir, entry.ID, "panel-grammar.md"))
-				for _, want := range []string{"## When to use this template", "## Semantic model", "## Required construction rules", "## Recommended fields", "## Visual encoding rules", "## Common mistakes to avoid", "## Quality checklist before render", "## Minimal good example"} {
-					if !strings.Contains(panelGrammar, want) {
-						t.Fatalf("%s panel grammar missing %q", entry.ID, want)
-					}
-				}
-			}
 			for _, example := range []string{"good-small.input.json", "good-medium.input.json", "bad-dense.input.json", "fixed-dense.input.json"} {
 				if _, err := os.Stat(filepath.Join(templateDir, entry.ID, "examples", example)); err != nil {
 					t.Fatalf("%s missing example %s: %v", entry.ID, example, err)
@@ -359,131 +330,79 @@ func TestVisualAllTemplatesHaveAgentGuidesAndQualityRules(t *testing.T) {
 			}
 		})
 	}
-	for _, shared := range []string{"common-visual-quality.md", "panel-grammar.md", "agent-guide.schema.json", "quality-rules.schema.json"} {
+	for _, shared := range []string{"common-visual-quality.md", "agent-guide.schema.json", "quality-rules.schema.json"} {
 		if _, err := os.Stat(filepath.Join(templateDir, "_shared", "agent-guidance", shared)); err != nil {
 			t.Fatalf("missing shared guidance file %s: %v", shared, err)
 		}
 	}
 }
 
-func TestVisualStudioTemplateAuthoringContract(t *testing.T) {
+func TestVisualArchitectureTemplateAuthoringContract(t *testing.T) {
 	root := repoRoot(t)
 	templateDir := filepath.Join(root, "templates", "visual")
-	studioTemplates := []string{
-		"studio.entity_explorer",
-		"studio.pipeline_release",
-		"studio.sequence_walkthrough",
-		"studio.service_topology",
+	templateID := "architecture.isometric_overview"
+	base := filepath.Join(templateDir, templateID)
+	for _, rel := range []string{"template.yaml", "schema.input.json", "style.css", "agent-guide.md", "quality.rules.json"} {
+		info, err := os.Stat(filepath.Join(base, filepath.FromSlash(rel)))
+		if err != nil || info.IsDir() || info.Size() == 0 {
+			t.Fatalf("%s missing non-empty %s", templateID, rel)
+		}
 	}
-	requiredExamples := map[string][]string{
-		"studio.pipeline_release": {
-			"basic.input.json",
-			"good-small.input.json",
-			"good-medium.input.json",
-			"bad-empty-panels.input.json",
-			"fixed-rich.input.json",
-			"standard-pipeline-studio.input.json",
-		},
-		"studio.service_topology": {
-			"basic.input.json",
-			"good-small.input.json",
-			"good-medium.input.json",
-			"bad-empty-panels.input.json",
-			"fixed-rich.input.json",
-			"aws-order-processing-studio.input.json",
-		},
-		"studio.sequence_walkthrough": {
-			"basic.input.json",
-			"good-small.input.json",
-			"good-medium.input.json",
-			"bad-empty-panels.input.json",
-			"fixed-rich.input.json",
-			"game-session-walkthrough-studio.input.json",
-		},
-		"studio.entity_explorer": {
-			"basic.input.json",
-			"good-small.input.json",
-			"good-medium.input.json",
-			"bad-empty-panels.input.json",
-			"fixed-rich.input.json",
-			"service-explorer-studio.input.json",
-			"component-explorer-bad.input.json",
-			"component-explorer-fixed.input.json",
-		},
+	for _, example := range []string{"basic.input.json", "good-small.input.json", "good-medium.input.json", "bad-dense.input.json", "fixed-dense.input.json", "bad-generic.input.json"} {
+		info, err := os.Stat(filepath.Join(base, "examples", example))
+		if err != nil || info.IsDir() || info.Size() == 0 {
+			t.Fatalf("%s missing non-empty example %s", templateID, example)
+		}
 	}
-	for _, templateID := range studioTemplates {
-		t.Run(templateID, func(t *testing.T) {
-			base := filepath.Join(templateDir, templateID)
-			for _, rel := range []string{"template.yaml", "schema.input.json", "style.css", "agent-guide.md", "panel-grammar.md", "quality.rules.json"} {
-				info, err := os.Stat(filepath.Join(base, filepath.FromSlash(rel)))
-				if err != nil || info.IsDir() || info.Size() == 0 {
-					t.Fatalf("%s missing non-empty %s", templateID, rel)
-				}
-			}
-			for _, example := range requiredExamples[templateID] {
-				info, err := os.Stat(filepath.Join(base, "examples", example))
-				if err != nil || info.IsDir() || info.Size() == 0 {
-					t.Fatalf("%s missing non-empty example %s", templateID, example)
-				}
-			}
-			schemaDoc := loadJSONMap(t, filepath.Join(base, "schema.input.json"))
-			jsonSchema := objectMap(t, schemaDoc["json_schema"])
-			props := objectMap(t, jsonSchema["properties"])
-			for _, field := range []string{"hero", "navigation", "panels", "controls", "annotations", "assumptions", "view", "renderHints", "visual"} {
-				if _, ok := props[field]; !ok {
-					t.Fatalf("%s studio schema missing %s", templateID, field)
-				}
-			}
-			heroProps := objectMap(t, objectMap(t, props["hero"])["properties"])
-			heroDataProps := objectMap(t, objectMap(t, heroProps["data"])["properties"])
-			for _, field := range []string{"nodes", "edges", "participants", "messages", "events", "items"} {
-				if _, ok := heroDataProps[field]; !ok {
-					t.Fatalf("%s hero.data schema missing %s", templateID, field)
-				}
-			}
-			defs := objectMap(t, jsonSchema["$defs"])
-			presentationProps := objectMap(t, objectMap(t, defs["presentation"])["properties"])
-			for _, field := range []string{"shape", "icon", "color"} {
-				if _, ok := presentationProps[field]; !ok {
-					t.Fatalf("%s studio object presentation missing %s", templateID, field)
-				}
-			}
-			studioEdgeProps := objectMap(t, objectMap(t, defs["studioEdge"])["properties"])
-			if _, ok := studioEdgeProps["directed"]; !ok {
-				t.Fatalf("%s studio edge missing directed", templateID)
-			}
-			if _, ok := presentationProps["arrow"]; !ok {
-				t.Fatalf("%s studio edge presentation missing arrow", templateID)
-			}
-			runVisualOK(t, "validate", "--template", templateID, "--template-dir", templateDir, "--input", filepath.Join(base, "examples", "basic.input.json"), "--json")
-		})
+	schemaDoc := loadJSONMap(t, filepath.Join(base, "schema.input.json"))
+	jsonSchema := objectMap(t, schemaDoc["json_schema"])
+	props := objectMap(t, jsonSchema["properties"])
+	for _, field := range []string{"schema", "title", "canvas", "camera", "theme", "zones", "entities", "links", "controls", "view", "renderHints", "visual"} {
+		if _, ok := props[field]; !ok {
+			t.Fatalf("%s architecture schema missing %s", templateID, field)
+		}
 	}
+	defs := objectMap(t, jsonSchema["$defs"])
+	zoneProps := objectMap(t, objectMap(t, defs["zone"])["properties"])
+	for _, field := range []string{"id", "label", "bounds", "presentation"} {
+		if _, ok := zoneProps[field]; !ok {
+			t.Fatalf("%s zone schema missing %s", templateID, field)
+		}
+	}
+	entityProps := objectMap(t, objectMap(t, defs["entity"])["properties"])
+	for _, field := range []string{"id", "label", "kind", "zone", "position", "size", "presentation"} {
+		if _, ok := entityProps[field]; !ok {
+			t.Fatalf("%s entity schema missing %s", templateID, field)
+		}
+	}
+	linkProps := objectMap(t, objectMap(t, defs["link"])["properties"])
+	for _, field := range []string{"id", "from", "to", "label", "directed", "route", "presentation"} {
+		if _, ok := linkProps[field]; !ok {
+			t.Fatalf("%s link schema missing %s", templateID, field)
+		}
+	}
+	presentationProps := objectMap(t, objectMap(t, defs["presentation"])["properties"])
+	for _, field := range []string{"shape", "icon", "color", "arrow", "boundary", "label", "leaderLine"} {
+		if _, ok := presentationProps[field]; !ok {
+			t.Fatalf("%s architecture presentation missing %s", templateID, field)
+		}
+	}
+	runVisualOK(t, "validate", "--template", templateID, "--template-dir", templateDir, "--input", filepath.Join(base, "examples", "basic.input.json"), "--json")
 
-	get := runVisualOK(t, "template", "get", "studio.pipeline_release", "--template-dir", templateDir, "--json")
+	get := runVisualOK(t, "template", "get", templateID, "--template-dir", templateDir, "--json")
 	getData := objectMap(t, get["data"])
-	if getData["category"] != "studio" || getData["input_schema_kind"] != "studio_v1" || objectMap(t, getData["renderer"])["contract"] != "offline.studio.v1" {
-		t.Fatalf("studio.pipeline_release get contract mismatch: %#v", getData)
+	if getData["category"] != "architecture" || getData["input_schema_kind"] != "isometric_architecture_v1" || objectMap(t, getData["renderer"])["contract"] != "offline.architecture.isometric.v1" {
+		t.Fatalf("architecture get contract mismatch: %#v", getData)
 	}
-	if getData["panel_grammar_available"] != true || getData["panel_grammar_path"] != "studio.pipeline_release/panel-grammar.md" {
-		t.Fatalf("studio.pipeline_release get missing panel grammar metadata: %#v", getData)
-	}
-	schema := runVisualOK(t, "template", "schema", "studio.pipeline_release", "--template-dir", templateDir, "--json")
+	schema := runVisualOK(t, "template", "schema", templateID, "--template-dir", templateDir, "--json")
 	schemaData := objectMap(t, schema["data"])
-	if schemaData["panel_grammar_available"] != true || len(schemaData["panel_grammar_summary"].([]any)) == 0 {
-		t.Fatalf("studio.pipeline_release schema missing panel grammar summary: %#v", schemaData)
+	if schemaData["agent_guide_available"] != true || len(schemaData["agent_guide_summary"].([]any)) == 0 {
+		t.Fatalf("architecture schema missing guide summary: %#v", schemaData)
 	}
-	guide := runVisualOK(t, "template", "guide", "studio.pipeline_release", "--template-dir", templateDir, "--json")
-	if objectMap(t, guide["data"])["agent_guide_available"] != true {
-		t.Fatalf("studio.pipeline_release guide unavailable: %#v", guide)
-	}
-	panel := runVisualOK(t, "template", "panel-grammar", "studio.pipeline_release", "--template-dir", templateDir, "--json")
-	panelData := objectMap(t, panel["data"])
-	if panelData["template_id"] != "studio.pipeline_release" || panelData["panel_grammar_available"] != true || !strings.Contains(panelData["raw_markdown"].(string), "Canary Gate") {
-		t.Fatalf("studio.pipeline_release panel grammar response invalid: %#v", panelData)
-	}
-	sections := objectMap(t, panelData["panel_grammar"])
-	if strings.TrimSpace(sections["semantic_model"].(string)) == "" || len(panelData["panel_grammar_summary"].([]any)) == 0 {
-		t.Fatalf("studio.pipeline_release panel grammar sections invalid: %#v", panelData)
+	guide := runVisualOK(t, "template", "guide", templateID, "--template-dir", templateDir, "--json")
+	guideData := objectMap(t, guide["data"])
+	if guideData["agent_guide_available"] != true || !strings.Contains(guideData["raw_markdown"].(string), "zones`, `entities`, and `links`") {
+		t.Fatalf("architecture guide unavailable or missing zones/entities/links rule: %#v", guideData)
 	}
 }
 
@@ -523,6 +442,35 @@ func TestVisualInspectInputTemplateQualityRulesWarnings(t *testing.T) {
 	fixedGraph := runVisualOK(t, "inspect-input", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "relationship.dependency_graph", "examples", "dependency-dense-fixed.input.json"), "--json")
 	if len(warningCodes(t, fixedGraph)) >= len(warningCodes(t, badGraph)) {
 		t.Fatalf("fixed graph should have fewer warnings than bad graph")
+	}
+
+	badIso := runVisualOK(t, "inspect-input", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "architecture.isometric_overview", "examples", "bad-generic.input.json"), "--json")
+	badIsoCodes := warningCodeSet(t, badIso)
+	for _, code := range []string{"isometric_zones_missing", "isometric_entity_kind_missing", "isometric_link_direction_missing", "isometric_missing_base_grid", "isometric_generic_graph_detected"} {
+		if !badIsoCodes[code] {
+			t.Fatalf("bad isometric input missing warning %s in %#v", code, badIsoCodes)
+		}
+	}
+	for _, item := range objectMap(t, badIso["data"])["warnings"].([]any) {
+		warning := objectMap(t, item)
+		code, _ := warning["code"].(string)
+		if strings.HasPrefix(code, "isometric_") {
+			if warning["severity"] == "" || warning["path"] == "" || warning["message"] == "" || warning["suggestion"] == "" || warning["auto_fix_hint"] == nil {
+				t.Fatalf("isometric warning missing required fields: %#v", warning)
+			}
+		}
+	}
+	goodIso := runVisualOK(t, "inspect-input", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "architecture.isometric_overview", "examples", "good-small.input.json"), "--json")
+	goodIsoCodes := warningCodeSet(t, goodIso)
+	for _, forbidden := range []string{"isometric_link_endpoint_unknown", "isometric_entity_zone_unknown", "isometric_missing_base_grid", "isometric_link_direction_missing", "isometric_link_arrow_missing"} {
+		if goodIsoCodes[forbidden] {
+			t.Fatalf("good isometric input unexpectedly has warning %s in %#v", forbidden, goodIsoCodes)
+		}
+	}
+	for _, item := range objectMap(t, goodIso["data"])["warnings"].([]any) {
+		if objectMap(t, item)["severity"] == "error" {
+			t.Fatalf("good isometric input should not have critical warnings: %#v", goodIso)
+		}
 	}
 }
 
@@ -592,6 +540,30 @@ func TestVisualInspectPlanContract(t *testing.T) {
 	actions := plan["agent_next_actions"].([]any)
 	if len(actions) == 0 {
 		t.Fatalf("visual plan missing agent next actions: %#v", plan)
+	}
+
+	isoObj := runVisualOK(t, "inspect-plan", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "architecture.isometric_overview", "examples", "good-small.input.json"), "--out", filepath.Join(t.TempDir(), "isometric"), "--json")
+	isoData := objectMap(t, isoObj["data"])
+	if isoData["ready"] != true || isoData["quality_score"].(float64) < 80 {
+		t.Fatalf("good isometric inspect-plan should be ready: %#v", isoData)
+	}
+	isoPlan := objectMap(t, objectMap(t, isoData["visual_plan"])["isometric"])
+	for _, field := range []string{"base_plane", "grid"} {
+		if isoPlan[field] != true {
+			t.Fatalf("isometric plan field %s should be true: %#v", field, isoPlan)
+		}
+	}
+	for field, want := range map[string]float64{"zone_count": 2, "entity_count": 2, "link_count": 1, "positioned_entities": 2, "auto_positioned_entities": 0, "directed_links": 1, "arrow_links": 1, "top_labels": 2, "leader_lines": 2} {
+		if isoPlan[field].(float64) != want {
+			t.Fatalf("isometric plan expected %s=%.0f, got %#v", field, want, isoPlan)
+		}
+	}
+	if isoPlan["camera"] != "orthographic_isometric" || isoPlan["theme"] != "architecture_light" {
+		t.Fatalf("isometric plan camera/theme mismatch: %#v", isoPlan)
+	}
+	boundaries := objectMap(t, isoPlan["boundary_styles"])
+	if boundaries["solid"].(float64) != 2 {
+		t.Fatalf("isometric plan missing boundary styles: %#v", isoPlan)
 	}
 
 	bad := runVisualOK(t, "inspect-plan", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "relationship.dependency_graph", "examples", "dependency-dense-bad.input.json"), "--json")

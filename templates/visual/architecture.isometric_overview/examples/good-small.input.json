@@ -1,0 +1,129 @@
+{
+  "schema": "efp.visual.input.isometric_architecture.v1",
+  "title": "Payment Service Isometric Architecture",
+  "theme": "architecture_light",
+  "canvas": {
+    "grid": {
+      "enabled": true
+    }
+  },
+  "camera": {
+    "preset": "isometric"
+  },
+  "zones": [
+    {
+      "id": "app",
+      "label": "Application Zone",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 12
+      },
+      "presentation": {
+        "boundary": "solid"
+      }
+    },
+    {
+      "id": "data",
+      "label": "Data Zone",
+      "bounds": {
+        "x": 18,
+        "y": 0,
+        "w": 12,
+        "h": 12
+      },
+      "presentation": {
+        "boundary": "solid"
+      }
+    }
+  ],
+  "entities": [
+    {
+      "id": "payment-api",
+      "label": "Payment API",
+      "kind": "api",
+      "zone": "app",
+      "position": {
+        "x": 4,
+        "y": 4
+      },
+      "size": {
+        "w": 4,
+        "d": 3,
+        "h": 2
+      },
+      "importance": 0.9,
+      "summary": "Accepts payment authorization requests.",
+      "presentation": {
+        "shape": "hex_service",
+        "icon": "generic.api",
+        "label": "top",
+        "leaderLine": true
+      }
+    },
+    {
+      "id": "ledger-db",
+      "label": "Ledger DB",
+      "kind": "database",
+      "zone": "data",
+      "position": {
+        "x": 22,
+        "y": 4
+      },
+      "size": {
+        "w": 4,
+        "d": 3,
+        "h": 3
+      },
+      "importance": 0.8,
+      "summary": "Stores payment ledger entries.",
+      "presentation": {
+        "shape": "database_cylinder",
+        "icon": "generic.database",
+        "label": "top",
+        "leaderLine": true
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "payment-ledger",
+      "from": "payment-api",
+      "to": "ledger-db",
+      "label": "writes ledger",
+      "kind": "writes",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward"
+      }
+    }
+  ],
+  "visual": {
+    "goal": "Show the payment write path between application and data zones.",
+    "initial_focus_ids": [
+      "payment-api",
+      "ledger-db"
+    ],
+    "hidden_detail_ids": [
+      "payment-ledger"
+    ],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Payment write path",
+        "focus_ids": [
+          "payment-api",
+          "ledger-db"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "ledger-note",
+        "target_id": "ledger-db",
+        "label": "Durable ledger"
+      }
+    ]
+  }
+}

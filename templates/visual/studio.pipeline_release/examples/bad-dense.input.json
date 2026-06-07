@@ -1,0 +1,27 @@
+{
+  "schema": "efp.visual.input.studio.v1",
+  "title": "Bare Pipeline Studio",
+  "goal": "This intentionally incomplete example should be rejected or warned on by authoring checks.",
+  "audience": "release reviewer",
+  "hero": {
+    "type": "pipeline",
+    "title": "Bare Pipeline",
+    "summary": "Missing panels, controls, semantic marks, arrows, color policy, and legend.",
+    "data": {
+      "nodes": [
+        {"id": "build", "label": "Build"},
+        {"id": "deploy", "label": "Deploy"}
+      ],
+      "edges": [
+        {"id": "build-deploy", "from": "build", "to": "deploy", "kind": "deploys", "label": "deploys"}
+      ]
+    }
+  },
+  "panels": [],
+  "visual": {
+    "goal": "Show the missing authoring fields.",
+    "initial_focus_ids": ["build"],
+    "narrative_steps": [{"id": "overview", "title": "Incomplete", "focus_ids": ["build"]}],
+    "annotations": [{"id": "missing", "label": "Missing", "target_id": "build", "summary": "No panel or controls."}]
+  }
+}

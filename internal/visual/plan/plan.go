@@ -387,6 +387,19 @@ func buildIR(kind string, data map[string]any) VisualIR {
 		}
 	case "matrix_v1":
 		addObjects(&ir, data, "items", "item")
+	case "studio_v1":
+		heroData := studioHeroData(data)
+		addObjects(&ir, heroData, "nodes", "node")
+		addObjects(&ir, heroData, "items", "item")
+		addObjects(&ir, heroData, "events", "event")
+		addObjects(&ir, heroData, "participants", "participant")
+		addObjects(&ir, data, "panels", "panel")
+		for i, edge := range objects(heroData, "edges") {
+			ir.Relationships = append(ir.Relationships, relationshipFrom(edge, "hero.data.edges", i, firstString(edge, "from"), firstString(edge, "to")))
+		}
+		for i, msg := range objects(heroData, "messages") {
+			ir.Relationships = append(ir.Relationships, relationshipFrom(msg, "hero.data.messages", i, firstString(msg, "from"), firstString(msg, "to")))
+		}
 	case "uml_class_v1":
 		addObjects(&ir, data, "classes", "class")
 		for i, rel := range objects(data, "relationships") {
@@ -733,6 +746,11 @@ func object(data map[string]any, field string) map[string]any {
 		return map[string]any{}
 	}
 	return obj
+}
+
+func studioHeroData(data map[string]any) map[string]any {
+	hero := object(data, "hero")
+	return object(hero, "data")
 }
 
 func objectID(obj map[string]any, field string, index int) string {

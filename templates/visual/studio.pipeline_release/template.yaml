@@ -1,0 +1,88 @@
+id: studio.pipeline_release
+version: 1.0.0
+category: studio
+title: Pipeline Release Studio
+description: Organizes release stages, gates, signals, and rollback evidence into an explorable Studio page.
+input_schema: schema.input.json
+input_schema_kind: studio_v1
+renderer:
+  contract: offline.studio.v1
+layout:
+  preset: studio_pipeline
+  group_by: phase
+effects:
+  engine: three.v1
+  scene: studio_pipeline_release
+  camera: orbit_isometric
+  particles: semantic_depth_dust
+  material: holographic
+  motion: slow_orbit
+  interaction:
+    - click_inspect
+    - filter_panels
+    - narrative_step
+  postprocess:
+    - emissive_glow
+visual_design:
+  initial_view: overview
+  max_initial_nodes: 48
+  max_initial_edges: 96
+  default_collapse_depth: 1
+  group_by:
+    - phase
+    - status
+    - owner
+    - provider
+  supports:
+    - studio_panels
+    - hero_visual
+    - navigation
+    - inspector
+    - controls
+    - assumptions
+    - annotations
+  agent_guidance:
+    - Use this template when a release needs an explorable walkthrough, not only a pipeline diagram.
+    - Keep hero.data focused on critical stages, services, gates, and events.
+    - Put rollout details, risks, and evidence in panels instead of long labels.
+    - Add controls for phase focus, status filters, and rollback story steps.
+    - Read panel-grammar before writing panels.
+offline:
+  required: true
+  forbid_network: true
+  data_mode: js-file
+assets:
+  - from: ../_shared/runtime/efp-visual-runtime.iife.js
+    to: assets/runtime/efp-visual-runtime.iife.js
+  - from: ../_shared/runtime/efp-visual-renderers.iife.js
+    to: assets/runtime/efp-visual-renderers.iife.js
+  - from: ../_shared/runtime/efp-visual-runtime.css
+    to: assets/runtime/efp-visual-runtime.css
+  - from: style.css
+    to: assets/templates/studio.pipeline_release/style.css
+styles:
+  - assets/runtime/efp-visual-runtime.css
+  - assets/templates/studio.pipeline_release/style.css
+scripts:
+  - manifest.js
+  - data.js
+  - assets/runtime/efp-visual-runtime.iife.js
+  - assets/runtime/efp-visual-renderers.iife.js
+interactions:
+  - hover_tooltip
+  - click_inspect
+  - panel_navigation
+  - filter_by_status
+  - narrative_step
+  - export_json
+limits:
+  max_nodes: 1000
+  max_edges: 3000
+  max_events: 5000
+  max_items: 2000
+tags:
+  - studio
+  - release
+  - pipeline
+  - dashboard
+  - walkthrough

@@ -22,6 +22,8 @@
 - visual template list --schema-kind <input-schema-kind>
 - visual template get <template-id>
 - visual template schema <template-id>
+- visual template guide <template-id>
+- visual template panel-grammar <template-id>
 - visual template doctor
 - visual validate
 - visual inspect-input
@@ -36,17 +38,21 @@
 
 ### Template Discovery
 
-`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`. In the built-in semantic catalog, `canonical_count=33`, `total_count=33`, and `alias_count=0`.
+`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`. In the built-in semantic catalog, `canonical_count=37`, `total_count=37`, and `alias_count=0`.
 
 `visual template list --json` returns canonical templates from `templates/visual/registry.json`. Use `--category`, `--query`, `--renderer`, and `--schema-kind` to narrow discovery before reading template details. The response includes normalized `filters`, `matched_count`, `canonical_count`, `total_count`, and `alias_count`.
 
-`visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, `schema_file`, and `example_file`.
+`visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, `schema_file`, `example_file`, `agent_guide_available`, `agent_guide_path`, `panel_grammar_available`, `panel_grammar_path`, `quality_rules_available`, and `quality_rules_path`.
 
-`visual template schema <template-id> --json` returns the template metadata, `visual_design`, full local `json_schema`, and example object agents should mirror when writing input JSON.
+`visual template schema <template-id> --json` returns the template metadata, `visual_design`, full local `json_schema`, example object agents should mirror when writing input JSON, guide summary, and panel grammar availability/path/summary.
+
+`visual template panel-grammar <template-id> --json` returns `template_id`, `requested_id`, `canonical_id`, `panel_grammar_path`, `panel_grammar_available`, `raw_markdown`, parsed `panel_grammar` sections, and `panel_grammar_summary`. Use it after `template guide` and before writing Studio `panels[]`.
 
 Agents must not discover templates by listing `templates/visual` directories or inventing template paths. Use `template categories`, `template list`, `template get`, and `template schema` only.
 
-Semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, `evidence`, `matrix`, and `spatial`. UML schema kinds are `uml_sequence_v1`, `uml_class_v1`, `uml_state_machine_v1`, `uml_activity_v1`, and `uml_component_deployment_v1`.
+Semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, `evidence`, `matrix`, `spatial`, and `studio`. Studio templates use `studio_v1` input and `offline.studio.v1` renderer contracts. UML schema kinds are `uml_sequence_v1`, `uml_class_v1`, `uml_state_machine_v1`, `uml_activity_v1`, and `uml_component_deployment_v1`.
+
+`studio_v1` input uses `schema=efp.visual.input.studio.v1`, a required `hero` object with `hero.data.nodes/items/events/participants/messages`, required `panels[]`, optional `navigation[]`, `controls[]`, `annotations[]`, `assumptions[]`, and shared `visual`, `view`, and `renderHints` guidance.
 
 ### Input Inspection
 

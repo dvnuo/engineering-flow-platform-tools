@@ -1,0 +1,41 @@
+{
+  "schema": "efp.visual.template_quality_rules.v1",
+  "template_id": "studio.sequence_walkthrough",
+  "label": {
+    "max_overview_label_chars": 32,
+    "max_detail_label_chars": 64,
+    "require_summary_for_long_labels": true
+  },
+  "required_for_quality": [
+    {
+      "path": "$.panels",
+      "severity": "warning",
+      "code": "studio_panels_missing",
+      "suggestion": "Add panels for overview, phase details, failure branch, and evidence."
+    },
+    {
+      "path": "$.controls",
+      "severity": "warning",
+      "code": "studio_controls_missing",
+      "suggestion": "Add controls for phase stepping and participant focus."
+    },
+    {
+      "path": "$.renderHints.showLegend",
+      "severity": "warning",
+      "code": "legend_missing",
+      "suggestion": "Set renderHints.showLegend=true when color encodes phase, participant, provider, or status."
+    }
+  ],
+  "semantic_rules": [
+    {
+      "code": "studio_sequence_panels_must_follow_message_order",
+      "severity": "warning",
+      "description": "Sequence walkthrough panels should align with phases, messages, participants, and branches."
+    }
+  ],
+  "template_specific": {
+    "require_panels": 3,
+    "require_controls": 2,
+    "dominant_edge_kind_ratio": 0.75
+  }
+}

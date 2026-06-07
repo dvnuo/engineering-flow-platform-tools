@@ -1,0 +1,41 @@
+{
+  "schema": "efp.visual.template_quality_rules.v1",
+  "template_id": "studio.pipeline_release",
+  "label": {
+    "max_overview_label_chars": 32,
+    "max_detail_label_chars": 64,
+    "require_summary_for_long_labels": true
+  },
+  "required_for_quality": [
+    {
+      "path": "$.panels",
+      "severity": "warning",
+      "code": "studio_panels_missing",
+      "suggestion": "Add panels for release overview, gates, risk, and rollback evidence."
+    },
+    {
+      "path": "$.controls",
+      "severity": "warning",
+      "code": "studio_controls_missing",
+      "suggestion": "Add controls for phase focus, status filtering, and rollback inspection."
+    },
+    {
+      "path": "$.renderHints.showLegend",
+      "severity": "warning",
+      "code": "legend_missing",
+      "suggestion": "Set renderHints.showLegend=true when color encodes phase, status, or risk."
+    }
+  ],
+  "semantic_rules": [
+    {
+      "code": "studio_release_panels_must_explain_gates",
+      "severity": "warning",
+      "description": "Release Studio panels should explain gates, rollout risk, evidence, and next actions."
+    }
+  ],
+  "template_specific": {
+    "require_panels": 3,
+    "require_controls": 2,
+    "dominant_edge_kind_ratio": 0.65
+  }
+}

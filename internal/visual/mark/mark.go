@@ -323,7 +323,7 @@ func Analyze(templateDir, inputSchemaKind string, data map[string]any) Stats {
 
 func shapeQualityApplies(kind string) bool {
 	switch strings.ToLower(kind) {
-	case "graph_v1", "graph_events_v1", "matrix_v1", "uml_class_v1", "uml_state_machine_v1", "uml_activity_v1", "uml_component_deployment_v1":
+	case "graph_v1", "graph_events_v1", "matrix_v1", "studio_v1", "uml_class_v1", "uml_state_machine_v1", "uml_activity_v1", "uml_component_deployment_v1":
 		return true
 	case "timeline_v1", "evidence_v1":
 		return true
@@ -388,6 +388,14 @@ func collectNodes(kind string, data map[string]any) []nodeItem {
 		return objectItems(data, "events")
 	case "matrix_v1":
 		return objectItems(data, "items")
+	case "studio_v1":
+		heroData := studioHeroData(data)
+		out := objectItemsFrom(heroData, "nodes", "$.hero.data.nodes")
+		out = append(out, objectItemsFrom(heroData, "items", "$.hero.data.items")...)
+		out = append(out, objectItemsFrom(heroData, "events", "$.hero.data.events")...)
+		out = append(out, objectItemsFrom(heroData, "participants", "$.hero.data.participants")...)
+		out = append(out, objectItems(data, "panels")...)
+		return out
 	case "evidence_v1":
 		out := objectItems(data, "claims")
 		out = append(out, objectItems(data, "sources")...)
@@ -411,31 +419,56 @@ func collectEdges(kind string, data map[string]any) []edgeItem {
 		return edgeItems(data, "links")
 	case "evidence_v1":
 		return edgeItems(data, "links")
+	case "studio_v1":
+		heroData := studioHeroData(data)
+		out := edgeItemsFrom(heroData, "edges", "$.hero.data.edges")
+		out = append(out, edgeItemsFrom(heroData, "messages", "$.hero.data.messages")...)
+		return out
 	default:
 		return edgeItems(data, "edges")
 	}
 }
 
 func objectItems(data map[string]any, field string) []nodeItem {
+	return objectItemsFrom(data, field, "$."+field)
+}
+
+func objectItemsFrom(data map[string]any, field, pathPrefix string) []nodeItem {
 	raw, _ := data[field].([]any)
 	out := make([]nodeItem, 0, len(raw))
 	for i, item := range raw {
 		if obj, ok := item.(map[string]any); ok {
-			out = append(out, nodeItem{Path: "$." + field + "[" + intString(i) + "]", Obj: obj})
+			out = append(out, nodeItem{Path: pathPrefix + "[" + intString(i) + "]", Obj: obj})
 		}
 	}
 	return out
 }
 
 func edgeItems(data map[string]any, field string) []edgeItem {
+	return edgeItemsFrom(data, field, "$."+field)
+}
+
+func edgeItemsFrom(data map[string]any, field, pathPrefix string) []edgeItem {
 	raw, _ := data[field].([]any)
 	out := make([]edgeItem, 0, len(raw))
 	for i, item := range raw {
 		if obj, ok := item.(map[string]any); ok {
-			out = append(out, edgeItem{Path: "$." + field + "[" + intString(i) + "]", Obj: obj})
+			out = append(out, edgeItem{Path: pathPrefix + "[" + intString(i) + "]", Obj: obj})
 		}
 	}
 	return out
+}
+
+func studioHeroData(data map[string]any) map[string]any {
+	hero, _ := data["hero"].(map[string]any)
+	if hero == nil {
+		return map[string]any{}
+	}
+	heroData, _ := hero["data"].(map[string]any)
+	if heroData == nil {
+		return map[string]any{}
+	}
+	return heroData
 }
 
 func resolveNode(registry MarkRegistry, obj map[string]any) resolvedMark {

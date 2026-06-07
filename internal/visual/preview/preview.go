@@ -42,6 +42,8 @@ type Summary struct {
 	Nodes                   int      `json:"nodes,omitempty"`
 	Edges                   int      `json:"edges,omitempty"`
 	Groups                  int      `json:"groups,omitempty"`
+	Zones                   int      `json:"zones,omitempty"`
+	Entities                int      `json:"entities,omitempty"`
 	VisibleNodes            int      `json:"visible_nodes,omitempty"`
 	VisibleEdges            int      `json:"visible_edges,omitempty"`
 	Events                  int      `json:"events,omitempty"`
@@ -224,8 +226,8 @@ func Analyze(templateDir string, tpl manifest.TemplateManifest, data map[string]
 			quality -= 20
 			warnings = append(warnings, Warning{Code: "matrix_items_high", Message: "Matrix has more items than the recommended initial view.", Hint: "Use filters, categories, or high-importance items for the first view."})
 		}
-	case "studio_v1":
-		quality = analyzeStudio(data, design, &summary, &warnings, &recommendations)
+	case "isometric_architecture_v1":
+		quality = analyzeIsometricArchitecture(data, design, &summary, &warnings, &recommendations)
 	case "uml_sequence_v1":
 		quality = analyzeUMLSequence(data, design, &summary, &warnings, &recommendations)
 	case "uml_class_v1":
@@ -355,155 +357,124 @@ func analyzeVisualGuidance(data map[string]any, kind string, design manifest.Vis
 	return penalty
 }
 
-type studioRef struct {
-	Path  string
-	Value string
-}
-
-func analyzeStudio(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
+func analyzeIsometricArchitecture(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
 	_ = design
+	zones := objectArray(data, "zones")
+	entities := objectArray(data, "entities")
+	links := objectArray(data, "links")
+	summary.Zones = len(zones)
+	summary.Entities = len(entities)
+	summary.Links = len(links)
+	summary.Nodes = len(entities)
+	summary.Edges = len(links)
+
 	quality := 100
 	penalty := 0
 	add := func(code, severity, path, message, suggestion string) {
-		*warnings = append(*warnings, studioWarning(code, severity, path, message, suggestion))
-		penalty += studioWarningPenalty(severity)
+		*warnings = append(*warnings, isometricWarning(code, severity, path, message, suggestion))
+		penalty += isometricWarningPenalty(severity)
 	}
-	hero, hasHero := studioObjectField(data, "hero")
-	heroData, hasHeroDataObject := studioObjectField(hero, "data")
-	hasHeroData := hasHeroDataObject && studioHasHeroData(heroData)
-	nodes := studioHeroObjects(heroData)
-	edges := studioHeroRelationships(heroData)
-	panels := objectArray(data, "panels")
-	annotations := studioAnnotationObjects(data)
-	controls := objectArray(data, "controls")
-	navItems := studioNavigationObjects(data)
-	knownIDs := studioKnownTargetIDs(heroData)
-	for _, panel := range panels {
-		if id := firstString(panel, "id"); id != "" {
-			knownIDs[id] = true
+
+	zoneIDs := map[string]bool{}
+	var zoneRects []isometricRect
+	if len(zones) == 0 {
+		add("isometric_zones_missing", "warning", "$.zones", "Isometric architecture input does not define any zones.", "Add zones[] with id, label, and bounds so the architecture scene has visible boundaries.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "zones[]")
+	}
+	for i, zone := range zones {
+		id := firstString(zone, "id")
+		if id != "" {
+			zoneIDs[id] = true
+		}
+		rect, ok := isometricBounds(zone)
+		if !ok {
+			add("isometric_zone_bounds_missing", "warning", "$.zones["+intString(i)+"].bounds", "A zone is missing numeric bounds for the isometric floor plan.", "Set zone.bounds.x/y/w/h to numbers.")
+			continue
+		}
+		rect.ID = id
+		zoneRects = append(zoneRects, rect)
+	}
+	if overlaps := overlappingRects(zoneRects); len(overlaps) > 0 {
+		add("isometric_zone_overlap_risk", "warning", "$.zones", "Some zone bounds overlap and may make boundaries hard to read.", "Adjust zone.bounds so architecture areas have clear separation.")
+		(*warnings)[len(*warnings)-1].Details = overlaps
+	}
+
+	entityIDs := map[string]bool{}
+	missingPosition := 0
+	fallbackRisk := []string{}
+	var entityRects []isometricRect
+	for i, entity := range entities {
+		id := firstString(entity, "id")
+		if id != "" {
+			entityIDs[id] = true
+		}
+		path := "$.entities[" + intString(i) + "]"
+		kind := firstString(entity, "kind")
+		if kind == "" || isGenericKind(kind) {
+			add("isometric_entity_kind_missing", "warning", path+".kind", "An architecture entity lacks a specific kind.", "Set entity.kind to service, api, database, queue, stream, worker, gateway, client, external, storage, or deployment.")
+			fallbackRisk = appendCapped(fallbackRisk, path, 12)
+		}
+		if firstString(entity, "label", "name", "title") == "" {
+			add("isometric_entity_label_missing", "warning", path+".label", "An architecture entity lacks a display label.", "Set entity.label to a short label that fits above the isometric mark.")
+		}
+		zone := firstString(entity, "zone")
+		if zone != "" && len(zoneIDs) > 0 && !zoneIDs[zone] {
+			add("isometric_entity_zone_unknown", "warning", path+".zone", "An entity references a zone id that does not exist.", "Set entity.zone to one of zones[].id or add the missing zone.")
+		}
+		pos, hasPos := isometricPosition(entity)
+		if !hasPos {
+			missingPosition++
+			add("isometric_entity_position_missing", "warning", path+".position", "An entity is missing an explicit isometric position.", "Set entity.position.x/y so the renderer does not auto-place architecture marks.")
+		}
+		size := isometricSize(entity)
+		if hasPos {
+			entityRects = append(entityRects, isometricRect{ID: id, X: pos.X, Y: pos.Y, W: size.W, H: size.D})
+		}
+		if !isometricHasMark(entity) {
+			fallbackRisk = appendCapped(fallbackRisk, path, 12)
+		}
+	}
+	if overlaps := overlappingRects(entityRects); len(overlaps) > 0 {
+		add("isometric_entity_overlap_risk", "warning", "$.entities", "Some positioned entities may overlap in the isometric scene.", "Move entity.position values apart or reduce entity.size.")
+		(*warnings)[len(*warnings)-1].Details = overlaps
+	}
+	if len(entities) > 0 && missingPosition*100 > len(entities)*35 {
+		add("isometric_too_many_auto_positions", "warning", "$.entities", "Too many architecture entities rely on automatic placement.", "Position important entities explicitly with entity.position.x/y.")
+	}
+	if len(fallbackRisk) > 0 {
+		add("isometric_fallback_sphere_risk", "warning", "$.entities", "Some architecture entities may fall back to generic sphere marks.", "Add specific entity.kind plus presentation.shape, presentation.icon, provider, service, or platform.")
+		(*warnings)[len(*warnings)-1].Details = duplicateFree(fallbackRisk, 12)
+	}
+
+	for i, link := range links {
+		path := "$.links[" + intString(i) + "]"
+		from := firstString(link, "from")
+		to := firstString(link, "to")
+		if !entityIDs[from] || !entityIDs[to] {
+			add("isometric_link_endpoint_unknown", "warning", path, "A link references an endpoint that is not present in entities[].", "Set link.from and link.to to existing entity ids.")
+		}
+		if value, ok := link["directed"].(bool); !ok || !value {
+			add("isometric_link_direction_missing", "warning", path+".directed", "An architecture link is not marked as directional.", "Set link.directed=true for calls, reads, writes, events, dependencies, and deployment flows.")
+		}
+		if !isometricLinkHasArrow(link) {
+			add("isometric_link_arrow_missing", "warning", path+".presentation.arrow", "A directional architecture link does not declare a visible arrow.", "Set link.presentation.arrow=forward or reverse.")
+		}
+		if label := firstString(link, "label", "name", "title"); len(label) > 48 {
+			add("isometric_link_label_too_long", "warning", path+".label", "A link label is too long for the isometric overview.", "Shorten link.label and move detail into summary.")
 		}
 	}
 
-	summary.Nodes = len(objectArray(heroData, "nodes"))
-	summary.Items = len(objectArray(heroData, "items"))
-	summary.Events = len(objectArray(heroData, "events"))
-	summary.Participants = len(objectArray(heroData, "participants"))
-	summary.Edges = len(objectArray(heroData, "edges"))
-	summary.Messages = len(objectArray(heroData, "messages"))
-	summary.Flows = len(objectArray(heroData, "flows"))
-	summary.Links = len(objectArray(heroData, "links"))
-	summary.VisualAnnotations = len(annotations)
+	if !isometricBaseGridEnabled(data) {
+		add("isometric_missing_base_grid", "warning", "$.canvas.grid.enabled", "Isometric architecture input does not enable a base grid.", "Set canvas.grid.enabled=true so the scene has a base plane and scale reference.")
+		recommendations.AddFields = appendUnique(recommendations.AddFields, "canvas.grid.enabled")
+	}
+	if isometricGenericGraph(data, entities) {
+		add("isometric_generic_graph_detected", "warning", "$", "Input looks like a generic graph rather than an isometric architecture scene.", "Use zones/entities/links with architecture-specific entity kinds instead of nodes/edges.")
+	}
+	if isometricStarfieldTheme(data) {
+		add("isometric_starfield_theme_detected", "warning", "$.theme", "Starfield themes do not match the architecture isometric scene contract.", "Use theme=architecture_light for a grounded architecture map.")
+	}
 
-	if strings.TrimSpace(studioGoalText(data)) == "" {
-		add("studio_goal_missing", "warning", "$.goal", "Studio input does not state the presentation goal.", "Add goal or visual.goal so the Studio page has a clear first-view purpose.")
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "goal")
-	}
-	if studioHasInferredContent(data) && len(array(data, "assumptions")) == 0 {
-		add("studio_assumptions_missing_for_inferred_content", "warning", "$.assumptions", "Studio content appears to contain inferred material but assumptions are not listed.", "Add assumptions[] explaining what was inferred and why.")
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "assumptions[]")
-	}
-	if !hasHero {
-		add("studio_hero_missing", "error", "$.hero", "Studio input does not provide a hero section.", "Add hero with title, summary, and hero.data for the primary stage.")
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "hero")
-	}
-	if !hasHeroData {
-		add("studio_hero_data_missing", "error", "$.hero.data", "Studio hero does not provide stage data.", "Add hero.data.nodes/items/events/participants and hero.data.edges/messages/flows/links.")
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "hero.data")
-	}
-	hasNavigation := len(navItems) > 0
-	hasDetailPanel := studioHasDetailPanel(data, panels)
-	hasBottomPanels := studioHasBottomPanels(panels)
-	hasControls := len(controls) > 0
-	hasStory := studioHasStory(data)
-	if hasHeroData && !hasNavigation && !hasDetailPanel && !hasBottomPanels && !hasControls && !hasStory && len(annotations) == 0 {
-		add("studio_bare_graph", "warning", "$", "Studio input looks like a bare graph without presentation slots.", "Add navigation, detail panels, bottom panels, controls, story steps, annotations, and assumptions around the hero stage.")
-	}
-	if !hasNavigation {
-		add("studio_navigation_missing", "warning", "$.navigation", "Studio input does not define left navigation.", "Add navigation.items[] with labels and target refs for the important hero objects.")
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "navigation.items[]")
-	}
-	if !hasDetailPanel {
-		add("studio_detail_panel_missing", "warning", "$.panels", "Studio input has no detail or inspector panel.", "Add a panel with type=detail or type=inspector so selection has explanatory content.")
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "panels[].type=detail")
-	}
-	if !hasBottomPanels {
-		add("studio_bottom_panels_missing", "warning", "$.panels", "Studio input has no bottom panels for story, evidence, risks, or comparison.", "Add bottom panels with concise content for evidence, risks, comparisons, or results.")
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "panels[]")
-	}
-	if !hasControls {
-		add("studio_controls_missing", "info", "$.controls", "Studio input does not declare controls.", "Add controls[] for reset, isolate, hide, show, replay, and export actions.")
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "controls[]")
-	}
-	if !hasStory {
-		add("studio_story_missing", "warning", "$.story", "Studio input does not define a narrative story.", "Add story.steps[] or visual.narrative_steps[] to explain the presentation sequence.")
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "story.steps[]")
-	}
-	if len(annotations) == 0 {
-		add("studio_annotations_missing", "warning", "$.annotations", "Studio input has no annotations for focus anchors.", "Add annotations[] with target_id and short labels for key decisions, risks, or evidence.")
-		recommendations.AddFields = appendUnique(recommendations.AddFields, "annotations[]")
-	}
-	unknownRefs := []string{}
-	for _, ref := range studioTargetRefs(data, navItems, panels, annotations, controls) {
-		if ref.Value != "" && len(knownIDs) > 0 && !knownIDs[ref.Value] {
-			unknownRefs = appendCapped(unknownRefs, ref.Path+"="+ref.Value, 12)
-		}
-	}
-	if len(unknownRefs) > 0 {
-		add("studio_target_refs_unknown", "error", "$", "Some Studio target refs do not exist in hero.data.", "Use ids from hero.data nodes, items, events, participants, or relationships when binding navigation, annotations, panels, and controls.")
-		(*warnings)[len(*warnings)-1].Details = duplicateFree(unknownRefs, 12)
-		summary.VisualUnknownRefs = duplicateFree(unknownRefs, 12)
-	}
-	if len(knownIDs) > 0 {
-		totalRefs := len(studioTargetRefs(data, navItems, panels, annotations, controls))
-		unknownCount := len(unknownRefs)
-		summary.VisualReferenceCoverage = round2(float64(maxInt(0, totalRefs-unknownCount)) / float64(maxInt(1, totalRefs)))
-	}
-	for i, panel := range panels {
-		path := "$.panels[" + intString(i) + "]"
-		text := studioPanelText(panel)
-		if strings.TrimSpace(text) == "" && len(objectArrayFromValue(panel["items"])) == 0 {
-			add("studio_panel_empty", "warning", path, "A Studio panel is empty.", "Add concise panel text or items, or remove the empty panel.")
-		}
-		if len(text) > 1200 {
-			add("studio_panel_text_too_long", "info", path, "A Studio panel has too much text for a scannable presentation layer.", "Shorten panel copy and move long evidence or implementation detail into items or summaries.")
-		}
-	}
-	for _, evidence := range studioEvidenceItems(data, panels) {
-		if !studioEvidenceHasSource(evidence.Obj) {
-			add("studio_evidence_without_source", "warning", evidence.Path, "An evidence item does not identify its source.", "Add source, source_id, citation, reference, or provenance to evidence items.")
-		}
-	}
-	if studioCompareRequested(data) && !studioHasPanelType(panels, "compare", "comparison") {
-		add("studio_compare_requested_but_missing", "warning", "$.panels", "Studio content asks for comparison but no comparison panel is present.", "Add a compare/comparison panel with the options, deltas, or before/after result.")
-	}
-	if studioRiskRequested(data) && !studioHasPanelType(panels, "risk", "risks") {
-		add("studio_risk_requested_but_missing", "warning", "$.panels", "Studio content mentions risk but no risk panel is present.", "Add a risk panel with impact, likelihood, mitigation, and evidence refs.")
-	}
-	for i, control := range controls {
-		if firstString(control, "action", "command", "target_id", "targetId", "target_ref", "targetRef") == "" {
-			add("studio_control_unbound", "warning", "$.controls["+intString(i)+"]", "A Studio control is not bound to an action or target.", "Set controls[].action or controls[].target_id so runtime controls have deterministic behavior.")
-		}
-	}
-	missingMarkFields := []string{}
-	for i, node := range nodes {
-		if !studioHasMarkFields(node) {
-			missingMarkFields = appendCapped(missingMarkFields, studioNodePath(node, i), 12)
-		}
-	}
-	if len(missingMarkFields) > 0 {
-		add("studio_mark_fields_missing", "warning", "$.hero.data", "Some Studio hero objects lack semantic mark fields.", "Add kind, provider/service, platform, or presentation.shape/icon so Studio can render meaningful icons and shapes.")
-		(*warnings)[len(*warnings)-1].Details = missingMarkFields
-	}
-	missingArrows := []string{}
-	for i, edge := range edges {
-		if studioEdgeNeedsArrow(edge) && !studioEdgeHasArrow(edge) {
-			missingArrows = appendCapped(missingArrows, studioEdgePath(edge, i), 12)
-		}
-	}
-	if len(missingArrows) > 0 {
-		add("studio_edge_arrows_missing", "warning", "$.hero.data", "Some directed Studio relationships do not declare visible arrows.", "Set directed=true or presentation.arrow=forward on directional calls, reads, writes, emits, sends, returns, deploys, validates, blocks, or depends_on edges.")
-		(*warnings)[len(*warnings)-1].Details = missingArrows
-	}
 	quality -= penalty
 	if quality < 0 {
 		return 0
@@ -511,7 +482,7 @@ func analyzeStudio(data map[string]any, design manifest.VisualDesign, summary *S
 	return quality
 }
 
-func studioWarning(code, severity, path, message, suggestion string) Warning {
+func isometricWarning(code, severity, path, message, suggestion string) Warning {
 	if path == "" {
 		path = "$"
 	}
@@ -529,7 +500,7 @@ func studioWarning(code, severity, path, message, suggestion string) Warning {
 	}
 }
 
-func studioWarningPenalty(severity string) int {
+func isometricWarningPenalty(severity string) int {
 	switch strings.ToLower(severity) {
 	case "error":
 		return 12
@@ -542,320 +513,128 @@ func studioWarningPenalty(severity string) int {
 	}
 }
 
-func studioObjectField(data map[string]any, name string) (map[string]any, bool) {
-	obj, ok := data[name].(map[string]any)
-	if !ok || obj == nil {
-		return map[string]any{}, false
-	}
-	return obj, true
+type isometricRect struct {
+	ID   string
+	X    float64
+	Y    float64
+	W    float64
+	H    float64
 }
 
-func studioHeroData(data map[string]any) map[string]any {
-	hero, ok := studioObjectField(data, "hero")
-	if !ok {
-		return map[string]any{}
-	}
-	heroData, ok := studioObjectField(hero, "data")
-	if !ok {
-		return map[string]any{}
-	}
-	return heroData
+type isometricPoint struct {
+	X float64
+	Y float64
 }
 
-func studioHasHeroData(heroData map[string]any) bool {
-	for _, field := range []string{"nodes", "items", "events", "participants", "edges", "messages", "flows", "links"} {
-		if len(objectArray(heroData, field)) > 0 {
-			return true
-		}
-	}
-	return false
+type isometricSizeValue struct {
+	W float64
+	D float64
 }
 
-func studioHeroObjects(heroData map[string]any) []map[string]any {
-	var out []map[string]any
-	for _, field := range []string{"nodes", "items", "events", "participants"} {
-		for _, obj := range objectArray(heroData, field) {
-			obj["_studio_source"] = field
-			out = append(out, obj)
-		}
+func isometricBounds(zone map[string]any) (isometricRect, bool) {
+	bounds, _ := zone["bounds"].(map[string]any)
+	if bounds == nil {
+		return isometricRect{}, false
 	}
-	return out
+	x, okX := numericValue(bounds["x"])
+	y, okY := numericValue(bounds["y"])
+	w, okW := numericValue(bounds["w"])
+	h, okH := numericValue(bounds["h"])
+	return isometricRect{X: x, Y: y, W: w, H: h}, okX && okY && okW && okH
 }
 
-func studioHeroRelationships(heroData map[string]any) []map[string]any {
-	var out []map[string]any
-	for _, field := range []string{"edges", "messages", "flows", "links"} {
-		for _, obj := range objectArray(heroData, field) {
-			obj["_studio_source"] = field
-			out = append(out, obj)
-		}
+func isometricPosition(entity map[string]any) (isometricPoint, bool) {
+	position, _ := entity["position"].(map[string]any)
+	if position == nil {
+		return isometricPoint{}, false
 	}
-	return out
+	x, okX := numericValue(position["x"])
+	y, okY := numericValue(position["y"])
+	return isometricPoint{X: x, Y: y}, okX && okY
 }
 
-func studioGoalText(data map[string]any) string {
-	visual, _ := data["visual"].(map[string]any)
-	story, _ := data["story"].(map[string]any)
-	return firstString(data, "goal", "objective", "purpose") + firstString(visual, "goal") + firstString(story, "goal")
+func isometricSize(entity map[string]any) isometricSizeValue {
+	size, _ := entity["size"].(map[string]any)
+	w, okW := numericValue(size["w"])
+	d, okD := numericValue(size["d"])
+	if !okW || w <= 0 {
+		w = 3
+	}
+	if !okD || d <= 0 {
+		d = 3
+	}
+	return isometricSizeValue{W: w, D: d}
 }
 
-func studioHasInferredContent(data map[string]any) bool {
-	if boolFieldAny(data, "inferred", "inferred_content", "inferredContent") {
-		return true
-	}
-	text := strings.ToLower(firstString(data, "content_source", "source"))
-	if strings.Contains(text, "inferred") {
-		return true
-	}
-	for _, item := range qualityObjects(studioHeroData(data)) {
-		if boolFieldAny(item.Obj, "inferred", "generated", "estimated") {
-			return true
-		}
-	}
-	return false
-}
-
-func boolFieldAny(obj map[string]any, names ...string) bool {
-	for _, name := range names {
-		if value, ok := obj[name].(bool); ok && value {
-			return true
-		}
-	}
-	return false
-}
-
-func studioNavigationObjects(data map[string]any) []map[string]any {
-	if items := objectArray(data, "navigation"); len(items) > 0 {
-		return items
-	}
-	if items := objectArray(data, "nav"); len(items) > 0 {
-		return items
-	}
-	for _, name := range []string{"navigation", "nav"} {
-		if obj, ok := data[name].(map[string]any); ok {
-			if items := objectArrayFromValue(obj["items"]); len(items) > 0 {
-				return items
+func overlappingRects(rects []isometricRect) []string {
+	var out []string
+	for i := 0; i < len(rects); i++ {
+		for j := i + 1; j < len(rects); j++ {
+			a, b := rects[i], rects[j]
+			if a.W <= 0 || a.H <= 0 || b.W <= 0 || b.H <= 0 {
+				continue
+			}
+			if a.X < b.X+b.W && a.X+a.W > b.X && a.Y < b.Y+b.H && a.Y+a.H > b.Y {
+				label := strings.TrimSpace(a.ID + "/" + b.ID)
+				if label == "/" {
+					label = intString(i) + "/" + intString(j)
+				}
+				out = appendCapped(out, label, 12)
 			}
 		}
 	}
-	return nil
-}
-
-func studioAnnotationObjects(data map[string]any) []map[string]any {
-	var out []map[string]any
-	out = append(out, objectArray(data, "annotations")...)
-	hero, _ := data["hero"].(map[string]any)
-	out = append(out, objectArray(hero, "annotations")...)
-	visual, _ := data["visual"].(map[string]any)
-	out = append(out, objectArray(visual, "annotations")...)
 	return out
 }
 
-func studioHasDetailPanel(data map[string]any, panels []map[string]any) bool {
-	if _, ok := data["inspector"].(map[string]any); ok {
+func isometricHasMark(entity map[string]any) bool {
+	if firstString(entity, "provider", "service", "platform") != "" {
 		return true
 	}
-	return studioHasPanelType(panels, "detail", "details", "inspector")
-}
-
-func studioHasBottomPanels(panels []map[string]any) bool {
-	for _, panel := range panels {
-		slot := strings.ToLower(firstString(panel, "slot", "placement"))
-		typ := strings.ToLower(firstString(panel, "type", "kind"))
-		if slot == "bottom" || (typ != "" && typ != "detail" && typ != "inspector") {
-			return true
-		}
-	}
-	return false
-}
-
-func studioHasStory(data map[string]any) bool {
-	if len(objectArray(data, "story")) > 0 {
+	if kind := firstString(entity, "kind"); kind != "" && !isGenericKind(kind) {
 		return true
 	}
-	if story, ok := data["story"].(map[string]any); ok {
-		if strings.TrimSpace(firstString(story, "title", "summary", "goal")) != "" || len(objectArrayFromValue(story["steps"])) > 0 || len(objectArrayFromValue(story["items"])) > 0 {
-			return true
-		}
-	}
-	visual, _ := data["visual"].(map[string]any)
-	return len(objectArrayFromValue(visual["narrative_steps"])) > 0 || len(objectArrayFromValue(visual["narrativeSteps"])) > 0
-}
-
-func studioKnownTargetIDs(heroData map[string]any) map[string]bool {
-	ids := map[string]bool{}
-	for _, obj := range append(studioHeroObjects(heroData), studioHeroRelationships(heroData)...) {
-		for _, id := range visualIDsForObject(obj) {
-			ids[id] = true
-		}
-		if id := firstString(obj, "id"); id != "" {
-			ids[id] = true
-		}
-	}
-	return ids
-}
-
-func studioTargetRefs(data map[string]any, navItems, panels, annotations, controls []map[string]any) []studioRef {
-	var refs []studioRef
-	addRefs := func(path string, obj map[string]any) {
-		for _, value := range studioRefsFromObject(obj) {
-			refs = append(refs, studioRef{Path: path, Value: value})
-		}
-	}
-	for i, item := range navItems {
-		addRefs("$.navigation.items["+intString(i)+"]", item)
-	}
-	for i, panel := range panels {
-		addRefs("$.panels["+intString(i)+"]", panel)
-	}
-	for i, annotation := range annotations {
-		addRefs("$.annotations["+intString(i)+"]", annotation)
-	}
-	for i, control := range controls {
-		addRefs("$.controls["+intString(i)+"]", control)
-	}
-	visual, _ := data["visual"].(map[string]any)
-	for _, name := range []string{"initial_focus_ids", "initialFocusIds", "hidden_detail_ids", "hiddenDetailIds"} {
-		for _, value := range stringListFromAny(visual[name]) {
-			refs = append(refs, studioRef{Path: "$.visual." + name, Value: value})
-		}
-	}
-	return refs
-}
-
-func studioRefsFromObject(obj map[string]any) []string {
-	var refs []string
-	for _, name := range []string{"target_id", "targetId", "target_ref", "targetRef", "node_id", "nodeId"} {
-		if value := firstString(obj, name); value != "" {
-			refs = append(refs, value)
-		}
-	}
-	for _, name := range []string{"targets", "target_ids", "targetIds", "target_refs", "targetRefs", "focus_ids", "focusIds"} {
-		refs = append(refs, stringListFromAny(obj[name])...)
-	}
-	return refs
-}
-
-func stringListFromAny(value any) []string {
-	raw, ok := value.([]any)
-	if !ok {
-		return nil
-	}
-	var out []string
-	for _, item := range raw {
-		if s, ok := item.(string); ok && strings.TrimSpace(s) != "" {
-			out = append(out, strings.TrimSpace(s))
-		}
-	}
-	return out
-}
-
-func studioPanelText(panel map[string]any) string {
-	parts := []string{firstString(panel, "body", "text", "summary", "description")}
-	for _, item := range objectArrayFromValue(panel["items"]) {
-		parts = append(parts, firstString(item, "label", "title", "summary", "text", "body"))
-	}
-	return strings.TrimSpace(strings.Join(parts, "\n"))
-}
-
-type studioEvidenceItem struct {
-	Path string
-	Obj  map[string]any
-}
-
-func studioEvidenceItems(data map[string]any, panels []map[string]any) []studioEvidenceItem {
-	var out []studioEvidenceItem
-	for i, item := range objectArray(data, "evidence") {
-		out = append(out, studioEvidenceItem{Path: "$.evidence[" + intString(i) + "]", Obj: item})
-	}
-	for i, panel := range panels {
-		typ := strings.ToLower(firstString(panel, "type", "kind"))
-		if typ != "evidence" {
-			continue
-		}
-		for j, item := range objectArrayFromValue(panel["items"]) {
-			out = append(out, studioEvidenceItem{Path: "$.panels[" + intString(i) + "].items[" + intString(j) + "]", Obj: item})
-		}
-	}
-	return out
-}
-
-func studioEvidenceHasSource(obj map[string]any) bool {
-	return firstString(obj, "source", "source_id", "sourceId", "citation", "reference", "provenance") != ""
-}
-
-func studioCompareRequested(data map[string]any) bool {
-	text := studioSearchableText(data)
-	return strings.Contains(text, "compare") || strings.Contains(text, "comparison") || strings.Contains(text, "delta") || strings.Contains(text, "before/after")
-}
-
-func studioRiskRequested(data map[string]any) bool {
-	text := studioSearchableText(data)
-	return strings.Contains(text, "risk") || strings.Contains(text, "mitigation") || strings.Contains(text, "failure")
-}
-
-func studioSearchableText(data map[string]any) string {
-	b, _ := json.Marshal(data)
-	return strings.ToLower(string(b))
-}
-
-func studioHasPanelType(panels []map[string]any, types ...string) bool {
-	wanted := map[string]bool{}
-	for _, typ := range types {
-		wanted[strings.ToLower(typ)] = true
-	}
-	for _, panel := range panels {
-		if wanted[strings.ToLower(firstString(panel, "type", "kind", "slot"))] {
-			return true
-		}
-	}
-	return false
-}
-
-func studioHasMarkFields(obj map[string]any) bool {
-	if firstString(obj, "kind", "type", "provider", "service", "platform") != "" {
-		return true
-	}
-	presentation, _ := obj["presentation"].(map[string]any)
+	presentation, _ := entity["presentation"].(map[string]any)
 	return firstString(presentation, "shape", "mesh", "icon") != ""
 }
 
-func studioNodePath(obj map[string]any, fallback int) string {
-	field := firstString(obj, "_studio_source")
-	if field == "" {
-		field = "nodes"
-	}
-	return "$.hero.data." + field + "[" + intString(fallback) + "]"
+func isometricLinkHasArrow(link map[string]any) bool {
+	presentation, _ := link["presentation"].(map[string]any)
+	arrow := strings.ToLower(firstString(presentation, "arrow"))
+	return arrow != "" && arrow != "none" && arrow != "false"
 }
 
-func studioEdgePath(obj map[string]any, fallback int) string {
-	field := firstString(obj, "_studio_source")
-	if field == "" {
-		field = "edges"
-	}
-	return "$.hero.data." + field + "[" + intString(fallback) + "]"
+func isometricBaseGridEnabled(data map[string]any) bool {
+	canvas, _ := data["canvas"].(map[string]any)
+	grid, _ := canvas["grid"].(map[string]any)
+	enabled, _ := grid["enabled"].(bool)
+	return enabled
 }
 
-func studioEdgeNeedsArrow(edge map[string]any) bool {
-	kind := strings.ToLower(firstString(edge, "kind", "relation", "type"))
-	directed := map[string]bool{
-		"call": true, "calls": true, "sync": true, "async": true,
-		"write": true, "writes": true, "read": true, "reads": true,
-		"emit": true, "emits": true, "send": true, "sends": true,
-		"return": true, "returns": true, "deploy": true, "deploys": true,
-		"validate": true, "validates": true, "block": true, "blocks": true,
-		"depends_on": true, "message": true, "flow": true, "transition": true,
-	}
-	return directed[kind]
-}
-
-func studioEdgeHasArrow(edge map[string]any) bool {
-	if value, ok := edge["directed"].(bool); ok && value {
+func isometricGenericGraph(data map[string]any, entities []map[string]any) bool {
+	if len(objectArray(data, "nodes")) > 0 || len(objectArray(data, "edges")) > 0 {
 		return true
 	}
-	presentation, _ := edge["presentation"].(map[string]any)
-	arrow := strings.ToLower(firstString(presentation, "arrow"))
-	return arrow != "" && arrow != "none"
+	generic := 0
+	for _, entity := range entities {
+		if isGenericKind(firstString(entity, "kind")) {
+			generic++
+		}
+	}
+	return len(entities) > 0 && generic*2 >= len(entities)
+}
+
+func isometricStarfieldTheme(data map[string]any) bool {
+	values := []string{firstString(data, "theme", "scene_theme")}
+	for _, field := range []string{"view", "renderHints"} {
+		obj, _ := data[field].(map[string]any)
+		values = append(values, firstString(obj, "theme", "sceneTheme", "scene_theme"))
+	}
+	for _, value := range values {
+		if strings.Contains(strings.ToLower(value), "starfield") {
+			return true
+		}
+	}
+	return false
 }
 
 func analyzeUMLSequence(data map[string]any, design manifest.VisualDesign, summary *Summary, warnings *[]Warning, recommendations *Recommendations) int {
@@ -1219,7 +998,7 @@ func analyzeGeneralQuality(data map[string]any, rules authoring.QualityRules, de
 				addWarning(warnings, Warning{Code: "summary_missing_for_long_label", Severity: "warning", Path: item.Path, Message: "A long label does not provide summary/details for hover or inspector use.", Suggestion: "Shorten the label and put the full explanation in summary or details.", AutoFixHint: map[string]any{"action": "add_summary", "path": item.Path}})
 			}
 		}
-		if !hasImportance(item.Obj) && item.Kind != "phase" && !isStudioPresentationKind(item.Kind) {
+		if !hasImportance(item.Obj) && item.Kind != "phase" {
 			missingImportance++
 		}
 		visibility := normalizeVisibility(firstString(item.Obj, "visibility"))
@@ -1653,35 +1432,14 @@ type qualityObject struct {
 }
 
 func qualityObjects(data map[string]any) []qualityObject {
-	fields := []string{"groups", "nodes", "edges", "events", "claims", "sources", "links", "items", "participants", "messages", "phases", "activations", "fragments", "classes", "relationships", "states", "transitions", "actions", "flows", "components", "deployments"}
+	fields := []string{"groups", "zones", "nodes", "entities", "edges", "events", "claims", "sources", "links", "items", "participants", "messages", "phases", "activations", "fragments", "classes", "relationships", "states", "transitions", "actions", "flows", "components", "deployments"}
 	var out []qualityObject
 	for _, field := range fields {
 		for i, obj := range objectArray(data, field) {
 			out = append(out, qualityObject{Kind: strings.TrimSuffix(field, "s"), Path: "$." + field + "[" + intString(i) + "]", Obj: obj})
 		}
 	}
-	if heroData := studioHeroData(data); len(heroData) > 0 {
-		for _, field := range []string{"nodes", "edges", "events", "items", "participants", "messages"} {
-			for i, obj := range objectArray(heroData, field) {
-				out = append(out, qualityObject{Kind: strings.TrimSuffix(field, "s"), Path: "$.hero.data." + field + "[" + intString(i) + "]", Obj: obj})
-			}
-		}
-	}
-	for _, field := range []string{"navigation", "panels", "controls", "annotations"} {
-		for i, obj := range objectArray(data, field) {
-			out = append(out, qualityObject{Kind: strings.TrimSuffix(field, "s"), Path: "$." + field + "[" + intString(i) + "]", Obj: obj})
-		}
-	}
 	return out
-}
-
-func isStudioPresentationKind(kind string) bool {
-	switch strings.ToLower(strings.TrimSpace(kind)) {
-	case "navigation", "panel", "control", "annotation":
-		return true
-	default:
-		return false
-	}
 }
 
 func normalizeLabelPriority(obj map[string]any) string {
@@ -2062,15 +1820,7 @@ func duplicateFree(items []string, limit int) []string {
 
 func countSemanticItems(data map[string]any) int {
 	total := 0
-	for _, name := range []string{"groups", "nodes", "edges", "events", "claims", "sources", "links", "items", "participants", "messages", "phases", "activations", "fragments", "classes", "relationships", "states", "transitions", "actions", "flows", "components", "deployments"} {
-		total += len(array(data, name))
-	}
-	if heroData := studioHeroData(data); len(heroData) > 0 {
-		for _, name := range []string{"nodes", "edges", "events", "items", "participants", "messages"} {
-			total += len(array(heroData, name))
-		}
-	}
-	for _, name := range []string{"navigation", "panels", "controls", "annotations"} {
+	for _, name := range []string{"groups", "zones", "nodes", "entities", "edges", "events", "claims", "sources", "links", "items", "participants", "messages", "phases", "activations", "fragments", "classes", "relationships", "states", "transitions", "actions", "flows", "components", "deployments"} {
 		total += len(array(data, name))
 	}
 	return total
@@ -2156,52 +1906,27 @@ func firstString(obj map[string]any, names ...string) string {
 }
 
 func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool {
-	if strings.ToLower(kind) == "studio_v1" {
-		return collectStudioReferenceIDs(data)
-	}
 	fieldsByKind := map[string][]string{
 		"graph_v1":                    {"groups", "nodes", "edges"},
 		"graph_events_v1":             {"groups", "nodes", "edges", "events"},
 		"timeline_v1":                 {"events"},
 		"evidence_v1":                 {"claims", "sources", "links"},
 		"matrix_v1":                   {"items"},
+		"isometric_architecture_v1":    {"zones", "entities", "links"},
 		"uml_sequence_v1":             {"participants", "messages", "phases", "activations", "fragments"},
 		"uml_class_v1":                {"classes", "relationships"},
 		"uml_state_machine_v1":        {"states", "transitions"},
 		"uml_activity_v1":             {"actions", "flows"},
 		"uml_component_deployment_v1": {"components", "deployments", "links"},
-		"studio_v1":                   {"nodes", "items", "events", "participants", "edges", "messages", "flows", "links"},
 	}
 	ids := map[string]bool{}
 	source := data
-	if strings.ToLower(kind) == "studio_v1" {
-		source = studioHeroData(data)
-	}
 	for _, field := range fieldsByKind[strings.ToLower(kind)] {
 		for _, item := range objectArray(source, field) {
 			for _, id := range visualIDsForObject(item) {
 				ids[id] = true
 			}
 		}
-	}
-	return ids
-}
-
-func collectStudioReferenceIDs(data map[string]any) map[string]bool {
-	ids := map[string]bool{}
-	collect := func(items []map[string]any) {
-		for _, item := range items {
-			for _, id := range visualIDsForObject(item) {
-				ids[id] = true
-			}
-		}
-	}
-	heroData := studioHeroData(data)
-	for _, field := range []string{"nodes", "edges", "events", "items", "participants", "messages"} {
-		collect(objectArray(heroData, field))
-	}
-	for _, field := range []string{"navigation", "panels", "controls", "annotations"} {
-		collect(objectArray(data, field))
 	}
 	return ids
 }

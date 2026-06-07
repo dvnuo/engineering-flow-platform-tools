@@ -1,0 +1,213 @@
+{
+  "schema": "efp.visual.input.isometric_architecture.v1",
+  "title": "Inventory Platform Isometric Architecture",
+  "theme": "architecture_light",
+  "canvas": {
+    "grid": {
+      "enabled": true,
+      "spacing": 5
+    }
+  },
+  "camera": {
+    "preset": "isometric"
+  },
+  "zones": [
+    {
+      "id": "edge",
+      "label": "Edge",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 14,
+        "h": 12
+      },
+      "presentation": {
+        "boundary": "solid"
+      }
+    },
+    {
+      "id": "services",
+      "label": "Services",
+      "bounds": {
+        "x": 16,
+        "y": 0,
+        "w": 20,
+        "h": 16
+      },
+      "presentation": {
+        "boundary": "solid"
+      }
+    },
+    {
+      "id": "data",
+      "label": "Data",
+      "bounds": {
+        "x": 16,
+        "y": 18,
+        "w": 20,
+        "h": 12
+      },
+      "presentation": {
+        "boundary": "dashed"
+      }
+    }
+  ],
+  "entities": [
+    {
+      "id": "portal",
+      "label": "Ops Portal",
+      "kind": "client",
+      "zone": "edge",
+      "position": {
+        "x": 4,
+        "y": 4
+      },
+      "size": {
+        "w": 3,
+        "d": 2,
+        "h": 1
+      },
+      "importance": 0.82,
+      "summary": "Inventory operators adjust stock state.",
+      "presentation": {
+        "shape": "actor_card",
+        "icon": "generic.user",
+        "label": "top",
+        "leaderLine": true
+      }
+    },
+    {
+      "id": "inventory-api",
+      "label": "Inventory API",
+      "kind": "api",
+      "zone": "services",
+      "position": {
+        "x": 20,
+        "y": 5
+      },
+      "size": {
+        "w": 4,
+        "d": 3,
+        "h": 2
+      },
+      "importance": 0.92,
+      "summary": "Coordinates stock commands.",
+      "presentation": {
+        "shape": "hex_service",
+        "icon": "generic.api",
+        "label": "top",
+        "leaderLine": true
+      }
+    },
+    {
+      "id": "event-stream",
+      "label": "Stock Events",
+      "kind": "stream",
+      "zone": "services",
+      "position": {
+        "x": 30,
+        "y": 8
+      },
+      "size": {
+        "w": 4,
+        "d": 3,
+        "h": 2
+      },
+      "importance": 0.78,
+      "summary": "Publishes stock changed events.",
+      "presentation": {
+        "shape": "event_bus",
+        "icon": "generic.stream",
+        "label": "top",
+        "leaderLine": true
+      }
+    },
+    {
+      "id": "stock-db",
+      "label": "Stock DB",
+      "kind": "database",
+      "zone": "data",
+      "position": {
+        "x": 23,
+        "y": 23
+      },
+      "size": {
+        "w": 4,
+        "d": 3,
+        "h": 3
+      },
+      "importance": 0.8,
+      "summary": "Stores stock quantities.",
+      "presentation": {
+        "shape": "database_cylinder",
+        "icon": "generic.database",
+        "label": "top",
+        "leaderLine": true
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "portal-api",
+      "from": "portal",
+      "to": "inventory-api",
+      "label": "updates stock",
+      "kind": "calls",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward"
+      }
+    },
+    {
+      "id": "api-db",
+      "from": "inventory-api",
+      "to": "stock-db",
+      "label": "writes quantity",
+      "kind": "writes",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward"
+      }
+    },
+    {
+      "id": "api-stream",
+      "from": "inventory-api",
+      "to": "event-stream",
+      "label": "emits event",
+      "kind": "emits",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward"
+      }
+    }
+  ],
+  "visual": {
+    "goal": "Show the inventory update path and the event publication boundary.",
+    "initial_focus_ids": [
+      "portal",
+      "inventory-api",
+      "stock-db"
+    ],
+    "hidden_detail_ids": [
+      "api-stream"
+    ],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Stock update path",
+        "focus_ids": [
+          "portal",
+          "inventory-api",
+          "stock-db"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "event-note",
+        "target_id": "event-stream",
+        "label": "Async boundary"
+      }
+    ]
+  }
+}

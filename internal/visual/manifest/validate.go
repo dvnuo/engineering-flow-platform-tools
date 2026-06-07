@@ -193,7 +193,7 @@ var SupportedInputSchemaKinds = map[string]bool{
 	"timeline_v1":                 true,
 	"evidence_v1":                 true,
 	"matrix_v1":                   true,
-	"studio_v1":                   true,
+	"isometric_architecture_v1":    true,
 	"uml_sequence_v1":             true,
 	"uml_class_v1":                true,
 	"uml_state_machine_v1":        true,
@@ -210,7 +210,7 @@ var SupportedCategoryOrder = []string{
 	"evidence",
 	"matrix",
 	"spatial",
-	"studio",
+	"architecture",
 }
 
 var SupportedCategories = map[string]bool{
@@ -222,14 +222,14 @@ var SupportedCategories = map[string]bool{
 	"evidence":     true,
 	"matrix":       true,
 	"spatial":      true,
-	"studio":       true,
+	"architecture": true,
 }
 
 var SupportedEffectEngines = map[string]bool{
 	"three.v1": true,
 }
 
-const DefaultExpectedCanonicalCount = 37
+const DefaultExpectedCanonicalCount = 34
 
 var ExpectedCategoryCounts = map[string]int{
 	"uml":          5,
@@ -240,7 +240,7 @@ var ExpectedCategoryCounts = map[string]int{
 	"evidence":     4,
 	"matrix":       4,
 	"spatial":      4,
-	"studio":       4,
+	"architecture": 1,
 }
 
 var SupportedLayoutPresets = map[string]bool{
@@ -293,11 +293,7 @@ var SupportedLayoutPresets = map[string]bool{
 	"class_cards":                 true,
 	"activity_swimlanes":          true,
 	"component_deployment":        true,
-	"studio_pipeline":             true,
-	"studio_topology":             true,
-	"studio_sequence_walkthrough": true,
-	"studio_entity_explorer":      true,
-	"studio_page":                 true,
+	"isometric_architecture":       true,
 }
 
 func normalizeInputSchemaKind(kind string) string {

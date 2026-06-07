@@ -1,0 +1,66 @@
+{
+  "schema": "efp.visual.input.isometric_architecture.v1",
+  "title": "Generic Graph Mistaken For Architecture",
+  "theme": "starfield",
+  "zones": [],
+  "entities": [
+    {
+      "id": "a",
+      "label": "",
+      "kind": "",
+      "zone": "missing-zone"
+    },
+    {
+      "id": "b",
+      "label": "Node B",
+      "kind": "node"
+    }
+  ],
+  "links": [
+    {
+      "id": "a-b",
+      "from": "a",
+      "to": "missing",
+      "label": "a very long generic relationship label that will not read well on an isometric architecture link label layer",
+      "directed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A"
+    },
+    {
+      "id": "b",
+      "label": "B"
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "b"
+    }
+  ],
+  "visual": {
+    "goal": "Show nodes and edges.",
+    "initial_focus_ids": [
+      "a"
+    ],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Overview",
+        "focus_ids": [
+          "a"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "note-a",
+        "target_id": "a",
+        "label": "Generic node"
+      }
+    ]
+  }
+}

@@ -23,7 +23,6 @@
 - visual template get <template-id>
 - visual template schema <template-id>
 - visual template guide <template-id>
-- visual template panel-grammar <template-id>
 - visual template doctor
 - visual validate
 - visual inspect-input
@@ -38,21 +37,19 @@
 
 ### Template Discovery
 
-`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`. In the built-in semantic catalog, `canonical_count=37`, `total_count=37`, and `alias_count=0`.
+`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`. In the built-in semantic catalog, `canonical_count=34`, `total_count=34`, and `alias_count=0`.
 
 `visual template list --json` returns canonical templates from `templates/visual/registry.json`. Use `--category`, `--query`, `--renderer`, and `--schema-kind` to narrow discovery before reading template details. The response includes normalized `filters`, `matched_count`, `canonical_count`, `total_count`, and `alias_count`.
 
-`visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, `schema_file`, `example_file`, `agent_guide_available`, `agent_guide_path`, `panel_grammar_available`, `panel_grammar_path`, `quality_rules_available`, and `quality_rules_path`.
+`visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, `schema_file`, `example_file`, `agent_guide_available`, `agent_guide_path`, `quality_rules_available`, and `quality_rules_path`.
 
-`visual template schema <template-id> --json` returns the template metadata, `visual_design`, full local `json_schema`, example object agents should mirror when writing input JSON, guide summary, and panel grammar availability/path/summary.
-
-`visual template panel-grammar <template-id> --json` returns `template_id`, `requested_id`, `canonical_id`, `panel_grammar_path`, `panel_grammar_available`, `raw_markdown`, parsed `panel_grammar` sections, and `panel_grammar_summary`. Use it after `template guide` and before writing Studio `panels[]`.
+`visual template schema <template-id> --json` returns the template metadata, `visual_design`, full local `json_schema`, example object agents should mirror when writing input JSON, and guide summary.
 
 Agents must not discover templates by listing `templates/visual` directories or inventing template paths. Use `template categories`, `template list`, `template get`, and `template schema` only.
 
-Semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, `evidence`, `matrix`, `spatial`, and `studio`. Studio templates use `studio_v1` input and `offline.studio.v1` renderer contracts. UML schema kinds are `uml_sequence_v1`, `uml_class_v1`, `uml_state_machine_v1`, `uml_activity_v1`, and `uml_component_deployment_v1`.
+Semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, `evidence`, `matrix`, `spatial`, and `architecture`. Architecture templates use `isometric_architecture_v1` input and `offline.architecture.isometric.v1` renderer contracts. UML schema kinds are `uml_sequence_v1`, `uml_class_v1`, `uml_state_machine_v1`, `uml_activity_v1`, and `uml_component_deployment_v1`.
 
-`studio_v1` input uses `schema=efp.visual.input.studio.v1`, a required `hero` object with `hero.data.nodes/items/events/participants/messages`, required `panels[]`, optional `navigation[]`, `controls[]`, `annotations[]`, `assumptions[]`, and shared `visual`, `view`, and `renderHints` guidance.
+`isometric_architecture_v1` input uses `schema=efp.visual.input.isometric_architecture.v1`, required `title`, `zones[]`, `entities[]`, and `links[]`, plus optional `canvas.grid`, `camera`, `theme`, `controls[]`, and shared `visual`, `view`, and `renderHints` guidance. For `architecture.isometric_overview`, generate zones/entities/links rather than generic nodes/edges.
 
 ### Input Inspection
 
@@ -62,9 +59,11 @@ Semantic categories are `uml`, `relationship`, `temporal`, `flow`, `hierarchy`, 
 
 `visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json` validates the same input and compiles an agent-readable pre-render plan. The response includes `visual_plan.schema=efp.visual.plan.v1`, normalized `visual_plan.ir` objects/relationships/events, first-view budgets, label buckets, legend hints, disclosure strategy, selection behavior, quality-loop actions, and the exact render command shape. It also includes `visual_plan.marks.shape_counts`, `visual_plan.marks.icon_counts`, `visual_plan.marks.fallback_sphere_count`, `visual_plan.edges.directed_count`, `visual_plan.edges.arrow_count`, `visual_plan.edges.undirected_count`, `visual_plan.colors.colorBy`, `visual_plan.colors.legend_items`, `visual_plan.colors.single_color`, `visual_plan.assets.icons_used`, `visual_plan.assets.missing_icons`, and `visual_plan.assets.attributions`. It does not inspect pixels or screenshots; use it to revise dense or unclear input before rendering.
 
+For `isometric_architecture_v1`, `inspect-plan` also returns `visual_plan.isometric` with base plane, grid, zone/entity/link counts, positioned and auto-positioned entity counts, directed and arrow link counts, top labels, leader lines, boundary style counts, camera, and theme.
+
 ### Render Inspection
 
-`visual inspect-render --out <dir> --json` reads a generated artifact, validates required files and offline safety, loads `manifest.json` and `data.js`, rebuilds the normalized visual plan, and returns `ready`, `render_score`, `checks`, `warnings`, `visual_plan`, and `next_actions`. Checks include `shape_diversity`, `arrows_visible`, `color_diversity`, `legend_present`, `icon_assets_present`, and `attributions_present` in addition to output, offline, runtime, plan, label, relationship, and screenshot checks. Add `--screenshot <png|jpg|gif>` when a browser screenshot is available; the command then also checks blankness, contrast, and visible content coverage with standard-library image decoding.
+`visual inspect-render --out <dir> --json` reads a generated artifact, validates required files and offline safety, loads `manifest.json` and `data.js`, rebuilds the normalized visual plan, and returns `ready`, `render_score`, `checks`, `warnings`, `visual_plan`, and `next_actions`. Checks include `shape_diversity`, `arrows_visible`, `color_diversity`, `legend_present`, `icon_assets_present`, and `attributions_present` in addition to output, offline, runtime, plan, label, relationship, architecture isometric, and screenshot checks. Architecture checks include `isometric_renderer_used`, `base_plane_present`, `grid_present`, `zones_present`, `zone_boundaries_present`, `entities_present`, `entity_labels_present`, `leader_lines_present`, `directed_arrows_present`, `link_labels_present`, `orthographic_camera_planned`, `architecture_light_theme`, `no_starfield_theme`, and `no_studio_layout`. Add `--screenshot <png|jpg|gif>` when a browser screenshot is available; the command then also checks blankness, contrast, and visible content coverage with standard-library image decoding.
 
 ### Render Artifact Output
 

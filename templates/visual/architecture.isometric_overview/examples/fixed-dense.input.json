@@ -1,0 +1,129 @@
+{
+  "schema": "efp.visual.input.isometric_architecture.v1",
+  "title": "Fixed Isometric Architecture Overview",
+  "theme": "architecture_light",
+  "canvas": {
+    "grid": {
+      "enabled": true
+    }
+  },
+  "camera": {
+    "preset": "isometric"
+  },
+  "zones": [
+    {
+      "id": "runtime",
+      "label": "Runtime",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 20,
+        "h": 14
+      },
+      "presentation": {
+        "boundary": "solid"
+      }
+    },
+    {
+      "id": "data",
+      "label": "Data",
+      "bounds": {
+        "x": 22,
+        "y": 0,
+        "w": 14,
+        "h": 14
+      },
+      "presentation": {
+        "boundary": "solid"
+      }
+    }
+  ],
+  "entities": [
+    {
+      "id": "service",
+      "label": "Core Service",
+      "kind": "service",
+      "zone": "runtime",
+      "position": {
+        "x": 5,
+        "y": 5
+      },
+      "size": {
+        "w": 4,
+        "d": 3,
+        "h": 2
+      },
+      "importance": 0.9,
+      "summary": "Main service in the runtime zone.",
+      "presentation": {
+        "shape": "service_box",
+        "icon": "generic.service",
+        "label": "top",
+        "leaderLine": true
+      }
+    },
+    {
+      "id": "database",
+      "label": "System DB",
+      "kind": "database",
+      "zone": "data",
+      "position": {
+        "x": 26,
+        "y": 5
+      },
+      "size": {
+        "w": 4,
+        "d": 3,
+        "h": 3
+      },
+      "importance": 0.82,
+      "summary": "Primary data store.",
+      "presentation": {
+        "shape": "database_cylinder",
+        "icon": "generic.database",
+        "label": "top",
+        "leaderLine": true
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "service-database",
+      "from": "service",
+      "to": "database",
+      "label": "reads and writes",
+      "kind": "writes",
+      "directed": true,
+      "presentation": {
+        "arrow": "forward"
+      }
+    }
+  ],
+  "visual": {
+    "goal": "Show the service to data dependency in an isometric scene.",
+    "initial_focus_ids": [
+      "service",
+      "database"
+    ],
+    "hidden_detail_ids": [
+      "service-database"
+    ],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Runtime depends on data",
+        "focus_ids": [
+          "service",
+          "database"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "db-note",
+        "target_id": "database",
+        "label": "Primary data dependency"
+      }
+    ]
+  }
+}

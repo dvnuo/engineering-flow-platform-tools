@@ -21,7 +21,9 @@ type InputSummary struct {
 	Kind                 string `json:"kind"`
 	Title                string `json:"title,omitempty"`
 	Groups               int    `json:"groups,omitempty"`
+	Zones                int    `json:"zones,omitempty"`
 	Nodes                int    `json:"nodes,omitempty"`
+	Entities             int    `json:"entities,omitempty"`
 	Edges                int    `json:"edges,omitempty"`
 	Events               int    `json:"events,omitempty"`
 	Claims               int    `json:"claims,omitempty"`
@@ -118,17 +120,14 @@ func ValidateInput(kind string, raw []byte, limits manifest.LimitsSpec) (ParsedI
 			return ParsedInput{}, err
 		}
 		summary.Items = len(items)
-	case "studio_v1":
-		counts, err := validateStudio(data, limits)
+	case "isometric_architecture_v1":
+		counts, err := validateIsometricArchitecture(data, limits)
 		if err != nil {
 			return ParsedInput{}, err
 		}
-		summary.Nodes = counts.nodes
-		summary.Edges = counts.edges
-		summary.Events = counts.events
-		summary.Items = counts.items
-		summary.Participants = counts.participants
-		summary.Messages = counts.messages
+		summary.Zones = counts.zones
+		summary.Entities = counts.entities
+		summary.Links = counts.links
 	case "uml_sequence_v1":
 		counts, err := validateUMLSequence(data, limits)
 		if err != nil {
@@ -189,7 +188,7 @@ func validateSchemaField(kind string, data map[string]any) error {
 		"timeline_v1":                 "efp.visual.input.timeline.v1",
 		"evidence_v1":                 "efp.visual.input.evidence.v1",
 		"matrix_v1":                   "efp.visual.input.matrix.v1",
-		"studio_v1":                   "efp.visual.input.studio.v1",
+		"isometric_architecture_v1":    "efp.visual.input.isometric_architecture.v1",
 		"uml_sequence_v1":             "efp.visual.input.uml.sequence.v1",
 		"uml_class_v1":                "efp.visual.input.uml.class.v1",
 		"uml_state_machine_v1":        "efp.visual.input.uml.state_machine.v1",
@@ -198,8 +197,8 @@ func validateSchemaField(kind string, data map[string]any) error {
 	}
 	value, ok := data["schema"].(string)
 	if !ok || strings.TrimSpace(value) == "" {
-		if kind == "studio_v1" {
-			return invalid("studio input is missing schema.", "Set schema to efp.visual.input.studio.v1.")
+		if kind == "isometric_architecture_v1" {
+			return invalid("isometric architecture input is missing schema.", "Set schema to efp.visual.input.isometric_architecture.v1.")
 		}
 		return nil
 	}
@@ -209,92 +208,166 @@ func validateSchemaField(kind string, data map[string]any) error {
 	return nil
 }
 
-type studioCounts struct {
-	nodes        int
-	edges        int
-	events       int
-	items        int
-	participants int
-	messages     int
+type isometricCounts struct {
+	zones    int
+	entities int
+	links    int
 }
 
-func validateStudio(data map[string]any, limits manifest.LimitsSpec) (studioCounts, error) {
-	hero, err := requiredObject(data, "hero")
+func validateIsometricArchitecture(data map[string]any, limits manifest.LimitsSpec) (isometricCounts, error) {
+	title := stringField(data, "title")
+	if title == "" {
+		return isometricCounts{}, invalid("isometric architecture input is missing title.", "Set title to a short architecture scene title.")
+	}
+	zones, err := requiredArray(data, "zones")
 	if err != nil {
-		return studioCounts{}, err
+		return isometricCounts{}, err
 	}
-	heroData, err := requiredObject(hero, "data")
+	entities, err := requiredArray(data, "entities")
 	if err != nil {
-		return studioCounts{}, err
+		return isometricCounts{}, err
 	}
-	nodes, err := optionalArray(heroData, "nodes")
+	links, err := requiredArray(data, "links")
 	if err != nil {
-		return studioCounts{}, err
+		return isometricCounts{}, err
 	}
-	edges, err := optionalArray(heroData, "edges")
-	if err != nil {
-		return studioCounts{}, err
+	if len(entities) > limitOrDefault(limits.MaxNodes, 1000) {
+		return isometricCounts{}, invalid("isometric architecture input has too many entities.", "Reduce entities or raise template max_nodes.")
 	}
-	events, err := optionalArray(heroData, "events")
-	if err != nil {
-		return studioCounts{}, err
+	if len(links) > limitOrDefault(limits.MaxEdges, 3000) {
+		return isometricCounts{}, invalid("isometric architecture input has too many links.", "Reduce links or raise template max_edges.")
 	}
-	items, err := optionalArray(heroData, "items")
-	if err != nil {
-		return studioCounts{}, err
-	}
-	participants, err := optionalArray(heroData, "participants")
-	if err != nil {
-		return studioCounts{}, err
-	}
-	messages, err := optionalArray(heroData, "messages")
-	if err != nil {
-		return studioCounts{}, err
-	}
-	if len(nodes)+len(items)+len(events)+len(participants)+len(messages) == 0 {
-		return studioCounts{}, invalid("studio hero.data must contain at least one semantic array.", "Add non-empty hero.data.nodes, items, events, participants, or messages so the Studio hero has inspectable content.")
-	}
-	if len(nodes) > limitOrDefault(limits.MaxNodes, 1000) {
-		return studioCounts{}, invalid("studio input has too many nodes.", "Reduce hero.data.nodes or raise template max_nodes.")
-	}
-	if len(edges) > limitOrDefault(limits.MaxEdges, 3000) {
-		return studioCounts{}, invalid("studio input has too many edges.", "Reduce hero.data.edges or raise template max_edges.")
-	}
-	if len(events) > limitOrDefault(limits.MaxEvents, 5000) || len(messages) > limitOrDefault(limits.MaxEvents, 5000) {
-		return studioCounts{}, invalid("studio input has too many events or messages.", "Reduce hero.data.events/messages or raise template max_events.")
-	}
-	if len(items) > limitOrDefault(limits.MaxItems, 2000) {
-		return studioCounts{}, invalid("studio input has too many items.", "Reduce hero.data.items or raise template max_items.")
-	}
-	panels, err := requiredArray(data, "panels")
-	if err != nil {
-		return studioCounts{}, err
-	}
-	if len(panels) == 0 {
-		return studioCounts{}, invalid("studio input must contain at least one panel.", "Add panels[] with id, type, title, target_refs, and content.")
-	}
-	for i, item := range panels {
-		panel, ok := item.(map[string]any)
+	zoneIDs := map[string]bool{}
+	for i, item := range zones {
+		zone, ok := item.(map[string]any)
 		if !ok {
-			return studioCounts{}, invalid(fmt.Sprintf("studio panel at index %d must be an object.", i), "Each panels[] item must contain id, type, and title.")
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric zone at index %d must be an object.", i), "Each zone must contain id, label, and bounds.")
 		}
-		if stringField(panel, "id") == "" || stringField(panel, "type") == "" || stringField(panel, "title") == "" {
-			return studioCounts{}, invalid(fmt.Sprintf("studio panel at index %d is missing id, type, or title.", i), "Set panels[].id, panels[].type, and panels[].title to non-empty strings.")
+		id := stringField(zone, "id")
+		if id == "" {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric zone at index %d is missing id.", i), "Set zone.id to a non-empty string.")
+		}
+		if zoneIDs[id] {
+			return isometricCounts{}, invalid("isometric zone ids must be unique.", "Rename duplicate zone id "+id+".")
+		}
+		zoneIDs[id] = true
+		if _, err := requiredStringPresent(zone, "label", "isometric zone", i); err != nil {
+			return isometricCounts{}, err
+		}
+		bounds, err := requiredObject(zone, "bounds")
+		if err != nil {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric zone %s is missing bounds.", id), "Set zone.bounds with numeric x, y, w, and h.")
+		}
+		for _, name := range []string{"x", "y", "w", "h"} {
+			if _, ok := numberField(bounds, name); !ok {
+				return isometricCounts{}, invalid("isometric zone bounds."+name+" must be numeric.", "Set zone.bounds."+name+" to a number.")
+			}
 		}
 	}
-	for _, name := range []string{"navigation", "controls", "annotations", "assumptions"} {
-		if _, err := optionalArray(data, name); err != nil {
-			return studioCounts{}, err
+	entityIDs := map[string]bool{}
+	for i, item := range entities {
+		entity, ok := item.(map[string]any)
+		if !ok {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric entity at index %d must be an object.", i), "Each entity must contain id, label, kind, and optional zone/position/size.")
+		}
+		id := stringField(entity, "id")
+		if id == "" {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric entity at index %d is missing id.", i), "Set entity.id to a non-empty string.")
+		}
+		if entityIDs[id] {
+			return isometricCounts{}, invalid("isometric entity ids must be unique.", "Rename duplicate entity id "+id+".")
+		}
+		entityIDs[id] = true
+		if _, err := requiredStringPresent(entity, "label", "isometric entity", i); err != nil {
+			return isometricCounts{}, err
+		}
+		if _, err := requiredStringPresent(entity, "kind", "isometric entity", i); err != nil {
+			return isometricCounts{}, err
+		}
+		if position, ok := entity["position"]; ok && position != nil {
+			obj, ok := position.(map[string]any)
+			if !ok {
+				return isometricCounts{}, invalid("isometric entity position must be an object.", "Set entity.position to an object with numeric x and y.")
+			}
+			for _, name := range []string{"x", "y"} {
+				if _, ok := numberField(obj, name); !ok {
+					return isometricCounts{}, invalid("isometric entity position."+name+" must be numeric.", "Set entity.position."+name+" to a number.")
+				}
+			}
+		}
+		if size, ok := entity["size"]; ok && size != nil {
+			obj, ok := size.(map[string]any)
+			if !ok {
+				return isometricCounts{}, invalid("isometric entity size must be an object.", "Set entity.size to an object with numeric w, d, and h.")
+			}
+			for _, name := range []string{"w", "d", "h"} {
+				if value, ok := obj[name]; ok && !isNumber(value) {
+					return isometricCounts{}, invalid("isometric entity size."+name+" must be numeric.", "Set entity.size."+name+" to a number.")
+				}
+			}
 		}
 	}
-	return studioCounts{
-		nodes:        len(nodes),
-		edges:        len(edges),
-		events:       len(events),
-		items:        len(items),
-		participants: len(participants),
-		messages:     len(messages),
-	}, nil
+	linkIDs := map[string]bool{}
+	for i, item := range links {
+		link, ok := item.(map[string]any)
+		if !ok {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric link at index %d must be an object.", i), "Each link must contain id, from, to, label, and directed.")
+		}
+		id := stringField(link, "id")
+		if id == "" {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric link at index %d is missing id.", i), "Set link.id to a non-empty string.")
+		}
+		if linkIDs[id] {
+			return isometricCounts{}, invalid("isometric link ids must be unique.", "Rename duplicate link id "+id+".")
+		}
+		linkIDs[id] = true
+		for _, name := range []string{"from", "to", "label"} {
+			if _, err := requiredStringPresent(link, name, "isometric link", i); err != nil {
+				return isometricCounts{}, err
+			}
+		}
+		if value, ok := link["directed"]; !ok || !isBool(value) {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric link %s is missing boolean directed.", id), "Set link.directed to true or false.")
+		}
+		if route, ok := link["route"]; ok && route != nil {
+			points, ok := route.([]any)
+			if !ok {
+				return isometricCounts{}, invalid("isometric link route must be an array.", "Set link.route to an array of points with numeric x and y.")
+			}
+			for j, item := range points {
+				point, ok := item.(map[string]any)
+				if !ok {
+					return isometricCounts{}, invalid(fmt.Sprintf("isometric link route point at index %d must be an object.", j), "Set each route point to an object with numeric x and y.")
+				}
+				for _, name := range []string{"x", "y"} {
+					if _, ok := numberField(point, name); !ok {
+						return isometricCounts{}, invalid("isometric link route point "+name+" must be numeric.", "Set route point "+name+" to a number.")
+					}
+				}
+			}
+		}
+	}
+	controls, err := optionalArray(data, "controls")
+	if err != nil {
+		return isometricCounts{}, err
+	}
+	allowedControls := map[string]bool{
+		"overview": true, "focus": true, "isolate": true, "hide_others": true, "show_all": true,
+		"toggle_labels": true, "toggle_boundaries": true, "toggle_arrows": true, "reset_camera": true, "export_json": true,
+	}
+	for i, item := range controls {
+		control, ok := item.(map[string]any)
+		if !ok {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric control at index %d must be an object.", i), "Each control must be an object with action or type.")
+		}
+		for _, name := range []string{"action", "type"} {
+			value := stringField(control, name)
+			if value != "" && !allowedControls[value] {
+				return isometricCounts{}, invalid("isometric control "+name+" is not supported: "+value, "Use overview, focus, isolate, hide_others, show_all, toggle_labels, toggle_boundaries, toggle_arrows, reset_camera, or export_json.")
+			}
+		}
+	}
+	return isometricCounts{zones: len(zones), entities: len(entities), links: len(links)}, nil
 }
 
 type graphCounts struct {
@@ -920,9 +993,6 @@ func validateVisualStringArray(data map[string]any, name string, knownIDs map[st
 }
 
 func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool {
-	if kind == "studio_v1" {
-		return collectStudioReferenceIDs(data)
-	}
 	ids := map[string]bool{}
 	fieldsByKind := map[string][]string{
 		"graph_v1":                    {"groups", "nodes", "edges"},
@@ -930,6 +1000,7 @@ func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool
 		"timeline_v1":                 {"events"},
 		"evidence_v1":                 {"claims", "sources", "links"},
 		"matrix_v1":                   {"items"},
+		"isometric_architecture_v1":    {"zones", "entities", "links"},
 		"uml_sequence_v1":             {"participants", "messages", "phases", "activations", "fragments"},
 		"uml_class_v1":                {"classes", "relationships"},
 		"uml_state_machine_v1":        {"states", "transitions"},
@@ -942,28 +1013,6 @@ func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool
 				ids[id] = true
 			}
 		}
-	}
-	return ids
-}
-
-func collectStudioReferenceIDs(data map[string]any) map[string]bool {
-	ids := map[string]bool{}
-	collect := func(value any) {
-		for _, item := range objectArrayFromAny(value) {
-			for _, id := range visualIDsForObject(item) {
-				ids[id] = true
-			}
-		}
-	}
-	if hero, ok := data["hero"].(map[string]any); ok {
-		if heroData, ok := hero["data"].(map[string]any); ok {
-			for _, field := range []string{"nodes", "edges", "events", "items", "participants", "messages"} {
-				collect(heroData[field])
-			}
-		}
-	}
-	for _, field := range []string{"navigation", "panels", "controls", "annotations"} {
-		collect(data[field])
 	}
 	return ids
 }
@@ -1061,6 +1110,18 @@ func firstStringField(data map[string]any, names ...string) string {
 		}
 	}
 	return ""
+}
+
+func requiredStringPresent(data map[string]any, name, noun string, index int) (string, error) {
+	value, ok := data[name]
+	if !ok {
+		return "", invalid(fmt.Sprintf("%s at index %d is missing %s.", noun, index, name), "Set "+name+" to a string.")
+	}
+	text, ok := value.(string)
+	if !ok {
+		return "", invalid(fmt.Sprintf("%s at index %d has non-string %s.", noun, index, name), "Set "+name+" to a string.")
+	}
+	return strings.TrimSpace(text), nil
 }
 
 func numberField(data map[string]any, name string) (float64, bool) {

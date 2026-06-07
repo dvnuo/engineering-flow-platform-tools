@@ -2,7 +2,7 @@
 
 `visual` is a terminal-invoked Go CLI for generating complete offline static visualization artifacts. It reads local templates from `~/.efp/template/visual` by default, validates input JSON, copies local assets, and writes a self-contained site to `--out`.
 
-The built-in catalog is now a semantic catalog: 37 canonical templates across 9 categories. It intentionally does not keep legacy aliases or duplicate legacy directories. Discover templates through the CLI, not by guessing file paths.
+The built-in catalog is now a semantic catalog: 34 canonical templates across 9 categories. It intentionally does not keep legacy aliases or duplicate legacy directories. Discover templates through the CLI, not by guessing file paths.
 
 ## Template Directory
 
@@ -27,7 +27,7 @@ The directory must contain `registry.json`, `_shared/**`, and one direct directo
 - `evidence`: claim/source boards, root-cause evidence, risk decisions, and documentation freshness.
 - `matrix`: capability, KPI, risk, and resource allocation matrices.
 - `spatial`: service cities, codebase galaxies, agent fleets, and control-room spaces.
-- `studio`: explorable pages with header/hero, navigation, inspector panels, controls, assumptions, and annotations.
+- `architecture`: isometric architecture, topology, deployment, service map, system map, infrastructure map, microservice, cloud, and iCraft-like scenes.
 
 ## Renderer Contracts
 
@@ -37,7 +37,7 @@ Supported renderer contracts:
 - `offline.timeline.v1`
 - `offline.evidence.v1`
 - `offline.matrix.v1`
-- `offline.studio.v1`
+- `offline.architecture.isometric.v1`
 - `offline.uml.sequence.3d.v1`
 - `offline.uml.class.2_5d.v1`
 - `offline.uml.state.3d.v1`
@@ -53,7 +53,7 @@ Reusable visual schema kinds:
 - `timeline_v1`
 - `evidence_v1`
 - `matrix_v1`
-- `studio_v1`
+- `isometric_architecture_v1`
 
 UML semantic schema kinds:
 
@@ -65,7 +65,7 @@ UML semantic schema kinds:
 
 UML templates are not just graph templates with looser names. For example, `uml.sequence_3d` requires `participants`, ordered `messages`, optional `phases`, `activations`, and `fragments`. The runtime can then draw 3D lifelines, directional arrows, labels, and replay/phase controls.
 
-Studio templates use `studio_v1` with `schema=efp.visual.input.studio.v1`. The input organizes a presentation layer around `hero`, `navigation`, `panels`, `controls`, `annotations`, `assumptions`, `view`, `renderHints`, and `visual`. The hero contains semantic data arrays such as `nodes`, `edges`, `participants`, `messages`, `events`, and `items`; panels turn that semantic layer into an explorable page.
+Architecture templates use `isometric_architecture_v1` with `schema=efp.visual.input.isometric_architecture.v1`. The input organizes an isometric architecture scene around `zones`, `entities`, `links`, optional `canvas.grid`, `camera`, `theme`, `controls`, `view`, `renderHints`, and `visual`. `architecture.isometric_overview` requires zones/entities/links and must not be authored as generic nodes/edges.
 
 ## Agent Workflow
 
@@ -91,20 +91,21 @@ Every semantic input schema includes a shared `visual` object. Use it to tell th
 - `visual.narrative_steps`: progressive explanation beats with `focus_ids`
 - `visual.annotations`: callouts attached to existing `target_id` values
 
-Graph, timeline, matrix, evidence, and UML renderers use this guidance for focus styling, delayed detail, labels, and annotations.
+Graph, timeline, matrix, evidence, UML, and architecture renderers use this guidance for focus styling, delayed detail, labels, and annotations.
 
-## Studio Layer
+## Isometric Architecture Layer
 
-Studio is a presentation layer over the semantic Diagram/Mark layer. It does not replace graph, UML, timeline, evidence, matrix, or mark authoring. Instead, it organizes a semantic visual into an explorable page:
+The isometric architecture layer is a scene contract over the semantic Diagram/Mark layer. It does not replace graph, UML, timeline, evidence, matrix, or mark authoring. Instead, it maps systems into a grounded architecture scene:
 
-- header/title/goal/audience set the viewing context
-- hero shows the primary semantic visual and first story
-- navigation points to panels or semantic ids
-- inspector/bottom panels explain details, evidence, metrics, risks, and actions
-- controls define exploration affordances such as focus, filter, search, step, and toggle
-- assumptions and annotations make inferred facts and callouts visible
+- zones define bounded infrastructure, runtime, data, network, or platform areas
+- entities define services, APIs, workers, queues, streams, databases, storage, users, gateways, and external systems
+- links define directed calls, reads, writes, events, dependencies, deploys, validates, blocks, sends, and returns
+- canvas.grid defines the base plane and ground reference
+- camera defaults to orthographic isometric
+- theme defaults to architecture_light and should not be starfield
+- top labels and leader lines keep entities readable in the first view
 
-Use Studio when the user asks for an explanation, walkthrough, dashboard, page, or explorable view. Use the underlying diagram categories when the user only needs a focused visual.
+Use `architecture.isometric_overview` when the user asks for architecture, topology, deployment, service map, system map, infrastructure map, microservice, cloud, iCraft-like, or isometric architecture. Use the underlying diagram categories when the user only needs a focused non-isometric visual.
 
 ## Visual Design Guidance
 
@@ -205,10 +206,10 @@ visual inspect-output --out ./out/sequence --json
 
 For the built-in semantic catalog, doctor must report:
 
-- `checked_templates: 37`
-- `checked_examples: 37`
-- `rendered_examples: 37`
-- `canonical_template_dirs: 37`
+- `checked_templates: 34`
+- `checked_examples: 34`
+- `rendered_examples: 34`
+- `canonical_template_dirs: 34`
 - `orphan_template_dirs: []`
 - `offline: true`
 
@@ -216,9 +217,9 @@ Use `--dry-run` on `visual render` to preview `planned_files` without creating `
 
 ## Template Agent Guides
 
-Visual templates now carry their own authoring contract in `templates/visual/<template-id>/agent-guide.md`, optional `panel-grammar.md`, and `quality.rules.json`. The global CLI instructions intentionally stay short: agents discover a template, read its schema, then read `visual template guide <template-id> --json` before writing semantic input JSON. For Studio templates, agents also read `visual template panel-grammar <template-id> --json` before writing `panels[]`.
+Visual templates carry their own authoring contract in `templates/visual/<template-id>/agent-guide.md` and `quality.rules.json`. The global CLI instructions intentionally stay short: agents discover a template, read its schema, then read `visual template guide <template-id> --json` before writing semantic input JSON.
 
-`visual template guide` returns the guide path, raw markdown, parsed sections, and a compact summary. `visual template panel-grammar` returns panel grammar path, raw markdown, parsed sections, and summary. `visual template get` and `visual template schema` also expose whether the guide, panel grammar, and quality rules are available.
+`visual template guide` returns the guide path, raw markdown, parsed sections, and a compact summary. `visual template get` and `visual template schema` also expose whether the guide and quality rules are available.
 
 `inspect-input` reads the selected template schema, agent guide, and quality rules. Warnings are machine-readable and include `code`, `severity`, `path`, `suggestion`, and usually `auto_fix_hint`. Agents should revise input JSON until bad-density warnings are resolved or intentionally accepted.
 

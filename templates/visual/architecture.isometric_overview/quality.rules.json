@@ -1,0 +1,41 @@
+{
+  "schema": "efp.visual.template_quality_rules.v1",
+  "template_id": "architecture.isometric_overview",
+  "label": {
+    "max_overview_label_chars": 32,
+    "max_detail_label_chars": 64,
+    "require_summary_for_long_labels": true
+  },
+  "required_for_quality": [
+    {
+      "path": "$.canvas.grid.enabled",
+      "severity": "warning",
+      "code": "isometric_missing_base_grid",
+      "suggestion": "Set canvas.grid.enabled=true so the scene has a base plane and readable grid."
+    },
+    {
+      "path": "$.zones",
+      "severity": "warning",
+      "code": "isometric_zones_missing",
+      "suggestion": "Add bounded zones for infrastructure, runtime, edge, data, or platform areas."
+    },
+    {
+      "path": "$.links[].presentation.arrow",
+      "severity": "warning",
+      "code": "isometric_link_arrow_missing",
+      "suggestion": "Set links[].presentation.arrow=forward on directed architecture links."
+    }
+  ],
+  "semantic_rules": [
+    {
+      "code": "architecture_uses_zones_entities_links",
+      "severity": "warning",
+      "description": "Architecture input must use zones/entities/links rather than generic nodes/edges."
+    }
+  ],
+  "template_specific": {
+    "max_auto_position_ratio": 0.35,
+    "max_link_label_chars": 48,
+    "require_architecture_light_theme": true
+  }
+}

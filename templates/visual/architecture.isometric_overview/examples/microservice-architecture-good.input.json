@@ -15,16 +15,16 @@
   "camera": {
     "mode": "orthographic_isometric",
     "position": {
-      "x": 28,
-      "y": 24,
-      "z": 26
+      "x": 31,
+      "y": 23,
+      "z": 27
     },
     "target": {
-      "x": 14.2,
+      "x": 18.2,
       "y": 0,
-      "z": 8.2
+      "z": 9.1
     },
-    "zoom": 0.92
+    "zoom": 1.16
   },
   "zones": [
     {
@@ -32,101 +32,131 @@
       "label": "Client Zone",
       "bounds": {
         "x": 0,
-        "y": 1.2,
-        "w": 4.2,
-        "h": 4.8
+        "y": 0.8,
+        "w": 4.8,
+        "h": 4.5
       },
       "style": "dashed",
       "importance": 0.75,
       "presentation": {
         "boundary": "dashed",
         "fill": "#eff6ff",
-        "color": "#3b82f6"
+        "fillOpacity": 0.055,
+        "color": "#3b82f6",
+        "labelPoint": {
+          "x": 0.55,
+          "y": 4.95
+        }
       }
     },
     {
       "id": "edge-zone",
       "label": "Edge Zone",
       "bounds": {
-        "x": 5,
-        "y": 2,
-        "w": 3.4,
-        "h": 5.2
+        "x": 6,
+        "y": 3,
+        "w": 3.8,
+        "h": 4.5
       },
-      "style": "dashed",
+      "style": "solid",
       "importance": 0.75,
       "presentation": {
         "boundary": "solid",
         "fill": "#f0fdf4",
-        "color": "#16a34a"
+        "fillOpacity": 0.055,
+        "color": "#16a34a",
+        "labelPoint": {
+          "x": 6.25,
+          "y": 7.1
+        }
       }
     },
     {
       "id": "gateway-zone",
       "label": "Gateway Zone",
       "bounds": {
-        "x": 9.2,
-        "y": 3.3,
-        "w": 3.4,
-        "h": 4.2
+        "x": 11.3,
+        "y": 4.2,
+        "w": 5.1,
+        "h": 5.1
       },
-      "style": "dashed",
+      "style": "solid",
       "importance": 0.75,
       "presentation": {
         "boundary": "solid",
         "fill": "#f8fafc",
-        "color": "#334155"
+        "fillOpacity": 0.055,
+        "color": "#334155",
+        "labelPoint": {
+          "x": 11.65,
+          "y": 8.75
+        }
       }
     },
     {
       "id": "registry-zone",
       "label": "Registry Zone",
       "bounds": {
-        "x": 14,
-        "y": 0.5,
-        "w": 8.2,
-        "h": 3
+        "x": 22,
+        "y": 0.6,
+        "w": 7.5,
+        "h": 4.5
       },
       "style": "dashed",
       "importance": 0.75,
       "presentation": {
         "boundary": "dashed",
         "fill": "#ecfeff",
-        "color": "#0891b2"
+        "fillOpacity": 0.055,
+        "color": "#0891b2",
+        "labelPoint": {
+          "x": 22.35,
+          "y": 4.55
+        }
       }
     },
     {
       "id": "service-zone",
       "label": "Service Zone",
       "bounds": {
-        "x": 13.4,
-        "y": 4.4,
-        "w": 8.8,
-        "h": 6
+        "x": 18.3,
+        "y": 5.5,
+        "w": 8.6,
+        "h": 7.3
       },
-      "style": "dashed",
+      "style": "solid",
       "importance": 0.75,
       "presentation": {
         "boundary": "solid",
         "fill": "#eef2ff",
-        "color": "#4f46e5"
+        "fillOpacity": 0.055,
+        "color": "#4f46e5",
+        "labelPoint": {
+          "x": 18.65,
+          "y": 12.25
+        }
       }
     },
     {
       "id": "cache-zone",
       "label": "Cache Zone",
       "bounds": {
-        "x": 23.5,
-        "y": 4.8,
-        "w": 4.4,
-        "h": 4.4
+        "x": 30,
+        "y": 7.1,
+        "w": 5,
+        "h": 4.8
       },
       "style": "dashed",
       "importance": 0.55,
       "presentation": {
         "boundary": "dashed",
         "fill": "#fef2f2",
-        "color": "#dc2626"
+        "fillOpacity": 0.055,
+        "color": "#dc2626",
+        "labelPoint": {
+          "x": 30.25,
+          "y": 11.45
+        }
       }
     },
     {
@@ -134,67 +164,87 @@
       "label": "Database Zone",
       "bounds": {
         "x": 22.4,
-        "y": 10.5,
-        "w": 5.6,
-        "h": 3.6
+        "y": 13,
+        "w": 7,
+        "h": 4
       },
-      "style": "dashed",
+      "style": "solid",
       "importance": 0.55,
       "presentation": {
         "boundary": "solid",
         "fill": "#eff6ff",
-        "color": "#2563eb"
+        "fillOpacity": 0.055,
+        "color": "#2563eb",
+        "labelPoint": {
+          "x": 22.7,
+          "y": 16.55
+        }
       }
     },
     {
       "id": "storage-zone",
       "label": "Storage Zone",
       "bounds": {
-        "x": 12.4,
-        "y": 12.1,
-        "w": 8.8,
-        "h": 3.8
+        "x": 13.1,
+        "y": 13,
+        "w": 7.4,
+        "h": 4.2
       },
       "style": "dashed",
       "importance": 0.55,
       "presentation": {
         "boundary": "dashed",
-        "fill": "#f0f9ff",
-        "color": "#0284c7"
+        "fill": "#f0fdf4",
+        "fillOpacity": 0.055,
+        "color": "#16a34a",
+        "labelPoint": {
+          "x": 13.45,
+          "y": 16.75
+        }
       }
     },
     {
       "id": "observability-zone",
       "label": "Observability Zone",
       "bounds": {
-        "x": 21.8,
-        "y": 15.1,
-        "w": 6.2,
-        "h": 3
+        "x": 30,
+        "y": 13.2,
+        "w": 6,
+        "h": 4
       },
       "style": "dashed",
       "importance": 0.55,
       "presentation": {
         "boundary": "dashed",
         "fill": "#fffbeb",
-        "color": "#d97706"
+        "fillOpacity": 0.055,
+        "color": "#d97706",
+        "labelPoint": {
+          "x": 30.25,
+          "y": 16.8
+        }
       }
     },
     {
       "id": "admin-zone",
       "label": "Admin Zone",
       "bounds": {
-        "x": 4.6,
-        "y": 10.8,
-        "w": 5.8,
-        "h": 3.4
+        "x": 4.8,
+        "y": 11.6,
+        "w": 6,
+        "h": 4.2
       },
       "style": "dashed",
       "importance": 0.55,
       "presentation": {
         "boundary": "dashed",
         "fill": "#fff7ed",
-        "color": "#ea580c"
+        "fillOpacity": 0.055,
+        "color": "#ea580c",
+        "labelPoint": {
+          "x": 5.1,
+          "y": 15.3
+        }
       }
     }
   ],
@@ -205,8 +255,8 @@
       "kind": "pc",
       "zone": "client-zone",
       "position": {
-        "x": 1.1,
-        "y": 2.3
+        "x": 1.2,
+        "y": 1.8
       },
       "importance": 0.9,
       "summary": "Desktop browser client.",
@@ -218,8 +268,14 @@
       "presentation": {
         "icon": "generic.pc",
         "label": "top",
-        "leaderLine": true
-      }
+        "leaderLine": true,
+        "label_offset": {
+          "x": -0.22,
+          "y": 0.18,
+          "z": -0.45
+        }
+      },
+      "labelPriority": "always"
     },
     {
       "id": "mobile",
@@ -227,10 +283,10 @@
       "kind": "mobile",
       "zone": "client-zone",
       "position": {
-        "x": 1.2,
-        "y": 4.5
+        "x": 2.6,
+        "y": 2.9
       },
-      "importance": 0.75,
+      "importance": 0.72,
       "summary": "Mobile app client.",
       "size": {
         "w": 0.9,
@@ -241,7 +297,8 @@
         "icon": "generic.mobile",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "visibility": "detail"
     },
     {
       "id": "cdn",
@@ -249,10 +306,10 @@
       "kind": "cdn",
       "zone": "client-zone",
       "position": {
-        "x": 3.1,
-        "y": 3.3
+        "x": 3.5,
+        "y": 4.1
       },
-      "importance": 0.8,
+      "importance": 0.84,
       "summary": "Static resource edge cache.",
       "size": {
         "w": 1.05,
@@ -262,8 +319,14 @@
       "presentation": {
         "icon": "generic.cdn",
         "label": "top",
-        "leaderLine": true
-      }
+        "leaderLine": true,
+        "label_offset": {
+          "x": 0.32,
+          "y": 0.16,
+          "z": -0.35
+        }
+      },
+      "labelPriority": "important"
     },
     {
       "id": "nginx",
@@ -271,10 +334,10 @@
       "kind": "nginx",
       "zone": "edge-zone",
       "position": {
-        "x": 6.6,
-        "y": 4.6
+        "x": 7.9,
+        "y": 5.35
       },
-      "importance": 0.95,
+      "importance": 0.96,
       "labelPriority": "always",
       "summary": "Reverse proxy and edge routing.",
       "size": {
@@ -286,7 +349,12 @@
         "icon": "nginx",
         "model": "nginx.logo3d",
         "label": "top",
-        "leaderLine": true
+        "leaderLine": true,
+        "label_offset": {
+          "x": -0.38,
+          "y": 0.24,
+          "z": -0.46
+        }
       }
     },
     {
@@ -295,10 +363,10 @@
       "kind": "api_gateway",
       "zone": "gateway-zone",
       "position": {
-        "x": 10.9,
-        "y": 5.4
+        "x": 13.9,
+        "y": 6.7
       },
-      "importance": 0.95,
+      "importance": 0.97,
       "labelPriority": "always",
       "summary": "Central API ingress for services.",
       "size": {
@@ -311,9 +379,9 @@
         "label": "top",
         "leaderLine": true,
         "label_offset": {
-          "x": 0.85,
-          "y": 0.35,
-          "z": -0.75
+          "x": 0.1,
+          "y": 0.34,
+          "z": -0.92
         }
       }
     },
@@ -323,11 +391,11 @@
       "kind": "nacos",
       "zone": "registry-zone",
       "position": {
-        "x": 15.4,
-        "y": 1.7
+        "x": 23.2,
+        "y": 1.8
       },
       "summary": "Registry node.",
-      "importance": 0.8,
+      "importance": 0.82,
       "labelPriority": "always",
       "size": {
         "w": 1.05,
@@ -339,9 +407,9 @@
         "label": "top",
         "leaderLine": true,
         "label_offset": {
-          "x": -0.35,
+          "x": -0.2,
           "y": 0.24,
-          "z": -0.65
+          "z": -0.58
         }
       }
     },
@@ -351,11 +419,11 @@
       "kind": "nacos",
       "zone": "registry-zone",
       "position": {
-        "x": 18.1,
-        "y": 1.7
+        "x": 27.4,
+        "y": 1.8
       },
       "summary": "Registry node.",
-      "importance": 0.8,
+      "importance": 0.72,
       "visibility": "detail",
       "size": {
         "w": 1.05,
@@ -374,11 +442,11 @@
       "kind": "nacos",
       "zone": "registry-zone",
       "position": {
-        "x": 20.8,
-        "y": 1.7
+        "x": 25.3,
+        "y": 3.7
       },
       "summary": "Registry node.",
-      "importance": 0.8,
+      "importance": 0.72,
       "visibility": "detail",
       "size": {
         "w": 1.05,
@@ -397,8 +465,8 @@
       "kind": "admin",
       "zone": "admin-zone",
       "position": {
-        "x": 6.8,
-        "y": 12.4
+        "x": 7.4,
+        "y": 13.35
       },
       "summary": "Admin and health-check console.",
       "importance": 0.62,
@@ -410,8 +478,14 @@
       "presentation": {
         "icon": "generic.admin",
         "label": "top",
-        "leaderLine": true
-      }
+        "leaderLine": true,
+        "label_offset": {
+          "x": -0.4,
+          "y": 0.2,
+          "z": -0.35
+        }
+      },
+      "labelPriority": "important"
     },
     {
       "id": "microservice-a",
@@ -419,10 +493,10 @@
       "kind": "microservice",
       "zone": "service-zone",
       "position": {
-        "x": 14.9,
-        "y": 5.4
+        "x": 19.3,
+        "y": 6.3
       },
-      "importance": 0.9,
+      "importance": 0.92,
       "summary": "Primary business service.",
       "size": {
         "w": 1.05,
@@ -435,11 +509,12 @@
         "label": "top",
         "leaderLine": true,
         "label_offset": {
-          "x": -0.35,
-          "y": 0.2,
-          "z": -0.5
+          "x": -0.2,
+          "y": 0.24,
+          "z": -0.55
         }
-      }
+      },
+      "labelPriority": "always"
     },
     {
       "id": "microservice-b",
@@ -447,11 +522,11 @@
       "kind": "microservice",
       "zone": "service-zone",
       "position": {
-        "x": 17.8,
-        "y": 5.3
+        "x": 22,
+        "y": 6.3
       },
       "summary": "Business service dependency.",
-      "importance": 0.62,
+      "importance": 0.72,
       "size": {
         "w": 1.05,
         "d": 1.05,
@@ -462,7 +537,8 @@
         "model": "spring.logo3d",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "labelPriority": "important"
     },
     {
       "id": "microservice-c",
@@ -470,7 +546,7 @@
       "kind": "microservice",
       "zone": "service-zone",
       "position": {
-        "x": 20.5,
+        "x": 24.8,
         "y": 6.8
       },
       "summary": "Business service dependency.",
@@ -485,7 +561,8 @@
         "model": "spring.logo3d",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "visibility": "detail"
     },
     {
       "id": "microservice-d",
@@ -493,8 +570,8 @@
       "kind": "microservice",
       "zone": "service-zone",
       "position": {
-        "x": 15.3,
-        "y": 8.7
+        "x": 20,
+        "y": 10.1
       },
       "summary": "Business service dependency.",
       "importance": 0.62,
@@ -508,7 +585,8 @@
         "model": "spring.logo3d",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "visibility": "detail"
     },
     {
       "id": "microservice-e",
@@ -516,8 +594,8 @@
       "kind": "microservice",
       "zone": "service-zone",
       "position": {
-        "x": 18.5,
-        "y": 8.8
+        "x": 23.3,
+        "y": 10.2
       },
       "summary": "Business service dependency.",
       "importance": 0.62,
@@ -531,7 +609,8 @@
         "model": "spring.logo3d",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "visibility": "detail"
     },
     {
       "id": "redis-1",
@@ -539,11 +618,11 @@
       "kind": "redis",
       "zone": "cache-zone",
       "position": {
-        "x": 24.5,
-        "y": 5.9
+        "x": 31,
+        "y": 8.2
       },
       "summary": "Cache primary.",
-      "importance": 0.62,
+      "importance": 0.82,
       "size": {
         "w": 1.05,
         "d": 1.05,
@@ -555,11 +634,12 @@
         "label": "top",
         "leaderLine": true,
         "label_offset": {
-          "x": 0.35,
-          "y": 0.2,
-          "z": -0.45
+          "x": 0.32,
+          "y": 0.22,
+          "z": -0.42
         }
-      }
+      },
+      "labelPriority": "important"
     },
     {
       "id": "redis-2",
@@ -567,8 +647,8 @@
       "kind": "redis",
       "zone": "cache-zone",
       "position": {
-        "x": 26.3,
-        "y": 6.9
+        "x": 32.8,
+        "y": 9.4
       },
       "summary": "Cache replica.",
       "importance": 0.62,
@@ -591,8 +671,8 @@
       "kind": "redis",
       "zone": "cache-zone",
       "position": {
-        "x": 24.6,
-        "y": 8.1
+        "x": 30.9,
+        "y": 10.7
       },
       "summary": "Cache replica.",
       "importance": 0.62,
@@ -615,10 +695,10 @@
       "kind": "mysql",
       "zone": "database-zone",
       "position": {
-        "x": 23.7,
-        "y": 11.7
+        "x": 24.4,
+        "y": 14.3
       },
-      "importance": 0.85,
+      "importance": 0.88,
       "summary": "Primary database.",
       "size": {
         "w": 1.05,
@@ -631,11 +711,12 @@
         "label": "top",
         "leaderLine": true,
         "label_offset": {
-          "x": -0.45,
-          "y": 0.22,
-          "z": 0.45
+          "x": -0.42,
+          "y": 0.24,
+          "z": 0.48
         }
-      }
+      },
+      "labelPriority": "always"
     },
     {
       "id": "mysql-slave",
@@ -643,12 +724,11 @@
       "kind": "mysql",
       "zone": "database-zone",
       "position": {
-        "x": 26.2,
-        "y": 12.8
+        "x": 27.2,
+        "y": 15
       },
       "summary": "Read replica.",
-      "importance": 0.62,
-      "visibility": "detail",
+      "importance": 0.64,
       "size": {
         "w": 1.05,
         "d": 1.05,
@@ -658,8 +738,14 @@
         "icon": "mysql",
         "model": "mysql.logo3d",
         "label": "top",
-        "leaderLine": true
-      }
+        "leaderLine": true,
+        "label_offset": {
+          "x": 0.38,
+          "y": 0.18,
+          "z": 0.35
+        }
+      },
+      "labelPriority": "important"
     },
     {
       "id": "oss",
@@ -667,11 +753,11 @@
       "kind": "oss",
       "zone": "storage-zone",
       "position": {
-        "x": 13.9,
-        "y": 13.2
+        "x": 14.4,
+        "y": 14
       },
       "summary": "Object storage.",
-      "importance": 0.62,
+      "importance": 0.7,
       "size": {
         "w": 0.9,
         "d": 0.9,
@@ -681,7 +767,8 @@
         "icon": "generic.oss",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "labelPriority": "important"
     },
     {
       "id": "file-storage",
@@ -689,11 +776,11 @@
       "kind": "file_storage",
       "zone": "storage-zone",
       "position": {
-        "x": 16.7,
-        "y": 14
+        "x": 17.1,
+        "y": 15.1
       },
       "summary": "Distributed file storage.",
-      "importance": 0.62,
+      "importance": 0.54,
       "visibility": "detail",
       "size": {
         "w": 0.9,
@@ -712,11 +799,11 @@
       "kind": "block_storage",
       "zone": "storage-zone",
       "position": {
-        "x": 19.5,
-        "y": 13.2
+        "x": 19.8,
+        "y": 14.1
       },
       "summary": "Block storage volume.",
-      "importance": 0.62,
+      "importance": 0.54,
       "visibility": "detail",
       "size": {
         "w": 0.9,
@@ -730,11 +817,11 @@
       "kind": "log",
       "zone": "observability-zone",
       "position": {
-        "x": 23.1,
-        "y": 16.2
+        "x": 31.1,
+        "y": 14.5
       },
       "summary": "Log collector.",
-      "importance": 0.62,
+      "importance": 0.52,
       "size": {
         "w": 0.9,
         "d": 0.9,
@@ -744,7 +831,8 @@
         "icon": "generic.log",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "visibility": "detail"
     },
     {
       "id": "elasticsearch",
@@ -752,8 +840,8 @@
       "kind": "elasticsearch",
       "zone": "observability-zone",
       "position": {
-        "x": 25.6,
-        "y": 16.5
+        "x": 33.9,
+        "y": 15.4
       },
       "summary": "Search and log index.",
       "importance": 0.62,
@@ -768,11 +856,12 @@
         "label": "top",
         "leaderLine": true,
         "label_offset": {
-          "x": 0.45,
-          "y": 0.18,
+          "x": 0.42,
+          "y": 0.2,
           "z": 0.42
         }
-      }
+      },
+      "labelPriority": "important"
     }
   ],
   "links": [
@@ -785,21 +874,27 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 4.4,
-          "y": 2.3
+          "x": 5.25,
+          "y": 1.8
         },
         {
-          "x": 4.4,
-          "y": 4.6
+          "x": 5.25,
+          "y": 5.35
         }
       ],
       "routeStyle": "orthogonal",
-      "importance": 0.95,
-      "labelPriority": "hidden",
+      "importance": 0.98,
+      "labelPriority": "always",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
-      }
+        "lineStyle": "solid",
+        "role": "primary",
+        "pathGroup": "entry"
+      },
+      "role": "primary",
+      "pathGroup": "entry",
+      "summary": "Primary browser API entry path.",
+      "visibility": "overview"
     },
     {
       "id": "mobile-to-nginx",
@@ -810,21 +905,25 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 4.3,
-          "y": 4.5
+          "x": 5,
+          "y": 2.9
         },
         {
-          "x": 4.3,
-          "y": 5.2
+          "x": 5,
+          "y": 5.1
         }
       ],
       "routeStyle": "orthogonal",
-      "importance": 0.45,
+      "importance": 0.48,
       "visibility": "detail",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
-      }
+        "lineStyle": "solid",
+        "role": "secondary",
+        "pathGroup": "entry"
+      },
+      "role": "secondary",
+      "pathGroup": "entry"
     },
     {
       "id": "cdn-to-nginx-static",
@@ -835,21 +934,26 @@
       "kind": "static_resource",
       "route": [
         {
-          "x": 4.8,
-          "y": 3.3
+          "x": 5.55,
+          "y": 4.1
         },
         {
-          "x": 4.8,
-          "y": 4.1
+          "x": 5.55,
+          "y": 5.35
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "secondary",
+        "pathGroup": "entry"
       },
-      "importance": 0.45,
-      "visibility": "detail"
+      "importance": 0.65,
+      "visibility": "detail",
+      "role": "secondary",
+      "pathGroup": "entry",
+      "labelPriority": "important"
     },
     {
       "id": "nginx-to-gateway",
@@ -860,21 +964,27 @@
       "kind": "reverse_proxy",
       "route": [
         {
-          "x": 8.6,
-          "y": 4.6
+          "x": 10.35,
+          "y": 5.35
         },
         {
-          "x": 8.6,
-          "y": 5.4
+          "x": 10.35,
+          "y": 6.7
         }
       ],
       "routeStyle": "orthogonal",
-      "importance": 0.95,
-      "labelPriority": "hidden",
+      "importance": 0.98,
+      "labelPriority": "always",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
-      }
+        "lineStyle": "solid",
+        "role": "primary",
+        "pathGroup": "gateway"
+      },
+      "role": "primary",
+      "pathGroup": "gateway",
+      "summary": "Primary reverse proxy to gateway route.",
+      "visibility": "overview"
     },
     {
       "id": "nginx-to-cdn-static",
@@ -886,11 +996,15 @@
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "auxiliary",
+        "pathGroup": "entry"
       },
-      "importance": 0.35,
+      "importance": 0.28,
       "visibility": "detail",
-      "labelPriority": "hidden"
+      "labelPriority": "hidden",
+      "role": "auxiliary",
+      "pathGroup": "entry"
     },
     {
       "id": "gateway-to-service-a",
@@ -901,17 +1015,23 @@
       "kind": "load_balancing",
       "route": [
         {
-          "x": 12.8,
-          "y": 5.4
+          "x": 16.7,
+          "y": 6.7
         }
       ],
       "routeStyle": "orthogonal",
-      "importance": 0.95,
-      "labelPriority": "hidden",
+      "importance": 0.98,
+      "labelPriority": "always",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
-      }
+        "lineStyle": "solid",
+        "role": "primary",
+        "pathGroup": "gateway"
+      },
+      "role": "primary",
+      "pathGroup": "gateway",
+      "summary": "Gateway routes the main request to Service A.",
+      "visibility": "overview"
     },
     {
       "id": "gateway-to-service-b",
@@ -922,17 +1042,21 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 12.9,
-          "y": 5.8
+          "x": 16.85,
+          "y": 7.25
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "secondary",
+        "pathGroup": "gateway"
       },
-      "importance": 0.45,
-      "visibility": "detail"
+      "importance": 0.46,
+      "visibility": "detail",
+      "role": "secondary",
+      "pathGroup": "gateway"
     },
     {
       "id": "gateway-to-service-c",
@@ -943,17 +1067,21 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 12.9,
-          "y": 6.6
+          "x": 16.85,
+          "y": 8
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "secondary",
+        "pathGroup": "gateway"
       },
-      "importance": 0.45,
-      "visibility": "detail"
+      "importance": 0.42,
+      "visibility": "detail",
+      "role": "secondary",
+      "pathGroup": "gateway"
     },
     {
       "id": "services-to-nacos-a",
@@ -964,21 +1092,25 @@
       "kind": "registering_service",
       "route": [
         {
-          "x": 14.9,
-          "y": 3.7
+          "x": 19.3,
+          "y": 4.65
         },
         {
-          "x": 15.4,
-          "y": 3.2
+          "x": 23.2,
+          "y": 4.65
         }
       ],
       "routeStyle": "polyline",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "dashed"
+        "lineStyle": "dashed",
+        "role": "secondary",
+        "pathGroup": "registry"
       },
       "importance": 0.82,
-      "labelPriority": "important"
+      "labelPriority": "important",
+      "role": "secondary",
+      "pathGroup": "registry"
     },
     {
       "id": "services-to-nacos-b",
@@ -989,21 +1121,25 @@
       "kind": "register",
       "route": [
         {
-          "x": 17.8,
-          "y": 3.6
+          "x": 22,
+          "y": 4.35
         },
         {
-          "x": 18.1,
-          "y": 3.2
+          "x": 27.4,
+          "y": 4.35
         }
       ],
       "routeStyle": "polyline",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "dashed"
+        "lineStyle": "dashed",
+        "role": "auxiliary",
+        "pathGroup": "registry"
       },
-      "importance": 0.4,
-      "visibility": "detail"
+      "importance": 0.34,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "registry"
     },
     {
       "id": "gateway-pulls-nacos",
@@ -1014,21 +1150,25 @@
       "kind": "pull_consumption",
       "route": [
         {
-          "x": 11.2,
-          "y": 3.2
+          "x": 13.9,
+          "y": 3.9
         },
         {
-          "x": 20.8,
-          "y": 3.2
+          "x": 25.3,
+          "y": 3.9
         }
       ],
       "routeStyle": "polyline",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "dashed"
+        "lineStyle": "dashed",
+        "role": "auxiliary",
+        "pathGroup": "registry"
       },
-      "importance": 0.4,
-      "visibility": "detail"
+      "importance": 0.32,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "registry"
     },
     {
       "id": "admin-health-service-a",
@@ -1039,21 +1179,29 @@
       "kind": "health_check",
       "route": [
         {
-          "x": 10.8,
-          "y": 12.4
+          "x": 11,
+          "y": 13.35
         },
         {
-          "x": 10.8,
-          "y": 8.9
+          "x": 11,
+          "y": 10.4
+        },
+        {
+          "x": 18.2,
+          "y": 10.4
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "dashed"
+        "lineStyle": "dashed",
+        "role": "auxiliary",
+        "pathGroup": "health"
       },
-      "importance": 0.38,
-      "visibility": "detail"
+      "importance": 0.32,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "health"
     },
     {
       "id": "service-a-to-redis",
@@ -1064,21 +1212,25 @@
       "kind": "data_cache",
       "route": [
         {
-          "x": 14.9,
-          "y": 10.65
+          "x": 19.3,
+          "y": 12.35
         },
         {
-          "x": 24.5,
-          "y": 10.65
+          "x": 31,
+          "y": 12.35
         }
       ],
       "routeStyle": "orthogonal",
-      "importance": 0.85,
+      "importance": 0.86,
       "labelPriority": "important",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
-      }
+        "lineStyle": "solid",
+        "role": "secondary",
+        "pathGroup": "cache"
+      },
+      "role": "secondary",
+      "pathGroup": "cache"
     },
     {
       "id": "service-b-to-redis",
@@ -1089,21 +1241,25 @@
       "kind": "data_cache",
       "route": [
         {
-          "x": 17.8,
-          "y": 10.25
+          "x": 22,
+          "y": 12.05
         },
         {
-          "x": 26.3,
-          "y": 10.25
+          "x": 32.8,
+          "y": 12.05
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "auxiliary",
+        "pathGroup": "cache"
       },
-      "importance": 0.38,
-      "visibility": "detail"
+      "importance": 0.3,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "cache"
     },
     {
       "id": "service-a-to-mysql",
@@ -1114,12 +1270,12 @@
       "kind": "data_storage",
       "route": [
         {
-          "x": 14.9,
-          "y": 11.35
+          "x": 19.3,
+          "y": 12.8
         },
         {
-          "x": 23.7,
-          "y": 11.35
+          "x": 24.4,
+          "y": 12.8
         }
       ],
       "routeStyle": "orthogonal",
@@ -1127,8 +1283,12 @@
       "labelPriority": "always",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
-      }
+        "lineStyle": "solid",
+        "role": "secondary",
+        "pathGroup": "data"
+      },
+      "role": "secondary",
+      "pathGroup": "data"
     },
     {
       "id": "service-d-to-mysql",
@@ -1139,21 +1299,25 @@
       "kind": "data_storage",
       "route": [
         {
-          "x": 15.3,
-          "y": 11.85
+          "x": 20,
+          "y": 12.55
         },
         {
-          "x": 23.7,
-          "y": 11.85
+          "x": 24.4,
+          "y": 12.55
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "auxiliary",
+        "pathGroup": "data"
       },
-      "importance": 0.38,
-      "visibility": "detail"
+      "importance": 0.32,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "data"
     },
     {
       "id": "mysql-master-to-slave",
@@ -1164,17 +1328,21 @@
       "kind": "replication",
       "route": [
         {
-          "x": 25.4,
-          "y": 11.7
+          "x": 25.8,
+          "y": 14.3
         }
       ],
       "routeStyle": "orthogonal",
-      "importance": 0.8,
+      "importance": 0.78,
       "labelPriority": "important",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
-      }
+        "lineStyle": "solid",
+        "role": "secondary",
+        "pathGroup": "data"
+      },
+      "role": "secondary",
+      "pathGroup": "data"
     },
     {
       "id": "service-c-to-oss",
@@ -1185,21 +1353,25 @@
       "kind": "distributed_file_service",
       "route": [
         {
-          "x": 20.5,
-          "y": 11.5
+          "x": 24.8,
+          "y": 12.25
         },
         {
-          "x": 13.9,
-          "y": 11.5
+          "x": 14.4,
+          "y": 12.25
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "auxiliary",
+        "pathGroup": "storage"
       },
-      "importance": 0.4,
-      "visibility": "detail"
+      "importance": 0.32,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "storage"
     },
     {
       "id": "service-e-to-file-storage",
@@ -1210,21 +1382,25 @@
       "kind": "distributed_file_service",
       "route": [
         {
-          "x": 18.5,
-          "y": 11.95
+          "x": 23.3,
+          "y": 12.05
         },
         {
-          "x": 16.7,
-          "y": 11.95
+          "x": 17.1,
+          "y": 12.05
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "auxiliary",
+        "pathGroup": "storage"
       },
-      "importance": 0.36,
-      "visibility": "detail"
+      "importance": 0.28,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "storage"
     },
     {
       "id": "service-d-to-block-storage",
@@ -1235,21 +1411,25 @@
       "kind": "distributed_file_service",
       "route": [
         {
-          "x": 15.3,
-          "y": 11.95
+          "x": 20,
+          "y": 12.05
         },
         {
-          "x": 19.5,
-          "y": 11.95
+          "x": 19.8,
+          "y": 12.05
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "auxiliary",
+        "pathGroup": "storage"
       },
-      "importance": 0.36,
-      "visibility": "detail"
+      "importance": 0.28,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "storage"
     },
     {
       "id": "logstash-to-elasticsearch",
@@ -1260,17 +1440,22 @@
       "kind": "log_collection",
       "route": [
         {
-          "x": 24.2,
-          "y": 16.2
+          "x": 32.4,
+          "y": 14.5
         }
       ],
       "routeStyle": "orthogonal",
-      "importance": 0.8,
-      "labelPriority": "important",
+      "importance": 0.36,
+      "labelPriority": "hidden",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "dashed"
-      }
+        "lineStyle": "dashed",
+        "role": "auxiliary",
+        "pathGroup": "observability"
+      },
+      "role": "auxiliary",
+      "pathGroup": "observability",
+      "visibility": "detail"
     },
     {
       "id": "service-a-feign-b",
@@ -1282,10 +1467,14 @@
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "auxiliary",
+        "pathGroup": "service"
       },
-      "importance": 0.35,
-      "visibility": "detail"
+      "importance": 0.28,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "service"
     },
     {
       "id": "service-b-feign-c",
@@ -1297,10 +1486,14 @@
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "auxiliary",
+        "pathGroup": "service"
       },
-      "importance": 0.35,
-      "visibility": "detail"
+      "importance": 0.28,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "service"
     },
     {
       "id": "service-c-feign-d",
@@ -1311,21 +1504,25 @@
       "kind": "feign_call",
       "route": [
         {
-          "x": 20.5,
-          "y": 9.9
+          "x": 24.8,
+          "y": 11.1
         },
         {
-          "x": 15.3,
-          "y": 9.9
+          "x": 20,
+          "y": 11.1
         }
       ],
       "routeStyle": "polyline",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "auxiliary",
+        "pathGroup": "service"
       },
-      "importance": 0.35,
-      "visibility": "detail"
+      "importance": 0.28,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "service"
     },
     {
       "id": "service-d-feign-e",
@@ -1337,10 +1534,14 @@
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid"
+        "lineStyle": "solid",
+        "role": "auxiliary",
+        "pathGroup": "service"
       },
-      "importance": 0.35,
-      "visibility": "detail"
+      "importance": 0.28,
+      "visibility": "detail",
+      "role": "auxiliary",
+      "pathGroup": "service"
     }
   ],
   "annotations": [
@@ -1392,7 +1593,7 @@
     "showLegend": true
   },
   "visual": {
-    "goal": "Read the topology from left to right: client, edge, gateway, services, registry, state, storage, and logs.",
+    "goal": "Read the topology as a drafted architecture map: client entry, edge proxy, gateway, service cluster, registry lane, data/cache/storage lanes, and peripheral health/observability.",
     "assumptions": [
       "Each microservice entity represents a logical service, not every pod replica.",
       "Nacos, Redis, and MySQL are shown as clustered logical nodes because exact host placement is outside the overview.",
@@ -1462,8 +1663,8 @@
     ]
   },
   "renderHints": {
-    "colorBy": "kind",
-    "routeCollisionAvoidance": "basic",
+    "colorBy": "pathGroup",
+    "routeCollisionAvoidance": "bus-lane",
     "preferExplicitRoutes": true,
     "showLegend": true,
     "badgeMode": "icon_and_model",

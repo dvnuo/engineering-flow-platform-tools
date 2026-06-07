@@ -1731,7 +1731,7 @@
     if (!edgeSpec.directed || edgeSpec.arrow === "none") {
       return null;
     }
-    var arrowScale = Math.max(0.58, Math.min(1.55, edgeSpec.arrowScale || 1));
+    var arrowScale = Math.max(0.58, Math.min(2.25, edgeSpec.arrowScale || 1));
     var t = edgeSpec.arrow === "reverse" ? 0.06 : 0.94;
     var tail = curve.getPoint(edgeSpec.arrow === "reverse" ? 0.14 : 0.86);
     var tip = curve.getPoint(t);
@@ -4056,6 +4056,165 @@
     return button;
   }
 
+  function createIsometricInspector(container, data) {
+    data = data || {};
+    var entities = Array.isArray(data.entities) ? data.entities : [];
+    var links = Array.isArray(data.links) ? data.links : [];
+    var zones = Array.isArray(data.zones) ? data.zones : [];
+
+    function roleOf(link) {
+      var presentation = link && link.presentation && typeof link.presentation === "object" ? link.presentation : {};
+      var metadata = link && link.metadata && typeof link.metadata === "object" ? link.metadata : {};
+      return normalizeMarkKey(link && (link.role || presentation.role || metadata.role)) || "secondary";
+    }
+
+    function pathGroupOf(link) {
+      var presentation = link && link.presentation && typeof link.presentation === "object" ? link.presentation : {};
+      var metadata = link && link.metadata && typeof link.metadata === "object" ? link.metadata : {};
+      return normalizeMarkKey(link && (link.pathGroup || link.path_group || presentation.pathGroup || presentation.path_group || metadata.pathGroup || metadata.path_group || link.kind)) || "relationship";
+    }
+
+    function entityByIDValue(id) {
+      return entities.find(function (item) { return item && item.id === id; }) || null;
+    }
+
+    function zoneByIDValue(id) {
+      return zones.find(function (item) { return item && item.id === id; }) || null;
+    }
+
+    function entityLinkCounts(id) {
+      var incoming = 0;
+      var outgoing = 0;
+      links.forEach(function (link) {
+        if (link && link.to === id) incoming += 1;
+        if (link && link.from === id) outgoing += 1;
+      });
+      return { incoming: incoming, outgoing: outgoing };
+    }
+
+    function clear(title) {
+      container.textContent = "";
+      container.appendChild(el("h2", "visual-inspector-title", title || "Architecture Summary"));
+    }
+
+    function metricGrid(items) {
+      var grid = el("dl", "visual-inspector-metrics");
+      items.forEach(function (item) {
+        grid.appendChild(el("dt", "", item[0]));
+        grid.appendChild(el("dd", "", item[1]));
+      });
+      container.appendChild(grid);
+    }
+
+    function chips(values) {
+      var row = el("div", "visual-inspector-chips");
+      values.filter(Boolean).forEach(function (value) {
+        row.appendChild(el("span", "visual-inspector-chip", value));
+      });
+      container.appendChild(row);
+    }
+
+    function rawDetails(payload) {
+      var details = el("details", "visual-inspector-raw");
+      details.appendChild(el("summary", "", "Raw JSON"));
+      var pre = el("pre", "");
+      try {
+        pre.textContent = JSON.stringify(payload || {}, null, 2);
+      } catch (err) {
+        pre.textContent = String(payload || "");
+      }
+      details.appendChild(pre);
+      container.appendChild(details);
+    }
+
+    function showSummary() {
+      clear("Architecture Summary");
+      var roles = { primary: 0, secondary: 0, auxiliary: 0 };
+      var groups = {};
+      links.forEach(function (link) {
+        var role = roleOf(link);
+        if (roles[role] === undefined) role = "secondary";
+        roles[role] += 1;
+        groups[pathGroupOf(link)] = true;
+      });
+      metricGrid([
+        ["Zones", String(zones.length)],
+        ["Entities", String(entities.length)],
+        ["Links", String(links.length)],
+        ["Primary", String(roles.primary)],
+        ["Secondary", String(roles.secondary)],
+        ["Auxiliary", String(roles.auxiliary)],
+        ["Theme", String(data.theme || "architecture_light")]
+      ]);
+      chips(Object.keys(groups).sort().slice(0, 8));
+    }
+
+    function showEntity(item) {
+      var counts = entityLinkCounts(item.id);
+      var presentation = item.presentation && typeof item.presentation === "object" ? item.presentation : {};
+      clear(itemLabel(item) || item.id || "Entity");
+      if (item.summary) container.appendChild(el("p", "", item.summary));
+      metricGrid([
+        ["Kind", item.kind || item.type || "-"],
+        ["Zone", item.zone || "-"],
+        ["Incoming", String(counts.incoming)],
+        ["Outgoing", String(counts.outgoing)],
+        ["Icon", presentation.icon || "-"],
+        ["Model", presentation.model || "-"]
+      ]);
+      rawDetails(item);
+    }
+
+    function showLink(link) {
+      clear(link.label || link.id || "Relationship");
+      if (link.summary) container.appendChild(el("p", "", link.summary));
+      metricGrid([
+        ["Kind", link.kind || "-"],
+        ["From", link.from || "-"],
+        ["To", link.to || "-"],
+        ["Role", roleOf(link)],
+        ["Path", pathGroupOf(link)]
+      ]);
+      rawDetails(link);
+    }
+
+    function showZone(zone) {
+      var count = entities.filter(function (item) { return item && item.zone === zone.id; }).length;
+      clear(itemLabel(zone) || zone.id || "Zone");
+      if (zone.summary) container.appendChild(el("p", "", zone.summary));
+      metricGrid([
+        ["Kind", zone.kind || "zone"],
+        ["Entities", String(count)],
+        ["Boundary", zone.style || presentationOf(zone).boundary || "-"]
+      ]);
+      rawDetails(zone);
+    }
+
+    showSummary();
+    return {
+      show: function (label, payload) {
+        if (!payload || payload.title === data.title && payload.entities === entities.length) {
+          showSummary();
+          return;
+        }
+        if (payload.from && payload.to) {
+          showLink(payload);
+          return;
+        }
+        if (payload.bounds || zoneByIDValue(payload.id)) {
+          showZone(payload.bounds ? payload : zoneByIDValue(payload.id));
+          return;
+        }
+        if (payload.id && entityByIDValue(payload.id)) {
+          showEntity(payload);
+          return;
+        }
+        clear(label || "Architecture");
+        rawDetails(payload);
+      }
+    };
+  }
+
   function createIsometricShell(container, manifest, data) {
     container.textContent = "";
     var app = el("div", "visual-isometric-app");
@@ -4082,7 +4241,7 @@
     app.appendChild(controls);
     app.appendChild(body);
     container.appendChild(app);
-    return { app: app, controls: controls, stage: stage, labelLayer: labelLayer, inspector: runtime.createInspector(inspector) };
+    return { app: app, controls: controls, stage: stage, labelLayer: labelLayer, inspector: createIsometricInspector(inspector, data) };
   }
 
   function isometricEntityGeometry(THREE, item, spec, size) {
@@ -4360,11 +4519,11 @@
     var bounds = isometricBounds(zone);
     var world = isometricWorld({ x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 }, scale, center);
     var presentation = zone && zone.presentation && typeof zone.presentation === "object" ? zone.presentation : {};
-    var color = colorValue(presentation.color || "#e6edf5", 0xe6edf5);
+    var color = colorValue(presentation.fill || presentation.color || "#e6edf5", 0xe6edf5);
     var plane = new THREE.Mesh(new THREE.PlaneGeometry(bounds.w * scale, bounds.h * scale), new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
-      opacity: 0.16,
+      opacity: numberValue(presentation.fillOpacity || presentation.fill_opacity, 0.065),
       depthWrite: false
     }));
     plane.rotation.x = -Math.PI / 2;
@@ -4380,10 +4539,20 @@
     ].map(function (p) { return new THREE.Vector3(p.x, 0.035, p.z); });
     var boundaryStyle = normalizeMarkKey(presentation.boundary || presentation.lineStyle || zone.style || "solid");
     var boundaryColor = presentation.boundaryColor || presentation.borderColor || presentation.color || zone.color || "#64748b";
-    var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, 0.94, 0.22, 0.11) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.96));
+    var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, 0.72, 0.18, 0.12) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.78));
     boundary.userData = { isZoneBoundary: true, style: boundaryStyle };
     root.add(boundary);
-    return { zone: zone, bounds: bounds, labelPoint: { x: bounds.x + Math.min(bounds.w - 0.45, 0.45), y: bounds.y + 0.45 }, plane: plane, boundary: boundary };
+    var labelPoint = presentation.labelPoint || presentation.label_point || {};
+    return {
+      zone: zone,
+      bounds: bounds,
+      labelPoint: {
+        x: labelPoint.x !== undefined ? numberValue(labelPoint.x, bounds.x + Math.min(bounds.w - 0.45, 0.45)) : bounds.x + Math.min(bounds.w - 0.45, 0.45),
+        y: labelPoint.y !== undefined ? numberValue(labelPoint.y, bounds.y + 0.45) : bounds.y + 0.45
+      },
+      plane: plane,
+      boundary: boundary
+    };
   }
 
   function compactLabelText(text, maxLength) {
@@ -4574,7 +4743,21 @@
 
     var laneCounters = {};
     var linkLabelsCreated = 0;
+    function linkRole(link) {
+      var presentation = link && link.presentation && typeof link.presentation === "object" ? link.presentation : {};
+      var metadata = link && link.metadata && typeof link.metadata === "object" ? link.metadata : {};
+      var role = normalizeMarkKey(link && (link.role || presentation.role || metadata.role));
+      return role === "primary" || role === "secondary" || role === "auxiliary" ? role : "";
+    }
+    function linkPathGroup(link) {
+      var presentation = link && link.presentation && typeof link.presentation === "object" ? link.presentation : {};
+      var metadata = link && link.metadata && typeof link.metadata === "object" ? link.metadata : {};
+      return normalizeMarkKey(link && (link.pathGroup || link.path_group || presentation.pathGroup || presentation.path_group || metadata.pathGroup || metadata.path_group)) || "";
+    }
     function isSecondaryLink(link) {
+      var role = linkRole(link);
+      if (role === "primary") return false;
+      if (role === "auxiliary") return true;
       var cls = routeClass(link);
       var q = normalizeVisualQualityFields(link);
       var visibility = normalizeVisibilityValue(link.visibility);
@@ -4585,13 +4768,18 @@
       var q = normalizeVisualQualityFields(link);
       var presentation = edgePresentation(link);
       var secondary = isSecondaryLink(link);
+      var role = linkRole(link) || (secondary ? "auxiliary" : "secondary");
       edgeSpec.directed = edgeSpec.directed !== false;
       edgeSpec.arrow = edgeSpec.arrow && edgeSpec.arrow !== "none" ? edgeSpec.arrow : "forward";
       edgeSpec.lightBackground = true;
       edgeSpec.lineStyle = presentation.lineStyle || presentation.line_style || edgeSpec.lineStyle;
-      if (cls === "cache") {
+      if (role === "primary") {
+        edgeSpec.color = presentation.color || link.color || "#111827";
+      } else if (cls === "cache") {
         edgeSpec.color = presentation.color || link.color || "#991b1b";
       } else if (cls === "storage") {
+        edgeSpec.color = presentation.color || link.color || "#166534";
+      } else if (cls === "data") {
         edgeSpec.color = presentation.color || link.color || "#1d4ed8";
       } else if (cls === "register") {
         edgeSpec.color = presentation.color || link.color || "#0f766e";
@@ -4606,26 +4794,43 @@
       } else {
         edgeSpec.color = presentation.color || link.color || "#111827";
       }
+      if (role === "primary") {
+        edgeSpec.opacity = 0.96;
+        edgeSpec.flow = false;
+        edgeSpec.arrowScale = 2.05;
+        return { radius: 0.108, secondary: false, role: role };
+      }
+      if (role === "secondary" && !secondary) {
+        edgeSpec.opacity = Math.max(0.48, Math.min(0.62, edgeSpec.opacity || 0.54));
+        edgeSpec.flow = false;
+        edgeSpec.arrowScale = 1.05;
+        return { radius: 0.045, secondary: false, role: role };
+      }
       if (isOverviewMode() && secondary) {
-        edgeSpec.opacity = Math.max(0.18, Math.min(0.35, edgeSpec.opacity || 0.28));
+        edgeSpec.opacity = Math.max(0.2, Math.min(0.34, edgeSpec.opacity || 0.28));
         edgeSpec.flow = false;
         edgeSpec.arrowScale = 0.68;
-        return { radius: 0.018 + Math.min(0.01, q.importance * 0.012), secondary: true };
+        if (role === "auxiliary") {
+          edgeSpec.lineStyle = edgeSpec.lineStyle || "dashed";
+        }
+        return { radius: 0.017 + Math.min(0.008, q.importance * 0.01), secondary: true, role: role };
       }
       edgeSpec.opacity = Math.max(edgeSpec.opacity || 0.74, cls === "main" ? 0.9 : 0.74);
       edgeSpec.flow = edgeSpec.flow && (cls === "main" || cls === "cache" || cls === "storage" || cls === "service");
       edgeSpec.arrowScale = Math.max(0.9, Math.min(1.35, 0.9 + q.importance * 0.35));
-      if (cls === "main") return { radius: 0.05 + Math.min(0.018, q.importance * 0.018), secondary: false };
-      return { radius: 0.036 + Math.min(0.014, q.importance * 0.014), secondary: false };
+      if (cls === "main") return { radius: 0.05 + Math.min(0.018, q.importance * 0.018), secondary: false, role: role };
+      return { radius: 0.036 + Math.min(0.014, q.importance * 0.014), secondary: false, role: role };
     }
     function shouldShowIsometricLinkLabel(link) {
       if (!link.label) return false;
       var q = normalizeVisualQualityFields(link);
       var visibility = normalizeVisibilityValue(link.visibility);
       var priority = q.labelPriority || normalizeLabelPriorityValue(link.labelPriority !== undefined ? link.labelPriority : link.label_priority);
+      var role = linkRole(link);
       if (visibility === "hidden" || priority === "hidden") return false;
       if (!isOverviewMode()) return true;
       if (visibility === "detail") return priority === "always";
+      if (role === "primary") return true;
       if (priority === "always" || priority === "important") return true;
       return q.importance >= 0.82;
     }
@@ -4659,11 +4864,19 @@
         label.setAttribute("data-link-label", link.id || "");
         label.setAttribute("data-link-id", link.id || "");
         label.setAttribute("data-link-kind", link.kind || "");
+        label.setAttribute("data-link-role", linkRole(link) || "");
+        label.setAttribute("data-path-group", linkPathGroup(link) || routeClass(link));
         if (importanceValue(link, 0.35) < 0.74) {
           label.setAttribute("data-low-priority", "true");
         }
         shell.labelLayer.appendChild(label);
-        labels.push({ element: label, point: mid, visible: true, type: "link", priority: 0.38 + importanceValue(link, 0.35) * 0.5, id: link.id });
+        var linkPriority = 0.38 + importanceValue(link, 0.35) * 0.5;
+        if (linkRole(link) === "primary") {
+          linkPriority += 0.82;
+        } else if (normalizeLabelPriorityValue(link.labelPriority !== undefined ? link.labelPriority : link.label_priority) === "important") {
+          linkPriority += 0.28;
+        }
+        labels.push({ element: label, point: mid, visible: true, type: "link", priority: linkPriority, id: link.id });
       }
     });
 
@@ -4726,10 +4939,19 @@
     }
 
     function routeClass(link) {
+      var group = linkPathGroup(link);
+      if (group === "entry" || group === "gateway") return "main";
+      if (group === "registry") return "register";
+      if (group === "data") return "data";
+      if (group === "cache") return "cache";
+      if (group === "storage") return "storage";
+      if (group === "health") return "health";
+      if (group === "observability") return "observability";
       var kind = normalizeMarkKey(link.kind || link.type || "");
       if (kind.indexOf("register") >= 0 || kind.indexOf("nacos") >= 0 || kind.indexOf("pull") >= 0) return "register";
       if (kind.indexOf("cache") >= 0 || kind.indexOf("redis") >= 0) return "cache";
       if (kind.indexOf("storage") >= 0 || kind.indexOf("store") >= 0 || kind.indexOf("file") >= 0 || kind.indexOf("block") >= 0) return "storage";
+      if (kind.indexOf("data") >= 0 || kind.indexOf("mysql") >= 0 || kind.indexOf("database") >= 0) return "data";
       if (kind.indexOf("health") >= 0 || kind.indexOf("admin") >= 0 || kind.indexOf("observ") >= 0) return "health";
       if (kind.indexOf("log") >= 0 || kind.indexOf("metric") >= 0) return "observability";
       if (kind.indexOf("replication") >= 0 || kind.indexOf("repl") >= 0) return "replication";
@@ -4744,7 +4966,7 @@
       var dx = toEntity.pos.x - fromEntity.pos.x;
       var dy = toEntity.pos.y - fromEntity.pos.y;
       if (cls === "register") return { start: fromPorts.north, end: toPorts.south };
-      if (cls === "cache" || cls === "storage") return { start: fromPorts.south, end: toPorts.north };
+      if (cls === "cache" || cls === "storage" || cls === "data") return { start: fromPorts.south, end: toPorts.north };
       if (cls === "health") return { start: fromPorts.east, end: toPorts.west };
       if (cls === "observability") return { start: fromPorts.south, end: toPorts.north };
       if (Math.abs(dx) >= Math.abs(dy)) {
@@ -4762,6 +4984,7 @@
       var b = isometricLinkGroundPoint(toEntity);
       if (cls === "register") return { z: Math.min(a.z, b.z) - scale * (0.55 + lane * 0.22) };
       if (cls === "cache") return { z: Math.max(a.z, b.z) + scale * (0.42 + lane * 0.18) };
+      if (cls === "data") return { z: Math.max(a.z, b.z) + scale * (0.58 + lane * 0.18) };
       if (cls === "storage") return { z: Math.max(a.z, b.z) + scale * (0.72 + lane * 0.2) };
       if (cls === "health") return { x: Math.min(a.x, b.x) - scale * (0.75 + lane * 0.18) };
       if (cls === "observability") return { z: Math.max(a.z, b.z) + scale * (0.55 + lane * 0.18) };

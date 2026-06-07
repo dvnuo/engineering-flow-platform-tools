@@ -202,6 +202,23 @@ const expression = `(() => {
   const canvas = q("canvas");
   const layer = q(".visual-isometric-label-layer");
   const labelLayoutPass = Number(layer?.dataset?.layoutPass || 0);
+  const visualData = window.__EFP_VISUAL_DATA__ || {};
+  const linkData = Array.isArray(visualData.links) ? visualData.links : [];
+  const roleOf = (link) => {
+    const role = String(link?.role || link?.presentation?.role || link?.metadata?.role || "secondary").toLowerCase().replace(/[_\\s]+/g, "-");
+    return ["primary", "secondary", "auxiliary"].includes(role) ? role : "secondary";
+  };
+  const pathGroupOf = (link) => String(link?.pathGroup || link?.path_group || link?.presentation?.pathGroup || link?.presentation?.path_group || link?.metadata?.pathGroup || link?.metadata?.path_group || link?.kind || "relationship").toLowerCase().replace(/[_\\s]+/g, "-");
+  const primaryLinkCount = linkData.filter((link) => roleOf(link) === "primary").length;
+  const secondaryLinkCount = linkData.filter((link) => roleOf(link) === "secondary").length;
+  const auxiliaryLinkCount = linkData.filter((link) => roleOf(link) === "auxiliary").length;
+  const visiblePrimaryLinkLabelCount = linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").length;
+  const visibleSecondaryLinkLabelCount = linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "secondary").length;
+  const visibleAuxiliaryLinkLabelCount = linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "auxiliary").length;
+  const routeGroups = Array.from(new Set(linkData.map(pathGroupOf))).filter(Boolean).sort();
+  const primaryPathGroupsVisible = Array.from(new Set(linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").map((node) => node.getAttribute("data-path-group") || ""))).filter(Boolean).sort();
+  const inspector = q(".visual-isometric-inspector");
+  const inspectorRawJSONDefault = !!inspector?.querySelector(":scope > pre");
   const summary = {
     title: document.title || "",
     template: q("[data-visual-template]")?.getAttribute("data-visual-template") || "",
@@ -220,6 +237,17 @@ const expression = `(() => {
     visibleLinkLabels: linkLabelNodes.filter(isVisible).length,
     visibleZoneLabels: zoneLabelNodes.filter(isVisible).length,
     visibleLabelIcons: labelIconNodes.filter((node) => isVisible(node.closest(".visual-isometric-entity-label") || node) && imageLoaded(node)).length,
+    primaryLinkCount,
+    secondaryLinkCount,
+    auxiliaryLinkCount,
+    visiblePrimaryLinkLabelCount,
+    visibleSecondaryLinkLabelCount,
+    visibleAuxiliaryLinkLabelCount,
+    linkOpacityBuckets: { strong: primaryLinkCount, medium: secondaryLinkCount, low: auxiliaryLinkCount },
+    zoneCountVisible: zoneLabelNodes.filter(isVisible).length,
+    primaryPathGroupsVisible,
+    routeGroups,
+    inspectorRawJSONDefault,
     modelBadges: qa('[data-has-model-badge="true"]').length,
     svgBillboards: qa('[data-has-svg-billboard="true"]').length,
     fallbackBadges: qa('[data-icon-id=""], [data-model-id=""]').length,

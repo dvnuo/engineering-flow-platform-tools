@@ -71,30 +71,39 @@ type Checks struct {
 }
 
 type DOMSummary struct {
-	Title                string `json:"title,omitempty"`
-	Template             string `json:"template,omitempty"`
-	Renderer             string `json:"renderer,omitempty"`
-	EntityLabels         int    `json:"entity_labels"`
-	LinkLabels           int    `json:"link_labels"`
-	ZoneLabels           int    `json:"zone_labels"`
-	LabelIcons           int    `json:"label_icons"`
-	LabelIconsLoaded     int    `json:"label_icons_loaded"`
-	BrokenLabelIcons     int    `json:"broken_label_icons"`
-	VisibleEntityLabels  int    `json:"visible_entity_labels"`
-	VisibleLinkLabels    int    `json:"visible_link_labels"`
-	VisibleZoneLabels    int    `json:"visible_zone_labels"`
-	VisibleLabelIcons    int    `json:"visible_label_icons"`
-	EntityLabelOverlap   int    `json:"entity_label_overlap_count"`
-	LinkLabelOverlap     int    `json:"link_label_overlap_count"`
-	ZoneLabelOverlap     int    `json:"zone_label_overlap_count"`
-	TotalLabelOverlap    int    `json:"total_label_overlap_count"`
-	LabelsOutsideStage   int    `json:"labels_outside_stage_count"`
-	ModelBadges          int    `json:"model_badges"`
-	SvgBillboards        int    `json:"svg_billboards"`
-	FallbackBadges       int    `json:"fallback_badges"`
-	Controls             int    `json:"controls"`
-	Canvas               int    `json:"canvas"`
-	RuntimeDataRequested bool   `json:"runtime_data_requested"`
+	Title                  string   `json:"title,omitempty"`
+	Template               string   `json:"template,omitempty"`
+	Renderer               string   `json:"renderer,omitempty"`
+	EntityLabels           int      `json:"entity_labels"`
+	LinkLabels             int      `json:"link_labels"`
+	ZoneLabels             int      `json:"zone_labels"`
+	LabelIcons             int      `json:"label_icons"`
+	LabelIconsLoaded       int      `json:"label_icons_loaded"`
+	BrokenLabelIcons       int      `json:"broken_label_icons"`
+	VisibleEntityLabels    int      `json:"visible_entity_labels"`
+	VisibleLinkLabels      int      `json:"visible_link_labels"`
+	VisibleZoneLabels      int      `json:"visible_zone_labels"`
+	VisibleLabelIcons      int      `json:"visible_label_icons"`
+	PrimaryLinkCount       int      `json:"primary_link_count"`
+	SecondaryLinkCount     int      `json:"secondary_link_count"`
+	AuxiliaryLinkCount     int      `json:"auxiliary_link_count"`
+	VisiblePrimaryLabels   int      `json:"visible_primary_link_label_count"`
+	VisibleSecondaryLabels int      `json:"visible_secondary_link_label_count"`
+	VisibleAuxiliaryLabels int      `json:"visible_auxiliary_link_label_count"`
+	ZoneCountVisible       int      `json:"zone_count_visible"`
+	RouteGroups            []string `json:"route_groups,omitempty"`
+	InspectorRawDefault    bool     `json:"inspector_raw_json_default"`
+	EntityLabelOverlap     int      `json:"entity_label_overlap_count"`
+	LinkLabelOverlap       int      `json:"link_label_overlap_count"`
+	ZoneLabelOverlap       int      `json:"zone_label_overlap_count"`
+	TotalLabelOverlap      int      `json:"total_label_overlap_count"`
+	LabelsOutsideStage     int      `json:"labels_outside_stage_count"`
+	ModelBadges            int      `json:"model_badges"`
+	SvgBillboards          int      `json:"svg_billboards"`
+	FallbackBadges         int      `json:"fallback_badges"`
+	Controls               int      `json:"controls"`
+	Canvas                 int      `json:"canvas"`
+	RuntimeDataRequested   bool     `json:"runtime_data_requested"`
 }
 
 type Rect struct {
@@ -105,30 +114,41 @@ type Rect struct {
 }
 
 type VisualSummary struct {
-	Template                     string `json:"template"`
-	ScreenshotPath               string `json:"screenshot_path"`
-	EntityLabelCount             int    `json:"entity_label_count"`
-	LabelIconCount               int    `json:"label_icon_count"`
-	LabelIconLoadedCount         int    `json:"label_icon_loaded_count"`
-	BrokenLabelIconCount         int    `json:"broken_label_icon_count"`
-	VisibleEntityLabelCount      int    `json:"visible_entity_label_count"`
-	VisibleLinkLabelCount        int    `json:"visible_link_label_count"`
-	VisibleZoneLabelCount        int    `json:"visible_zone_label_count"`
-	VisibleLabelIconCount        int    `json:"visible_label_icon_count"`
-	ModelBadgeCount              int    `json:"model_badge_count"`
-	SvgBillboardCount            int    `json:"svg_billboard_count"`
-	FallbackBadgeCount           int    `json:"fallback_badge_count"`
-	CanvasVisible                bool   `json:"canvas_visible"`
-	ControlsVisible              bool   `json:"controls_visible"`
-	ApproximateLabelOverlapCount int    `json:"approximate_label_overlap_count"`
-	EntityLabelOverlapCount      int    `json:"entity_label_overlap_count"`
-	LinkLabelOverlapCount        int    `json:"link_label_overlap_count"`
-	ZoneLabelOverlapCount        int    `json:"zone_label_overlap_count"`
-	TotalLabelOverlapCount       int    `json:"total_label_overlap_count"`
-	LabelsOutsideStageCount      int    `json:"labels_outside_stage_count"`
-	LabelLayerBounds             *Rect  `json:"label_layer_bounds,omitempty"`
-	CanvasBounds                 *Rect  `json:"canvas_bounds,omitempty"`
-	ScreenshotSize               *Rect  `json:"screenshot_size,omitempty"`
+	Template                       string         `json:"template"`
+	ScreenshotPath                 string         `json:"screenshot_path"`
+	EntityLabelCount               int            `json:"entity_label_count"`
+	LabelIconCount                 int            `json:"label_icon_count"`
+	LabelIconLoadedCount           int            `json:"label_icon_loaded_count"`
+	BrokenLabelIconCount           int            `json:"broken_label_icon_count"`
+	VisibleEntityLabelCount        int            `json:"visible_entity_label_count"`
+	VisibleLinkLabelCount          int            `json:"visible_link_label_count"`
+	VisibleZoneLabelCount          int            `json:"visible_zone_label_count"`
+	VisibleLabelIconCount          int            `json:"visible_label_icon_count"`
+	PrimaryLinkCount               int            `json:"primary_link_count"`
+	SecondaryLinkCount             int            `json:"secondary_link_count"`
+	AuxiliaryLinkCount             int            `json:"auxiliary_link_count"`
+	VisiblePrimaryLinkLabelCount   int            `json:"visible_primary_link_label_count"`
+	VisibleSecondaryLinkLabelCount int            `json:"visible_secondary_link_label_count"`
+	VisibleAuxiliaryLinkLabelCount int            `json:"visible_auxiliary_link_label_count"`
+	LinkOpacityBuckets             map[string]int `json:"link_opacity_buckets,omitempty"`
+	ZoneCountVisible               int            `json:"zone_count_visible"`
+	PrimaryPathGroupsVisible       []string       `json:"primary_path_groups_visible,omitempty"`
+	RouteGroups                    []string       `json:"route_groups,omitempty"`
+	InspectorRawJSONDefault        bool           `json:"inspector_raw_json_default"`
+	ModelBadgeCount                int            `json:"model_badge_count"`
+	SvgBillboardCount              int            `json:"svg_billboard_count"`
+	FallbackBadgeCount             int            `json:"fallback_badge_count"`
+	CanvasVisible                  bool           `json:"canvas_visible"`
+	ControlsVisible                bool           `json:"controls_visible"`
+	ApproximateLabelOverlapCount   int            `json:"approximate_label_overlap_count"`
+	EntityLabelOverlapCount        int            `json:"entity_label_overlap_count"`
+	LinkLabelOverlapCount          int            `json:"link_label_overlap_count"`
+	ZoneLabelOverlapCount          int            `json:"zone_label_overlap_count"`
+	TotalLabelOverlapCount         int            `json:"total_label_overlap_count"`
+	LabelsOutsideStageCount        int            `json:"labels_outside_stage_count"`
+	LabelLayerBounds               *Rect          `json:"label_layer_bounds,omitempty"`
+	CanvasBounds                   *Rect          `json:"canvas_bounds,omitempty"`
+	ScreenshotSize                 *Rect          `json:"screenshot_size,omitempty"`
 }
 
 func Inspect(opts Options) (Result, error) {
@@ -188,30 +208,39 @@ func Inspect(opts Options) (Result, error) {
 	}
 	requests = mergeRequests(requests, nodeResult.Data.Requests)
 	domSummary := DOMSummary{
-		Title:                nodeResult.Data.Summary.Title,
-		Template:             nodeResult.Data.Summary.Template,
-		Renderer:             nodeResult.Data.Summary.Renderer,
-		EntityLabels:         nodeResult.Data.Summary.EntityLabels,
-		LinkLabels:           nodeResult.Data.Summary.LinkLabels,
-		ZoneLabels:           nodeResult.Data.Summary.ZoneLabels,
-		LabelIcons:           nodeResult.Data.Summary.LabelIcons,
-		LabelIconsLoaded:     nodeResult.Data.Summary.LabelIconsLoaded,
-		BrokenLabelIcons:     nodeResult.Data.Summary.BrokenLabelIcons,
-		VisibleEntityLabels:  nodeResult.Data.Summary.VisibleEntityLabels,
-		VisibleLinkLabels:    nodeResult.Data.Summary.VisibleLinkLabels,
-		VisibleZoneLabels:    nodeResult.Data.Summary.VisibleZoneLabels,
-		VisibleLabelIcons:    nodeResult.Data.Summary.VisibleLabelIcons,
-		EntityLabelOverlap:   nodeResult.Data.Summary.EntityLabelOverlapCount,
-		LinkLabelOverlap:     nodeResult.Data.Summary.LinkLabelOverlapCount,
-		ZoneLabelOverlap:     nodeResult.Data.Summary.ZoneLabelOverlapCount,
-		TotalLabelOverlap:    nodeResult.Data.Summary.TotalLabelOverlapCount,
-		LabelsOutsideStage:   nodeResult.Data.Summary.LabelsOutsideStageCount,
-		ModelBadges:          nodeResult.Data.Summary.ModelBadges,
-		SvgBillboards:        nodeResult.Data.Summary.SvgBillboards,
-		FallbackBadges:       nodeResult.Data.Summary.FallbackBadges,
-		Controls:             nodeResult.Data.Summary.Controls,
-		Canvas:               nodeResult.Data.Summary.Canvas,
-		RuntimeDataRequested: hasRequest(requests, "/data.js") && hasRequest(requests, "/manifest.js"),
+		Title:                  nodeResult.Data.Summary.Title,
+		Template:               nodeResult.Data.Summary.Template,
+		Renderer:               nodeResult.Data.Summary.Renderer,
+		EntityLabels:           nodeResult.Data.Summary.EntityLabels,
+		LinkLabels:             nodeResult.Data.Summary.LinkLabels,
+		ZoneLabels:             nodeResult.Data.Summary.ZoneLabels,
+		LabelIcons:             nodeResult.Data.Summary.LabelIcons,
+		LabelIconsLoaded:       nodeResult.Data.Summary.LabelIconsLoaded,
+		BrokenLabelIcons:       nodeResult.Data.Summary.BrokenLabelIcons,
+		VisibleEntityLabels:    nodeResult.Data.Summary.VisibleEntityLabels,
+		VisibleLinkLabels:      nodeResult.Data.Summary.VisibleLinkLabels,
+		VisibleZoneLabels:      nodeResult.Data.Summary.VisibleZoneLabels,
+		VisibleLabelIcons:      nodeResult.Data.Summary.VisibleLabelIcons,
+		PrimaryLinkCount:       nodeResult.Data.Summary.PrimaryLinkCount,
+		SecondaryLinkCount:     nodeResult.Data.Summary.SecondaryLinkCount,
+		AuxiliaryLinkCount:     nodeResult.Data.Summary.AuxiliaryLinkCount,
+		VisiblePrimaryLabels:   nodeResult.Data.Summary.VisiblePrimaryLinkLabelCount,
+		VisibleSecondaryLabels: nodeResult.Data.Summary.VisibleSecondaryLinkLabelCount,
+		VisibleAuxiliaryLabels: nodeResult.Data.Summary.VisibleAuxiliaryLinkLabelCount,
+		ZoneCountVisible:       nodeResult.Data.Summary.ZoneCountVisible,
+		RouteGroups:            nodeResult.Data.Summary.RouteGroups,
+		InspectorRawDefault:    nodeResult.Data.Summary.InspectorRawJSONDefault,
+		EntityLabelOverlap:     nodeResult.Data.Summary.EntityLabelOverlapCount,
+		LinkLabelOverlap:       nodeResult.Data.Summary.LinkLabelOverlapCount,
+		ZoneLabelOverlap:       nodeResult.Data.Summary.ZoneLabelOverlapCount,
+		TotalLabelOverlap:      nodeResult.Data.Summary.TotalLabelOverlapCount,
+		LabelsOutsideStage:     nodeResult.Data.Summary.LabelsOutsideStageCount,
+		ModelBadges:            nodeResult.Data.Summary.ModelBadges,
+		SvgBillboards:          nodeResult.Data.Summary.SvgBillboards,
+		FallbackBadges:         nodeResult.Data.Summary.FallbackBadges,
+		Controls:               nodeResult.Data.Summary.Controls,
+		Canvas:                 nodeResult.Data.Summary.Canvas,
+		RuntimeDataRequested:   hasRequest(requests, "/data.js") && hasRequest(requests, "/manifest.js"),
 	}
 	renderResult, renderWarnings := inspectRenderedScreenshot(opts, outDir, screenshot)
 	checks := buildChecks(domSummary, requests, screenshot, nodeResult, renderResult)
@@ -253,38 +282,49 @@ type browserSmokeOutput struct {
 }
 
 type browserDOMSummary struct {
-	Title                        string `json:"title"`
-	Template                     string `json:"template"`
-	Renderer                     string `json:"renderer"`
-	IsometricReady               bool   `json:"isometricReady"`
-	Stage                        bool   `json:"stage"`
-	LabelLayer                   bool   `json:"labelLayer"`
-	EntityLabels                 int    `json:"entityLabels"`
-	LinkLabels                   int    `json:"linkLabels"`
-	ZoneLabels                   int    `json:"zoneLabels"`
-	LabelIcons                   int    `json:"labelIcons"`
-	LabelIconsLoaded             int    `json:"labelIconsLoaded"`
-	BrokenLabelIcons             int    `json:"brokenLabelIcons"`
-	VisibleEntityLabels          int    `json:"visibleEntityLabels"`
-	VisibleLinkLabels            int    `json:"visibleLinkLabels"`
-	VisibleZoneLabels            int    `json:"visibleZoneLabels"`
-	VisibleLabelIcons            int    `json:"visibleLabelIcons"`
-	ModelBadges                  int    `json:"modelBadges"`
-	SvgBillboards                int    `json:"svgBillboards"`
-	FallbackBadges               int    `json:"fallbackBadges"`
-	Controls                     int    `json:"controls"`
-	ControlBar                   bool   `json:"controlBar"`
-	Canvas                       int    `json:"canvas"`
-	ApproximateLabelOverlapCount int    `json:"approximateLabelOverlapCount"`
-	EntityLabelOverlapCount      int    `json:"entityLabelOverlapCount"`
-	LinkLabelOverlapCount        int    `json:"linkLabelOverlapCount"`
-	ZoneLabelOverlapCount        int    `json:"zoneLabelOverlapCount"`
-	TotalLabelOverlapCount       int    `json:"totalLabelOverlapCount"`
-	LabelsOutsideStageCount      int    `json:"labelsOutsideStageCount"`
-	LabelLayerBounds             *Rect  `json:"labelLayerBounds"`
-	CanvasBounds                 *Rect  `json:"canvasBounds"`
-	ScreenshotSize               *Rect  `json:"screenshotSize"`
-	Ready                        bool   `json:"ready"`
+	Title                          string         `json:"title"`
+	Template                       string         `json:"template"`
+	Renderer                       string         `json:"renderer"`
+	IsometricReady                 bool           `json:"isometricReady"`
+	Stage                          bool           `json:"stage"`
+	LabelLayer                     bool           `json:"labelLayer"`
+	EntityLabels                   int            `json:"entityLabels"`
+	LinkLabels                     int            `json:"linkLabels"`
+	ZoneLabels                     int            `json:"zoneLabels"`
+	LabelIcons                     int            `json:"labelIcons"`
+	LabelIconsLoaded               int            `json:"labelIconsLoaded"`
+	BrokenLabelIcons               int            `json:"brokenLabelIcons"`
+	VisibleEntityLabels            int            `json:"visibleEntityLabels"`
+	VisibleLinkLabels              int            `json:"visibleLinkLabels"`
+	VisibleZoneLabels              int            `json:"visibleZoneLabels"`
+	VisibleLabelIcons              int            `json:"visibleLabelIcons"`
+	PrimaryLinkCount               int            `json:"primaryLinkCount"`
+	SecondaryLinkCount             int            `json:"secondaryLinkCount"`
+	AuxiliaryLinkCount             int            `json:"auxiliaryLinkCount"`
+	VisiblePrimaryLinkLabelCount   int            `json:"visiblePrimaryLinkLabelCount"`
+	VisibleSecondaryLinkLabelCount int            `json:"visibleSecondaryLinkLabelCount"`
+	VisibleAuxiliaryLinkLabelCount int            `json:"visibleAuxiliaryLinkLabelCount"`
+	LinkOpacityBuckets             map[string]int `json:"linkOpacityBuckets"`
+	ZoneCountVisible               int            `json:"zoneCountVisible"`
+	PrimaryPathGroupsVisible       []string       `json:"primaryPathGroupsVisible"`
+	RouteGroups                    []string       `json:"routeGroups"`
+	InspectorRawJSONDefault        bool           `json:"inspectorRawJSONDefault"`
+	ModelBadges                    int            `json:"modelBadges"`
+	SvgBillboards                  int            `json:"svgBillboards"`
+	FallbackBadges                 int            `json:"fallbackBadges"`
+	Controls                       int            `json:"controls"`
+	ControlBar                     bool           `json:"controlBar"`
+	Canvas                         int            `json:"canvas"`
+	ApproximateLabelOverlapCount   int            `json:"approximateLabelOverlapCount"`
+	EntityLabelOverlapCount        int            `json:"entityLabelOverlapCount"`
+	LinkLabelOverlapCount          int            `json:"linkLabelOverlapCount"`
+	ZoneLabelOverlapCount          int            `json:"zoneLabelOverlapCount"`
+	TotalLabelOverlapCount         int            `json:"totalLabelOverlapCount"`
+	LabelsOutsideStageCount        int            `json:"labelsOutsideStageCount"`
+	LabelLayerBounds               *Rect          `json:"labelLayerBounds"`
+	CanvasBounds                   *Rect          `json:"canvasBounds"`
+	ScreenshotSize                 *Rect          `json:"screenshotSize"`
+	Ready                          bool           `json:"ready"`
 }
 
 func (c Checks) AllOK() bool {
@@ -564,30 +604,41 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		screenshotSize = nodeResult.Data.Summary.ScreenshotSize
 	}
 	return VisualSummary{
-		Template:                     summary.Template,
-		ScreenshotPath:               screenshot,
-		EntityLabelCount:             summary.EntityLabels,
-		LabelIconCount:               summary.LabelIcons,
-		LabelIconLoadedCount:         summary.LabelIconsLoaded,
-		BrokenLabelIconCount:         summary.BrokenLabelIcons,
-		VisibleEntityLabelCount:      summary.VisibleEntityLabels,
-		VisibleLinkLabelCount:        summary.VisibleLinkLabels,
-		VisibleZoneLabelCount:        summary.VisibleZoneLabels,
-		VisibleLabelIconCount:        summary.VisibleLabelIcons,
-		ModelBadgeCount:              summary.ModelBadges,
-		SvgBillboardCount:            summary.SvgBillboards,
-		FallbackBadgeCount:           summary.FallbackBadges,
-		CanvasVisible:                checks.CanvasVisible,
-		ControlsVisible:              checks.ControlsPresent,
-		ApproximateLabelOverlapCount: nodeResult.Data.Summary.ApproximateLabelOverlapCount,
-		EntityLabelOverlapCount:      nodeResult.Data.Summary.EntityLabelOverlapCount,
-		LinkLabelOverlapCount:        nodeResult.Data.Summary.LinkLabelOverlapCount,
-		ZoneLabelOverlapCount:        nodeResult.Data.Summary.ZoneLabelOverlapCount,
-		TotalLabelOverlapCount:       nodeResult.Data.Summary.TotalLabelOverlapCount,
-		LabelsOutsideStageCount:      nodeResult.Data.Summary.LabelsOutsideStageCount,
-		LabelLayerBounds:             nodeResult.Data.Summary.LabelLayerBounds,
-		CanvasBounds:                 nodeResult.Data.Summary.CanvasBounds,
-		ScreenshotSize:               screenshotSize,
+		Template:                       summary.Template,
+		ScreenshotPath:                 screenshot,
+		EntityLabelCount:               summary.EntityLabels,
+		LabelIconCount:                 summary.LabelIcons,
+		LabelIconLoadedCount:           summary.LabelIconsLoaded,
+		BrokenLabelIconCount:           summary.BrokenLabelIcons,
+		VisibleEntityLabelCount:        summary.VisibleEntityLabels,
+		VisibleLinkLabelCount:          summary.VisibleLinkLabels,
+		VisibleZoneLabelCount:          summary.VisibleZoneLabels,
+		VisibleLabelIconCount:          summary.VisibleLabelIcons,
+		PrimaryLinkCount:               summary.PrimaryLinkCount,
+		SecondaryLinkCount:             summary.SecondaryLinkCount,
+		AuxiliaryLinkCount:             summary.AuxiliaryLinkCount,
+		VisiblePrimaryLinkLabelCount:   summary.VisiblePrimaryLabels,
+		VisibleSecondaryLinkLabelCount: summary.VisibleSecondaryLabels,
+		VisibleAuxiliaryLinkLabelCount: summary.VisibleAuxiliaryLabels,
+		LinkOpacityBuckets:             nodeResult.Data.Summary.LinkOpacityBuckets,
+		ZoneCountVisible:               summary.ZoneCountVisible,
+		PrimaryPathGroupsVisible:       nodeResult.Data.Summary.PrimaryPathGroupsVisible,
+		RouteGroups:                    nodeResult.Data.Summary.RouteGroups,
+		InspectorRawJSONDefault:        summary.InspectorRawDefault,
+		ModelBadgeCount:                summary.ModelBadges,
+		SvgBillboardCount:              summary.SvgBillboards,
+		FallbackBadgeCount:             summary.FallbackBadges,
+		CanvasVisible:                  checks.CanvasVisible,
+		ControlsVisible:                checks.ControlsPresent,
+		ApproximateLabelOverlapCount:   nodeResult.Data.Summary.ApproximateLabelOverlapCount,
+		EntityLabelOverlapCount:        nodeResult.Data.Summary.EntityLabelOverlapCount,
+		LinkLabelOverlapCount:          nodeResult.Data.Summary.LinkLabelOverlapCount,
+		ZoneLabelOverlapCount:          nodeResult.Data.Summary.ZoneLabelOverlapCount,
+		TotalLabelOverlapCount:         nodeResult.Data.Summary.TotalLabelOverlapCount,
+		LabelsOutsideStageCount:        nodeResult.Data.Summary.LabelsOutsideStageCount,
+		LabelLayerBounds:               nodeResult.Data.Summary.LabelLayerBounds,
+		CanvasBounds:                   nodeResult.Data.Summary.CanvasBounds,
+		ScreenshotSize:                 screenshotSize,
 	}
 }
 
@@ -650,6 +701,25 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	if summary.LabelsOutsideStage > 0 {
 		add("browser_labels_outside_stage", "warning", fmt.Sprintf("Some labels are outside the screenshot viewport: %d.", summary.LabelsOutsideStage), "Adjust camera zoom, label offsets, or zone bounds so labels stay inside the first screenshot.", "fit_labels_inside_stage")
 	}
+	hasArchitectureFlowGroup := containsString(summary.RouteGroups, "entry") || containsString(summary.RouteGroups, "gateway")
+	if summary.PrimaryLinkCount == 0 && hasArchitectureFlowGroup {
+		add("browser_primary_path_missing", "warning", "No primary architecture path links were declared.", "Mark entry/gateway request path links as role=primary.", "declare_primary_links")
+	}
+	if summary.PrimaryLinkCount > 0 && summary.VisiblePrimaryLabels == 0 {
+		add("browser_primary_link_labels_missing", "warning", "Primary architecture path links have no visible overview labels.", "Give at least one primary path link labelPriority=important or always.", "show_primary_path_labels")
+	}
+	if summary.VisibleAuxiliaryLabels > 2 {
+		add("browser_auxiliary_links_too_prominent", "warning", fmt.Sprintf("Too many auxiliary link labels are visible: %d.", summary.VisibleAuxiliaryLabels), "Hide auxiliary labels in overview unless they explain an important exception.", "hide_auxiliary_labels")
+	}
+	if summary.ZoneLabels >= 8 && summary.ZoneCountVisible < 8 {
+		add("browser_zone_count_low", "warning", fmt.Sprintf("Only %d architecture zone labels are visible.", summary.ZoneCountVisible), "Move zone labels to top-left edges or reduce competing entity labels.", "increase_visible_zone_labels")
+	}
+	if summary.InspectorRawDefault {
+		add("browser_inspector_raw_json_default", "warning", "The default architecture inspector is still dominated by raw JSON.", "Render a summary-first inspector and collapse raw JSON details.", "use_summary_inspector")
+	}
+	if summary.VisibleLinkLabels > 8 {
+		add("browser_route_density_high", "warning", fmt.Sprintf("Too many relationship labels are visible in overview: %d.", summary.VisibleLinkLabels), "Keep overview labels to primary and critical data paths.", "reduce_route_label_density")
+	}
 	return out
 }
 
@@ -657,6 +727,15 @@ func sortWarnings(warnings []preview.Warning) {
 	sort.SliceStable(warnings, func(i, j int) bool {
 		return warnings[i].Code < warnings[j].Code
 	})
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
 
 func hasErrorWarnings(warnings []preview.Warning) bool {

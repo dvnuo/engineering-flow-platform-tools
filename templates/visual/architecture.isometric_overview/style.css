@@ -181,6 +181,77 @@ body {
   backdrop-filter: blur(14px);
 }
 
+.visual-isometric-inspector .visual-inspector-title {
+  margin-bottom: 12px;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.visual-inspector-metrics {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 7px 10px;
+  margin: 8px 0 12px;
+  padding: 0;
+  font-size: 12px;
+}
+
+.visual-inspector-metrics dt {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.visual-inspector-metrics dd {
+  margin: 0;
+  color: #111827;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.visual-inspector-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.visual-inspector-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 8px;
+  border: 1px solid rgb(100 116 139 / 0.18);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.visual-inspector-raw {
+  margin-top: 12px;
+  border-top: 1px solid rgb(100 116 139 / 0.16);
+  padding-top: 10px;
+}
+
+.visual-inspector-raw summary {
+  cursor: pointer;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.visual-inspector-raw pre {
+  max-height: 220px;
+  overflow: auto;
+  margin-top: 8px;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
 .visual-isometric-inspector h2,
 .visual-isometric-inspector h3 {
   margin: 0 0 8px;

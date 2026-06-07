@@ -1578,6 +1578,36 @@
     if (direction.length() < 0.001) {
       direction.set(0, 1, 0);
     }
+    if (edgeSpec.lightBackground && THREE.BufferGeometry) {
+      var side = new THREE.Vector3(-direction.z, 0, direction.x).normalize();
+      if (side.length() < 0.001) {
+        side.set(1, 0, 0);
+      }
+      var back = tip.clone().sub(direction.clone().multiplyScalar(0.24));
+      var yLift = new THREE.Vector3(0, 0.018, 0);
+      var geometryFlat = new THREE.BufferGeometry().setFromPoints([
+        tip.clone().add(yLift),
+        back.clone().add(side.clone().multiplyScalar(0.105)).add(yLift),
+        back.clone().add(side.clone().multiplyScalar(-0.105)).add(yLift)
+      ]);
+      if (geometryFlat.computeVertexNormals) {
+        geometryFlat.computeVertexNormals();
+      }
+      var materialFlat = new THREE.MeshBasicMaterial({
+        color: colorValue(edgeSpec.color, 0x111827),
+        transparent: true,
+        opacity: 0,
+        blending: THREE.NormalBlending,
+        side: THREE.DoubleSide || 2
+      });
+      materialFlat.depthTest = false;
+      materialFlat.depthWrite = false;
+      var flatArrow = new THREE.Mesh(geometryFlat, materialFlat);
+      flatArrow.renderOrder = 4;
+      flatArrow.userData.baseOpacity = Math.min(1, edgeSpec.opacity + 0.1);
+      flatArrow.userData.targetOpacity = flatArrow.userData.baseOpacity;
+      return flatArrow;
+    }
     var geometry = THREE.ConeGeometry ? new THREE.ConeGeometry(0.075, 0.24, 18) : new THREE.IcosahedronGeometry(0.1, 1);
     var material = new THREE.MeshBasicMaterial({
       color: colorValue(edgeSpec.color, 0x63a9ff),
@@ -3938,6 +3968,83 @@
     return new THREE.IcosahedronGeometry(Math.max(radius, height * 0.28), 1);
   }
 
+  function isometricDetailMaterial(THREE, color, opacity) {
+    return new THREE.MeshStandardMaterial({
+      color: colorValue(color, 0xffffff),
+      roughness: 0.5,
+      metalness: 0.12,
+      transparent: opacity !== undefined && opacity < 1,
+      opacity: opacity === undefined ? 1 : opacity
+    });
+  }
+
+  function addIsometricBoxDetail(THREE, group, w, h, d, x, y, z, color, opacity) {
+    var detail = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), isometricDetailMaterial(THREE, color, opacity));
+    detail.position.set(x || 0, y || 0, z || 0);
+    group.add(detail);
+    return detail;
+  }
+
+  function addIsometricCylinderDetail(THREE, group, radius, height, x, y, z, color, opacity, segments) {
+    var detail = new THREE.Mesh(isometricCylinderGeometry(THREE, radius, height, segments || 24), isometricDetailMaterial(THREE, color, opacity));
+    detail.position.set(x || 0, y || 0, z || 0);
+    group.add(detail);
+    return detail;
+  }
+
+  function decorateIsometricEntity(THREE, group, item, spec, size, color) {
+    var kind = normalizeMarkKey(item.kind || item.type || spec.shape || spec.mesh);
+    var mesh = normalizeMarkKey(spec.mesh || spec.shape);
+    if (kind === "pc" || kind === "client") {
+      addIsometricBoxDetail(THREE, group, size.w * 0.34, size.h * 0.27, size.d * 0.045, 0, size.h * 0.22, size.d * 0.2, "#111827", 1);
+      addIsometricBoxDetail(THREE, group, size.w * 0.06, size.h * 0.16, size.d * 0.04, 0, size.h * 0.02, size.d * 0.17, "#6b7280", 1);
+      addIsometricBoxDetail(THREE, group, size.w * 0.23, size.h * 0.035, size.d * 0.16, 0, -size.h * 0.08, size.d * 0.1, "#e5e7eb", 1);
+      return;
+    }
+    if (kind === "mobile") {
+      addIsometricBoxDetail(THREE, group, size.w * 0.13, size.h * 0.36, size.d * 0.025, 0, size.h * 0.04, size.d * 0.08, "#111827", 1);
+      addIsometricBoxDetail(THREE, group, size.w * 0.09, size.h * 0.28, size.d * 0.028, 0, size.h * 0.04, size.d * 0.1, "#dbeafe", 0.9);
+      return;
+    }
+    if (kind === "database" || kind === "mysql" || kind === "postgres" || kind === "mongodb" || kind === "redis" || kind === "cache") {
+      addIsometricCylinderDetail(THREE, group, size.w * 0.19, 0.035, 0, size.h * 0.22, 0, "#ffffff", 0.54, 30);
+      addIsometricCylinderDetail(THREE, group, size.w * 0.19, 0.025, 0, size.h * 0.04, 0, "#ffffff", 0.28, 30);
+      addIsometricCylinderDetail(THREE, group, size.w * 0.19, 0.025, 0, -size.h * 0.12, 0, "#111827", 0.16, 30);
+      return;
+    }
+    if (kind === "storage" || kind === "oss" || kind === "minio" || mesh === "bucket") {
+      addIsometricCylinderDetail(THREE, group, size.w * 0.2, 0.04, 0, size.h * 0.2, 0, "#ffffff", 0.72, 28);
+      addIsometricCylinderDetail(THREE, group, size.w * 0.13, 0.035, 0, size.h * 0.24, 0, "#e0f2fe", 0.78, 28);
+      return;
+    }
+    if (kind === "file_storage" || kind === "block_storage") {
+      for (var i = 0; i < 3; i += 1) {
+        addIsometricBoxDetail(THREE, group, size.w * 0.36, size.h * 0.075, size.d * 0.3, 0, -size.h * 0.12 + i * size.h * 0.12, 0, i % 2 ? "#5b6ee1" : "#4661d9", 1);
+      }
+      addIsometricBoxDetail(THREE, group, size.w * 0.12, size.h * 0.025, size.d * 0.04, 0, size.h * 0.2, size.d * 0.16, "#dbeafe", 0.92);
+      return;
+    }
+    if (kind === "service" || kind === "microservice" || kind === "api" || kind === "api_gateway" || kind === "gateway" || kind === "nginx" || kind === "ingress" || kind === "load_balancer") {
+      addIsometricBoxDetail(THREE, group, size.w * 0.28, size.h * 0.04, size.d * 0.22, 0, size.h * 0.19, size.d * 0.17, "#ffffff", 0.45);
+      addIsometricBoxDetail(THREE, group, size.w * 0.08, size.h * 0.025, size.d * 0.03, -size.w * 0.1, size.h * 0.07, size.d * 0.18, "#fbbf24", 1);
+      addIsometricBoxDetail(THREE, group, size.w * 0.08, size.h * 0.025, size.d * 0.03, size.w * 0.08, size.h * 0.07, size.d * 0.18, "#60a5fa", 1);
+      if (kind === "api_gateway" || kind === "gateway" || kind === "nginx" || kind === "ingress" || kind === "load_balancer") {
+        addIsometricBoxDetail(THREE, group, size.w * 0.18, size.h * 0.18, size.d * 0.035, 0, size.h * 0.02, size.d * 0.2, "#111827", 0.86);
+      }
+      return;
+    }
+    if (kind === "registry" || kind === "nacos" || kind === "event_stream" || kind === "queue" || kind === "kafka" || kind === "rocketmq" || kind === "rabbitmq") {
+      addIsometricCylinderDetail(THREE, group, size.w * 0.24, 0.035, 0, -size.h * 0.22, 0, "#ffffff", 0.88, 30);
+      addIsometricCylinderDetail(THREE, group, size.w * 0.16, 0.025, 0, -size.h * 0.18, 0, "#bfdbfe", 0.76, 30);
+      addIsometricCylinderDetail(THREE, group, size.w * 0.055, 0.06, -size.w * 0.08, size.h * 0.18, size.d * 0.02, "#22d3ee", 1, 14);
+      addIsometricCylinderDetail(THREE, group, size.w * 0.055, 0.06, size.w * 0.08, size.h * 0.18, size.d * 0.02, "#22d3ee", 1, 14);
+      return;
+    }
+    if (kind === "log" || kind === "search" || kind === "elasticsearch") {
+      addIsometricBoxDetail(THREE, group, size.w * 0.24, size.h * 0.03, size.d * 0.22, 0, size.h * 0.19, 0, "#fef3c7", 0.84);
+    }
+  }
+
   function createIsometricEntity(THREE, item, spec, size, markContext) {
     var color = colorValue(spec.color, 0x2f80ed);
     var group = new THREE.Group();
@@ -3952,18 +4059,7 @@
     mesh.castShadow = false;
     mesh.receiveShadow = true;
     group.add(mesh);
-    var kind = normalizeMarkKey(item.kind || item.type || spec.shape || spec.mesh);
-    if (kind === "pc" || kind === "client") {
-      var screen = new THREE.Mesh(new THREE.BoxGeometry(size.w * 0.32, size.h * 0.26, size.d * 0.04), new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.4, metalness: 0.2 }));
-      screen.position.y = size.h * 0.22;
-      screen.position.z = size.d * 0.19;
-      group.add(screen);
-    }
-    if (kind === "database" || kind === "mysql" || kind === "postgres" || kind === "mongodb" || kind === "redis" || kind === "cache") {
-      var cap = new THREE.Mesh(isometricCylinderGeometry(THREE, size.w * 0.18, 0.035, 30), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
-      cap.position.y = size.h * 0.22;
-      group.add(cap);
-    }
+    decorateIsometricEntity(THREE, group, item, spec, size, color);
     var icon = createIconBillboard(spec, item, THREE, markContext);
     if (icon) {
       icon.position.set(0, size.h * 0.3, size.d * 0.22);
@@ -3979,6 +4075,52 @@
 
   function isometricLineMaterial(THREE, color, opacity) {
     return new THREE.LineBasicMaterial({ color: colorValue(color, 0x1f2937), transparent: true, opacity: opacity === undefined ? 0.8 : opacity });
+  }
+
+  function createDashedPolyline(THREE, points, color, opacity, dashLength, gapLength) {
+    var dashed = new THREE.Group();
+    var material = isometricLineMaterial(THREE, color || "#111827", opacity === undefined ? 0.86 : opacity);
+    var dash = Math.max(0.03, dashLength || 0.14);
+    var gap = Math.max(0.02, gapLength || 0.09);
+    for (var i = 0; i < points.length - 1; i += 1) {
+      var start = points[i];
+      var end = points[i + 1];
+      var delta = end.clone().sub(start);
+      var length = delta.length();
+      if (length < 0.001) continue;
+      var direction = delta.clone().normalize();
+      var cursor = 0;
+      while (cursor < length) {
+        var segStart = start.clone().add(direction.clone().multiplyScalar(cursor));
+        var segEnd = start.clone().add(direction.clone().multiplyScalar(Math.min(length, cursor + dash)));
+        var segment = new THREE.Line(new THREE.BufferGeometry().setFromPoints([segStart, segEnd]), material.clone());
+        segment.userData.isDashedSegment = true;
+        dashed.add(segment);
+        cursor += dash + gap;
+      }
+    }
+    return dashed;
+  }
+
+  function createVerticalDashedLeader(THREE, x, z, yStart, yEnd) {
+    var leader = new THREE.Group();
+    var from = Math.min(yStart, yEnd);
+    var to = Math.max(yStart, yEnd);
+    var material = new THREE.MeshBasicMaterial({ color: 0x111827, transparent: true, opacity: 0.74 });
+    var radius = 0.008;
+    var dash = 0.09;
+    var gap = 0.07;
+    for (var y = from; y < to; y += dash + gap) {
+      var height = Math.min(dash, to - y);
+      if (height <= 0.002) continue;
+      var geometry = isometricCylinderGeometry(THREE, radius, height, 8);
+      var segment = new THREE.Mesh(geometry, material.clone());
+      segment.position.set(x, y + height / 2, z);
+      segment.userData.isLeaderLine = true;
+      leader.add(segment);
+    }
+    leader.userData.isLeaderLine = true;
+    return leader;
   }
 
   function addIsometricZone(THREE, root, zone, scale, center) {
@@ -4003,8 +4145,10 @@
       isometricWorld({ x: bounds.x, y: bounds.y + bounds.h }, scale, center),
       isometricWorld({ x: bounds.x, y: bounds.y }, scale, center)
     ].map(function (p) { return new THREE.Vector3(p.x, 0.035, p.z); });
-    var boundary = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, presentation.color || "#64748b", 0.92));
-    boundary.userData = { isZoneBoundary: true, style: presentation.boundary || "solid" };
+    var boundaryStyle = normalizeMarkKey(presentation.boundary || presentation.lineStyle || zone.style || "solid");
+    var boundaryColor = presentation.color || zone.color || "#111827";
+    var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, 0.78, 0.16, 0.09) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.86));
+    boundary.userData = { isZoneBoundary: true, style: boundaryStyle };
     root.add(boundary);
     return { zone: zone, bounds: bounds, labelPoint: { x: bounds.x + 0.35, y: bounds.y + 0.35 }, plane: plane, boundary: boundary };
   }
@@ -4112,8 +4256,7 @@
       shell.labelLayer.appendChild(label);
       var anchor = new THREE.Vector3(world.x, size.h * 0.72 + 0.28, world.z);
       labels.push({ element: label, point: anchor, visible: true, type: "entity", priority: 0.84 + importanceValue(item, 0.45) * 0.32, id: item.id });
-      var leader = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(world.x, size.h * 0.34, world.z), anchor]), isometricLineMaterial(THREE, "#475569", 0.5));
-      leader.userData.isLeaderLine = true;
+      var leader = createVerticalDashedLeader(THREE, world.x, world.z, size.h * 0.38, anchor.y);
       leaderRoot.add(leader);
     });
 
@@ -4126,22 +4269,18 @@
       var edgeSpec = resolveEdgeSpec(link, markContext);
       edgeSpec.opacity = Math.max(edgeSpec.opacity || 0.68, 0.82);
       edgeSpec.lightBackground = true;
-      var endpoints = {
-        from: { position: from.world.clone().add(new THREE.Vector3(0, 0.22, 0)) },
-        to: { position: to.world.clone().add(new THREE.Vector3(0, 0.22, 0)) }
-      };
-      var route = Array.isArray(link.route) ? link.route : [];
-      var curve;
-      if (route.length && THREE.CatmullRomCurve3) {
-        var points = [endpoints.from.position].concat(route.map(function (point) {
-          var world = isometricWorld(point, scale, center);
-          return new THREE.Vector3(world.x, 0.52, world.z);
-        })).concat([endpoints.to.position]);
-        curve = new THREE.CatmullRomCurve3(points);
-      } else {
-        curve = edgeCurveFor(THREE, endpoints.from.position, endpoints.to.position, link, edgeSpec, index);
+      var presentation = link && link.presentation && typeof link.presentation === "object" ? link.presentation : {};
+      if (!presentation.color && !link.color) {
+        edgeSpec.color = "#111827";
       }
-      var tube = createEdgeTube(THREE, curve, edgeSpec, 0.026);
+      var pathPoints = isometricLinkPathPoints(link, from, to);
+      var curve;
+      if (pathPoints.length > 2 && THREE.CatmullRomCurve3) {
+        curve = new THREE.CatmullRomCurve3(pathPoints);
+      } else {
+        curve = edgeCurveFor(THREE, pathPoints[0], pathPoints[pathPoints.length - 1], link, Object.assign({}, edgeSpec, { curve: "straight", flow: false }), index);
+      }
+      var tube = createEdgeTube(THREE, curve, edgeSpec, 0.032);
       tube.userData.isDirectedArrow = !!edgeSpec.directed;
       linkRoot.add(tube);
       var arrow = createArrowHead(THREE, curve, edgeSpec);
@@ -4191,6 +4330,27 @@
     function project(point) {
       var projected = point.clone().project(camera);
       return { x: (projected.x * 0.5 + 0.5) * width, y: (-projected.y * 0.5 + 0.5) * height };
+    }
+
+    function isometricLinkGroundPoint(node) {
+      return node.world.clone().setY(0.07);
+    }
+
+    function isometricLinkPathPoints(link, from, to) {
+      var start = isometricLinkGroundPoint(from);
+      var end = isometricLinkGroundPoint(to);
+      var route = Array.isArray(link.route) ? link.route : [];
+      if (route.length) {
+        return [start].concat(route.map(function (point) {
+          var world = isometricWorld(point, scale, center);
+          return new THREE.Vector3(world.x, 0.07, world.z);
+        })).concat([end]);
+      }
+      var routeStyle = normalizeMarkKey(link.routeStyle || link.route_style || link.presentation && link.presentation.routeStyle || "");
+      if (routeStyle === "orthogonal" || routeStyle === "elbow" || Math.abs(start.x - end.x) > 0.5 && Math.abs(start.z - end.z) > 0.5) {
+        return [start, new THREE.Vector3(end.x, 0.07, start.z), end];
+      }
+      return [start, end];
     }
 
     function labelBudget(label) {

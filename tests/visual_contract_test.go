@@ -820,7 +820,7 @@ func TestVisualIsometricRuntimeAndInspectionContracts(t *testing.T) {
 	if strings.Contains(renderers, "studioShell") || strings.Contains(renderers, "renderStudio(") || strings.Contains(renderers, "studio-app") {
 		t.Fatalf("runtime renderers still contain legacy Studio renderer code")
 	}
-	for _, snippet := range []string{"function labelBudget", "function rectOverlaps", "function insideViewport", "data-low-priority", "visual-isometric-label-icon", "edgeSpec.lightBackground = true"} {
+	for _, snippet := range []string{"function labelBudget", "function rectOverlaps", "function insideViewport", "function createDashedPolyline", "function createVerticalDashedLeader", "function decorateIsometricEntity", "function isometricLinkPathPoints", "data-low-priority", "visual-isometric-label-icon", "edgeSpec.lightBackground = true", "THREE.NormalBlending", "THREE.DoubleSide"} {
 		if !strings.Contains(renderers, snippet) {
 			t.Fatalf("isometric runtime missing readability snippet %q", snippet)
 		}

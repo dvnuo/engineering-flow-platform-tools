@@ -28,6 +28,7 @@
 - visual inspect-input
 - visual inspect-plan
 - visual inspect-render
+- visual inspect-browser
 - visual render
 - visual inspect-output
 - visual commands
@@ -64,6 +65,10 @@ For `isometric_architecture_v1`, `inspect-plan` also returns `visual_plan.isomet
 ### Render Inspection
 
 `visual inspect-render --out <dir> --json` reads a generated artifact, validates required files and offline safety, loads `manifest.json` and `data.js`, rebuilds the normalized visual plan, and returns `ready`, `render_score`, `checks`, `warnings`, `visual_plan`, and `next_actions`. Checks include `shape_diversity`, `arrows_visible`, `color_diversity`, `legend_present`, `icon_assets_present`, and `attributions_present` in addition to output, offline, runtime, plan, label, relationship, architecture isometric, artifact hook, and screenshot checks. Architecture checks include `isometric_renderer_used`, `base_plane_present`, `grid_present`, `zones_present`, `zone_boundaries_present`, `entities_present`, `entity_labels_present`, `leader_lines_present`, `directed_arrows_present`, `link_labels_present`, `orthographic_camera_planned`, `architecture_light_theme`, `no_starfield_theme`, and `no_studio_layout`. Artifact hook checks include `artifact_runtime_wired`, `artifact_isometric_runtime_hook`, `artifact_isometric_dom_hooks`, `artifact_entity_label_hooks`, `artifact_link_label_hooks`, `artifact_zone_label_hooks`, `artifact_base_plane_hook`, `artifact_grid_hook`, `artifact_leader_line_hook`, `artifact_arrow_hook`, `artifact_no_studio_runtime`, and `artifact_no_starfield_runtime`; these inspect generated `index.html`, runtime JS/CSS, `manifest.js`, and `data.js` instead of trusting only the plan. Add `--screenshot <png|jpg|gif>` when a browser screenshot is available; the command then also checks blankness, contrast, and visible content coverage with standard-library image decoding.
+
+`visual inspect-browser --out <dir> --json` opens a rendered artifact through a temporary local HTTP server and captures browser evidence. It serves `<dir>/index.html` at `http://127.0.0.1:<port>/index.html`, launches local Chrome/Chromium through a Node.js CDP helper, waits for runtime data and renderer DOM hooks, writes `--screenshot` or `<dir>/visual-screenshot.png`, and then reuses `inspect-render --screenshot`. The response includes `server_url`, `screenshot_path`, `browser_ready`, `render_ready`, `render_score`, `visual_checks`, `dom`, `requests`, `warnings`, and `ready`. Checks include page/runtime load, renderer mount, screenshot write, console/network/remote request absence, isometric stage and label layer presence, entity/link/zone label hooks, label icons, model badges, SVG billboards, control bar, canvas visibility, screenshot nonblank/contrast, and expected label count.
+
+`inspect-browser` does not use `file://`, does not make remote requests, and does not perform OCR or logo semantic recognition. It requires Chrome/Chromium and Node.js. Missing runtime returns `browser_runtime_missing`; smoke scripts may set `EFP_SKIP_BROWSER_SMOKE=1` only when that browser runtime is intentionally unavailable.
 
 ### Render Artifact Output
 

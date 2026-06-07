@@ -4057,11 +4057,14 @@
     container.textContent = "";
     var app = el("div", "visual-isometric-app");
     app.setAttribute("data-isometric-renderer", "true");
+    app.setAttribute("data-visual-template", "architecture.isometric_overview");
+    app.setAttribute("data-visual-renderer", "offline.architecture.isometric.v1");
     app.setAttribute("data-architecture-light", "true");
     var header = el("header", "visual-isometric-header");
     header.appendChild(el("h1", "visual-isometric-title", data.title || manifest.title || "Isometric Architecture"));
     header.appendChild(el("div", "visual-isometric-subtitle", data.subtitle || data.goal || "Offline Three.js architecture overview"));
     var controls = el("div", "visual-isometric-toolbar");
+    controls.classList.add("visual-isometric-control-bar");
     var body = el("main", "visual-isometric-body");
     var stage = el("section", "visual-isometric-stage");
     stage.setAttribute("role", "application");
@@ -4395,6 +4398,7 @@
       var pos = isometricWorld(info.labelPoint, scale, center);
       var label = labelHTML("visual-isometric-zone-label", itemLabel(zone) || zone.id);
       label.setAttribute("data-zone-label", zone.id || "");
+      label.setAttribute("data-zone-id", zone.id || "");
       shell.labelLayer.appendChild(label);
       labels.push({ element: label, point: new THREE.Vector3(pos.x, 0.16, pos.z), visible: true, type: "zone", priority: 0.56 });
     });
@@ -4410,9 +4414,18 @@
       object.scale.setScalar(1 + Math.min(0.35, importanceValue(item, 0.45) * 0.18));
       entityRoot.add(object);
       entityByID[item.id] = { object: object, item: item, pos: pos, world: new THREE.Vector3(world.x, size.h * 0.22, world.z), size: size };
-      var label = labelHTML("visual-isometric-label", itemLabel(item) || item.id);
+      var settings = badgeSettings(markContext);
+      var label = labelHTML("visual-isometric-label visual-isometric-entity-label", itemLabel(item) || item.id);
       label.setAttribute("data-entity-label", item.id || "");
-      var inlineIcon = badgeSettings(markContext).labelIcon ? createInlineIcon(spec, markContext, "visual-isometric-label-icon") : null;
+      label.setAttribute("data-entity-id", item.id || "");
+      label.setAttribute("data-entity-kind", item.kind || "");
+      label.setAttribute("data-icon-id", spec.icon || "");
+      label.setAttribute("data-model-id", spec.model || "");
+      label.setAttribute("data-badge-mode", settings.mode);
+      label.setAttribute("data-has-label-icon", iconPathFor(spec, markContext) && settings.labelIcon ? "true" : "false");
+      label.setAttribute("data-has-model-badge", modelPathFor(spec, markContext) && settings.mode !== "none" && settings.mode !== "icon" ? "true" : "false");
+      label.setAttribute("data-has-svg-billboard", iconPathFor(spec, markContext) && settings.mode !== "none" && settings.mode !== "model" ? "true" : "false");
+      var inlineIcon = settings.labelIcon ? createInlineIcon(spec, markContext, "visual-isometric-label-icon") : null;
       if (inlineIcon) {
         label.textContent = "";
         label.appendChild(inlineIcon);
@@ -4458,6 +4471,7 @@
         var mid = curve.getPoint(0.52);
         var label = labelHTML("visual-isometric-link-label", link.label);
         label.setAttribute("data-link-label", link.id || "");
+        label.setAttribute("data-link-id", link.id || "");
         if (importanceValue(link, 0.35) < 0.74) {
           label.setAttribute("data-low-priority", "true");
         }

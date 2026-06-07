@@ -79,6 +79,7 @@ visual inspect-input --template uml.sequence_3d --template-dir ./templates/visua
 visual inspect-plan --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --json
 visual render --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --title "Checkout Sequence" --json
 visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json
+visual inspect-browser --template-dir ./templates/visual --out ./out/sequence --json
 ```
 
 Agents must read `visual template schema <id> --json` before writing input JSON. Do not invent JSON shape. Do not infer templates from directories.
@@ -146,6 +147,18 @@ Use `inspect-plan` after fixing `inspect-input` warnings and before `visual rend
 
 `visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, shape diversity, visible arrows, color diversity, legend presence, local icon/model assets, attributions, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read. For `architecture.isometric_overview`, it also inspects generated artifact hooks in `index.html`, runtime JS/CSS, `manifest.js`, and `data.js`: runtime wiring, isometric renderer registration, label-layer hooks, entity/link/zone label hooks, base-plane/grid/leader-line/arrow hooks, generated model badge hooks, local asset registry/icons/models, remote asset URL absence, and absence of Studio/starfield hooks in the isometric path. If a screenshot is available, pass `--screenshot <png|jpg|gif>` to add blankness, contrast, and visible coverage checks.
 
+`visual inspect-browser` is the browser-level smoke step for rendered artifacts. It serves `--out` through a temporary `http://127.0.0.1:<port>/index.html` server, launches local Chrome/Chromium headlessly, waits for the runtime data and renderer DOM hooks, writes a screenshot to `--screenshot` or `<out>/visual-screenshot.png`, and then reuses `inspect-render --screenshot` checks. It does not use `file://`, does not contact remote URLs, and does not require npm packages. The checks are deliberately mechanical: DOM hooks for labels/icons/model badges/control bars, local request safety, console/network errors, and screenshot nonblank/contrast/coverage. It is not OCR and does not judge whether a vendor logo is semantically recognizable.
+
+Example for the architecture badge gallery:
+
+```bash
+visual render --template architecture.isometric_overview --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/asset-gallery.input.json --out ./out/isometric-asset-gallery --json
+visual inspect-browser --template-dir ./templates/visual --out ./out/isometric-asset-gallery --screenshot ./out/isometric-asset-gallery/screenshot.png --json
+visual inspect-render --template-dir ./templates/visual --out ./out/isometric-asset-gallery --screenshot ./out/isometric-asset-gallery/screenshot.png --json
+```
+
+`inspect-browser` requires a Chrome or Chromium executable and Node.js. It returns `browser_runtime_missing` when either runtime is unavailable; CI smoke may set `EFP_SKIP_BROWSER_SMOKE=1` only when browser smoke is intentionally skipped.
+
 ## Render Output Contract
 
 Successful render output includes:
@@ -204,6 +217,7 @@ visual validate --template uml.sequence_3d --template-dir ./templates/visual --i
 visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json
 visual inspect-plan --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --json
 visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json
+visual inspect-browser --template-dir ./templates/visual --out ./out/sequence --json
 visual template doctor --template-dir ./templates/visual --json
 visual inspect-output --out ./out/sequence --json
 ```

@@ -42,7 +42,8 @@
 - Then run `visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json` and use `data.visual_plan.ir`, `data.visual_plan.view`, `data.visual_plan.marks`, `data.visual_plan.edges`, `data.visual_plan.colors`, `data.visual_plan.assets`, `data.visual_plan.disclosure`, and `data.visual_plan.quality_loop` to confirm the first view is explainable before render.
 - Validate with `visual validate --template <template-id> --input <input.json> --json`, using `--template-dir` only when the catalog is not installed at `~/.efp/template/visual`.
 - Render to a new output directory with `visual render --template <template-id> --input <input.json> --out <dir> --json`.
-- Return `data.artifact.entrypoint` to the user.
+- Run `visual inspect-render --out <dir> --json` after render. For browser-level evidence, run `visual inspect-browser --out <dir> --json`; it serves the artifact through local `127.0.0.1`, writes a screenshot, and reuses `inspect-render --screenshot`.
+- Return `data.artifact.entrypoint` to the user only after inspection passes, or return the warnings and screenshot path for review.
 - Visual effects are template-declared. Do not override them with generated JavaScript; choose the right template and provide better input data.
 - Do not use remote assets, CDN URLs, runtime Node/npm, generated JavaScript, or network APIs.
 - Use `--dry-run` to preview planned files before writing.
@@ -215,7 +216,8 @@ For visual generation, use this loop:
 8. `visual inspect-plan --template <template-id> --input <input.json> --out <dir> --json`
 9. Revise JSON using warning `suggestion`, `auto_fix_hint`, `visual_plan.marks`, `visual_plan.edges`, `visual_plan.colors`, `visual_plan.assets`, and `visual_plan.quality_loop`.
 10. `visual render --template <template-id> --input <input.json> --out <dir> --json`
-11. `visual inspect-render --out <dir> --json`, optionally adding `--screenshot <png|jpg|gif>` after a browser screenshot is captured. For isometric architecture, require the artifact hook checks such as `artifact_isometric_dom_hooks`, `artifact_entity_label_hooks`, `artifact_grid_hook`, and `artifact_arrow_hook` to pass.
-12. Return `data.artifact.entrypoint` to the user only when `inspect-render` reports `ready=true`, or return the warnings with the artifact if the user wants to review a draft.
+11. `visual inspect-render --out <dir> --json`. For isometric architecture or visual-quality work, also run `visual inspect-browser --out <dir> --json` to generate a local HTTP browser screenshot and DOM hook report.
+12. If `inspect-browser` wrote a screenshot, rerun or verify `visual inspect-render --out <dir> --screenshot <png|jpg|gif> --json`. For isometric architecture, require the artifact hook checks such as `artifact_isometric_dom_hooks`, `artifact_entity_label_hooks`, `artifact_grid_hook`, and `artifact_arrow_hook` to pass.
+13. Return `data.artifact.entrypoint` to the user only when inspections report `ready=true`, or return the warnings and screenshot path with the artifact if the user wants to review a draft.
 
 Never write input JSON before reading the selected template guide. The guide is where template-specific construction rules live.

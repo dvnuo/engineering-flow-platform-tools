@@ -32,6 +32,8 @@
 - Then run `visual inspect-plan --template <template-id> --input <input.json> --out <workspace-output-dir> --json` and use `visual_plan.ir`, `visual_plan.view`, `visual_plan.marks`, `visual_plan.edges`, `visual_plan.colors`, `visual_plan.assets`, `visual_plan.disclosure`, and `visual_plan.quality_loop` to confirm the first view is explainable.
 - If `inspect-plan` returns `ready=false`, revise input JSON before rendering.
 - Render with `visual render --template <template-id> --input <input.json> --out <workspace-output-dir> --json`.
-- Then run `visual inspect-render --out <workspace-output-dir> --json`; if a screenshot is available, add `--screenshot <png|jpg|gif>`. If it returns `ready=false`, revise input JSON using the warnings and render again.
+- Then run `visual inspect-render --out <workspace-output-dir> --json`; if a screenshot is available, add `--screenshot <png|jpg|gif>`. For browser-level visual evidence, run `visual inspect-browser --out <workspace-output-dir> --json`; it serves the artifact through local HTTP, captures a screenshot, and reuses `inspect-render --screenshot`.
+- Do not use `file://` for automated visual smoke. `inspect-browser` must use `http://127.0.0.1:<port>/index.html` and should report `browser_runtime_missing` if Chrome/Chromium or Node.js is unavailable.
+- If `inspect-render` or `inspect-browser` returns `ready=false`, revise input JSON or renderer assets using the warnings and render again.
 - Return the generated `index.html` path from `data.artifact.entrypoint`.
 - Outputs are offline static artifacts and Portal proxy safe through relative paths.

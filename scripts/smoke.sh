@@ -23,6 +23,7 @@ go run ./cmd/visual schema render --json >/dev/null
 go run ./cmd/visual schema inspect-input --json >/dev/null
 go run ./cmd/visual schema inspect-plan --json >/dev/null
 go run ./cmd/visual schema inspect-render --json >/dev/null
+go run ./cmd/visual schema inspect-browser --json >/dev/null
 go run ./cmd/inspect-image help llm >/dev/null
 go run ./cmd/inspect-image models --json >/dev/null
 go run ./cmd/inspect-image auth status --json >/dev/null
@@ -60,3 +61,24 @@ for template in "${templates[@]}"; do
   test -f "$out/index.html"
   go run ./cmd/visual inspect-render --template-dir ./templates/visual --out "$out" --json >/dev/null
 done
+
+gallery="$tmp/isometric-asset-gallery"
+go run ./cmd/visual render \
+  --template architecture.isometric_overview \
+  --template-dir ./templates/visual \
+  --input ./templates/visual/architecture.isometric_overview/examples/asset-gallery.input.json \
+  --out "$gallery" \
+  --json >/dev/null
+if [[ "${EFP_SKIP_BROWSER_SMOKE:-}" != "1" ]]; then
+  go run ./cmd/visual inspect-browser \
+    --template-dir ./templates/visual \
+    --out "$gallery" \
+    --screenshot "$gallery/screenshot.png" \
+    --timeout 90 \
+    --json >/dev/null
+  go run ./cmd/visual inspect-render \
+    --template-dir ./templates/visual \
+    --out "$gallery" \
+    --screenshot "$gallery/screenshot.png" \
+    --json >/dev/null
+fi

@@ -163,7 +163,7 @@ func TestVisualCommandsJSONContract(t *testing.T) {
 		m := objectMap(t, item)
 		names[m["name"].(string)] = true
 	}
-	for _, name := range []string{"render", "inspect-input", "inspect-plan", "inspect-render", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.guide", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
+	for _, name := range []string{"render", "inspect-input", "inspect-plan", "inspect-render", "inspect-browser", "validate", "template.categories", "template.list", "template.get", "template.schema", "template.guide", "template.doctor", "inspect-output", "schema", "help.llm", "version"} {
 		if !names[name] {
 			t.Fatalf("missing visual command %s in %#v", name, names)
 		}
@@ -771,6 +771,67 @@ func TestVisualInspectRenderContract(t *testing.T) {
 		if !codes[code] {
 			t.Fatalf("bad inspect-render missing warning %s in %#v", code, codes)
 		}
+	}
+}
+
+func TestVisualInspectBrowserContract(t *testing.T) {
+	browserPath := findTestBrowser()
+	if browserPath == "" {
+		t.Skip("Chrome/Chromium not available for browser smoke")
+	}
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+
+	cmdSchema := runVisualOK(t, "schema", "inspect-browser", "--json")
+	cmdData := objectMap(t, cmdSchema["data"])
+	if cmdData["command"] != "inspect-browser" {
+		t.Fatalf("inspect-browser command schema missing: %#v", cmdData)
+	}
+	required := stringSetFromAny(cmdData["required"].([]any))
+	if !required["out"] {
+		t.Fatalf("inspect-browser schema missing required out: %#v", cmdData)
+	}
+	flags := map[string]map[string]any{}
+	for _, item := range cmdData["flags"].([]any) {
+		flag := objectMap(t, item)
+		flags[flag["name"].(string)] = flag
+	}
+	for _, flag := range []string{"screenshot", "browser", "timeout", "template-dir"} {
+		if flags[flag] == nil {
+			t.Fatalf("inspect-browser schema missing flag %s: %#v", flag, flags)
+		}
+	}
+
+	out := filepath.Join(t.TempDir(), "isometric-asset-gallery")
+	input := filepath.Join(templateDir, "architecture.isometric_overview", "examples", "asset-gallery.input.json")
+	runVisualOK(t, "render", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
+	screenshot := filepath.Join(out, "screenshot.png")
+	inspected := runVisualOK(t, "inspect-browser", "--template-dir", templateDir, "--out", out, "--screenshot", screenshot, "--browser", browserPath, "--timeout", "60", "--json")
+	data := objectMap(t, inspected["data"])
+	if data["ready"] != true || data["browser_ready"] != true || data["render_ready"] != true || data["render_score"].(float64) < 90 {
+		t.Fatalf("inspect-browser asset gallery should be ready: %#v", data)
+	}
+	if !strings.HasPrefix(data["server_url"].(string), "http://127.0.0.1:") {
+		t.Fatalf("inspect-browser must use local HTTP server, got %s", data["server_url"])
+	}
+	info, err := os.Stat(screenshot)
+	if err != nil || info.Size() == 0 {
+		t.Fatalf("inspect-browser did not write screenshot %s", screenshot)
+	}
+	checks := objectMap(t, data["visual_checks"])
+	for _, field := range []string{"page_loaded", "runtime_data_loaded", "renderer_mounted", "screenshot_written", "no_console_errors", "no_network_errors", "no_remote_requests", "isometric_stage_present", "label_layer_present", "entity_labels_present", "link_labels_present", "zone_labels_present", "label_icons_present", "model_badges_resolved", "svg_billboards_resolved", "no_fallback_badges_in_good_example", "controls_present", "canvas_visible", "screenshot_non_blank", "screenshot_has_enough_contrast", "screenshot_has_expected_label_count"} {
+		if checks[field] != true {
+			t.Fatalf("inspect-browser check %s failed: %#v", field, checks)
+		}
+	}
+	dom := objectMap(t, data["dom"])
+	if dom["entity_labels"].(float64) < 14 || dom["label_icons"].(float64) < 14 || dom["model_badges"].(float64) < 14 || dom["svg_billboards"].(float64) < 14 || dom["fallback_badges"].(float64) != 0 {
+		t.Fatalf("inspect-browser DOM summary missing gallery badge hooks: %#v", dom)
+	}
+	rendered := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", out, "--screenshot", screenshot, "--json")
+	renderedData := objectMap(t, rendered["data"])
+	if renderedData["ready"] != true {
+		t.Fatalf("inspect-render should accept browser screenshot: %#v", renderedData)
 	}
 }
 
@@ -1851,6 +1912,35 @@ func stringSetFromAny(items []any) map[string]bool {
 func anyArrayLen(value any) int {
 	items, _ := value.([]any)
 	return len(items)
+}
+
+func findTestBrowser() string {
+	if env := strings.TrimSpace(os.Getenv("EFP_BROWSER")); env != "" {
+		if info, err := os.Stat(env); err == nil && !info.IsDir() {
+			return env
+		}
+	}
+	for _, name := range []string{"google-chrome", "chromium", "chromium-browser", "chrome", "microsoft-edge", "msedge"} {
+		if path, err := exec.LookPath(name); err == nil {
+			return path
+		}
+	}
+	for _, path := range []string{
+		"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+		"/Applications/Chromium.app/Contents/MacOS/Chromium",
+		"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+		filepath.Join(os.Getenv("ProgramFiles"), "Google", "Chrome", "Application", "chrome.exe"),
+		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Google", "Chrome", "Application", "chrome.exe"),
+		filepath.Join(os.Getenv("ProgramFiles"), "Microsoft", "Edge", "Application", "msedge.exe"),
+	} {
+		if path == "" {
+			continue
+		}
+		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			return path
+		}
+	}
+	return ""
 }
 
 func writeSolidPNG(t *testing.T, path string, width, height int, fill color.Color) {

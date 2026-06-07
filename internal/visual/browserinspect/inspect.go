@@ -1,0 +1,564 @@
+package browserinspect
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
+	"engineering-flow-platform-tools/internal/visual/metadata"
+	"engineering-flow-platform-tools/internal/visual/preview"
+	"engineering-flow-platform-tools/internal/visual/renderinspect"
+)
+
+type Options struct {
+	TemplateDir    string
+	OutDir         string
+	Screenshot     string
+	OfflineStrict  bool
+	TimeoutSeconds int
+	BrowserPath    string
+}
+
+type Result struct {
+	OutDir         string            `json:"out_dir"`
+	ServerURL      string            `json:"server_url"`
+	ScreenshotPath string            `json:"screenshot_path"`
+	Browser        string            `json:"browser"`
+	BrowserReady   bool              `json:"browser_ready"`
+	Ready          bool              `json:"ready"`
+	RenderReady    bool              `json:"render_ready"`
+	RenderScore    int               `json:"render_score"`
+	VisualChecks   Checks            `json:"visual_checks"`
+	Warnings       []preview.Warning `json:"warnings"`
+	DOM            DOMSummary        `json:"dom"`
+	Requests       []string          `json:"requests"`
+}
+
+type Checks struct {
+	PageLoaded                      bool `json:"page_loaded"`
+	RuntimeDataLoaded               bool `json:"runtime_data_loaded"`
+	RendererMounted                 bool `json:"renderer_mounted"`
+	ScreenshotWritten               bool `json:"screenshot_written"`
+	NoConsoleErrors                 bool `json:"no_console_errors"`
+	NoNetworkErrors                 bool `json:"no_network_errors"`
+	NoRemoteRequests                bool `json:"no_remote_requests"`
+	IsometricStagePresent           bool `json:"isometric_stage_present"`
+	LabelLayerPresent               bool `json:"label_layer_present"`
+	EntityLabelsPresent             bool `json:"entity_labels_present"`
+	LinkLabelsPresent               bool `json:"link_labels_present"`
+	ZoneLabelsPresent               bool `json:"zone_labels_present"`
+	LabelIconsPresent               bool `json:"label_icons_present"`
+	ModelBadgesResolved             bool `json:"model_badges_resolved"`
+	SvgBillboardsResolved           bool `json:"svg_billboards_resolved"`
+	NoFallbackBadgesInGoodExample   bool `json:"no_fallback_badges_in_good_example"`
+	ControlsPresent                 bool `json:"controls_present"`
+	CanvasVisible                   bool `json:"canvas_visible"`
+	ScreenshotNonBlank              bool `json:"screenshot_non_blank"`
+	ScreenshotHasEnoughContrast     bool `json:"screenshot_has_enough_contrast"`
+	ScreenshotHasExpectedLabelCount bool `json:"screenshot_has_expected_label_count"`
+}
+
+type DOMSummary struct {
+	Title                string `json:"title,omitempty"`
+	Template             string `json:"template,omitempty"`
+	Renderer             string `json:"renderer,omitempty"`
+	EntityLabels         int    `json:"entity_labels"`
+	LinkLabels           int    `json:"link_labels"`
+	ZoneLabels           int    `json:"zone_labels"`
+	LabelIcons           int    `json:"label_icons"`
+	ModelBadges          int    `json:"model_badges"`
+	SvgBillboards        int    `json:"svg_billboards"`
+	FallbackBadges       int    `json:"fallback_badges"`
+	Controls             int    `json:"controls"`
+	Canvas               int    `json:"canvas"`
+	RuntimeDataRequested bool   `json:"runtime_data_requested"`
+}
+
+func Inspect(opts Options) (Result, error) {
+	if strings.TrimSpace(opts.OutDir) == "" {
+		return Result{}, metadata.NewError("output_path_invalid", "visual inspect-browser requires --out.", "Pass the visual artifact output directory produced by visual render.", 400)
+	}
+	outDir, err := filepath.Abs(opts.OutDir)
+	if err != nil {
+		return Result{}, metadata.NewError("output_path_invalid", "visual output directory could not be resolved: "+err.Error(), "Pass a valid --out directory.", 400)
+	}
+	if info, err := os.Stat(outDir); err != nil || !info.IsDir() {
+		return Result{}, metadata.NewError("output_path_invalid", "visual output directory does not exist.", "Run visual render before inspect-browser.", 404)
+	}
+	if _, err := os.Stat(filepath.Join(outDir, "index.html")); err != nil {
+		return Result{}, metadata.NewError("visual_output_invalid", "visual output directory is missing index.html.", "Run visual render again before inspect-browser.", 400)
+	}
+	screenshot := strings.TrimSpace(opts.Screenshot)
+	if screenshot == "" {
+		screenshot = filepath.Join(outDir, "visual-screenshot.png")
+	} else if !filepath.IsAbs(screenshot) {
+		resolved, err := filepath.Abs(screenshot)
+		if err != nil {
+			return Result{}, metadata.NewError("screenshot_path_invalid", "screenshot path could not be resolved: "+err.Error(), "Pass a writable --screenshot path.", 400)
+		}
+		screenshot = resolved
+	}
+	if err := os.MkdirAll(filepath.Dir(screenshot), 0o755); err != nil {
+		return Result{}, metadata.NewError("screenshot_path_invalid", "screenshot directory could not be created: "+err.Error(), "Pass --screenshot inside the visual output directory.", 400)
+	}
+
+	browserPath, err := findBrowser(opts.BrowserPath)
+	if err != nil {
+		return Result{}, err
+	}
+
+	server, err := startServer(outDir)
+	if err != nil {
+		return Result{}, err
+	}
+	defer server.Close()
+
+	timeout := time.Duration(opts.TimeoutSeconds) * time.Second
+	if timeout <= 0 {
+		timeout = 90 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	url := server.URL + "/index.html"
+	if err := os.Remove(screenshot); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return Result{}, metadata.NewError("screenshot_path_invalid", "existing screenshot could not be replaced: "+err.Error(), "Choose a writable screenshot path.", 400)
+	}
+	requests := server.Requests()
+	nodeResult, err := runBrowserSmoke(ctx, browserPath, url, screenshot, opts.TimeoutSeconds)
+	if err != nil {
+		return Result{}, err
+	}
+	requests = mergeRequests(requests, nodeResult.Data.Requests)
+	domSummary := DOMSummary{
+		Title:                nodeResult.Data.Summary.Title,
+		Template:             nodeResult.Data.Summary.Template,
+		Renderer:             nodeResult.Data.Summary.Renderer,
+		EntityLabels:         nodeResult.Data.Summary.EntityLabels,
+		LinkLabels:           nodeResult.Data.Summary.LinkLabels,
+		ZoneLabels:           nodeResult.Data.Summary.ZoneLabels,
+		LabelIcons:           nodeResult.Data.Summary.LabelIcons,
+		ModelBadges:          nodeResult.Data.Summary.ModelBadges,
+		SvgBillboards:        nodeResult.Data.Summary.SvgBillboards,
+		FallbackBadges:       nodeResult.Data.Summary.FallbackBadges,
+		Controls:             nodeResult.Data.Summary.Controls,
+		Canvas:               nodeResult.Data.Summary.Canvas,
+		RuntimeDataRequested: hasRequest(requests, "/data.js") && hasRequest(requests, "/manifest.js"),
+	}
+	renderResult, renderWarnings := inspectRenderedScreenshot(opts, outDir, screenshot)
+	checks := buildChecks(domSummary, requests, screenshot, nodeResult, renderResult)
+	warnings := append(renderWarnings, warningsForChecks(checks, domSummary)...)
+	sortWarnings(warnings)
+	ready := checks.AllOK() && renderResult != nil && renderResult.Ready && !hasErrorWarnings(warnings)
+	return Result{
+		OutDir:         outDir,
+		ServerURL:      url,
+		ScreenshotPath: screenshot,
+		Browser:        browserPath,
+		BrowserReady:   checks.PageLoaded && checks.RendererMounted,
+		Ready:          ready,
+		RenderReady:    renderResult != nil && renderResult.Ready,
+		RenderScore:    renderScore(renderResult),
+		VisualChecks:   checks,
+		Warnings:       warnings,
+		DOM:            domSummary,
+		Requests:       requests,
+	}, nil
+}
+
+type browserSmokeOutput struct {
+	OK   bool `json:"ok"`
+	Data struct {
+		Summary        browserDOMSummary `json:"summary"`
+		Requests       []string          `json:"requests"`
+		RemoteRequests []string          `json:"remote_requests"`
+		ConsoleErrors  []string          `json:"console_errors"`
+		NetworkErrors  []string          `json:"network_errors"`
+		Screenshot     string            `json:"screenshot"`
+	} `json:"data"`
+	Error struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+		Hint    string `json:"hint"`
+	} `json:"error"`
+}
+
+type browserDOMSummary struct {
+	Title          string `json:"title"`
+	Template       string `json:"template"`
+	Renderer       string `json:"renderer"`
+	IsometricReady bool   `json:"isometricReady"`
+	Stage          bool   `json:"stage"`
+	LabelLayer     bool   `json:"labelLayer"`
+	EntityLabels   int    `json:"entityLabels"`
+	LinkLabels     int    `json:"linkLabels"`
+	ZoneLabels     int    `json:"zoneLabels"`
+	LabelIcons     int    `json:"labelIcons"`
+	ModelBadges    int    `json:"modelBadges"`
+	SvgBillboards  int    `json:"svgBillboards"`
+	FallbackBadges int    `json:"fallbackBadges"`
+	Controls       int    `json:"controls"`
+	ControlBar     bool   `json:"controlBar"`
+	Canvas         int    `json:"canvas"`
+	Ready          bool   `json:"ready"`
+}
+
+func (c Checks) AllOK() bool {
+	return c.PageLoaded &&
+		c.RuntimeDataLoaded &&
+		c.RendererMounted &&
+		c.ScreenshotWritten &&
+		c.NoConsoleErrors &&
+		c.NoNetworkErrors &&
+		c.NoRemoteRequests &&
+		c.IsometricStagePresent &&
+		c.LabelLayerPresent &&
+		c.EntityLabelsPresent &&
+		c.LinkLabelsPresent &&
+		c.ZoneLabelsPresent &&
+		c.LabelIconsPresent &&
+		c.ModelBadgesResolved &&
+		c.SvgBillboardsResolved &&
+		c.NoFallbackBadgesInGoodExample &&
+		c.ControlsPresent &&
+		c.CanvasVisible &&
+		c.ScreenshotNonBlank &&
+		c.ScreenshotHasEnoughContrast &&
+		c.ScreenshotHasExpectedLabelCount
+}
+
+type localServer struct {
+	server   *http.Server
+	listener net.Listener
+	mu       sync.Mutex
+	requests []string
+	URL      string
+}
+
+func startServer(outDir string) (*localServer, error) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return nil, metadata.NewError("browser_server_failed", "local visual preview server could not start: "+err.Error(), "Check that local loopback networking is available.", 500)
+	}
+	s := &localServer{listener: ln, URL: "http://" + ln.Addr().String()}
+	files := http.FileServer(http.Dir(outDir))
+	s.server = &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			s.mu.Lock()
+			s.requests = append(s.requests, r.URL.Path)
+			s.mu.Unlock()
+			w.Header().Set("Cache-Control", "no-store")
+			if r.URL.Path == "/favicon.ico" {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			files.ServeHTTP(w, r)
+		}),
+	}
+	go func() {
+		_ = s.server.Serve(ln)
+	}()
+	return s, nil
+}
+
+func (s *localServer) Close() {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_ = s.server.Shutdown(ctx)
+}
+
+func (s *localServer) Requests() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := append([]string(nil), s.requests...)
+	sort.Strings(out)
+	return out
+}
+
+func findBrowser(explicit string) (string, error) {
+	candidates := []string{}
+	if strings.TrimSpace(explicit) != "" {
+		candidates = append(candidates, explicit)
+	}
+	if env := strings.TrimSpace(os.Getenv("EFP_BROWSER")); env != "" {
+		candidates = append(candidates, env)
+	}
+	candidates = append(candidates, "google-chrome", "chromium", "chromium-browser", "chrome", "microsoft-edge", "msedge")
+	if runtime.GOOS == "darwin" {
+		candidates = append(candidates,
+			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+			"/Applications/Chromium.app/Contents/MacOS/Chromium",
+			"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+		)
+	}
+	if runtime.GOOS == "windows" {
+		candidates = append(candidates,
+			filepath.Join(os.Getenv("ProgramFiles"), "Google", "Chrome", "Application", "chrome.exe"),
+			filepath.Join(os.Getenv("ProgramFiles(x86)"), "Google", "Chrome", "Application", "chrome.exe"),
+			filepath.Join(os.Getenv("ProgramFiles"), "Microsoft", "Edge", "Application", "msedge.exe"),
+		)
+	}
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" {
+			continue
+		}
+		if filepath.IsAbs(candidate) {
+			if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+				return candidate, nil
+			}
+			continue
+		}
+		if path, err := exec.LookPath(candidate); err == nil {
+			return path, nil
+		}
+	}
+	return "", metadata.NewError("browser_runtime_missing", "Chrome or Chromium was not found for visual inspect-browser.", "Install Chrome/Chromium, set EFP_BROWSER, or pass --browser <path>. In CI, set EFP_SKIP_BROWSER_SMOKE=1 only when browser smoke is intentionally unavailable.", 501)
+}
+
+func runBrowserSmoke(ctx context.Context, browserPath, url, screenshot string, timeoutSeconds int) (browserSmokeOutput, error) {
+	nodePath, err := findNode()
+	if err != nil {
+		return browserSmokeOutput{}, err
+	}
+	scriptPath, err := findBrowserSmokeScript()
+	if err != nil {
+		return browserSmokeOutput{}, err
+	}
+	if timeoutSeconds <= 0 {
+		timeoutSeconds = 90
+	}
+	cmd := exec.CommandContext(ctx, nodePath, scriptPath,
+		"--url", url,
+		"--browser", browserPath,
+		"--screenshot", screenshot,
+		"--timeout", fmt.Sprintf("%d", timeoutSeconds),
+	)
+	out, err := cmd.CombinedOutput()
+	var parsed browserSmokeOutput
+	if jsonErr := json.Unmarshal(out, &parsed); jsonErr != nil {
+		if err != nil {
+			return browserSmokeOutput{}, metadata.NewError("browser_page_not_ready", "browser smoke helper failed: "+err.Error(), "Run scripts/visual/browser_smoke.mjs directly for diagnostics.", 500)
+		}
+		return browserSmokeOutput{}, metadata.NewError("browser_page_not_ready", "browser smoke helper returned invalid JSON.", "Inspect scripts/visual/browser_smoke.mjs output.", 500)
+	}
+	if err != nil || !parsed.OK {
+		code := parsed.Error.Code
+		if code == "" {
+			code = "browser_page_not_ready"
+		}
+		message := parsed.Error.Message
+		if message == "" && err != nil {
+			message = err.Error()
+		}
+		if message == "" {
+			message = "browser smoke helper failed."
+		}
+		hint := parsed.Error.Hint
+		if hint == "" {
+			hint = "Ensure Chrome/Chromium can run headless and the rendered output is valid."
+		}
+		return browserSmokeOutput{}, metadata.NewError(code, message, hint, 500)
+	}
+	return parsed, nil
+}
+
+func findNode() (string, error) {
+	if env := strings.TrimSpace(os.Getenv("EFP_NODE")); env != "" {
+		if info, err := os.Stat(env); err == nil && !info.IsDir() {
+			return env, nil
+		}
+	}
+	if path, err := exec.LookPath("node"); err == nil {
+		return path, nil
+	}
+	return "", metadata.NewError("browser_runtime_missing", "Node.js was not found for visual inspect-browser.", "Install Node.js or set EFP_NODE to a Node executable. No npm dependencies are required.", 501)
+}
+
+func findBrowserSmokeScript() (string, error) {
+	candidates := []string{}
+	if cwd, err := os.Getwd(); err == nil {
+		for dir := cwd; ; dir = filepath.Dir(dir) {
+			candidates = append(candidates, filepath.Join(dir, "scripts", "visual", "browser_smoke.mjs"))
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+		}
+	}
+	for _, candidate := range candidates {
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate, nil
+		}
+	}
+	return "", metadata.NewError("browser_runtime_missing", "visual browser smoke helper script was not found.", "Run inspect-browser from the repository checkout or include scripts/visual/browser_smoke.mjs with the CLI distribution.", 501)
+}
+
+func mergeRequests(local, browser []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, list := range [][]string{local, browser} {
+		for _, item := range list {
+			if item == "" || seen[item] {
+				continue
+			}
+			seen[item] = true
+			out = append(out, item)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func buildChecks(summary DOMSummary, requests []string, screenshotPath string, nodeResult browserSmokeOutput, renderResult *renderinspect.Result) Checks {
+	info, statErr := os.Stat(screenshotPath)
+	renderChecks := renderinspect.Checks{}
+	if renderResult != nil {
+		renderChecks = renderResult.Checks
+	}
+	labelThreshold := 1
+	if strings.Contains(summary.Title, "Local Logo Badge Gallery") || summary.EntityLabels >= 14 {
+		labelThreshold = 14
+	}
+	return Checks{
+		PageLoaded:                      summary.Template != "" || summary.EntityLabels > 0 || summary.Canvas > 0,
+		RuntimeDataLoaded:               summary.RuntimeDataRequested,
+		RendererMounted:                 nodeResult.Data.Summary.Ready && summary.Template == "architecture.isometric_overview" && summary.Renderer == "offline.architecture.isometric.v1",
+		ScreenshotWritten:               statErr == nil && info.Size() > 0,
+		NoConsoleErrors:                 len(nodeResult.Data.ConsoleErrors) == 0,
+		NoNetworkErrors:                 len(nodeResult.Data.NetworkErrors) == 0,
+		NoRemoteRequests:                noRemoteRequests(requests) && len(nodeResult.Data.RemoteRequests) == 0,
+		IsometricStagePresent:           nodeResult.Data.Summary.Stage,
+		LabelLayerPresent:               nodeResult.Data.Summary.LabelLayer,
+		EntityLabelsPresent:             summary.EntityLabels > 0,
+		LinkLabelsPresent:               summary.LinkLabels > 0,
+		ZoneLabelsPresent:               summary.ZoneLabels > 0,
+		LabelIconsPresent:               summary.LabelIcons >= labelThreshold,
+		ModelBadgesResolved:             summary.ModelBadges >= labelThreshold,
+		SvgBillboardsResolved:           summary.SvgBillboards >= labelThreshold,
+		NoFallbackBadgesInGoodExample:   summary.FallbackBadges == 0,
+		ControlsPresent:                 summary.Controls > 0 && nodeResult.Data.Summary.ControlBar,
+		CanvasVisible:                   summary.Canvas > 0,
+		ScreenshotNonBlank:              renderChecks.ScreenshotNonBlank,
+		ScreenshotHasEnoughContrast:     renderChecks.ScreenshotContrast,
+		ScreenshotHasExpectedLabelCount: summary.EntityLabels >= labelThreshold,
+	}
+}
+
+func inspectRenderedScreenshot(opts Options, outDir, screenshot string) (*renderinspect.Result, []preview.Warning) {
+	result, err := renderinspect.Inspect(renderinspect.Options{
+		TemplateDir:   opts.TemplateDir,
+		OutDir:        outDir,
+		Screenshot:    screenshot,
+		OfflineStrict: opts.OfflineStrict,
+	})
+	if err != nil {
+		return nil, []preview.Warning{{
+			Code:       "browser_inspect_render_failed",
+			Severity:   "error",
+			Message:    "inspect-render could not inspect the browser-generated screenshot: " + err.Error(),
+			Suggestion: "Inspect the rendered artifact and screenshot path, then rerun visual inspect-browser.",
+			AutoFixHint: map[string]any{
+				"action": "rerun_inspect_render",
+			},
+		}}
+	}
+	return &result, nil
+}
+
+func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
+	var out []preview.Warning
+	add := func(code, severity, message, suggestion, action string) {
+		out = append(out, preview.Warning{
+			Code:       code,
+			Severity:   severity,
+			Message:    message,
+			Suggestion: suggestion,
+			AutoFixHint: map[string]any{
+				"action": action,
+			},
+		})
+	}
+	if !checks.PageLoaded || !checks.RuntimeDataLoaded {
+		add("browser_page_not_ready", "error", "The browser did not fully load the rendered artifact.", "Check index.html, manifest.js, data.js, and runtime asset paths.", "inspect_artifact_files")
+	}
+	if !checks.RendererMounted {
+		add("browser_renderer_not_mounted", "error", "The isometric architecture renderer did not mount in the browser DOM.", "Ensure the output was rendered with architecture.isometric_overview and the runtime registers offline.architecture.isometric.v1.", "rerender_architecture_artifact")
+	}
+	if !checks.EntityLabelsPresent {
+		add("browser_entity_labels_missing", "error", "No architecture entity labels were found in the browser DOM.", "Ensure entities render data-entity-id labels in the label layer.", "fix_entity_label_hooks")
+	}
+	if !checks.LabelIconsPresent {
+		add("browser_label_icons_missing", "warning", "Expected local label icons were not resolved in the browser DOM.", "Use local presentation.icon IDs and renderHints.labelIcon=true.", "fix_label_icons")
+	}
+	if !checks.ModelBadgesResolved {
+		add("browser_model_badges_missing", "warning", "Expected generated model badges were not resolved in the browser DOM.", "Use local presentation.model IDs and renderHints.badgeMode=icon_and_model or model.", "fix_model_badges")
+	}
+	if !checks.NoRemoteRequests {
+		add("browser_remote_request_detected", "error", "The browser smoke found remote URL references or non-local requests.", "Vendor assets locally and reference relative asset paths only.", "remove_remote_assets")
+	}
+	if !checks.NoConsoleErrors {
+		add("browser_console_errors", "warning", "The headless browser reported JavaScript console errors.", "Open the artifact in Chrome DevTools or inspect runtime JS for thrown errors.", "inspect_console_errors")
+	}
+	if !checks.ScreenshotNonBlank {
+		add("browser_screenshot_blank", "error", "The browser screenshot appears blank.", "Ensure the renderer mounted and waited long enough before screenshot.", "rerun_browser_screenshot")
+	}
+	if !checks.ScreenshotHasExpectedLabelCount {
+		add("browser_label_count_low", "warning", fmt.Sprintf("The browser DOM has fewer entity labels than expected: %d.", summary.EntityLabels), "Check label visibility hooks and first-view entity count.", "fix_label_count")
+	}
+	return out
+}
+
+func sortWarnings(warnings []preview.Warning) {
+	sort.SliceStable(warnings, func(i, j int) bool {
+		return warnings[i].Code < warnings[j].Code
+	})
+}
+
+func hasErrorWarnings(warnings []preview.Warning) bool {
+	for _, w := range warnings {
+		if strings.EqualFold(w.Severity, "error") {
+			return true
+		}
+	}
+	return false
+}
+
+func renderScore(result *renderinspect.Result) int {
+	if result == nil {
+		return 0
+	}
+	return result.RenderScore
+}
+
+func hasRequest(requests []string, path string) bool {
+	for _, req := range requests {
+		if req == path || strings.HasSuffix(req, path) {
+			return true
+		}
+	}
+	return false
+}
+
+func noRemoteRequests(requests []string) bool {
+	for _, req := range requests {
+		if strings.HasPrefix(req, "http://127.0.0.1:") {
+			continue
+		}
+		if strings.HasPrefix(req, "http://") || strings.HasPrefix(req, "https://") || strings.HasPrefix(req, "//") {
+			return false
+		}
+	}
+	return true
+}

@@ -81,7 +81,14 @@ type DOMSummary struct {
 	LabelIconsLoaded     int    `json:"label_icons_loaded"`
 	BrokenLabelIcons     int    `json:"broken_label_icons"`
 	VisibleEntityLabels  int    `json:"visible_entity_labels"`
+	VisibleLinkLabels    int    `json:"visible_link_labels"`
+	VisibleZoneLabels    int    `json:"visible_zone_labels"`
 	VisibleLabelIcons    int    `json:"visible_label_icons"`
+	EntityLabelOverlap   int    `json:"entity_label_overlap_count"`
+	LinkLabelOverlap     int    `json:"link_label_overlap_count"`
+	ZoneLabelOverlap     int    `json:"zone_label_overlap_count"`
+	TotalLabelOverlap    int    `json:"total_label_overlap_count"`
+	LabelsOutsideStage   int    `json:"labels_outside_stage_count"`
 	ModelBadges          int    `json:"model_badges"`
 	SvgBillboards        int    `json:"svg_billboards"`
 	FallbackBadges       int    `json:"fallback_badges"`
@@ -105,6 +112,8 @@ type VisualSummary struct {
 	LabelIconLoadedCount         int    `json:"label_icon_loaded_count"`
 	BrokenLabelIconCount         int    `json:"broken_label_icon_count"`
 	VisibleEntityLabelCount      int    `json:"visible_entity_label_count"`
+	VisibleLinkLabelCount        int    `json:"visible_link_label_count"`
+	VisibleZoneLabelCount        int    `json:"visible_zone_label_count"`
 	VisibleLabelIconCount        int    `json:"visible_label_icon_count"`
 	ModelBadgeCount              int    `json:"model_badge_count"`
 	SvgBillboardCount            int    `json:"svg_billboard_count"`
@@ -112,6 +121,11 @@ type VisualSummary struct {
 	CanvasVisible                bool   `json:"canvas_visible"`
 	ControlsVisible              bool   `json:"controls_visible"`
 	ApproximateLabelOverlapCount int    `json:"approximate_label_overlap_count"`
+	EntityLabelOverlapCount      int    `json:"entity_label_overlap_count"`
+	LinkLabelOverlapCount        int    `json:"link_label_overlap_count"`
+	ZoneLabelOverlapCount        int    `json:"zone_label_overlap_count"`
+	TotalLabelOverlapCount       int    `json:"total_label_overlap_count"`
+	LabelsOutsideStageCount      int    `json:"labels_outside_stage_count"`
 	LabelLayerBounds             *Rect  `json:"label_layer_bounds,omitempty"`
 	CanvasBounds                 *Rect  `json:"canvas_bounds,omitempty"`
 	ScreenshotSize               *Rect  `json:"screenshot_size,omitempty"`
@@ -184,7 +198,14 @@ func Inspect(opts Options) (Result, error) {
 		LabelIconsLoaded:     nodeResult.Data.Summary.LabelIconsLoaded,
 		BrokenLabelIcons:     nodeResult.Data.Summary.BrokenLabelIcons,
 		VisibleEntityLabels:  nodeResult.Data.Summary.VisibleEntityLabels,
+		VisibleLinkLabels:    nodeResult.Data.Summary.VisibleLinkLabels,
+		VisibleZoneLabels:    nodeResult.Data.Summary.VisibleZoneLabels,
 		VisibleLabelIcons:    nodeResult.Data.Summary.VisibleLabelIcons,
+		EntityLabelOverlap:   nodeResult.Data.Summary.EntityLabelOverlapCount,
+		LinkLabelOverlap:     nodeResult.Data.Summary.LinkLabelOverlapCount,
+		ZoneLabelOverlap:     nodeResult.Data.Summary.ZoneLabelOverlapCount,
+		TotalLabelOverlap:    nodeResult.Data.Summary.TotalLabelOverlapCount,
+		LabelsOutsideStage:   nodeResult.Data.Summary.LabelsOutsideStageCount,
 		ModelBadges:          nodeResult.Data.Summary.ModelBadges,
 		SvgBillboards:        nodeResult.Data.Summary.SvgBillboards,
 		FallbackBadges:       nodeResult.Data.Summary.FallbackBadges,
@@ -245,6 +266,8 @@ type browserDOMSummary struct {
 	LabelIconsLoaded             int    `json:"labelIconsLoaded"`
 	BrokenLabelIcons             int    `json:"brokenLabelIcons"`
 	VisibleEntityLabels          int    `json:"visibleEntityLabels"`
+	VisibleLinkLabels            int    `json:"visibleLinkLabels"`
+	VisibleZoneLabels            int    `json:"visibleZoneLabels"`
 	VisibleLabelIcons            int    `json:"visibleLabelIcons"`
 	ModelBadges                  int    `json:"modelBadges"`
 	SvgBillboards                int    `json:"svgBillboards"`
@@ -253,6 +276,11 @@ type browserDOMSummary struct {
 	ControlBar                   bool   `json:"controlBar"`
 	Canvas                       int    `json:"canvas"`
 	ApproximateLabelOverlapCount int    `json:"approximateLabelOverlapCount"`
+	EntityLabelOverlapCount      int    `json:"entityLabelOverlapCount"`
+	LinkLabelOverlapCount        int    `json:"linkLabelOverlapCount"`
+	ZoneLabelOverlapCount        int    `json:"zoneLabelOverlapCount"`
+	TotalLabelOverlapCount       int    `json:"totalLabelOverlapCount"`
+	LabelsOutsideStageCount      int    `json:"labelsOutsideStageCount"`
 	LabelLayerBounds             *Rect  `json:"labelLayerBounds"`
 	CanvasBounds                 *Rect  `json:"canvasBounds"`
 	ScreenshotSize               *Rect  `json:"screenshotSize"`
@@ -543,6 +571,8 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		LabelIconLoadedCount:         summary.LabelIconsLoaded,
 		BrokenLabelIconCount:         summary.BrokenLabelIcons,
 		VisibleEntityLabelCount:      summary.VisibleEntityLabels,
+		VisibleLinkLabelCount:        summary.VisibleLinkLabels,
+		VisibleZoneLabelCount:        summary.VisibleZoneLabels,
 		VisibleLabelIconCount:        summary.VisibleLabelIcons,
 		ModelBadgeCount:              summary.ModelBadges,
 		SvgBillboardCount:            summary.SvgBillboards,
@@ -550,6 +580,11 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		CanvasVisible:                checks.CanvasVisible,
 		ControlsVisible:              checks.ControlsPresent,
 		ApproximateLabelOverlapCount: nodeResult.Data.Summary.ApproximateLabelOverlapCount,
+		EntityLabelOverlapCount:      nodeResult.Data.Summary.EntityLabelOverlapCount,
+		LinkLabelOverlapCount:        nodeResult.Data.Summary.LinkLabelOverlapCount,
+		ZoneLabelOverlapCount:        nodeResult.Data.Summary.ZoneLabelOverlapCount,
+		TotalLabelOverlapCount:       nodeResult.Data.Summary.TotalLabelOverlapCount,
+		LabelsOutsideStageCount:      nodeResult.Data.Summary.LabelsOutsideStageCount,
 		LabelLayerBounds:             nodeResult.Data.Summary.LabelLayerBounds,
 		CanvasBounds:                 nodeResult.Data.Summary.CanvasBounds,
 		ScreenshotSize:               screenshotSize,
@@ -602,6 +637,18 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	}
 	if !checks.ScreenshotHasExpectedLabelCount {
 		add("browser_label_count_low", "warning", fmt.Sprintf("The browser DOM has fewer entity labels than expected: %d.", summary.EntityLabels), "Check label visibility hooks and first-view entity count.", "fix_label_count")
+	}
+	if summary.TotalLabelOverlap > 5 {
+		add("browser_label_overlap_high", "warning", fmt.Sprintf("Visible labels overlap too much: total=%d entity=%d link=%d zone=%d.", summary.TotalLabelOverlap, summary.EntityLabelOverlap, summary.LinkLabelOverlap, summary.ZoneLabelOverlap), "Move entities apart, add label_offset values, or reduce low-priority label visibility.", "reduce_label_overlap")
+	}
+	if summary.VisibleLinkLabels > 10 {
+		add("browser_link_label_density_high", "warning", fmt.Sprintf("Too many link labels are visible in the overview: %d.", summary.VisibleLinkLabels), "Set secondary links to visibility=detail or lower their labelPriority.", "reduce_overview_link_labels")
+	}
+	if summary.VisibleEntityLabels > 18 {
+		add("browser_entity_label_density_high", "warning", fmt.Sprintf("Too many entity labels are visible in the overview: %d.", summary.VisibleEntityLabels), "Prioritize important entity labels and let lower-priority entities remain selectable without first-view labels.", "reduce_overview_entity_labels")
+	}
+	if summary.LabelsOutsideStage > 0 {
+		add("browser_labels_outside_stage", "warning", fmt.Sprintf("Some labels are outside the screenshot viewport: %d.", summary.LabelsOutsideStage), "Adjust camera zoom, label offsets, or zone bounds so labels stay inside the first screenshot.", "fit_labels_inside_stage")
 	}
 	return out
 }

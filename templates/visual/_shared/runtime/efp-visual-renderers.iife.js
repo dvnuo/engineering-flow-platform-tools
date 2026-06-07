@@ -1731,6 +1731,7 @@
     if (!edgeSpec.directed || edgeSpec.arrow === "none") {
       return null;
     }
+    var arrowScale = Math.max(0.58, Math.min(1.55, edgeSpec.arrowScale || 1));
     var t = edgeSpec.arrow === "reverse" ? 0.06 : 0.94;
     var tail = curve.getPoint(edgeSpec.arrow === "reverse" ? 0.14 : 0.86);
     var tip = curve.getPoint(t);
@@ -1743,12 +1744,12 @@
       if (side.length() < 0.001) {
         side.set(1, 0, 0);
       }
-      var back = tip.clone().sub(direction.clone().multiplyScalar(0.34));
+      var back = tip.clone().sub(direction.clone().multiplyScalar(0.34 * arrowScale));
       var yLift = new THREE.Vector3(0, 0.018, 0);
       var geometryFlat = new THREE.BufferGeometry().setFromPoints([
         tip.clone().add(yLift),
-        back.clone().add(side.clone().multiplyScalar(0.155)).add(yLift),
-        back.clone().add(side.clone().multiplyScalar(-0.155)).add(yLift)
+        back.clone().add(side.clone().multiplyScalar(0.155 * arrowScale)).add(yLift),
+        back.clone().add(side.clone().multiplyScalar(-0.155 * arrowScale)).add(yLift)
       ]);
       if (geometryFlat.computeVertexNormals) {
         geometryFlat.computeVertexNormals();
@@ -1768,7 +1769,7 @@
       flatArrow.userData.targetOpacity = flatArrow.userData.baseOpacity;
       return flatArrow;
     }
-    var geometry = THREE.ConeGeometry ? new THREE.ConeGeometry(0.075, 0.24, 18) : new THREE.IcosahedronGeometry(0.1, 1);
+    var geometry = THREE.ConeGeometry ? new THREE.ConeGeometry(0.075 * arrowScale, 0.24 * arrowScale, 18) : new THREE.IcosahedronGeometry(0.1 * arrowScale, 1);
     var material = new THREE.MeshBasicMaterial({
       color: colorValue(edgeSpec.color, 0x63a9ff),
       transparent: true,
@@ -4378,11 +4379,11 @@
       isometricWorld({ x: bounds.x, y: bounds.y }, scale, center)
     ].map(function (p) { return new THREE.Vector3(p.x, 0.035, p.z); });
     var boundaryStyle = normalizeMarkKey(presentation.boundary || presentation.lineStyle || zone.style || "solid");
-    var boundaryColor = presentation.boundaryColor || presentation.borderColor || zone.color || "#64748b";
+    var boundaryColor = presentation.boundaryColor || presentation.borderColor || presentation.color || zone.color || "#64748b";
     var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, 0.94, 0.22, 0.11) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.96));
     boundary.userData = { isZoneBoundary: true, style: boundaryStyle };
     root.add(boundary);
-    return { zone: zone, bounds: bounds, labelPoint: { x: bounds.x + bounds.w * 0.5, y: bounds.y + 0.28 }, plane: plane, boundary: boundary };
+    return { zone: zone, bounds: bounds, labelPoint: { x: bounds.x + Math.min(bounds.w - 0.45, 0.45), y: bounds.y + 0.45 }, plane: plane, boundary: boundary };
   }
 
   function compactLabelText(text, maxLength) {
@@ -4503,6 +4504,18 @@
     var labels = [];
     var entityByID = {};
     var markContext = createMarkContext(manifest, data);
+    var visualHints = readVisualHints(data);
+    var viewMode = normalizeMarkKey(visualHints.labelMode || "overview") || "overview";
+    function isOverviewMode() {
+      return viewMode !== "detail";
+    }
+    function shouldShowIsometricEntityLabel(item) {
+      var q = normalizeVisualQualityFields(item);
+      if (!isOverviewMode()) return q.visibility !== "hidden" && q.labelPriority !== "hidden";
+      if (q.visibility === "hidden" || q.labelPriority === "hidden") return false;
+      if (q.visibility === "detail" || q.labelPriority === "hover") return false;
+      return q.importance >= 0.58 || q.labelPriority === "always" || q.labelPriority === "important";
+    }
     zones.forEach(function (zone) {
       var info = addIsometricZone(THREE, zoneRoot, zone, scale, center);
       var pos = isometricWorld(info.labelPoint, scale, center);
@@ -4510,7 +4523,7 @@
       label.setAttribute("data-zone-label", zone.id || "");
       label.setAttribute("data-zone-id", zone.id || "");
       shell.labelLayer.appendChild(label);
-      labels.push({ element: label, point: new THREE.Vector3(pos.x, 0.2, pos.z), visible: true, type: "zone", priority: 0.72 });
+      labels.push({ element: label, point: new THREE.Vector3(pos.x, 0.2, pos.z), visible: true, type: "zone", priority: 1.45 });
     });
 
     entities.forEach(function (item, index) {
@@ -4531,6 +4544,8 @@
       label.setAttribute("data-entity-kind", item.kind || "");
       label.setAttribute("data-icon-id", spec.icon || "");
       label.setAttribute("data-model-id", spec.model || "");
+      label.setAttribute("data-label-priority", normalizeVisualQualityFields(item).labelPriority || "");
+      label.setAttribute("data-visibility", normalizeVisualQualityFields(item).visibility || "");
       label.setAttribute("data-badge-mode", settings.mode);
       label.setAttribute("data-has-label-icon", iconPathFor(spec, markContext) && settings.labelIcon ? "true" : "false");
       label.setAttribute("data-has-model-badge", modelPathFor(spec, markContext) && settings.mode !== "none" && settings.mode !== "icon" ? "true" : "false");
@@ -4544,10 +4559,76 @@
       shell.labelLayer.appendChild(label);
       var offset = explicitIsometricLabelOffset(item) || isometricEntityLabelOffset(index, size);
       var anchor = new THREE.Vector3(world.x + offset.x, size.h * 0.76 + 0.34 + offset.y, world.z + offset.z);
-      labels.push({ element: label, point: anchor, visible: true, type: "entity", priority: 0.84 + importanceValue(item, 0.45) * 0.32, id: item.id });
+      var entityQuality = normalizeVisualQualityFields(item);
+      var entityPriority = 0.84 + importanceValue(item, 0.45) * 0.32;
+      if (entityQuality.labelPriority === "always") {
+        entityPriority += 0.55;
+      } else if (entityQuality.labelPriority === "important") {
+        entityPriority += 0.28;
+      }
+      labels.push({ element: label, point: anchor, visible: shouldShowIsometricEntityLabel(item), type: "entity", priority: entityPriority, id: item.id });
       var leader = createDashedLeader(THREE, new THREE.Vector3(world.x, size.h * 0.38, world.z), anchor.clone().add(new THREE.Vector3(0, -0.06, 0)));
+      leader.visible = shouldShowIsometricEntityLabel(item);
       leaderRoot.add(leader);
     });
+
+    var laneCounters = {};
+    var linkLabelsCreated = 0;
+    function isSecondaryLink(link) {
+      var cls = routeClass(link);
+      var q = normalizeVisualQualityFields(link);
+      var visibility = normalizeVisibilityValue(link.visibility);
+      return visibility === "detail" || visibility === "hidden" || q.importance <= 0.45 || ((cls === "health" || cls === "observability" || cls === "replication") && q.importance < 0.82);
+    }
+    function applyIsometricEdgeStyle(link, edgeSpec) {
+      var cls = routeClass(link);
+      var q = normalizeVisualQualityFields(link);
+      var presentation = edgePresentation(link);
+      var secondary = isSecondaryLink(link);
+      edgeSpec.directed = edgeSpec.directed !== false;
+      edgeSpec.arrow = edgeSpec.arrow && edgeSpec.arrow !== "none" ? edgeSpec.arrow : "forward";
+      edgeSpec.lightBackground = true;
+      edgeSpec.lineStyle = presentation.lineStyle || presentation.line_style || edgeSpec.lineStyle;
+      if (cls === "cache") {
+        edgeSpec.color = presentation.color || link.color || "#991b1b";
+      } else if (cls === "storage") {
+        edgeSpec.color = presentation.color || link.color || "#1d4ed8";
+      } else if (cls === "register") {
+        edgeSpec.color = presentation.color || link.color || "#0f766e";
+      } else if (cls === "health" || cls === "observability") {
+        edgeSpec.color = presentation.color || link.color || "#64748b";
+        edgeSpec.lineStyle = edgeSpec.lineStyle || "dashed";
+      } else if (cls === "replication") {
+        edgeSpec.color = presentation.color || link.color || "#475569";
+        edgeSpec.lineStyle = edgeSpec.lineStyle || "dashed";
+      } else if (cls === "service") {
+        edgeSpec.color = presentation.color || link.color || "#4338ca";
+      } else {
+        edgeSpec.color = presentation.color || link.color || "#111827";
+      }
+      if (isOverviewMode() && secondary) {
+        edgeSpec.opacity = Math.max(0.18, Math.min(0.35, edgeSpec.opacity || 0.28));
+        edgeSpec.flow = false;
+        edgeSpec.arrowScale = 0.68;
+        return { radius: 0.018 + Math.min(0.01, q.importance * 0.012), secondary: true };
+      }
+      edgeSpec.opacity = Math.max(edgeSpec.opacity || 0.74, cls === "main" ? 0.9 : 0.74);
+      edgeSpec.flow = edgeSpec.flow && (cls === "main" || cls === "cache" || cls === "storage" || cls === "service");
+      edgeSpec.arrowScale = Math.max(0.9, Math.min(1.35, 0.9 + q.importance * 0.35));
+      if (cls === "main") return { radius: 0.05 + Math.min(0.018, q.importance * 0.018), secondary: false };
+      return { radius: 0.036 + Math.min(0.014, q.importance * 0.014), secondary: false };
+    }
+    function shouldShowIsometricLinkLabel(link) {
+      if (!link.label) return false;
+      var q = normalizeVisualQualityFields(link);
+      var visibility = normalizeVisibilityValue(link.visibility);
+      var priority = q.labelPriority || normalizeLabelPriorityValue(link.labelPriority !== undefined ? link.labelPriority : link.label_priority);
+      if (visibility === "hidden" || priority === "hidden") return false;
+      if (!isOverviewMode()) return true;
+      if (visibility === "detail") return priority === "always";
+      if (priority === "always" || priority === "important") return true;
+      return q.importance >= 0.82;
+    }
 
     links.forEach(function (link, index) {
       var from = entityByID[link.from];
@@ -4556,38 +4637,33 @@
         return;
       }
       var edgeSpec = resolveEdgeSpec(link, markContext);
-      edgeSpec.opacity = Math.max(edgeSpec.opacity || 0.68, 0.82);
-      edgeSpec.lightBackground = true;
-      var presentation = link && link.presentation && typeof link.presentation === "object" ? link.presentation : {};
-      if (!presentation.color && !link.color) {
-        edgeSpec.color = "#111827";
-      }
+      var edgeStyle = applyIsometricEdgeStyle(link, edgeSpec);
       var pathPoints = isometricLinkPathPoints(link, from, to);
-      var curve;
-      if (pathPoints.length > 2 && THREE.CatmullRomCurve3) {
-        curve = new THREE.CatmullRomCurve3(pathPoints);
-      } else {
-        curve = edgeCurveFor(THREE, pathPoints[0], pathPoints[pathPoints.length - 1], link, Object.assign({}, edgeSpec, { curve: "straight", flow: false }), index);
-      }
-      var tube = createEdgeTube(THREE, curve, edgeSpec, 0.04 + Math.min(0.016, importanceValue(link, 0.45) * 0.014));
+      var routeMesh = createRouteMesh(pathPoints, edgeSpec, edgeStyle.radius);
+      var curve = routeMesh.curve;
+      var tube = routeMesh.mesh;
       tube.userData.isDirectedArrow = !!edgeSpec.directed;
+      tube.userData.isOverviewSecondary = !!edgeStyle.secondary;
       linkRoot.add(tube);
-      var arrow = createArrowHead(THREE, curve, edgeSpec);
+      var arrow = createRouteArrowhead(pathPoints, edgeSpec);
       if (arrow) {
         arrow.userData.isDirectedArrow = true;
+        arrow.userData.isOverviewSecondary = !!edgeStyle.secondary;
         linkRoot.add(arrow);
       }
-      createFlowParticles(THREE, curve, edgeSpec, edgeSpec.flow ? 2 : 0).forEach(function (marker) { linkRoot.add(marker); });
-      if (link.label) {
-        var mid = curve.getPoint(0.52);
-        var label = labelHTML("visual-isometric-link-label", link.label);
+      createFlowParticles(THREE, curve, edgeSpec, edgeSpec.flow && !edgeStyle.secondary ? 2 : 0).forEach(function (marker) { linkRoot.add(marker); });
+      if (shouldShowIsometricLinkLabel(link) && linkLabelsCreated < 10) {
+        linkLabelsCreated += 1;
+        var mid = placeRouteLabel(pathPoints);
+        var label = labelHTML("visual-isometric-link-label", compactLabelText(link.label, 18));
         label.setAttribute("data-link-label", link.id || "");
         label.setAttribute("data-link-id", link.id || "");
+        label.setAttribute("data-link-kind", link.kind || "");
         if (importanceValue(link, 0.35) < 0.74) {
           label.setAttribute("data-low-priority", "true");
         }
         shell.labelLayer.appendChild(label);
-        labels.push({ element: label, point: mid.clone().add(new THREE.Vector3(0, 0.18, 0)), visible: true, type: "link", priority: 0.34 + importanceValue(link, 0.35) * 0.5, id: link.id });
+        labels.push({ element: label, point: mid, visible: true, type: "link", priority: 0.38 + importanceValue(link, 0.35) * 0.5, id: link.id });
       }
     });
 
@@ -4626,21 +4702,142 @@
       return node.world.clone().setY(0.07);
     }
 
-    function isometricLinkPathPoints(link, from, to) {
-      var start = isometricLinkGroundPoint(from);
-      var end = isometricLinkGroundPoint(to);
+    function computeEntityBounds(entity) {
+      var halfX = Math.max(0.2, entity.size.w * scale * 0.28);
+      var halfZ = Math.max(0.18, entity.size.d * scale * 0.26);
+      return {
+        minX: entity.world.x - halfX,
+        maxX: entity.world.x + halfX,
+        minZ: entity.world.z - halfZ,
+        maxZ: entity.world.z + halfZ,
+        center: isometricLinkGroundPoint(entity)
+      };
+    }
+
+    function computeEntityPorts(entity) {
+      var b = computeEntityBounds(entity);
+      return {
+        center: b.center,
+        north: new THREE.Vector3(b.center.x, 0.07, b.minZ - 0.06),
+        east: new THREE.Vector3(b.maxX + 0.08, 0.07, b.center.z),
+        south: new THREE.Vector3(b.center.x, 0.07, b.maxZ + 0.06),
+        west: new THREE.Vector3(b.minX - 0.08, 0.07, b.center.z)
+      };
+    }
+
+    function routeClass(link) {
+      var kind = normalizeMarkKey(link.kind || link.type || "");
+      if (kind.indexOf("register") >= 0 || kind.indexOf("nacos") >= 0 || kind.indexOf("pull") >= 0) return "register";
+      if (kind.indexOf("cache") >= 0 || kind.indexOf("redis") >= 0) return "cache";
+      if (kind.indexOf("storage") >= 0 || kind.indexOf("store") >= 0 || kind.indexOf("file") >= 0 || kind.indexOf("block") >= 0) return "storage";
+      if (kind.indexOf("health") >= 0 || kind.indexOf("admin") >= 0 || kind.indexOf("observ") >= 0) return "health";
+      if (kind.indexOf("log") >= 0 || kind.indexOf("metric") >= 0) return "observability";
+      if (kind.indexOf("replication") >= 0 || kind.indexOf("repl") >= 0) return "replication";
+      if (kind.indexOf("feign") >= 0) return "service";
+      return "main";
+    }
+
+    function chooseLinkPorts(fromEntity, toEntity, link) {
+      var fromPorts = computeEntityPorts(fromEntity);
+      var toPorts = computeEntityPorts(toEntity);
+      var cls = routeClass(link);
+      var dx = toEntity.pos.x - fromEntity.pos.x;
+      var dy = toEntity.pos.y - fromEntity.pos.y;
+      if (cls === "register") return { start: fromPorts.north, end: toPorts.south };
+      if (cls === "cache" || cls === "storage") return { start: fromPorts.south, end: toPorts.north };
+      if (cls === "health") return { start: fromPorts.east, end: toPorts.west };
+      if (cls === "observability") return { start: fromPorts.south, end: toPorts.north };
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        return dx >= 0 ? { start: fromPorts.east, end: toPorts.west } : { start: fromPorts.west, end: toPorts.east };
+      }
+      return dy >= 0 ? { start: fromPorts.south, end: toPorts.north } : { start: fromPorts.north, end: toPorts.south };
+    }
+
+    function reserveRouteLane(routeGroup, fromEntity, toEntity, link) {
+      var cls = routeGroup || routeClass(link);
+      var key = cls;
+      laneCounters[key] = (laneCounters[key] || 0) + 1;
+      var lane = laneCounters[key] - 1;
+      var a = isometricLinkGroundPoint(fromEntity);
+      var b = isometricLinkGroundPoint(toEntity);
+      if (cls === "register") return { z: Math.min(a.z, b.z) - scale * (0.55 + lane * 0.22) };
+      if (cls === "cache") return { z: Math.max(a.z, b.z) + scale * (0.42 + lane * 0.18) };
+      if (cls === "storage") return { z: Math.max(a.z, b.z) + scale * (0.72 + lane * 0.2) };
+      if (cls === "health") return { x: Math.min(a.x, b.x) - scale * (0.75 + lane * 0.18) };
+      if (cls === "observability") return { z: Math.max(a.z, b.z) + scale * (0.55 + lane * 0.18) };
+      if (cls === "replication") return { x: (a.x + b.x) / 2 + scale * (0.28 + lane * 0.12) };
+      return { z: (a.z + b.z) / 2 + (lane % 2 === 0 ? 1 : -1) * scale * (0.18 + Math.floor(lane / 2) * 0.12) };
+    }
+
+    function avoidEntityIntersections(route) {
+      if (!route || route.length < 3) return route;
+      var avoidBounds = Object.keys(entityByID).map(function (id) { return computeEntityBounds(entityByID[id]); });
+      var adjusted = route.map(function (point) { return point.clone(); });
+      for (var i = 1; i < adjusted.length - 1; i += 1) {
+        var prev = adjusted[i - 1];
+        var point = adjusted[i];
+        var next = adjusted[i + 1];
+        avoidBounds.some(function (b) {
+          var horizontal = Math.abs(prev.z - point.z) < 0.01 || Math.abs(next.z - point.z) < 0.01;
+          var vertical = Math.abs(prev.x - point.x) < 0.01 || Math.abs(next.x - point.x) < 0.01;
+          if (horizontal && point.z > b.minZ - 0.05 && point.z < b.maxZ + 0.05 && ((prev.x <= b.maxX && point.x >= b.minX) || (point.x <= b.maxX && prev.x >= b.minX) || (next.x <= b.maxX && point.x >= b.minX) || (point.x <= b.maxX && next.x >= b.minX))) {
+            point.z += point.z < b.center.z ? -scale * 0.28 : scale * 0.28;
+            return true;
+          }
+          if (vertical && point.x > b.minX - 0.05 && point.x < b.maxX + 0.05 && ((prev.z <= b.maxZ && point.z >= b.minZ) || (point.z <= b.maxZ && prev.z >= b.minZ) || (next.z <= b.maxZ && point.z >= b.minZ) || (point.z <= b.maxZ && next.z >= b.minZ))) {
+            point.x += point.x < b.center.x ? -scale * 0.28 : scale * 0.28;
+            return true;
+          }
+          return false;
+        });
+      }
+      return adjusted;
+    }
+
+    function computeOrthogonalRoute(link, fromEntity, toEntity, scene) {
       var route = Array.isArray(link.route) ? link.route : [];
+      var ports = chooseLinkPorts(fromEntity, toEntity, link);
       if (route.length) {
-        return [start].concat(route.map(function (point) {
+        return [ports.start].concat(route.map(function (point) {
           var world = isometricWorld(point, scale, center);
           return new THREE.Vector3(world.x, 0.07, world.z);
-        })).concat([end]);
+        })).concat([ports.end]);
       }
-      var routeStyle = normalizeMarkKey(link.routeStyle || link.route_style || link.presentation && link.presentation.routeStyle || "");
-      if (routeStyle === "orthogonal" || routeStyle === "elbow" || Math.abs(start.x - end.x) > 0.5 && Math.abs(start.z - end.z) > 0.5) {
-        return [start, new THREE.Vector3(end.x, 0.07, start.z), end];
+      var lane = reserveRouteLane(routeClass(link), fromEntity, toEntity, link);
+      var cls = routeClass(link);
+      if (lane.x !== undefined) {
+        return avoidEntityIntersections([ports.start, new THREE.Vector3(lane.x, 0.07, ports.start.z), new THREE.Vector3(lane.x, 0.07, ports.end.z), ports.end]);
       }
-      return [start, end];
+      if (lane.z !== undefined) {
+        return avoidEntityIntersections([ports.start, new THREE.Vector3(ports.start.x, 0.07, lane.z), new THREE.Vector3(ports.end.x, 0.07, lane.z), ports.end]);
+      }
+      if (cls === "main" && Math.abs(ports.start.z - ports.end.z) < scale * 0.4) {
+        return [ports.start, ports.end];
+      }
+      return avoidEntityIntersections([ports.start, new THREE.Vector3(ports.end.x, 0.07, ports.start.z), ports.end]);
+    }
+
+    function createRouteMesh(route, edgeSpec, radius) {
+      var curve = route.length > 2 && THREE.CatmullRomCurve3 ? new THREE.CatmullRomCurve3(route) : edgeCurveFor(THREE, route[0], route[route.length - 1], {}, Object.assign({}, edgeSpec, { curve: "straight", flow: false }), 0);
+      return { curve: curve, mesh: createEdgeTube(THREE, curve, edgeSpec, radius) };
+    }
+
+    function createRouteArrowhead(route, edgeSpec) {
+      var curve = route.length > 2 && THREE.CatmullRomCurve3 ? new THREE.CatmullRomCurve3(route) : edgeCurveFor(THREE, route[0], route[route.length - 1], {}, Object.assign({}, edgeSpec, { curve: "straight", flow: false }), 0);
+      return createArrowHead(THREE, curve, edgeSpec);
+    }
+
+    function placeRouteLabel(route) {
+      var best = { start: route[0], end: route[route.length - 1], length: 0 };
+      for (var i = 0; i < route.length - 1; i += 1) {
+        var length = route[i].distanceTo(route[i + 1]);
+        if (length > best.length) best = { start: route[i], end: route[i + 1], length: length };
+      }
+      return best.start.clone().lerp(best.end, 0.5).add(new THREE.Vector3(0, 0.18, 0));
+    }
+
+    function isometricLinkPathPoints(link, from, to) {
+      return computeOrthogonalRoute(link, from, to, scene);
     }
 
     function labelBudget(label) {
@@ -4669,6 +4866,7 @@
     }
 
     function updateLabels() {
+      shell.labelLayer.dataset.layoutPass = String((numberValue(shell.labelLayer.dataset.layoutPass, 0) || 0) + 1);
       var keepGalleryEntityLabels = String(data.title || "").toLowerCase().indexOf("logo badge gallery") >= 0;
       var projected = labels.map(function (label, index) {
         var p = project(label.point);
@@ -4748,6 +4946,7 @@
     }));
     shell.controls.appendChild(createIsometricButton("Labels", "toggle_labels", function () {
       labelsVisible = !labelsVisible;
+      leaderRoot.visible = labelsVisible;
     }));
     shell.controls.appendChild(createIsometricButton("Boundaries", "toggle_boundaries", function () {
       boundariesVisible = !boundariesVisible;

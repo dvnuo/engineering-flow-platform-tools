@@ -168,33 +168,40 @@ const expression = `(() => {
   };
   const labelIconNodes = qa(".visual-isometric-label-icon");
   const entityLabelNodes = qa(".visual-isometric-entity-label");
+  const linkLabelNodes = qa(".visual-isometric-link-label");
+  const zoneLabelNodes = qa(".visual-isometric-zone-label");
   const imageLoaded = (node) => !(node instanceof HTMLImageElement) || (node.complete && node.naturalWidth > 0 && node.naturalHeight > 0);
   const imageBroken = (node) => node instanceof HTMLImageElement && (!node.complete || node.naturalWidth === 0 || node.naturalHeight === 0);
-  const approximateLabelRect = (node) => {
+  const labelRect = (node) => {
     const r = node.getBoundingClientRect();
-    const w = Math.max(28, node.offsetWidth || r.width || 80);
-    const h = Math.max(18, node.offsetHeight || r.height || 28);
-    const match = String(node.style.transform || "").match(/translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
-    if (match) {
-      const x = Number(match[1]);
-      const y = Number(match[2]);
-      return { left: x - w / 2, right: x + w / 2, top: y - h, bottom: y };
-    }
-    return r;
+    return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
   };
-  const visibleLabels = entityLabelNodes
-    .filter(isVisible)
-    .map(approximateLabelRect);
-  let overlapCount = 0;
-  for (let i = 0; i < visibleLabels.length; i += 1) {
-    for (let j = i + 1; j < visibleLabels.length; j += 1) {
-      const a = visibleLabels[i];
-      const b = visibleLabels[j];
-      if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) overlapCount += 1;
+  const overlapCountFor = (nodes) => {
+    const rects = nodes.filter(isVisible).map(labelRect);
+    let count = 0;
+    for (let i = 0; i < rects.length; i += 1) {
+      for (let j = i + 1; j < rects.length; j += 1) {
+        const a = rects[i];
+        const b = rects[j];
+        const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (w > 0 && h > 0 && w * h >= 12) count += 1;
+      }
     }
-  }
+    return count;
+  };
+  const outsideCountFor = (nodes) => nodes.filter(isVisible).filter((node) => {
+    const r = labelRect(node);
+    return r.left < 0 || r.top < 0 || r.right > window.innerWidth || r.bottom > window.innerHeight;
+  }).length;
+  const entityLabelOverlapCount = overlapCountFor(entityLabelNodes);
+  const linkLabelOverlapCount = overlapCountFor(linkLabelNodes);
+  const zoneLabelOverlapCount = overlapCountFor(zoneLabelNodes);
+  const totalLabelOverlapCount = entityLabelOverlapCount + linkLabelOverlapCount + zoneLabelOverlapCount;
+  const labelsOutsideStageCount = outsideCountFor([...entityLabelNodes, ...linkLabelNodes, ...zoneLabelNodes]);
   const canvas = q("canvas");
   const layer = q(".visual-isometric-label-layer");
+  const labelLayoutPass = Number(layer?.dataset?.layoutPass || 0);
   const summary = {
     title: document.title || "",
     template: q("[data-visual-template]")?.getAttribute("data-visual-template") || "",
@@ -202,6 +209,7 @@ const expression = `(() => {
     isometricReady: !!q(".visual-isometric-ready"),
     stage: !!q(".visual-isometric-stage"),
     labelLayer: !!q(".visual-isometric-label-layer"),
+    labelLayoutPass,
     entityLabels: qa("[data-entity-id]").length,
     linkLabels: qa("[data-link-id]").length,
     zoneLabels: qa("[data-zone-id]").length,
@@ -209,6 +217,8 @@ const expression = `(() => {
     labelIconsLoaded: labelIconNodes.filter(imageLoaded).length,
     brokenLabelIcons: labelIconNodes.filter(imageBroken).length,
     visibleEntityLabels: entityLabelNodes.filter(isVisible).length,
+    visibleLinkLabels: linkLabelNodes.filter(isVisible).length,
+    visibleZoneLabels: zoneLabelNodes.filter(isVisible).length,
     visibleLabelIcons: labelIconNodes.filter((node) => isVisible(node.closest(".visual-isometric-entity-label") || node) && imageLoaded(node)).length,
     modelBadges: qa('[data-has-model-badge="true"]').length,
     svgBillboards: qa('[data-has-svg-billboard="true"]').length,
@@ -216,13 +226,19 @@ const expression = `(() => {
     controls: qa(".visual-isometric-control").length,
     controlBar: !!q(".visual-isometric-control-bar"),
     canvas: qa("canvas").length,
-    approximateLabelOverlapCount: overlapCount,
+    approximateLabelOverlapCount: entityLabelOverlapCount,
+    entityLabelOverlapCount,
+    linkLabelOverlapCount,
+    zoneLabelOverlapCount,
+    totalLabelOverlapCount,
+    labelsOutsideStageCount,
     labelLayerBounds: rect(layer),
     canvasBounds: rect(canvas),
     screenshotSize: { width: Math.round(window.innerWidth || 0), height: Math.round(window.innerHeight || 0) },
     ready: !!q("[data-visual-template='architecture.isometric_overview'][data-visual-renderer='offline.architecture.isometric.v1']") &&
       !!q(".visual-isometric-ready") &&
       !!q(".visual-isometric-label-layer") &&
+      labelLayoutPass >= 2 &&
       qa("[data-entity-id]").length > 0
   };
   return summary;
@@ -273,7 +289,7 @@ try {
     summary = result.result?.value || {};
     if (summary.ready) break;
   }
-  await sleep(350);
+  await sleep(700);
   const finalResult = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }).catch(() => ({}));
   summary = finalResult.result?.value || summary;
   const shot = await cdp.send("Page.captureScreenshot", { format: "png", fromSurface: true, captureBeyondViewport: false });

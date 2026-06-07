@@ -63,6 +63,13 @@ type Checks struct {
 	LegendPresent                      bool `json:"legend_present"`
 	IconAssetsPresent                  bool `json:"icon_assets_present"`
 	AttributionsPresent                bool `json:"attributions_present"`
+	LocalAssetRegistryPresent          bool `json:"local_asset_registry_present"`
+	LocalIconsPresent                  bool `json:"local_icons_present"`
+	LocalGeneratedModelsPresent        bool `json:"local_generated_models_present"`
+	NoRemoteAssetURLs                  bool `json:"no_remote_asset_urls"`
+	AssetAttributionsPresent           bool `json:"asset_attributions_present"`
+	KnownEntityBadgesPresent           bool `json:"known_entity_badges_present"`
+	ModelOrIconFallbackWorks           bool `json:"model_or_icon_fallback_works"`
 	IsometricRendererUsed              bool `json:"isometric_renderer_used"`
 	BasePlanePresent                   bool `json:"base_plane_present"`
 	GridPresent                        bool `json:"grid_present"`
@@ -89,6 +96,7 @@ type Checks struct {
 	ArtifactArrowHook                  bool `json:"artifact_arrow_hook"`
 	ArtifactNoStudioRuntime            bool `json:"artifact_no_studio_runtime"`
 	ArtifactNoStarfieldRuntime         bool `json:"artifact_no_starfield_runtime"`
+	ArtifactGeneratedModelBadgeHook    bool `json:"artifact_generated_model_badge_hook"`
 	ScreenshotReadable                 bool `json:"screenshot_readable"`
 	ScreenshotNonBlank                 bool `json:"screenshot_non_blank"`
 	ScreenshotContrast                 bool `json:"screenshot_contrast"`
@@ -96,18 +104,24 @@ type Checks struct {
 }
 
 type artifactEvidence struct {
-	RuntimeWired         bool
-	IsometricRuntimeHook bool
-	IsometricDOMHooks    bool
-	EntityLabelHooks     bool
-	LinkLabelHooks       bool
-	ZoneLabelHooks       bool
-	BasePlaneHook        bool
-	GridHook             bool
-	LeaderLineHook       bool
-	ArrowHook            bool
-	NoStudioRuntime      bool
-	NoStarfieldRuntime   bool
+	RuntimeWired             bool
+	IsometricRuntimeHook     bool
+	IsometricDOMHooks        bool
+	EntityLabelHooks         bool
+	LinkLabelHooks           bool
+	ZoneLabelHooks           bool
+	BasePlaneHook            bool
+	GridHook                 bool
+	LeaderLineHook           bool
+	ArrowHook                bool
+	NoStudioRuntime          bool
+	NoStarfieldRuntime       bool
+	GeneratedModelBadgeHook  bool
+	AssetRegistryPresent     bool
+	IconsPresent             bool
+	GeneratedModelsPresent   bool
+	AssetAttributionsPresent bool
+	NoRemoteAssetURLs        bool
 }
 
 type Action struct {
@@ -196,6 +210,7 @@ func (c Checks) AllCriticalOK(withScreenshot bool) bool {
 	base := c.OutputFiles && c.ManifestJSON && c.ManifestJS && c.DataJS && c.RuntimeAssets && c.ThreeAsset && c.RendererContractMatch && c.TemplateVersionMatch && c.PlanReady && c.FirstViewObjectsWithinBudget && c.FirstViewRelationshipsWithinBudget && c.LabelsBounded && c.RelationshipsVisible
 	base = base && c.IsometricRendererUsed && c.BasePlanePresent && c.GridPresent && c.ZonesPresent && c.ZoneBoundariesPresent && c.EntitiesPresent && c.EntityLabelsPresent && c.LeaderLinesPresent && c.DirectedArrowsPresent && c.LinkLabelsPresent && c.OrthographicCameraPlanned && c.ArchitectureLightTheme && c.NoStarfieldTheme && c.NoStudioLayout
 	base = base && c.ArtifactRuntimeWired && c.ArtifactIsometricRuntimeHook && c.ArtifactIsometricDOMHooks && c.ArtifactEntityLabelHooks && c.ArtifactLinkLabelHooks && c.ArtifactZoneLabelHooks && c.ArtifactBasePlaneHook && c.ArtifactGridHook && c.ArtifactLeaderLineHook && c.ArtifactArrowHook && c.ArtifactNoStudioRuntime && c.ArtifactNoStarfieldRuntime
+	base = base && c.LocalAssetRegistryPresent && c.LocalIconsPresent && c.NoRemoteAssetURLs && c.AssetAttributionsPresent && c.KnownEntityBadgesPresent && c.ModelOrIconFallbackWorks
 	return base && (!withScreenshot || c.ScreenshotReadable)
 }
 
@@ -247,18 +262,24 @@ func parseJSAssignment(b []byte, variable, file string) (map[string]any, error) 
 
 func inspectArtifactEvidence(outDir string, tpl manifest.TemplateManifest) artifactEvidence {
 	evidence := artifactEvidence{
-		RuntimeWired:         true,
-		IsometricRuntimeHook: true,
-		IsometricDOMHooks:    true,
-		EntityLabelHooks:     true,
-		LinkLabelHooks:       true,
-		ZoneLabelHooks:       true,
-		BasePlaneHook:        true,
-		GridHook:             true,
-		LeaderLineHook:       true,
-		ArrowHook:            true,
-		NoStudioRuntime:      true,
-		NoStarfieldRuntime:   true,
+		RuntimeWired:             true,
+		IsometricRuntimeHook:     true,
+		IsometricDOMHooks:        true,
+		EntityLabelHooks:         true,
+		LinkLabelHooks:           true,
+		ZoneLabelHooks:           true,
+		BasePlaneHook:            true,
+		GridHook:                 true,
+		LeaderLineHook:           true,
+		ArrowHook:                true,
+		NoStudioRuntime:          true,
+		NoStarfieldRuntime:       true,
+		GeneratedModelBadgeHook:  true,
+		AssetRegistryPresent:     true,
+		IconsPresent:             true,
+		GeneratedModelsPresent:   true,
+		AssetAttributionsPresent: true,
+		NoRemoteAssetURLs:        true,
 	}
 	if tpl.Renderer.Contract != "offline.architecture.isometric.v1" {
 		return evidence
@@ -295,6 +316,12 @@ func inspectArtifactEvidence(outDir string, tpl manifest.TemplateManifest) artif
 	evidence.NoStudioRuntime = !strings.Contains(combinedArtifact, "studio-") && !strings.Contains(combinedArtifact, "studioshell") && !strings.Contains(combinedArtifact, "renderstudio")
 	evidence.NoStarfieldRuntime = !strings.Contains(strings.ToLower(isometricRuntime), "visual-space-dot") &&
 		!strings.Contains(strings.ToLower(isometricRuntime+"\n"+templateCSS+"\n"+dataJS), "starfield")
+	evidence.GeneratedModelBadgeHook = strings.Contains(runtimeJS, "isGeneratedModelBadge") && strings.Contains(runtimeJS, "modelPathFor")
+	evidence.AssetRegistryPresent = fileExists(filepath.Join(outDir, "assets", "asset-registry.json")) && fileExists(filepath.Join(outDir, "assets", "mark-registry.json"))
+	evidence.IconsPresent = fileExists(filepath.Join(outDir, "assets", "icons", "generic", "service.svg")) && fileExists(filepath.Join(outDir, "assets", "icons", "simple-icons", "nginx.svg"))
+	evidence.GeneratedModelsPresent = fileExists(filepath.Join(outDir, "assets", "models", "generated", "nginx.glb"))
+	evidence.AssetAttributionsPresent = fileExists(filepath.Join(outDir, "assets", "ATTRIBUTIONS.md")) && fileExists(filepath.Join(outDir, "assets", "attributions", "ASSETS.md"))
+	evidence.NoRemoteAssetURLs = noRemoteAssetPaths(outDir)
 	return evidence
 }
 
@@ -304,6 +331,24 @@ func readArtifactText(path string) string {
 		return ""
 	}
 	return string(b)
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+func noRemoteAssetPaths(outDir string) bool {
+	for _, rel := range []string{"assets/asset-registry.json", "manifest.json", "data.js"} {
+		text := strings.ToLower(readArtifactText(filepath.Join(outDir, filepath.FromSlash(rel))))
+		if strings.Contains(text, `"path":"http://`) || strings.Contains(text, `"path":"https://`) || strings.Contains(text, `"path":"//`) {
+			return false
+		}
+		if strings.Contains(text, `"icon":"http://`) || strings.Contains(text, `"icon":"https://`) || strings.Contains(text, `"model":"http://`) || strings.Contains(text, `"model":"https://`) {
+			return false
+		}
+	}
+	return true
 }
 
 func isometricRuntimeBlock(runtimeJS string) string {
@@ -349,6 +394,13 @@ func buildChecks(outputInspection render.Inspection, outputManifest manifest.Out
 		LegendPresent:                      legendPresent(visualPlan),
 		IconAssetsPresent:                  len(visualPlan.Assets.MissingIcons) == 0,
 		AttributionsPresent:                len(visualPlan.Assets.IconsUsed) == 0 || len(visualPlan.Assets.Attributions) > 0,
+		LocalAssetRegistryPresent:          true,
+		LocalIconsPresent:                  true,
+		LocalGeneratedModelsPresent:        true,
+		NoRemoteAssetURLs:                  true,
+		AssetAttributionsPresent:           true,
+		KnownEntityBadgesPresent:           true,
+		ModelOrIconFallbackWorks:           true,
 		IsometricRendererUsed:              true,
 		BasePlanePresent:                   true,
 		GridPresent:                        true,
@@ -375,6 +427,7 @@ func buildChecks(outputInspection render.Inspection, outputManifest manifest.Out
 		ArtifactArrowHook:                  true,
 		ArtifactNoStudioRuntime:            true,
 		ArtifactNoStarfieldRuntime:         true,
+		ArtifactGeneratedModelBadgeHook:    true,
 		ScreenshotReadable:                 !screenshot.Provided || screenshot.NonBlank && screenshot.ContrastOK && screenshot.CoverageOK,
 		ScreenshotNonBlank:                 !screenshot.Provided || screenshot.NonBlank,
 		ScreenshotContrast:                 !screenshot.Provided || screenshot.ContrastOK,
@@ -433,6 +486,14 @@ func applyArchitectureChecks(checks *Checks, tpl manifest.TemplateManifest, visu
 	checks.ArtifactArrowHook = evidence.ArrowHook
 	checks.ArtifactNoStudioRuntime = evidence.NoStudioRuntime
 	checks.ArtifactNoStarfieldRuntime = evidence.NoStarfieldRuntime
+	checks.ArtifactGeneratedModelBadgeHook = evidence.GeneratedModelBadgeHook
+	checks.LocalAssetRegistryPresent = evidence.AssetRegistryPresent
+	checks.LocalIconsPresent = evidence.IconsPresent && len(visualPlan.Assets.MissingIcons) == 0
+	checks.LocalGeneratedModelsPresent = evidence.GeneratedModelsPresent || len(visualPlan.Assets.ModelsUsed) == 0
+	checks.NoRemoteAssetURLs = evidence.NoRemoteAssetURLs
+	checks.AssetAttributionsPresent = evidence.AssetAttributionsPresent && (len(visualPlan.Assets.IconsUsed)+len(visualPlan.Assets.ModelsUsed) == 0 || len(visualPlan.Assets.Attributions) > 0)
+	checks.KnownEntityBadgesPresent = visualPlan.Marks.EntityBadgeCount >= iso.EntityCount && visualPlan.Assets.FallbackBadges == 0
+	checks.ModelOrIconFallbackWorks = len(visualPlan.Assets.MissingIcons) == 0 && len(visualPlan.Assets.MissingModels) == 0
 }
 
 func inspectRenderWarnings(checks Checks, outputManifest manifest.OutputManifest, tpl manifest.TemplateManifest, visualPlan plan.VisualPlan, summary preview.Summary) []preview.Warning {
@@ -486,6 +547,30 @@ func inspectRenderWarnings(checks Checks, outputManifest manifest.OutputManifest
 		add("asset_attributions_missing", "warning", "Icons are used but no asset attribution entries are present.", "Ensure manifest.json assets.attributions and assets/ATTRIBUTIONS.md are included in the artifact.")
 	}
 	if tpl.Renderer.Contract == "offline.architecture.isometric.v1" {
+		if !checks.LocalAssetRegistryPresent {
+			add("asset_registry_missing", "error", "The rendered artifact is missing local asset and mark registries.", "Run visual render again and ensure shared visual registries are copied to assets/.")
+		}
+		if !checks.LocalIconsPresent {
+			add("local_icons_missing", "error", "The rendered artifact is missing local icon assets or references unknown icon IDs.", "Run scripts/assets/fetch_logo_assets.mjs or replace unknown presentation.icon values with local registry IDs.")
+		}
+		if !checks.LocalGeneratedModelsPresent {
+			add("local_generated_models_missing", "warning", "The rendered artifact does not include generated local model badges.", "Run scripts/assets/convert_svg_to_3d.mjs --write-registry for important technology logos, or rely on SVG icons.")
+		}
+		if !checks.NoRemoteAssetURLs {
+			add("remote_asset_urls_detected", "error", "The rendered artifact contains remote asset URL references.", "Vendor assets through scripts/assets/logo_catalog.json and reference local asset IDs only.")
+		}
+		if !checks.AssetAttributionsPresent {
+			add("asset_attributions_missing", "warning", "The rendered architecture artifact is missing asset attribution files or manifest attribution entries.", "Include assets/attributions/ASSETS.md and manifest.json assets.attributions.")
+		}
+		if !checks.KnownEntityBadgesPresent {
+			add("known_entity_badges_missing", "warning", "Some architecture entities do not resolve to a local icon/model badge.", "Use known kind/provider/service values or add local presentation.icon/presentation.model IDs.")
+		}
+		if !checks.ModelOrIconFallbackWorks {
+			add("model_or_icon_fallback_missing", "error", "Some architecture entities request missing icons or models with no local fallback.", "Use local asset IDs from assets/asset-registry.json or omit missing presentation fields.")
+		}
+		if !checks.ArtifactGeneratedModelBadgeHook {
+			add("architecture_artifact_model_badge_hook_missing", "warning", "The generated runtime does not expose generated model badge hooks.", "Ensure isometric entities call createModelBadge and tag badges with isGeneratedModelBadge.")
+		}
 		if !checks.IsometricRendererUsed {
 			add("architecture_renderer_missing", "error", "Rendered artifact does not use the isometric architecture input contract.", "Render with architecture.isometric_overview and isometric_architecture_v1 input.")
 		}

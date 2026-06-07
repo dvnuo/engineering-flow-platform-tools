@@ -43,7 +43,9 @@ Prefer `visual.initial_focus_ids`, `visual.narrative_steps`, `visual.annotations
 
 ## Visual encoding rules
 
-- Entity `kind`, `provider`, `service`, `platform`, and `presentation` drive 3D geometry and local icon selection.
+- Entity `kind`, `provider`, `service`, `platform`, and `presentation` drive 3D geometry, local icon selection, and generated model badges.
+- Use `presentation.icon` and `presentation.model` only with local registry IDs. Examples: `nginx` + `nginx.logo3d`, `redis` + `redis.logo3d`, `mysql` + `mysql.logo3d`, `elasticsearch` + `elasticsearch.logo3d`, `kubernetes` + `kubernetes.logo3d`, `spring` + `spring.logo3d`.
+- Do not invent vendor logo URLs or remote model URLs. If a product logo is not locally registered, use a generic icon such as `generic.service`, `generic.database`, `generic.storage`, or `generic.registry`.
 - Zone `bounds` and `presentation.boundary` drive floor plates and solid/dashed/dotted boundaries.
 - Link `kind`, `directed`, `presentation.arrow`, `presentation.lineStyle`, and `presentation.color` drive thick arrows, line style, and route color.
 - Use `theme: architecture_light`; do not choose dark starfield or decorative particle effects for this renderer.
@@ -73,6 +75,7 @@ If a source architecture omits exact positions, choose stable conventional place
 - Every zone has `id`, `label`, and numeric `bounds`.
 - Every important entity has `id`, `label`, `kind`, `zone`, and `position`.
 - Every visible entity can receive a top label and leader line.
+- Important infrastructure entities use a local icon or generated model badge, never a remote URL.
 - Every link has `directed: true`, specific `kind`, short `label`, and route style or explicit route.
 - Routes avoid obvious overlaps in the first view.
 - `visual.assumptions` explains inferred placement or grouped replicas.

@@ -1,0 +1,801 @@
+{
+  "schema": "efp.visual.logo_catalog.v1",
+  "generated_at": "2026-06-07",
+  "policy": {
+    "runtime_network": "forbidden",
+    "download_phase": "build-time only",
+    "allow_remote_input": false,
+    "notes": [
+      "Only IDs listed in this catalog may be fetched or converted by the build-time asset scripts.",
+      "Every downloaded SVG must produce an attribution record before it is referenced by asset-registry.json.",
+      "Vendor names and marks remain subject to their owners' trademark policies; generated assets are local visualization badges, not endorsements."
+    ]
+  },
+  "logos": [
+    {
+      "id": "nginx",
+      "label": "NGINX",
+      "source": "simple-icons",
+      "slug": "nginx",
+      "license": "CC0-1.0",
+      "color": "#009639",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/nginx.svg",
+      "model": "templates/visual/_shared/assets/models/generated/nginx.glb",
+      "notes": "Simple Icons project metadata tracks brand source and color.",
+      "kind": "gateway",
+      "preferred_entity_kinds": [
+        "gateway"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "NGINX trademark belongs to its owner."
+    },
+    {
+      "id": "redis",
+      "label": "Redis",
+      "source": "simple-icons",
+      "slug": "redis",
+      "license": "CC0-1.0",
+      "color": "#ff4438",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/redis.svg",
+      "model": "templates/visual/_shared/assets/models/generated/redis.glb",
+      "kind": "cache",
+      "preferred_entity_kinds": [
+        "cache"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Redis trademark belongs to its owner."
+    },
+    {
+      "id": "mysql",
+      "label": "MySQL",
+      "source": "simple-icons",
+      "slug": "mysql",
+      "license": "CC0-1.0",
+      "color": "#4479a1",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/mysql.svg",
+      "model": "templates/visual/_shared/assets/models/generated/mysql.glb",
+      "kind": "database",
+      "preferred_entity_kinds": [
+        "database"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "MySQL trademark belongs to its owner."
+    },
+    {
+      "id": "jenkins",
+      "label": "Jenkins",
+      "source": "simple-icons",
+      "slug": "jenkins",
+      "license": "CC0-1.0",
+      "color": "#d24939",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/jenkins.svg",
+      "model": "templates/visual/_shared/assets/models/generated/jenkins.glb",
+      "notes": "This catalog uses Simple Icons artwork. Do not replace with Jenkins project artwork unless CC BY-SA attribution is explicitly carried.",
+      "kind": "ci",
+      "preferred_entity_kinds": [
+        "ci"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Jenkins trademark belongs to its owner."
+    },
+    {
+      "id": "kubernetes",
+      "label": "Kubernetes",
+      "source": "simple-icons",
+      "slug": "kubernetes",
+      "license": "CC0-1.0",
+      "color": "#326ce5",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/kubernetes.svg",
+      "model": "templates/visual/_shared/assets/models/generated/kubernetes.glb",
+      "kind": "cluster",
+      "preferred_entity_kinds": [
+        "cluster"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Kubernetes trademark belongs to its owner."
+    },
+    {
+      "id": "docker",
+      "label": "Docker",
+      "source": "simple-icons",
+      "slug": "docker",
+      "license": "CC0-1.0",
+      "color": "#2496ed",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/docker.svg",
+      "model": "templates/visual/_shared/assets/models/generated/docker.glb",
+      "kind": "container",
+      "preferred_entity_kinds": [
+        "container"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Docker trademark belongs to its owner."
+    },
+    {
+      "id": "postgresql",
+      "label": "PostgreSQL",
+      "source": "simple-icons",
+      "slug": "postgresql",
+      "license": "CC0-1.0",
+      "color": "#4169e1",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/postgresql.svg",
+      "model": "templates/visual/_shared/assets/models/generated/postgresql.glb",
+      "kind": "database",
+      "preferred_entity_kinds": [
+        "database"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "PostgreSQL trademark belongs to its owner."
+    },
+    {
+      "id": "mongodb",
+      "label": "MongoDB",
+      "source": "simple-icons",
+      "slug": "mongodb",
+      "license": "CC0-1.0",
+      "color": "#47a248",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/mongodb.svg",
+      "model": "templates/visual/_shared/assets/models/generated/mongodb.glb",
+      "kind": "database",
+      "preferred_entity_kinds": [
+        "database"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "MongoDB trademark belongs to its owner."
+    },
+    {
+      "id": "kafka",
+      "label": "Apache Kafka",
+      "source": "simple-icons",
+      "slug": "apachekafka",
+      "license": "CC0-1.0",
+      "color": "#231f20",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/kafka.svg",
+      "model": "templates/visual/_shared/assets/models/generated/kafka.glb",
+      "kind": "queue",
+      "preferred_entity_kinds": [
+        "queue"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Apache Kafka trademark belongs to its owner."
+    },
+    {
+      "id": "rabbitmq",
+      "label": "RabbitMQ",
+      "source": "simple-icons",
+      "slug": "rabbitmq",
+      "license": "CC0-1.0",
+      "color": "#ff6600",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/rabbitmq.svg",
+      "model": "templates/visual/_shared/assets/models/generated/rabbitmq.glb",
+      "kind": "queue",
+      "preferred_entity_kinds": [
+        "queue"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "RabbitMQ trademark belongs to its owner."
+    },
+    {
+      "id": "elasticsearch",
+      "label": "Elasticsearch",
+      "source": "simple-icons",
+      "slug": "elasticsearch",
+      "license": "CC0-1.0",
+      "color": "#005571",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/elasticsearch.svg",
+      "model": "templates/visual/_shared/assets/models/generated/elasticsearch.glb",
+      "kind": "observability",
+      "preferred_entity_kinds": [
+        "observability"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Elasticsearch trademark belongs to its owner."
+    },
+    {
+      "id": "prometheus",
+      "label": "Prometheus",
+      "source": "simple-icons",
+      "slug": "prometheus",
+      "license": "CC0-1.0",
+      "color": "#e6522c",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/prometheus.svg",
+      "model": "templates/visual/_shared/assets/models/generated/prometheus.glb",
+      "kind": "observability",
+      "preferred_entity_kinds": [
+        "observability"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Prometheus trademark belongs to its owner."
+    },
+    {
+      "id": "grafana",
+      "label": "Grafana",
+      "source": "simple-icons",
+      "slug": "grafana",
+      "license": "CC0-1.0",
+      "color": "#f46800",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/grafana.svg",
+      "model": "templates/visual/_shared/assets/models/generated/grafana.glb",
+      "kind": "observability",
+      "preferred_entity_kinds": [
+        "observability"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Grafana trademark belongs to its owner."
+    },
+    {
+      "id": "opentelemetry",
+      "label": "OpenTelemetry",
+      "source": "simple-icons",
+      "slug": "opentelemetry",
+      "license": "CC0-1.0",
+      "color": "#000000",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/opentelemetry.svg",
+      "model": "templates/visual/_shared/assets/models/generated/opentelemetry.glb",
+      "kind": "observability",
+      "preferred_entity_kinds": [
+        "observability"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "OpenTelemetry trademark belongs to its owner."
+    },
+    {
+      "id": "spring",
+      "label": "Spring",
+      "source": "simple-icons",
+      "slug": "spring",
+      "license": "CC0-1.0",
+      "color": "#6db33f",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/spring.svg",
+      "model": "templates/visual/_shared/assets/models/generated/spring.glb",
+      "kind": "runtime",
+      "preferred_entity_kinds": [
+        "runtime"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Spring trademark belongs to its owner."
+    },
+    {
+      "id": "java",
+      "label": "Java",
+      "source": "simple-icons",
+      "slug": "openjdk",
+      "license": "CC0-1.0",
+      "color": "#437291",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/java.svg",
+      "model": "templates/visual/_shared/assets/models/generated/java.glb",
+      "kind": "runtime",
+      "preferred_entity_kinds": [
+        "runtime"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Java trademark belongs to its owner."
+    },
+    {
+      "id": "nodejs",
+      "label": "Node.js",
+      "source": "simple-icons",
+      "slug": "nodedotjs",
+      "license": "CC0-1.0",
+      "color": "#5fa04e",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/nodejs.svg",
+      "model": "templates/visual/_shared/assets/models/generated/nodejs.glb",
+      "kind": "runtime",
+      "preferred_entity_kinds": [
+        "runtime"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Node.js trademark belongs to its owner."
+    },
+    {
+      "id": "python",
+      "label": "Python",
+      "source": "simple-icons",
+      "slug": "python",
+      "license": "CC0-1.0",
+      "color": "#3776ab",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/python.svg",
+      "model": "templates/visual/_shared/assets/models/generated/python.glb",
+      "kind": "runtime",
+      "preferred_entity_kinds": [
+        "runtime"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Python trademark belongs to its owner."
+    },
+    {
+      "id": "go",
+      "label": "Go",
+      "source": "simple-icons",
+      "slug": "go",
+      "license": "CC0-1.0",
+      "color": "#00add8",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/go.svg",
+      "model": "templates/visual/_shared/assets/models/generated/go.glb",
+      "kind": "runtime",
+      "preferred_entity_kinds": [
+        "runtime"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Go trademark belongs to its owner."
+    },
+    {
+      "id": "github",
+      "label": "GitHub",
+      "source": "simple-icons",
+      "slug": "github",
+      "license": "CC0-1.0",
+      "color": "#181717",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/github.svg",
+      "model": "templates/visual/_shared/assets/models/generated/github.glb",
+      "kind": "pipeline",
+      "preferred_entity_kinds": [
+        "pipeline"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "GitHub trademark belongs to its owner."
+    },
+    {
+      "id": "gitlab",
+      "label": "GitLab",
+      "source": "simple-icons",
+      "slug": "gitlab",
+      "license": "CC0-1.0",
+      "color": "#fc6d26",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/gitlab.svg",
+      "model": "templates/visual/_shared/assets/models/generated/gitlab.glb",
+      "kind": "pipeline",
+      "preferred_entity_kinds": [
+        "pipeline"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "GitLab trademark belongs to its owner."
+    },
+    {
+      "id": "envoy",
+      "label": "Envoy",
+      "source": "simple-icons",
+      "slug": "envoyproxy",
+      "license": "CC0-1.0",
+      "color": "#ac6199",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/envoy.svg",
+      "model": "templates/visual/_shared/assets/models/generated/envoy.glb",
+      "kind": "service_mesh",
+      "preferred_entity_kinds": [
+        "service_mesh"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Envoy trademark belongs to its owner."
+    },
+    {
+      "id": "istio",
+      "label": "Istio",
+      "source": "simple-icons",
+      "slug": "istio",
+      "license": "CC0-1.0",
+      "color": "#466bb0",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/istio.svg",
+      "model": "templates/visual/_shared/assets/models/generated/istio.glb",
+      "kind": "service_mesh",
+      "preferred_entity_kinds": [
+        "service_mesh"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Istio trademark belongs to its owner."
+    },
+    {
+      "id": "argo",
+      "label": "Argo",
+      "source": "simple-icons",
+      "slug": "argo",
+      "license": "CC0-1.0",
+      "color": "#ef7b4d",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/argo.svg",
+      "model": "templates/visual/_shared/assets/models/generated/argo.glb",
+      "kind": "pipeline",
+      "preferred_entity_kinds": [
+        "pipeline"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Argo trademark belongs to its owner."
+    },
+    {
+      "id": "harbor",
+      "label": "Harbor",
+      "source": "simple-icons",
+      "slug": "harbor",
+      "license": "CC0-1.0",
+      "color": "#60b932",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/harbor.svg",
+      "model": "templates/visual/_shared/assets/models/generated/harbor.glb",
+      "kind": "container",
+      "preferred_entity_kinds": [
+        "container"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "Harbor trademark belongs to its owner."
+    },
+    {
+      "id": "etcd",
+      "label": "etcd",
+      "source": "simple-icons",
+      "slug": "etcd",
+      "license": "CC0-1.0",
+      "color": "#419eda",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/etcd.svg",
+      "model": "templates/visual/_shared/assets/models/generated/etcd.glb",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "etcd trademark belongs to its owner."
+    },
+    {
+      "id": "nacos",
+      "label": "Nacos",
+      "source": "manual-review-required",
+      "license": "not-vendored",
+      "color": "#2f74ff",
+      "target": "",
+      "model": "",
+      "notes": "No logo is vendored by default. Use generic.registry unless a reviewed local asset is added with explicit license terms.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "generate_model": false,
+      "model_style": "none",
+      "trademark": "Nacos trademark belongs to its owner."
+    },
+    {
+      "id": "helm",
+      "label": "Helm",
+      "source": "simple-icons",
+      "slug": "helm",
+      "license": "CC0-1.0",
+      "color": "#64748b",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/helm.svg",
+      "model": "templates/visual/_shared/assets/models/generated/helm.glb",
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "helm trademark belongs to its owner.",
+      "kind": "cluster",
+      "preferred_entity_kinds": [
+        "cluster"
+      ]
+    },
+    {
+      "id": "containerd",
+      "label": "Containerd",
+      "source": "simple-icons",
+      "slug": "containerd",
+      "license": "CC0-1.0",
+      "color": "#64748b",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/containerd.svg",
+      "model": "templates/visual/_shared/assets/models/generated/containerd.glb",
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "containerd trademark belongs to its owner.",
+      "kind": "container",
+      "preferred_entity_kinds": [
+        "container"
+      ]
+    },
+    {
+      "id": "fluentd",
+      "label": "Fluentd",
+      "source": "simple-icons",
+      "slug": "fluentd",
+      "license": "CC0-1.0",
+      "color": "#64748b",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/fluentd.svg",
+      "model": "templates/visual/_shared/assets/models/generated/fluentd.glb",
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "fluentd trademark belongs to its owner.",
+      "kind": "observability",
+      "preferred_entity_kinds": [
+        "observability"
+      ]
+    },
+    {
+      "id": "jaeger",
+      "label": "Jaeger",
+      "source": "simple-icons",
+      "slug": "jaeger",
+      "license": "CC0-1.0",
+      "color": "#64748b",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/jaeger.svg",
+      "model": "templates/visual/_shared/assets/models/generated/jaeger.glb",
+      "generate_model": true,
+      "model_style": "front_badge",
+      "trademark": "jaeger trademark belongs to its owner.",
+      "kind": "observability",
+      "preferred_entity_kinds": [
+        "observability"
+      ]
+    },
+    {
+      "id": "aws",
+      "label": "AWS",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS trademark belongs to its owner."
+    },
+    {
+      "id": "aws.lambda",
+      "label": "AWS.LAMBDA",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.LAMBDA trademark belongs to its owner."
+    },
+    {
+      "id": "aws.apigateway",
+      "label": "AWS.APIGATEWAY",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.APIGATEWAY trademark belongs to its owner."
+    },
+    {
+      "id": "aws.s3",
+      "label": "AWS.S3",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.S3 trademark belongs to its owner."
+    },
+    {
+      "id": "aws.rds",
+      "label": "AWS.RDS",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.RDS trademark belongs to its owner."
+    },
+    {
+      "id": "aws.cloudfront",
+      "label": "AWS.CLOUDFRONT",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.CLOUDFRONT trademark belongs to its owner."
+    },
+    {
+      "id": "aws.cloudwatch",
+      "label": "AWS.CLOUDWATCH",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.CLOUDWATCH trademark belongs to its owner."
+    },
+    {
+      "id": "aws.sqs",
+      "label": "AWS.SQS",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.SQS trademark belongs to its owner."
+    },
+    {
+      "id": "aws.sns",
+      "label": "AWS.SNS",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.SNS trademark belongs to its owner."
+    },
+    {
+      "id": "aws.eventbridge",
+      "label": "AWS.EVENTBRIDGE",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.EVENTBRIDGE trademark belongs to its owner."
+    },
+    {
+      "id": "aws.ec2",
+      "label": "AWS.EC2",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.EC2 trademark belongs to its owner."
+    },
+    {
+      "id": "aws.eks",
+      "label": "AWS.EKS",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.EKS trademark belongs to its owner."
+    },
+    {
+      "id": "aws.ecs",
+      "label": "AWS.ECS",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.ECS trademark belongs to its owner."
+    },
+    {
+      "id": "aws.secretsmanager",
+      "label": "AWS.SECRETSMANAGER",
+      "source": "aws-architecture-icons",
+      "license": "manual_review_required",
+      "target": "",
+      "model": "",
+      "generate_model": false,
+      "notes": "Official AWS icons are not downloaded by default; use existing local AWS-styled placeholders unless official package metadata is added.",
+      "kind": "service",
+      "preferred_entity_kinds": [
+        "service"
+      ],
+      "model_style": "none",
+      "trademark": "AWS.SECRETSMANAGER trademark belongs to its owner."
+    }
+  ],
+  "sources": {
+    "simple-icons": {
+      "type": "github_raw",
+      "license": "CC0-1.0",
+      "trademark_note": "Brand trademarks may apply. Read Simple Icons legal disclaimer."
+    },
+    "devicon": {
+      "type": "github_raw",
+      "license": "MIT",
+      "trademark_note": "Brand trademarks may apply."
+    },
+    "aws-architecture-icons": {
+      "type": "manual",
+      "license": "AWS Architecture Icons terms",
+      "trademark_note": "Use only for architecture diagrams; keep attribution/source metadata."
+    },
+    "cncf-artwork": {
+      "type": "github_raw",
+      "license": "project-specific / CNCF trademark policy",
+      "trademark_note": "Respect CNCF and project trademark guidelines."
+    },
+    "official-url": {
+      "type": "manual",
+      "license": "manual_review_required",
+      "trademark_note": "Do not auto-ship without manual approval."
+    },
+    "manual-review-required": {
+      "type": "manual",
+      "license": "manual_review_required",
+      "trademark_note": "Use generic fallback until source/license is reviewed."
+    }
+  }
+}

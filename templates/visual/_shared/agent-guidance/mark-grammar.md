@@ -1,6 +1,6 @@
 # Visual Mark Grammar
 
-Visual inputs should describe what each object and relationship means, not only where it appears. The renderer uses these semantic fields to choose shape, icon, mesh, color, arrow style, and legend entries.
+Visual inputs should describe what each object and relationship means, not only where it appears. The renderer uses these semantic fields to choose shape, icon, generated model badge, mesh, color, arrow style, and legend entries.
 
 ## Objects
 
@@ -9,12 +9,13 @@ Use `kind`, `provider`, `service`, `platform`, and `presentation` to encode the 
 Priority:
 
 1. `presentation.mesh` or `presentation.shape`
-2. `presentation.icon`
-3. `provider + service`
-4. `platform`
-5. `kind`
-6. `group`
-7. fallback
+2. `presentation.model`
+3. `presentation.icon`
+4. `provider + service`
+5. `platform`
+6. `kind`
+7. `group`
+8. fallback
 
 Recommended object fields:
 
@@ -30,6 +31,7 @@ Recommended object fields:
     "shape": "hex_service",
     "mesh": "hex_prism",
     "icon": "aws.api_gateway",
+    "model": "nginx.logo3d",
     "color": "#ff9900",
     "depth": 0.4,
     "lane": "backend"
@@ -37,7 +39,9 @@ Recommended object fields:
 }
 ```
 
-Do not rely on generic sphere nodes for semantic entities. Use `kind`, `provider`, `service`, `platform`, or `presentation.shape` so service boxes, databases, queues, actors, decisions, warnings, and external systems render differently.
+Do not rely on generic sphere nodes for semantic entities. Use `kind`, `provider`, `service`, `platform`, `presentation.shape`, `presentation.icon`, or `presentation.model` so service boxes, databases, queues, actors, decisions, warnings, and external systems render differently.
+
+`presentation.icon` and `presentation.model` must be local IDs from `asset-registry.json`. Never put external image/model URLs in visual input. If a logo is not in the registry, use a generic fallback ID or add it through the build-time asset pipeline first. Generated `*.logo3d` models are lightweight local GLB badges derived from local SVG source icons; they are not official vendor 3D models.
 
 Legacy fields remain supported:
 
@@ -124,4 +128,4 @@ Recommended:
 }
 ```
 
-If all marks resolve to the same fallback color, `visual inspect-input` reports `single_color_detected`. If `colorBy` is used without a usable legend, it reports `legend_missing`.
+If all marks resolve to the same fallback color, `visual inspect-input` reports `single_color_detected`. If `colorBy` is used without a usable legend, it reports `legend_missing`. If local asset IDs are wrong or remote URLs are used, it reports `asset_icon_unknown`, `asset_model_missing`, `asset_remote_url_forbidden`, `asset_registry_path_missing`, or `asset_vendor_attribution_missing`.

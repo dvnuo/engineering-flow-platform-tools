@@ -43,12 +43,14 @@
       "shape": "nginx_tower",
       "mesh": "tower",
       "iconFallback": "generic.nginx",
-      "color": "#16a34a"
+      "color": "#16a34a",
+      "icon": "nginx",
+      "model": "nginx.logo3d"
     },
     "api_gateway": {
       "shape": "gateway_card",
       "mesh": "gateway_card",
-      "iconFallback": "generic.api",
+      "iconFallback": "generic.api_gateway",
       "color": "#2563eb"
     },
     "microservice": {
@@ -60,13 +62,13 @@
     "registry": {
       "shape": "registry_ring",
       "mesh": "ring_pedestal",
-      "iconFallback": "generic.service",
+      "iconFallback": "generic.registry",
       "color": "#8b5cf6"
     },
     "nacos": {
       "shape": "registry_ring",
       "mesh": "ring_pedestal",
-      "iconFallback": "generic.nacos",
+      "iconFallback": "generic.registry",
       "color": "#7c3aed"
     },
     "admin": {
@@ -109,7 +111,9 @@
       "shape": "database_cylinder",
       "mesh": "cylinder",
       "iconFallback": "generic.mysql",
-      "color": "#2563eb"
+      "color": "#2563eb",
+      "icon": "mysql",
+      "model": "mysql.logo3d"
     },
     "cache": {
       "shape": "cache_stack",
@@ -121,7 +125,9 @@
       "shape": "redis_stack",
       "mesh": "stacked_cylinder",
       "iconFallback": "generic.redis",
-      "color": "#ef4444"
+      "color": "#ef4444",
+      "icon": "redis",
+      "model": "redis.logo3d"
     },
     "storage": {
       "shape": "bucket",
@@ -175,13 +181,17 @@
       "shape": "gear_card",
       "mesh": "box",
       "iconFallback": "generic.job",
-      "color": "#d33833"
+      "color": "#d33833",
+      "icon": "jenkins",
+      "model": "jenkins.logo3d"
     },
     "ci": {
       "shape": "ci_card",
       "mesh": "box",
       "iconFallback": "generic.job",
-      "color": "#d33833"
+      "color": "#d33833",
+      "icon": "jenkins",
+      "model": "jenkins.logo3d"
     },
     "user": {
       "shape": "actor_card",
@@ -211,7 +221,9 @@
       "shape": "search_glyph",
       "mesh": "search_cluster",
       "iconFallback": "generic.elasticsearch",
-      "color": "#eab308"
+      "color": "#eab308",
+      "icon": "elasticsearch",
+      "model": "elasticsearch.logo3d"
     },
     "search": {
       "shape": "search_glyph",
@@ -367,7 +379,9 @@
       "shape": "event_bus",
       "mesh": "capsule",
       "iconFallback": "generic.kafka",
-      "color": "#8b5cf6"
+      "color": "#8b5cf6",
+      "icon": "kafka",
+      "model": "kafka.logo3d"
     },
     "rocketmq": {
       "shape": "queue_capsule",
@@ -379,19 +393,25 @@
       "shape": "queue_capsule",
       "mesh": "capsule",
       "iconFallback": "generic.rabbitmq",
-      "color": "#22c55e"
+      "color": "#22c55e",
+      "icon": "rabbitmq",
+      "model": "rabbitmq.logo3d"
     },
     "postgres": {
       "shape": "database_cylinder",
       "mesh": "cylinder",
       "iconFallback": "generic.postgres",
-      "color": "#336791"
+      "color": "#336791",
+      "icon": "postgresql",
+      "model": "postgresql.logo3d"
     },
     "mongodb": {
       "shape": "database_cylinder",
       "mesh": "cylinder",
       "iconFallback": "generic.mongodb",
-      "color": "#10b981"
+      "color": "#10b981",
+      "icon": "mongodb",
+      "model": "mongodb.logo3d"
     },
     "minio": {
       "shape": "object_bucket",
@@ -403,7 +423,9 @@
       "shape": "cluster_block",
       "mesh": "cluster",
       "iconFallback": "generic.kubernetes",
-      "color": "#326ce5"
+      "color": "#326ce5",
+      "icon": "kubernetes",
+      "model": "kubernetes.logo3d"
     },
     "pod": {
       "shape": "service_box",
@@ -513,13 +535,15 @@
       "shape": "ci_card",
       "mesh": "box",
       "icon": "jenkins",
-      "color": "#d33833"
+      "color": "#d24939",
+      "model": "jenkins.logo3d"
     },
     "jenkins.jenkins": {
       "shape": "ci_card",
       "mesh": "box",
       "icon": "jenkins",
-      "color": "#d33833"
+      "color": "#d24939",
+      "model": "jenkins.logo3d"
     }
   },
   "platforms": {
@@ -527,7 +551,8 @@
       "shape": "ci_card",
       "mesh": "box",
       "icon": "jenkins",
-      "color": "#d33833"
+      "color": "#d24939",
+      "model": "jenkins.logo3d"
     },
     "aws": {
       "shape": "cloud_plate",

@@ -1,0 +1,412 @@
+{
+  "schema": "efp.visual.logo_catalog_manifest.v1",
+  "generated_from": "scripts/assets/logo_catalog.json",
+  "generated_at": "2026-06-07T09:43:30.242Z",
+  "logos": [
+    {
+      "id": "nginx",
+      "label": "NGINX",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/nginx.svg",
+      "model": "templates/visual/_shared/assets/models/generated/nginx.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "redis",
+      "label": "Redis",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/redis.svg",
+      "model": "templates/visual/_shared/assets/models/generated/redis.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "mysql",
+      "label": "MySQL",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/mysql.svg",
+      "model": "templates/visual/_shared/assets/models/generated/mysql.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "jenkins",
+      "label": "Jenkins",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/jenkins.svg",
+      "model": "templates/visual/_shared/assets/models/generated/jenkins.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "kubernetes",
+      "label": "Kubernetes",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/kubernetes.svg",
+      "model": "templates/visual/_shared/assets/models/generated/kubernetes.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "docker",
+      "label": "Docker",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/docker.svg",
+      "model": "templates/visual/_shared/assets/models/generated/docker.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "postgresql",
+      "label": "PostgreSQL",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/postgresql.svg",
+      "model": "templates/visual/_shared/assets/models/generated/postgresql.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "mongodb",
+      "label": "MongoDB",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/mongodb.svg",
+      "model": "templates/visual/_shared/assets/models/generated/mongodb.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "kafka",
+      "label": "Apache Kafka",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/kafka.svg",
+      "model": "templates/visual/_shared/assets/models/generated/kafka.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "rabbitmq",
+      "label": "RabbitMQ",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/rabbitmq.svg",
+      "model": "templates/visual/_shared/assets/models/generated/rabbitmq.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "elasticsearch",
+      "label": "Elasticsearch",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/elasticsearch.svg",
+      "model": "templates/visual/_shared/assets/models/generated/elasticsearch.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "prometheus",
+      "label": "Prometheus",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/prometheus.svg",
+      "model": "templates/visual/_shared/assets/models/generated/prometheus.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "grafana",
+      "label": "Grafana",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/grafana.svg",
+      "model": "templates/visual/_shared/assets/models/generated/grafana.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "opentelemetry",
+      "label": "OpenTelemetry",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/opentelemetry.svg",
+      "model": "templates/visual/_shared/assets/models/generated/opentelemetry.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "spring",
+      "label": "Spring",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/spring.svg",
+      "model": "templates/visual/_shared/assets/models/generated/spring.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "java",
+      "label": "Java",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/java.svg",
+      "model": "templates/visual/_shared/assets/models/generated/java.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "nodejs",
+      "label": "Node.js",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/nodejs.svg",
+      "model": "templates/visual/_shared/assets/models/generated/nodejs.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "python",
+      "label": "Python",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/python.svg",
+      "model": "templates/visual/_shared/assets/models/generated/python.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "go",
+      "label": "Go",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/go.svg",
+      "model": "templates/visual/_shared/assets/models/generated/go.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "github",
+      "label": "GitHub",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/github.svg",
+      "model": "templates/visual/_shared/assets/models/generated/github.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "gitlab",
+      "label": "GitLab",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/gitlab.svg",
+      "model": "templates/visual/_shared/assets/models/generated/gitlab.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "envoy",
+      "label": "Envoy",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/envoy.svg",
+      "model": "templates/visual/_shared/assets/models/generated/envoy.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "istio",
+      "label": "Istio",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/istio.svg",
+      "model": "templates/visual/_shared/assets/models/generated/istio.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "argo",
+      "label": "Argo",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/argo.svg",
+      "model": "templates/visual/_shared/assets/models/generated/argo.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "harbor",
+      "label": "Harbor",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/harbor.svg",
+      "model": "templates/visual/_shared/assets/models/generated/harbor.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "etcd",
+      "label": "etcd",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/etcd.svg",
+      "model": "templates/visual/_shared/assets/models/generated/etcd.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "nacos",
+      "label": "Nacos",
+      "source": "manual-review-required",
+      "target": "",
+      "model": "",
+      "license": "not-vendored",
+      "vendored": false
+    },
+    {
+      "id": "helm",
+      "label": "Helm",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/helm.svg",
+      "model": "templates/visual/_shared/assets/models/generated/helm.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "containerd",
+      "label": "Containerd",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/containerd.svg",
+      "model": "templates/visual/_shared/assets/models/generated/containerd.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "fluentd",
+      "label": "Fluentd",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/fluentd.svg",
+      "model": "templates/visual/_shared/assets/models/generated/fluentd.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "jaeger",
+      "label": "Jaeger",
+      "source": "simple-icons",
+      "target": "templates/visual/_shared/assets/icons/simple-icons/jaeger.svg",
+      "model": "templates/visual/_shared/assets/models/generated/jaeger.glb",
+      "license": "CC0-1.0",
+      "vendored": true
+    },
+    {
+      "id": "aws",
+      "label": "AWS",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.lambda",
+      "label": "AWS.LAMBDA",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.apigateway",
+      "label": "AWS.APIGATEWAY",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.s3",
+      "label": "AWS.S3",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.rds",
+      "label": "AWS.RDS",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.cloudfront",
+      "label": "AWS.CLOUDFRONT",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.cloudwatch",
+      "label": "AWS.CLOUDWATCH",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.sqs",
+      "label": "AWS.SQS",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.sns",
+      "label": "AWS.SNS",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.eventbridge",
+      "label": "AWS.EVENTBRIDGE",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.ec2",
+      "label": "AWS.EC2",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.eks",
+      "label": "AWS.EKS",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.ecs",
+      "label": "AWS.ECS",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    },
+    {
+      "id": "aws.secretsmanager",
+      "label": "AWS.SECRETSMANAGER",
+      "source": "aws-architecture-icons",
+      "target": "",
+      "model": "",
+      "license": "manual_review_required",
+      "vendored": false
+    }
+  ]
+}

@@ -138,6 +138,10 @@ type MarkPlan struct {
 	ShapeCounts         map[string]int `json:"shape_counts"`
 	IconCounts          map[string]int `json:"icon_counts"`
 	FallbackSphereCount int            `json:"fallback_sphere_count"`
+	EntityBadgeCount    int            `json:"entity_badge_count"`
+	ModelBadgeCount     int            `json:"model_badge_count"`
+	SVGIconBadgeCount   int            `json:"svg_icon_badge_count"`
+	GenericBadgeCount   int            `json:"generic_badge_count"`
 }
 
 type EdgeEncodingPlan struct {
@@ -153,26 +157,45 @@ type ColorPlan struct {
 }
 
 type AssetPlan struct {
-	IconsUsed    []string           `json:"icons_used"`
-	MissingIcons []string           `json:"missing_icons"`
-	Attributions []mark.Attribution `json:"attributions"`
+	IconsUsed       []string           `json:"icons_used"`
+	MissingIcons    []string           `json:"missing_icons"`
+	ModelsUsed      []string           `json:"models_used"`
+	MissingModels   []string           `json:"missing_models"`
+	Attributions    []mark.Attribution `json:"attributions"`
+	FallbackBadges  int                `json:"fallback_badges"`
+	VendorAssets    int                `json:"vendor_assets"`
+	GeneratedModels int                `json:"generated_models"`
+}
+
+type IsometricAssetPlan struct {
+	IconsUsed         []string           `json:"icons_used"`
+	ModelsUsed        []string           `json:"models_used"`
+	MissingIcons      []string           `json:"missing_icons"`
+	MissingModels     []string           `json:"missing_models"`
+	Attributions      []mark.Attribution `json:"attributions"`
+	EntityBadgeCount  int                `json:"entity_badge_count"`
+	ModelBadgeCount   int                `json:"model_badge_count"`
+	SVGIconBadgeCount int                `json:"svg_icon_badge_count"`
+	GenericBadgeCount int                `json:"generic_badge_count"`
+	FallbackBadges    int                `json:"fallback_badges"`
 }
 
 type IsometricPlan struct {
-	BasePlane              bool           `json:"base_plane"`
-	Grid                   bool           `json:"grid"`
-	ZoneCount              int            `json:"zone_count"`
-	EntityCount            int            `json:"entity_count"`
-	LinkCount              int            `json:"link_count"`
-	PositionedEntities     int            `json:"positioned_entities"`
-	AutoPositionedEntities int            `json:"auto_positioned_entities"`
-	DirectedLinks          int            `json:"directed_links"`
-	ArrowLinks             int            `json:"arrow_links"`
-	TopLabels              int            `json:"top_labels"`
-	LeaderLines            int            `json:"leader_lines"`
-	BoundaryStyles         map[string]int `json:"boundary_styles"`
-	Camera                 string         `json:"camera"`
-	Theme                  string         `json:"theme"`
+	BasePlane              bool                `json:"base_plane"`
+	Grid                   bool                `json:"grid"`
+	ZoneCount              int                 `json:"zone_count"`
+	EntityCount            int                 `json:"entity_count"`
+	LinkCount              int                 `json:"link_count"`
+	PositionedEntities     int                 `json:"positioned_entities"`
+	AutoPositionedEntities int                 `json:"auto_positioned_entities"`
+	DirectedLinks          int                 `json:"directed_links"`
+	ArrowLinks             int                 `json:"arrow_links"`
+	TopLabels              int                 `json:"top_labels"`
+	LeaderLines            int                 `json:"leader_lines"`
+	BoundaryStyles         map[string]int      `json:"boundary_styles"`
+	Camera                 string              `json:"camera"`
+	Theme                  string              `json:"theme"`
+	Assets                 *IsometricAssetPlan `json:"assets,omitempty"`
 }
 
 type DisclosurePlan struct {
@@ -329,6 +352,10 @@ func Build(templateDir string, tpl manifest.TemplateManifest, data map[string]an
 			ShapeCounts:         markStats.ShapeCounts,
 			IconCounts:          markStats.IconCounts,
 			FallbackSphereCount: markStats.FallbackSphereCount,
+			EntityBadgeCount:    markStats.EntityBadgeCount,
+			ModelBadgeCount:     markStats.ModelBadgeCount,
+			SVGIconBadgeCount:   markStats.SVGIconBadgeCount,
+			GenericBadgeCount:   markStats.GenericBadgeCount,
 		},
 		Edges: EdgeEncodingPlan{
 			DirectedCount:   markStats.DirectedCount,
@@ -341,9 +368,14 @@ func Build(templateDir string, tpl manifest.TemplateManifest, data map[string]an
 			SingleColor: markStats.SingleColor,
 		},
 		Assets: AssetPlan{
-			IconsUsed:    markStats.IconsUsed,
-			MissingIcons: markStats.MissingIcons,
-			Attributions: markStats.Attributions,
+			IconsUsed:       markStats.IconsUsed,
+			MissingIcons:    markStats.MissingIcons,
+			ModelsUsed:      markStats.ModelsUsed,
+			MissingModels:   markStats.MissingModels,
+			Attributions:    markStats.Attributions,
+			FallbackBadges:  markStats.FallbackBadges,
+			VendorAssets:    markStats.VendorAssets,
+			GeneratedModels: markStats.GeneratedModels,
 		},
 		Isometric: buildIsometricPlan(tpl.InputSchemaKind, data),
 		Disclosure: DisclosurePlan{
@@ -362,6 +394,20 @@ func Build(templateDir string, tpl manifest.TemplateManifest, data map[string]an
 		},
 		QualityLoop:      qualityActions(warnings),
 		AgentNextActions: nextActions(tpl.ID, outDir, warnings),
+	}
+	if plan.Isometric != nil {
+		plan.Isometric.Assets = &IsometricAssetPlan{
+			IconsUsed:         markStats.IconsUsed,
+			ModelsUsed:        markStats.ModelsUsed,
+			MissingIcons:      markStats.MissingIcons,
+			MissingModels:     markStats.MissingModels,
+			Attributions:      markStats.Attributions,
+			EntityBadgeCount:  markStats.EntityBadgeCount,
+			ModelBadgeCount:   markStats.ModelBadgeCount,
+			SVGIconBadgeCount: markStats.SVGIconBadgeCount,
+			GenericBadgeCount: markStats.GenericBadgeCount,
+			FallbackBadges:    markStats.FallbackBadges,
+		}
 	}
 	return plan
 }

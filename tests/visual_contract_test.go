@@ -382,7 +382,7 @@ func TestVisualArchitectureTemplateAuthoringContract(t *testing.T) {
 		}
 	}
 	presentationProps := objectMap(t, objectMap(t, defs["presentation"])["properties"])
-	for _, field := range []string{"shape", "icon", "color", "arrow", "boundary", "label", "leaderLine"} {
+	for _, field := range []string{"shape", "icon", "model", "color", "arrow", "boundary", "label", "leaderLine"} {
 		if _, ok := presentationProps[field]; !ok {
 			t.Fatalf("%s architecture presentation missing %s", templateID, field)
 		}
@@ -403,6 +403,71 @@ func TestVisualArchitectureTemplateAuthoringContract(t *testing.T) {
 	guideData := objectMap(t, guide["data"])
 	if guideData["agent_guide_available"] != true || !strings.Contains(guideData["raw_markdown"].(string), "zones`, `entities`, and `links`") {
 		t.Fatalf("architecture guide unavailable or missing zones/entities/links rule: %#v", guideData)
+	}
+}
+
+func TestVisualLogoModelAssetPipelineContract(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+	catalog := loadJSONMap(t, filepath.Join(root, "scripts", "assets", "logo_catalog.json"))
+	if catalog["schema"] != "efp.visual.logo_catalog.v1" || len(catalog["logos"].([]any)) < 20 {
+		t.Fatalf("logo catalog should contain at least 20 allowlisted entries: %#v", catalog)
+	}
+	for _, rel := range []string{
+		"scripts/assets/fetch_logo_assets.mjs",
+		"scripts/assets/convert_svg_to_3d.mjs",
+		"scripts/assets/vecto3d_adapter.mjs",
+		"scripts/assets/optimize_generated_models.mjs",
+		"scripts/assets/validate_asset_registry.mjs",
+		"scripts/assets/README.md",
+		"templates/visual/_shared/assets/attributions/ASSETS.md",
+		"templates/visual/_shared/assets/attributions/LOGO_SOURCES.json",
+		"templates/visual/_shared/assets/manifests/logo-catalog.json",
+		"templates/visual/_shared/assets/manifests/generated-models.json",
+	} {
+		info, err := os.Stat(filepath.Join(root, filepath.FromSlash(rel)))
+		if err != nil || info.IsDir() || info.Size() == 0 {
+			t.Fatalf("missing non-empty visual asset pipeline file %s", rel)
+		}
+	}
+	assetRegistryRaw := mustRead(t, filepath.Join(templateDir, "_shared", "asset-registry.json"))
+	if strings.Contains(assetRegistryRaw, "http://") || strings.Contains(assetRegistryRaw, "https://") {
+		t.Fatalf("asset-registry must not contain remote URL schemes")
+	}
+	sourceRaw := mustRead(t, filepath.Join(templateDir, "_shared", "assets", "attributions", "LOGO_SOURCES.json"))
+	if strings.Contains(sourceRaw, "http://") || strings.Contains(sourceRaw, "https://") {
+		t.Fatalf("LOGO_SOURCES must use offline source references, not remote URL schemes")
+	}
+	assetRegistry := loadJSONMap(t, filepath.Join(templateDir, "_shared", "asset-registry.json"))
+	icons := objectMap(t, assetRegistry["icons"])
+	models := objectMap(t, assetRegistry["models"])
+	for _, id := range []string{"nginx", "redis", "mysql", "jenkins", "kubernetes"} {
+		if icons[id] == nil {
+			t.Fatalf("asset registry missing downloaded logo icon %s", id)
+		}
+		modelID := id + ".logo3d"
+		if models[modelID] == nil {
+			t.Fatalf("asset registry missing generated model %s", modelID)
+		}
+		modelPath := objectMap(t, models[modelID])["path"].(string)
+		b, err := os.ReadFile(filepath.Join(templateDir, "_shared", filepath.FromSlash(modelPath)))
+		if err != nil || len(b) < 12 || string(b[:4]) != "glTF" {
+			t.Fatalf("generated model %s is not a GLB file", modelPath)
+		}
+	}
+	markRegistry := loadJSONMap(t, filepath.Join(templateDir, "_shared", "mark-registry.json"))
+	kinds := objectMap(t, markRegistry["kinds"])
+	for kind, modelID := range map[string]string{"nginx": "nginx.logo3d", "redis": "redis.logo3d", "mysql": "mysql.logo3d", "kubernetes": "kubernetes.logo3d", "elasticsearch": "elasticsearch.logo3d"} {
+		spec := objectMap(t, kinds[kind])
+		if spec["model"] != modelID {
+			t.Fatalf("mark registry kind %s should resolve model %s: %#v", kind, modelID, spec)
+		}
+	}
+	cmd := exec.Command("node", "scripts/assets/validate_asset_registry.mjs")
+	cmd.Dir = root
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("asset registry validation failed: %v\n%s", err, string(out))
 	}
 }
 
@@ -446,7 +511,7 @@ func TestVisualInspectInputTemplateQualityRulesWarnings(t *testing.T) {
 
 	badIso := runVisualOK(t, "inspect-input", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "architecture.isometric_overview", "examples", "bad-generic.input.json"), "--json")
 	badIsoCodes := warningCodeSet(t, badIso)
-	for _, code := range []string{"isometric_zones_missing", "isometric_entity_kind_missing", "isometric_link_direction_missing", "isometric_missing_base_grid", "isometric_generic_graph_detected"} {
+	for _, code := range []string{"isometric_zones_missing", "isometric_entity_kind_missing", "isometric_link_direction_missing", "isometric_missing_base_grid", "isometric_generic_graph_detected", "asset_remote_url_forbidden", "asset_model_missing", "asset_icon_unknown", "asset_logo_missing"} {
 		if !badIsoCodes[code] {
 			t.Fatalf("bad isometric input missing warning %s in %#v", code, badIsoCodes)
 		}
@@ -634,8 +699,23 @@ func TestVisualInspectRenderContract(t *testing.T) {
 	if isometricData["ready"] != true || isometricData["render_score"].(float64) < 90 {
 		t.Fatalf("isometric inspect-render should be ready with high score: %#v", isometricData)
 	}
+	isometricPlan := objectMap(t, isometricData["visual_plan"])
+	isometricAssets := objectMap(t, isometricPlan["assets"])
+	modelsUsed := stringSetFromAny(isometricAssets["models_used"].([]any))
+	for _, modelID := range []string{"nginx.logo3d", "redis.logo3d", "mysql.logo3d", "elasticsearch.logo3d", "spring.logo3d"} {
+		if !modelsUsed[modelID] {
+			t.Fatalf("isometric visual plan missing generated model %s in %#v", modelID, modelsUsed)
+		}
+	}
+	if anyArrayLen(isometricAssets["missing_models"]) != 0 || anyArrayLen(isometricAssets["missing_icons"]) != 0 || anyArrayLen(isometricAssets["attributions"]) == 0 {
+		t.Fatalf("isometric visual plan should use local model/icon assets with attribution: %#v", isometricAssets)
+	}
+	isometricMarks := objectMap(t, isometricPlan["marks"])
+	if isometricMarks["model_badge_count"].(float64) < 5 || isometricMarks["entity_badge_count"].(float64) < 10 {
+		t.Fatalf("isometric marks should count generated model and entity badges: %#v", isometricMarks)
+	}
 	isometricChecks := objectMap(t, isometricData["checks"])
-	for _, field := range []string{"isometric_renderer_used", "base_plane_present", "grid_present", "zones_present", "zone_boundaries_present", "entities_present", "entity_labels_present", "leader_lines_present", "directed_arrows_present", "link_labels_present", "orthographic_camera_planned", "architecture_light_theme", "no_starfield_theme", "no_studio_layout", "artifact_runtime_wired", "artifact_isometric_runtime_hook", "artifact_isometric_dom_hooks", "artifact_entity_label_hooks", "artifact_link_label_hooks", "artifact_zone_label_hooks", "artifact_base_plane_hook", "artifact_grid_hook", "artifact_leader_line_hook", "artifact_arrow_hook", "artifact_no_studio_runtime", "artifact_no_starfield_runtime"} {
+	for _, field := range []string{"isometric_renderer_used", "base_plane_present", "grid_present", "zones_present", "zone_boundaries_present", "entities_present", "entity_labels_present", "leader_lines_present", "directed_arrows_present", "link_labels_present", "orthographic_camera_planned", "architecture_light_theme", "no_starfield_theme", "no_studio_layout", "local_asset_registry_present", "local_icons_present", "local_generated_models_present", "no_remote_asset_urls", "asset_attributions_present", "known_entity_badges_present", "model_or_icon_fallback_works", "artifact_runtime_wired", "artifact_isometric_runtime_hook", "artifact_isometric_dom_hooks", "artifact_entity_label_hooks", "artifact_link_label_hooks", "artifact_zone_label_hooks", "artifact_base_plane_hook", "artifact_grid_hook", "artifact_leader_line_hook", "artifact_arrow_hook", "artifact_no_studio_runtime", "artifact_no_starfield_runtime", "artifact_generated_model_badge_hook"} {
 		if isometricChecks[field] != true {
 			t.Fatalf("isometric inspect-render check %s failed: %#v", field, isometricChecks)
 		}
@@ -820,7 +900,7 @@ func TestVisualIsometricRuntimeAndInspectionContracts(t *testing.T) {
 	if strings.Contains(renderers, "studioShell") || strings.Contains(renderers, "renderStudio(") || strings.Contains(renderers, "studio-app") {
 		t.Fatalf("runtime renderers still contain legacy Studio renderer code")
 	}
-	for _, snippet := range []string{"function labelBudget", "function rectOverlaps", "function insideViewport", "function createDashedPolyline", "function createVerticalDashedLeader", "function decorateIsometricEntity", "function isometricLinkPathPoints", "data-low-priority", "visual-isometric-label-icon", "edgeSpec.lightBackground = true", "THREE.NormalBlending", "THREE.DoubleSide"} {
+	for _, snippet := range []string{"function labelBudget", "function rectOverlaps", "function insideViewport", "function createDashedPolyline", "function createVerticalDashedLeader", "function decorateIsometricEntity", "function isometricLinkPathPoints", "function modelPathFor", "function createModelBadge", "isGeneratedModelBadge", "data-low-priority", "visual-isometric-label-icon", "edgeSpec.lightBackground = true", "THREE.NormalBlending", "THREE.DoubleSide"} {
 		if !strings.Contains(renderers, snippet) {
 			t.Fatalf("isometric runtime missing readability snippet %q", snippet)
 		}
@@ -846,38 +926,46 @@ func TestVisualIsometricRuntimeAndInspectionContracts(t *testing.T) {
 	}
 
 	checks := renderinspect.Checks{
-		IsometricRendererUsed:        true,
-		BasePlanePresent:             true,
-		GridPresent:                  true,
-		ZonesPresent:                 true,
-		ZoneBoundariesPresent:        true,
-		EntitiesPresent:              true,
-		EntityLabelsPresent:          true,
-		LeaderLinesPresent:           true,
-		DirectedArrowsPresent:        true,
-		LinkLabelsPresent:            true,
-		OrthographicCameraPlanned:    true,
-		ArchitectureLightTheme:       true,
-		NoStarfieldTheme:             true,
-		NoStudioLayout:               true,
-		ArtifactRuntimeWired:         true,
-		ArtifactIsometricRuntimeHook: true,
-		ArtifactIsometricDOMHooks:    true,
-		ArtifactEntityLabelHooks:     true,
-		ArtifactLinkLabelHooks:       true,
-		ArtifactZoneLabelHooks:       true,
-		ArtifactBasePlaneHook:        true,
-		ArtifactGridHook:             true,
-		ArtifactLeaderLineHook:       true,
-		ArtifactArrowHook:            true,
-		ArtifactNoStudioRuntime:      true,
-		ArtifactNoStarfieldRuntime:   true,
+		IsometricRendererUsed:           true,
+		BasePlanePresent:                true,
+		GridPresent:                     true,
+		ZonesPresent:                    true,
+		ZoneBoundariesPresent:           true,
+		EntitiesPresent:                 true,
+		EntityLabelsPresent:             true,
+		LeaderLinesPresent:              true,
+		DirectedArrowsPresent:           true,
+		LinkLabelsPresent:               true,
+		OrthographicCameraPlanned:       true,
+		ArchitectureLightTheme:          true,
+		NoStarfieldTheme:                true,
+		NoStudioLayout:                  true,
+		ArtifactRuntimeWired:            true,
+		ArtifactIsometricRuntimeHook:    true,
+		ArtifactIsometricDOMHooks:       true,
+		ArtifactEntityLabelHooks:        true,
+		ArtifactLinkLabelHooks:          true,
+		ArtifactZoneLabelHooks:          true,
+		ArtifactBasePlaneHook:           true,
+		ArtifactGridHook:                true,
+		ArtifactLeaderLineHook:          true,
+		ArtifactArrowHook:               true,
+		ArtifactNoStudioRuntime:         true,
+		ArtifactNoStarfieldRuntime:      true,
+		ArtifactGeneratedModelBadgeHook: true,
+		LocalAssetRegistryPresent:       true,
+		LocalIconsPresent:               true,
+		LocalGeneratedModelsPresent:     true,
+		NoRemoteAssetURLs:               true,
+		AssetAttributionsPresent:        true,
+		KnownEntityBadgesPresent:        true,
+		ModelOrIconFallbackWorks:        true,
 	}
 	checkJSON, err := json.Marshal(checks)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, field := range []string{"isometric_renderer_used", "base_plane_present", "grid_present", "zones_present", "zone_boundaries_present", "entities_present", "entity_labels_present", "leader_lines_present", "directed_arrows_present", "link_labels_present", "orthographic_camera_planned", "architecture_light_theme", "no_starfield_theme", "no_studio_layout", "artifact_runtime_wired", "artifact_isometric_runtime_hook", "artifact_isometric_dom_hooks", "artifact_entity_label_hooks", "artifact_link_label_hooks", "artifact_zone_label_hooks", "artifact_base_plane_hook", "artifact_grid_hook", "artifact_leader_line_hook", "artifact_arrow_hook", "artifact_no_studio_runtime", "artifact_no_starfield_runtime"} {
+	for _, field := range []string{"isometric_renderer_used", "base_plane_present", "grid_present", "zones_present", "zone_boundaries_present", "entities_present", "entity_labels_present", "leader_lines_present", "directed_arrows_present", "link_labels_present", "orthographic_camera_planned", "architecture_light_theme", "no_starfield_theme", "no_studio_layout", "local_asset_registry_present", "local_icons_present", "local_generated_models_present", "no_remote_asset_urls", "asset_attributions_present", "known_entity_badges_present", "model_or_icon_fallback_works", "artifact_runtime_wired", "artifact_isometric_runtime_hook", "artifact_isometric_dom_hooks", "artifact_entity_label_hooks", "artifact_link_label_hooks", "artifact_zone_label_hooks", "artifact_base_plane_hook", "artifact_grid_hook", "artifact_leader_line_hook", "artifact_arrow_hook", "artifact_no_studio_runtime", "artifact_no_starfield_runtime", "artifact_generated_model_badge_hook"} {
 		if !strings.Contains(string(checkJSON), field) {
 			t.Fatalf("Checks JSON missing %s: %s", field, string(checkJSON))
 		}
@@ -910,7 +998,7 @@ func TestVisualIsometricMarkAndPreviewAnalysis(t *testing.T) {
 	badInput := loadJSONMap(t, filepath.Join(templateDir, "architecture.isometric_overview", "examples", "bad-generic.input.json"))
 	_, _, badWarnings, _ := preview.Analyze(templateDir, tpl, badInput, authoring.QualityRules{})
 	badCodes := previewWarningCodes(badWarnings)
-	for _, code := range []string{"isometric_zones_missing", "isometric_entity_kind_missing", "isometric_link_direction_missing", "isometric_link_arrow_missing", "isometric_link_endpoint_unknown", "isometric_entity_zone_unknown", "isometric_generic_graph_detected", "isometric_starfield_theme_detected"} {
+	for _, code := range []string{"isometric_zones_missing", "isometric_entity_kind_missing", "isometric_link_direction_missing", "isometric_link_arrow_missing", "isometric_link_endpoint_unknown", "isometric_entity_zone_unknown", "isometric_generic_graph_detected", "isometric_starfield_theme_detected", "asset_remote_url_forbidden", "asset_model_missing", "asset_icon_unknown", "asset_logo_missing"} {
 		if !badCodes[code] {
 			t.Fatalf("bad isometric input missing warning %s in %#v", code, badCodes)
 		}

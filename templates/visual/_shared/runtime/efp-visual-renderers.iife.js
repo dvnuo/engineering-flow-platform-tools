@@ -402,7 +402,7 @@
   function mergeMarkSpec(base, next) {
     base = Object.assign({}, base || {});
     next = next || {};
-    ["shape", "mesh", "icon", "iconFallback", "color"].forEach(function (key) {
+    ["shape", "mesh", "icon", "iconFallback", "model", "modelFallback", "color"].forEach(function (key) {
       if (!base[key] && next[key]) {
         base[key] = next[key];
       }
@@ -462,6 +462,9 @@
     if (presentation.icon) {
       spec.icon = presentation.icon;
     }
+    if (presentation.model) {
+      spec.model = presentation.model;
+    }
     var providerKey = providerServiceKey(source);
     if (providerKey && registry.providers[providerKey]) {
       spec = mergeMarkSpec(spec, registry.providers[providerKey]);
@@ -490,6 +493,7 @@
     spec.shape = spec.shape || "sphere";
     spec.mesh = spec.mesh || spec.shape || "sphere";
     spec.icon = presentation.icon || spec.icon || spec.iconFallback || "";
+    spec.model = presentation.model || spec.model || spec.modelFallback || "";
     spec.color = normalizeColorString(presentation.color || source.color || spec.color || resolveColorSpec(source, context).color);
     spec.depth = presentation.depth !== undefined ? presentation.depth : source.depth;
     spec.lane = presentation.lane || source.lane || source.group || source.module || "";
@@ -581,6 +585,15 @@
     return icon && icon.path ? String(icon.path) : "";
   }
 
+  function modelPathFor(spec, context) {
+    if (!spec || !spec.model) {
+      return "";
+    }
+    var registry = context && context.assetRegistry ? context.assetRegistry : assetRegistryFromManifest({});
+    var model = registry.models && registry.models[spec.model];
+    return model && model.path ? String(model.path) : "";
+  }
+
   function createInlineIcon(spec, context, className) {
     var path = iconPathFor(spec, context);
     if (!path) {
@@ -624,6 +637,36 @@
     plane.renderOrder = 6;
     plane.userData = { icon: spec.icon, label: itemLabel(item), payload: item };
     return plane;
+  }
+
+  function createModelBadge(THREE, spec, item, size, context) {
+    var path = modelPathFor(spec, context);
+    if (!path) {
+      return null;
+    }
+    var group = new THREE.Group();
+    var color = colorValue(spec.color, 0x64748b);
+    var baseMaterial = new THREE.MeshStandardMaterial({
+      color: color,
+      roughness: 0.44,
+      metalness: 0.18,
+      emissive: color,
+      emissiveIntensity: 0.04
+    });
+    var plate = new THREE.Mesh(new THREE.BoxGeometry(size.w * 0.52, size.h * 0.08, size.d * 0.16), baseMaterial);
+    plate.position.set(0, size.h * 0.36, size.d * 0.28);
+    plate.userData = { isGeneratedModelBadge: true, model: spec.model, modelPath: path, payload: item };
+    group.add(plate);
+    var shine = new THREE.Mesh(new THREE.BoxGeometry(size.w * 0.34, size.h * 0.018, size.d * 0.025), new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.54
+    }));
+    shine.position.set(0, size.h * 0.42, size.d * 0.365);
+    shine.userData = plate.userData;
+    group.add(shine);
+    group.userData = { isGeneratedModelBadge: true, model: spec.model, modelPath: path, payload: item };
+    return group;
   }
 
   function createLabelEngine(options) {
@@ -4060,13 +4103,17 @@
     mesh.receiveShadow = true;
     group.add(mesh);
     decorateIsometricEntity(THREE, group, item, spec, size, color);
+    var modelBadge = createModelBadge(THREE, spec, item, size, markContext);
+    if (modelBadge) {
+      group.add(modelBadge);
+    }
     var icon = createIconBillboard(spec, item, THREE, markContext);
     if (icon) {
-      icon.position.set(0, size.h * 0.3, size.d * 0.22);
-      icon.scale.set(1.5, 1.5, 1.5);
+      icon.position.set(0, modelBadge ? size.h * 0.43 : size.h * 0.3, modelBadge ? size.d * 0.39 : size.d * 0.22);
+      icon.scale.set(modelBadge ? 1.18 : 1.5, modelBadge ? 1.18 : 1.5, modelBadge ? 1.18 : 1.5);
       group.add(icon);
     }
-    group.userData = { label: itemLabel(item), payload: item, id: item.id };
+    group.userData = { label: itemLabel(item), payload: item, id: item.id, mark: { icon: spec.icon || "", model: spec.model || "", modelPath: modelPathFor(spec, markContext) || "" } };
     group.traverse(function (child) {
       child.userData = group.userData;
     });

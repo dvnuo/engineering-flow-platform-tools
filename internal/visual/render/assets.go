@@ -117,6 +117,8 @@ func copySharedVisualAssets(templateDir, outDir string) ([]string, error) {
 	}{
 		{src: "_shared/assets/icons", dst: "assets/icons"},
 		{src: "_shared/assets/models", dst: "assets/models"},
+		{src: "_shared/assets/attributions", dst: "assets/attributions"},
+		{src: "_shared/assets/manifests", dst: "assets/manifests"},
 	} {
 		copied, err := copySharedDirectory(templateDir, outDir, dir.src, dir.dst)
 		if err != nil {

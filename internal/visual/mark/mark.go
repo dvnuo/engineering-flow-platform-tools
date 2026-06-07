@@ -17,11 +17,13 @@ type MarkRegistry struct {
 }
 
 type MarkSpec struct {
-	Shape        string `json:"shape"`
-	Mesh         string `json:"mesh"`
-	Icon         string `json:"icon"`
-	IconFallback string `json:"iconFallback"`
-	Color        string `json:"color"`
+	Shape         string `json:"shape"`
+	Mesh          string `json:"mesh"`
+	Icon          string `json:"icon"`
+	IconFallback  string `json:"iconFallback"`
+	Model         string `json:"model"`
+	ModelFallback string `json:"modelFallback"`
+	Color         string `json:"color"`
 }
 
 type EdgeKindSpec struct {
@@ -43,6 +45,12 @@ type AssetEntry struct {
 	Kind          string `json:"kind"`
 	Official      bool   `json:"official"`
 	AttributionID string `json:"attribution_id"`
+	Source        string `json:"source"`
+	License       string `json:"license"`
+	SourceIcon    string `json:"source_icon"`
+	GeneratedBy   string `json:"generated_by"`
+	Trademark     string `json:"trademark"`
+	ByteLength    int    `json:"byte_length"`
 }
 
 type Attribution struct {
@@ -66,7 +74,16 @@ type Stats struct {
 	SingleColor         bool           `json:"single_color"`
 	IconsUsed           []string       `json:"icons_used"`
 	MissingIcons        []string       `json:"missing_icons"`
+	ModelsUsed          []string       `json:"models_used"`
+	MissingModels       []string       `json:"missing_models"`
 	Attributions        []Attribution  `json:"attributions"`
+	FallbackBadges      int            `json:"fallback_badges"`
+	VendorAssets        int            `json:"vendor_assets"`
+	GeneratedModels     int            `json:"generated_models"`
+	EntityBadgeCount    int            `json:"entity_badge_count"`
+	ModelBadgeCount     int            `json:"model_badge_count"`
+	SVGIconBadgeCount   int            `json:"svg_icon_badge_count"`
+	GenericBadgeCount   int            `json:"generic_badge_count"`
 	Warnings            []Warning      `json:"warnings"`
 }
 
@@ -98,13 +115,15 @@ type edgeItem struct {
 }
 
 type resolvedMark struct {
-	Shape        string
-	Mesh         string
-	Icon         string
-	Color        string
-	Fallback     bool
-	UnknownRef   string
-	ExplicitIcon string
+	Shape         string
+	Mesh          string
+	Icon          string
+	Color         string
+	Model         string
+	Fallback      bool
+	UnknownRef    string
+	ExplicitIcon  string
+	ExplicitModel string
 }
 
 func Analyze(templateDir, inputSchemaKind string, data map[string]any) Stats {
@@ -124,8 +143,16 @@ func Analyze(templateDir, inputSchemaKind string, data map[string]any) Stats {
 	stats.EdgeCount = len(edges)
 	iconSeen := map[string]bool{}
 	missingIconSeen := map[string]bool{}
+	modelSeen := map[string]bool{}
+	missingModelSeen := map[string]bool{}
+	modelMissingWithIcon := map[string]bool{}
 	unknownProviderSeen := map[string]bool{}
 	providerAttributionMissing := map[string]bool{}
+	vendorAttributionMissing := map[string]bool{}
+	remoteAssets := map[string]bool{}
+	registryPathMissing := map[string]bool{}
+	largeModels := map[string]bool{}
+	missingBadgeEntities := map[string]bool{}
 	colorSeen := map[string]int{}
 	fallbackColors := 0
 	for _, node := range nodes {
@@ -134,23 +161,88 @@ func Analyze(templateDir, inputSchemaKind string, data map[string]any) Stats {
 		if resolved.Fallback {
 			stats.FallbackSphereCount++
 		}
+		badgeResolved := false
+		if isRemoteRef(resolved.ExplicitIcon) {
+			remoteAssets[node.Path+".presentation.icon"] = true
+		}
+		if isRemoteRef(resolved.ExplicitModel) {
+			remoteAssets[node.Path+".presentation.model"] = true
+		}
 		if resolved.Icon != "" {
 			stats.IconCounts[resolved.Icon]++
 			iconSeen[resolved.Icon] = true
 			asset, ok := assets.Icons[resolved.Icon]
 			if !ok {
 				missingIconSeen[resolved.Icon] = true
-			} else if isProviderIcon(resolved.Icon) && strings.TrimSpace(asset.AttributionID) == "" {
-				providerAttributionMissing[resolved.Icon] = true
+			} else if !assetPathExists(templateDir, asset.Path) {
+				registryPathMissing["icons."+resolved.Icon] = true
+			} else {
+				badgeResolved = true
+				stats.EntityBadgeCount++
+				stats.SVGIconBadgeCount++
+				if isGenericAsset(asset) {
+					stats.GenericBadgeCount++
+				}
+				if isVendorAsset(resolved.Icon, asset) {
+					stats.VendorAssets++
+				}
+				if isProviderIcon(resolved.Icon) && strings.TrimSpace(asset.AttributionID) == "" {
+					providerAttributionMissing[resolved.Icon] = true
+				}
+				if isVendorAsset(resolved.Icon, asset) && strings.TrimSpace(asset.AttributionID) == "" {
+					vendorAttributionMissing[resolved.Icon] = true
+				}
+			}
+		}
+		if resolved.Model != "" {
+			modelSeen[resolved.Model] = true
+			asset, ok := assets.Models[resolved.Model]
+			if !ok {
+				missingModelSeen[resolved.Model] = true
+				if resolved.Icon != "" {
+					if iconEntry, iconOK := assets.Icons[resolved.Icon]; iconOK && assetPathExists(templateDir, iconEntry.Path) {
+						modelMissingWithIcon[resolved.Model] = true
+					}
+				}
+			} else if !assetPathExists(templateDir, asset.Path) {
+				registryPathMissing["models."+resolved.Model] = true
+			} else {
+				if !badgeResolved {
+					stats.EntityBadgeCount++
+				}
+				stats.ModelBadgeCount++
+				badgeResolved = true
+				if isGeneratedModel(asset) {
+					stats.GeneratedModels++
+				}
+				if asset.ByteLength > 250000 {
+					largeModels[resolved.Model] = true
+				}
+				if isVendorAsset(resolved.Model, asset) && strings.TrimSpace(asset.AttributionID) == "" {
+					vendorAttributionMissing[resolved.Model] = true
+				}
 			}
 		}
 		if resolved.ExplicitIcon != "" {
-			if _, ok := assets.Icons[resolved.ExplicitIcon]; !ok {
+			if isRemoteRef(resolved.ExplicitIcon) {
+				remoteAssets[node.Path+".presentation.icon"] = true
+			} else if _, ok := assets.Icons[resolved.ExplicitIcon]; !ok {
 				missingIconSeen[resolved.ExplicitIcon] = true
+			}
+		}
+		if resolved.ExplicitModel != "" {
+			if isRemoteRef(resolved.ExplicitModel) {
+				remoteAssets[node.Path+".presentation.model"] = true
+			} else if _, ok := assets.Models[resolved.ExplicitModel]; !ok {
+				missingModelSeen[resolved.ExplicitModel] = true
 			}
 		}
 		if resolved.UnknownRef != "" {
 			unknownProviderSeen[resolved.UnknownRef] = true
+		}
+		if !badgeResolved && knownInfrastructureKind(node.Obj) {
+			stats.FallbackBadges++
+			missingBadgeEntities[firstString(node.Obj, "id", "label", "name")] = true
 		}
 		if resolved.Color == fallbackColor() {
 			fallbackColors++
@@ -242,6 +334,76 @@ func Analyze(templateDir, inputSchemaKind string, data map[string]any) Stats {
 				"action": "replace_unknown_icon",
 			},
 		})
+		stats.Warnings = append(stats.Warnings, Warning{
+			Code:       "asset_logo_missing",
+			Severity:   "warning",
+			Message:    "Some requested logo/icon IDs are not available as local vendored assets.",
+			Suggestion: "Fetch the logo with scripts/assets/fetch_logo_assets.mjs, use a local generic fallback, or remove the explicit presentation.icon value.",
+			Details:    sortedKeys(missingIconSeen),
+			AutoFixHint: map[string]any{
+				"action": "fetch_or_replace_missing_logo",
+			},
+		})
+	}
+	if len(missingModelSeen) > 0 {
+		stats.Warnings = append(stats.Warnings, Warning{
+			Code:       "asset_model_missing",
+			Severity:   "warning",
+			Message:    "Some presentation.model values are not present in the local asset registry.",
+			Suggestion: "Use model IDs from templates/visual/_shared/asset-registry.json, generate the model at build time, or omit presentation.model so the renderer can use icon/generic badge fallback.",
+			Details:    sortedKeys(missingModelSeen),
+			AutoFixHint: map[string]any{
+				"action": "replace_or_generate_unknown_model",
+			},
+		})
+	}
+	if len(remoteAssets) > 0 {
+		stats.Warnings = append(stats.Warnings, Warning{
+			Code:       "asset_remote_url_forbidden",
+			Severity:   "error",
+			Message:    "Visual asset references must be local asset registry IDs, not remote URLs.",
+			Suggestion: "Add the asset to scripts/assets/logo_catalog.json, fetch it at build time, register the local path, and reference the local icon/model ID.",
+			Details:    sortedKeys(remoteAssets),
+			AutoFixHint: map[string]any{
+				"action": "vendor_asset_locally",
+			},
+		})
+	}
+	if len(modelMissingWithIcon) > 0 {
+		stats.Warnings = append(stats.Warnings, Warning{
+			Code:       "entity_model_missing_but_icon_available",
+			Severity:   "info",
+			Message:    "A requested generated model is missing, but a local SVG icon is available as fallback.",
+			Suggestion: "Run scripts/assets/convert_svg_to_3d.mjs --write-registry for this logo if a raised 3D badge is needed.",
+			Details:    sortedKeys(modelMissingWithIcon),
+			AutoFixHint: map[string]any{
+				"action": "generate_missing_model_badge",
+			},
+		})
+	}
+	if len(registryPathMissing) > 0 {
+		stats.Warnings = append(stats.Warnings, Warning{
+			Code:       "asset_registry_path_missing",
+			Severity:   "error",
+			Message:    "The local asset registry references files that do not exist under templates/visual/_shared.",
+			Suggestion: "Run scripts/assets/fetch_logo_assets.mjs and scripts/assets/convert_svg_to_3d.mjs, or remove stale registry entries.",
+			Details:    sortedKeys(registryPathMissing),
+			AutoFixHint: map[string]any{
+				"action": "regenerate_or_fix_asset_registry",
+			},
+		})
+	}
+	if len(largeModels) > 0 {
+		stats.Warnings = append(stats.Warnings, Warning{
+			Code:       "asset_model_too_large",
+			Severity:   "warning",
+			Message:    "Some local model assets are larger than the visual artifact budget.",
+			Suggestion: "Run scripts/assets/optimize_generated_models.mjs or replace oversized GLB files with lighter badges.",
+			Details:    sortedKeys(largeModels),
+			AutoFixHint: map[string]any{
+				"action": "optimize_generated_models",
+			},
+		})
 	}
 	if len(providerAttributionMissing) > 0 {
 		stats.Warnings = append(stats.Warnings, Warning{
@@ -252,6 +414,30 @@ func Analyze(templateDir, inputSchemaKind string, data map[string]any) Stats {
 			Details:    sortedKeys(providerAttributionMissing),
 			AutoFixHint: map[string]any{
 				"action": "add_asset_attribution",
+			},
+		})
+	}
+	if len(vendorAttributionMissing) > 0 {
+		stats.Warnings = append(stats.Warnings, Warning{
+			Code:       "asset_vendor_attribution_missing",
+			Severity:   "warning",
+			Message:    "A vendor or generated logo asset is used without an attribution entry in the local asset registry.",
+			Suggestion: "Add attribution_id to asset-registry.json and document the source in assets/attributions/ASSETS.md.",
+			Details:    sortedKeys(vendorAttributionMissing),
+			AutoFixHint: map[string]any{
+				"action": "add_vendor_asset_attribution",
+			},
+		})
+	}
+	if len(missingBadgeEntities) > 0 {
+		stats.Warnings = append(stats.Warnings, Warning{
+			Code:       "entity_badge_missing_for_known_kind",
+			Severity:   "warning",
+			Message:    "Some known infrastructure entities cannot resolve a local icon or generated model badge.",
+			Suggestion: "Use kind/provider/service values present in mark-registry.json, or provide presentation.icon/presentation.model with local registry IDs.",
+			Details:    sortedKeys(missingBadgeEntities),
+			AutoFixHint: map[string]any{
+				"action": "add_local_icon_or_model_badge",
 			},
 		})
 	}
@@ -317,7 +503,9 @@ func Analyze(templateDir, inputSchemaKind string, data map[string]any) Stats {
 	}
 	stats.IconsUsed = sortedKeys(iconSeen)
 	stats.MissingIcons = sortedKeys(missingIconSeen)
-	stats.Attributions = usedAttributions(assets, iconSeen)
+	stats.ModelsUsed = sortedKeys(modelSeen)
+	stats.MissingModels = sortedKeys(missingModelSeen)
+	stats.Attributions = usedAttributions(assets, iconSeen, modelSeen)
 	return stats
 }
 
@@ -468,6 +656,10 @@ func resolveNode(registry MarkRegistry, obj map[string]any) resolvedMark {
 		spec.Icon = icon
 		fallback = false
 	}
+	if model := firstString(presentation, "model"); model != "" {
+		spec.Model = model
+		fallback = false
+	}
 	if provider != "" && service != "" {
 		key := provider + "." + service
 		if fromRegistry, ok := registry.Providers[key]; ok {
@@ -521,17 +713,22 @@ func resolveNode(registry MarkRegistry, obj map[string]any) resolvedMark {
 	if spec.Icon == "" {
 		spec.Icon = spec.IconFallback
 	}
+	if spec.Model == "" {
+		spec.Model = spec.ModelFallback
+	}
 	if spec.Color == "" {
 		spec.Color = statusColor(firstString(obj, "status"))
 	}
 	return resolvedMark{
-		Shape:        spec.Shape,
-		Mesh:         spec.Mesh,
-		Icon:         spec.Icon,
-		Color:        normalizeColor(spec.Color),
-		Fallback:     fallback && spec.Shape == "sphere",
-		UnknownRef:   unknownRef,
-		ExplicitIcon: firstString(presentation, "icon"),
+		Shape:         spec.Shape,
+		Mesh:          spec.Mesh,
+		Icon:          spec.Icon,
+		Color:         normalizeColor(spec.Color),
+		Model:         spec.Model,
+		Fallback:      fallback && spec.Shape == "sphere",
+		UnknownRef:    unknownRef,
+		ExplicitIcon:  firstString(presentation, "icon"),
+		ExplicitModel: firstString(presentation, "model"),
 	}
 }
 
@@ -594,6 +791,12 @@ func mergeSpec(base, next MarkSpec) MarkSpec {
 	if base.IconFallback == "" {
 		base.IconFallback = next.IconFallback
 	}
+	if base.Model == "" {
+		base.Model = next.Model
+	}
+	if base.ModelFallback == "" {
+		base.ModelFallback = next.ModelFallback
+	}
 	if base.Color == "" {
 		base.Color = next.Color
 	}
@@ -647,7 +850,7 @@ func buildLegendItems(data map[string]any, nodes []nodeItem, edges []edgeItem, c
 	return out
 }
 
-func usedAttributions(assets AssetRegistry, iconSeen map[string]bool) []Attribution {
+func usedAttributions(assets AssetRegistry, iconSeen, modelSeen map[string]bool) []Attribution {
 	attributionByID := map[string]Attribution{}
 	for _, attr := range assets.Attributions {
 		if attr.ID != "" {
@@ -657,6 +860,11 @@ func usedAttributions(assets AssetRegistry, iconSeen map[string]bool) []Attribut
 	used := map[string]bool{}
 	for icon := range iconSeen {
 		if entry, ok := assets.Icons[icon]; ok && entry.AttributionID != "" {
+			used[entry.AttributionID] = true
+		}
+	}
+	for model := range modelSeen {
+		if entry, ok := assets.Models[model]; ok && entry.AttributionID != "" {
 			used[entry.AttributionID] = true
 		}
 	}
@@ -799,6 +1007,61 @@ func fallbackColor() string {
 
 func isProviderIcon(icon string) bool {
 	return strings.HasPrefix(icon, "aws.") || icon == "jenkins"
+}
+
+func isVendorAsset(id string, entry AssetEntry) bool {
+	text := normalize(id + " " + entry.Kind)
+	return strings.Contains(text, "vendor") ||
+		strings.Contains(text, "official") ||
+		strings.Contains(text, "simple_icons") ||
+		strings.Contains(text, "simple-icons") ||
+		strings.Contains(text, "devicon") ||
+		strings.HasPrefix(normalize(id), "aws_") ||
+		normalize(id) == "jenkins"
+}
+
+func isGenericAsset(entry AssetEntry) bool {
+	return strings.Contains(normalize(entry.Kind), "generic") || strings.Contains(normalize(entry.Path), "generic")
+}
+
+func isGeneratedModel(entry AssetEntry) bool {
+	return strings.Contains(normalize(entry.Kind), "generated") || strings.TrimSpace(entry.GeneratedBy) != ""
+}
+
+func isRemoteRef(value string) bool {
+	value = strings.TrimSpace(strings.ToLower(value))
+	return strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://") || strings.HasPrefix(value, "//")
+}
+
+func assetPathExists(templateDir, artifactPath string) bool {
+	if strings.TrimSpace(artifactPath) == "" || isRemoteRef(artifactPath) {
+		return false
+	}
+	clean := filepath.Clean(filepath.FromSlash(artifactPath))
+	if filepath.IsAbs(clean) || strings.HasPrefix(clean, ".."+string(filepath.Separator)) || clean == ".." {
+		return false
+	}
+	rel := clean
+	if strings.HasPrefix(filepath.ToSlash(rel), "assets/") {
+		rel = filepath.Join("_shared", rel)
+	}
+	_, err := os.Stat(filepath.Join(templateDir, rel))
+	return err == nil
+}
+
+func knownInfrastructureKind(obj map[string]any) bool {
+	kind := normalize(firstString(obj, "kind", "type", "stereotype"))
+	if kind == "" {
+		return false
+	}
+	known := map[string]bool{
+		"nginx": true, "redis": true, "mysql": true, "postgres": true, "postgresql": true,
+		"mongodb": true, "kafka": true, "rabbitmq": true, "rocketmq": true, "elasticsearch": true,
+		"jenkins": true, "kubernetes": true, "docker": true, "api_gateway": true, "gateway": true,
+		"nacos": true, "registry": true, "database": true, "cache": true, "queue": true,
+		"storage": true, "service": true, "microservice": true, "cdn": true, "external": true,
+	}
+	return known[kind]
 }
 
 func sortedKeys(values map[string]bool) []string {

@@ -164,6 +164,11 @@
         "w": 0.9,
         "d": 0.9,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "generic.pc",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -181,6 +186,11 @@
         "w": 0.9,
         "d": 0.9,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "generic.mobile",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -198,6 +208,11 @@
         "w": 1.05,
         "d": 1.05,
         "h": 0.9
+      },
+      "presentation": {
+        "icon": "generic.cdn",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -215,6 +230,12 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "nginx",
+        "model": "nginx.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -232,6 +253,11 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "generic.api_gateway",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -249,6 +275,11 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "generic.registry",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -266,6 +297,11 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "generic.registry",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -283,6 +319,11 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "generic.registry",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -300,6 +341,11 @@
         "w": 0.9,
         "d": 0.9,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "generic.admin",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -317,6 +363,12 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "spring",
+        "model": "spring.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -334,6 +386,12 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "spring",
+        "model": "spring.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -351,6 +409,12 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "spring",
+        "model": "spring.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -368,6 +432,12 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "spring",
+        "model": "spring.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -385,6 +455,12 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "spring",
+        "model": "spring.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -402,6 +478,12 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "redis",
+        "model": "redis.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -419,6 +501,12 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "redis",
+        "model": "redis.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -436,6 +524,12 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "redis",
+        "model": "redis.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -453,6 +547,12 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "mysql",
+        "model": "mysql.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -470,6 +570,12 @@
         "w": 1.05,
         "d": 1.05,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "mysql",
+        "model": "mysql.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -487,6 +593,11 @@
         "w": 0.9,
         "d": 0.9,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "generic.oss",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -504,6 +615,11 @@
         "w": 0.9,
         "d": 0.9,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "generic.storage",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -538,6 +654,11 @@
         "w": 0.9,
         "d": 0.9,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "generic.log",
+        "label": "top",
+        "leaderLine": true
       }
     },
     {
@@ -555,6 +676,12 @@
         "w": 0.9,
         "d": 0.9,
         "h": 1.1
+      },
+      "presentation": {
+        "icon": "elasticsearch",
+        "model": "elasticsearch.logo3d",
+        "label": "top",
+        "leaderLine": true
       }
     }
   ],

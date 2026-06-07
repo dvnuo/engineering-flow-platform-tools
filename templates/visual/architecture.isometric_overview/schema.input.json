@@ -373,6 +373,9 @@
           "icon": {
             "type": "string"
           },
+          "model": {
+            "type": "string"
+          },
           "color": {
             "type": "string"
           },

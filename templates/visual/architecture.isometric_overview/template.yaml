@@ -43,8 +43,10 @@ visual_design:
     - billboard_labels
     - constrained_camera
     - local_icons
+    - local_model_badges
   agent_guidance:
     - Use explicit zones with numeric bounds and typed entities with positions.
+    - Use local presentation.icon and presentation.model IDs for recognizable infrastructure badges.
     - Use directional links with short labels, arrow presentation, and explicit routes for dense diagrams.
     - Keep the theme architecture_light and avoid Studio panels, starfields, dust, or holographic effects.
 offline:

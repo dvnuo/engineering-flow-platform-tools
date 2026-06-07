@@ -41,14 +41,17 @@ Legacy `label_priority` numeric values are accepted and normalized: `>=0.85` alw
 
 ## presentation
 
-`presentation` contains optional visual hints such as `shape`, `mesh`, `icon`, `color`, `arrow`, `lineStyle`, `flow`, `lane`, `laneIndex`, `depth`, and `positionHint`. Renderers may use these hints, but agents must not rely on presentation to fix incorrect semantics.
+`presentation` contains optional visual hints such as `shape`, `mesh`, `icon`, `model`, `color`, `arrow`, `lineStyle`, `flow`, `lane`, `laneIndex`, `depth`, and `positionHint`. Renderers may use these hints, but agents must not rely on presentation to fix incorrect semantics.
 
 For object marks:
 
 - `presentation.shape`: semantic shape such as service_box, database_cylinder, queue_capsule, cloud_plate, actor_card, diamond, or warning_prism.
 - `presentation.mesh`: Three.js primitive hint such as box, card, cylinder, capsule, cloud, octahedron, cone, hex_prism, or sphere.
-- `presentation.icon`: local icon id from `asset-registry.json`, such as generic.database, aws.lambda, aws.s3, aws.rds, aws.sqs, aws.eventbridge, aws.api_gateway, or jenkins.
+- `presentation.icon`: local icon id from `asset-registry.json`, such as generic.database, aws.lambda, aws.s3, aws.rds, aws.sqs, aws.eventbridge, aws.api_gateway, nginx, redis, mysql, kubernetes, or jenkins.
+- `presentation.model`: local generated model id from `asset-registry.json`, such as nginx.logo3d, redis.logo3d, mysql.logo3d, elasticsearch.logo3d, kubernetes.logo3d, or spring.logo3d.
 - `provider`, `service`, and `platform`: semantic provider fields used before falling back to kind.
+
+Do not place remote image or model URLs in `presentation.icon` or `presentation.model`. Use the local asset registry IDs only.
 
 For relationship marks:
 
@@ -93,3 +96,4 @@ Legacy `initial_view` is accepted for older inputs.
 - `palette`: semantic_dark, cloud_provider, status, phase, or risk.
 - `colorBy`: semantic color policy if not set in view.
 - `iconMode`: billboard or none.
+- `modelMode`: badge or none.

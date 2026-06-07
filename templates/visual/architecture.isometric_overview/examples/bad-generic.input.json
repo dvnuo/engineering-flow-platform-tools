@@ -8,12 +8,20 @@
       "id": "a",
       "label": "Generic Node A",
       "kind": "node",
-      "zone": "missing-zone"
+      "zone": "missing-zone",
+      "presentation": {
+        "icon": "https:\/\/example.invalid\/logo.svg",
+        "model": "unknown.logo3d"
+      }
     },
     {
       "id": "b",
       "label": "Node B",
-      "kind": "node"
+      "kind": "node",
+      "presentation": {
+        "icon": "unknown.icon",
+        "model": "https:\/\/example.invalid\/model.glb"
+      }
     }
   ],
   "links": [

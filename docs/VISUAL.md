@@ -126,13 +126,15 @@ For UML sequence inputs, provide participants as semantic lifelines, use unique 
 
 Graph-like, matrix, UML component/activity/state, and sequence renderers use the shared Visual Mark System. The agent-facing grammar lives in `templates/visual/_shared/agent-guidance/mark-grammar.md`; runtime defaults live in `_shared/mark-registry.json`; local icon/model metadata lives in `_shared/asset-registry.json`.
 
-Object marks are resolved from `presentation.mesh` or `presentation.shape`, then `presentation.icon`, then `provider + service`, `platform`, `kind`, `group`, and finally fallback. Use these fields so a service can render as a box, an API as a hex service, a database or storage object as a cylinder, a queue or stream as a capsule, a user as an actor card, an external system as a cloud plate, and a decision or risk as a diamond or warning prism.
+Object marks are resolved from `presentation.mesh` or `presentation.shape`, then `presentation.model`, then `presentation.icon`, then `provider + service`, `platform`, `kind`, `group`, and finally fallback. Use these fields so a service can render as a box, an API as a hex service, a database or storage object as a cylinder, a queue or stream as a capsule, a user as an actor card, an external system as a cloud plate, and a decision or risk as a diamond or warning prism. `presentation.model` references local generated GLB badge IDs such as `nginx.logo3d`, `redis.logo3d`, `mysql.logo3d`, `elasticsearch.logo3d`, `kubernetes.logo3d`, or `spring.logo3d`.
 
 Relationship marks are resolved from `edge.kind`, `directed`, and `edge.presentation`. Directional relationship kinds such as `calls`, `writes`, `reads`, `emits`, `subscribes`, `deploys`, `validates`, `blocks`, `depends_on`, `sends`, and `returns` render with visible arrows by default. Set `presentation.arrow`, `presentation.lineStyle`, `presentation.curve`, `presentation.flow`, and `presentation.color` when direction or motion carries meaning.
 
-Color and legend are semantic, not random. Use `view.colorBy` or `renderHints.colorBy` with values such as `provider`, `kind`, `status`, `group`, `phase`, `risk`, or `severity`, and set `renderHints.showLegend=true` when color has meaning. `inspect-input` warns on `generic_sphere_overuse`, `mark_shape_missing`, `provider_service_unknown`, `asset_icon_unknown`, `edge_direction_missing`, `arrow_encoding_missing`, `single_color_detected`, `color_encoding_missing`, `legend_missing`, and `provider_icon_without_attribution`.
+Color and legend are semantic, not random. Use `view.colorBy` or `renderHints.colorBy` with values such as `provider`, `kind`, `status`, `group`, `phase`, `risk`, or `severity`, and set `renderHints.showLegend=true` when color has meaning. `inspect-input` warns on `generic_sphere_overuse`, `mark_shape_missing`, `provider_service_unknown`, `asset_icon_unknown`, `asset_model_missing`, `asset_remote_url_forbidden`, `asset_registry_path_missing`, `asset_model_too_large`, `asset_vendor_attribution_missing`, `edge_direction_missing`, `arrow_encoding_missing`, `single_color_detected`, `color_encoding_missing`, `legend_missing`, and `provider_icon_without_attribution`.
 
-The bundled AWS and Jenkins icon ids are local styled placeholders for offline visualization. They are not official vendor logos. If official assets are vendored later, update `_shared/assets/ATTRIBUTIONS.md`, `_shared/asset-registry.json`, tests, and release notes together.
+The bundled AWS icon ids are local styled placeholders for offline visualization. Simple Icons based technology logos and generated `*.logo3d` badges are vendored local assets with attribution metadata. They are not official vendor 3D models. If official assets are vendored later, update `_shared/assets/ATTRIBUTIONS.md`, `_shared/assets/attributions/ASSETS.md`, `_shared/asset-registry.json`, tests, and release notes together.
+
+The build-time asset pipeline lives under `scripts/assets/`: `logo_catalog.json` is the allowlist, `fetch_logo_assets.mjs` vendors SVGs, `convert_svg_to_3d.mjs` creates local GLB badges, `vecto3d_adapter.mjs` probes an optional vecto3d checkout/command, `optimize_generated_models.mjs` records model size, and `validate_asset_registry.mjs` checks local paths and attribution metadata. Runtime render never downloads assets.
 
 ## Visual Plan
 
@@ -140,7 +142,7 @@ The bundled AWS and Jenkins icon ids are local styled placeholders for offline v
 
 Use `inspect-plan` after fixing `inspect-input` warnings and before `visual render`. It does not analyze screenshots or rendered pixels; it tells the agent whether the semantic input is likely to produce a readable first view.
 
-`visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, shape diversity, visible arrows, color diversity, legend presence, local icon assets, attributions, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read. For `architecture.isometric_overview`, it also inspects generated artifact hooks in `index.html`, runtime JS/CSS, `manifest.js`, and `data.js`: runtime wiring, isometric renderer registration, label-layer hooks, entity/link/zone label hooks, base-plane/grid/leader-line/arrow hooks, and absence of Studio/starfield hooks in the isometric path. If a screenshot is available, pass `--screenshot <png|jpg|gif>` to add blankness, contrast, and visible coverage checks.
+`visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, shape diversity, visible arrows, color diversity, legend presence, local icon/model assets, attributions, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read. For `architecture.isometric_overview`, it also inspects generated artifact hooks in `index.html`, runtime JS/CSS, `manifest.js`, and `data.js`: runtime wiring, isometric renderer registration, label-layer hooks, entity/link/zone label hooks, base-plane/grid/leader-line/arrow hooks, generated model badge hooks, local asset registry/icons/models, remote asset URL absence, and absence of Studio/starfield hooks in the isometric path. If a screenshot is available, pass `--screenshot <png|jpg|gif>` to add blankness, contrast, and visible coverage checks.
 
 ## Render Output Contract
 
@@ -161,6 +163,8 @@ Successful render output includes:
 - `assets/ATTRIBUTIONS.md`
 - `assets/icons/**`
 - `assets/models/**`
+- `assets/attributions/**`
+- `assets/manifests/**`
 
 The JSON response returns `data.artifact`:
 

@@ -6,8 +6,8 @@
   "entities": [
     {
       "id": "a",
-      "label": "",
-      "kind": "",
+      "label": "Generic Node A",
+      "kind": "node",
       "zone": "missing-zone"
     },
     {

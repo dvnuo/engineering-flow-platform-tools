@@ -418,7 +418,7 @@ func analyzeIsometricArchitecture(data map[string]any, design manifest.VisualDes
 			add("isometric_entity_label_missing", "warning", path+".label", "An architecture entity lacks a display label.", "Set entity.label to a short label that fits above the isometric mark.")
 		}
 		zone := firstString(entity, "zone")
-		if zone != "" && len(zoneIDs) > 0 && !zoneIDs[zone] {
+		if zone != "" && !zoneIDs[zone] {
 			add("isometric_entity_zone_unknown", "warning", path+".zone", "An entity references a zone id that does not exist.", "Set entity.zone to one of zones[].id or add the missing zone.")
 		}
 		pos, hasPos := isometricPosition(entity)
@@ -514,11 +514,11 @@ func isometricWarningPenalty(severity string) int {
 }
 
 type isometricRect struct {
-	ID   string
-	X    float64
-	Y    float64
-	W    float64
-	H    float64
+	ID string
+	X  float64
+	Y  float64
+	W  float64
+	H  float64
 }
 
 type isometricPoint struct {
@@ -1912,7 +1912,7 @@ func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool
 		"timeline_v1":                 {"events"},
 		"evidence_v1":                 {"claims", "sources", "links"},
 		"matrix_v1":                   {"items"},
-		"isometric_architecture_v1":    {"zones", "entities", "links"},
+		"isometric_architecture_v1":   {"zones", "entities", "links"},
 		"uml_sequence_v1":             {"participants", "messages", "phases", "activations", "fragments"},
 		"uml_class_v1":                {"classes", "relationships"},
 		"uml_state_machine_v1":        {"states", "transitions"},

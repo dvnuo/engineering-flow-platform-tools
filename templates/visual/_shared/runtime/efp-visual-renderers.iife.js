@@ -3815,9 +3815,9 @@
     var header = el("header", "studio-header");
     var headerMain = el("div", "studio-header-main");
     headerMain.appendChild(el("h1", "studio-title", data.title || manifest.title || "Studio"));
-    headerMain.appendChild(el("div", "studio-subtitle", studioGoal(data) || (manifest.template && manifest.template.id ? manifest.template.id : "offline.studio.v1")));
+    headerMain.appendChild(el("div", "studio-subtitle", studioGoal(data) || (manifest.template && manifest.template.id ? manifest.template.id : "legacy visual renderer")));
     header.appendChild(headerMain);
-    var meta = el("div", "studio-header-meta", (manifest.renderer && manifest.renderer.contract ? manifest.renderer.contract : "offline.studio.v1"));
+    var meta = el("div", "studio-header-meta", (manifest.renderer && manifest.renderer.contract ? manifest.renderer.contract : "legacy visual renderer"));
     header.appendChild(meta);
 
     var controls = el("div", "studio-controls");
@@ -4398,7 +4398,7 @@
       }, 700);
     }));
     shell.controls.appendChild(studioCreateButton("Export", "export", function () {
-      runtime.exportJSON(data, "studio-data.json");
+      runtime.exportJSON(data, "visual-data.json");
     }));
 
     renderStudioLegend(shell.hero, buildLegendItems(data, { visual: visual, rawNodes: nodes, rawEdges: edges }, markContext), nodes, edges, markContext, visual);
@@ -4407,8 +4407,505 @@
     rebuild();
   }
 
+  function isometricArray(data, field) {
+    return Array.isArray(data && data[field]) ? data[field].filter(function (item) { return item && typeof item === "object"; }) : [];
+  }
+
+  function isometricBounds(zone) {
+    var bounds = zone && zone.bounds && typeof zone.bounds === "object" ? zone.bounds : {};
+    return {
+      x: numberValue(bounds.x, 0),
+      y: numberValue(bounds.y, 0),
+      w: Math.max(1, numberValue(bounds.w, 4)),
+      h: Math.max(1, numberValue(bounds.h, 3))
+    };
+  }
+
+  function isometricPosition(item, zone, index) {
+    var position = item && item.position && typeof item.position === "object" ? item.position : {};
+    if (Number.isFinite(Number(position.x)) && Number.isFinite(Number(position.y))) {
+      return { x: Number(position.x), y: Number(position.y), auto: false };
+    }
+    var bounds = isometricBounds(zone || {});
+    var col = index % 4;
+    var row = Math.floor(index / 4);
+    return {
+      x: bounds.x + Math.min(bounds.w - 0.7, 1 + col * Math.max(1.2, bounds.w / 4)),
+      y: bounds.y + Math.min(bounds.h - 0.7, 1 + row * 1.35),
+      auto: true
+    };
+  }
+
+  function isometricSize(item) {
+    var size = item && item.size && typeof item.size === "object" ? item.size : {};
+    return {
+      w: Math.max(0.55, numberValue(size.w, 1.35)),
+      d: Math.max(0.55, numberValue(size.d, 1.05)),
+      h: Math.max(0.35, numberValue(size.h, 0.85))
+    };
+  }
+
+  function isometricWorld(point, scale, center) {
+    return {
+      x: (point.x - center.x) * scale,
+      z: (point.y - center.y) * scale
+    };
+  }
+
+  function createIsometricButton(label, action, handler) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "visual-isometric-control";
+    button.setAttribute("data-action", action);
+    button.textContent = label;
+    button.addEventListener("click", handler);
+    return button;
+  }
+
+  function createIsometricShell(container, manifest, data) {
+    container.textContent = "";
+    var app = el("div", "visual-isometric-app");
+    app.setAttribute("data-isometric-renderer", "true");
+    app.setAttribute("data-architecture-light", "true");
+    var header = el("header", "visual-isometric-header");
+    header.appendChild(el("h1", "visual-isometric-title", data.title || manifest.title || "Isometric Architecture"));
+    header.appendChild(el("div", "visual-isometric-subtitle", data.subtitle || data.goal || "Offline Three.js architecture overview"));
+    var controls = el("div", "visual-isometric-toolbar");
+    var body = el("main", "visual-isometric-body");
+    var stage = el("section", "visual-isometric-stage");
+    stage.setAttribute("role", "application");
+    stage.setAttribute("aria-label", "Interactive isometric architecture scene");
+    var labelLayer = el("div", "visual-isometric-label-layer");
+    var inspector = el("aside", "visual-isometric-inspector visual-inspector");
+    inspector.setAttribute("aria-label", "Architecture inspector");
+    stage.appendChild(labelLayer);
+    body.appendChild(stage);
+    body.appendChild(inspector);
+    app.appendChild(header);
+    app.appendChild(controls);
+    app.appendChild(body);
+    container.appendChild(app);
+    return { app: app, controls: controls, stage: stage, labelLayer: labelLayer, inspector: runtime.createInspector(inspector) };
+  }
+
+  function isometricEntityGeometry(THREE, item, spec, size) {
+    var kind = normalizeMarkKey(item.kind || item.type || spec.shape || spec.mesh);
+    var mesh = normalizeMarkKey(spec.mesh || spec.shape);
+    if (kind === "cdn") {
+      return new THREE.SphereGeometry(Math.max(size.w, size.d) * 0.18, 28, 18);
+    }
+    if (kind === "database" || kind === "mysql" || kind === "redis" || mesh === "cylinder" || mesh === "database_cylinder" || mesh === "bucket") {
+      return new THREE.CylinderGeometry(size.w * 0.18, size.w * 0.18, size.h * 0.42, 30);
+    }
+    if (kind === "queue" || kind === "event_stream" || kind === "registry" || mesh === "capsule") {
+      if (THREE.CapsuleGeometry) {
+        return new THREE.CapsuleGeometry(size.d * 0.16, size.w * 0.25, 8, 18);
+      }
+      return new THREE.CylinderGeometry(size.d * 0.16, size.d * 0.16, size.w * 0.5, 20);
+    }
+    if (kind === "mobile") {
+      return new THREE.BoxGeometry(size.w * 0.18, size.h * 0.52, size.d * 0.08);
+    }
+    if (kind === "decision" || mesh === "octahedron" || mesh === "diamond") {
+      return new THREE.OctahedronGeometry(size.w * 0.2, 0);
+    }
+    if (kind === "risk" || kind === "warning" || mesh === "cone") {
+      return new THREE.ConeGeometry(size.w * 0.18, size.h * 0.5, 5);
+    }
+    return new THREE.BoxGeometry(size.w * 0.32, size.h * 0.42, size.d * 0.32);
+  }
+
+  function createIsometricEntity(THREE, item, spec, size, markContext) {
+    var color = colorValue(spec.color, 0x2f80ed);
+    var group = new THREE.Group();
+    var material = new THREE.MeshStandardMaterial({
+      color: color,
+      roughness: 0.58,
+      metalness: 0.08,
+      emissive: color,
+      emissiveIntensity: 0.02
+    });
+    var mesh = new THREE.Mesh(isometricEntityGeometry(THREE, item, spec, size), material);
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    var kind = normalizeMarkKey(item.kind || item.type || spec.shape || spec.mesh);
+    if (kind === "pc" || kind === "client") {
+      var screen = new THREE.Mesh(new THREE.BoxGeometry(size.w * 0.32, size.h * 0.26, size.d * 0.04), new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.4, metalness: 0.2 }));
+      screen.position.y = size.h * 0.22;
+      screen.position.z = size.d * 0.19;
+      group.add(screen);
+    }
+    if (kind === "database" || kind === "mysql" || kind === "redis") {
+      var cap = new THREE.Mesh(new THREE.CylinderGeometry(size.w * 0.18, size.w * 0.18, 0.035, 30), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
+      cap.position.y = size.h * 0.22;
+      group.add(cap);
+    }
+    var icon = createIconBillboard(spec, item, THREE, markContext);
+    if (icon) {
+      icon.position.set(0, size.h * 0.3, size.d * 0.22);
+      icon.scale.set(1.5, 1.5, 1.5);
+      group.add(icon);
+    }
+    group.userData = { label: itemLabel(item), payload: item, id: item.id };
+    group.traverse(function (child) {
+      child.userData = group.userData;
+    });
+    return group;
+  }
+
+  function isometricLineMaterial(THREE, color, opacity) {
+    return new THREE.LineBasicMaterial({ color: colorValue(color, 0x1f2937), transparent: true, opacity: opacity === undefined ? 0.8 : opacity });
+  }
+
+  function addIsometricZone(THREE, root, zone, scale, center) {
+    var bounds = isometricBounds(zone);
+    var world = isometricWorld({ x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 }, scale, center);
+    var color = colorValue(firstString(zone.presentation || {}, "color") || "#e6edf5", 0xe6edf5);
+    var plane = new THREE.Mesh(new THREE.PlaneGeometry(bounds.w * scale, bounds.h * scale), new THREE.MeshBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0.18,
+      depthWrite: false
+    }));
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.set(world.x, 0.006, world.z);
+    plane.userData = { zone: zone.id, label: itemLabel(zone) };
+    root.add(plane);
+    var points = [
+      isometricWorld({ x: bounds.x, y: bounds.y }, scale, center),
+      isometricWorld({ x: bounds.x + bounds.w, y: bounds.y }, scale, center),
+      isometricWorld({ x: bounds.x + bounds.w, y: bounds.y + bounds.h }, scale, center),
+      isometricWorld({ x: bounds.x, y: bounds.y + bounds.h }, scale, center),
+      isometricWorld({ x: bounds.x, y: bounds.y }, scale, center)
+    ].map(function (p) { return new THREE.Vector3(p.x, 0.035, p.z); });
+    var boundary = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, firstString(zone.presentation || {}, "color") || "#64748b", 0.92));
+    boundary.userData = { isZoneBoundary: true, style: firstString(zone.presentation || {}, "boundary") || "solid" };
+    root.add(boundary);
+    return { zone: zone, bounds: bounds, labelPoint: { x: bounds.x + 0.35, y: bounds.y + 0.35 }, plane: plane, boundary: boundary };
+  }
+
+  function labelHTML(className, text) {
+    var node = el("div", className, text || "");
+    node.setAttribute("data-label", text || "");
+    return node;
+  }
+
+  function renderIsometricArchitecture(ctx) {
+    var manifest = ctx.manifest || {};
+    var data = ctx.data || {};
+    var shell = createIsometricShell(ctx.container, manifest, data);
+    var THREE = window.THREE;
+    if (!THREE || !THREE.WebGLRenderer || !THREE.OrthographicCamera) {
+      shell.stage.appendChild(el("p", "isometric-fallback", "Three.js is required for this offline architecture renderer."));
+      return;
+    }
+    var zones = isometricArray(data, "zones");
+    var entities = isometricArray(data, "entities");
+    var links = isometricArray(data, "links");
+    var zoneByID = {};
+    zones.forEach(function (zone) { zoneByID[zone.id] = zone; });
+    var allBounds = zones.length ? zones.map(isometricBounds) : [{ x: 0, y: 0, w: 18, h: 12 }];
+    var minX = Math.min.apply(null, allBounds.map(function (b) { return b.x; }));
+    var minY = Math.min.apply(null, allBounds.map(function (b) { return b.y; }));
+    var maxX = Math.max.apply(null, allBounds.map(function (b) { return b.x + b.w; }));
+    var maxY = Math.max.apply(null, allBounds.map(function (b) { return b.y + b.h; }));
+    var center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+    var span = Math.max(8, maxX - minX, maxY - minY);
+    var scale = 8 / span;
+    var width = Math.max(760, shell.stage.clientWidth || 1024);
+    var height = Math.max(540, shell.stage.clientHeight || 680);
+    var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setClearColor(0xffffff, 0);
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setSize(width, height, false);
+    if (THREE.SRGBColorSpace) {
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+    }
+    shell.stage.insertBefore(renderer.domElement, shell.labelLayer);
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.OrthographicCamera(-6, 6, 4, -4, 0.1, 100);
+    var target = new THREE.Vector3(0, 0, 0);
+    var cameraState = { theta: Math.PI / 4, phi: Math.PI / 3.2, radius: 11, panX: 0, panZ: 0, zoom: 1 };
+    var root = new THREE.Group();
+    var zoneRoot = new THREE.Group();
+    var entityRoot = new THREE.Group();
+    var linkRoot = new THREE.Group();
+    var leaderRoot = new THREE.Group();
+    root.add(zoneRoot);
+    root.add(linkRoot);
+    root.add(entityRoot);
+    root.add(leaderRoot);
+    scene.add(root);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 1.15));
+    var sun = new THREE.DirectionalLight(0xffffff, 1.08);
+    sun.position.set(6, 8, 5);
+    scene.add(sun);
+    var base = new THREE.Mesh(new THREE.PlaneGeometry((maxX - minX + 3) * scale, (maxY - minY + 3) * scale), new THREE.MeshBasicMaterial({ color: 0xf8fafc, transparent: true, opacity: 0.94 }));
+    base.rotation.x = -Math.PI / 2;
+    base.position.y = -0.018;
+    base.userData.isBasePlane = true;
+    root.add(base);
+    var grid = addThreeGrid(THREE, root, Math.max(10, span * scale + 1.5), Math.max(10, Math.ceil(span)), 0.002, 0x94a3b8);
+    grid.userData.isIsometricGrid = true;
+
+    var labels = [];
+    var entityByID = {};
+    var markContext = createMarkContext(manifest, data);
+    zones.forEach(function (zone) {
+      var info = addIsometricZone(THREE, zoneRoot, zone, scale, center);
+      var pos = isometricWorld(info.labelPoint, scale, center);
+      var label = labelHTML("visual-isometric-zone-label", itemLabel(zone) || zone.id);
+      label.setAttribute("data-zone-label", zone.id || "");
+      shell.labelLayer.appendChild(label);
+      labels.push({ element: label, point: new THREE.Vector3(pos.x, 0.16, pos.z), visible: true });
+    });
+
+    entities.forEach(function (item, index) {
+      var zone = zoneByID[item.zone] || zones[index % Math.max(1, zones.length)] || {};
+      var pos = isometricPosition(item, zone, index);
+      var world = isometricWorld(pos, scale, center);
+      var size = isometricSize(item);
+      var spec = resolveMarkSpec(item, markContext);
+      var object = createIsometricEntity(THREE, item, spec, size, markContext);
+      object.position.set(world.x, size.h * 0.22, world.z);
+      object.scale.setScalar(1 + Math.min(0.35, importanceValue(item, 0.45) * 0.18));
+      entityRoot.add(object);
+      entityByID[item.id] = { object: object, item: item, pos: pos, world: new THREE.Vector3(world.x, size.h * 0.22, world.z), size: size };
+      var label = labelHTML("visual-isometric-label", itemLabel(item) || item.id);
+      label.setAttribute("data-entity-label", item.id || "");
+      shell.labelLayer.appendChild(label);
+      var anchor = new THREE.Vector3(world.x, size.h * 0.72 + 0.28, world.z);
+      labels.push({ element: label, point: anchor, visible: true });
+      var leader = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(world.x, size.h * 0.34, world.z), anchor]), isometricLineMaterial(THREE, "#475569", 0.5));
+      leader.userData.isLeaderLine = true;
+      leaderRoot.add(leader);
+    });
+
+    links.forEach(function (link, index) {
+      var from = entityByID[link.from];
+      var to = entityByID[link.to];
+      if (!from || !to) {
+        return;
+      }
+      var edgeSpec = resolveEdgeSpec(link, markContext);
+      var endpoints = {
+        from: { position: from.world.clone().add(new THREE.Vector3(0, 0.22, 0)) },
+        to: { position: to.world.clone().add(new THREE.Vector3(0, 0.22, 0)) }
+      };
+      var route = Array.isArray(link.route) ? link.route : [];
+      var curve;
+      if (route.length && THREE.CatmullRomCurve3) {
+        var points = [endpoints.from.position].concat(route.map(function (point) {
+          var world = isometricWorld(point, scale, center);
+          return new THREE.Vector3(world.x, 0.52, world.z);
+        })).concat([endpoints.to.position]);
+        curve = new THREE.CatmullRomCurve3(points);
+      } else {
+        curve = edgeCurveFor(THREE, endpoints.from.position, endpoints.to.position, link, edgeSpec, index);
+      }
+      var tube = createEdgeTube(THREE, curve, edgeSpec, 0.018);
+      tube.userData.isDirectedArrow = !!edgeSpec.directed;
+      linkRoot.add(tube);
+      var arrow = createArrowHead(THREE, curve, edgeSpec);
+      if (arrow) {
+        arrow.userData.isDirectedArrow = true;
+        linkRoot.add(arrow);
+      }
+      createFlowParticles(THREE, curve, edgeSpec, edgeSpec.flow ? 2 : 0).forEach(function (marker) { linkRoot.add(marker); });
+      if (link.label) {
+        var mid = curve.getPoint(0.52);
+        var label = labelHTML("visual-isometric-link-label", link.label);
+        label.setAttribute("data-link-label", link.id || "");
+        shell.labelLayer.appendChild(label);
+        labels.push({ element: label, point: mid.clone().add(new THREE.Vector3(0, 0.18, 0)), visible: true });
+      }
+    });
+
+    var selected = "";
+    var labelsVisible = true;
+    var boundariesVisible = true;
+    var arrowsVisible = true;
+    var pointer = new THREE.Vector2();
+    var raycaster = new THREE.Raycaster();
+    var meshes = entities.map(function (item) { return entityByID[item.id] && entityByID[item.id].object; }).filter(Boolean);
+
+    function updateCamera() {
+      var aspect = width / height;
+      var view = 5.2 / cameraState.zoom;
+      camera.left = -view * aspect;
+      camera.right = view * aspect;
+      camera.top = view;
+      camera.bottom = -view;
+      target.set(cameraState.panX, 0, cameraState.panZ);
+      var sinPhi = Math.sin(cameraState.phi);
+      camera.position.set(
+        target.x + cameraState.radius * sinPhi * Math.sin(cameraState.theta),
+        target.y + cameraState.radius * Math.cos(cameraState.phi),
+        target.z + cameraState.radius * sinPhi * Math.cos(cameraState.theta)
+      );
+      camera.lookAt(target);
+      camera.updateProjectionMatrix();
+    }
+
+    function project(point) {
+      var projected = point.clone().project(camera);
+      return { x: (projected.x * 0.5 + 0.5) * width, y: (-projected.y * 0.5 + 0.5) * height };
+    }
+
+    function updateLabels() {
+      labels.forEach(function (label) {
+        label.element.style.display = labelsVisible && label.visible ? "" : "none";
+        var p = project(label.point);
+        label.element.style.transform = "translate(" + p.x.toFixed(1) + "px, " + p.y.toFixed(1) + "px) translate(-50%, -100%)";
+      });
+    }
+
+    function showSelected(item) {
+      selected = item && item.id ? item.id : "";
+      if (shell.inspector) {
+        shell.inspector.show(itemLabel(item) || selected || "Architecture", item || { title: data.title, entities: entities.length, links: links.length });
+      }
+      meshes.forEach(function (mesh) {
+        mesh.traverse(function (child) {
+          if (child.material && child.material.emissiveIntensity !== undefined) {
+            child.material.emissiveIntensity = mesh.userData.id === selected ? 0.22 : 0.02;
+          }
+        });
+      });
+    }
+
+    shell.controls.appendChild(createIsometricButton("Overview", "overview", function () {
+      meshes.forEach(function (mesh) { mesh.visible = true; });
+      linkRoot.visible = true;
+      showSelected(null);
+    }));
+    shell.controls.appendChild(createIsometricButton("Reset", "reset_camera", function () {
+      cameraState.theta = Math.PI / 4;
+      cameraState.phi = Math.PI / 3.2;
+      cameraState.radius = 11;
+      cameraState.panX = 0;
+      cameraState.panZ = 0;
+      cameraState.zoom = 1;
+    }));
+    shell.controls.appendChild(createIsometricButton("Focus", "focus", function () {
+      var focusIDs = data.visual && Array.isArray(data.visual.initial_focus_ids) ? data.visual.initial_focus_ids : [];
+      if (focusIDs.length && entityByID[focusIDs[0]]) {
+        var point = entityByID[focusIDs[0]].world;
+        cameraState.panX = point.x;
+        cameraState.panZ = point.z;
+      }
+    }));
+    shell.controls.appendChild(createIsometricButton("Isolate zone", "isolate", function () {
+      if (!selected || !entityByID[selected]) return;
+      var zoneID = entityByID[selected].item.zone;
+      entities.forEach(function (item) {
+        var node = entityByID[item.id];
+        if (node) node.object.visible = item.zone === zoneID;
+      });
+    }));
+    shell.controls.appendChild(createIsometricButton("Labels", "toggle_labels", function () {
+      labelsVisible = !labelsVisible;
+    }));
+    shell.controls.appendChild(createIsometricButton("Boundaries", "toggle_boundaries", function () {
+      boundariesVisible = !boundariesVisible;
+      zoneRoot.visible = boundariesVisible;
+    }));
+    shell.controls.appendChild(createIsometricButton("Arrows", "toggle_arrows", function () {
+      arrowsVisible = !arrowsVisible;
+      linkRoot.visible = arrowsVisible;
+    }));
+    shell.controls.appendChild(createIsometricButton("Export", "export_json", function () {
+      runtime.exportJSON(data, "isometric-architecture-data.json");
+    }));
+
+    shell.stage.addEventListener("click", function (event) {
+      var rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      var hits = raycaster.intersectObjects(meshes, true);
+      if (hits.length && hits[0].object && hits[0].object.userData) {
+        showSelected(hits[0].object.userData.payload);
+      }
+    });
+
+    var drag = { active: false, mode: "", x: 0, y: 0 };
+    shell.stage.addEventListener("pointerdown", function (event) {
+      drag.active = true;
+      drag.mode = event.shiftKey ? "rotate" : "pan";
+      drag.x = event.clientX;
+      drag.y = event.clientY;
+      shell.stage.setPointerCapture(event.pointerId);
+    });
+    shell.stage.addEventListener("pointermove", function (event) {
+      if (!drag.active) return;
+      var dx = event.clientX - drag.x;
+      var dy = event.clientY - drag.y;
+      drag.x = event.clientX;
+      drag.y = event.clientY;
+      if (drag.mode === "rotate") {
+        cameraState.theta += dx * 0.004;
+        cameraState.phi = Math.max(0.72, Math.min(1.28, cameraState.phi + dy * 0.002));
+      } else {
+        cameraState.panX -= dx * 0.01 / cameraState.zoom;
+        cameraState.panZ -= dy * 0.01 / cameraState.zoom;
+      }
+    });
+    shell.stage.addEventListener("pointerup", function (event) {
+      drag.active = false;
+      try { shell.stage.releasePointerCapture(event.pointerId); } catch (err) { /* ignore */ }
+    });
+    shell.stage.addEventListener("wheel", function (event) {
+      event.preventDefault();
+      cameraState.zoom = Math.max(0.55, Math.min(2.6, cameraState.zoom * (event.deltaY > 0 ? 0.92 : 1.08)));
+    }, { passive: false });
+
+    function resize() {
+      width = Math.max(760, shell.stage.clientWidth || width);
+      height = Math.max(540, shell.stage.clientHeight || height);
+      renderer.setSize(width, height, false);
+      updateCamera();
+      updateLabels();
+    }
+    var observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
+    if (observer) observer.observe(shell.stage);
+    function animate() {
+      if (!document.body.contains(shell.stage)) {
+        if (observer) observer.disconnect();
+        renderer.dispose();
+        return;
+      }
+      updateCamera();
+      linkRoot.children.forEach(function (child) {
+        if (child.userData && child.userData.curve) {
+          var t = ((Date.now() / 1000) * child.userData.speed + child.userData.phase) % 1;
+          child.position.copy(child.userData.curve.getPoint(t));
+          if (child.material) child.material.opacity = child.userData.baseOpacity || 0.6;
+        } else if (child.material && child.userData && child.userData.baseOpacity !== undefined) {
+          child.material.opacity += ((child.userData.baseOpacity || 0.7) - child.material.opacity) * 0.09;
+        }
+      });
+      entityRoot.children.forEach(function (object) {
+        object.children.forEach(function (child) {
+          if (child.isMesh && child.material && child.material.map) {
+            child.quaternion.copy(camera.quaternion);
+          }
+        });
+      });
+      updateLabels();
+      renderer.render(scene, camera);
+      window.requestAnimationFrame(animate);
+    }
+    updateCamera();
+    showSelected(null);
+    shell.stage.classList.add("visual-isometric-ready");
+    animate();
+  }
+
   runtime.registerRenderer("offline.graph.v1", { render: renderGraph });
-  runtime.registerRenderer("offline.studio.v1", { render: renderStudio });
+  runtime.registerRenderer("offline.architecture.isometric.v1", { render: renderIsometricArchitecture });
   runtime.registerRenderer("offline.timeline.v1", { render: renderTimeline });
   runtime.registerRenderer("offline.evidence.v1", { render: renderEvidence });
   runtime.registerRenderer("offline.matrix.v1", { render: renderMatrix });

@@ -2,40 +2,132 @@
   "schema": "efp.visual.template_quality_rules.v1",
   "template_id": "architecture.isometric_overview",
   "label": {
-    "max_overview_label_chars": 32,
-    "max_detail_label_chars": 64,
+    "max_overview_label_chars": 22,
+    "max_detail_label_chars": 48,
     "require_summary_for_long_labels": true
   },
   "required_for_quality": [
     {
-      "path": "$.canvas.grid.enabled",
-      "severity": "warning",
-      "code": "isometric_missing_base_grid",
-      "suggestion": "Set canvas.grid.enabled=true so the scene has a base plane and readable grid."
-    },
-    {
       "path": "$.zones",
-      "severity": "warning",
-      "code": "isometric_zones_missing",
-      "suggestion": "Add bounded zones for infrastructure, runtime, edge, data, or platform areas."
+      "severity": "error",
+      "code": "missing_zones",
+      "suggestion": "Add bounded architecture zones before placing entities."
     },
     {
-      "path": "$.links[].presentation.arrow",
+      "path": "$.zones[*].bounds",
+      "severity": "error",
+      "code": "zone_without_bounds",
+      "suggestion": "Every zone must declare numeric bounds.x, bounds.y, bounds.w, and bounds.h."
+    },
+    {
+      "path": "$.entities[*].kind",
+      "severity": "error",
+      "code": "entity_kind_missing",
+      "suggestion": "Set an architecture entity kind such as nginx, microservice, nacos, redis, mysql, oss, or elasticsearch."
+    },
+    {
+      "path": "$.entities[*].position",
       "severity": "warning",
-      "code": "isometric_link_arrow_missing",
-      "suggestion": "Set links[].presentation.arrow=forward on directed architecture links."
+      "code": "entity_position_missing",
+      "suggestion": "Give important entities explicit x/y positions instead of relying on fallback placement."
+    },
+    {
+      "path": "$.links[*].directed",
+      "severity": "error",
+      "code": "link_direction_missing",
+      "suggestion": "Set every architecture link to directed=true."
     }
   ],
   "semantic_rules": [
     {
-      "code": "architecture_uses_zones_entities_links",
+      "code": "excessive_auto_layout",
       "severity": "warning",
-      "description": "Architecture input must use zones/entities/links rather than generic nodes/edges."
+      "description": "Too many important entities are missing positions, so the diagram cannot preserve architecture intent."
+    },
+    {
+      "code": "entity_label_missing",
+      "severity": "error",
+      "description": "Each entity must have a concise label."
+    },
+    {
+      "code": "top_label_missing",
+      "severity": "warning",
+      "description": "Visible entities should use top labels unless presentation.label.mode is intentionally hidden."
+    },
+    {
+      "code": "leader_line_missing",
+      "severity": "warning",
+      "description": "Visible entities should retain leader lines so top labels remain anchored to objects."
+    },
+    {
+      "code": "link_arrow_missing",
+      "severity": "error",
+      "description": "Directional links must render visible arrowheads."
+    },
+    {
+      "code": "link_route_missing",
+      "severity": "warning",
+      "description": "Links should declare routeStyle or explicit route points."
+    },
+    {
+      "code": "link_label_too_long",
+      "severity": "warning",
+      "description": "Link labels should be short architecture labels, not full sentences."
+    },
+    {
+      "code": "zone_overlap_risk",
+      "severity": "warning",
+      "description": "Zone bounds appear to overlap or crowd labels."
+    },
+    {
+      "code": "entity_overlap_risk",
+      "severity": "warning",
+      "description": "Entity positions appear too close for the chosen 3D models and top labels."
+    },
+    {
+      "code": "generic_graph_shape_detected",
+      "severity": "error",
+      "description": "Input uses generic graph nodes/edges or untyped graph shapes instead of architecture entities and links."
+    },
+    {
+      "code": "fallback_sphere_detected",
+      "severity": "error",
+      "description": "Renderer would fall back to a generic sphere for an architecture entity."
+    },
+    {
+      "code": "starfield_theme_detected",
+      "severity": "error",
+      "description": "Architecture overviews must use the light base-plane theme, not starfield or dust themes."
+    },
+    {
+      "code": "missing_architecture_light_theme",
+      "severity": "error",
+      "description": "Set theme to architecture_light."
+    },
+    {
+      "code": "too_many_links_without_routes",
+      "severity": "warning",
+      "description": "Dense diagrams need orthogonal routeStyle or explicit route points for readable arrows."
     }
   ],
   "template_specific": {
-    "max_auto_position_ratio": 0.35,
-    "max_link_label_chars": 48,
-    "require_architecture_light_theme": true
+    "min_zones": 2,
+    "require_grid": true,
+    "require_directed_links": true,
+    "require_architecture_light_theme": true,
+    "max_link_label_chars": 24,
+    "max_unrouted_links_before_warning": 8,
+    "preferred_route_styles": [
+      "orthogonal",
+      "polyline"
+    ],
+    "forbid_fields": [
+      "hero",
+      "panels",
+      "navigation",
+      "story",
+      "nodes",
+      "edges"
+    ]
   }
 }

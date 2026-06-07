@@ -1,68 +1,107 @@
 # architecture.isometric_overview Agent Guide
 
-This template guide extends `../_shared/agent-guidance/common-visual-quality.md`.
+This template guide extends `../_shared/agent-guidance/common-visual-quality.md` and `../_shared/agent-guidance/mark-grammar.md`.
 
 ## When to use this template
 
-Use this template for architecture, topology, deployment, service map, system map, infrastructure map, microservice, cloud, iCraft-like, or isometric architecture requests. It is for a spatial architecture scene, not a generic graph.
+Use this template when the user needs a static, inspectable architecture overview: runtime topology, microservice dependencies, gateway/service/data zones, storage and observability paths, or deployment-level system boundaries.
+
+Start by authoring `zones`, `entities`, and `links` so the renderer can draw an isometric base plane, typed infrastructure objects, and directional architecture routes.
+
+## Do not use this template
+
+Do not use it for Studio pages, narrative dashboards, generic graph exploration, UML sequence timing, matrix comparison, incident timelines, code-level package graphs, or unbounded dependency clouds.
 
 ## Semantic model
 
-- zone = bounded platform, network, runtime, cloud, team, or data area with a visible isometric boundary.
-- entity = service, API, worker, queue, stream, database, storage, user, external system, gateway, deployment, or control point.
-- link = directional call, read, write, event, dependency, deploy, validate, block, send, or return relationship.
-- canvas.grid = base grid and ground plane hint.
-- presentation.boundary = zone boundary style.
-- presentation.label and presentation.leaderLine = top label and leader line hint.
+- zone = a bounded architecture area on the base plane, with `id`, `label`, and numeric `bounds`.
+- entity = a typed system object such as client, nginx, service, nacos, redis, mysql, oss, admin, or elasticsearch.
+- link = a directed relationship between entities, with a short label, architecture-specific kind, arrow, and route.
+- label = a top HTML billboard above every visible entity, with an optional leader line back to the 3D object.
+- base plane = the pale isometric surface and grid that anchors zones and routes.
+- camera = orthographic isometric view with constrained orbit; the first view must make zones, entities, and arrows readable.
+- label/base plane/camera are renderer responsibilities, but the input must provide enough fields for them.
 
 ## Required construction rules
 
-1. Use `zones`, `entities`, and `links`; do not write generic `nodes` and `edges`.
-2. Every zone needs `id`, `label`, and numeric `bounds.x/y/w/h`.
-3. Every entity needs `id`, `label`, `kind`, `zone`, numeric `position.x/y`, and numeric `size.w/d/h`.
-4. Entity `zone` values must reference existing zones.
-5. Every link needs `id`, `from`, `to`, `label`, `kind`, `directed=true`, and `presentation.arrow`.
-6. Link endpoints must reference existing entities.
-7. Add `canvas.grid.enabled=true` for the base plane and grid.
-8. Use `camera.preset=isometric` unless the user explicitly asks for another camera.
-9. Use `theme=architecture_light`; do not use starfield themes.
-10. Use `visual.initial_focus_ids` and `visual.annotations` with entity or link ids.
+1. Create `zones` first. Every meaningful area must have `bounds.x`, `bounds.y`, `bounds.w`, and `bounds.h`.
+2. Create `entities` with `id`, short `label`, architecture `kind`, `zone`, and explicit `position`.
+3. Create `links` with `id`, `from`, `to`, short `label`, specific `kind`, `directed: true`, and `routeStyle` or explicit `route`.
+4. Use `theme: architecture_light` and `canvas.grid.enabled: true`.
+5. Use `visual.assumptions` for placement choices or inferred behavior.
+6. Do not create `panels`, `hero`, `nav`, `story`, or Studio walkthrough content.
+7. Do not use generic `nodes`/`edges`; use `entities`/`links`.
+8. Do not rely on generic graph shapes or fallback spheres. Entity `kind` drives generated architecture geometry.
 
 ## Recommended fields
 
-Use `importance`, `visibility`, `labelPriority`, `summary`, `details`, `presentation`, `visual`, `view`, and `renderHints` from `../_shared/agent-guidance/common-visual-quality.md`.
+Use these exact kinds where possible: `client`, `pc`, `mobile`, `cdn`, `gateway`, `nginx`, `api_gateway`, `service`, `microservice`, `registry`, `nacos`, `admin`, `database`, `mysql`, `cache`, `redis`, `storage`, `oss`, `file_storage`, `block_storage`, `queue`, `log`, `elasticsearch`, `security`, `external`.
+
+Use these exact link kinds where possible: `api_call`, `static_resource`, `reverse_proxy`, `load_balancing`, `register`, `registering_service`, `pull_consumption`, `health_check`, `data_cache`, `data_storage`, `replication`, `distributed_file_service`, `feign_call`, `log_collection`.
+
+Prefer `visual.initial_focus_ids`, `visual.narrative_steps`, `visual.annotations`, `renderHints.colorBy`, `renderHints.showLegend`, and explicit `route` bend points for dense architecture maps.
 
 ## Visual encoding rules
 
-Zones render as flat bounded slabs on a base plane. Entities render as semantic architecture marks such as service boxes, API hexes, database cylinders, queue capsules, event buses, cloud plates, and actor cards. Links render as routed paths with arrows, labels, and optional route points. Labels should sit above entities with leader lines by default.
+- Entity `kind`, `provider`, `service`, `platform`, and `presentation` drive 3D geometry and local icon selection.
+- Zone `bounds` and `presentation.boundary` drive floor plates and solid/dashed/dotted boundaries.
+- Link `kind`, `directed`, `presentation.arrow`, `presentation.lineStyle`, and `presentation.color` drive thick arrows, line style, and route color.
+- Use `theme: architecture_light`; do not choose dark starfield or decorative particle effects for this renderer.
+
+## Layout guide with conventional placement and assumptions in visual.assumptions
+
+Place client-facing zones on the left/front, edge/CDN/nginx next, API gateway before service clusters, registry/admin above or behind services, cache/database/storage on the lower or right side, and observability near the outbound log path. Keep high-traffic routes separated by explicit orthogonal `route` points when links would overlap.
+
+If a source architecture omits exact positions, choose stable conventional placement and record it in `visual.assumptions`, for example: "Service instances are grouped by logical role because replica topology was not specified." Do not leave entities unpositioned and expect auto-layout to solve the view.
 
 ## Common mistakes to avoid
 
-- Writing generic `nodes` and `edges` instead of zones/entities/links.
-- Omitting `canvas.grid.enabled=true`.
-- Leaving entities unpositioned so the renderer has to auto-place everything.
-- Using `kind=node`, `kind=component`, or fallback shapes for architecture objects.
-- Setting `theme=starfield` or other non-architecture scene themes.
-- Omitting directed arrows on data flow, calls, events, reads, writes, and dependencies.
+- No zones or zones without numeric bounds.
+- Entities missing `kind` or `position`.
+- Links missing `directed: true`, arrows, route style, or short labels.
+- Long relationship labels that read like documentation sentences.
+- Generic `nodes`/`edges` input copied from graph templates.
+- Studio fields such as `panels`, `hero`, `navigation`, or `story`.
+- Dark starfield, holographic, dust, or decorative background themes.
+- Service-to-service calls crossing many entities without explicit bend points.
 
 ## Quality checklist before render
 
-- Zones are present, bounded, and not accidentally overlapping.
-- Entities are labeled, typed, positioned, sized, and attached to existing zones.
-- Links are directed, have visible arrows, and use concise labels.
-- No generic nodes/edges are present.
-- Base plane/grid, isometric camera, architecture_light theme, top labels, and leader lines are planned.
+- `schema` is `efp.visual.input.isometric_architecture.v1`.
+- `theme` is `architecture_light`.
+- `canvas.grid.enabled` is true.
+- Every zone has `id`, `label`, and numeric `bounds`.
+- Every important entity has `id`, `label`, `kind`, `zone`, and `position`.
+- Every visible entity can receive a top label and leader line.
+- Every link has `directed: true`, specific `kind`, short `label`, and route style or explicit route.
+- Routes avoid obvious overlaps in the first view.
+- `visual.assumptions` explains inferred placement or grouped replicas.
+- No legacy panel grammar, Studio panels, generic graph fallback, starfield, dust, or holographic effects.
 
 ## Minimal good example
 
 ```json
-{"schema":"efp.visual.input.isometric_architecture.v1","title":"Payment Architecture","canvas":{"grid":{"enabled":true}},"camera":{"preset":"isometric"},"theme":"architecture_light","zones":[{"id":"app","label":"Application","bounds":{"x":0,"y":0,"w":12,"h":10}}],"entities":[{"id":"api","label":"Payment API","kind":"api","zone":"app","position":{"x":4,"y":4},"size":{"w":4,"d":3,"h":2}}],"links":[]}
+{
+  "schema": "efp.visual.input.isometric_architecture.v1",
+  "title": "Gateway To Service Path",
+  "theme": "architecture_light",
+  "canvas": { "grid": { "enabled": true } },
+  "zones": [
+    { "id": "edge", "label": "Edge", "bounds": { "x": 0, "y": 0, "w": 4, "h": 4 } },
+    { "id": "service", "label": "Services", "bounds": { "x": 5, "y": 0, "w": 6, "h": 4 } }
+  ],
+  "entities": [
+    { "id": "nginx", "label": "Nginx", "kind": "nginx", "zone": "edge", "position": { "x": 2, "y": 2 } },
+    { "id": "order-service", "label": "Order Service", "kind": "microservice", "zone": "service", "position": { "x": 7, "y": 2 } }
+  ],
+  "links": [
+    { "id": "route", "from": "nginx", "to": "order-service", "label": "routes", "kind": "reverse_proxy", "directed": true, "presentation": { "arrow": "forward" } }
+  ],
+  "visual": {
+    "goal": "Show the first service route.",
+    "initial_focus_ids": ["nginx", "order-service"],
+    "narrative_steps": [{ "id": "overview", "title": "Request path", "focus_ids": ["nginx", "order-service"] }],
+    "annotations": [{ "id": "route-note", "target_id": "route", "label": "Directional route" }]
+  }
+}
 ```
-
-## Visual Mark System
-
-Read `../_shared/agent-guidance/mark-grammar.md` before writing input JSON. Use `kind`, `provider`, `service`, `platform`, and `presentation.icon` so architecture entities avoid fallback spheres.
-
-For causal, dependency, call, data-flow, event, read/write, deploy, validate, block, send, or return relationships, set `directed=true` and `presentation.arrow=forward` or `reverse`. Use `presentation.lineStyle=dashed` and `presentation.flow=true` for async/event movement.
-
-When color has meaning, set `view.colorBy` or `renderHints.colorBy` and `renderHints.showLegend=true`. Do not use random colors; choose provider, kind, status, zone, risk, or severity as the color policy.

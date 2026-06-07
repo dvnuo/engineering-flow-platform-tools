@@ -12,39 +12,41 @@ layout:
   group_by: zone
 effects:
   engine: three.v1
-  scene: architecture_isometric_overview
+  scene: isometric_architecture
   camera: orthographic_isometric
-  material: architectural
-  motion: subtle_pan
+  particles: none
+  material: architecture_light
+  motion: constrained_orbit
   interaction:
-    - orbit_drag
-    - focus_entity
+    - constrained_orbit
+    - click_inspect
+    - isolate_zone
     - toggle_labels
     - export_json
 visual_design:
   initial_view: overview
-  max_initial_nodes: 80
-  max_initial_edges: 120
+  max_initial_nodes: 120
+  max_initial_edges: 240
   default_collapse_depth: 0
   group_by:
     - zone
     - kind
-    - provider
-    - status
+    - platform
   supports:
-    - semantic_schema
-    - isometric_zones
-    - base_grid
-    - directed_links
+    - base_plane
+    - isometric_grid
+    - zones
+    - typed_entities
+    - directional_links
     - top_labels
     - leader_lines
-    - export_json
+    - billboard_labels
+    - constrained_camera
+    - local_icons
   agent_guidance:
-    - Use zones, entities, and links; do not write generic nodes and edges for this template.
-    - Define canvas.grid.enabled=true so the isometric base plane has a readable ground reference.
-    - Give every entity a kind, label, zone, position, size, and presentation shape or icon when possible.
-    - Set links[].directed=true and presentation.arrow=forward for calls, reads, writes, events, dependencies, and deployment flows.
-    - Use architecture_light unless the user explicitly asks for another local architecture theme; do not use starfield themes.
+    - Use explicit zones with numeric bounds and typed entities with positions.
+    - Use directional links with short labels, arrow presentation, and explicit routes for dense diagrams.
+    - Keep the theme architecture_light and avoid Studio panels, starfields, dust, or holographic effects.
 offline:
   required: true
   forbid_network: true
@@ -56,6 +58,24 @@ assets:
     to: assets/runtime/efp-visual-renderers.iife.js
   - from: ../_shared/runtime/efp-visual-runtime.css
     to: assets/runtime/efp-visual-runtime.css
+  - from: ../_shared/mark-registry.json
+    to: assets/mark-registry.json
+  - from: ../_shared/asset-registry.json
+    to: assets/asset-registry.json
+  - from: ../_shared/assets/icons/generic/service.svg
+    to: assets/icons/generic/service.svg
+  - from: ../_shared/assets/icons/generic/api.svg
+    to: assets/icons/generic/api.svg
+  - from: ../_shared/assets/icons/generic/database.svg
+    to: assets/icons/generic/database.svg
+  - from: ../_shared/assets/icons/generic/storage.svg
+    to: assets/icons/generic/storage.svg
+  - from: ../_shared/assets/icons/generic/queue.svg
+    to: assets/icons/generic/queue.svg
+  - from: ../_shared/assets/icons/generic/user.svg
+    to: assets/icons/generic/user.svg
+  - from: ../_shared/assets/icons/generic/external.svg
+    to: assets/icons/generic/external.svg
   - from: style.css
     to: assets/templates/architecture.isometric_overview/style.css
 styles:
@@ -67,19 +87,20 @@ scripts:
   - assets/runtime/efp-visual-runtime.iife.js
   - assets/runtime/efp-visual-renderers.iife.js
 interactions:
-  - hover_tooltip
   - click_inspect
-  - focus_entity
+  - constrained_orbit
+  - focus_selected
   - isolate_zone
+  - hide_others
+  - show_all
   - toggle_labels
   - toggle_boundaries
   - toggle_arrows
-  - reset_camera
   - export_json
 limits:
-  max_nodes: 1000
-  max_edges: 3000
-  max_events: 5000
+  max_nodes: 1500
+  max_edges: 4000
+  max_events: 0
   max_items: 2000
 tags:
   - architecture

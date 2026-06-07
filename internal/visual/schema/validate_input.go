@@ -188,7 +188,7 @@ func validateSchemaField(kind string, data map[string]any) error {
 		"timeline_v1":                 "efp.visual.input.timeline.v1",
 		"evidence_v1":                 "efp.visual.input.evidence.v1",
 		"matrix_v1":                   "efp.visual.input.matrix.v1",
-		"isometric_architecture_v1":    "efp.visual.input.isometric_architecture.v1",
+		"isometric_architecture_v1":   "efp.visual.input.isometric_architecture.v1",
 		"uml_sequence_v1":             "efp.visual.input.uml.sequence.v1",
 		"uml_class_v1":                "efp.visual.input.uml.class.v1",
 		"uml_state_machine_v1":        "efp.visual.input.uml.state_machine.v1",
@@ -356,9 +356,15 @@ func validateIsometricArchitecture(data map[string]any, limits manifest.LimitsSp
 		"toggle_labels": true, "toggle_boundaries": true, "toggle_arrows": true, "reset_camera": true, "export_json": true,
 	}
 	for i, item := range controls {
+		if value, ok := item.(string); ok {
+			if !allowedControls[value] {
+				return isometricCounts{}, invalid("isometric control action is not supported: "+value, "Use overview, focus, isolate, hide_others, show_all, toggle_labels, toggle_boundaries, toggle_arrows, reset_camera, or export_json.")
+			}
+			continue
+		}
 		control, ok := item.(map[string]any)
 		if !ok {
-			return isometricCounts{}, invalid(fmt.Sprintf("isometric control at index %d must be an object.", i), "Each control must be an object with action or type.")
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric control at index %d must be a string or object.", i), "Each control must be an action string or an object with action or type.")
 		}
 		for _, name := range []string{"action", "type"} {
 			value := stringField(control, name)
@@ -1000,7 +1006,7 @@ func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool
 		"timeline_v1":                 {"events"},
 		"evidence_v1":                 {"claims", "sources", "links"},
 		"matrix_v1":                   {"items"},
-		"isometric_architecture_v1":    {"zones", "entities", "links"},
+		"isometric_architecture_v1":   {"zones", "entities", "links"},
 		"uml_sequence_v1":             {"participants", "messages", "phases", "activations", "fragments"},
 		"uml_class_v1":                {"classes", "relationships"},
 		"uml_state_machine_v1":        {"states", "transitions"},

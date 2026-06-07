@@ -21,9 +21,7 @@ var sharedAssetFiles = map[string]string{
 	"_shared/assets/ATTRIBUTIONS.md":         "assets/ATTRIBUTIONS.md",
 }
 
-var optionalSharedAssetFiles = map[string]string{
-	"_shared/agent-guidance/panel-grammar.md": "assets/agent-guidance/panel-grammar.md",
-}
+var optionalSharedAssetFiles = map[string]string{}
 
 func copyAssets(templateDir string, entry manifest.RegistryEntry, tpl manifest.TemplateManifest, outDir string) ([]string, error) {
 	var files []string

@@ -15,6 +15,66 @@
       "iconFallback": "generic.service",
       "color": "#63a9ff"
     },
+    "pc": {
+      "shape": "client_monitor",
+      "mesh": "monitor",
+      "iconFallback": "generic.user",
+      "color": "#64748b"
+    },
+    "mobile": {
+      "shape": "mobile_slab",
+      "mesh": "slab",
+      "iconFallback": "generic.user",
+      "color": "#475569"
+    },
+    "cdn": {
+      "shape": "cdn_globe",
+      "mesh": "globe",
+      "iconFallback": "generic.external",
+      "color": "#38bdf8"
+    },
+    "gateway": {
+      "shape": "gateway_tower",
+      "mesh": "tower",
+      "iconFallback": "generic.api",
+      "color": "#0d9488"
+    },
+    "nginx": {
+      "shape": "nginx_tower",
+      "mesh": "tower",
+      "iconFallback": "generic.api",
+      "color": "#16a34a"
+    },
+    "api_gateway": {
+      "shape": "gateway_card",
+      "mesh": "gateway_card",
+      "iconFallback": "generic.api",
+      "color": "#2563eb"
+    },
+    "microservice": {
+      "shape": "server_block_stack",
+      "mesh": "stacked_box",
+      "iconFallback": "generic.service",
+      "color": "#3b82f6"
+    },
+    "registry": {
+      "shape": "registry_ring",
+      "mesh": "ring_pedestal",
+      "iconFallback": "generic.service",
+      "color": "#8b5cf6"
+    },
+    "nacos": {
+      "shape": "registry_ring",
+      "mesh": "ring_pedestal",
+      "iconFallback": "generic.service",
+      "color": "#7c3aed"
+    },
+    "admin": {
+      "shape": "admin_shield",
+      "mesh": "shield",
+      "iconFallback": "generic.warning",
+      "color": "#f59e0b"
+    },
     "api": {
       "shape": "hex_service",
       "mesh": "hex_prism",
@@ -45,11 +105,47 @@
       "iconFallback": "generic.database",
       "color": "#527fff"
     },
+    "mysql": {
+      "shape": "database_cylinder",
+      "mesh": "cylinder",
+      "iconFallback": "generic.database",
+      "color": "#2563eb"
+    },
+    "cache": {
+      "shape": "cache_stack",
+      "mesh": "stacked_cylinder",
+      "iconFallback": "generic.storage",
+      "color": "#dc2626"
+    },
+    "redis": {
+      "shape": "redis_stack",
+      "mesh": "stacked_cylinder",
+      "iconFallback": "generic.storage",
+      "color": "#ef4444"
+    },
     "storage": {
       "shape": "bucket",
       "mesh": "cylinder",
       "iconFallback": "generic.storage",
       "color": "#569a31"
+    },
+    "oss": {
+      "shape": "object_bucket",
+      "mesh": "bucket",
+      "iconFallback": "generic.storage",
+      "color": "#16a34a"
+    },
+    "file_storage": {
+      "shape": "file_storage_block",
+      "mesh": "storage_block",
+      "iconFallback": "generic.storage",
+      "color": "#22c55e"
+    },
+    "block_storage": {
+      "shape": "block_storage",
+      "mesh": "block_storage",
+      "iconFallback": "generic.storage",
+      "color": "#65a30d"
     },
     "queue": {
       "shape": "queue_capsule",
@@ -103,6 +199,42 @@
       "shape": "cloud_plate",
       "mesh": "cloud",
       "iconFallback": "generic.external",
+      "color": "#94a3b8"
+    },
+    "log": {
+      "shape": "log_glyph",
+      "mesh": "log_stack",
+      "iconFallback": "generic.stream",
+      "color": "#f97316"
+    },
+    "elasticsearch": {
+      "shape": "search_glyph",
+      "mesh": "search_cluster",
+      "iconFallback": "generic.stream",
+      "color": "#eab308"
+    },
+    "search": {
+      "shape": "search_glyph",
+      "mesh": "search_cluster",
+      "iconFallback": "generic.stream",
+      "color": "#eab308"
+    },
+    "security": {
+      "shape": "security_shield",
+      "mesh": "shield",
+      "iconFallback": "generic.warning",
+      "color": "#e11d48"
+    },
+    "cluster": {
+      "shape": "cluster_block",
+      "mesh": "cluster",
+      "iconFallback": "generic.service",
+      "color": "#64748b"
+    },
+    "zone": {
+      "shape": "zone_boundary",
+      "mesh": "zone",
+      "iconFallback": "generic.service",
       "color": "#94a3b8"
     },
     "provider": {
@@ -339,6 +471,104 @@
     }
   },
   "edge_kinds": {
+    "api_call": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#1f2937"
+    },
+    "static_resource": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#0284c7"
+    },
+    "reverse_proxy": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#0f766e"
+    },
+    "load_balancing": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#2563eb"
+    },
+    "register": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#7c3aed"
+    },
+    "registering_service": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#8b5cf6"
+    },
+    "pull_consumption": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dotted",
+      "flow": true,
+      "color": "#0891b2"
+    },
+    "health_check": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": false,
+      "color": "#f59e0b"
+    },
+    "data_cache": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#dc2626"
+    },
+    "data_storage": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#2563eb"
+    },
+    "replication": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#4f46e5"
+    },
+    "distributed_file_service": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#16a34a"
+    },
+    "feign_call": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#334155"
+    },
+    "log_collection": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#f97316"
+    },
     "calls": {
       "directed": true,
       "arrow": "forward",

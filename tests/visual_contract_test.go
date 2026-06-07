@@ -101,7 +101,7 @@ var semanticSchemaKinds = map[string]bool{
 	"timeline_v1":                 true,
 	"evidence_v1":                 true,
 	"matrix_v1":                   true,
-	"isometric_architecture_v1":    true,
+	"isometric_architecture_v1":   true,
 	"uml_sequence_v1":             true,
 	"uml_class_v1":                true,
 	"uml_state_machine_v1":        true,
@@ -110,43 +110,43 @@ var semanticSchemaKinds = map[string]bool{
 }
 
 var semanticRenderers = map[string]bool{
-	"offline.graph.v1":            true,
-	"offline.timeline.v1":         true,
-	"offline.evidence.v1":         true,
-	"offline.matrix.v1":           true,
+	"offline.graph.v1":                  true,
+	"offline.timeline.v1":               true,
+	"offline.evidence.v1":               true,
+	"offline.matrix.v1":                 true,
 	"offline.architecture.isometric.v1": true,
-	"offline.uml.sequence.3d.v1":  true,
-	"offline.uml.class.2_5d.v1":   true,
-	"offline.uml.state.3d.v1":     true,
-	"offline.uml.activity.3d.v1":  true,
-	"offline.uml.component.3d.v1": true,
+	"offline.uml.sequence.3d.v1":        true,
+	"offline.uml.class.2_5d.v1":         true,
+	"offline.uml.state.3d.v1":           true,
+	"offline.uml.activity.3d.v1":        true,
+	"offline.uml.component.3d.v1":       true,
 }
 
 var semanticLayoutPresets = map[string]bool{
-	"activity_swimlanes":          true,
-	"city_map":                    true,
-	"class_cards":                 true,
-	"component_deployment":        true,
-	"control_room":                true,
-	"decision_matrix":             true,
-	"evidence_board":              true,
-	"flow_particles":              true,
-	"galaxy":                      true,
-	"graph_2_5d":                  true,
-	"heatmap":                     true,
-	"incident_timeline":           true,
-	"journey":                     true,
-	"layered_stack":               true,
-	"matrix_board":                true,
-	"permission_gate":             true,
-	"pipeline_flow":               true,
-	"radial_tree":                 true,
-	"replay_stage":                true,
-	"sequence_lifelines":          true,
-	"service_map":                 true,
-	"state_machine":               true,
-	"isometric_architecture":       true,
-	"timeline_tunnel":             true,
+	"activity_swimlanes":     true,
+	"city_map":               true,
+	"class_cards":            true,
+	"component_deployment":   true,
+	"control_room":           true,
+	"decision_matrix":        true,
+	"evidence_board":         true,
+	"flow_particles":         true,
+	"galaxy":                 true,
+	"graph_2_5d":             true,
+	"heatmap":                true,
+	"incident_timeline":      true,
+	"journey":                true,
+	"layered_stack":          true,
+	"matrix_board":           true,
+	"permission_gate":        true,
+	"pipeline_flow":          true,
+	"radial_tree":            true,
+	"replay_stage":           true,
+	"sequence_lifelines":     true,
+	"service_map":            true,
+	"state_machine":          true,
+	"isometric_architecture": true,
+	"timeline_tunnel":        true,
 }
 
 var genericDescriptionPatterns = []*regexp.Regexp{
@@ -766,109 +766,113 @@ func TestVisualAllTemplatesExposeMarkSystemAuthoringContract(t *testing.T) {
 			jsonSchema := objectMap(t, schemaDoc["json_schema"])
 			properties := objectMap(t, jsonSchema["properties"])
 			for _, field := range markObjectArrays(entry.InputSchemaKind) {
-				assertObjectArrayMarkPresentation(t, entry.ID, properties, field)
+				assertObjectArrayMarkPresentation(t, entry.ID, jsonSchema, properties, field)
 			}
 			for _, field := range []string{"edges", "relationships", "messages", "links", "flows", "transitions"} {
 				if _, ok := properties[field]; ok {
-					assertRelationshipArrayMarkPresentation(t, entry.ID, properties, field)
+					assertRelationshipArrayMarkPresentation(t, entry.ID, jsonSchema, properties, field)
 				}
 			}
 		})
 	}
 }
 
-func TestVisualStudioRuntimeAndInspectionContracts(t *testing.T) {
+func TestVisualIsometricRuntimeAndInspectionContracts(t *testing.T) {
 	root := repoRoot(t)
 	templateDir := filepath.Join(root, "templates", "visual")
 
 	markRegistry := loadJSONMap(t, filepath.Join(templateDir, "_shared", "mark-registry.json"))
 	kinds := objectMap(t, markRegistry["kinds"])
-	for _, kind := range []string{"state", "initial", "final", "transition", "action", "control", "merge", "fork", "join", "artifact", "server", "client", "deployment", "gate", "stage", "evidence", "result"} {
+	for _, kind := range []string{"pc", "mobile", "cdn", "gateway", "nginx", "api_gateway", "microservice", "registry", "nacos", "admin", "mysql", "redis", "oss", "file_storage", "block_storage", "log", "search"} {
 		if _, ok := kinds[kind]; !ok {
-			t.Fatalf("mark registry missing Studio kind %s", kind)
+			t.Fatalf("mark registry missing isometric architecture kind %s", kind)
 		}
 	}
 
 	renderers := mustRead(t, filepath.Join(templateDir, "_shared", "runtime", "efp-visual-renderers.iife.js"))
-	if !strings.Contains(renderers, `runtime.registerRenderer("offline.studio.v1", { render: renderStudio })`) {
-		t.Fatalf("runtime renderers do not register offline.studio.v1")
+	if !strings.Contains(renderers, `runtime.registerRenderer("offline.architecture.isometric.v1", { render: renderIsometricArchitecture })`) {
+		t.Fatalf("runtime renderers do not register offline.architecture.isometric.v1")
 	}
 	css := mustRead(t, filepath.Join(templateDir, "_shared", "runtime", "efp-visual-runtime.css"))
-	for _, className := range []string{".studio-app", ".studio-hero-stage", ".studio-nav", ".studio-inspector", ".studio-bottom-panels"} {
+	for _, className := range []string{".visual-isometric-app", ".visual-isometric-stage", ".visual-isometric-toolbar", ".visual-isometric-label-layer", ".visual-isometric-inspector"} {
 		if !strings.Contains(css, className) {
 			t.Fatalf("runtime CSS missing %s", className)
 		}
 	}
 
 	checks := renderinspect.Checks{
-		StudioLayoutPresent:      true,
-		HeroStagePresent:         true,
-		NavigationPresent:        true,
-		InspectorPresent:         true,
-		BottomPanelsPresent:      true,
-		ControlsPresent:          true,
-		PanelsNotEmpty:           true,
-		TargetRefsResolvable:     true,
-		HeroNotBareGraph:         true,
-		StudioAssumptionsVisible: true,
-		IconLabelsVisible:        true,
-		DirectedArrowsVisible:    true,
-		LegendPresentWhenColorBy: true,
+		IsometricRendererUsed:     true,
+		BasePlanePresent:          true,
+		GridPresent:               true,
+		ZonesPresent:              true,
+		ZoneBoundariesPresent:     true,
+		EntitiesPresent:           true,
+		EntityLabelsPresent:       true,
+		LeaderLinesPresent:        true,
+		DirectedArrowsPresent:     true,
+		LinkLabelsPresent:         true,
+		OrthographicCameraPlanned: true,
+		ArchitectureLightTheme:    true,
+		NoStarfieldTheme:          true,
+		NoStudioLayout:            true,
 	}
 	checkJSON, err := json.Marshal(checks)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, field := range []string{"studio_layout_present", "hero_stage_present", "navigation_present", "inspector_present", "bottom_panels_present", "controls_present", "panels_not_empty", "target_refs_resolvable", "hero_not_bare_graph", "studio_assumptions_visible", "icon_labels_visible", "directed_arrows_visible", "legend_present_when_color_by"} {
+	for _, field := range []string{"isometric_renderer_used", "base_plane_present", "grid_present", "zones_present", "zone_boundaries_present", "entities_present", "entity_labels_present", "leader_lines_present", "directed_arrows_present", "link_labels_present", "orthographic_camera_planned", "architecture_light_theme", "no_starfield_theme", "no_studio_layout"} {
 		if !strings.Contains(string(checkJSON), field) {
 			t.Fatalf("Checks JSON missing %s: %s", field, string(checkJSON))
 		}
 	}
 }
 
-func TestVisualStudioMarkAndPreviewAnalysis(t *testing.T) {
+func TestVisualIsometricMarkAndPreviewAnalysis(t *testing.T) {
 	root := repoRoot(t)
 	templateDir := filepath.Join(root, "templates", "visual")
 
-	stats := mark.Analyze(templateDir, "studio_v1", studioGoodInput())
-	if stats.ShapeCounts["service_box"] == 0 || stats.ShapeCounts["actor_card"] == 0 {
-		t.Fatalf("Studio mark analysis did not resolve expected shapes: %#v", stats.ShapeCounts)
+	goodInput := loadJSONMap(t, filepath.Join(templateDir, "architecture.isometric_overview", "examples", "good-small.input.json"))
+	stats := mark.Analyze(templateDir, "isometric_architecture_v1", goodInput)
+	if stats.ShapeCounts["hex_service"] == 0 || stats.ShapeCounts["database_cylinder"] == 0 {
+		t.Fatalf("isometric mark analysis did not resolve expected shapes: %#v", stats.ShapeCounts)
 	}
 	if stats.ArrowCount == 0 || stats.DirectedCount == 0 {
-		t.Fatalf("Studio mark analysis did not count directed arrows: %#v", stats)
+		t.Fatalf("isometric mark analysis did not count directed arrows: %#v", stats)
 	}
 	if len(stats.LegendItems) == 0 {
-		t.Fatalf("Studio mark analysis did not build legend items: %#v", stats)
+		t.Fatalf("isometric mark analysis did not build legend items: %#v", stats)
 	}
 
 	tpl := manifest.TemplateManifest{
-		ID:              "studio.presentation",
-		InputSchemaKind: "studio_v1",
-		Renderer:        manifest.RendererSpec{Contract: "offline.studio.v1"},
+		ID:              "architecture.isometric_overview",
+		InputSchemaKind: "isometric_architecture_v1",
+		Renderer:        manifest.RendererSpec{Contract: "offline.architecture.isometric.v1"},
+		Layout:          manifest.LayoutSpec{Preset: "isometric_architecture"},
 		VisualDesign:    manifest.VisualDesign{MaxInitialNodes: 60, MaxInitialEdges: 120},
 	}
-	_, _, badWarnings, _ := preview.Analyze(templateDir, tpl, studioBadInput(), authoring.QualityRules{})
+	badInput := loadJSONMap(t, filepath.Join(templateDir, "architecture.isometric_overview", "examples", "bad-generic.input.json"))
+	_, _, badWarnings, _ := preview.Analyze(templateDir, tpl, badInput, authoring.QualityRules{})
 	badCodes := previewWarningCodes(badWarnings)
-	for _, code := range []string{"studio_goal_missing", "studio_assumptions_missing_for_inferred_content", "studio_navigation_missing", "studio_detail_panel_missing", "studio_story_missing", "studio_target_refs_unknown", "studio_panel_empty", "studio_panel_text_too_long", "studio_evidence_without_source", "studio_compare_requested_but_missing", "studio_risk_requested_but_missing", "studio_control_unbound", "studio_mark_fields_missing", "studio_edge_arrows_missing"} {
+	for _, code := range []string{"isometric_zones_missing", "isometric_entity_kind_missing", "isometric_link_direction_missing", "isometric_link_arrow_missing", "isometric_link_endpoint_unknown", "isometric_entity_zone_unknown", "isometric_generic_graph_detected", "isometric_starfield_theme_detected"} {
 		if !badCodes[code] {
-			t.Fatalf("bad Studio input missing warning %s in %#v", code, badCodes)
+			t.Fatalf("bad isometric input missing warning %s in %#v", code, badCodes)
 		}
 	}
 	for _, warning := range badWarnings {
-		if strings.HasPrefix(warning.Code, "studio_") {
+		if strings.HasPrefix(warning.Code, "isometric_") {
 			if warning.Severity == "" || warning.Path == "" || warning.Message == "" || warning.Suggestion == "" || warning.AutoFixHint == nil {
-				t.Fatalf("Studio warning missing required fields: %#v", warning)
+				t.Fatalf("isometric warning missing required fields: %#v", warning)
 			}
 		}
 	}
-	_, _, goodWarnings, _ := preview.Analyze(templateDir, tpl, studioGoodInput(), authoring.QualityRules{})
+	_, _, goodWarnings, _ := preview.Analyze(templateDir, tpl, goodInput, authoring.QualityRules{})
 	if len(goodWarnings) >= len(badWarnings) {
-		t.Fatalf("good Studio input should produce fewer warnings: good=%d bad=%d", len(goodWarnings), len(badWarnings))
+		t.Fatalf("good isometric input should produce fewer warnings: good=%d bad=%d", len(goodWarnings), len(badWarnings))
 	}
 	goodCodes := previewWarningCodes(goodWarnings)
-	for _, forbidden := range []string{"studio_target_refs_unknown", "studio_panel_empty", "studio_edge_arrows_missing", "studio_assumptions_missing_for_inferred_content"} {
+	for _, forbidden := range []string{"isometric_link_endpoint_unknown", "isometric_entity_zone_unknown", "isometric_link_direction_missing", "isometric_link_arrow_missing", "isometric_generic_graph_detected", "isometric_starfield_theme_detected"} {
 		if goodCodes[forbidden] {
-			t.Fatalf("good Studio input unexpectedly has %s in %#v", forbidden, goodCodes)
+			t.Fatalf("good isometric input unexpectedly has %s in %#v", forbidden, goodCodes)
 		}
 	}
 }
@@ -903,12 +907,12 @@ func TestVisualDoctorRendersAllSemanticTemplates(t *testing.T) {
 	obj := runVisualOK(t, "template", "doctor", "--template-dir", templateDir, "--json")
 	data := objectMap(t, obj["data"])
 	for key, want := range map[string]float64{
-		"checked_templates":            37,
-		"checked_examples":             37,
-		"rendered_examples":            37,
-		"canonical_templates":          37,
-		"expected_canonical_templates": 37,
-		"canonical_template_dirs":      37,
+		"checked_templates":            34,
+		"checked_examples":             34,
+		"rendered_examples":            34,
+		"canonical_templates":          34,
+		"expected_canonical_templates": 34,
+		"canonical_template_dirs":      34,
 	} {
 		if data[key].(float64) != want {
 			t.Fatalf("doctor expected %s=%.0f, got %#v", key, want, data)
@@ -1395,18 +1399,20 @@ func markObjectArrays(kind string) []string {
 		return []string{"actions"}
 	case "uml_component_deployment_v1":
 		return []string{"components", "deployments"}
+	case "isometric_architecture_v1":
+		return []string{"entities"}
 	default:
 		return nil
 	}
 }
 
-func assertObjectArrayMarkPresentation(t *testing.T, templateID string, properties map[string]any, field string) {
+func assertObjectArrayMarkPresentation(t *testing.T, templateID string, jsonSchema, properties map[string]any, field string) {
 	t.Helper()
 	fieldSchema, ok := properties[field].(map[string]any)
 	if !ok {
 		t.Fatalf("%s schema missing object array %s: %#v", templateID, field, properties)
 	}
-	itemProps := objectMap(t, objectMap(t, fieldSchema["items"])["properties"])
+	itemProps := arrayItemProperties(t, templateID, jsonSchema, fieldSchema)
 	presentation := objectMap(t, itemProps["presentation"])
 	presentationProps := objectMap(t, presentation["properties"])
 	for _, name := range []string{"shape", "icon", "color"} {
@@ -1416,10 +1422,10 @@ func assertObjectArrayMarkPresentation(t *testing.T, templateID string, properti
 	}
 }
 
-func assertRelationshipArrayMarkPresentation(t *testing.T, templateID string, properties map[string]any, field string) {
+func assertRelationshipArrayMarkPresentation(t *testing.T, templateID string, jsonSchema, properties map[string]any, field string) {
 	t.Helper()
 	fieldSchema := objectMap(t, properties[field])
-	itemProps := objectMap(t, objectMap(t, fieldSchema["items"])["properties"])
+	itemProps := arrayItemProperties(t, templateID, jsonSchema, fieldSchema)
 	if _, ok := itemProps["directed"]; !ok {
 		t.Fatalf("%s %s[] missing directed field: %#v", templateID, field, itemProps)
 	}
@@ -1430,6 +1436,22 @@ func assertRelationshipArrayMarkPresentation(t *testing.T, templateID string, pr
 			t.Fatalf("%s %s[] presentation missing %s: %#v", templateID, field, name, presentationProps)
 		}
 	}
+}
+
+func arrayItemProperties(t *testing.T, templateID string, jsonSchema, fieldSchema map[string]any) map[string]any {
+	t.Helper()
+	itemSchema := objectMap(t, fieldSchema["items"])
+	if props, ok := itemSchema["properties"].(map[string]any); ok {
+		return props
+	}
+	if ref, _ := itemSchema["$ref"].(string); strings.HasPrefix(ref, "#/$defs/") {
+		defName := strings.TrimPrefix(ref, "#/$defs/")
+		defs := objectMap(t, jsonSchema["$defs"])
+		def := objectMap(t, defs[defName])
+		return objectMap(t, def["properties"])
+	}
+	t.Fatalf("%s array item schema missing properties or local $defs ref: %#v", templateID, itemSchema)
+	return nil
 }
 
 func assertRegistryEntryQuality(t *testing.T, entry visualRegistryEntry) {
@@ -1639,94 +1661,6 @@ func previewWarningCodes(warnings []preview.Warning) map[string]bool {
 	return out
 }
 
-func studioGoodInput() map[string]any {
-	return map[string]any{
-		"title":            "Release Readiness Studio",
-		"goal":             "Explain whether the release is ready to promote.",
-		"inferred_content": true,
-		"assumptions":      []any{"Risk posture is inferred from CI evidence and approval state."},
-		"view":             map[string]any{"colorBy": "kind"},
-		"renderHints":      map[string]any{"showLegend": true},
-		"visual": map[string]any{
-			"goal":              "Show the release decision path first.",
-			"initial_focus_ids": []any{"client", "api", "gate"},
-			"narrative_steps": []any{
-				map[string]any{"title": "Entry path", "focus_ids": []any{"client", "api"}},
-			},
-			"annotations": []any{
-				map[string]any{"target_id": "gate", "label": "Promotion decision"},
-			},
-		},
-		"hero": map[string]any{
-			"title": "Release path",
-			"data": map[string]any{
-				"nodes": []any{
-					map[string]any{"id": "client", "label": "Client app", "kind": "client", "importance": 0.9},
-					map[string]any{"id": "api", "label": "API server", "kind": "server", "importance": 0.8},
-					map[string]any{"id": "gate", "label": "Release gate", "kind": "gate", "importance": 0.85},
-					map[string]any{"id": "artifact", "label": "Build artifact", "kind": "artifact"},
-				},
-				"edges": []any{
-					map[string]any{"id": "client-api", "from": "client", "to": "api", "kind": "calls", "directed": true, "presentation": map[string]any{"arrow": "forward"}},
-					map[string]any{"id": "api-gate", "from": "api", "to": "gate", "kind": "validates", "directed": true, "presentation": map[string]any{"arrow": "forward"}},
-					map[string]any{"id": "artifact-gate", "from": "artifact", "to": "gate", "kind": "deploys", "directed": true, "presentation": map[string]any{"arrow": "forward"}},
-				},
-			},
-		},
-		"navigation": map[string]any{"items": []any{
-			map[string]any{"label": "Client", "target_id": "client"},
-			map[string]any{"label": "API", "target_id": "api"},
-			map[string]any{"label": "Gate", "target_id": "gate"},
-		}},
-		"panels": []any{
-			map[string]any{"id": "detail", "type": "detail", "target_id": "api", "body": "API server validates release health and exposes the selected service state."},
-			map[string]any{"id": "evidence", "type": "evidence", "slot": "bottom", "items": []any{map[string]any{"label": "CI run passed", "source": "ci-run-123"}}},
-			map[string]any{"id": "risk", "type": "risk", "slot": "bottom", "body": "Risk is mitigated by the release gate and rollback artifact."},
-			map[string]any{"id": "comparison", "type": "comparison", "slot": "bottom", "body": "Compare pre-gate and post-gate readiness signals."},
-		},
-		"controls": []any{
-			map[string]any{"id": "reset", "label": "Reset", "action": "reset"},
-			map[string]any{"id": "isolate-api", "label": "Isolate API", "action": "isolate", "target_id": "api"},
-		},
-		"story": map[string]any{"steps": []any{
-			map[string]any{"title": "Start at client demand", "target_id": "client"},
-			map[string]any{"title": "Inspect release gate", "target_id": "gate"},
-		}},
-		"annotations": []any{
-			map[string]any{"target_id": "api", "label": "Runtime owner"},
-		},
-	}
-}
-
-func studioBadInput() map[string]any {
-	return map[string]any{
-		"title":            "Component Explorer Bad",
-		"inferred_content": true,
-		"hero": map[string]any{
-			"data": map[string]any{
-				"nodes": []any{
-					map[string]any{"id": "api", "label": "API"},
-					map[string]any{"id": "db", "label": "Database"},
-				},
-				"edges": []any{
-					map[string]any{"from": "api", "to": "db", "kind": "calls"},
-				},
-			},
-		},
-		"panels": []any{
-			map[string]any{"id": "empty", "type": "result"},
-			map[string]any{"id": "notes", "type": "notes", "target_id": "missing-node", "body": strings.Repeat("compare risk detail ", 90)},
-			map[string]any{"id": "evidence", "type": "evidence", "items": []any{map[string]any{"label": "Claim without provenance"}}},
-		},
-		"annotations": []any{
-			map[string]any{"target_id": "missing-node", "label": "Risk compare callout"},
-		},
-		"controls": []any{
-			map[string]any{"label": "Replay selected thing"},
-		},
-	}
-}
-
 func objectMap(t *testing.T, value any) map[string]any {
 	t.Helper()
 	m, ok := value.(map[string]any)
@@ -1781,7 +1715,7 @@ func mustRead(t *testing.T, path string) string {
 func TestVisualRegistrySortedByCategoryThenID(t *testing.T) {
 	root := repoRoot(t)
 	registry := loadRegistry(t, filepath.Join(root, "templates", "visual"))
-	categoryOrder := map[string]int{"uml": 0, "relationship": 1, "temporal": 2, "flow": 3, "hierarchy": 4, "evidence": 5, "matrix": 6, "spatial": 7, "studio": 8}
+	categoryOrder := map[string]int{"uml": 0, "relationship": 1, "temporal": 2, "flow": 3, "hierarchy": 4, "evidence": 5, "matrix": 6, "spatial": 7, "architecture": 8}
 	for i := 1; i < len(registry.Templates); i++ {
 		prev := registry.Templates[i-1]
 		cur := registry.Templates[i]

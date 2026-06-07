@@ -1,0 +1,1077 @@
+{
+  "schema": "efp.visual.input.isometric_architecture.v1",
+  "title": "Microservice Architecture Overview",
+  "subtitle": "Client, edge, gateway, registry, services, state, storage, and observability",
+  "goal": "Show how user traffic enters through edge services, reaches the gateway and microservices, and fans out to registry, cache, database, storage, and log collection.",
+  "theme": "architecture_light",
+  "canvas": {
+    "grid": {
+      "enabled": true,
+      "step": 1,
+      "subdivisions": 4
+    },
+    "padding": 2
+  },
+  "camera": {
+    "mode": "orthographic_isometric",
+    "position": {
+      "x": 24,
+      "y": 22,
+      "z": 24
+    },
+    "target": {
+      "x": 13,
+      "y": 0,
+      "z": 8
+    },
+    "zoom": 1
+  },
+  "zones": [
+    {
+      "id": "client-zone",
+      "label": "Client Zone",
+      "bounds": {
+        "x": 0,
+        "y": 4,
+        "w": 3,
+        "h": 6
+      },
+      "style": "dashed",
+      "importance": 0.75
+    },
+    {
+      "id": "edge-zone",
+      "label": "Edge Zone",
+      "bounds": {
+        "x": 4,
+        "y": 3,
+        "w": 4,
+        "h": 8
+      },
+      "style": "dashed",
+      "importance": 0.75
+    },
+    {
+      "id": "gateway-zone",
+      "label": "Gateway Zone",
+      "bounds": {
+        "x": 9,
+        "y": 4,
+        "w": 3,
+        "h": 6
+      },
+      "style": "dashed",
+      "importance": 0.75
+    },
+    {
+      "id": "registry-zone",
+      "label": "Registry Zone",
+      "bounds": {
+        "x": 13,
+        "y": 0,
+        "w": 7,
+        "h": 3
+      },
+      "style": "dashed",
+      "importance": 0.75
+    },
+    {
+      "id": "service-zone",
+      "label": "Service Zone",
+      "bounds": {
+        "x": 13,
+        "y": 4,
+        "w": 8,
+        "h": 8
+      },
+      "style": "dashed",
+      "importance": 0.75
+    },
+    {
+      "id": "cache-zone",
+      "label": "Cache Zone",
+      "bounds": {
+        "x": 22,
+        "y": 3,
+        "w": 4,
+        "h": 5
+      },
+      "style": "dashed",
+      "importance": 0.55
+    },
+    {
+      "id": "database-zone",
+      "label": "Database Zone",
+      "bounds": {
+        "x": 22,
+        "y": 9,
+        "w": 4,
+        "h": 4
+      },
+      "style": "dashed",
+      "importance": 0.55
+    },
+    {
+      "id": "storage-zone",
+      "label": "Storage Zone",
+      "bounds": {
+        "x": 13,
+        "y": 13,
+        "w": 8,
+        "h": 4
+      },
+      "style": "dashed",
+      "importance": 0.55
+    },
+    {
+      "id": "observability-zone",
+      "label": "Observability Zone",
+      "bounds": {
+        "x": 22,
+        "y": 14,
+        "w": 4,
+        "h": 3
+      },
+      "style": "dashed",
+      "importance": 0.55
+    },
+    {
+      "id": "admin-zone",
+      "label": "Admin Zone",
+      "bounds": {
+        "x": 4,
+        "y": 12,
+        "w": 7,
+        "h": 4
+      },
+      "style": "dashed",
+      "importance": 0.55
+    }
+  ],
+  "entities": [
+    {
+      "id": "pc",
+      "label": "PC",
+      "kind": "pc",
+      "zone": "client-zone",
+      "position": {
+        "x": 1,
+        "y": 6
+      },
+      "importance": 0.9,
+      "summary": "Desktop browser client.",
+      "size": {
+        "w": 0.9,
+        "d": 0.9,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "mobile",
+      "label": "Mobile",
+      "kind": "mobile",
+      "zone": "client-zone",
+      "position": {
+        "x": 1,
+        "y": 8.5
+      },
+      "importance": 0.75,
+      "summary": "Mobile app client.",
+      "size": {
+        "w": 0.9,
+        "d": 0.9,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "cdn",
+      "label": "CDN",
+      "kind": "cdn",
+      "zone": "edge-zone",
+      "position": {
+        "x": 5,
+        "y": 4.5
+      },
+      "importance": 0.8,
+      "summary": "Static resource edge cache.",
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 0.9
+      }
+    },
+    {
+      "id": "nginx",
+      "label": "Nginx",
+      "kind": "nginx",
+      "zone": "edge-zone",
+      "position": {
+        "x": 6,
+        "y": 7
+      },
+      "importance": 0.95,
+      "summary": "Reverse proxy and edge routing.",
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "api-gateway",
+      "label": "API Gateway",
+      "kind": "api_gateway",
+      "zone": "gateway-zone",
+      "position": {
+        "x": 10.5,
+        "y": 7
+      },
+      "importance": 0.95,
+      "summary": "Central API ingress for services.",
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "nacos-1",
+      "label": "Nacos 1",
+      "kind": "nacos",
+      "zone": "registry-zone",
+      "position": {
+        "x": 14,
+        "y": 1.5
+      },
+      "summary": "Registry node.",
+      "importance": 0.8,
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "nacos-2",
+      "label": "Nacos 2",
+      "kind": "nacos",
+      "zone": "registry-zone",
+      "position": {
+        "x": 16.5,
+        "y": 1.5
+      },
+      "summary": "Registry node.",
+      "importance": 0.8,
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "nacos-3",
+      "label": "Nacos 3",
+      "kind": "nacos",
+      "zone": "registry-zone",
+      "position": {
+        "x": 19,
+        "y": 1.5
+      },
+      "summary": "Registry node.",
+      "importance": 0.8,
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "springboot-admin",
+      "label": "Spring Boot Admin",
+      "kind": "admin",
+      "zone": "admin-zone",
+      "position": {
+        "x": 7,
+        "y": 14
+      },
+      "summary": "Admin and health-check console.",
+      "importance": 0.62,
+      "size": {
+        "w": 0.9,
+        "d": 0.9,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "microservice-a",
+      "label": "Service A",
+      "kind": "microservice",
+      "zone": "service-zone",
+      "position": {
+        "x": 14,
+        "y": 5.5
+      },
+      "importance": 0.9,
+      "summary": "Primary business service.",
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "microservice-b",
+      "label": "Service B",
+      "kind": "microservice",
+      "zone": "service-zone",
+      "position": {
+        "x": 17,
+        "y": 5.5
+      },
+      "summary": "Business service dependency.",
+      "importance": 0.62,
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "microservice-c",
+      "label": "Service C",
+      "kind": "microservice",
+      "zone": "service-zone",
+      "position": {
+        "x": 19.5,
+        "y": 7
+      },
+      "summary": "Business service dependency.",
+      "importance": 0.62,
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "microservice-d",
+      "label": "Service D",
+      "kind": "microservice",
+      "zone": "service-zone",
+      "position": {
+        "x": 15,
+        "y": 9.5
+      },
+      "summary": "Business service dependency.",
+      "importance": 0.62,
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "microservice-e",
+      "label": "Service E",
+      "kind": "microservice",
+      "zone": "service-zone",
+      "position": {
+        "x": 18,
+        "y": 10
+      },
+      "summary": "Business service dependency.",
+      "importance": 0.62,
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "redis-1",
+      "label": "Redis 1",
+      "kind": "redis",
+      "zone": "cache-zone",
+      "position": {
+        "x": 23,
+        "y": 4
+      },
+      "summary": "Cache primary.",
+      "importance": 0.62,
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "redis-2",
+      "label": "Redis 2",
+      "kind": "redis",
+      "zone": "cache-zone",
+      "position": {
+        "x": 24.5,
+        "y": 5.5
+      },
+      "summary": "Cache replica.",
+      "importance": 0.62,
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "redis-3",
+      "label": "Redis 3",
+      "kind": "redis",
+      "zone": "cache-zone",
+      "position": {
+        "x": 23,
+        "y": 7
+      },
+      "summary": "Cache replica.",
+      "importance": 0.62,
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "mysql-master",
+      "label": "MySQL Master",
+      "kind": "mysql",
+      "zone": "database-zone",
+      "position": {
+        "x": 23,
+        "y": 10
+      },
+      "importance": 0.85,
+      "summary": "Primary database.",
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "mysql-slave",
+      "label": "MySQL Slave",
+      "kind": "mysql",
+      "zone": "database-zone",
+      "position": {
+        "x": 24.5,
+        "y": 11.5
+      },
+      "summary": "Read replica.",
+      "importance": 0.62,
+      "size": {
+        "w": 1.05,
+        "d": 1.05,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "oss",
+      "label": "OSS",
+      "kind": "oss",
+      "zone": "storage-zone",
+      "position": {
+        "x": 14,
+        "y": 14.5
+      },
+      "summary": "Object storage.",
+      "importance": 0.62,
+      "size": {
+        "w": 0.9,
+        "d": 0.9,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "file-storage",
+      "label": "File Store",
+      "kind": "file_storage",
+      "zone": "storage-zone",
+      "position": {
+        "x": 17,
+        "y": 15
+      },
+      "summary": "Distributed file storage.",
+      "importance": 0.62,
+      "size": {
+        "w": 0.9,
+        "d": 0.9,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "block-storage",
+      "label": "Block Store",
+      "kind": "block_storage",
+      "zone": "storage-zone",
+      "position": {
+        "x": 20,
+        "y": 14
+      },
+      "summary": "Block storage volume.",
+      "importance": 0.62,
+      "size": {
+        "w": 0.9,
+        "d": 0.9,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "logstash",
+      "label": "Logstash",
+      "kind": "log",
+      "zone": "observability-zone",
+      "position": {
+        "x": 23,
+        "y": 15
+      },
+      "summary": "Log collector.",
+      "importance": 0.62,
+      "size": {
+        "w": 0.9,
+        "d": 0.9,
+        "h": 1.1
+      }
+    },
+    {
+      "id": "elasticsearch",
+      "label": "Elasticsearch",
+      "kind": "elasticsearch",
+      "zone": "observability-zone",
+      "position": {
+        "x": 24.5,
+        "y": 16
+      },
+      "summary": "Search and log index.",
+      "importance": 0.62,
+      "size": {
+        "w": 0.9,
+        "d": 0.9,
+        "h": 1.1
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "pc-to-nginx",
+      "from": "pc",
+      "to": "nginx",
+      "label": "API",
+      "directed": true,
+      "kind": "api_call",
+      "routeStyle": "orthogonal",
+      "importance": 0.95,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      }
+    },
+    {
+      "id": "mobile-to-nginx",
+      "from": "mobile",
+      "to": "nginx",
+      "label": "API",
+      "directed": true,
+      "kind": "api_call",
+      "routeStyle": "orthogonal",
+      "importance": 0.8,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      }
+    },
+    {
+      "id": "cdn-to-nginx-static",
+      "from": "cdn",
+      "to": "nginx",
+      "label": "Static",
+      "directed": true,
+      "kind": "static_resource",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.72
+    },
+    {
+      "id": "nginx-to-gateway",
+      "from": "nginx",
+      "to": "api-gateway",
+      "label": "API",
+      "directed": true,
+      "kind": "reverse_proxy",
+      "routeStyle": "orthogonal",
+      "importance": 0.95,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      }
+    },
+    {
+      "id": "nginx-to-cdn-static",
+      "from": "nginx",
+      "to": "cdn",
+      "label": "Static",
+      "directed": true,
+      "kind": "static_resource",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.72
+    },
+    {
+      "id": "gateway-to-service-a",
+      "from": "api-gateway",
+      "to": "microservice-a",
+      "label": "API",
+      "directed": true,
+      "kind": "load_balancing",
+      "routeStyle": "orthogonal",
+      "importance": 0.95,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      }
+    },
+    {
+      "id": "gateway-to-service-b",
+      "from": "api-gateway",
+      "to": "microservice-b",
+      "label": "API",
+      "directed": true,
+      "kind": "api_call",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.72
+    },
+    {
+      "id": "gateway-to-service-c",
+      "from": "api-gateway",
+      "to": "microservice-c",
+      "label": "API",
+      "directed": true,
+      "kind": "api_call",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.72
+    },
+    {
+      "id": "services-to-nacos-a",
+      "from": "microservice-a",
+      "to": "nacos-1",
+      "label": "Register",
+      "directed": true,
+      "kind": "registering_service",
+      "route": [
+        {
+          "x": 14,
+          "y": 4
+        },
+        {
+          "x": 14,
+          "y": 2.7
+        }
+      ],
+      "routeStyle": "polyline",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "dashed"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "services-to-nacos-b",
+      "from": "microservice-b",
+      "to": "nacos-2",
+      "label": "Register",
+      "directed": true,
+      "kind": "register",
+      "route": [
+        {
+          "x": 17,
+          "y": 4
+        },
+        {
+          "x": 16.5,
+          "y": 2.7
+        }
+      ],
+      "routeStyle": "polyline",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "dashed"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "gateway-pulls-nacos",
+      "from": "api-gateway",
+      "to": "nacos-3",
+      "label": "Pull",
+      "directed": true,
+      "kind": "pull_consumption",
+      "route": [
+        {
+          "x": 11.5,
+          "y": 4
+        },
+        {
+          "x": 19,
+          "y": 3
+        }
+      ],
+      "routeStyle": "polyline",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "dashed"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "admin-health-service-a",
+      "from": "springboot-admin",
+      "to": "microservice-a",
+      "label": "Health",
+      "directed": true,
+      "kind": "health_check",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "dashed"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "service-a-to-redis",
+      "from": "microservice-a",
+      "to": "redis-1",
+      "label": "Cache",
+      "directed": true,
+      "kind": "data_cache",
+      "routeStyle": "orthogonal",
+      "importance": 0.85,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      }
+    },
+    {
+      "id": "service-b-to-redis",
+      "from": "microservice-b",
+      "to": "redis-2",
+      "label": "Cache",
+      "directed": true,
+      "kind": "data_cache",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "service-a-to-mysql",
+      "from": "microservice-a",
+      "to": "mysql-master",
+      "label": "Store",
+      "directed": true,
+      "kind": "data_storage",
+      "routeStyle": "orthogonal",
+      "importance": 0.9,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      }
+    },
+    {
+      "id": "service-d-to-mysql",
+      "from": "microservice-d",
+      "to": "mysql-master",
+      "label": "Store",
+      "directed": true,
+      "kind": "data_storage",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "mysql-master-to-slave",
+      "from": "mysql-master",
+      "to": "mysql-slave",
+      "label": "Repl",
+      "directed": true,
+      "kind": "replication",
+      "routeStyle": "orthogonal",
+      "importance": 0.8,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      }
+    },
+    {
+      "id": "service-c-to-oss",
+      "from": "microservice-c",
+      "to": "oss",
+      "label": "File",
+      "directed": true,
+      "kind": "distributed_file_service",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "service-e-to-file-storage",
+      "from": "microservice-e",
+      "to": "file-storage",
+      "label": "File",
+      "directed": true,
+      "kind": "distributed_file_service",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "service-d-to-block-storage",
+      "from": "microservice-d",
+      "to": "block-storage",
+      "label": "Block",
+      "directed": true,
+      "kind": "distributed_file_service",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "logstash-to-elasticsearch",
+      "from": "logstash",
+      "to": "elasticsearch",
+      "label": "Logs",
+      "directed": true,
+      "kind": "log_collection",
+      "routeStyle": "orthogonal",
+      "importance": 0.8,
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "dashed"
+      }
+    },
+    {
+      "id": "service-a-feign-b",
+      "from": "microservice-a",
+      "to": "microservice-b",
+      "label": "Feign",
+      "directed": true,
+      "kind": "feign_call",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "service-b-feign-c",
+      "from": "microservice-b",
+      "to": "microservice-c",
+      "label": "Feign",
+      "directed": true,
+      "kind": "feign_call",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "service-c-feign-d",
+      "from": "microservice-c",
+      "to": "microservice-d",
+      "label": "Feign",
+      "directed": true,
+      "kind": "feign_call",
+      "route": [
+        {
+          "x": 20.5,
+          "y": 8.5
+        },
+        {
+          "x": 15,
+          "y": 8.5
+        }
+      ],
+      "routeStyle": "polyline",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.5
+    },
+    {
+      "id": "service-d-feign-e",
+      "from": "microservice-d",
+      "to": "microservice-e",
+      "label": "Feign",
+      "directed": true,
+      "kind": "feign_call",
+      "routeStyle": "orthogonal",
+      "presentation": {
+        "arrow": "forward",
+        "lineStyle": "solid"
+      },
+      "importance": 0.5
+    }
+  ],
+  "annotations": [
+    {
+      "id": "entry-note",
+      "target_id": "nginx",
+      "label": "Traffic entry",
+      "summary": "Edge traffic reaches Nginx before the API gateway."
+    },
+    {
+      "id": "state-note",
+      "target_id": "mysql-master",
+      "label": "Stateful core",
+      "summary": "Service A and D write to the primary database."
+    }
+  ],
+  "legend": {
+    "items": [
+      {
+        "id": "traffic",
+        "label": "Request path",
+        "kind": "api_call",
+        "color": "#1f2937"
+      },
+      {
+        "id": "state",
+        "label": "State access",
+        "kind": "data_storage",
+        "color": "#2563eb"
+      }
+    ]
+  },
+  "controls": [
+    "overview",
+    "reset_camera",
+    "focus",
+    "isolate",
+    "hide_others",
+    "show_all",
+    "toggle_labels",
+    "toggle_boundaries",
+    "toggle_arrows",
+    "export_json"
+  ],
+  "view": {
+    "labelMode": "overview",
+    "showBoundaries": true,
+    "showArrows": true,
+    "showLegend": true
+  },
+  "visual": {
+    "goal": "Read the topology from left to right: client, edge, gateway, services, registry, state, storage, and logs.",
+    "assumptions": [
+      "Each microservice entity represents a logical service, not every pod replica.",
+      "Nacos, Redis, and MySQL are shown as clustered logical nodes because exact host placement is outside the overview.",
+      "Orthogonal routes are chosen to reduce crossings in the service and state zones."
+    ],
+    "initial_focus_ids": [
+      "pc",
+      "nginx",
+      "api-gateway",
+      "microservice-a",
+      "mysql-master"
+    ],
+    "narrative_steps": [
+      {
+        "id": "overview",
+        "title": "Architecture overview",
+        "focus_ids": [
+          "pc",
+          "nginx",
+          "api-gateway",
+          "microservice-a",
+          "mysql-master"
+        ]
+      },
+      {
+        "id": "request-path",
+        "title": "Request path",
+        "focus_ids": [
+          "pc",
+          "nginx",
+          "api-gateway",
+          "microservice-a"
+        ]
+      },
+      {
+        "id": "stateful-dependencies",
+        "title": "Stateful dependencies",
+        "focus_ids": [
+          "microservice-a",
+          "redis-1",
+          "mysql-master",
+          "oss"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "gateway-note",
+        "target_id": "api-gateway",
+        "label": "Gateway routes and rate limits service traffic."
+      },
+      {
+        "id": "registry-note",
+        "target_id": "nacos-1",
+        "label": "Nacos cluster handles registration and discovery."
+      },
+      {
+        "id": "state-note",
+        "target_id": "mysql-master",
+        "label": "Master database replicates to the slave node."
+      },
+      {
+        "id": "logs-note",
+        "target_id": "logstash-to-elasticsearch",
+        "label": "Logs flow into Elasticsearch for search."
+      }
+    ]
+  },
+  "renderHints": {
+    "colorBy": "kind",
+    "routeCollisionAvoidance": "basic",
+    "preferExplicitRoutes": true,
+    "showLegend": true
+  }
+}

@@ -10,7 +10,7 @@ Copy this file into `~/.copilot/instructions/browser-cli.instructions.md` so VS 
 
 `browser` is a terminal-invoked CLI for agents that need to open an internal URL in Edge, Chrome, or Chromium through DevTools and collect page diagnostics or run bounded actions in a persistent dedicated browser session.
 
-Use it for browser SSO checks, login-success probes, screenshots, HTML snapshots, network summaries, page-state inspection, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running, form inspection/fill, performance timing metadata, frame reads, console/runtime diagnostics, structured page outlines, table/list extraction, tab selection, upload/download metadata, and bounded page actions. It is not a Portal tool, runtime built-in browser tool, MCP server, or cookie export tool.
+Use it for browser SSO checks, login-success probes, screenshots, HTML snapshots, network summaries, page-state inspection, semantic element finding, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, performance timing metadata, frame reads, console/runtime diagnostics, structured page outlines, table/list extraction and export, scroll collection, page-state diffs, tab selection, upload/download metadata, and bounded page actions. It is not a Portal tool, runtime built-in browser tool, MCP server, or cookie export tool.
 
 ## Always Use JSON
 
@@ -48,8 +48,13 @@ browser schema session.discover --json
 browser schema page.fetch --json
 browser schema page.network --json
 browser schema page.extract-schema --json
+browser schema page.find --json
 browser schema page.outline --json
 browser schema page.ax --json
+browser schema page.table-export --json
+browser schema page.list-export --json
+browser schema page.scroll-collect --json
+browser schema page.diff --json
 browser schema network.start --json
 browser schema network.export --json
 browser schema page.metrics --json
@@ -98,6 +103,7 @@ browser tab current --session default --json
 browser page snapshot --session default --json
 browser page extract --session default --selector .user-avatar --json
 browser page extract-schema --session default --file schema.yaml --json
+browser page find --session default --role button --name Save --json
 browser page ax --session default --json
 browser page outline --session default --json
 browser page outline --session default --pierce --json
@@ -110,11 +116,14 @@ browser page table --session default --selector table.results --json
 browser page list --session default --selector nav --json
 browser page screenshot --session default --out result/page-screenshot.png --json
 browser page screenshot --session default --selector .avatar --out result/avatar.png --json
+browser page table-export --session default --selector table.results --out result/table.csv --format csv --json
+browser page scroll-collect --session default --item-selector .row --out result/items.json --json
+browser page diff --before before.json --after after.json --json
 browser assert visible --session default --selector .ready --json
 browser assert count --session default --selector .result --min 1 --json
 browser assert screenshot --session default --baseline baseline.png --out actual.png --diff-out diff.png --json
 browser workflow record --session default --out flow.yaml --duration-ms 10000 --json
-browser workflow run --file flow.yaml --dry-run --var query=demo --report-out result/workflow-run.json --json
+browser workflow run --file flow.yaml --dry-run --var query=demo --report-out result/workflow-run.json --evidence-dir result/evidence --json
 browser form inspect --session default --json
 browser form fill --session default --file values.yaml --json
 browser network start --session default --limit 500 --json
@@ -193,7 +202,7 @@ Common errors:
 
 `browser` does not export cookies or tokens. Do not ask it to print cookies, browser storage, or Authorization headers.
 
-`browser session discover` and `browser session attach` require explicit `127.0.0.1` DevTools ports; they do not inspect arbitrary browsers, default profiles, cookies, or tokens. `browser page ax` returns DOM/ARIA accessibility-style refs, not raw input values; rerun it after navigation or DOM changes. `browser page extract-schema` reads selector-declared YAML fields and returns redacted structured values. `browser form inspect` returns form metadata without current values; `browser form fill` fills from YAML and returns match metadata plus value byte counts only. `browser page click/type/select/check/uncheck/press` can use either `--selector` or `--ref`; action output returns metadata only and does not echo typed text or selected option values. `browser assert visible/text/url/count/screenshot` returns sanitized pass/fail assertion metadata; failures use `assertion_failed`, and screenshot assertions write actual/diff PNG artifacts instead of image bytes. `browser workflow record` writes a safe workflow skeleton with typed text and selected option values replaced by variables. `browser workflow run` supports variables, CLI `--var`, conditions, `for_each`, `smart_wait`, `human.wait`, `human.confirm`, and `--report-out`; it executes only whitelisted browser actions/assertions and rejects shell commands, arbitrary browser CLI strings, arbitrary JavaScript, `page eval`, and `page fetch`. Dry-run plans include typed-text byte counts, not typed text. `browser page network` returns sanitized resource timing summaries only. `browser page metrics` returns browser timing metadata only. `browser network start/list/wait/export/stop/clear` records or exports sanitized HAR-lite metadata only after `start`. Network commands never return headers, cookies, storage, request bodies, or response bodies. `browser page console` and `browser page errors` redact/truncate messages and stacks and do not return object previews. `browser frame list/snapshot` redact frame URLs and titles. `--pierce` traverses open shadow roots only; closed shadow roots are inaccessible. `browser page screenshot` writes a PNG artifact and returns file metadata, not image bytes; element screenshots require a visible selector/ref and stale refs require rerunning `browser page ax`. `browser page eval` rejects cookie, storage, header, credential, and network APIs before returning recursively redacted values. `browser page fetch` uses GET with credentials omitted, rejects unsafe schemes such as `file:`, `data:`, `javascript:`, `chrome:`, and `about:`, returns no headers, and redacts the body preview. `browser page upload` returns file path/name/size metadata only. `browser download list/wait` return file metadata only and do not read downloaded file contents.
+`browser session discover` and `browser session attach` require explicit `127.0.0.1` DevTools ports; they do not inspect arbitrary browsers, default profiles, cookies, or tokens. `browser page find` locates elements by role/name/text/label/placeholder/nearby text and returns refs plus fallback locators; use it before actions when selectors are unknown or unstable. `browser page ax` returns DOM/ARIA accessibility-style refs, not raw input values; rerun it after navigation or DOM changes. `browser page extract-schema` reads selector-declared YAML fields and returns redacted structured values. `browser page table-export`, `list-export`, and `scroll-collect` write redacted data artifacts; `browser page diff` compares two JSON page-state captures. `browser form inspect` returns form metadata without current values; `browser form fill` fills from YAML and returns match metadata plus value byte counts only. `browser page click/type/select/check/uncheck/press` can use either `--selector`, `--ref`, or workflow `locators`; action output returns metadata only and does not echo typed text or selected option values. Risky clicks such as submit, delete, pay, save, approve, publish, deploy, or transfer require explicit user confirmation and `--yes`. `browser assert visible/text/url/count/screenshot` returns sanitized pass/fail assertion metadata; failures use `assertion_failed`, and screenshot assertions write actual/diff PNG artifacts instead of image bytes. `browser workflow record` writes a safe workflow skeleton with typed text and selected option values replaced by variables and locator candidates. `browser workflow run` supports variables, CLI `--var`, conditions, `for_each`, `locators`, `smart_wait`, `human.wait`, `human.confirm`, `--report-out`, and optional `--evidence-dir`; it executes only whitelisted browser actions/assertions and rejects shell commands, arbitrary browser CLI strings, arbitrary JavaScript, `page eval`, and `page fetch`. Dry-run plans include typed-text byte counts, not typed text. `browser page network` returns sanitized resource timing summaries only. `browser page metrics` returns browser timing metadata only. `browser network start/list/wait/export/stop/clear` records or exports sanitized HAR-lite metadata after `start`; fetch/XHR response body previews are redacted and returned by default, while headers, cookies, storage, and request bodies are never returned. `browser page console` and `browser page errors` redact/truncate messages and stacks and do not return object previews. `browser frame list/snapshot` redact frame URLs and titles. `--pierce` traverses open shadow roots only; closed shadow roots are inaccessible. `browser page screenshot` writes a PNG artifact and returns file metadata, not image bytes; element screenshots require a visible selector/ref and stale refs require rerunning `browser page ax`. `browser page eval` rejects cookie, storage, header, credential, and network APIs before returning recursively redacted values. `browser page fetch` uses GET with credentials omitted, rejects unsafe schemes such as `file:`, `data:`, `javascript:`, `chrome:`, and `about:`, returns no headers, and redacts the body preview. `browser page upload` returns file path/name/size metadata only. `browser download list/wait` return file metadata only and do not read downloaded file contents.
 
 Artifacts may contain page content, visible user names, or internal URLs. Treat `page.html`, `screenshot.png`, `network.json`, and `summary.json` as potentially sensitive diagnostics.
 

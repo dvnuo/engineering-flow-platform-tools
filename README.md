@@ -39,7 +39,7 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 ### Browser
 
-`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. Persistent sessions can also inspect redacted page structure, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, performance metadata, HAR-lite recorder/export metadata, tables/lists, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
+`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. Persistent sessions can also inspect redacted page structure, semantic locators, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, redacted fetch/XHR body previews, performance metadata, HAR-lite recorder/export metadata, tables/lists, data exports, scroll collection, page-state diffs, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
 
@@ -287,6 +287,7 @@ browser tab current --session default --json
 browser page snapshot --session default --json
 browser page extract --session default --selector ".user-avatar" --json
 browser page extract-schema --session default --file schema.yaml --json
+browser page find --session default --role button --name Save --json
 browser page ax --session default --json
 browser page outline --session default --json
 browser page network --session default --filter "/api/" --json
@@ -297,11 +298,14 @@ browser page table --session default --selector "table.results" --json
 browser page list --session default --selector "nav" --json
 browser page screenshot --session default --out result/page-screenshot.png --json
 browser page screenshot --session default --selector ".avatar" --out result/avatar.png --json
+browser page table-export --session default --selector "table.results" --out result/table.csv --format csv --json
+browser page scroll-collect --session default --item-selector ".row" --out result/items.json --json
+browser page diff --before before.json --after after.json --json
 browser assert visible --session default --selector ".ready" --json
 browser assert count --session default --selector ".result" --min 1 --json
 browser assert screenshot --session default --baseline baseline.png --out actual.png --diff-out diff.png --json
 browser workflow record --session default --out flow.yaml --duration-ms 10000 --json
-browser workflow run --file flow.yaml --dry-run --var query=demo --report-out result/workflow-run.json --json
+browser workflow run --file flow.yaml --dry-run --var query=demo --report-out result/workflow-run.json --evidence-dir result/evidence --json
 browser form inspect --session default --json
 browser form fill --session default --file values.yaml --json
 browser network start --session default --limit 500 --json

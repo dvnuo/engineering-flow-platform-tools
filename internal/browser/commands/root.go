@@ -31,7 +31,7 @@ func NewRootWithRunner(r probe.Runner) *cobra.Command {
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
 	c.PersistentFlags().StringVar(&o.Format, "format", "table", "")
 	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "")
-	c.AddCommand(probeCmd(o, r), sessionCmd(o), tabCmd(o), pageCmd(o), frameCmd(o), networkCmd(o), downloadCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	c.AddCommand(probeCmd(o, r), sessionCmd(o), tabCmd(o), pageCmd(o), assertCmd(o), frameCmd(o), networkCmd(o), downloadCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
 	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
 		Product: "browser",
 		Binary:  "browser",
@@ -49,6 +49,10 @@ It writes non-secret diagnostics such as summary.json, network.json, page.html, 
 			`browser page click --selector button.sign-in --json`,
 			`browser page click --ref axref-0-abcdef123456 --json`,
 			`browser page wait --selector .ready --network-idle-ms 500 --json`,
+			`browser assert visible --selector .ready --json`,
+			`browser assert text --contains "Signed in" --json`,
+			`browser assert url --contains /dashboard --json`,
+			`browser assert count --selector .result --min 1 --json`,
 			`browser page network --filter /api/ --json`,
 			`browser network start --session default --limit 500 --json`,
 			`browser page console --level error --json`,

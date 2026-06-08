@@ -1720,7 +1720,7 @@
     material.depthTest = false;
     material.depthWrite = false;
     var object = THREE.TubeGeometry ? new THREE.Mesh(geometry, material) : new THREE.Line(geometry, material);
-    object.renderOrder = 1;
+    object.renderOrder = edgeSpec.lightBackground ? 3 : 1;
     object.userData.isEdgeTube = true;
     object.userData.baseOpacity = edgeSpec.opacity;
     object.userData.targetOpacity = edgeSpec.opacity;
@@ -4734,6 +4734,7 @@
     var visualHints = readVisualHints(data);
     var viewMode = normalizeMarkKey(visualHints.labelMode || "overview") || "overview";
     var isAssetGallery = String(data.title || "").toLowerCase().indexOf("logo badge gallery") >= 0;
+    var isMermaidArchitecture = normalizeMarkKey(manifest.id || data.template_id || data.template || "") === "mermaid.architecture";
     function isOverviewMode() {
       return viewMode !== "detail";
     }
@@ -4796,7 +4797,7 @@
         label.appendChild(el("span", "", compactLabelText(itemLabel(item) || item.id, 28)));
       }
       shell.labelLayer.appendChild(label);
-      var offset = explicitIsometricLabelOffset(item) || isometricEntityLabelOffset(index, size);
+      var offset = isMermaidArchitecture ? { x: 0, z: 0, y: 0.16 } : (explicitIsometricLabelOffset(item) || isometricEntityLabelOffset(index, size));
       var anchor = new THREE.Vector3(world.x + offset.x, size.h * 0.76 + 0.34 + offset.y, world.z + offset.z);
       var entityQuality = normalizeVisualQualityFields(item);
       var entityPriority = 0.84 + importanceValue(item, 0.45) * 0.32;
@@ -4807,7 +4808,8 @@
       }
       var labelRecord = { element: label, point: anchor, visible: shouldShowIsometricEntityLabel(item), type: "entity", priority: entityPriority, id: item.id, entityID: item.id, offset: offset };
       labels.push(labelRecord);
-      var leader = createDashedLeader(THREE, new THREE.Vector3(world.x, size.h * 0.38, world.z), anchor.clone().add(new THREE.Vector3(0, -0.06, 0)));
+      var leaderFrom = isMermaidArchitecture ? new THREE.Vector3(world.x, size.h * 0.78, world.z) : new THREE.Vector3(world.x, size.h * 0.38, world.z);
+      var leader = createDashedLeader(THREE, leaderFrom, anchor.clone().add(new THREE.Vector3(0, -0.06, 0)));
       leader.visible = shouldShowIsometricEntityLabel(item);
       leaderRoot.add(leader);
       entityByID[item.id].labelRecord = labelRecord;
@@ -4870,16 +4872,16 @@
         edgeSpec.color = presentation.color || link.color || "#111827";
       }
       if (role === "primary") {
-        edgeSpec.opacity = 0.96;
+        edgeSpec.opacity = 0.98;
         edgeSpec.flow = false;
-        edgeSpec.arrowScale = 0.92;
-        return { radius: 0.028, secondary: false, role: role };
+        edgeSpec.arrowScale = isMermaidArchitecture ? 0.78 : 0.92;
+        return { radius: isMermaidArchitecture ? 0.046 : 0.028, secondary: false, role: role };
       }
       if (role === "secondary" && !secondary) {
         edgeSpec.opacity = Math.max(0.48, Math.min(0.62, edgeSpec.opacity || 0.54));
         edgeSpec.flow = false;
         edgeSpec.arrowScale = 1.05;
-        return { radius: 0.017, secondary: false, role: role };
+        return { radius: isMermaidArchitecture ? 0.032 : 0.017, secondary: false, role: role };
       }
       if (isOverviewMode() && secondary) {
         edgeSpec.opacity = Math.max(0.2, Math.min(0.34, edgeSpec.opacity || 0.28));
@@ -4888,7 +4890,7 @@
         if (role === "auxiliary") {
           edgeSpec.lineStyle = edgeSpec.lineStyle || "dashed";
         }
-        return { radius: 0.008 + Math.min(0.004, q.importance * 0.006), secondary: true, role: role };
+        return { radius: isMermaidArchitecture ? 0.018 : 0.008 + Math.min(0.004, q.importance * 0.006), secondary: true, role: role };
       }
       edgeSpec.opacity = Math.max(edgeSpec.opacity || 0.74, cls === "main" ? 0.9 : 0.74);
       edgeSpec.flow = edgeSpec.flow && (cls === "main" || cls === "cache" || cls === "storage" || cls === "service");
@@ -4927,6 +4929,11 @@
     }
 
     function relationOpacity(role, edgeSpec) {
+      if (isMermaidArchitecture) {
+        if (role === "primary") return 0.94;
+        if (role === "auxiliary") return Math.min(0.28, edgeSpec.opacity || 0.28);
+        return Math.min(0.52, edgeSpec.opacity || 0.52);
+      }
       if (role === "primary") return 0.32;
       if (role === "auxiliary") return Math.min(0.16, edgeSpec.opacity || 0.16);
       return Math.min(0.22, edgeSpec.opacity || 0.22);
@@ -5011,24 +5018,27 @@
       var edgeStyle = applyIsometricEdgeStyle(link, edgeSpec);
       var pathPoints = isometricLinkPathPoints(link, from, to);
       var routeMesh = createRouteMesh(pathPoints, edgeSpec, edgeStyle.radius);
+      pathPoints = routeMesh.route || pathPoints;
       var curve = routeMesh.curve;
       var tube = routeMesh.mesh;
       tube.userData.isDirectedArrow = !!edgeSpec.directed;
       tube.userData.isOverviewSecondary = !!edgeStyle.secondary;
+      var worldTubeOpacity = isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.82 : edgeStyle.role === "secondary" ? 0.48 : 0.18;
       if (tube.material) {
-        tube.material.opacity = edgeStyle.role === "primary" ? 0.82 : edgeStyle.role === "secondary" ? 0.48 : 0.18;
+        tube.material.opacity = worldTubeOpacity;
       }
-      tube.userData.baseOpacity = edgeStyle.role === "primary" ? 0.82 : edgeStyle.role === "secondary" ? 0.48 : 0.18;
+      tube.userData.baseOpacity = worldTubeOpacity;
       tube.userData.targetOpacity = tube.userData.baseOpacity;
       linkRoot.add(tube);
       var arrow = createRouteArrowhead(pathPoints, edgeSpec);
       if (arrow) {
         arrow.userData.isDirectedArrow = true;
         arrow.userData.isOverviewSecondary = !!edgeStyle.secondary;
+        var worldArrowOpacity = isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.55 : 0.24;
         if (arrow.material) {
-          arrow.material.opacity = edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.55 : 0.24;
+          arrow.material.opacity = worldArrowOpacity;
         }
-        arrow.userData.baseOpacity = edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.55 : 0.24;
+        arrow.userData.baseOpacity = worldArrowOpacity;
         arrow.userData.targetOpacity = arrow.userData.baseOpacity;
         linkRoot.add(arrow);
       }
@@ -5122,12 +5132,13 @@
 
     function computeEntityPorts(entity) {
       var b = computeEntityBounds(entity);
+      var routeY = isMermaidArchitecture ? 0.18 : 0.07;
       return {
         center: b.center,
-        north: new THREE.Vector3(b.center.x, 0.07, b.minZ - 0.06),
-        east: new THREE.Vector3(b.maxX + 0.08, 0.07, b.center.z),
-        south: new THREE.Vector3(b.center.x, 0.07, b.maxZ + 0.06),
-        west: new THREE.Vector3(b.minX - 0.08, 0.07, b.center.z)
+        north: new THREE.Vector3(b.center.x, routeY, b.minZ - 0.06),
+        east: new THREE.Vector3(b.maxX + 0.08, routeY, b.center.z),
+        south: new THREE.Vector3(b.center.x, routeY, b.maxZ + 0.06),
+        west: new THREE.Vector3(b.minX - 0.08, routeY, b.center.z)
       };
     }
 
@@ -5216,7 +5227,7 @@
       if (route.length >= 2) {
         var middle = route.slice(1, -1).map(function (point) {
           var world = isometricWorld(point, scale, center);
-          return new THREE.Vector3(world.x, 0.07, world.z);
+          return new THREE.Vector3(world.x, isMermaidArchitecture ? 0.18 : 0.07, world.z);
         });
         return [ports.start].concat(middle).concat([ports.end]);
       }
@@ -5224,25 +5235,61 @@
       link.__efpReservedLane = lane;
       var cls = routeClass(link);
       if (lane.x !== undefined) {
-        return avoidEntityIntersections([ports.start, new THREE.Vector3(lane.x, 0.07, ports.start.z), new THREE.Vector3(lane.x, 0.07, ports.end.z), ports.end]);
+        return avoidEntityIntersections([ports.start, new THREE.Vector3(lane.x, isMermaidArchitecture ? 0.18 : 0.07, ports.start.z), new THREE.Vector3(lane.x, isMermaidArchitecture ? 0.18 : 0.07, ports.end.z), ports.end]);
       }
       if (lane.z !== undefined) {
-        return avoidEntityIntersections([ports.start, new THREE.Vector3(ports.start.x, 0.07, lane.z), new THREE.Vector3(ports.end.x, 0.07, lane.z), ports.end]);
+        return avoidEntityIntersections([ports.start, new THREE.Vector3(ports.start.x, isMermaidArchitecture ? 0.18 : 0.07, lane.z), new THREE.Vector3(ports.end.x, isMermaidArchitecture ? 0.18 : 0.07, lane.z), ports.end]);
       }
       if (cls === "main" && Math.abs(ports.start.z - ports.end.z) < scale * 0.4) {
         return [ports.start, ports.end];
       }
-      return avoidEntityIntersections([ports.start, new THREE.Vector3(ports.end.x, 0.07, ports.start.z), ports.end]);
+      return avoidEntityIntersections([ports.start, new THREE.Vector3(ports.end.x, isMermaidArchitecture ? 0.18 : 0.07, ports.start.z), ports.end]);
+    }
+
+    function simplifyWorldRoute(route) {
+      var cleaned = [];
+      (route || []).forEach(function (point) {
+        if (!cleaned.length || cleaned[cleaned.length - 1].distanceTo(point) > 0.006) {
+          cleaned.push(point);
+        }
+      });
+      if (cleaned.length < 3) return cleaned;
+      var simplified = [cleaned[0]];
+      for (var i = 1; i < cleaned.length - 1; i += 1) {
+        var prev = simplified[simplified.length - 1];
+        var current = cleaned[i];
+        var next = cleaned[i + 1];
+        var ab = current.clone().sub(prev);
+        var bc = next.clone().sub(current);
+        var cross = new THREE.Vector3().crossVectors(ab, bc).length();
+        if (cross > 0.0008 && ab.length() > 0.006 && bc.length() > 0.006) {
+          simplified.push(current);
+        }
+      }
+      simplified.push(cleaned[cleaned.length - 1]);
+      return simplified;
+    }
+
+    function routeCurve(route, edgeSpec) {
+      var simplified = simplifyWorldRoute(route);
+      if (simplified.length > 2 && THREE.CurvePath && THREE.LineCurve3) {
+        var path = new THREE.CurvePath();
+        for (var i = 0; i < simplified.length - 1; i += 1) {
+          path.add(new THREE.LineCurve3(simplified[i], simplified[i + 1]));
+        }
+        return { route: simplified, curve: path };
+      }
+      var curve = simplified.length > 2 && THREE.CatmullRomCurve3 ? new THREE.CatmullRomCurve3(simplified, false, "centripetal", 0.08) : edgeCurveFor(THREE, simplified[0], simplified[simplified.length - 1], {}, Object.assign({}, edgeSpec, { curve: "straight", flow: false }), 0);
+      return { route: simplified, curve: curve };
     }
 
     function createRouteMesh(route, edgeSpec, radius) {
-      var curve = route.length > 2 && THREE.CatmullRomCurve3 ? new THREE.CatmullRomCurve3(route) : edgeCurveFor(THREE, route[0], route[route.length - 1], {}, Object.assign({}, edgeSpec, { curve: "straight", flow: false }), 0);
-      return { curve: curve, mesh: createEdgeTube(THREE, curve, edgeSpec, radius) };
+      var routed = routeCurve(route, edgeSpec);
+      return { route: routed.route, curve: routed.curve, mesh: createEdgeTube(THREE, routed.curve, edgeSpec, radius) };
     }
 
     function createRouteArrowhead(route, edgeSpec) {
-      var curve = route.length > 2 && THREE.CatmullRomCurve3 ? new THREE.CatmullRomCurve3(route) : edgeCurveFor(THREE, route[0], route[route.length - 1], {}, Object.assign({}, edgeSpec, { curve: "straight", flow: false }), 0);
-      return createArrowHead(THREE, curve, edgeSpec);
+      return createArrowHead(THREE, routeCurve(route, edgeSpec).curve, edgeSpec);
     }
 
     function placeRouteLabel(route) {
@@ -5345,7 +5392,7 @@
       }
       var offset = record.leaderOffset || { x: 0, y: 0, z: 0 };
       var from = record.object.position.clone();
-      from.y = record.object.position.y + record.size.h * 0.16;
+      from.y = record.object.position.y + (isMermaidArchitecture ? record.size.h * 0.56 : record.size.h * 0.16);
       var to = new THREE.Vector3(
         record.object.position.x + offset.x,
         record.object.position.y + record.size.h * 0.54 + 0.28 + offset.y,
@@ -5371,7 +5418,7 @@
       if (!relation || !route || route.length < 2) return;
       var routeMesh = createRouteMesh(route, relation.edgeSpec, relation.edgeStyle.radius);
       relation.curve = routeMesh.curve;
-      relation.pathPoints = route;
+      relation.pathPoints = routeMesh.route || route;
       if (relation.tube && routeMesh.mesh && routeMesh.mesh.geometry) {
         disposeGeometry(relation.tube.geometry);
         relation.tube.geometry = routeMesh.mesh.geometry;
@@ -5512,20 +5559,35 @@
         relation.label.style.opacity = labelVisible ? "1" : "0";
         if (labelVisible) {
           var labelPoint = relationLabelScreenPoint(screen);
-          relation.label.style.transform = "translate3d(" + Math.round(labelPoint.x) + "px, " + Math.round(labelPoint.y) + "px, 0) translate(-50%, -50%)";
+          relation.label.style.transform = "translate3d(" + labelPoint.x.toFixed(2) + "px, " + labelPoint.y.toFixed(2) + "px, 0) translate(-50%, -50%)";
         }
       });
     }
 
     function updateLabels() {
-      shell.labelLayer.dataset.layoutPass = String((numberValue(shell.labelLayer.dataset.layoutPass, 0) || 0) + 1);
+      var layoutPass = numberValue(shell.labelLayer.dataset.layoutPass, 0) || 0;
+      if (layoutPass < 4) {
+        shell.labelLayer.dataset.layoutPass = String(layoutPass + 1);
+      }
       var keepGalleryEntityLabels = isAssetGallery;
+      if (isMermaidArchitecture) {
+        labels.forEach(function (label) {
+          var p = project(label.point);
+          var visible = labelsVisible && label.visible && insideViewport({ x: p.x - 16, y: p.y - 16, w: 32, h: 32 });
+          var transformMode = label.type === "link" || label.type === "zone" ? "translate(-50%, -50%)" : "translate(-50%, -100%)";
+          label.element.style.display = visible ? "" : "none";
+          label.element.style.visibility = visible ? "visible" : "hidden";
+          label.element.style.opacity = visible ? "1" : "0";
+          label.element.style.transform = "translate3d(" + p.x.toFixed(2) + "px, " + p.y.toFixed(2) + "px, 0) " + transformMode;
+        });
+        return;
+      }
       var projected = labels.map(function (label, index) {
         var p = project(label.point);
         label.element.style.display = labelsVisible && label.visible ? "" : "none";
         label.element.style.visibility = "hidden";
         var transformMode = label.type === "link" || label.type === "zone" ? "translate(-50%, -50%)" : "translate(-50%, -100%)";
-        label.element.style.transform = "translate3d(" + Math.round(p.x) + "px, " + Math.round(p.y) + "px, 0) " + transformMode;
+        label.element.style.transform = "translate3d(" + p.x.toFixed(2) + "px, " + p.y.toFixed(2) + "px, 0) " + transformMode;
         return { label: label, index: index, projected: p, rect: labelRect(label, p), priority: label.priority || 0.5 };
       });
       var selectedID = selected || "";

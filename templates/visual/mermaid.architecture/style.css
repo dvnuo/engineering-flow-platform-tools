@@ -110,6 +110,9 @@ body {
   inset: 0;
   z-index: 5;
   pointer-events: none;
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .visual-isometric-relation-layer {
@@ -131,16 +134,16 @@ body {
 .visual-isometric-link-path {
   stroke: var(--relation-stroke, #111827);
   stroke-width: var(--relation-width, 3px);
-  opacity: 0;
+  opacity: var(--relation-opacity, 0.72);
   vector-effect: non-scaling-stroke;
-  pointer-events: none;
-  cursor: default;
+  pointer-events: stroke;
+  cursor: pointer;
   transition: none;
 }
 
 .visual-isometric-link-path.is-hovered,
 .visual-isometric-link-path.is-selected {
-  opacity: 0;
+  opacity: 0.98;
 }
 
 .visual-isometric-link-arrow {
@@ -176,6 +179,8 @@ body {
 .visual-isometric-zone-label {
   position: absolute;
   transform: translate(-50%, -100%);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
   max-width: 190px;
   padding: 7px 10px;
   border: 1px solid rgb(100 116 139 / 0.2);

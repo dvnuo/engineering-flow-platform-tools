@@ -32,6 +32,13 @@ const url = args.url || "";
 const browserPath = args.browser || "";
 const screenshot = args.screenshot || "";
 const timeoutMs = Math.max(1000, Number(args.timeout || 90) * 1000);
+const scenario = String(args.scenario || "overview").toLowerCase();
+const scenarioEntity = String(args.entity || "");
+const dragX = Number(args["drag-x"] || 0);
+const dragZ = Number(args["drag-z"] || 0);
+const cameraTheta = Number(args["camera-theta"] || 0);
+const cameraPhi = Number(args["camera-phi"] || 0);
+const cameraZoom = Number(args["camera-zoom"] || 0);
 if (!url) fail("browser_url_missing", "--url is required.", "Pass the local HTTP URL for the rendered index.html.");
 if (!browserPath) fail("browser_runtime_missing", "--browser is required.", "Pass a Chrome or Chromium executable path.");
 if (!screenshot) fail("browser_screenshot_missing", "--screenshot is required.", "Pass the screenshot output path.");
@@ -323,6 +330,39 @@ const expression = `(() => {
   return summary;
 })()`;
 
+function scenarioExpression() {
+  const payload = {
+    scenario,
+    entity: scenarioEntity,
+    dragX: Number.isFinite(dragX) ? dragX : 0,
+    dragZ: Number.isFinite(dragZ) ? dragZ : 0,
+    cameraTheta: Number.isFinite(cameraTheta) ? cameraTheta : 0,
+    cameraPhi: Number.isFinite(cameraPhi) ? cameraPhi : 0,
+    cameraZoom: Number.isFinite(cameraZoom) ? cameraZoom : 0
+  };
+  return `(() => {
+    const input = ${JSON.stringify(payload)};
+    const api = window.__EFP_ISOMETRIC_SCENE__;
+    if (!api) return { ok: false, reason: "isometric_api_missing" };
+    const applyCamera = (camera) => api.setCamera && api.setCamera(camera);
+    if (input.scenario === "angle-left") {
+      applyCamera({ theta: -0.78, phi: 0.98, zoom: input.cameraZoom || 1.06 });
+    } else if (input.scenario === "angle-right") {
+      applyCamera({ theta: 1.28, phi: 0.94, zoom: input.cameraZoom || 1.04 });
+    } else if (input.scenario === "top") {
+      applyCamera({ theta: 0.78, phi: 0.36, zoom: input.cameraZoom || 1.05 });
+    } else if (input.scenario === "drag") {
+      if (input.cameraTheta || input.cameraPhi || input.cameraZoom) {
+        applyCamera({ theta: input.cameraTheta || undefined, phi: input.cameraPhi || undefined, zoom: input.cameraZoom || undefined });
+      }
+      if (api.dragEntity) api.dragEntity(input.entity, input.dragX || 1.2, input.dragZ || 0.55);
+    } else if (input.cameraTheta || input.cameraPhi || input.cameraZoom) {
+      applyCamera({ theta: input.cameraTheta || undefined, phi: input.cameraPhi || undefined, zoom: input.cameraZoom || undefined });
+    }
+    return { ok: true, scenario: input.scenario, stats: api.stats ? api.stats() : {} };
+  })()`;
+}
+
 try {
   chrome = spawn(browserPath, [
     "--headless=new",
@@ -368,6 +408,7 @@ try {
     summary = result.result?.value || {};
     if (summary.ready) break;
   }
+  await cdp.send("Runtime.evaluate", { expression: scenarioExpression(), returnByValue: true, awaitPromise: true }).catch(() => ({}));
   await sleep(700);
   const finalResult = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }).catch(() => ({}));
   summary = finalResult.result?.value || summary;

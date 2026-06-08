@@ -28,6 +28,13 @@ type Options struct {
 	OfflineStrict  bool
 	TimeoutSeconds int
 	BrowserPath    string
+	Scenario       string
+	EntityID       string
+	DragX          float64
+	DragZ          float64
+	CameraTheta    float64
+	CameraPhi      float64
+	CameraZoom     float64
 }
 
 type Result struct {
@@ -235,7 +242,7 @@ func Inspect(opts Options) (Result, error) {
 		return Result{}, metadata.NewError("screenshot_path_invalid", "existing screenshot could not be replaced: "+err.Error(), "Choose a writable screenshot path.", 400)
 	}
 	requests := server.Requests()
-	nodeResult, err := runBrowserSmoke(ctx, browserPath, url, screenshot, opts.TimeoutSeconds)
+	nodeResult, err := runBrowserSmoke(ctx, browserPath, url, screenshot, opts)
 	if err != nil {
 		return Result{}, err
 	}
@@ -506,7 +513,7 @@ func findBrowser(explicit string) (string, error) {
 	return "", metadata.NewError("browser_runtime_missing", "Chrome or Chromium was not found for visual inspect-browser.", "Install Chrome/Chromium, set EFP_BROWSER, or pass --browser <path>. In CI, set EFP_SKIP_BROWSER_SMOKE=1 only when browser smoke is intentionally unavailable.", 501)
 }
 
-func runBrowserSmoke(ctx context.Context, browserPath, url, screenshot string, timeoutSeconds int) (browserSmokeOutput, error) {
+func runBrowserSmoke(ctx context.Context, browserPath, url, screenshot string, opts Options) (browserSmokeOutput, error) {
 	nodePath, err := findNode()
 	if err != nil {
 		return browserSmokeOutput{}, err
@@ -515,15 +522,38 @@ func runBrowserSmoke(ctx context.Context, browserPath, url, screenshot string, t
 	if err != nil {
 		return browserSmokeOutput{}, err
 	}
+	timeoutSeconds := opts.TimeoutSeconds
 	if timeoutSeconds <= 0 {
 		timeoutSeconds = 90
 	}
-	cmd := exec.CommandContext(ctx, nodePath, scriptPath,
+	args := []string{
 		"--url", url,
 		"--browser", browserPath,
 		"--screenshot", screenshot,
 		"--timeout", fmt.Sprintf("%d", timeoutSeconds),
-	)
+	}
+	if strings.TrimSpace(opts.Scenario) != "" {
+		args = append(args, "--scenario", strings.TrimSpace(opts.Scenario))
+	}
+	if strings.TrimSpace(opts.EntityID) != "" {
+		args = append(args, "--entity", strings.TrimSpace(opts.EntityID))
+	}
+	if opts.DragX != 0 {
+		args = append(args, "--drag-x", fmt.Sprintf("%g", opts.DragX))
+	}
+	if opts.DragZ != 0 {
+		args = append(args, "--drag-z", fmt.Sprintf("%g", opts.DragZ))
+	}
+	if opts.CameraTheta != 0 {
+		args = append(args, "--camera-theta", fmt.Sprintf("%g", opts.CameraTheta))
+	}
+	if opts.CameraPhi != 0 {
+		args = append(args, "--camera-phi", fmt.Sprintf("%g", opts.CameraPhi))
+	}
+	if opts.CameraZoom != 0 {
+		args = append(args, "--camera-zoom", fmt.Sprintf("%g", opts.CameraZoom))
+	}
+	cmd := exec.CommandContext(ctx, nodePath, append([]string{scriptPath}, args...)...)
 	out, err := cmd.CombinedOutput()
 	var parsed browserSmokeOutput
 	if jsonErr := json.Unmarshal(out, &parsed); jsonErr != nil {

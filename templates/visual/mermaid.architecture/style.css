@@ -131,11 +131,11 @@ body {
 .visual-isometric-link-path {
   stroke: var(--relation-stroke, #111827);
   stroke-width: var(--relation-width, 3px);
-  opacity: var(--relation-opacity, 0.72);
+  opacity: var(--relation-opacity, 0.24);
   vector-effect: non-scaling-stroke;
   pointer-events: stroke;
   cursor: pointer;
-  transition: opacity 140ms ease, stroke-width 140ms ease;
+  transition: opacity 80ms ease, stroke-width 80ms ease;
 }
 
 .visual-isometric-link-path.is-hovered,
@@ -146,7 +146,7 @@ body {
 
 .visual-isometric-link-arrow {
   fill: var(--relation-stroke, #111827);
-  opacity: var(--relation-opacity, 0.82);
+  opacity: var(--relation-opacity, 0.24);
   pointer-events: none;
   transition: opacity 140ms ease;
 }
@@ -191,7 +191,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   box-shadow: 0 10px 26px rgb(31 41 55 / 0.14);
-  transition: opacity 160ms ease, transform 160ms ease;
+  transition: opacity 80ms ease;
 }
 
 .visual-isometric-label[data-selected] {

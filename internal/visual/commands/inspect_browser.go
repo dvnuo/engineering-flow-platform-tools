@@ -9,8 +9,9 @@ import (
 )
 
 func inspectBrowserCmd(o *Opts) *cobra.Command {
-	var outDir, screenshotPath, browserPath string
+	var outDir, screenshotPath, browserPath, scenario, entityID string
 	var timeoutSeconds int
+	var dragX, dragZ, cameraTheta, cameraPhi, cameraZoom float64
 	c := &cobra.Command{
 		Use:   "inspect-browser",
 		Short: "Open a rendered visual artifact through a local HTTP server and inspect browser screenshot readiness",
@@ -29,6 +30,13 @@ func inspectBrowserCmd(o *Opts) *cobra.Command {
 				OfflineStrict:  o.OfflineStrict,
 				TimeoutSeconds: timeoutSeconds,
 				BrowserPath:    browserPath,
+				Scenario:       scenario,
+				EntityID:       entityID,
+				DragX:          dragX,
+				DragZ:          dragZ,
+				CameraTheta:    cameraTheta,
+				CameraPhi:      cameraPhi,
+				CameraZoom:     cameraZoom,
 			})
 			if err != nil {
 				return print(cmd, o, failureFromError(err, "visual_browser_inspect_failed"))
@@ -40,5 +48,12 @@ func inspectBrowserCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&screenshotPath, "screenshot", "", "Optional screenshot path; defaults to <out>/visual-screenshot.png")
 	c.Flags().StringVar(&browserPath, "browser", "", "Optional Chrome/Chromium executable path; defaults to EFP_BROWSER or common system locations")
 	c.Flags().IntVar(&timeoutSeconds, "timeout", 90, "Maximum seconds to wait for browser render and screenshot")
+	c.Flags().StringVar(&scenario, "scenario", "", "Optional browser scenario: overview, angle-left, angle-right, top, or drag")
+	c.Flags().StringVar(&entityID, "entity", "", "Entity id for drag scenario")
+	c.Flags().Float64Var(&dragX, "drag-x", 0, "Grid-space x delta for drag scenario")
+	c.Flags().Float64Var(&dragZ, "drag-z", 0, "Grid-space z/y delta for drag scenario")
+	c.Flags().Float64Var(&cameraTheta, "camera-theta", 0, "Override isometric camera theta for scenario screenshots")
+	c.Flags().Float64Var(&cameraPhi, "camera-phi", 0, "Override isometric camera phi for scenario screenshots")
+	c.Flags().Float64Var(&cameraZoom, "camera-zoom", 0, "Override isometric camera zoom for scenario screenshots")
 	return c
 }

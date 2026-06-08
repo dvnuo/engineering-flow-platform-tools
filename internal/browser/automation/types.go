@@ -11,6 +11,7 @@ type Session struct {
 	Name                string    `json:"name"`
 	BrowserPath         string    `json:"browser_path,omitempty"`
 	ProfileDir          string    `json:"profile_dir,omitempty"`
+	DownloadDir         string    `json:"download_dir,omitempty"`
 	DebugAddr           string    `json:"debug_addr"`
 	DebugPort           int       `json:"debug_port"`
 	BrowserWebSocketURL string    `json:"browser_websocket_url,omitempty"`
@@ -28,6 +29,7 @@ type StartOptions struct {
 	BrowserExe   string
 	Headless     bool
 	ProfileDir   string
+	DownloadDir  string
 	CleanProfile bool
 	Port         int
 	URL          string

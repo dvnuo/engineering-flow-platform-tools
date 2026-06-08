@@ -80,6 +80,23 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (Session, error)
 	if err := os.MkdirAll(profileDir, 0o700); err != nil {
 		return Session{}, NewError("artifact_write_failed", err.Error(), "Dedicated browser profile could not be created.", 500)
 	}
+	downloadDir := strings.TrimSpace(opts.DownloadDir)
+	if downloadDir == "" {
+		downloadDir, err = DefaultDownloadDir(name)
+		if err != nil {
+			return Session{}, err
+		}
+	}
+	downloadDir, err = ValidateDownloadDir(downloadDir)
+	if err != nil {
+		return Session{}, err
+	}
+	if err := os.MkdirAll(downloadDir, 0o700); err != nil {
+		return Session{}, NewError("artifact_write_failed", err.Error(), "Dedicated browser download directory could not be created.", 500)
+	}
+	if err := ensureDownloadPreferences(profileDir, downloadDir); err != nil {
+		return Session{}, err
+	}
 
 	browserPath, err := probe.FindBrowser(defaultBrowserName(opts.Browser), opts.BrowserExe)
 	if err != nil {
@@ -110,6 +127,7 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (Session, error)
 		_, _ = cmd.Process.Wait()
 		return Session{}, err
 	}
+	_ = configureBrowserDownloadBehavior(ctx, version.WebSocketDebuggerURL, downloadDir)
 	_ = cmd.Process.Release()
 
 	now := m.now()
@@ -117,6 +135,7 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (Session, error)
 		Name:                name,
 		BrowserPath:         browserPath,
 		ProfileDir:          profileDir,
+		DownloadDir:         downloadDir,
 		DebugAddr:           LocalDebugAddr,
 		DebugPort:           port,
 		BrowserWebSocketURL: version.WebSocketDebuggerURL,

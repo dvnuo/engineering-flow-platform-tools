@@ -50,6 +50,29 @@ func TestSchemaProbeRequiresURL(t *testing.T) {
 	t.Fatalf("schema did not require url: %#v", data)
 }
 
+func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
+	cases := map[string][]string{
+		"session.start": {"download-dir"},
+		"page.upload":   {"selector", "file", "clear", "session", "target-id", "timeout"},
+		"download.list": {"session"},
+		"download.wait": {"session", "filename-contains", "timeout"},
+	}
+	for command, flags := range cases {
+		out := run(t, &fakeRunner{}, "schema", command, "--json")
+		data := out["data"].(map[string]any)
+		have := map[string]bool{}
+		for _, raw := range data["flags"].([]any) {
+			flag := raw.(map[string]any)
+			have[flag["name"].(string)] = true
+		}
+		for _, flag := range flags {
+			if !have[flag] {
+				t.Fatalf("%s missing --%s in %#v", command, flag, data)
+			}
+		}
+	}
+}
+
 func TestVersionJSON(t *testing.T) {
 	out := run(t, &fakeRunner{}, "version", "--json")
 	if out["ok"] != true {

@@ -36,6 +36,17 @@ func DefaultProfileDir(name string) (string, error) {
 	return filepath.Join(root, "profiles", name), nil
 }
 
+func DefaultDownloadDir(name string) (string, error) {
+	if err := ValidateSessionName(name); err != nil {
+		return "", err
+	}
+	root, err := DefaultBrowserHome()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "downloads", name), nil
+}
+
 func ValidateSessionName(name string) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -59,6 +70,17 @@ func ValidateProfileDir(profileDir string) (string, error) {
 		return "", invalidArgs("--profile must not point at a default Edge/Chrome/Chromium profile", "Use a dedicated profile directory under ~/.efp/browser/profiles.")
 	}
 	return profileDir, nil
+}
+
+func ValidateDownloadDir(downloadDir string) (string, error) {
+	downloadDir = filepath.Clean(expandHome(strings.TrimSpace(downloadDir)))
+	if downloadDir == "" || downloadDir == "." {
+		return "", invalidArgs("--download-dir must point at a dedicated download directory", "Use a directory under ~/.efp/browser/downloads.")
+	}
+	if probe.UnsafeProfileDir(downloadDir) {
+		return "", invalidArgs("--download-dir must point at a dedicated directory, not a filesystem root", "Use a directory under ~/.efp/browser/downloads.")
+	}
+	return downloadDir, nil
 }
 
 func validateHTTPURL(raw, flag string) error {

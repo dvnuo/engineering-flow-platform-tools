@@ -47,6 +47,7 @@ func sessionStartCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&opts.BrowserExe, "browser-exe", "", "Explicit Edge/Chrome/Chromium executable path to launch.")
 	c.Flags().BoolVar(&opts.Headless, "headless", false, "Run the persistent browser without a visible UI.")
 	c.Flags().StringVar(&opts.ProfileDir, "profile", "", "Dedicated browser profile directory; defaults to ~/.efp/browser/profiles/<session-name>.")
+	c.Flags().StringVar(&opts.DownloadDir, "download-dir", "", "Dedicated download directory; defaults to ~/.efp/browser/downloads/<session-name>.")
 	c.Flags().BoolVar(&opts.CleanProfile, "clean-profile", false, "Delete the dedicated profile directory before launching the session.")
 	c.Flags().IntVar(&opts.Port, "port", 0, "Local DevTools port on 127.0.0.1; 0 picks a free port.")
 	c.Flags().StringVar(&opts.URL, "url", "", "Optional initial HTTP or HTTPS URL to open in the session.")

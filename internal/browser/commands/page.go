@@ -20,6 +20,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		pageExtractCmd(o),
 		pageClickCmd(o),
 		pageTypeCmd(o),
+		pageUploadCmd(o),
 		pageWaitCmd(o),
 		pageScreenshotCmd(o),
 		pageEvalCmd(o),
@@ -136,6 +137,33 @@ func pageTypeCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&opts.Selector, "selector", "", "CSS selector for the visible input or editable element.")
 	c.Flags().StringVar(&opts.Text, "text", "", "Text to type; the value is not included in command output.")
 	c.Flags().BoolVar(&opts.Clear, "clear", false, "Clear the selected element before typing.")
+	return c
+}
+
+func pageUploadCmd(o *Opts) *cobra.Command {
+	opts := automation.UploadOptions{PageOptions: defaultPageOptions()}
+	c := &cobra.Command{
+		Use:   "upload",
+		Short: "Attach files to a page file input",
+		Long:  "Set files on an input[type=file] element in the selected page and return only file metadata, selector, URL, and title.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Upload(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "CSS selector for the input[type=file] element.")
+	c.Flags().StringArrayVar(&opts.Files, "file", nil, "Local regular file path to attach; repeat for multiple files.")
+	c.Flags().BoolVar(&opts.Clear, "clear", false, "Clear the file input before attaching files, or clear it without files.")
 	return c
 }
 

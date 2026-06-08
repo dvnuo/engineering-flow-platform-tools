@@ -34,6 +34,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		pageErrorsCmd(o),
 		pageConsoleClearCmd(o),
 		pageNetworkCmd(o),
+		pageMetricsCmd(o),
 		pageOutlineCmd(o),
 		pageTableCmd(o),
 		pageListCmd(o),
@@ -513,6 +514,32 @@ func pageNetworkCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&opts.Filter, "filter", "", "Case-insensitive filter matched against resource URL, initiator type, resource type, or API-like marker.")
 	c.Flags().IntVar(&opts.Limit, "limit", 50, "Maximum number of matching resource timing entries to return.")
 	c.Flags().BoolVar(&opts.All, "all", false, "Include all resource timing entries instead of only API-like fetch/XHR entries.")
+	return c
+}
+
+func pageMetricsCmd(o *Opts) *cobra.Command {
+	opts := automation.MetricsOptions{PageOptions: defaultPageOptions(), LimitResources: 10}
+	c := &cobra.Command{
+		Use:   "metrics",
+		Short: "Summarize browser performance timing metadata",
+		Long:  "Return safe browser Performance API metadata including navigation timings, paint timings, resource aggregates, DOM node count, long-task counts, and bounded largest resources with redacted URLs.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Metrics(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().IntVar(&opts.LimitResources, "limit-resources", 10, "Maximum number of largest matching resource timing entries to return.")
+	c.Flags().StringVar(&opts.Filter, "filter", "", "Case-insensitive filter matched against resource URL, resource type, or initiator type.")
 	return c
 }
 

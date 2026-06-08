@@ -66,6 +66,7 @@ func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
 		"page.console-clear": {"session", "target-id", "timeout"},
 		"page.extract":       {"selector", "limit", "include-html", "pierce", "max-html-bytes", "session", "target-id", "timeout"},
 		"page.outline":       {"limit", "include-hidden", "pierce", "session", "target-id", "timeout"},
+		"page.metrics":       {"limit-resources", "filter", "session", "target-id", "timeout"},
 		"assert.visible":     {"selector", "ref", "not", "session", "target-id", "timeout"},
 		"assert.text":        {"contains", "selector", "ref", "not", "session", "target-id", "timeout"},
 		"assert.url":         {"contains", "not", "session", "target-id", "timeout"},

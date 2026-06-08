@@ -90,6 +90,14 @@ type DOMSummary struct {
 	VisiblePrimaryLabels   int      `json:"visible_primary_link_label_count"`
 	VisibleSecondaryLabels int      `json:"visible_secondary_link_label_count"`
 	VisibleAuxiliaryLabels int      `json:"visible_auxiliary_link_label_count"`
+	ExplicitRouteLinks     int      `json:"explicit_route_link_count"`
+	HeuristicRouteLinks    int      `json:"heuristic_route_link_count"`
+	PrimaryExplicitRoutes  int      `json:"primary_explicit_route_count"`
+	PrimaryVisibleLabels   int      `json:"primary_visible_label_count"`
+	OverviewLinkLabels     int      `json:"overview_link_label_count"`
+	RelationPaletteSize    int      `json:"relation_color_palette_size"`
+	RelationPalette        []string `json:"relation_color_palette,omitempty"`
+	VisibleAuxOpacityAvg   float64  `json:"visible_auxiliary_opacity_average,omitempty"`
 	ZoneCountVisible       int      `json:"zone_count_visible"`
 	RouteGroups            []string `json:"route_groups,omitempty"`
 	InspectorRawDefault    bool     `json:"inspector_raw_json_default"`
@@ -138,6 +146,14 @@ type VisualSummary struct {
 	VisiblePrimaryLinkLabelCount   int            `json:"visible_primary_link_label_count"`
 	VisibleSecondaryLinkLabelCount int            `json:"visible_secondary_link_label_count"`
 	VisibleAuxiliaryLinkLabelCount int            `json:"visible_auxiliary_link_label_count"`
+	ExplicitRouteLinkCount         int            `json:"explicit_route_link_count"`
+	HeuristicRouteLinkCount        int            `json:"heuristic_route_link_count"`
+	PrimaryExplicitRouteCount      int            `json:"primary_explicit_route_count"`
+	PrimaryVisibleLabelCount       int            `json:"primary_visible_label_count"`
+	OverviewLinkLabelCount         int            `json:"overview_link_label_count"`
+	RelationColorPaletteSize       int            `json:"relation_color_palette_size"`
+	RelationColorPalette           []string       `json:"relation_color_palette,omitempty"`
+	VisibleAuxiliaryOpacityAverage float64        `json:"visible_auxiliary_opacity_average,omitempty"`
 	LinkOpacityBuckets             map[string]int `json:"link_opacity_buckets,omitempty"`
 	ZoneCountVisible               int            `json:"zone_count_visible"`
 	PrimaryPathGroupsVisible       []string       `json:"primary_path_groups_visible,omitempty"`
@@ -244,6 +260,14 @@ func Inspect(opts Options) (Result, error) {
 		VisiblePrimaryLabels:   nodeResult.Data.Summary.VisiblePrimaryLinkLabelCount,
 		VisibleSecondaryLabels: nodeResult.Data.Summary.VisibleSecondaryLinkLabelCount,
 		VisibleAuxiliaryLabels: nodeResult.Data.Summary.VisibleAuxiliaryLinkLabelCount,
+		ExplicitRouteLinks:     nodeResult.Data.Summary.ExplicitRouteLinkCount,
+		HeuristicRouteLinks:    nodeResult.Data.Summary.HeuristicRouteLinkCount,
+		PrimaryExplicitRoutes:  nodeResult.Data.Summary.PrimaryExplicitRouteCount,
+		PrimaryVisibleLabels:   nodeResult.Data.Summary.PrimaryVisibleLabelCount,
+		OverviewLinkLabels:     nodeResult.Data.Summary.OverviewLinkLabelCount,
+		RelationPaletteSize:    nodeResult.Data.Summary.RelationColorPaletteSize,
+		RelationPalette:        nodeResult.Data.Summary.RelationColorPalette,
+		VisibleAuxOpacityAvg:   nodeResult.Data.Summary.VisibleAuxiliaryOpacityAverage,
 		ZoneCountVisible:       nodeResult.Data.Summary.ZoneCountVisible,
 		RouteGroups:            nodeResult.Data.Summary.RouteGroups,
 		InspectorRawDefault:    nodeResult.Data.Summary.InspectorRawJSONDefault,
@@ -327,8 +351,16 @@ type browserDOMSummary struct {
 	SecondaryLinkCount             int            `json:"secondaryLinkCount"`
 	AuxiliaryLinkCount             int            `json:"auxiliaryLinkCount"`
 	VisiblePrimaryLinkLabelCount   int            `json:"visiblePrimaryLinkLabelCount"`
+	PrimaryVisibleLabelCount       int            `json:"primaryVisibleLabelCount"`
 	VisibleSecondaryLinkLabelCount int            `json:"visibleSecondaryLinkLabelCount"`
 	VisibleAuxiliaryLinkLabelCount int            `json:"visibleAuxiliaryLinkLabelCount"`
+	ExplicitRouteLinkCount         int            `json:"explicitRouteLinkCount"`
+	HeuristicRouteLinkCount        int            `json:"heuristicRouteLinkCount"`
+	PrimaryExplicitRouteCount      int            `json:"primaryExplicitRouteCount"`
+	OverviewLinkLabelCount         int            `json:"overviewLinkLabelCount"`
+	RelationColorPaletteSize       int            `json:"relationColorPaletteSize"`
+	RelationColorPalette           []string       `json:"relationColorPalette"`
+	VisibleAuxiliaryOpacityAverage float64        `json:"visibleAuxiliaryOpacityAverage"`
 	LinkOpacityBuckets             map[string]int `json:"linkOpacityBuckets"`
 	ZoneCountVisible               int            `json:"zoneCountVisible"`
 	PrimaryPathGroupsVisible       []string       `json:"primaryPathGroupsVisible"`
@@ -654,6 +686,14 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		VisiblePrimaryLinkLabelCount:   summary.VisiblePrimaryLabels,
 		VisibleSecondaryLinkLabelCount: summary.VisibleSecondaryLabels,
 		VisibleAuxiliaryLinkLabelCount: summary.VisibleAuxiliaryLabels,
+		ExplicitRouteLinkCount:         summary.ExplicitRouteLinks,
+		HeuristicRouteLinkCount:        summary.HeuristicRouteLinks,
+		PrimaryExplicitRouteCount:      summary.PrimaryExplicitRoutes,
+		PrimaryVisibleLabelCount:       summary.PrimaryVisibleLabels,
+		OverviewLinkLabelCount:         summary.OverviewLinkLabels,
+		RelationColorPaletteSize:       summary.RelationPaletteSize,
+		RelationColorPalette:           summary.RelationPalette,
+		VisibleAuxiliaryOpacityAverage: summary.VisibleAuxOpacityAvg,
 		LinkOpacityBuckets:             nodeResult.Data.Summary.LinkOpacityBuckets,
 		ZoneCountVisible:               summary.ZoneCountVisible,
 		PrimaryPathGroupsVisible:       nodeResult.Data.Summary.PrimaryPathGroupsVisible,
@@ -752,6 +792,18 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 		add("browser_primary_link_labels_missing", "warning", "Primary architecture path links have no visible overview labels.", "Give at least one primary path link labelPriority=important or always.", "show_primary_path_labels")
 	}
 	totalDeclaredLinks := summary.PrimaryLinkCount + summary.SecondaryLinkCount + summary.AuxiliaryLinkCount
+	if hasArchitectureFlowGroup && summary.PrimaryLinkCount > 0 && summary.PrimaryExplicitRoutes < summary.PrimaryLinkCount {
+		add("browser_primary_links_without_explicit_route", "warning", fmt.Sprintf("Some primary architecture path links do not use explicit route points: %d/%d explicit.", summary.PrimaryExplicitRoutes, summary.PrimaryLinkCount), "Give every primary path a route with at least two grid points so the golden example remains hand laid out.", "add_primary_explicit_routes")
+	}
+	if hasArchitectureFlowGroup && summary.OverviewLinkLabels > 7 {
+		add("browser_overview_link_labels_too_many", "warning", fmt.Sprintf("Too many relation labels are visible in the overview: %d.", summary.OverviewLinkLabels), "Keep the golden overview to 5-7 high-value relation labels.", "reduce_golden_overview_link_labels")
+	}
+	if hasArchitectureFlowGroup && summary.RelationPaletteSize > 5 {
+		add("browser_relation_palette_too_noisy", "warning", fmt.Sprintf("The relation layer uses too many stroke colors: %d.", summary.RelationPaletteSize), "Constrain relation colors to primary, secondary, auxiliary, and one or two muted accents.", "reduce_relation_palette")
+	}
+	if hasArchitectureFlowGroup && totalDeclaredLinks >= 12 && summary.ExplicitRouteLinks < 12 {
+		add("browser_heuristic_routes_too_many_for_golden_example", "warning", fmt.Sprintf("The golden architecture example has too few explicit relation routes: %d explicit, %d heuristic.", summary.ExplicitRouteLinks, summary.HeuristicRouteLinks), "Add explicit route arrays to at least 12 important links; prefer explicit routes for all golden example links.", "add_golden_explicit_routes")
+	}
 	if totalDeclaredLinks > 0 && !summary.SVGRelationLayer {
 		add("browser_svg_relation_layer_missing", "error", "The SVG relation overlay layer is missing.", "Render relation routes through .visual-isometric-relation-svg above the canvas.", "restore_svg_relation_layer")
 	}

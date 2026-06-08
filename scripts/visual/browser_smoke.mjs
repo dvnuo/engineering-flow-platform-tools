@@ -219,6 +219,10 @@ const expression = `(() => {
   const visibleAuxiliaryLinkLabelCount = linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "auxiliary").length;
   const routeGroups = Array.from(new Set(linkData.map(pathGroupOf))).filter(Boolean).sort();
   const primaryPathGroupsVisible = Array.from(new Set(linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").map((node) => node.getAttribute("data-path-group") || ""))).filter(Boolean).sort();
+  const hasExplicitRoute = (link) => Array.isArray(link?.route) && link.route.length >= 2;
+  const explicitRouteLinkCount = linkData.filter(hasExplicitRoute).length;
+  const heuristicRouteLinkCount = Math.max(0, linkData.length - explicitRouteLinkCount);
+  const primaryExplicitRouteCount = linkData.filter((link) => roleOf(link) === "primary" && hasExplicitRoute(link)).length;
   const inspector = q(".visual-isometric-inspector");
   const inspectorRawJSONDefault = !!inspector?.querySelector(":scope > pre");
   const isVisibleSvgPath = (node) => {
@@ -237,6 +241,17 @@ const expression = `(() => {
   const svgAuxiliaryLinkPathCount = svgLinkPathNodes.filter((node) => node.getAttribute("data-role") === "auxiliary").length;
   const linkPathsWithMarkerCount = svgLinkPathNodes.filter((node) => !!node.getAttribute("marker-end")).length;
   const linkPathsWithoutMarkerCount = svgLinkPathNodes.filter((node) => !node.getAttribute("marker-end")).length;
+  const relationColorPalette = Array.from(new Set(svgLinkPathNodes.map((node) => {
+    const style = getComputedStyle(node);
+    return (style.stroke && style.stroke !== "none") ? style.stroke : (node.style.getPropertyValue("--relation-stroke") || "");
+  }).filter(Boolean))).sort();
+  const visibleAuxiliaryOpacityValues = svgLinkPathNodes
+    .filter((node) => node.getAttribute("data-role") === "auxiliary" && isVisibleSvgPath(node))
+    .map((node) => Number(getComputedStyle(node).opacity || 1))
+    .filter((value) => Number.isFinite(value));
+  const visibleAuxiliaryOpacityAverage = visibleAuxiliaryOpacityValues.length
+    ? Math.round((visibleAuxiliaryOpacityValues.reduce((sum, value) => sum + value, 0) / visibleAuxiliaryOpacityValues.length) * 100) / 100
+    : 0;
   const summary = {
     title: document.title || "",
     template: q("[data-visual-template]")?.getAttribute("data-visual-template") || "",
@@ -259,12 +274,20 @@ const expression = `(() => {
     secondaryLinkCount,
     auxiliaryLinkCount,
     visiblePrimaryLinkLabelCount,
+    primaryVisibleLabelCount: visiblePrimaryLinkLabelCount,
     visibleSecondaryLinkLabelCount,
     visibleAuxiliaryLinkLabelCount,
+    overviewLinkLabelCount: linkLabelNodes.filter(isVisible).length,
     linkOpacityBuckets: { strong: primaryLinkCount, medium: secondaryLinkCount, low: auxiliaryLinkCount },
     zoneCountVisible: zoneLabelNodes.filter(isVisible).length,
     primaryPathGroupsVisible,
     routeGroups,
+    explicitRouteLinkCount,
+    heuristicRouteLinkCount,
+    primaryExplicitRouteCount,
+    relationColorPaletteSize: relationColorPalette.length,
+    relationColorPalette,
+    visibleAuxiliaryOpacityAverage,
     inspectorRawJSONDefault,
     svgRelationLayerPresent: !!relationLayer,
     svgLinkPathCount: svgLinkPathNodes.length,

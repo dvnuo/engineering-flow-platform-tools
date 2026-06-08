@@ -15,235 +15,235 @@
   "camera": {
     "mode": "orthographic_isometric",
     "position": {
-      "x": 31,
-      "y": 23,
-      "z": 27
+      "x": 32,
+      "y": 24,
+      "z": 28
     },
     "target": {
-      "x": 18.2,
+      "x": 18.8,
       "y": 0,
-      "z": 9.1
+      "z": 9.3
     },
-    "zoom": 1.16
+    "zoom": 1.08
   },
   "zones": [
     {
       "id": "client-zone",
-      "label": "Client Zone",
+      "label": "CLIENT ZONE",
       "bounds": {
-        "x": 0,
-        "y": 0.8,
-        "w": 4.8,
-        "h": 4.5
+        "x": 0.5,
+        "y": 0.6,
+        "w": 5.2,
+        "h": 5.2
       },
       "style": "dashed",
       "importance": 0.75,
       "presentation": {
         "boundary": "dashed",
-        "fill": "#eff6ff",
-        "fillOpacity": 0.055,
-        "color": "#3b82f6",
+        "fill": "#f8fafc",
+        "fillOpacity": 0.045,
+        "color": "#64748b",
         "labelPoint": {
-          "x": 0.55,
-          "y": 4.95
+          "x": 0.9,
+          "y": 5.35
         }
       }
     },
     {
       "id": "edge-zone",
-      "label": "Edge Zone",
+      "label": "EDGE ZONE",
       "bounds": {
-        "x": 6,
-        "y": 3,
-        "w": 3.8,
-        "h": 4.5
+        "x": 6.8,
+        "y": 3.2,
+        "w": 4.2,
+        "h": 4.4
       },
       "style": "solid",
       "importance": 0.75,
       "presentation": {
-        "boundary": "solid",
-        "fill": "#f0fdf4",
-        "fillOpacity": 0.055,
-        "color": "#16a34a",
+        "boundary": "dashed",
+        "fill": "#f8fafc",
+        "fillOpacity": 0.045,
+        "color": "#475569",
         "labelPoint": {
-          "x": 6.25,
-          "y": 7.1
+          "x": 7.2,
+          "y": 7.2
         }
       }
     },
     {
       "id": "gateway-zone",
-      "label": "Gateway Zone",
+      "label": "GATEWAY ZONE",
       "bounds": {
-        "x": 11.3,
+        "x": 12.4,
         "y": 4.2,
-        "w": 5.1,
-        "h": 5.1
+        "w": 5.2,
+        "h": 5.2
       },
       "style": "solid",
       "importance": 0.75,
       "presentation": {
         "boundary": "solid",
         "fill": "#f8fafc",
-        "fillOpacity": 0.055,
-        "color": "#334155",
+        "fillOpacity": 0.045,
+        "color": "#475569",
         "labelPoint": {
-          "x": 11.65,
-          "y": 8.75
+          "x": 12.8,
+          "y": 8.85
         }
       }
     },
     {
       "id": "registry-zone",
-      "label": "Registry Zone",
+      "label": "REGISTRY ZONE",
       "bounds": {
-        "x": 22,
-        "y": 0.6,
-        "w": 7.5,
-        "h": 4.5
+        "x": 29,
+        "y": 1,
+        "w": 7.6,
+        "h": 5.2
       },
       "style": "dashed",
       "importance": 0.75,
       "presentation": {
         "boundary": "dashed",
-        "fill": "#ecfeff",
-        "fillOpacity": 0.055,
-        "color": "#0891b2",
+        "fill": "#f0fdfa",
+        "fillOpacity": 0.045,
+        "color": "#0f766e",
         "labelPoint": {
-          "x": 22.35,
-          "y": 4.55
+          "x": 29.4,
+          "y": 5.75
         }
       }
     },
     {
       "id": "service-zone",
-      "label": "Service Zone",
+      "label": "SERVICE ZONE",
       "bounds": {
-        "x": 18.3,
-        "y": 5.5,
-        "w": 8.6,
-        "h": 7.3
+        "x": 19.2,
+        "y": 5.8,
+        "w": 8.4,
+        "h": 6.8
       },
       "style": "solid",
       "importance": 0.75,
       "presentation": {
-        "boundary": "solid",
-        "fill": "#eef2ff",
-        "fillOpacity": 0.055,
-        "color": "#4f46e5",
+        "boundary": "dashed",
+        "fill": "#f8fafc",
+        "fillOpacity": 0.045,
+        "color": "#475569",
         "labelPoint": {
-          "x": 18.65,
-          "y": 12.25
+          "x": 19.6,
+          "y": 12.15
         }
       }
     },
     {
       "id": "cache-zone",
-      "label": "Cache Zone",
+      "label": "CACHE ZONE",
       "bounds": {
-        "x": 30,
-        "y": 7.1,
-        "w": 5,
-        "h": 4.8
+        "x": 30.6,
+        "y": 8.2,
+        "w": 6,
+        "h": 4.6
       },
       "style": "dashed",
       "importance": 0.55,
       "presentation": {
         "boundary": "dashed",
-        "fill": "#fef2f2",
-        "fillOpacity": 0.055,
-        "color": "#dc2626",
+        "fill": "#fff7f7",
+        "fillOpacity": 0.045,
+        "color": "#7f1d1d",
         "labelPoint": {
-          "x": 30.25,
-          "y": 11.45
+          "x": 31,
+          "y": 12.25
         }
       }
     },
     {
       "id": "database-zone",
-      "label": "Database Zone",
+      "label": "DATABASE ZONE",
       "bounds": {
-        "x": 22.4,
-        "y": 13,
-        "w": 7,
-        "h": 4
+        "x": 23.2,
+        "y": 14,
+        "w": 6.8,
+        "h": 4.3
       },
       "style": "solid",
       "importance": 0.55,
       "presentation": {
         "boundary": "solid",
-        "fill": "#eff6ff",
-        "fillOpacity": 0.055,
-        "color": "#2563eb",
+        "fill": "#f8fafc",
+        "fillOpacity": 0.045,
+        "color": "#334155",
         "labelPoint": {
-          "x": 22.7,
-          "y": 16.55
+          "x": 23.6,
+          "y": 17.9
         }
       }
     },
     {
       "id": "storage-zone",
-      "label": "Storage Zone",
+      "label": "STORAGE ZONE",
       "bounds": {
-        "x": 13.1,
-        "y": 13,
-        "w": 7.4,
-        "h": 4.2
+        "x": 13.4,
+        "y": 14,
+        "w": 7.6,
+        "h": 4.5
       },
       "style": "dashed",
       "importance": 0.55,
       "presentation": {
         "boundary": "dashed",
-        "fill": "#f0fdf4",
-        "fillOpacity": 0.055,
-        "color": "#16a34a",
+        "fill": "#f8fafc",
+        "fillOpacity": 0.045,
+        "color": "#334155",
         "labelPoint": {
-          "x": 13.45,
-          "y": 16.75
+          "x": 13.8,
+          "y": 18.05
         }
       }
     },
     {
       "id": "observability-zone",
-      "label": "Observability Zone",
+      "label": "OBSERVABILITY ZONE",
       "bounds": {
-        "x": 30,
-        "y": 13.2,
-        "w": 6,
-        "h": 4
+        "x": 31,
+        "y": 14.2,
+        "w": 6.3,
+        "h": 4.4
       },
       "style": "dashed",
       "importance": 0.55,
       "presentation": {
         "boundary": "dashed",
-        "fill": "#fffbeb",
-        "fillOpacity": 0.055,
-        "color": "#d97706",
+        "fill": "#f8fafc",
+        "fillOpacity": 0.045,
+        "color": "#64748b",
         "labelPoint": {
-          "x": 30.25,
-          "y": 16.8
+          "x": 31.35,
+          "y": 18.1
         }
       }
     },
     {
       "id": "admin-zone",
-      "label": "Admin Zone",
+      "label": "ADMIN ZONE",
       "bounds": {
-        "x": 4.8,
-        "y": 11.6,
-        "w": 6,
+        "x": 5.8,
+        "y": 12.3,
+        "w": 5.4,
         "h": 4.2
       },
       "style": "dashed",
       "importance": 0.55,
       "presentation": {
         "boundary": "dashed",
-        "fill": "#fff7ed",
-        "fillOpacity": 0.055,
-        "color": "#ea580c",
+        "fill": "#f8fafc",
+        "fillOpacity": 0.045,
+        "color": "#64748b",
         "labelPoint": {
-          "x": 5.1,
-          "y": 15.3
+          "x": 6.2,
+          "y": 16.05
         }
       }
     }
@@ -255,8 +255,8 @@
       "kind": "pc",
       "zone": "client-zone",
       "position": {
-        "x": 1.2,
-        "y": 1.8
+        "x": 1.4,
+        "y": 1.5
       },
       "importance": 0.9,
       "summary": "Desktop browser client.",
@@ -283,8 +283,8 @@
       "kind": "mobile",
       "zone": "client-zone",
       "position": {
-        "x": 2.6,
-        "y": 2.9
+        "x": 2.7,
+        "y": 3.3
       },
       "importance": 0.72,
       "summary": "Mobile app client.",
@@ -306,8 +306,8 @@
       "kind": "cdn",
       "zone": "client-zone",
       "position": {
-        "x": 3.5,
-        "y": 4.1
+        "x": 4.4,
+        "y": 4.5
       },
       "importance": 0.84,
       "summary": "Static resource edge cache.",
@@ -334,11 +334,10 @@
       "kind": "nginx",
       "zone": "edge-zone",
       "position": {
-        "x": 7.9,
-        "y": 5.35
+        "x": 8.9,
+        "y": 5.2
       },
       "importance": 0.96,
-      "labelPriority": "always",
       "summary": "Reverse proxy and edge routing.",
       "size": {
         "w": 1.05,
@@ -355,7 +354,8 @@
           "y": 0.24,
           "z": -0.46
         }
-      }
+      },
+      "labelPriority": "always"
     },
     {
       "id": "api-gateway",
@@ -363,11 +363,10 @@
       "kind": "api_gateway",
       "zone": "gateway-zone",
       "position": {
-        "x": 13.9,
-        "y": 6.7
+        "x": 15.2,
+        "y": 6.4
       },
       "importance": 0.97,
-      "labelPriority": "always",
       "summary": "Central API ingress for services.",
       "size": {
         "w": 1.05,
@@ -383,7 +382,8 @@
           "y": 0.34,
           "z": -0.92
         }
-      }
+      },
+      "labelPriority": "always"
     },
     {
       "id": "nacos-1",
@@ -391,12 +391,11 @@
       "kind": "nacos",
       "zone": "registry-zone",
       "position": {
-        "x": 23.2,
-        "y": 1.8
+        "x": 30.4,
+        "y": 2
       },
       "summary": "Registry node.",
       "importance": 0.82,
-      "labelPriority": "always",
       "size": {
         "w": 1.05,
         "d": 1.05,
@@ -411,7 +410,8 @@
           "y": 0.24,
           "z": -0.58
         }
-      }
+      },
+      "labelPriority": "always"
     },
     {
       "id": "nacos-2",
@@ -419,12 +419,11 @@
       "kind": "nacos",
       "zone": "registry-zone",
       "position": {
-        "x": 27.4,
-        "y": 1.8
+        "x": 34.2,
+        "y": 2
       },
       "summary": "Registry node.",
       "importance": 0.72,
-      "visibility": "detail",
       "size": {
         "w": 1.05,
         "d": 1.05,
@@ -434,7 +433,8 @@
         "icon": "generic.registry",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "visibility": "detail"
     },
     {
       "id": "nacos-3",
@@ -442,12 +442,11 @@
       "kind": "nacos",
       "zone": "registry-zone",
       "position": {
-        "x": 25.3,
-        "y": 3.7
+        "x": 32.3,
+        "y": 4.2
       },
       "summary": "Registry node.",
       "importance": 0.72,
-      "visibility": "detail",
       "size": {
         "w": 1.05,
         "d": 1.05,
@@ -457,7 +456,8 @@
         "icon": "generic.registry",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "visibility": "detail"
     },
     {
       "id": "springboot-admin",
@@ -465,8 +465,8 @@
       "kind": "admin",
       "zone": "admin-zone",
       "position": {
-        "x": 7.4,
-        "y": 13.35
+        "x": 8.1,
+        "y": 14
       },
       "summary": "Admin and health-check console.",
       "importance": 0.62,
@@ -493,8 +493,8 @@
       "kind": "microservice",
       "zone": "service-zone",
       "position": {
-        "x": 19.3,
-        "y": 6.3
+        "x": 20.8,
+        "y": 6.6
       },
       "importance": 0.92,
       "summary": "Primary business service.",
@@ -522,8 +522,8 @@
       "kind": "microservice",
       "zone": "service-zone",
       "position": {
-        "x": 22,
-        "y": 6.3
+        "x": 23.6,
+        "y": 6.6
       },
       "summary": "Business service dependency.",
       "importance": 0.72,
@@ -546,8 +546,8 @@
       "kind": "microservice",
       "zone": "service-zone",
       "position": {
-        "x": 24.8,
-        "y": 6.8
+        "x": 26.1,
+        "y": 6.9
       },
       "summary": "Business service dependency.",
       "importance": 0.62,
@@ -570,8 +570,8 @@
       "kind": "microservice",
       "zone": "service-zone",
       "position": {
-        "x": 20,
-        "y": 10.1
+        "x": 21.8,
+        "y": 10.5
       },
       "summary": "Business service dependency.",
       "importance": 0.62,
@@ -594,8 +594,8 @@
       "kind": "microservice",
       "zone": "service-zone",
       "position": {
-        "x": 23.3,
-        "y": 10.2
+        "x": 24.8,
+        "y": 10.5
       },
       "summary": "Business service dependency.",
       "importance": 0.62,
@@ -618,8 +618,8 @@
       "kind": "redis",
       "zone": "cache-zone",
       "position": {
-        "x": 31,
-        "y": 8.2
+        "x": 31.8,
+        "y": 9.1
       },
       "summary": "Cache primary.",
       "importance": 0.82,
@@ -647,12 +647,11 @@
       "kind": "redis",
       "zone": "cache-zone",
       "position": {
-        "x": 32.8,
-        "y": 9.4
+        "x": 34.2,
+        "y": 9.2
       },
       "summary": "Cache replica.",
       "importance": 0.62,
-      "visibility": "detail",
       "size": {
         "w": 1.05,
         "d": 1.05,
@@ -663,7 +662,8 @@
         "model": "redis.logo3d",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "visibility": "detail"
     },
     {
       "id": "redis-3",
@@ -671,12 +671,11 @@
       "kind": "redis",
       "zone": "cache-zone",
       "position": {
-        "x": 30.9,
-        "y": 10.7
+        "x": 33,
+        "y": 11.1
       },
       "summary": "Cache replica.",
       "importance": 0.62,
-      "visibility": "detail",
       "size": {
         "w": 1.05,
         "d": 1.05,
@@ -687,7 +686,8 @@
         "model": "redis.logo3d",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "visibility": "detail"
     },
     {
       "id": "mysql-master",
@@ -695,8 +695,8 @@
       "kind": "mysql",
       "zone": "database-zone",
       "position": {
-        "x": 24.4,
-        "y": 14.3
+        "x": 25,
+        "y": 15.2
       },
       "importance": 0.88,
       "summary": "Primary database.",
@@ -724,8 +724,8 @@
       "kind": "mysql",
       "zone": "database-zone",
       "position": {
-        "x": 27.2,
-        "y": 15
+        "x": 28,
+        "y": 15.8
       },
       "summary": "Read replica.",
       "importance": 0.64,
@@ -753,8 +753,8 @@
       "kind": "oss",
       "zone": "storage-zone",
       "position": {
-        "x": 14.4,
-        "y": 14
+        "x": 14.8,
+        "y": 15
       },
       "summary": "Object storage.",
       "importance": 0.7,
@@ -776,12 +776,11 @@
       "kind": "file_storage",
       "zone": "storage-zone",
       "position": {
-        "x": 17.1,
-        "y": 15.1
+        "x": 17.4,
+        "y": 16
       },
       "summary": "Distributed file storage.",
       "importance": 0.54,
-      "visibility": "detail",
       "size": {
         "w": 0.9,
         "d": 0.9,
@@ -791,7 +790,8 @@
         "icon": "generic.storage",
         "label": "top",
         "leaderLine": true
-      }
+      },
+      "visibility": "detail"
     },
     {
       "id": "block-storage",
@@ -799,17 +799,17 @@
       "kind": "block_storage",
       "zone": "storage-zone",
       "position": {
-        "x": 19.8,
-        "y": 14.1
+        "x": 20,
+        "y": 15
       },
       "summary": "Block storage volume.",
       "importance": 0.54,
-      "visibility": "detail",
       "size": {
         "w": 0.9,
         "d": 0.9,
         "h": 1.1
-      }
+      },
+      "visibility": "detail"
     },
     {
       "id": "logstash",
@@ -817,8 +817,8 @@
       "kind": "log",
       "zone": "observability-zone",
       "position": {
-        "x": 31.1,
-        "y": 14.5
+        "x": 32.2,
+        "y": 15.1
       },
       "summary": "Log collector.",
       "importance": 0.52,
@@ -840,8 +840,8 @@
       "kind": "elasticsearch",
       "zone": "observability-zone",
       "position": {
-        "x": 33.9,
-        "y": 15.4
+        "x": 35,
+        "y": 16.1
       },
       "summary": "Search and log index.",
       "importance": 0.62,
@@ -874,12 +874,20 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 5.25,
-          "y": 1.8
+          "x": 3.8,
+          "y": 1.5
         },
         {
-          "x": 5.25,
-          "y": 5.35
+          "x": 5.8,
+          "y": 1.5
+        },
+        {
+          "x": 5.8,
+          "y": 5.2
+        },
+        {
+          "x": 7.5,
+          "y": 5.2
         }
       ],
       "routeStyle": "orthogonal",
@@ -889,12 +897,19 @@
         "arrow": "forward",
         "lineStyle": "solid",
         "role": "primary",
-        "pathGroup": "entry"
+        "pathGroup": "entry",
+        "color": "#111827",
+        "opacity": 0.95,
+        "width": 5,
+        "arrowSize": "large"
       },
       "role": "primary",
       "pathGroup": "entry",
       "summary": "Primary browser API entry path.",
-      "visibility": "overview"
+      "visibility": "overview",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "mobile-to-nginx",
@@ -905,12 +920,20 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 5,
-          "y": 2.9
+          "x": 4.8,
+          "y": 3.3
         },
         {
-          "x": 5,
-          "y": 5.1
+          "x": 5.55,
+          "y": 3.3
+        },
+        {
+          "x": 5.55,
+          "y": 5
+        },
+        {
+          "x": 7.5,
+          "y": 5
         }
       ],
       "routeStyle": "orthogonal",
@@ -920,10 +943,18 @@
         "arrow": "forward",
         "lineStyle": "solid",
         "role": "secondary",
-        "pathGroup": "entry"
+        "pathGroup": "entry",
+        "color": "#334155",
+        "opacity": 0.56,
+        "width": 3,
+        "arrowSize": "medium"
       },
       "role": "secondary",
-      "pathGroup": "entry"
+      "pathGroup": "entry",
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "cdn-to-nginx-static",
@@ -934,12 +965,20 @@
       "kind": "static_resource",
       "route": [
         {
-          "x": 5.55,
-          "y": 4.1
+          "x": 5.6,
+          "y": 4.5
         },
         {
-          "x": 5.55,
-          "y": 5.35
+          "x": 6.1,
+          "y": 4.5
+        },
+        {
+          "x": 6.1,
+          "y": 5.45
+        },
+        {
+          "x": 7.5,
+          "y": 5.45
         }
       ],
       "routeStyle": "orthogonal",
@@ -947,13 +986,20 @@
         "arrow": "forward",
         "lineStyle": "solid",
         "role": "secondary",
-        "pathGroup": "entry"
+        "pathGroup": "entry",
+        "color": "#334155",
+        "opacity": 0.56,
+        "width": 3,
+        "arrowSize": "medium"
       },
       "importance": 0.65,
       "visibility": "detail",
       "role": "secondary",
       "pathGroup": "entry",
-      "labelPriority": "important"
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "nginx-to-gateway",
@@ -964,12 +1010,20 @@
       "kind": "reverse_proxy",
       "route": [
         {
-          "x": 10.35,
-          "y": 5.35
+          "x": 10.6,
+          "y": 5.2
         },
         {
-          "x": 10.35,
-          "y": 6.7
+          "x": 12,
+          "y": 5.2
+        },
+        {
+          "x": 12,
+          "y": 6.4
+        },
+        {
+          "x": 13.8,
+          "y": 6.4
         }
       ],
       "routeStyle": "orthogonal",
@@ -979,12 +1033,19 @@
         "arrow": "forward",
         "lineStyle": "solid",
         "role": "primary",
-        "pathGroup": "gateway"
+        "pathGroup": "gateway",
+        "color": "#111827",
+        "opacity": 0.95,
+        "width": 5,
+        "arrowSize": "large"
       },
       "role": "primary",
       "pathGroup": "gateway",
       "summary": "Primary reverse proxy to gateway route.",
-      "visibility": "overview"
+      "visibility": "overview",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "nginx-to-cdn-static",
@@ -996,15 +1057,32 @@
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid",
+        "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "entry"
+        "pathGroup": "entry",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.28,
       "visibility": "detail",
       "labelPriority": "hidden",
       "role": "auxiliary",
-      "pathGroup": "entry"
+      "pathGroup": "entry",
+      "route": [
+        {
+          "x": 8,
+          "y": 4.55
+        },
+        {
+          "x": 5.2,
+          "y": 4.55
+        }
+      ],
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "gateway-to-service-a",
@@ -1015,8 +1093,12 @@
       "kind": "load_balancing",
       "route": [
         {
-          "x": 16.7,
-          "y": 6.7
+          "x": 17.6,
+          "y": 6.4
+        },
+        {
+          "x": 19.2,
+          "y": 6.4
         }
       ],
       "routeStyle": "orthogonal",
@@ -1026,12 +1108,19 @@
         "arrow": "forward",
         "lineStyle": "solid",
         "role": "primary",
-        "pathGroup": "gateway"
+        "pathGroup": "gateway",
+        "color": "#111827",
+        "opacity": 0.95,
+        "width": 5,
+        "arrowSize": "large"
       },
       "role": "primary",
       "pathGroup": "gateway",
       "summary": "Gateway routes the main request to Service A.",
-      "visibility": "overview"
+      "visibility": "overview",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "gateway-to-service-b",
@@ -1042,8 +1131,20 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 16.85,
-          "y": 7.25
+          "x": 17.8,
+          "y": 6.9
+        },
+        {
+          "x": 19,
+          "y": 6.9
+        },
+        {
+          "x": 19,
+          "y": 7.35
+        },
+        {
+          "x": 22.2,
+          "y": 7.35
         }
       ],
       "routeStyle": "orthogonal",
@@ -1051,12 +1152,20 @@
         "arrow": "forward",
         "lineStyle": "solid",
         "role": "secondary",
-        "pathGroup": "gateway"
+        "pathGroup": "gateway",
+        "color": "#334155",
+        "opacity": 0.56,
+        "width": 3,
+        "arrowSize": "medium"
       },
       "importance": 0.46,
       "visibility": "detail",
       "role": "secondary",
-      "pathGroup": "gateway"
+      "pathGroup": "gateway",
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "gateway-to-service-c",
@@ -1067,8 +1176,20 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 16.85,
-          "y": 8
+          "x": 17.8,
+          "y": 7.25
+        },
+        {
+          "x": 19,
+          "y": 7.25
+        },
+        {
+          "x": 19,
+          "y": 8.2
+        },
+        {
+          "x": 25,
+          "y": 8.2
         }
       ],
       "routeStyle": "orthogonal",
@@ -1076,12 +1197,20 @@
         "arrow": "forward",
         "lineStyle": "solid",
         "role": "secondary",
-        "pathGroup": "gateway"
+        "pathGroup": "gateway",
+        "color": "#334155",
+        "opacity": 0.56,
+        "width": 3,
+        "arrowSize": "medium"
       },
       "importance": 0.42,
       "visibility": "detail",
       "role": "secondary",
-      "pathGroup": "gateway"
+      "pathGroup": "gateway",
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "services-to-nacos-a",
@@ -1092,25 +1221,41 @@
       "kind": "registering_service",
       "route": [
         {
-          "x": 19.3,
-          "y": 4.65
+          "x": 20.8,
+          "y": 5.4
         },
         {
-          "x": 23.2,
-          "y": 4.65
+          "x": 20.8,
+          "y": 4.7
+        },
+        {
+          "x": 28.6,
+          "y": 4.7
+        },
+        {
+          "x": 30.4,
+          "y": 3
         }
       ],
-      "routeStyle": "polyline",
+      "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
         "lineStyle": "dashed",
         "role": "secondary",
-        "pathGroup": "registry"
+        "pathGroup": "registry",
+        "color": "#0f766e",
+        "opacity": 0.56,
+        "width": 3,
+        "arrowSize": "medium"
       },
       "importance": 0.82,
       "labelPriority": "important",
       "role": "secondary",
-      "pathGroup": "registry"
+      "pathGroup": "registry",
+      "visibility": "overview",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "services-to-nacos-b",
@@ -1121,25 +1266,41 @@
       "kind": "register",
       "route": [
         {
-          "x": 22,
+          "x": 23.6,
+          "y": 5.25
+        },
+        {
+          "x": 23.6,
           "y": 4.35
         },
         {
-          "x": 27.4,
+          "x": 33.9,
           "y": 4.35
+        },
+        {
+          "x": 34.2,
+          "y": 3
         }
       ],
-      "routeStyle": "polyline",
+      "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
         "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "registry"
+        "pathGroup": "registry",
+        "color": "#0f766e",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.34,
       "visibility": "detail",
       "role": "auxiliary",
-      "pathGroup": "registry"
+      "pathGroup": "registry",
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "gateway-pulls-nacos",
@@ -1150,25 +1311,37 @@
       "kind": "pull_consumption",
       "route": [
         {
-          "x": 13.9,
+          "x": 15.2,
           "y": 3.9
         },
         {
-          "x": 25.3,
+          "x": 28.8,
           "y": 3.9
+        },
+        {
+          "x": 32.3,
+          "y": 4.2
         }
       ],
-      "routeStyle": "polyline",
+      "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
         "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "registry"
+        "pathGroup": "registry",
+        "color": "#0f766e",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.32,
       "visibility": "detail",
       "role": "auxiliary",
-      "pathGroup": "registry"
+      "pathGroup": "registry",
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "admin-health-service-a",
@@ -1179,16 +1352,20 @@
       "kind": "health_check",
       "route": [
         {
-          "x": 11,
-          "y": 13.35
+          "x": 11.4,
+          "y": 14
         },
         {
-          "x": 11,
-          "y": 10.4
+          "x": 11.4,
+          "y": 11.5
         },
         {
-          "x": 18.2,
-          "y": 10.4
+          "x": 19,
+          "y": 11.5
+        },
+        {
+          "x": 20.8,
+          "y": 10
         }
       ],
       "routeStyle": "orthogonal",
@@ -1196,12 +1373,20 @@
         "arrow": "forward",
         "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "health"
+        "pathGroup": "health",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.32,
-      "visibility": "detail",
+      "visibility": "overview",
       "role": "auxiliary",
-      "pathGroup": "health"
+      "pathGroup": "health",
+      "labelPriority": "important",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "service-a-to-redis",
@@ -1212,12 +1397,16 @@
       "kind": "data_cache",
       "route": [
         {
-          "x": 19.3,
-          "y": 12.35
+          "x": 20.8,
+          "y": 12.7
         },
         {
-          "x": 31,
-          "y": 12.35
+          "x": 31.8,
+          "y": 12.7
+        },
+        {
+          "x": 31.8,
+          "y": 10.2
         }
       ],
       "routeStyle": "orthogonal",
@@ -1227,10 +1416,18 @@
         "arrow": "forward",
         "lineStyle": "solid",
         "role": "secondary",
-        "pathGroup": "cache"
+        "pathGroup": "cache",
+        "color": "#334155",
+        "opacity": 0.56,
+        "width": 3,
+        "arrowSize": "medium"
       },
       "role": "secondary",
-      "pathGroup": "cache"
+      "pathGroup": "cache",
+      "visibility": "overview",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "service-b-to-redis",
@@ -1241,83 +1438,119 @@
       "kind": "data_cache",
       "route": [
         {
-          "x": 22,
-          "y": 12.05
+          "x": 23.6,
+          "y": 12.45
         },
         {
-          "x": 32.8,
-          "y": 12.05
+          "x": 34.2,
+          "y": 12.45
+        },
+        {
+          "x": 34.2,
+          "y": 10.3
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid",
+        "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "cache"
+        "pathGroup": "cache",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.3,
       "visibility": "detail",
       "role": "auxiliary",
-      "pathGroup": "cache"
+      "pathGroup": "cache",
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "service-a-to-mysql",
       "from": "microservice-a",
       "to": "mysql-master",
-      "label": "Store",
+      "label": "Data",
       "directed": true,
       "kind": "data_storage",
       "route": [
         {
-          "x": 19.3,
-          "y": 12.8
+          "x": 20.8,
+          "y": 13.2
         },
         {
-          "x": 24.4,
-          "y": 12.8
+          "x": 25,
+          "y": 13.2
+        },
+        {
+          "x": 25,
+          "y": 14.2
         }
       ],
       "routeStyle": "orthogonal",
       "importance": 0.9,
-      "labelPriority": "always",
+      "labelPriority": "important",
       "presentation": {
         "arrow": "forward",
         "lineStyle": "solid",
         "role": "secondary",
-        "pathGroup": "data"
+        "pathGroup": "data",
+        "color": "#334155",
+        "opacity": 0.56,
+        "width": 3,
+        "arrowSize": "medium"
       },
       "role": "secondary",
-      "pathGroup": "data"
+      "pathGroup": "data",
+      "visibility": "overview",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "service-d-to-mysql",
       "from": "microservice-d",
       "to": "mysql-master",
-      "label": "Store",
+      "label": "Data",
       "directed": true,
       "kind": "data_storage",
       "route": [
         {
-          "x": 20,
-          "y": 12.55
+          "x": 21.8,
+          "y": 13.45
         },
         {
-          "x": 24.4,
-          "y": 12.55
+          "x": 24.7,
+          "y": 13.45
+        },
+        {
+          "x": 24.7,
+          "y": 14.2
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid",
+        "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "data"
+        "pathGroup": "data",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.32,
       "visibility": "detail",
       "role": "auxiliary",
-      "pathGroup": "data"
+      "pathGroup": "data",
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "mysql-master-to-slave",
@@ -1328,50 +1561,74 @@
       "kind": "replication",
       "route": [
         {
-          "x": 25.8,
-          "y": 14.3
+          "x": 26.3,
+          "y": 15.2
+        },
+        {
+          "x": 26.8,
+          "y": 15.8
         }
       ],
       "routeStyle": "orthogonal",
       "importance": 0.78,
-      "labelPriority": "important",
+      "labelPriority": "hidden",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid",
-        "role": "secondary",
-        "pathGroup": "data"
+        "lineStyle": "dashed",
+        "role": "auxiliary",
+        "pathGroup": "data",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
-      "role": "secondary",
-      "pathGroup": "data"
+      "role": "auxiliary",
+      "pathGroup": "data",
+      "visibility": "detail",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "service-c-to-oss",
       "from": "microservice-c",
       "to": "oss",
-      "label": "File",
+      "label": "Storage",
       "directed": true,
       "kind": "distributed_file_service",
       "route": [
         {
-          "x": 24.8,
-          "y": 12.25
+          "x": 26.1,
+          "y": 13.55
         },
         {
-          "x": 14.4,
-          "y": 12.25
+          "x": 14.8,
+          "y": 13.55
+        },
+        {
+          "x": 14.8,
+          "y": 14.2
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid",
+        "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "storage"
+        "pathGroup": "storage",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.32,
       "visibility": "detail",
       "role": "auxiliary",
-      "pathGroup": "storage"
+      "pathGroup": "storage",
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "service-e-to-file-storage",
@@ -1382,25 +1639,37 @@
       "kind": "distributed_file_service",
       "route": [
         {
-          "x": 23.3,
-          "y": 12.05
+          "x": 24.8,
+          "y": 13.95
         },
         {
-          "x": 17.1,
-          "y": 12.05
+          "x": 17.4,
+          "y": 13.95
+        },
+        {
+          "x": 17.4,
+          "y": 15.15
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid",
+        "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "storage"
+        "pathGroup": "storage",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.28,
       "visibility": "detail",
       "role": "auxiliary",
-      "pathGroup": "storage"
+      "pathGroup": "storage",
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "service-d-to-block-storage",
@@ -1411,25 +1680,37 @@
       "kind": "distributed_file_service",
       "route": [
         {
-          "x": 20,
-          "y": 12.05
+          "x": 21.8,
+          "y": 13.75
         },
         {
-          "x": 19.8,
-          "y": 12.05
+          "x": 20,
+          "y": 13.75
+        },
+        {
+          "x": 20,
+          "y": 14.2
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid",
+        "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "storage"
+        "pathGroup": "storage",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.28,
       "visibility": "detail",
       "role": "auxiliary",
-      "pathGroup": "storage"
+      "pathGroup": "storage",
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "logstash-to-elasticsearch",
@@ -1440,8 +1721,12 @@
       "kind": "log_collection",
       "route": [
         {
-          "x": 32.4,
-          "y": 14.5
+          "x": 33.4,
+          "y": 15.1
+        },
+        {
+          "x": 35,
+          "y": 15.8
         }
       ],
       "routeStyle": "orthogonal",
@@ -1451,11 +1736,18 @@
         "arrow": "forward",
         "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "observability"
+        "pathGroup": "observability",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "role": "auxiliary",
       "pathGroup": "observability",
-      "visibility": "detail"
+      "visibility": "detail",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "service-a-feign-b",
@@ -1467,14 +1759,32 @@
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid",
+        "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "service"
+        "pathGroup": "service",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.28,
       "visibility": "detail",
       "role": "auxiliary",
-      "pathGroup": "service"
+      "pathGroup": "service",
+      "labelPriority": "hidden",
+      "route": [
+        {
+          "x": 21.8,
+          "y": 6.6
+        },
+        {
+          "x": 22.6,
+          "y": 6.6
+        }
+      ],
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "service-b-feign-c",
@@ -1486,14 +1796,32 @@
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid",
+        "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "service"
+        "pathGroup": "service",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.28,
       "visibility": "detail",
       "role": "auxiliary",
-      "pathGroup": "service"
+      "pathGroup": "service",
+      "labelPriority": "hidden",
+      "route": [
+        {
+          "x": 24.5,
+          "y": 6.6
+        },
+        {
+          "x": 25.2,
+          "y": 6.9
+        }
+      ],
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "service-c-feign-d",
@@ -1504,25 +1832,33 @@
       "kind": "feign_call",
       "route": [
         {
-          "x": 24.8,
-          "y": 11.1
+          "x": 26.1,
+          "y": 9.2
         },
         {
-          "x": 20,
-          "y": 11.1
+          "x": 21.8,
+          "y": 9.2
         }
       ],
-      "routeStyle": "polyline",
+      "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid",
+        "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "service"
+        "pathGroup": "service",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.28,
       "visibility": "detail",
       "role": "auxiliary",
-      "pathGroup": "service"
+      "pathGroup": "service",
+      "labelPriority": "hidden",
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     },
     {
       "id": "service-d-feign-e",
@@ -1534,14 +1870,32 @@
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "solid",
+        "lineStyle": "dashed",
         "role": "auxiliary",
-        "pathGroup": "service"
+        "pathGroup": "service",
+        "color": "#64748b",
+        "opacity": 0.26,
+        "width": 2,
+        "arrowSize": "small"
       },
       "importance": 0.28,
       "visibility": "detail",
       "role": "auxiliary",
-      "pathGroup": "service"
+      "pathGroup": "service",
+      "labelPriority": "hidden",
+      "route": [
+        {
+          "x": 22.7,
+          "y": 10.5
+        },
+        {
+          "x": 23.8,
+          "y": 10.5
+        }
+      ],
+      "metadata": {
+        "route_authoring": "explicit_golden_layout"
+      }
     }
   ],
   "annotations": [
@@ -1590,7 +1944,8 @@
     "labelMode": "overview",
     "showBoundaries": true,
     "showArrows": true,
-    "showLegend": true
+    "showLegend": true,
+    "colorBy": "role"
   },
   "visual": {
     "goal": "Read the topology as a drafted architecture map: client entry, edge proxy, gateway, service cluster, registry lane, data/cache/storage lanes, and peripheral health/observability.",
@@ -1663,13 +2018,14 @@
     ]
   },
   "renderHints": {
-    "colorBy": "pathGroup",
+    "colorBy": "role",
     "routeCollisionAvoidance": "bus-lane",
     "preferExplicitRoutes": true,
     "showLegend": true,
     "badgeMode": "icon_and_model",
     "badgeSize": "medium",
     "badgePlacement": "front",
-    "labelIcon": true
+    "labelIcon": true,
+    "palette": "engineering_drafting"
   }
 }

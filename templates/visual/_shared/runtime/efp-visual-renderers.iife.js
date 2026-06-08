@@ -5171,7 +5171,7 @@
     function computeOrthogonalRoute(link, fromEntity, toEntity, scene) {
       var route = Array.isArray(link.route) ? link.route : [];
       var ports = chooseLinkPorts(fromEntity, toEntity, link);
-      if (route.length) {
+      if (route.length >= 2) {
         return [ports.start].concat(route.map(function (point) {
           var world = isometricWorld(point, scale, center);
           return new THREE.Vector3(world.x, 0.07, world.z);

@@ -26,6 +26,8 @@ func pageCmd(o *Opts) *cobra.Command {
 		pageFetchCmd(o),
 		pageNetworkCmd(o),
 		pageOutlineCmd(o),
+		pageTableCmd(o),
+		pageListCmd(o),
 	)
 	return c
 }
@@ -295,6 +297,60 @@ func pageOutlineCmd(o *Opts) *cobra.Command {
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().IntVar(&opts.Limit, "limit", 100, "Maximum number of outline elements to return.")
 	c.Flags().BoolVar(&opts.IncludeHidden, "include-hidden", false, "Include hidden elements when deriving the page outline.")
+	return c
+}
+
+func pageTableCmd(o *Opts) *cobra.Command {
+	opts := automation.TableOptions{PageOptions: defaultPageOptions(), LimitRows: 50, LimitCells: 20}
+	c := &cobra.Command{
+		Use:   "table",
+		Short: "Extract structured page tables",
+		Long:  "Extract captions, headers, rows, cells, spans, and counts from tables in the selected page, with all returned text redacted and truncated.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Table(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "Optional CSS selector for a table or container whose tables should be extracted.")
+	c.Flags().IntVar(&opts.LimitRows, "limit-rows", 50, "Maximum number of rows to return per table.")
+	c.Flags().IntVar(&opts.LimitCells, "limit-cells", 20, "Maximum number of cells to return per row.")
+	c.Flags().BoolVar(&opts.IncludeHTML, "include-html", false, "Include a redacted and truncated table outer HTML preview.")
+	return c
+}
+
+func pageListCmd(o *Opts) *cobra.Command {
+	opts := automation.PageListOptions{PageOptions: defaultPageOptions(), LimitItems: 100}
+	c := &cobra.Command{
+		Use:   "list",
+		Short: "Extract structured page lists",
+		Long:  "Extract ordered, unordered, and role=list data from the selected page with redacted item text, hrefs, nesting level, and selector hints.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.PageList(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "Optional CSS selector for a list or container whose lists should be extracted.")
+	c.Flags().IntVar(&opts.LimitItems, "limit-items", 100, "Maximum number of items to return per list.")
 	return c
 }
 

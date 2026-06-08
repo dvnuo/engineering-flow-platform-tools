@@ -15,15 +15,22 @@ func TestWorkflowRecordFileRedactsTypedText(t *testing.T) {
 	events, file := workflowRecordFileFromEvents([]workflowRecordRawEvent{
 		{Action: "page.click", Selector: "button#go"},
 		{Action: "page.type", Selector: "input#secret", TextBytes: len("typed-secret")},
+		{Action: "page.select", Selector: "select#role", TextBytes: len("admin")},
 	}, "default", time.Unix(0, 0).UTC())
-	if len(events) != 2 || len(file.Steps) != 2 {
+	if len(events) != 3 || len(file.Steps) != 3 {
 		t.Fatalf("unexpected record file: %#v %#v", events, file)
 	}
 	if file.Steps[1].Text != "{{vars.recorded_text_1}}" || file.Vars["recorded_text_1"] != "" {
 		t.Fatalf("typed text placeholder not generated: %#v", file)
 	}
+	if file.Steps[2].Label != "{{vars.recorded_select_1}}" || file.Vars["recorded_select_1"] != "" {
+		t.Fatalf("selected option placeholder not generated: %#v", file)
+	}
 	if strings.Contains(file.Steps[1].Text, "typed-secret") {
 		t.Fatalf("typed text leaked: %#v", file.Steps[1])
+	}
+	if strings.Contains(file.Steps[2].Label, "admin") {
+		t.Fatalf("selected option leaked: %#v", file.Steps[2])
 	}
 }
 

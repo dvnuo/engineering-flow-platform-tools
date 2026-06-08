@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It can run one-shot probes, or keep a dedicated Edge/Chrome/Chromium automation session open for tab selection, redacted page reads, bounded page actions, assertions, workflows, screenshots, network exports, and performance metadata through DevTools.
+`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It can run one-shot probes, or keep a dedicated Edge/Chrome/Chromium automation session open for tab selection, redacted page reads, structured extraction, form automation, bounded page actions, assertions, workflows, screenshots, network exports, and performance metadata through DevTools.
 
 ## What It Verifies
 
@@ -11,12 +11,13 @@
 - A provided CSS selector appears after navigation.
 - Page title, final URL, screenshot, HTML, and network event summaries are available for diagnosis.
 - Optional page-context `fetch` can call an API with browser credentials included.
-- A persistent session can list/open/activate tabs, snapshot/extract redacted page content, inspect page structure, produce accessibility-style refs, assert page state, run whitelisted YAML workflows, read sanitized network timing summaries, record/export sanitized HAR-lite metadata, inspect performance timing metadata, inspect console/runtime errors, inspect frames, extract tables/lists, click/type/select/check/press/upload/wait, write page or visible-element screenshot artifacts, evaluate sanitized page expressions, run sanitized GET fetches with credentials omitted, and inspect download metadata.
+- A persistent session can list/open/activate tabs, attach to explicitly supplied local DevTools endpoints, snapshot/extract redacted page content, extract selector-declared schema fields, inspect page structure, produce accessibility-style refs, assert page state and screenshot baselines, record and run whitelisted YAML workflows, inspect/fill forms without echoing values, read sanitized network timing summaries, record/export sanitized HAR-lite metadata, inspect performance timing metadata, inspect console/runtime errors, inspect frames, extract tables/lists, click/type/select/check/press/upload/wait, write page or visible-element screenshot artifacts, evaluate sanitized page expressions, run sanitized GET fetches with credentials omitted, and inspect download metadata.
 
 ## What It Does Not Do
 
 - It does not read, decrypt, or export the user's default browser cookies or tokens.
-- It does not reuse the default Edge/Chrome profile.
+- It does not launch managed sessions with the default Edge/Chrome profile.
+- It does not discover arbitrary browser instances; `session discover` and `session attach` require explicit `127.0.0.1` DevTools ports.
 - It does not bypass MFA, Conditional Access, or enterprise browser policy.
 - It does not print `Authorization`, `Cookie`, or `Set-Cookie` headers.
 - It does not return response headers, request bodies, response bodies from network observation, browser storage, or binary download bytes.
@@ -55,11 +56,13 @@ If a clean profile still reaches the business page, OS/enterprise SSO is more li
 
 ## Persistent Session Workflow
 
-Start or reuse a dedicated browser session:
+Start or reuse a dedicated browser session, or attach metadata to a browser the user explicitly launched with a local DevTools port:
 
 ```bash
 browser session start --name default --url "https://intranet.example.test/app" --json
 browser session status default --json
+browser session discover --ports 9222,9223 --json
+browser session attach --name user-demo --debug-port 9222 --json
 ```
 
 Select a page target:
@@ -76,6 +79,7 @@ Read redacted page state:
 ```bash
 browser page snapshot --session default --json
 browser page extract --session default --selector ".user-avatar" --json
+browser page extract-schema --session default --file "schema.yaml" --json
 browser page ax --session default --json
 browser page outline --session default --json
 browser page outline --session default --pierce --json
@@ -118,23 +122,39 @@ browser assert visible --session default --selector ".ready" --json
 browser assert text --session default --contains "Signed in" --json
 browser assert url --session default --contains "/dashboard" --json
 browser assert count --session default --selector ".result" --min 1 --json
-browser workflow run --file flow.yaml --dry-run --json
-browser workflow run --file flow.yaml --session default --json
+browser assert screenshot --session default --baseline "baseline.png" --out "actual.png" --diff-out "diff.png" --json
+browser workflow record --session default --out "flow.yaml" --duration-ms 10000 --json
+browser workflow run --file "flow.yaml" --dry-run --var query=demo --report-out "result/workflow-run.json" --json
+browser workflow run --file "flow.yaml" --session default --json
+browser form inspect --session default --json
+browser form fill --session default --file "values.yaml" --json
 ```
 
 Compact workflow YAML uses an explicit action whitelist:
 
 ```yaml
+session: default
+vars:
+  query: ""
+smart_wait:
+  network_idle_ms: 500
+  dom_stable_ms: 300
 steps:
   - action: page.wait
     selector: .ready
   - action: assert.visible
     selector: .ready
-  - action: page.screenshot
-    out: result/page.png
+  - action: page.type
+    selector: input[name=q]
+    text: "{{vars.query}}"
+    clear: true
+  - action: assert.screenshot
+    baseline: result/baseline.png
+    out: result/actual.png
+    diff_out: result/diff.png
 ```
 
-`page snapshot`, `page extract`, `page ax`, `page outline`, `page table`, `page list`, `page console`, `page errors`, `frame snapshot`, `page eval`, and `page fetch` redact URLs, sensitive assignments, sensitive JSON fields, and known secret-bearing text patterns. `page ax` is a DOM/ARIA accessibility-style fallback with stable short-session refs stored under `~/.efp/browser/refs`; rerun it after navigation or DOM changes. `page extract`, `page outline`, and `page ax` support `--pierce` for open shadow roots only. `frame snapshot` reads a selected DevTools frame by `--frame-id` and redacts frame URL/title/text. `page screenshot --selector` or `--ref` requires a visible element and returns file metadata only. `page network` reads browser resource timing entries and returns redacted URLs, initiator/resource type, timing, size counters, and an API-like marker only. `browser network start/list/wait/stop/export/clear` records or exports sanitized HAR-lite metadata after `start` via page-side fetch/XHR/resource collectors and never captures headers, cookies, storage, or bodies. `page metrics` returns navigation, paint/resource aggregate, DOM node count, long-task count, and redacted largest-resource metadata only. `browser workflow run` executes only whitelisted steps and rejects arbitrary shell, browser CLI strings, JavaScript, `page eval`, and `page fetch`. Dedicated console/network assertion commands are not included in this pass; use `network wait/list` and `page console/errors` for those checks. `page console` and `page errors` capture events only after recorder injection and redact/truncate messages and stacks. `page fetch` rejects unsafe schemes such as `file:`, `data:`, `javascript:`, `chrome:`, and `about:`, runs as GET only, omits credentials, and returns no headers.
+`page snapshot`, `page extract`, `page extract-schema`, `page ax`, `page outline`, `page table`, `page list`, `page console`, `page errors`, `frame snapshot`, `form inspect`, `form fill`, `page eval`, and `page fetch` redact URLs, sensitive assignments, sensitive JSON fields, and known secret-bearing text patterns. `page ax` is a DOM/ARIA accessibility-style fallback with stable short-session refs stored under `~/.efp/browser/refs`; rerun it after navigation or DOM changes. `page extract`, `page outline`, and `page ax` support `--pierce` for open shadow roots only. `frame snapshot` reads a selected DevTools frame by `--frame-id` and redacts frame URL/title/text. `page screenshot --selector` or `--ref` requires a visible element and returns file metadata only. `assert screenshot` writes actual and diff PNG artifacts and returns metadata only. `form inspect` returns field metadata without current values; `form fill` returns match metadata and value byte counts only. `page network` reads browser resource timing entries and returns redacted URLs, initiator/resource type, timing, size counters, and an API-like marker only. `browser network start/list/wait/stop/export/clear` records or exports sanitized HAR-lite metadata after `start` via page-side fetch/XHR/resource collectors and never captures headers, cookies, storage, or bodies. `page metrics` returns navigation, paint/resource aggregate, DOM node count, long-task count, and redacted largest-resource metadata only. `browser workflow record` writes a safe YAML skeleton and replaces typed text and selected option values with empty variables. `browser workflow run` supports variables, CLI `--var`, conditions, `for_each`, `smart_wait`, `human.wait`, `human.confirm`, and `--report-out` audit logs while executing only whitelisted steps. It rejects arbitrary shell, browser CLI strings, JavaScript, `page eval`, and `page fetch`. Dedicated console/network assertion commands are not included in this pass; use `network wait/list` and `page console/errors` for those checks. `page console` and `page errors` capture events only after recorder injection and redact/truncate messages and stacks. `page fetch` rejects unsafe schemes such as `file:`, `data:`, `javascript:`, `chrome:`, and `about:`, runs as GET only, omits credentials, and returns no headers.
 
 `page wait` accepts `--selector`, `--duration-ms`, `--url-contains`, `--text`, `--network-idle-ms`, and `--dom-stable-ms`; all provided conditions must be satisfied within `--timeout`. Network-idle and DOM-stable waits use resource timing counts and DOM/text shape metadata only.
 
@@ -197,7 +217,7 @@ Use `--profile` to choose another dedicated profile. Use `--clean-profile` to de
 
 Persistent sessions default to `~/.efp/browser/profiles/<session-name>`, downloads default to `~/.efp/browser/downloads/<session-name>`, session metadata is stored under `~/.efp/browser/sessions`, accessibility refs under `~/.efp/browser/refs`, and network recorder artifacts under `~/.efp/browser/network`. DevTools for launched sessions is bound to `127.0.0.1`.
 
-The tool does not read browser cookie databases, decrypt cookies, export tokens, print request/response headers, print request/response bodies, echo typed text, or read downloaded file contents. Probe `--fetch-api` records `ok`, `status`, redacted `url`, `contentType`, and a capped `bodyPreview`. Persistent `page fetch` records `ok`, `status`, redacted final URL, and a capped redacted `body_preview` with credentials omitted and no headers. Persistent `page upload` validates local regular files and returns path/name/size metadata only. Workflow dry-runs and executed step results report typed-text byte counts, not typed text.
+The tool does not read browser cookie databases, decrypt cookies, export tokens, print request/response headers, print request/response bodies, echo typed text or selected option values, or read downloaded file contents. Probe `--fetch-api` records `ok`, `status`, redacted `url`, `contentType`, and a capped `bodyPreview`. Persistent `page fetch` records `ok`, `status`, redacted final URL, and a capped redacted `body_preview` with credentials omitted and no headers. Persistent `page upload` validates local regular files and returns path/name/size metadata only. Workflow dry-runs and executed step results report typed-text byte counts, not typed text. Form filling and workflow recording preserve automation structure while suppressing user-entered values.
 
 ## OpenCode Runtime Handoff
 

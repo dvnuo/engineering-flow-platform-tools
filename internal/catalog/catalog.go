@@ -90,6 +90,8 @@ var browserCommands = []string{
 	"browser session start",
 	"browser session list",
 	"browser session status [name]",
+	"browser session attach",
+	"browser session discover",
 	"browser session stop [name]",
 	"browser tab list",
 	"browser tab current",
@@ -97,6 +99,7 @@ var browserCommands = []string{
 	"browser tab open",
 	"browser page snapshot",
 	"browser page extract",
+	"browser page extract-schema",
 	"browser page ax",
 	"browser page click",
 	"browser page type",
@@ -121,7 +124,11 @@ var browserCommands = []string{
 	"browser assert text",
 	"browser assert url",
 	"browser assert count",
+	"browser assert screenshot",
 	"browser workflow run",
+	"browser workflow record",
+	"browser form inspect",
+	"browser form fill",
 	"browser frame list",
 	"browser frame snapshot",
 	"browser network start",
@@ -692,6 +699,10 @@ func browserExplicit(name string) (explicitMeta, bool) {
 			Flags: common, Risk: "read", Example: "browser session list --json"},
 		"session.status": {Description: "Show one browser automation session and refresh whether its local DevTools endpoint is alive.",
 			Flags: common, Risk: "read", Example: "browser session status default --json"},
+		"session.attach": {Description: "Attach stored session metadata to an explicitly supplied 127.0.0.1 DevTools endpoint without launching or stopping the browser.",
+			Flags: append([]string{"name", "debug-addr", "debug-port"}, common...), Required: []string{"debug-port"}, Risk: "write", Example: "browser session attach --name user-demo --debug-port 9222 --json"},
+		"session.discover": {Description: "Probe explicitly listed local DevTools ports and return redacted target metadata.",
+			Flags: append([]string{"debug-addr", "ports"}, common...), Risk: "read", Example: "browser session discover --ports 9222,9223 --json"},
 		"session.stop": {Description: "Stop a browser automation session started by this CLI.",
 			Flags: append([]string{"keep-metadata"}, common...), Risk: "write", Example: "browser session stop default --json"},
 		"tab.list": {Description: "List page tabs in a running browser automation session.",
@@ -706,6 +717,8 @@ func browserExplicit(name string) (explicitMeta, bool) {
 			Flags: append([]string{"include-html", "max-text-bytes", "max-html-bytes"}, pageFlags...), Risk: "read", Example: "browser page snapshot --session default --json"},
 		"page.extract": {Description: "Extract redacted text, values, links, labels, and optional HTML from elements matching a CSS selector.",
 			Flags: append([]string{"selector", "limit", "include-html", "pierce", "max-html-bytes"}, pageFlags...), Required: []string{"selector"}, Risk: "read", Example: "browser page extract --selector .user-avatar --json"},
+		"page.extract-schema": {Description: "Extract selector-declared structured page fields from a YAML schema as redacted stable JSON.",
+			Flags: append([]string{"file", "limit"}, pageFlags...), Required: []string{"file"}, Risk: "read", Example: "browser page extract-schema --file schema.yaml --json"},
 		"page.ax": {Description: "Return a bounded DOM/ARIA accessibility-style tree with stable refs for short-session agent interactions.",
 			Flags: append([]string{"limit", "include-hidden", "pierce"}, pageFlags...), Risk: "read", Example: "browser page ax --limit 100 --json"},
 		"page.click": {Description: "Click a visible element in the selected page target and return redacted page metadata.",
@@ -754,8 +767,16 @@ func browserExplicit(name string) (explicitMeta, bool) {
 			Flags: append([]string{"contains", "not"}, pageFlags...), Required: []string{"contains"}, Risk: "read", Example: "browser assert url --contains /dashboard --json"},
 		"assert.count": {Description: "Assert a CSS selector count using an exact count or inclusive min/max bounds.",
 			Flags: append([]string{"selector", "equals", "min", "max"}, pageFlags...), Required: []string{"selector", "equals|min|max"}, Risk: "read", Example: "browser assert count --selector .result --min 1 --json"},
+		"assert.screenshot": {Description: "Assert that a page or element screenshot matches a baseline PNG and write a PNG diff artifact.",
+			Flags: append([]string{"baseline", "out", "diff-out", "selector", "ref", "threshold", "full-page"}, pageFlags...), Required: []string{"baseline", "diff-out"}, Risk: "read", Example: "browser assert screenshot --baseline baseline.png --out actual.png --diff-out diff.png --json"},
 		"workflow.run": {Description: "Parse, dry-run, or execute a YAML workflow made only of whitelisted browser actions and assertions.",
-			Flags: append([]string{"file", "dry-run", "session", "target-id", "timeout", "continue-on-error"}, common...), Required: []string{"file"}, Risk: "write", Example: "browser workflow run --file flow.yaml --dry-run --json"},
+			Flags: append([]string{"file", "dry-run", "session", "target-id", "timeout", "continue-on-error", "var", "report-out", "allow-human", "yes"}, common...), Required: []string{"file"}, Risk: "write", Example: "browser workflow run --file flow.yaml --dry-run --json"},
+		"workflow.record": {Description: "Record bounded manual browser actions into a sanitized workflow YAML skeleton with typed text replaced by variables.",
+			Flags: append([]string{"out", "duration-ms", "limit"}, pageFlags...), Required: []string{"out"}, Risk: "write", Example: "browser workflow record --out flow.yaml --duration-ms 10000 --json"},
+		"form.inspect": {Description: "Inspect form field metadata such as labels, names, types, selectors, and options without returning current values.",
+			Flags: append([]string{"selector", "limit"}, pageFlags...), Risk: "read", Example: "browser form inspect --selector form --json"},
+		"form.fill": {Description: "Fill form fields from a YAML file and return match metadata plus value byte counts without echoing values.",
+			Flags: append([]string{"file"}, pageFlags...), Required: []string{"file"}, Risk: "write", Example: "browser form fill --file values.yaml --json"},
 		"frame.list": {Description: "List the DevTools frame tree for the selected page target with redacted frame URLs and names.",
 			Flags: pageFlags, Risk: "read", Example: "browser frame list --session default --json"},
 		"frame.snapshot": {Description: "Snapshot a selected frame with redacted URL, title, text, and optional HTML preview.",
@@ -1298,13 +1319,13 @@ func flagTypeFor(command, name string) string {
 
 func flagType(name string) string {
 	switch name {
-	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error":
+	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error", "allow-human":
 		return "bool"
-	case "sample-rows", "max-create", "wait", "timeout", "max-network-events", "limit", "limit-resources", "duration-ms", "network-idle-ms", "dom-stable-ms", "equals", "min", "max", "index", "status", "limit-rows", "limit-cells", "limit-items":
+	case "sample-rows", "max-create", "wait", "timeout", "max-network-events", "limit", "limit-resources", "duration-ms", "network-idle-ms", "dom-stable-ms", "equals", "min", "max", "index", "status", "limit-rows", "limit-cells", "limit-items", "debug-port":
 		return "int"
-	case "min-confidence":
+	case "min-confidence", "threshold":
 		return "float"
-	case "field", "fields":
+	case "field", "fields", "var":
 		return "string[]"
 	default:
 		return "string"
@@ -1350,6 +1371,9 @@ func flagDescription(command, name string) string {
 		}
 		return "Preview write request without sending it."
 	case "yes":
+		if command == "workflow.run" {
+			return "Allow human.confirm steps only after explicit user confirmation."
+		}
 		return "Confirm destructive operations."
 	case "base-url":
 		return "Base URL for the Jira or Confluence instance, for example https://jira.example.test."
@@ -1419,6 +1443,12 @@ func flagDescription(command, name string) string {
 	case "file":
 		if command == "workflow.run" {
 			return "Workflow YAML file to parse and run."
+		}
+		if command == "page.extract-schema" {
+			return "YAML extraction schema file."
+		}
+		if command == "form.fill" {
+			return "YAML form values file; values are not echoed in output."
 		}
 		return "File path to upload."
 	case "jql":
@@ -1592,6 +1622,9 @@ func flagDescription(command, name string) string {
 		if strings.HasPrefix(command, "assert.") {
 			return "CSS selector for the assertion target."
 		}
+		if strings.HasPrefix(command, "form.") {
+			return "Optional form/container selector."
+		}
 		if strings.HasPrefix(command, "page.") {
 			return "CSS selector for the page element to read or automate."
 		}
@@ -1623,6 +1656,9 @@ func flagDescription(command, name string) string {
 	case "max-body-bytes":
 		return "Maximum bytes of redacted page fetch body preview to return."
 	case "duration-ms":
+		if command == "workflow.record" {
+			return "Recording duration in milliseconds while the user manually interacts."
+		}
 		return "Bounded page wait duration in milliseconds."
 	case "url-contains":
 		if command == "network.wait" {
@@ -1665,6 +1701,24 @@ func flagDescription(command, name string) string {
 		return "Capture the full page instead of only the current viewport; cannot be combined with element screenshot selector/ref."
 	case "continue-on-error":
 		return "Continue later workflow steps after a step fails; final workflow result still fails."
+	case "allow-human":
+		return "Allow bounded human.wait pauses in workflows."
+	case "var":
+		return "Workflow variable override in name=value form; repeatable and not echoed in plans."
+	case "report-out":
+		return "Path to write a sanitized workflow run audit report."
+	case "debug-addr":
+		return "Explicit local DevTools address; only 127.0.0.1 is allowed."
+	case "debug-port":
+		return "Explicit local DevTools port exposed by a browser launched by the user."
+	case "ports":
+		return "Comma-separated explicit local DevTools ports to probe."
+	case "baseline":
+		return "Baseline PNG path for screenshot assertion."
+	case "diff-out":
+		return "Output PNG path for screenshot assertion diff."
+	case "threshold":
+		return "Maximum allowed changed-pixel ratio from 0 to 1."
 	case "method":
 		if strings.HasPrefix(command, "network.") {
 			return "Optional HTTP method filter such as GET or POST when method is available."
@@ -1700,6 +1754,12 @@ func flagDescription(command, name string) string {
 	case "out":
 		if command == "network.export" {
 			return "Output file path for the sanitized network export."
+		}
+		if command == "workflow.record" {
+			return "Output workflow YAML path; typed text is replaced by variables."
+		}
+		if command == "assert.screenshot" {
+			return "Output path for the freshly captured actual screenshot PNG."
 		}
 		if command == "page.screenshot" {
 			return "Screenshot output PNG path; defaults under ~/.efp/browser/artifacts."

@@ -63,19 +63,23 @@ Recommended template categories:
 ## Browser SSO Diagnostics
 
 - Always call `browser schema probe --json` before constructing a probe command.
-- For persistent browser workflows, inspect `browser schema session.start --json`, `browser schema tab.open --json`, and the exact `browser schema page.<command> --json` before acting.
+- For persistent browser workflows, inspect `browser schema session.start --json`, `browser schema tab.open --json`, and the exact `browser schema page.<command> --json` or `browser schema workflow.run --json` before acting.
 - Always use `--json`.
 - `browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd, not an OpenCode built-in browser tool, MCP tool, or Web UI component.
 - Use `browser session start` for multi-step workflows that need a dedicated browser to stay open, then use `browser tab list/current/activate/open` to select a page target.
+- Use `browser session discover` and `browser session attach` only when the user explicitly provides local DevTools ports, for example a Chrome launched with `--remote-debugging-port=9222`. They do not inspect arbitrary browsers, default profiles, cookies, or tokens.
 - Use `browser page snapshot`, `browser page extract`, and `browser frame snapshot` for redacted page/frame reads.
+- Use `browser page extract-schema --file schema.yaml` when the agent needs stable structured JSON fields from selector-declared YAML instead of raw page text.
 - Use `browser page ax` to get accessibility-style refs before ref-based actions; rerun it after navigation or DOM changes.
 - Use `browser page outline`, `table`, and `list` when an agent needs navigable page structure or structured data instead of raw text.
+- Use `browser form inspect` to discover form field metadata without current values, then `browser form fill --file values.yaml` to fill fields without echoing values.
 - Use `--pierce` on `page extract`, `page outline`, or `page ax` only when open shadow-root traversal is needed; closed shadow roots are not accessible.
 - Use `browser page network` for sanitized resource timing/API observation; it returns no headers, cookies, or bodies.
 - Use `browser page metrics` for navigation, paint/resource aggregate, DOM node count, long-task count, and bounded largest-resource timing metadata. It is not a trace and returns no headers, cookies, storage, or bodies.
-- Use `browser assert visible|text|url|count` for JSON-first page state checks. Assertion failures return `ok=false`, `error.code=assertion_failed`, and sanitized details in `data`.
+- Use `browser assert visible|text|url|count|screenshot` for JSON-first page state checks. Assertion failures return `ok=false`, `error.code=assertion_failed`, and sanitized details in `data`. Screenshot assertions write actual/diff PNG files and return metadata only.
 - Console/network assertions are not separate assertion commands in this pass; use `browser network wait/list` and `browser page console/errors`.
-- Use `browser workflow run --file flow.yaml --dry-run --json` before executing YAML workflows. Workflows call only whitelisted browser actions/assertions and never execute shell commands, arbitrary browser CLI strings, arbitrary JavaScript, `page eval`, or `page fetch`.
+- Use `browser workflow record --out flow.yaml --duration-ms 10000 --json` when the user wants to demonstrate a manual flow and let the agent convert it into a safe workflow skeleton. Typed text and selected option values become empty variables.
+- Use `browser workflow run --file flow.yaml --dry-run --json` before executing YAML workflows. Workflows support top-level `vars`, CLI `--var`, `if`, `for_each`, `smart_wait`, `human.wait`, `human.confirm`, and `--report-out` audit logs. Workflows call only whitelisted browser actions/assertions and never execute shell commands, arbitrary browser CLI strings, arbitrary JavaScript, `page eval`, or `page fetch`.
 - Use `browser network start/list/wait/export/stop/clear` when the user will manually interact and the agent later needs sanitized HAR-lite metadata. It records only after `start`; `network export` writes JSON/HAR-lite metadata and returns path/count/size only. Network commands never return headers, cookies, storage, or bodies.
 - Use `browser page console` and `browser page errors` for redacted console/runtime diagnostics. They capture events only after recorder injection and do not return object previews.
 - Use `browser frame list` before `browser frame snapshot --frame-id <id>` when frame-specific reads are needed. Frame URLs and titles are redacted.

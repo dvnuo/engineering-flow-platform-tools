@@ -64,6 +64,7 @@ type workflowRecordFileStep struct {
 	Name     string `yaml:"name,omitempty"`
 	Selector string `yaml:"selector,omitempty"`
 	Text     string `yaml:"text,omitempty"`
+	Label    string `yaml:"label,omitempty"`
 	Key      string `yaml:"key,omitempty"`
 	Clear    bool   `yaml:"clear,omitempty"`
 }
@@ -149,6 +150,7 @@ func workflowRecordFileFromEvents(raw []workflowRecordRawEvent, session string, 
 	steps := make([]workflowRecordFileStep, 0, len(raw))
 	events := make([]WorkflowRecordedEvent, 0, len(raw))
 	textIndex := 0
+	selectIndex := 0
 	for _, item := range raw {
 		action := strings.TrimSpace(item.Action)
 		selector := normalizeSelectorHint(item.Selector)
@@ -173,6 +175,12 @@ func workflowRecordFileFromEvents(raw []workflowRecordRawEvent, session string, 
 			step.Text = "{{vars." + name + "}}"
 			step.Clear = true
 			step.Name = "fill " + name
+		case "page.select":
+			selectIndex++
+			name := "recorded_select_" + strconv.Itoa(selectIndex)
+			vars[name] = ""
+			step.Label = "{{vars." + name + "}}"
+			step.Name = "select " + name
 		case "page.press":
 			step.Key = RedactString(item.Key)
 		}
@@ -245,6 +253,10 @@ func workflowRecordInstallExpression(limit int) string {
     if (!target) return;
     if (tag === "input" && ["checkbox","radio"].includes(type)) {
       push({action: target.checked ? "page.check" : "page.uncheck", selector: selectorFor(target), input_kind: type});
+      return;
+    }
+    if (tag === "select") {
+      push({action: "page.select", selector: selectorFor(target), input_kind: "select", text_bytes: String(target.value || "").length});
       return;
     }
     if (tag === "input" || tag === "textarea") {

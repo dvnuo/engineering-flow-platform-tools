@@ -483,10 +483,17 @@ confluence page get --url <page-url>
 - browser page extract
 - browser page click
 - browser page type
+- browser page upload
 - browser page wait
 - browser page screenshot
 - browser page eval
 - browser page fetch
+- browser page network
+- browser page outline
+- browser page table
+- browser page list
+- browser download list
+- browser download wait
 - browser commands
 - browser schema <command>
 - browser help llm
@@ -502,22 +509,30 @@ browser tab list --session default --json
 browser tab activate --session default --target-id <target-id> --json
 browser page snapshot --session default --json
 browser page extract --session default --selector .user-avatar --json
+browser page outline --session default --json
+browser page network --session default --filter /api/ --json
 ```
 
 ### Page Actions
 
 - `browser page click --selector <css>` clicks a visible element.
 - `browser page type --selector <css> --text <text> [--clear]` types text without echoing the text in output.
-- `browser page wait --selector <css>` or `--duration-ms <n>` waits within the command timeout.
+- `browser page upload --selector <css> --file <path>` attaches local regular files to an input[type=file] and returns file metadata only.
+- `browser page wait --selector <css>`, `--duration-ms <n>`, `--url-contains <text>`, `--text <text>`, `--network-idle-ms <n>`, or `--dom-stable-ms <n>` waits within the command timeout.
 - `browser page screenshot --out <file>` writes a PNG artifact and returns path/size metadata.
 - `browser page eval --expr <js>` rejects cookie, storage, header, credential, and network APIs, then redacts returned values.
 - `browser page fetch --url <url-or-path>` runs a GET fetch with credentials omitted, rejects unsafe URL schemes, returns no headers, and redacts the body preview.
+- `browser page network [--filter <text>] [--all]` returns resource timing summaries with redacted URLs and no headers or bodies.
+- `browser page outline` returns a DOM-derived page outline with redacted names, labels, text, hrefs, roles, and selector hints.
+- `browser page table` and `browser page list` return structured table/list data that is easier to consume than generic extraction.
+- `browser download list` and `browser download wait` inspect completed files in the session download directory and return file metadata only.
 
 ### Common Browser Flags
 
 - `--session <name>`: browser automation session name.
 - `--target-id <id>`: optional DevTools page target id; defaults to the active tab.
 - `--timeout <seconds>`: maximum seconds for page commands.
+- `--download-dir <dir>`: dedicated session download directory for `browser session start`.
 - `--json`: return the stable JSON envelope.
 
 ## Inspect Image

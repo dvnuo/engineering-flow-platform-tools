@@ -68,10 +68,15 @@ Recommended template categories:
 - `browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd, not an OpenCode built-in browser tool, MCP tool, or Web UI component.
 - Use `browser session start` for multi-step workflows that need a dedicated browser to stay open, then use `browser tab list/current/activate/open` to select a page target.
 - Use `browser page snapshot` and `browser page extract` for redacted page reads.
-- Use `browser page click`, `type`, `wait`, `screenshot`, `eval`, and `fetch` only as bounded actions against the active or selected tab.
+- Use `browser page outline`, `table`, and `list` when an agent needs navigable page structure or structured data instead of raw text.
+- Use `browser page network` for sanitized resource timing/API observation; it returns no headers, cookies, or bodies.
+- Use `browser page click`, `type`, `upload`, `wait`, `screenshot`, `eval`, and `fetch` only as bounded actions against the active or selected tab.
+- `browser page wait` can wait for selectors, current URL substrings, visible text, resource timing idle windows, DOM stability windows, or a bounded duration.
 - `browser page screenshot` writes a PNG artifact and returns metadata rather than binary image data.
 - `browser page eval` rejects cookie, storage, header, credential, and network APIs; returned values are recursively redacted.
 - `browser page fetch` performs GET with credentials omitted, rejects unsafe URL schemes, returns no headers, and redacts the body preview.
+- `browser page upload` validates local regular files and returns file metadata only; it never prints file contents.
+- `browser download list` and `browser download wait` read only path/name/size/modified metadata from the session download directory.
 - Use `--selector` for a deterministic login-success signal.
 - Use `--clean-profile` when the user wants to distinguish true OS/enterprise SSO from cached browser session.
 - Read `data.files.summary`, `data.files.screenshot`, `data.files.html`, and `data.files.network`.
@@ -163,6 +168,9 @@ jira schema zephyr.execution.bulk-update-status --json
 confluence schema page.create --json
 confluence schema page.update --json
 browser schema probe --json
+browser schema page.network --json
+browser schema page.outline --json
+browser schema download.wait --json
 jenkins schema job.build-with-params --json
 jenkins schema build.status --json
 jenkins schema artifact.download --json

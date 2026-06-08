@@ -10,7 +10,7 @@ Copy this file into `~/.copilot/instructions/browser-cli.instructions.md` so VS 
 
 `browser` is a terminal-invoked CLI for agents that need to open an internal URL in Edge, Chrome, or Chromium through DevTools and collect page diagnostics or run bounded actions in a persistent dedicated browser session.
 
-Use it for browser SSO checks, login-success probes, screenshots, HTML snapshots, network summaries, page-state inspection, tab selection, and bounded page actions. It is not a Portal tool, runtime built-in browser tool, MCP server, or cookie export tool.
+Use it for browser SSO checks, login-success probes, screenshots, HTML snapshots, network summaries, page-state inspection, structured page outlines, table/list extraction, tab selection, upload/download metadata, and bounded page actions. It is not a Portal tool, runtime built-in browser tool, MCP server, or cookie export tool.
 
 ## Always Use JSON
 
@@ -44,6 +44,8 @@ browser commands --json
 browser schema probe --json
 browser schema session.start --json
 browser schema page.fetch --json
+browser schema page.network --json
+browser schema page.outline --json
 browser help llm --json
 ```
 
@@ -78,6 +80,10 @@ browser session start --name default --url https://intranet.example.test --json
 browser tab current --session default --json
 browser page snapshot --session default --json
 browser page extract --session default --selector .user-avatar --json
+browser page outline --session default --json
+browser page network --session default --filter /api/ --json
+browser page table --session default --selector table.results --json
+browser page list --session default --selector nav --json
 browser page screenshot --session default --out result/page-screenshot.png --json
 ```
 
@@ -86,9 +92,12 @@ Bounded page actions:
 ```bash
 browser page click --session default --selector "button.sign-in" --json
 browser page type --session default --selector "input[name=q]" --text "search" --clear --json
-browser page wait --session default --selector ".ready" --json
+browser page upload --session default --selector "input[type=file]" --file ./report.pdf --json
+browser page wait --session default --selector ".ready" --network-idle-ms 500 --dom-stable-ms 500 --json
 browser page eval --session default --expr "document.title" --json
 browser page fetch --session default --url /api/me --json
+browser download wait --session default --filename-contains report --json
+browser download list --session default --json
 ```
 
 ## Windows cmd Workflow
@@ -105,6 +114,8 @@ browser version --json
 browser commands --json
 browser schema probe --json
 browser schema page.screenshot --json
+browser schema page.wait --json
+browser schema download.wait --json
 ```
 
 Normal probe command:
@@ -141,7 +152,7 @@ Common errors:
 
 `browser` does not export cookies or tokens. Do not ask it to print cookies, browser storage, or Authorization headers.
 
-`browser page screenshot` writes a PNG artifact and returns file metadata, not image bytes. `browser page eval` rejects cookie, storage, header, credential, and network APIs before returning recursively redacted values. `browser page fetch` uses GET with credentials omitted, rejects unsafe schemes such as `file:`, `data:`, `javascript:`, `chrome:`, and `about:`, returns no headers, and redacts the body preview.
+`browser page network` returns sanitized resource timing summaries only; it never returns headers, cookies, or bodies. `browser page screenshot` writes a PNG artifact and returns file metadata, not image bytes. `browser page eval` rejects cookie, storage, header, credential, and network APIs before returning recursively redacted values. `browser page fetch` uses GET with credentials omitted, rejects unsafe schemes such as `file:`, `data:`, `javascript:`, `chrome:`, and `about:`, returns no headers, and redacts the body preview. `browser page upload` returns file path/name/size metadata only. `browser download list/wait` return file metadata only and do not read downloaded file contents.
 
 Artifacts may contain page content, visible user names, or internal URLs. Treat `page.html`, `screenshot.png`, `network.json`, and `summary.json` as potentially sensitive diagnostics.
 

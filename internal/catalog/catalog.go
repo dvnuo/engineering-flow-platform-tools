@@ -99,10 +99,17 @@ var browserCommands = []string{
 	"browser page extract",
 	"browser page click",
 	"browser page type",
+	"browser page upload",
 	"browser page wait",
 	"browser page screenshot",
 	"browser page eval",
 	"browser page fetch",
+	"browser page network",
+	"browser page outline",
+	"browser page table",
+	"browser page list",
+	"browser download list",
+	"browser download wait",
 	"browser commands",
 	"browser schema <command>",
 	"browser help llm",
@@ -658,7 +665,7 @@ func browserExplicit(name string) (explicitMeta, bool) {
 	pageFlags := append([]string{"session", "target-id", "timeout"}, common...)
 	items := map[string]explicitMeta{
 		"session.start": {Description: "Start a persistent Edge/Chrome/Chromium automation session with DevTools bound to 127.0.0.1.",
-			Flags: []string{"name", "browser", "browser-exe", "headless", "profile", "clean-profile", "port", "url", "json", "format", "verbose"}, Risk: "write", Example: "browser session start --name default --url https://intranet.example.test --json"},
+			Flags: []string{"name", "browser", "browser-exe", "headless", "profile", "download-dir", "clean-profile", "port", "url", "json", "format", "verbose"}, Risk: "write", Example: "browser session start --name default --url https://intranet.example.test --json"},
 		"session.list": {Description: "List stored browser automation sessions and refresh their local DevTools status.",
 			Flags: common, Risk: "read", Example: "browser session list --json"},
 		"session.status": {Description: "Show one browser automation session and refresh whether its local DevTools endpoint is alive.",
@@ -681,14 +688,28 @@ func browserExplicit(name string) (explicitMeta, bool) {
 			Flags: append([]string{"selector"}, pageFlags...), Required: []string{"selector"}, Risk: "write", Example: "browser page click --selector button.sign-in --json"},
 		"page.type": {Description: "Type text into a visible input or editable element without echoing the typed text in output.",
 			Flags: append([]string{"selector", "text", "clear"}, pageFlags...), Required: []string{"selector"}, Risk: "write", Example: "browser page type --selector input[name=q] --text search --clear --json"},
-		"page.wait": {Description: "Wait for a visible selector, a bounded duration, or both in the selected page target.",
-			Flags: append([]string{"selector", "duration-ms"}, pageFlags...), Required: []string{"selector|duration-ms"}, Risk: "read", Example: "browser page wait --selector .ready --json"},
+		"page.upload": {Description: "Attach local regular files to an input[type=file] element without printing file contents.",
+			Flags: append([]string{"selector", "file", "clear"}, pageFlags...), Required: []string{"selector", "file|clear"}, Risk: "write", Example: "browser page upload --selector input[type=file] --file ./report.pdf --json"},
+		"page.wait": {Description: "Wait for selector, text, URL, network-idle, DOM-stable, or bounded-duration conditions in the selected page target.",
+			Flags: append([]string{"selector", "duration-ms", "url-contains", "text", "network-idle-ms", "dom-stable-ms"}, pageFlags...), Required: []string{"selector|duration-ms|url-contains|text|network-idle-ms|dom-stable-ms"}, Risk: "read", Example: "browser page wait --selector .ready --network-idle-ms 500 --json"},
 		"page.screenshot": {Description: "Capture the selected page target to a PNG artifact and return file metadata instead of image bytes.",
 			Flags: append([]string{"out", "full-page"}, pageFlags...), Risk: "read", Example: "browser page screenshot --out result/page-screenshot.png --json"},
 		"page.eval": {Description: "Evaluate a bounded JavaScript expression and recursively redact returned serializable values.",
 			Flags: append([]string{"expr", "max-string-bytes"}, pageFlags...), Required: []string{"expr"}, Risk: "write", Example: "browser page eval --expr 'document.title' --json"},
 		"page.fetch": {Description: "Fetch an HTTP, HTTPS, or relative URL from the page context with credentials omitted and no headers returned.",
 			Flags: append([]string{"url", "max-body-bytes"}, pageFlags...), Required: []string{"url"}, Risk: "read", Example: "browser page fetch --url /api/me --json"},
+		"page.network": {Description: "Return sanitized page resource timing summaries, favoring API-like fetch/XHR entries by default.",
+			Flags: append([]string{"filter", "limit", "all"}, pageFlags...), Risk: "read", Example: "browser page network --filter /api/ --json"},
+		"page.outline": {Description: "Return a redacted DOM-derived outline of headings, links, buttons, fields, forms, tables, and lists.",
+			Flags: append([]string{"limit", "include-hidden"}, pageFlags...), Risk: "read", Example: "browser page outline --limit 100 --json"},
+		"page.table": {Description: "Extract structured table captions, headers, rows, cells, spans, and counts from the selected page.",
+			Flags: append([]string{"selector", "limit-rows", "limit-cells", "include-html"}, pageFlags...), Risk: "read", Example: "browser page table --selector table.results --json"},
+		"page.list": {Description: "Extract structured ordered, unordered, and role=list data with item text, hrefs, and nesting levels.",
+			Flags: append([]string{"selector", "limit-items"}, pageFlags...), Risk: "read", Example: "browser page list --selector nav --json"},
+		"download.list": {Description: "List completed files in a browser session download directory without reading file contents.",
+			Flags: sessionFlag, Risk: "read", Example: "browser download list --session default --json"},
+		"download.wait": {Description: "Wait for a completed file in a browser session download directory and return file metadata.",
+			Flags: append([]string{"session", "filename-contains", "timeout"}, common...), Risk: "read", Example: "browser download wait --session default --filename-contains report --json"},
 		"commands": {Description: "List available Browser commands with metadata.",
 			Flags: common, Risk: "read", Example: "browser commands --json"},
 		"schema": {Description: "Show argument and flag schema for a Browser command.",
@@ -1485,6 +1506,9 @@ func flagDescription(command, name string) string {
 		if command == "page.type" {
 			return "Text to type; the value is not included in command output."
 		}
+		if command == "page.wait" {
+			return "Visible page body text substring to wait for."
+		}
 		return "Text term used to build a Confluence content search query."
 	case "selector":
 		if strings.HasPrefix(command, "page.") {
@@ -1507,11 +1531,40 @@ func flagDescription(command, name string) string {
 		return "Maximum bytes of redacted page fetch body preview to return."
 	case "duration-ms":
 		return "Bounded page wait duration in milliseconds."
+	case "url-contains":
+		return "Substring that must appear in the current page URL before page wait returns."
+	case "network-idle-ms":
+		return "Milliseconds that resource timing entries must remain unchanged before page wait returns."
+	case "dom-stable-ms":
+		return "Milliseconds that body text and DOM shape must remain stable before page wait returns."
+	case "filter":
+		if command == "page.network" {
+			return "Case-insensitive filter for resource URL, initiator type, resource type, or API-like marker."
+		}
+		return "Filter string."
+	case "all":
+		if command == "page.network" {
+			return "Include all resource timing entries instead of only API-like fetch/XHR entries."
+		}
+		return "Include all available results."
+	case "include-hidden":
+		return "Include hidden elements in the DOM-derived page outline."
+	case "limit-rows":
+		return "Maximum number of rows to return per extracted table."
+	case "limit-cells":
+		return "Maximum number of cells to return per extracted table row."
+	case "limit-items":
+		return "Maximum number of items to return per extracted page list."
+	case "filename-contains":
+		return "Case-insensitive substring that a completed download filename must contain."
 	case "full-page":
 		return "Capture the full page instead of only the current viewport."
 	case "expr":
 		return "JavaScript expression to evaluate; storage, cookie, header, credential, and network APIs are rejected."
 	case "clear":
+		if command == "page.upload" {
+			return "Clear the file input before attaching files, or clear it without files."
+		}
 		return "Clear the selected page element before typing."
 	case "keep-metadata":
 		return "Keep browser session metadata after stopping or finding a stale browser."
@@ -1522,6 +1575,9 @@ func flagDescription(command, name string) string {
 	case "timeout":
 		if strings.HasPrefix(command, "page.") {
 			return "Maximum seconds to wait for this page command."
+		}
+		if command == "download.wait" {
+			return "Maximum seconds to wait for a completed matching download."
 		}
 		return "Overall probe timeout in seconds."
 	case "out":
@@ -1537,6 +1593,8 @@ func flagDescription(command, name string) string {
 			return "Dedicated browser profile directory for this automation session."
 		}
 		return "Dedicated browser user-data-dir for this probe."
+	case "download-dir":
+		return "Dedicated browser download directory for this automation session."
 	case "clean-profile":
 		if strings.HasPrefix(command, "session.") {
 			return "Delete the dedicated session profile before launching the browser."

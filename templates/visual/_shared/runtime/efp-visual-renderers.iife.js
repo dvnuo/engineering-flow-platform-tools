@@ -4666,7 +4666,9 @@
     var maxY = Math.max.apply(null, allBounds.map(function (b) { return b.y + b.h; }));
     var center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
     var span = Math.max(8, maxX - minX, maxY - minY);
-    var scale = 8.65 / span;
+    var inputRenderHints = data && data.renderHints && typeof data.renderHints === "object" ? data.renderHints : {};
+    var layoutScale = Math.max(0.85, Math.min(1.55, numberValue(inputRenderHints.layoutScale || inputRenderHints.layout_scale, 1)));
+    var scale = (8.65 * layoutScale) / span;
     var width = Math.max(760, shell.stage.clientWidth || 1024);
     var height = Math.max(540, shell.stage.clientHeight || 680);
     var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });

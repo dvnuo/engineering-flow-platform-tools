@@ -24,7 +24,7 @@
       "y": 0,
       "z": 9.3
     },
-    "zoom": 1.08
+    "zoom": 0.78
   },
   "zones": [
     {
@@ -2026,6 +2026,7 @@
     "badgeSize": "medium",
     "badgePlacement": "front",
     "labelIcon": true,
-    "palette": "engineering_drafting"
+    "palette": "engineering_drafting",
+    "layoutScale": 1.45
   }
 }

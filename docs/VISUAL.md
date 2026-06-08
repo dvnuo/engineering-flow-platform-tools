@@ -1,14 +1,14 @@
 # Visual Offline Artifacts
 
-`visual` is a terminal-invoked Go CLI for generating complete offline static visualization artifacts. It reads local templates from `~/.efp/template/visual` by default, accepts Mermaid or JSON input, copies local assets, and writes a self-contained site to `--out`.
+`visual` is a terminal-invoked Go CLI for generating complete offline static visualization artifacts. It reads local templates from `~/.efp/template/visual` by default, accepts Mermaid input, copies local assets, and writes a self-contained site to `--out`.
 
-The built-in catalog is now a semantic catalog: 34 canonical templates across 9 categories. It intentionally does not keep legacy aliases or duplicate legacy directories. Discover templates through the CLI, not by guessing file paths.
+The built-in public catalog is now a Mermaid catalog: 28 canonical `mermaid.*` templates in the `mermaid` category. Each public template corresponds to one Mermaid Diagram Syntax family. Discover templates through the CLI, not by guessing file paths.
 
 ## Mermaid Input
 
-Mermaid is the preferred public input format for authored diagrams. `visual inspect-input`, `visual inspect-plan`, `visual validate`, and `visual render` can read `.mmd` files directly. When `--template` is omitted, the CLI infers the closest visual template from the Mermaid diagram type.
+Mermaid is the public input format for authored diagrams. `visual inspect-input`, `visual inspect-plan`, `visual validate`, and `visual render` read `.mmd` files directly. When `--template` is omitted, the CLI infers the closest `mermaid.*` template from the Mermaid diagram type.
 
-Pure official Mermaid is accepted for compatibility. Diagram types with a dedicated semantic target use that target when possible: architecture and C4 diagrams map to `architecture.isometric_overview`, sequence and ZenUML map to `uml.sequence_3d`, class and ER map to `uml.class_structure_2_5d`, state maps to `uml.state_machine_3d`, timeline/gantt/journey/gitGraph map to temporal views, mindmap/treeView map to hierarchy, chart-like diagrams map to matrix or data-flow views, and remaining official diagram kinds fall back to `relationship.dependency_graph`. Pure Mermaid may render with lower quality because it usually lacks explicit camera, route, label, and mark guidance.
+Pure official Mermaid is accepted. Diagram types map one-to-one to public templates such as `mermaid.flowchart`, `mermaid.sequence`, `mermaid.class`, `mermaid.state`, `mermaid.er`, `mermaid.gantt`, `mermaid.timeline`, `mermaid.c4`, and `mermaid.architecture`. Pure Mermaid may render with lower quality than EFP frontmatter-enhanced Mermaid because official syntax does not always carry explicit camera, route, label, or mark guidance.
 
 Use optional EFP frontmatter only when better layout is needed:
 
@@ -16,7 +16,7 @@ Use optional EFP frontmatter only when better layout is needed:
 ---
 title: Microservice Architecture
 efp:
-  template: architecture.isometric_overview
+  template: mermaid.architecture
   camera:
     zoom: 1.18
   renderHints:
@@ -31,8 +31,6 @@ architecture-beta
   nginx:R --> L:api
 ```
 
-JSON input remains supported for compatibility and for internal semantic IR workflows. If JSON is used, pass `--template <template-id>` so the CLI knows which schema to validate.
-
 ## Template Directory
 
 Template directory resolution order:
@@ -44,19 +42,11 @@ Template directory resolution order:
 5. `./templates/visual`
 6. executable-adjacent release paths
 
-The directory must contain `registry.json`, `_shared/**`, and one direct directory per canonical template. Every direct directory except `_shared` must be registered.
+The directory must contain `registry.json`, `_shared/**`, and registered template directories. Public templates are `mermaid.*`; older semantic renderer directories are internal implementation targets.
 
 ## Categories
 
-- `uml`: UML sequence, class, state machine, activity, and component/deployment diagrams.
-- `relationship`: dependency, topology, lineage, and issue relationship maps.
-- `temporal`: timelines, event traces, automation replay, and release history.
-- `flow`: pipeline, approval, data flow, and customer journey views.
-- `hierarchy`: layered architecture, repository trees, ownership, and containment.
-- `evidence`: claim/source boards, root-cause evidence, risk decisions, and documentation freshness.
-- `matrix`: capability, KPI, risk, and resource allocation matrices.
-- `spatial`: service cities, codebase galaxies, agent fleets, and control-room spaces.
-- `architecture`: isometric architecture, topology, deployment, service map, system map, infrastructure map, microservice, cloud, and iCraft-like scenes.
+- `mermaid`: public templates that correspond to Mermaid Diagram Syntax families.
 
 ## Renderer Contracts
 
@@ -92,26 +82,24 @@ UML semantic schema kinds:
 - `uml_activity_v1`
 - `uml_component_deployment_v1`
 
-UML templates are not just graph templates with looser names. For example, `uml.sequence_3d` requires `participants`, ordered `messages`, optional `phases`, `activations`, and `fragments`. The runtime can then draw 3D lifelines, directional arrows, labels, and replay/phase controls.
-
-Architecture templates use `isometric_architecture_v1` with `schema=efp.visual.input.isometric_architecture.v1`. The input organizes an isometric architecture scene around `zones`, `entities`, `links`, optional `canvas.grid`, `camera`, `theme`, `controls`, `view`, `renderHints`, and `visual`. `architecture.isometric_overview` requires zones/entities/links and must not be authored as generic nodes/edges.
+Schema kinds are internal compiled targets. Users author Mermaid; the CLI compiles Mermaid into these internal IR schemas before rendering.
 
 ## Agent Workflow
 
 ```bash
 visual template categories --template-dir ./templates/visual --json
-visual template list --template-dir ./templates/visual --category uml --json
-visual template get uml.sequence_3d --template-dir ./templates/visual --json
-visual template schema uml.sequence_3d --template-dir ./templates/visual --json
-visual template guide uml.sequence_3d --template-dir ./templates/visual --json
-visual inspect-input --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --json
-visual inspect-plan --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --out ./out/mermaid-architecture --json
-visual render --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --out ./out/mermaid-architecture --json
+visual template list --template-dir ./templates/visual --category mermaid --json
+visual template get mermaid.sequence --template-dir ./templates/visual --json
+visual template schema mermaid.sequence --template-dir ./templates/visual --json
+visual template guide mermaid.sequence --template-dir ./templates/visual --json
+visual inspect-input --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --json
+visual inspect-plan --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --out ./out/mermaid-architecture --json
+visual render --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --out ./out/mermaid-architecture --json
 visual inspect-render --template-dir ./templates/visual --out ./out/mermaid-architecture --json
 visual inspect-browser --template-dir ./templates/visual --out ./out/mermaid-architecture --json
 ```
 
-Agents should prefer Mermaid input and may omit `--template` for Mermaid so the CLI can infer the closest template. Agents must read `visual template schema <id> --json` before writing JSON compatibility input. Do not invent JSON shape. Do not infer templates from directories.
+Agents should author Mermaid input and may omit `--template` so the CLI can infer the closest public template. Do not infer templates from directories.
 
 Every semantic input schema includes a shared `visual` object. Use it to tell the renderer how to make the first view readable instead of asking the agent to generate JavaScript:
 
@@ -135,7 +123,7 @@ The isometric architecture layer is a scene contract over the semantic Diagram/M
 - theme defaults to architecture_light and should not be starfield
 - top labels and leader lines keep entities readable in the first view
 
-Use `architecture.isometric_overview` when the user asks for architecture, topology, deployment, service map, system map, infrastructure map, microservice, cloud, iCraft-like, or isometric architecture. Use the underlying diagram categories when the user only needs a focused non-isometric visual.
+Use `mermaid.architecture` or `mermaid.c4` when the user asks for architecture, topology, deployment, service map, system map, infrastructure map, microservice, cloud, iCraft-like, or isometric architecture.
 
 ## Visual Design Guidance
 
@@ -166,7 +154,7 @@ The bundled AWS icon ids are local styled placeholders for offline visualization
 
 The build-time asset pipeline lives under `scripts/assets/`: `logo_catalog.json` is the allowlist, `fetch_logo_assets.mjs` vendors SVGs, `convert_svg_to_3d.mjs` creates local GLB badges, `vecto3d_adapter.mjs` probes an optional vecto3d checkout/command, `optimize_generated_models.mjs` records model size, and `validate_asset_registry.mjs` checks local paths and attribution metadata. Runtime render never downloads assets.
 
-For `architecture.isometric_overview`, badge readability is controlled by `renderHints.badgeMode`, `renderHints.badgeSize`, `renderHints.badgePlacement`, and `renderHints.labelIcon`. Use `icon_and_model`, `medium`, `front`, and `true` for normal architecture diagrams. Use `badgeSize=large` mainly for sparse reviews such as `templates/visual/architecture.isometric_overview/examples/asset-gallery.input.json`, which is the development gallery for checking whether vendored SVG icons and generated `*.logo3d` badges are visually recognizable.
+For Mermaid architecture diagrams, badge readability can be controlled by EFP frontmatter `renderHints.badgeMode`, `renderHints.badgeSize`, `renderHints.badgePlacement`, and `renderHints.labelIcon`. Use `icon_and_model`, `medium`, `front`, and `true` for normal architecture diagrams.
 
 ## Visual Plan
 
@@ -174,16 +162,16 @@ For `architecture.isometric_overview`, badge readability is controlled by `rende
 
 Use `inspect-plan` after fixing `inspect-input` warnings and before `visual render`. It does not analyze screenshots or rendered pixels; it tells the agent whether the semantic input is likely to produce a readable first view.
 
-`visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, shape diversity, visible arrows, color diversity, legend presence, local icon/model assets, attributions, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read. For `architecture.isometric_overview`, it also inspects generated artifact hooks in `index.html`, runtime JS/CSS, `manifest.js`, and `data.js`: runtime wiring, isometric renderer registration, label-layer hooks, entity/link/zone label hooks, base-plane/grid/leader-line/arrow hooks, generated model badge hooks, local asset registry/icons/models, remote asset URL absence, and absence of Studio/starfield hooks in the isometric path. If a screenshot is available, pass `--screenshot <png|jpg|gif>` to add blankness, contrast, and visible coverage checks.
+`visual inspect-render` runs after `visual render`. It checks required output files, offline safety, manifest/data consistency, local Three.js asset presence, shape diversity, visible arrows, color diversity, legend presence, local icon/model assets, attributions, and the rebuilt visual plan so agents can catch a rendered artifact that is technically valid but still hard to read. For the isometric architecture renderer, it also inspects generated artifact hooks in `index.html`, runtime JS/CSS, `manifest.js`, and `data.js`: runtime wiring, label-layer hooks, entity/link/zone label hooks, base-plane/grid/leader-line/arrow hooks, generated model badge hooks, local asset registry/icons/models, remote asset URL absence, and absence of Studio/starfield hooks in the isometric path. If a screenshot is available, pass `--screenshot <png|jpg|gif>` to add blankness, contrast, and visible coverage checks.
 
 `visual inspect-browser` is the browser-level smoke step for rendered artifacts. It serves `--out` through a temporary `http://127.0.0.1:<port>/index.html` server, launches local Chrome/Chromium headlessly, waits for the runtime data and renderer DOM hooks, writes a screenshot to `--screenshot` or `<out>/visual-screenshot.png`, and then reuses `inspect-render --screenshot` checks. It also returns `visual_summary` with total and visible label/icon counts, loaded/broken icon counts, badge/fallback counts, approximate entity-label overlap, bounds, and screenshot size. It does not use `file://`, does not contact remote URLs, and does not require npm packages. The checks are deliberately mechanical: DOM hooks for labels/icons/model badges/control bars, local request safety, console/network errors, and screenshot nonblank/contrast/coverage. It is not OCR and does not judge whether a vendor logo is semantically recognizable.
 
-Example for the architecture badge gallery:
+Example for Mermaid architecture:
 
 ```bash
-visual render --template architecture.isometric_overview --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/asset-gallery.input.json --out ./out/isometric-asset-gallery --json
-visual inspect-browser --template-dir ./templates/visual --out ./out/isometric-asset-gallery --screenshot ./out/isometric-asset-gallery/screenshot.png --json
-visual inspect-render --template-dir ./templates/visual --out ./out/isometric-asset-gallery --screenshot ./out/isometric-asset-gallery/screenshot.png --json
+visual render --template mermaid.architecture --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --out ./out/mermaid-architecture --json
+visual inspect-browser --template-dir ./templates/visual --out ./out/mermaid-architecture --screenshot ./out/mermaid-architecture/screenshot.png --json
+visual inspect-render --template-dir ./templates/visual --out ./out/mermaid-architecture --screenshot ./out/mermaid-architecture/screenshot.png --json
 ```
 
 `inspect-browser` requires a Chrome or Chromium executable and Node.js. It returns `browser_runtime_missing` when either runtime is unavailable; CI smoke may set `EFP_SKIP_BROWSER_SMOKE=1` only when browser smoke is intentionally skipped.
@@ -242,9 +230,9 @@ Artifacts must be fully offline:
 ## Validation And Inspection
 
 ```bash
-visual validate --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --json
-visual inspect-input --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --json
-visual inspect-plan --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --out ./out/mermaid-architecture --json
+visual validate --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --json
+visual inspect-input --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --json
+visual inspect-plan --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --out ./out/mermaid-architecture --json
 visual inspect-render --template-dir ./templates/visual --out ./out/mermaid-architecture --json
 visual inspect-browser --template-dir ./templates/visual --out ./out/mermaid-architecture --json
 visual template doctor --template-dir ./templates/visual --json
@@ -255,10 +243,10 @@ visual inspect-output --out ./out/mermaid-architecture --json
 
 For the built-in semantic catalog, doctor must report:
 
-- `checked_templates: 34`
-- `checked_examples: 34`
-- `rendered_examples: 34`
-- `canonical_template_dirs: 34`
+- `checked_templates: 28`
+- `checked_examples: 28`
+- `rendered_examples: 28`
+- `canonical_templates: 28`
 - `orphan_template_dirs: []`
 - `offline: true`
 
@@ -266,10 +254,10 @@ Use `--dry-run` on `visual render` to preview `planned_files` without creating `
 
 ## Template Agent Guides
 
-Visual templates carry their own authoring contract in `templates/visual/<template-id>/agent-guide.md` and `quality.rules.json`. The global CLI instructions intentionally stay short: agents should prefer Mermaid, and read `visual template guide <template-id> --json` before writing JSON compatibility input or high-control EFP frontmatter.
+Visual templates carry their own authoring contract in `templates/visual/<template-id>/agent-guide.md` and `quality.rules.json`. The global CLI instructions intentionally stay short: agents should author Mermaid and read `visual template guide <template-id> --json` before using high-control EFP frontmatter.
 
 `visual template guide` returns the guide path, raw markdown, parsed sections, and a compact summary. `visual template get` and `visual template schema` also expose whether the guide and quality rules are available.
 
-`inspect-input` reads the selected template schema, agent guide, and quality rules. Warnings are machine-readable and include `code`, `severity`, `path`, `suggestion`, and usually `auto_fix_hint`. Agents should revise Mermaid/frontmatter or JSON until bad-density warnings are resolved or intentionally accepted.
+`inspect-input` reads the selected template schema, agent guide, and quality rules. Warnings are machine-readable and include `code`, `severity`, `path`, `suggestion`, and usually `auto_fix_hint`. Agents should revise Mermaid/frontmatter until bad-density warnings are resolved or intentionally accepted.
 
-The current deep mark consumption is strongest for graph-based relationship/spatial/flow/hierarchy templates, matrix templates, UML component/activity/state templates, and `uml.sequence_3d` message arrows. Evidence and timeline templates use shared guidance, color policy, and inspection first; more renderer-specific shape/icon consumption can be added without changing the agent workflow.
+The current deep mark consumption is strongest when Mermaid compiles to graph, architecture, matrix, and UML renderer IRs. More renderer-specific shape/icon consumption can be added without changing the Mermaid authoring workflow.

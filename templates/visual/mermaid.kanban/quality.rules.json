@@ -1,0 +1,28 @@
+{
+  "schema": "efp.visual.template_quality_rules.v1",
+  "template_id": "mermaid.kanban",
+  "label": {
+    "max_overview_label_chars": 32,
+    "max_detail_label_chars": 64,
+    "require_summary_for_long_labels": true
+  },
+  "required_for_quality": [
+    {
+      "path": "$.source",
+      "severity": "warning",
+      "code": "mermaid_source_required",
+      "suggestion": "Author the input as official Mermaid syntax."
+    }
+  ],
+  "semantic_rules": [
+    {
+      "code": "mermaid_labels_should_be_short",
+      "severity": "warning",
+      "description": "Mermaid labels should stay short enough to remain readable after rendering."
+    }
+  ],
+  "template_specific": {
+    "input_format": "mermaid",
+    "mermaid_syntax": "kanban"
+  }
+}

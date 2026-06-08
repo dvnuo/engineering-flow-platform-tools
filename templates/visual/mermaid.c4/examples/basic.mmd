@@ -1,0 +1,12 @@
+---
+title: Mermaid C4 Example
+---
+C4Context
+  title Checkout Context
+  Person(user, "Customer")
+  System(portal, "Portal")
+  System(api, "Order API")
+  SystemDb(db, "Order DB")
+  Rel(user, portal, "uses")
+  Rel(portal, api, "calls")
+  Rel(api, db, "writes")

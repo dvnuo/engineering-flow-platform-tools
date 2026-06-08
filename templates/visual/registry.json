@@ -1,631 +1,563 @@
 {
-  "version": 3,
+  "version": 4,
   "expected": {
-    "canonical_count": 34,
+    "canonical_count": 28,
     "categories": {
-      "uml": 5,
-      "relationship": 4,
-      "temporal": 4,
-      "flow": 4,
-      "hierarchy": 4,
-      "evidence": 4,
-      "matrix": 4,
-      "spatial": 4,
-      "architecture": 1
+      "mermaid": 28
     }
   },
   "templates": [
     {
-      "id": "uml.activity_flow_3d",
+      "id": "mermaid.architecture",
       "version": "1.0.0",
-      "category": "uml",
-      "path": "uml.activity_flow_3d/template.yaml",
-      "title": "UML Activity Flow 3D",
-      "description": "Organizes actions, decisions, merges, and swimlanes into an interactive 3D activity flow.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "uml_activity_v1",
-      "renderer": "offline.uml.activity.3d.v1",
-      "layout_preset": "activity_swimlanes",
-      "tags": [
-        "uml",
-        "activity",
-        "swimlane",
-        "flow"
-      ]
-    },
-    {
-      "id": "uml.class_structure_2_5d",
-      "version": "1.0.0",
-      "category": "uml",
-      "path": "uml.class_structure_2_5d/template.yaml",
-      "title": "UML Class Structure 2.5D",
-      "description": "Displays classes, stereotypes, attributes, operations, and relationships as grouped 2.5D structure cards.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "uml_class_v1",
-      "renderer": "offline.uml.class.2_5d.v1",
-      "layout_preset": "class_cards",
-      "tags": [
-        "uml",
-        "class",
-        "structure",
-        "relationships"
-      ]
-    },
-    {
-      "id": "uml.component_deployment_3d",
-      "version": "1.0.0",
-      "category": "uml",
-      "path": "uml.component_deployment_3d/template.yaml",
-      "title": "UML Component Deployment 3D",
-      "description": "Combines software components, deployment nodes, interfaces, and runtime links in a 3D deployment view.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "uml_component_deployment_v1",
-      "renderer": "offline.uml.component.3d.v1",
-      "layout_preset": "component_deployment",
-      "tags": [
-        "uml",
-        "component",
-        "deployment",
-        "interfaces"
-      ]
-    },
-    {
-      "id": "uml.sequence_3d",
-      "version": "1.0.0",
-      "category": "uml",
-      "path": "uml.sequence_3d/template.yaml",
-      "title": "UML Sequence 3D",
-      "description": "Renders participants as 3D lifelines and messages as ordered directional arrows for protocol, API, and agent workflow reviews.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "uml_sequence_v1",
-      "renderer": "offline.uml.sequence.3d.v1",
-      "layout_preset": "sequence_lifelines",
-      "tags": [
-        "uml",
-        "sequence",
-        "lifeline",
-        "messages"
-      ]
-    },
-    {
-      "id": "uml.state_machine_3d",
-      "version": "1.0.0",
-      "category": "uml",
-      "path": "uml.state_machine_3d/template.yaml",
-      "title": "UML State Machine 3D",
-      "description": "Shows states, guards, actions, and transitions in a 3D state-machine layout for lifecycle reasoning.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "uml_state_machine_v1",
-      "renderer": "offline.uml.state.3d.v1",
-      "layout_preset": "state_machine",
-      "tags": [
-        "uml",
-        "state-machine",
-        "transition",
-        "lifecycle"
-      ]
-    },
-    {
-      "id": "relationship.dependency_graph",
-      "version": "1.0.0",
-      "category": "relationship",
-      "path": "relationship.dependency_graph/template.yaml",
-      "title": "Dependency Relationship Graph",
-      "description": "Maps modules, packages, tests, and owners so an agent can reveal dependency direction without dumping every class at once.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "layered_stack",
-      "tags": [
-        "relationship",
-        "dependency",
-        "module",
-        "graph"
-      ]
-    },
-    {
-      "id": "relationship.issue_dependencies",
-      "version": "1.0.0",
-      "category": "relationship",
-      "path": "relationship.issue_dependencies/template.yaml",
-      "title": "Issue Dependency Relationship Map",
-      "description": "Displays Jira issues, blockers, approvals, and release gates as a navigable dependency graph.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "graph_2_5d",
-      "tags": [
-        "relationship",
-        "issue",
-        "dependency",
-        "project"
-      ]
-    },
-    {
-      "id": "relationship.knowledge_lineage",
-      "version": "1.0.0",
-      "category": "relationship",
-      "path": "relationship.knowledge_lineage/template.yaml",
-      "title": "Knowledge Lineage Relationship Map",
-      "description": "Connects answers, source evidence, validation steps, and reviewers to explain where a conclusion came from.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "evidence_v1",
-      "renderer": "offline.evidence.v1",
-      "layout_preset": "radial_tree",
-      "tags": [
-        "relationship",
-        "knowledge",
-        "lineage",
-        "evidence"
-      ]
-    },
-    {
-      "id": "relationship.service_topology",
-      "version": "1.0.0",
-      "category": "relationship",
-      "path": "relationship.service_topology/template.yaml",
-      "title": "Service Topology Relationship Map",
-      "description": "Shows services, workers, gateways, and health links as an expandable topology for runtime dependency reviews.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "service_map",
-      "tags": [
-        "relationship",
-        "service",
-        "topology",
-        "runtime"
-      ]
-    },
-    {
-      "id": "temporal.automation_replay",
-      "version": "1.0.0",
-      "category": "temporal",
-      "path": "temporal.automation_replay/template.yaml",
-      "title": "Automation Run Replay",
-      "description": "Animates an automation run from trigger through orchestration, evidence collection, gates, and completion.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_events_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "replay_stage",
-      "tags": [
-        "temporal",
-        "automation",
-        "replay",
-        "planning"
-      ]
-    },
-    {
-      "id": "temporal.event_trace",
-      "version": "1.0.0",
-      "category": "temporal",
-      "path": "temporal.event_trace/template.yaml",
-      "title": "Agent Event Trace",
-      "description": "Follows an agent run through planning, tool calls, permission checks, verification, and handoff events.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_events_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "timeline_tunnel",
-      "tags": [
-        "temporal",
-        "agent",
-        "event",
-        "trace"
-      ]
-    },
-    {
-      "id": "temporal.incident_timeline",
-      "version": "1.0.0",
-      "category": "temporal",
-      "path": "temporal.incident_timeline/template.yaml",
-      "title": "Incident Timeline",
-      "description": "Replays detection, mitigation, rollback, customer impact, and postmortem moments in chronological order.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "timeline_v1",
-      "renderer": "offline.timeline.v1",
-      "layout_preset": "incident_timeline",
-      "tags": [
-        "temporal",
-        "incident",
-        "timeline",
-        "debug"
-      ]
-    },
-    {
-      "id": "temporal.release_history",
-      "version": "1.0.0",
-      "category": "temporal",
-      "path": "temporal.release_history/template.yaml",
-      "title": "Release History Timeline",
-      "description": "Tracks release candidates, verification gates, incidents, and rollout decisions across time.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_events_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "pipeline_flow",
-      "tags": [
-        "temporal",
-        "release",
-        "history",
-        "timeline"
-      ]
-    },
-    {
-      "id": "flow.approval",
-      "version": "1.0.0",
-      "category": "flow",
-      "path": "flow.approval/template.yaml",
-      "title": "Approval Flow",
-      "description": "Shows request, review, policy, escalation, and final decision paths for approval-heavy workflows.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_events_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "permission_gate",
-      "tags": [
-        "flow",
-        "approval",
-        "policy",
-        "workflow"
-      ]
-    },
-    {
-      "id": "flow.customer_journey",
-      "version": "1.0.0",
-      "category": "flow",
-      "path": "flow.customer_journey/template.yaml",
-      "title": "Customer Journey Flow",
-      "description": "Connects customer touchpoints, funnel transitions, support moments, and conversion outcomes.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "timeline_v1",
-      "renderer": "offline.timeline.v1",
-      "layout_preset": "journey",
-      "tags": [
-        "flow",
-        "customer",
-        "journey",
-        "business"
-      ]
-    },
-    {
-      "id": "flow.data_flow",
-      "version": "1.0.0",
-      "category": "flow",
-      "path": "flow.data_flow/template.yaml",
-      "title": "Runtime Data Flow",
-      "description": "Visualizes producers, brokers, consumers, retries, and dead-letter paths in an event-driven system.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_events_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "flow_particles",
-      "tags": [
-        "flow",
-        "event",
-        "data",
-        "runtime"
-      ]
-    },
-    {
-      "id": "flow.pipeline",
-      "version": "1.0.0",
-      "category": "flow",
-      "path": "flow.pipeline/template.yaml",
-      "title": "Pipeline Flow",
-      "description": "Presents pipeline stages, handoffs, queues, and failure branches with emphasis on what moves next.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "pipeline_flow",
-      "tags": [
-        "flow",
-        "pipeline",
-        "handoff",
-        "process"
-      ]
-    },
-    {
-      "id": "hierarchy.layered_architecture",
-      "version": "1.0.0",
-      "category": "hierarchy",
-      "path": "hierarchy.layered_architecture/template.yaml",
-      "title": "Layered Architecture Hierarchy",
-      "description": "Stacks domains, adapters, infrastructure, policies, and telemetry into a layered architecture view.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "layered_stack",
-      "tags": [
-        "hierarchy",
-        "architecture",
-        "layer",
-        "stack"
-      ]
-    },
-    {
-      "id": "hierarchy.ownership_map",
-      "version": "1.0.0",
-      "category": "hierarchy",
-      "path": "hierarchy.ownership_map/template.yaml",
-      "title": "Ownership Hierarchy Map",
-      "description": "Groups teams, modules, services, and escalation paths to clarify accountability boundaries.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "matrix_board",
-      "tags": [
-        "hierarchy",
-        "ownership",
-        "team",
-        "codebase"
-      ]
-    },
-    {
-      "id": "hierarchy.package_containment",
-      "version": "1.0.0",
-      "category": "hierarchy",
-      "path": "hierarchy.package_containment/template.yaml",
-      "title": "Package Containment Hierarchy",
-      "description": "Shows packages, folders, classes, and interfaces as containment levels instead of a flat dependency cloud.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "radial_tree",
-      "tags": [
-        "hierarchy",
-        "package",
-        "containment",
-        "tree"
-      ]
-    },
-    {
-      "id": "hierarchy.repository_tree",
-      "version": "1.0.0",
-      "category": "hierarchy",
-      "path": "hierarchy.repository_tree/template.yaml",
-      "title": "Repository Workspace Tree",
-      "description": "Organizes monorepo workspaces, packages, generated outputs, and test surfaces into expandable levels.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "city_map",
-      "tags": [
-        "hierarchy",
-        "repository",
-        "workspace",
-        "tree"
-      ]
-    },
-    {
-      "id": "evidence.claim_source_board",
-      "version": "1.0.0",
-      "category": "evidence",
-      "path": "evidence.claim_source_board/template.yaml",
-      "title": "Claim Source Evidence Board",
-      "description": "Compares claims with supporting, refuting, and mentioning sources while preserving confidence and reliability.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "evidence_v1",
-      "renderer": "offline.evidence.v1",
-      "layout_preset": "evidence_board",
-      "tags": [
-        "evidence",
-        "claim",
-        "source",
-        "confidence"
-      ]
-    },
-    {
-      "id": "evidence.doc_freshness",
-      "version": "1.0.0",
-      "category": "evidence",
-      "path": "evidence.doc_freshness/template.yaml",
-      "title": "Documentation Freshness Evidence Map",
-      "description": "Links documents, owners, code changes, and stale sections to highlight what needs review.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "matrix_v1",
-      "renderer": "offline.matrix.v1",
-      "layout_preset": "heatmap",
-      "tags": [
-        "evidence",
-        "documentation",
-        "freshness",
-        "project"
-      ]
-    },
-    {
-      "id": "evidence.risk_decision",
-      "version": "1.0.0",
-      "category": "evidence",
-      "path": "evidence.risk_decision/template.yaml",
-      "title": "Risk Decision Evidence Matrix",
-      "description": "Relates options, risks, decision criteria, and evidence so reviewers can see why a choice was made.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "matrix_v1",
-      "renderer": "offline.matrix.v1",
-      "layout_preset": "decision_matrix",
-      "tags": [
-        "evidence",
-        "risk",
-        "decision",
-        "matrix"
-      ]
-    },
-    {
-      "id": "evidence.root_cause_tree",
-      "version": "1.0.0",
-      "category": "evidence",
-      "path": "evidence.root_cause_tree/template.yaml",
-      "title": "Root Cause Evidence Tree",
-      "description": "Traces symptoms, competing causes, observations, and fixes into a reviewable root-cause argument.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "radial_tree",
-      "tags": [
-        "evidence",
-        "root-cause",
-        "debug",
-        "tree"
-      ]
-    },
-    {
-      "id": "matrix.capability",
-      "version": "1.0.0",
-      "category": "matrix",
-      "path": "matrix.capability/template.yaml",
-      "title": "Capability Matrix",
-      "description": "Places services, agents, or modules by capability coverage and operational readiness.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "matrix_v1",
-      "renderer": "offline.matrix.v1",
-      "layout_preset": "matrix_board",
-      "tags": [
-        "matrix",
-        "capability",
-        "runtime",
-        "coverage"
-      ]
-    },
-    {
-      "id": "matrix.kpi_control",
-      "version": "1.0.0",
-      "category": "matrix",
-      "path": "matrix.kpi_control/template.yaml",
-      "title": "KPI Control Matrix",
-      "description": "Positions product and operations metrics by business impact, confidence, and response priority.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "matrix_v1",
-      "renderer": "offline.matrix.v1",
-      "layout_preset": "control_room",
-      "tags": [
-        "matrix",
-        "kpi",
-        "business",
-        "control"
-      ]
-    },
-    {
-      "id": "matrix.resource_allocation",
-      "version": "1.0.0",
-      "category": "matrix",
-      "path": "matrix.resource_allocation/template.yaml",
-      "title": "Resource Allocation Matrix",
-      "description": "Compares people, agents, queues, and workstreams by load, urgency, and ownership.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "matrix_v1",
-      "renderer": "offline.matrix.v1",
-      "layout_preset": "matrix_board",
-      "tags": [
-        "matrix",
-        "resource",
-        "allocation",
-        "planning"
-      ]
-    },
-    {
-      "id": "matrix.risk",
-      "version": "1.0.0",
-      "category": "matrix",
-      "path": "matrix.risk/template.yaml",
-      "title": "Project Risk Matrix",
-      "description": "Plots project risks by probability, impact, mitigation status, and release exposure.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "matrix_v1",
-      "renderer": "offline.matrix.v1",
-      "layout_preset": "matrix_board",
-      "tags": [
-        "matrix",
-        "risk",
-        "project",
-        "planning"
-      ]
-    },
-    {
-      "id": "spatial.agent_fleet",
-      "version": "1.0.0",
-      "category": "spatial",
-      "path": "spatial.agent_fleet/template.yaml",
-      "title": "Agent Fleet Space",
-      "description": "Shows agent workers, sessions, queues, failures, and retry pressure as a fleet-level 3D operating space.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "matrix_v1",
-      "renderer": "offline.matrix.v1",
-      "layout_preset": "control_room",
-      "tags": [
-        "spatial",
-        "agent",
-        "fleet",
-        "runtime"
-      ]
-    },
-    {
-      "id": "spatial.codebase_galaxy",
-      "version": "1.0.0",
-      "category": "spatial",
-      "path": "spatial.codebase_galaxy/template.yaml",
-      "title": "Codebase Galaxy",
-      "description": "Clusters packages, modules, classes, tests, and ownership into a 3D galaxy with expandable groups.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "galaxy",
-      "tags": [
-        "spatial",
-        "codebase",
-        "galaxy",
-        "module"
-      ]
-    },
-    {
-      "id": "spatial.control_room",
-      "version": "1.0.0",
-      "category": "spatial",
-      "path": "spatial.control_room/template.yaml",
-      "title": "Control Room Space",
-      "description": "Arranges queues, incidents, alerts, and service health into a spatial control-room view.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "matrix_v1",
-      "renderer": "offline.matrix.v1",
-      "layout_preset": "control_room",
-      "tags": [
-        "spatial",
-        "control-room",
-        "operations",
-        "status"
-      ]
-    },
-    {
-      "id": "spatial.service_city",
-      "version": "1.0.0",
-      "category": "spatial",
-      "path": "spatial.service_city/template.yaml",
-      "title": "Service City Map",
-      "description": "Turns services, gateways, databases, and operations surfaces into a spatial map for topology scanning.",
-      "input_schema": "schema.input.json",
-      "input_schema_kind": "graph_v1",
-      "renderer": "offline.graph.v1",
-      "layout_preset": "city_map",
-      "tags": [
-        "spatial",
-        "service",
-        "city",
-        "topology"
-      ]
-    },
-    {
-      "id": "architecture.isometric_overview",
-      "version": "1.0.0",
-      "category": "architecture",
-      "path": "architecture.isometric_overview/template.yaml",
-      "title": "Isometric Architecture Overview",
-      "description": "Maps zones, systems, services, infrastructure, and directional links onto an isometric architecture scene.",
+      "category": "mermaid",
+      "path": "mermaid.architecture/template.yaml",
+      "title": "Mermaid Architecture Diagram",
+      "description": "Renders official Mermaid Architecture Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
       "input_schema": "schema.input.json",
       "input_schema_kind": "isometric_architecture_v1",
       "renderer": "offline.architecture.isometric.v1",
       "layout_preset": "isometric_architecture",
       "tags": [
+        "mermaid",
         "architecture",
-        "isometric",
-        "service-map",
-        "infrastructure",
-        "topology"
+        "architecture",
+        "diagram"
+      ],
+      "aliases": [
+        "architecture-beta"
+      ]
+    },
+    {
+      "id": "mermaid.block",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.block/template.yaml",
+      "title": "Mermaid Block Diagram",
+      "description": "Renders official Mermaid Block Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "mermaid",
+        "block",
+        "block",
+        "diagram"
+      ],
+      "aliases": [
+        "block-beta"
+      ]
+    },
+    {
+      "id": "mermaid.c4",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.c4/template.yaml",
+      "title": "Mermaid C4 Diagram",
+      "description": "Renders official Mermaid C4 Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "isometric_architecture_v1",
+      "renderer": "offline.architecture.isometric.v1",
+      "layout_preset": "isometric_architecture",
+      "tags": [
+        "mermaid",
+        "c4",
+        "c4",
+        "diagram"
+      ],
+      "aliases": [
+        "C4Context"
+      ]
+    },
+    {
+      "id": "mermaid.class",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.class/template.yaml",
+      "title": "Mermaid Class Diagram",
+      "description": "Renders official Mermaid Class Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "uml_class_v1",
+      "renderer": "offline.uml.class.2_5d.v1",
+      "layout_preset": "class_cards",
+      "tags": [
+        "mermaid",
+        "class",
+        "class",
+        "diagram"
+      ]
+    },
+    {
+      "id": "mermaid.er",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.er/template.yaml",
+      "title": "Mermaid Entity Relationship Diagram",
+      "description": "Renders official Mermaid Entity Relationship Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "uml_class_v1",
+      "renderer": "offline.uml.class.2_5d.v1",
+      "layout_preset": "class_cards",
+      "tags": [
+        "mermaid",
+        "er",
+        "entity",
+        "diagram"
+      ],
+      "aliases": [
+        "erDiagram"
+      ]
+    },
+    {
+      "id": "mermaid.event_modeling",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.event_modeling/template.yaml",
+      "title": "Mermaid Event Modeling Diagram",
+      "description": "Renders official Mermaid Event Modeling Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "mermaid",
+        "event-modeling",
+        "event",
+        "diagram"
+      ],
+      "aliases": [
+        "eventModeling"
+      ]
+    },
+    {
+      "id": "mermaid.flowchart",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.flowchart/template.yaml",
+      "title": "Mermaid Flowchart",
+      "description": "Renders official Mermaid Flowchart syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "mermaid",
+        "flowchart",
+        "flowchart",
+        "diagram"
+      ],
+      "aliases": [
+        "graph"
+      ]
+    },
+    {
+      "id": "mermaid.gantt",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.gantt/template.yaml",
+      "title": "Mermaid Gantt Chart",
+      "description": "Renders official Mermaid Gantt Chart syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "mermaid",
+        "gantt",
+        "gantt",
+        "diagram"
+      ]
+    },
+    {
+      "id": "mermaid.gitgraph",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.gitgraph/template.yaml",
+      "title": "Mermaid GitGraph",
+      "description": "Renders official Mermaid GitGraph syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "pipeline_flow",
+      "tags": [
+        "mermaid",
+        "gitgraph",
+        "gitgraph",
+        "diagram"
+      ],
+      "aliases": [
+        "gitGraph"
+      ]
+    },
+    {
+      "id": "mermaid.ishikawa",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.ishikawa/template.yaml",
+      "title": "Mermaid Ishikawa Diagram",
+      "description": "Renders official Mermaid Ishikawa Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "layered_stack",
+      "tags": [
+        "mermaid",
+        "ishikawa",
+        "ishikawa",
+        "diagram"
+      ]
+    },
+    {
+      "id": "mermaid.journey",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.journey/template.yaml",
+      "title": "Mermaid User Journey",
+      "description": "Renders official Mermaid User Journey syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "incident_timeline",
+      "tags": [
+        "mermaid",
+        "journey",
+        "user",
+        "diagram"
+      ]
+    },
+    {
+      "id": "mermaid.kanban",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.kanban/template.yaml",
+      "title": "Mermaid Kanban Board",
+      "description": "Renders official Mermaid Kanban Board syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "mermaid",
+        "kanban",
+        "kanban",
+        "diagram"
+      ]
+    },
+    {
+      "id": "mermaid.mindmap",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.mindmap/template.yaml",
+      "title": "Mermaid Mindmap",
+      "description": "Renders official Mermaid Mindmap syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "city_map",
+      "tags": [
+        "mermaid",
+        "mindmap",
+        "mindmap",
+        "diagram"
+      ]
+    },
+    {
+      "id": "mermaid.packet",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.packet/template.yaml",
+      "title": "Mermaid Packet Diagram",
+      "description": "Renders official Mermaid Packet Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "mermaid",
+        "packet",
+        "packet",
+        "diagram"
+      ],
+      "aliases": [
+        "packet-beta"
+      ]
+    },
+    {
+      "id": "mermaid.pie",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.pie/template.yaml",
+      "title": "Mermaid Pie Chart",
+      "description": "Renders official Mermaid Pie Chart syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "mermaid",
+        "pie",
+        "pie",
+        "diagram"
+      ]
+    },
+    {
+      "id": "mermaid.quadrant",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.quadrant/template.yaml",
+      "title": "Mermaid Quadrant Chart",
+      "description": "Renders official Mermaid Quadrant Chart syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "mermaid",
+        "quadrant",
+        "quadrant",
+        "diagram"
+      ],
+      "aliases": [
+        "quadrantChart"
+      ]
+    },
+    {
+      "id": "mermaid.radar",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.radar/template.yaml",
+      "title": "Mermaid Radar Chart",
+      "description": "Renders official Mermaid Radar Chart syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "mermaid",
+        "radar",
+        "radar",
+        "diagram"
+      ],
+      "aliases": [
+        "radar-beta"
+      ]
+    },
+    {
+      "id": "mermaid.requirement",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.requirement/template.yaml",
+      "title": "Mermaid Requirement Diagram",
+      "description": "Renders official Mermaid Requirement Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "graph_2_5d",
+      "tags": [
+        "mermaid",
+        "requirement",
+        "requirement",
+        "diagram"
+      ],
+      "aliases": [
+        "requirementDiagram"
+      ]
+    },
+    {
+      "id": "mermaid.sankey",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.sankey/template.yaml",
+      "title": "Mermaid Sankey Diagram",
+      "description": "Renders official Mermaid Sankey Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "graph_events_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "flow_particles",
+      "tags": [
+        "mermaid",
+        "sankey",
+        "sankey",
+        "diagram"
+      ],
+      "aliases": [
+        "sankey-beta"
+      ]
+    },
+    {
+      "id": "mermaid.sequence",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.sequence/template.yaml",
+      "title": "Mermaid Sequence Diagram",
+      "description": "Renders official Mermaid Sequence Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "uml_sequence_v1",
+      "renderer": "offline.uml.sequence.3d.v1",
+      "layout_preset": "sequence_lifelines",
+      "tags": [
+        "mermaid",
+        "sequence",
+        "sequence",
+        "diagram"
+      ]
+    },
+    {
+      "id": "mermaid.state",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.state/template.yaml",
+      "title": "Mermaid State Diagram",
+      "description": "Renders official Mermaid State Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "uml_state_machine_v1",
+      "renderer": "offline.uml.state.3d.v1",
+      "layout_preset": "state_machine",
+      "tags": [
+        "mermaid",
+        "state",
+        "state",
+        "diagram"
+      ]
+    },
+    {
+      "id": "mermaid.timeline",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.timeline/template.yaml",
+      "title": "Mermaid Timeline",
+      "description": "Renders official Mermaid Timeline syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "timeline_v1",
+      "renderer": "offline.timeline.v1",
+      "layout_preset": "incident_timeline",
+      "tags": [
+        "mermaid",
+        "timeline",
+        "timeline",
+        "diagram"
+      ]
+    },
+    {
+      "id": "mermaid.treemap",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.treemap/template.yaml",
+      "title": "Mermaid Treemap",
+      "description": "Renders official Mermaid Treemap syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "matrix_board",
+      "tags": [
+        "mermaid",
+        "treemap",
+        "treemap",
+        "diagram"
+      ],
+      "aliases": [
+        "treemap-beta"
+      ]
+    },
+    {
+      "id": "mermaid.treeview",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.treeview/template.yaml",
+      "title": "Mermaid TreeView",
+      "description": "Renders official Mermaid TreeView syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "city_map",
+      "tags": [
+        "mermaid",
+        "treeview",
+        "treeview",
+        "diagram"
+      ],
+      "aliases": [
+        "treeView"
+      ]
+    },
+    {
+      "id": "mermaid.venn",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.venn/template.yaml",
+      "title": "Mermaid Venn Diagram",
+      "description": "Renders official Mermaid Venn Diagram syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "evidence_v1",
+      "renderer": "offline.evidence.v1",
+      "layout_preset": "radial_tree",
+      "tags": [
+        "mermaid",
+        "venn",
+        "venn",
+        "diagram"
+      ]
+    },
+    {
+      "id": "mermaid.wardley",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.wardley/template.yaml",
+      "title": "Mermaid Wardley Map",
+      "description": "Renders official Mermaid Wardley Map syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "graph_v1",
+      "renderer": "offline.graph.v1",
+      "layout_preset": "city_map",
+      "tags": [
+        "mermaid",
+        "wardley",
+        "wardley",
+        "diagram"
+      ],
+      "aliases": [
+        "wardley-beta"
+      ]
+    },
+    {
+      "id": "mermaid.xy",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.xy/template.yaml",
+      "title": "Mermaid XY Chart",
+      "description": "Renders official Mermaid XY Chart syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "matrix_v1",
+      "renderer": "offline.matrix.v1",
+      "layout_preset": "control_room",
+      "tags": [
+        "mermaid",
+        "xy",
+        "xy",
+        "diagram"
+      ],
+      "aliases": [
+        "xychart",
+        "xychart-beta"
+      ]
+    },
+    {
+      "id": "mermaid.zenuml",
+      "version": "1.0.0",
+      "category": "mermaid",
+      "path": "mermaid.zenuml/template.yaml",
+      "title": "Mermaid ZenUML Sequence",
+      "description": "Renders official Mermaid ZenUML Sequence syntax through the EFP offline visual renderer mapped for this diagram type.",
+      "input_schema": "schema.input.json",
+      "input_schema_kind": "uml_sequence_v1",
+      "renderer": "offline.uml.sequence.3d.v1",
+      "layout_preset": "sequence_lifelines",
+      "tags": [
+        "mermaid",
+        "zenuml",
+        "zenuml",
+        "diagram"
       ]
     }
   ]

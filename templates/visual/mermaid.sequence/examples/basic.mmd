@@ -1,0 +1,14 @@
+---
+title: Mermaid Sequence Example
+---
+sequenceDiagram
+  actor User
+  participant Portal
+  participant API
+  participant Database
+  User->>Portal: submit order
+  Portal->>API: create order
+  API->>Database: persist order
+  Database-->>API: order id
+  API-->>Portal: order created
+  Portal-->>User: confirmation

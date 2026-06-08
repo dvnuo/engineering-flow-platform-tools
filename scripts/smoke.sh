@@ -36,37 +36,36 @@ go run ./cmd/visual version --json >/dev/null
 
 go run ./cmd/visual template categories --template-dir ./templates/visual --json >/dev/null
 go run ./cmd/visual template list --template-dir ./templates/visual --json >/dev/null
-go run ./cmd/visual template list --template-dir ./templates/visual --category uml --json >/dev/null
-go run ./cmd/visual template schema uml.sequence_3d --template-dir ./templates/visual --json >/dev/null
-go run ./cmd/visual template guide uml.sequence_3d --template-dir ./templates/visual --json >/dev/null
-go run ./cmd/visual template schema relationship.dependency_graph --template-dir ./templates/visual --json >/dev/null
-go run ./cmd/visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json >/dev/null
+go run ./cmd/visual template list --template-dir ./templates/visual --category mermaid --json >/dev/null
+go run ./cmd/visual template schema mermaid.sequence --template-dir ./templates/visual --json >/dev/null
+go run ./cmd/visual template guide mermaid.sequence --template-dir ./templates/visual --json >/dev/null
+go run ./cmd/visual template schema mermaid.flowchart --template-dir ./templates/visual --json >/dev/null
+go run ./cmd/visual inspect-input --template mermaid.sequence --template-dir ./templates/visual --input ./templates/visual/mermaid.sequence/examples/basic.mmd --json >/dev/null
 go run ./cmd/visual template doctor --template-dir ./templates/visual --json >/dev/null
-go run ./cmd/visual inspect-plan --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out "${TMPDIR:-/tmp}/visual-plan-smoke" --json >/dev/null
+go run ./cmd/visual inspect-plan --template mermaid.sequence --template-dir ./templates/visual --input ./templates/visual/mermaid.sequence/examples/basic.mmd --out "${TMPDIR:-/tmp}/visual-plan-smoke" --json >/dev/null
 
 tmp="$(mktemp -d)"
 templates=(
-  uml.sequence_3d
-  relationship.dependency_graph
-  temporal.event_trace
-  flow.pipeline
-  hierarchy.layered_architecture
-  evidence.claim_source_board
-  matrix.kpi_control
-  spatial.codebase_galaxy
+  mermaid.sequence
+  mermaid.flowchart
+  mermaid.timeline
+  mermaid.sankey
+  mermaid.mindmap
+  mermaid.pie
+  mermaid.wardley
 )
 for template in "${templates[@]}"; do
   out="$tmp/${template//./-}"
-  go run ./cmd/visual render --template "$template" --template-dir ./templates/visual --input "./templates/visual/$template/examples/basic.input.json" --out "$out" --title "Smoke $template" --json >/dev/null
+  go run ./cmd/visual render --template "$template" --template-dir ./templates/visual --input "./templates/visual/$template/examples/basic.mmd" --out "$out" --title "Smoke $template" --json >/dev/null
   test -f "$out/index.html"
   go run ./cmd/visual inspect-render --template-dir ./templates/visual --out "$out" --json >/dev/null
 done
 
-gallery="$tmp/isometric-asset-gallery"
+gallery="$tmp/mermaid-architecture"
 go run ./cmd/visual render \
-  --template architecture.isometric_overview \
+  --template mermaid.architecture \
   --template-dir ./templates/visual \
-  --input ./templates/visual/architecture.isometric_overview/examples/asset-gallery.input.json \
+  --input ./templates/visual/mermaid.architecture/examples/basic.mmd \
   --out "$gallery" \
   --json >/dev/null
 if [[ "${EFP_SKIP_BROWSER_SMOKE:-}" != "1" ]]; then

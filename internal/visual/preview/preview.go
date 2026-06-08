@@ -141,7 +141,7 @@ func Preview(opts Options) (Result, error) {
 	if templateID == "" {
 		inferred, ok := mermaid.InferTemplateID(raw)
 		if !ok {
-			return Result{}, metadata.NewError("template_required", "visual inspect-input requires --template for JSON input.", "Pass --template <template-id>, or pass a Mermaid .mmd input so the template can be inferred.", 400)
+			return Result{}, metadata.NewError("mermaid_input_required", "visual inspect-input accepts Mermaid input.", "Pass a valid Mermaid .mmd file.", 400)
 		}
 		templateID = inferred
 	}
@@ -155,6 +155,9 @@ func Preview(opts Options) (Result, error) {
 	}
 	if err := manifest.ValidateTemplateManifest(opts.TemplateDir, entry, &tpl); err != nil {
 		return Result{}, err
+	}
+	if !mermaid.IsMermaid(raw) {
+		return Result{}, metadata.NewError("mermaid_input_required", "visual inspect-input accepts Mermaid input for public templates.", "Pass a valid Mermaid .mmd file or omit --template so the CLI can infer the Mermaid template.", 400)
 	}
 	raw, err = mermaid.CompileIfNeeded(tpl.InputSchemaKind, raw)
 	if err != nil {
@@ -1657,13 +1660,13 @@ func readInput(path string, stdin io.Reader) ([]byte, error) {
 		}
 		b, err := io.ReadAll(stdin)
 		if err != nil {
-			return nil, metadata.NewError("input_read_failed", "failed to read visual input from stdin: "+err.Error(), "Pipe valid JSON or Mermaid to visual preview --input -.", 400)
+			return nil, metadata.NewError("input_read_failed", "failed to read visual input from stdin: "+err.Error(), "Pipe valid Mermaid to visual preview --input -.", 400)
 		}
 		return b, nil
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, metadata.NewError("input_read_failed", "failed to read visual input: "+err.Error(), "Pass a readable JSON or Mermaid file path to --input.", 400)
+		return nil, metadata.NewError("input_read_failed", "failed to read visual input: "+err.Error(), "Pass a readable Mermaid file path to --input.", 400)
 	}
 	return b, nil
 }

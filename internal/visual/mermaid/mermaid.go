@@ -80,27 +80,64 @@ func InferTemplateID(raw []byte) (string, bool) {
 	}
 	switch d.Kind {
 	case "architecture-beta", "architecture":
-		return "architecture.isometric_overview", true
+		return "mermaid.architecture", true
 	case "c4context":
-		return "architecture.isometric_overview", true
+		return "mermaid.c4", true
 	case "sequencediagram", "sequencediagram-v2", "zenuml":
-		return "uml.sequence_3d", true
-	case "classdiagram", "classdiagram-v2", "erdiagram":
-		return "uml.class_structure_2_5d", true
+		if d.Kind == "zenuml" {
+			return "mermaid.zenuml", true
+		}
+		return "mermaid.sequence", true
+	case "classdiagram", "classdiagram-v2":
+		return "mermaid.class", true
+	case "erdiagram":
+		return "mermaid.er", true
 	case "statediagram", "statediagram-v2", "statediagram-v2-beta":
-		return "uml.state_machine_3d", true
-	case "timeline", "gantt", "journey", "gitgraph":
-		return "temporal.incident_timeline", true
-	case "mindmap", "treeview":
-		return "hierarchy.repository_tree", true
-	case "sankey", "sankey-beta", "xychart", "xychart-beta", "block", "block-beta", "packet", "packet-beta":
-		return "flow.data_flow", true
-	case "pie", "quadrantchart", "kanban", "radar", "treemap":
-		return "matrix.capability", true
+		return "mermaid.state", true
+	case "timeline":
+		return "mermaid.timeline", true
+	case "gantt":
+		return "mermaid.gantt", true
+	case "journey":
+		return "mermaid.journey", true
+	case "gitgraph":
+		return "mermaid.gitgraph", true
+	case "mindmap":
+		return "mermaid.mindmap", true
+	case "treeview":
+		return "mermaid.treeview", true
+	case "sankey", "sankey-beta":
+		return "mermaid.sankey", true
+	case "xychart", "xychart-beta":
+		return "mermaid.xy", true
+	case "block", "block-beta":
+		return "mermaid.block", true
+	case "packet", "packet-beta":
+		return "mermaid.packet", true
+	case "pie":
+		return "mermaid.pie", true
+	case "quadrantchart":
+		return "mermaid.quadrant", true
+	case "kanban":
+		return "mermaid.kanban", true
+	case "radar", "radar-beta":
+		return "mermaid.radar", true
+	case "treemap", "treemap-beta":
+		return "mermaid.treemap", true
+	case "requirementdiagram":
+		return "mermaid.requirement", true
+	case "eventmodeling":
+		return "mermaid.event_modeling", true
+	case "venn":
+		return "mermaid.venn", true
+	case "ishikawa":
+		return "mermaid.ishikawa", true
+	case "wardley", "wardley-beta":
+		return "mermaid.wardley", true
 	case "flowchart", "graph":
-		return "relationship.dependency_graph", true
+		return "mermaid.flowchart", true
 	default:
-		return "relationship.dependency_graph", true
+		return "mermaid.flowchart", true
 	}
 }
 
@@ -152,7 +189,7 @@ func parse(raw []byte) (Diagram, bool) {
 	switch kind {
 	case "architecture-beta", "architecture":
 		parseArchitecture(&d, bodyLines)
-	case "sequencediagram", "sequencediagram-v2":
+	case "sequencediagram", "sequencediagram-v2", "zenuml":
 		parseSequence(&d, bodyLines)
 	case "classdiagram", "classdiagram-v2":
 		parseClass(&d, bodyLines)
@@ -820,7 +857,7 @@ func knownMermaidKind(kind string) bool {
 		"erdiagram", "gantt", "timeline", "journey", "pie",
 		"mindmap", "gitgraph", "quadrantchart", "requirementdiagram", "c4context",
 		"xychart", "xychart-beta", "block", "block-beta", "packet", "packet-beta",
-		"sankey", "sankey-beta", "kanban", "radar", "eventmodeling", "treemap",
+		"sankey", "sankey-beta", "kanban", "radar", "radar-beta", "eventmodeling", "treemap", "treemap-beta",
 		"venn", "ishikawa", "wardley", "wardley-beta", "treeview":
 		return true
 	default:

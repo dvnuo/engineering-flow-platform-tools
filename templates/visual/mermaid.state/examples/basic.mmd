@@ -1,0 +1,9 @@
+---
+title: Mermaid State Diagram Example
+---
+stateDiagram-v2
+  [*] --> Created
+  Created --> Paid: payment accepted
+  Paid --> Packed: allocate stock
+  Packed --> Shipped: carrier pickup
+  Shipped --> Delivered: signed

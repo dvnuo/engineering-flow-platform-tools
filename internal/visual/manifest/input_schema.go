@@ -51,7 +51,7 @@ func LoadTemplateInputSchema(templateDir string, entry RegistryEntry, tpl Templa
 		return TemplateInputSchema{}, rel, metadata.NewError("template_manifest_invalid", "visual template schema file is missing json_schema: "+rel, "Add a complete json_schema object.", 400)
 	}
 	if len(doc.Example) == 0 {
-		return TemplateInputSchema{}, rel, metadata.NewError("template_manifest_invalid", "visual template schema file is missing example: "+rel, "Add an example object matching examples/basic.input.json.", 400)
+		return TemplateInputSchema{}, rel, metadata.NewError("template_manifest_invalid", "visual template schema file is missing example: "+rel, "Add an example object matching the template Mermaid example.", 400)
 	}
 	return doc, rel, nil
 }

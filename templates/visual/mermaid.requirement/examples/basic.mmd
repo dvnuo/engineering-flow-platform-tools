@@ -1,0 +1,14 @@
+---
+title: Mermaid Requirement Example
+---
+requirementDiagram
+  requirement auth_req {
+    id: REQ-1
+    text: Users must authenticate before checkout
+    risk: high
+    verifymethod: test
+  }
+  element login_api {
+    type: service
+  }
+  login_api - satisfies -> auth_req

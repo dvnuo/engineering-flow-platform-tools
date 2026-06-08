@@ -18,10 +18,10 @@ func validateCmd(o *Opts) *cobra.Command {
 	var templateID, inputPath string
 	c := &cobra.Command{
 		Use:   "validate",
-		Short: "Validate visual JSON or Mermaid input against a template contract",
+		Short: "Validate Mermaid input against a visual template contract",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputPath == "" {
-				return invalidArgs(cmd, o, "--input is required", "Pass --input <file> or --input - to read JSON or Mermaid from stdin.")
+				return invalidArgs(cmd, o, "--input is required", "Pass --input <file> or --input - to read Mermaid from stdin.")
 			}
 			templateDir, err := config.ResolveTemplateDir(o.TemplateDir, o.Config)
 			if err != nil {
@@ -34,7 +34,7 @@ func validateCmd(o *Opts) *cobra.Command {
 			if strings.TrimSpace(templateID) == "" {
 				inferred, ok := mermaid.InferTemplateID(raw)
 				if !ok {
-					return print(cmd, o, failureFromError(metadata.NewError("template_required", "visual validate requires --template for JSON input.", "Pass --template <template-id>, or pass a Mermaid .mmd input so the template can be inferred.", 400), "template_required"))
+					return print(cmd, o, failureFromError(metadata.NewError("mermaid_input_required", "visual validate accepts Mermaid input.", "Pass a valid Mermaid .mmd file.", 400), "mermaid_input_required"))
 				}
 				templateID = inferred
 			}
@@ -53,6 +53,9 @@ func validateCmd(o *Opts) *cobra.Command {
 			if err := manifest.ValidateTemplateManifest(templateDir, entry, &tpl); err != nil {
 				return print(cmd, o, failureFromError(err, "template_manifest_invalid"))
 			}
+			if !mermaid.IsMermaid(raw) {
+				return print(cmd, o, failureFromError(metadata.NewError("mermaid_input_required", "visual validate accepts Mermaid input for public templates.", "Pass a valid Mermaid .mmd file or omit --template so the CLI can infer the Mermaid template.", 400), "mermaid_input_required"))
+			}
 			raw, err = mermaid.CompileIfNeeded(tpl.InputSchemaKind, raw)
 			if err != nil {
 				return print(cmd, o, failureFromError(err, "template_input_invalid"))
@@ -69,7 +72,7 @@ func validateCmd(o *Opts) *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&templateID, "template", "", "Template id from visual template list; optional for Mermaid input")
-	c.Flags().StringVar(&inputPath, "input", "", "Input JSON or Mermaid file path, or - for stdin")
+	c.Flags().StringVar(&inputPath, "input", "", "Input Mermaid file path, or - for stdin")
 	return c
 }
 
@@ -77,13 +80,13 @@ func readValidationInput(cmd *cobra.Command, inputPath string) ([]byte, error) {
 	if strings.TrimSpace(inputPath) == "-" {
 		b, err := io.ReadAll(cmd.InOrStdin())
 		if err != nil {
-			return nil, metadata.NewError("input_read_failed", "failed to read visual input from stdin: "+err.Error(), "Pipe valid JSON or Mermaid to visual validate --input -.", 400)
+			return nil, metadata.NewError("input_read_failed", "failed to read visual input from stdin: "+err.Error(), "Pipe valid Mermaid to visual validate --input -.", 400)
 		}
 		return b, nil
 	}
 	b, err := os.ReadFile(inputPath)
 	if err != nil {
-		return nil, metadata.NewError("input_read_failed", "failed to read visual input: "+err.Error(), "Pass a readable JSON or Mermaid file path to --input.", 400)
+		return nil, metadata.NewError("input_read_failed", "failed to read visual input: "+err.Error(), "Pass a readable Mermaid file path to --input.", 400)
 	}
 	return b, nil
 }

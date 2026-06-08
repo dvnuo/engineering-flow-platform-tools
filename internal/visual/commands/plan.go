@@ -14,7 +14,7 @@ func inspectPlanCmd(o *Opts) *cobra.Command {
 		Short: "Compile a visual input into an agent-readable render plan before rendering",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputPath == "" {
-				return invalidArgs(cmd, o, "--input is required", "Pass --input <file> or --input - to read JSON or Mermaid from stdin.")
+				return invalidArgs(cmd, o, "--input is required", "Pass --input <file> or --input - to read Mermaid from stdin.")
 			}
 			templateDir, err := visualconfig.ResolveTemplateDir(o.TemplateDir, o.Config)
 			if err != nil {
@@ -34,7 +34,7 @@ func inspectPlanCmd(o *Opts) *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&templateID, "template", "", "Template id from visual template list; optional for Mermaid input")
-	c.Flags().StringVar(&inputPath, "input", "", "Input JSON or Mermaid file path, or - for stdin")
+	c.Flags().StringVar(&inputPath, "input", "", "Input Mermaid file path, or - for stdin")
 	c.Flags().StringVar(&outDir, "out", "", "Optional planned output directory for render command hints")
 	return c
 }

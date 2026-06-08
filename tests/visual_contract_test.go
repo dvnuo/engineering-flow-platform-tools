@@ -2,24 +2,14 @@ package tests
 
 import (
 	"encoding/json"
-	"image"
-	"image/color"
-	"image/png"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 
 	"engineering-flow-platform-tools/internal/testutil"
-	"engineering-flow-platform-tools/internal/visual/authoring"
-	"engineering-flow-platform-tools/internal/visual/manifest"
-	"engineering-flow-platform-tools/internal/visual/mark"
-	"engineering-flow-platform-tools/internal/visual/preview"
-	"engineering-flow-platform-tools/internal/visual/renderinspect"
-	"gopkg.in/yaml.v3"
 )
 
 type visualRegistry struct {
@@ -48,118 +38,41 @@ type visualRegistryEntry struct {
 	Aliases         []string `json:"aliases"`
 }
 
-type visualTemplateManifest struct {
-	ID              string `yaml:"id"`
-	Version         string `yaml:"version"`
-	Category        string `yaml:"category"`
-	Title           string `yaml:"title"`
-	Description     string `yaml:"description"`
-	InputSchema     string `yaml:"input_schema"`
-	InputSchemaKind string `yaml:"input_schema_kind"`
-	Renderer        struct {
-		Contract string `yaml:"contract"`
-	} `yaml:"renderer"`
-	Layout struct {
-		Preset string `yaml:"preset"`
-	} `yaml:"layout"`
-	Effects struct {
-		Engine string `yaml:"engine"`
-		Scene  string `yaml:"scene"`
-	} `yaml:"effects"`
-	VisualDesign struct {
-		InitialView     string   `yaml:"initial_view"`
-		AgentGuidance   []string `yaml:"agent_guidance"`
-		Supports        []string `yaml:"supports"`
-		MaxInitialNodes int      `yaml:"max_initial_nodes"`
-		MaxInitialEdges int      `yaml:"max_initial_edges"`
-	} `yaml:"visual_design"`
-	Offline struct {
-		Required      bool   `yaml:"required"`
-		ForbidNetwork bool   `yaml:"forbid_network"`
-		DataMode      string `yaml:"data_mode"`
-	} `yaml:"offline"`
-	Styles  []string `yaml:"styles"`
-	Scripts []string `yaml:"scripts"`
-	Tags    []string `yaml:"tags"`
-}
-
-var semanticCategoryCounts = map[string]int{
-	"uml":          5,
-	"relationship": 4,
-	"temporal":     4,
-	"flow":         4,
-	"hierarchy":    4,
-	"evidence":     4,
-	"matrix":       4,
-	"spatial":      4,
-	"architecture": 1,
-}
-
-var semanticSchemaKinds = map[string]bool{
-	"graph_v1":                    true,
-	"graph_events_v1":             true,
-	"timeline_v1":                 true,
-	"evidence_v1":                 true,
-	"matrix_v1":                   true,
-	"isometric_architecture_v1":   true,
-	"uml_sequence_v1":             true,
-	"uml_class_v1":                true,
-	"uml_state_machine_v1":        true,
-	"uml_activity_v1":             true,
-	"uml_component_deployment_v1": true,
-}
-
-var semanticRenderers = map[string]bool{
-	"offline.graph.v1":                  true,
-	"offline.timeline.v1":               true,
-	"offline.evidence.v1":               true,
-	"offline.matrix.v1":                 true,
-	"offline.architecture.isometric.v1": true,
-	"offline.uml.sequence.3d.v1":        true,
-	"offline.uml.class.2_5d.v1":         true,
-	"offline.uml.state.3d.v1":           true,
-	"offline.uml.activity.3d.v1":        true,
-	"offline.uml.component.3d.v1":       true,
-}
-
-var semanticLayoutPresets = map[string]bool{
-	"activity_swimlanes":     true,
-	"city_map":               true,
-	"class_cards":            true,
-	"component_deployment":   true,
-	"control_room":           true,
-	"decision_matrix":        true,
-	"evidence_board":         true,
-	"flow_particles":         true,
-	"galaxy":                 true,
-	"graph_2_5d":             true,
-	"heatmap":                true,
-	"incident_timeline":      true,
-	"journey":                true,
-	"layered_stack":          true,
-	"matrix_board":           true,
-	"permission_gate":        true,
-	"pipeline_flow":          true,
-	"radial_tree":            true,
-	"replay_stage":           true,
-	"sequence_lifelines":     true,
-	"service_map":            true,
-	"state_machine":          true,
-	"isometric_architecture": true,
-	"timeline_tunnel":        true,
-}
-
-var genericDescriptionPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`^Visualize .+ as a complete offline .+ view`),
-	regexp.MustCompile(`^Offline .+ visualization for .+ workflows\.$`),
-	regexp.MustCompile(`^.+ template for visual artifacts\.$`),
+var mermaidTemplates = []string{
+	"mermaid.architecture",
+	"mermaid.block",
+	"mermaid.c4",
+	"mermaid.class",
+	"mermaid.er",
+	"mermaid.event_modeling",
+	"mermaid.flowchart",
+	"mermaid.gantt",
+	"mermaid.gitgraph",
+	"mermaid.ishikawa",
+	"mermaid.journey",
+	"mermaid.kanban",
+	"mermaid.mindmap",
+	"mermaid.packet",
+	"mermaid.pie",
+	"mermaid.quadrant",
+	"mermaid.radar",
+	"mermaid.requirement",
+	"mermaid.sankey",
+	"mermaid.sequence",
+	"mermaid.state",
+	"mermaid.timeline",
+	"mermaid.treemap",
+	"mermaid.treeview",
+	"mermaid.venn",
+	"mermaid.wardley",
+	"mermaid.xy",
+	"mermaid.zenuml",
 }
 
 func TestVisualCommandsJSONContract(t *testing.T) {
 	obj := runVisualOK(t, "commands", "--json")
-	commands := objectMap(t, obj["data"])["commands"].([]any)
 	names := map[string]bool{}
-	for _, item := range commands {
+	for _, item := range objectMap(t, obj["data"])["commands"].([]any) {
 		m := objectMap(t, item)
 		names[m["name"].(string)] = true
 	}
@@ -170,1064 +83,227 @@ func TestVisualCommandsJSONContract(t *testing.T) {
 	}
 }
 
-func TestVisualSemanticCatalogContract(t *testing.T) {
+func TestVisualMermaidCatalogOnly(t *testing.T) {
 	root := repoRoot(t)
 	templateDir := filepath.Join(root, "templates", "visual")
 	registry := loadRegistry(t, templateDir)
-	if registry.Version != 3 {
-		t.Fatalf("expected registry version 3, got %d", registry.Version)
+	if registry.Version != 4 {
+		t.Fatalf("expected registry version 4, got %d", registry.Version)
 	}
-	if registry.Expected.CanonicalCount != 34 || len(registry.Templates) != 34 {
-		t.Fatalf("expected 34 semantic templates, got expected=%#v len=%d", registry.Expected, len(registry.Templates))
+	if registry.Expected.CanonicalCount != 28 || registry.Expected.Categories["mermaid"] != 28 {
+		t.Fatalf("unexpected registry expected metadata: %#v", registry.Expected)
 	}
-	for category, want := range semanticCategoryCounts {
-		if got := registry.Expected.Categories[category]; got != want {
-			t.Fatalf("expected category %s=%d, got %d", category, want, got)
-		}
+	if len(registry.Templates) != 28 {
+		t.Fatalf("expected 28 Mermaid templates, got %d", len(registry.Templates))
 	}
-
+	expected := map[string]bool{}
+	for _, id := range mermaidTemplates {
+		expected[id] = true
+	}
 	seen := map[string]bool{}
-	counts := map[string]int{}
 	for _, entry := range registry.Templates {
+		if !expected[entry.ID] {
+			t.Fatalf("unexpected public visual template %s", entry.ID)
+		}
 		if seen[entry.ID] {
-			t.Fatalf("duplicate template id %s", entry.ID)
+			t.Fatalf("duplicate template %s", entry.ID)
 		}
 		seen[entry.ID] = true
-		counts[entry.Category]++
-		if len(entry.Aliases) != 0 {
-			t.Fatalf("new semantic catalog must not expose aliases: %#v", entry)
+		if entry.Category != "mermaid" || !strings.HasPrefix(entry.ID, "mermaid.") {
+			t.Fatalf("public template must be mermaid category/id: %#v", entry)
 		}
-		assertRegistryEntryQuality(t, entry)
-		manifest := loadTemplateManifest(t, templateDir, entry)
-		assertManifestMatchesRegistry(t, entry, manifest)
-		assertTemplateFiles(t, templateDir, entry)
-		runVisualOK(t, "validate", "--template", entry.ID, "--template-dir", templateDir, "--input", filepath.Join(templateDir, entry.ID, "examples", "basic.input.json"), "--json")
+		assertMermaidTemplateFiles(t, templateDir, entry)
+		runVisualOK(t, "validate", "--template", entry.ID, "--template-dir", templateDir, "--input", filepath.Join(templateDir, entry.ID, "examples", "basic.mmd"), "--json")
 	}
-	for category, want := range semanticCategoryCounts {
-		if counts[category] != want {
-			t.Fatalf("category %s expected %d templates, got %d", category, want, counts[category])
-		}
+	if len(seen) != len(expected) {
+		t.Fatalf("expected Mermaid templates missing: seen=%#v", seen)
 	}
-}
 
-func TestVisualNoUnregisteredTemplateDirectories(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	registry := loadRegistry(t, templateDir)
-	canonical := map[string]bool{}
-	for _, entry := range registry.Templates {
-		canonical[filepath.Dir(filepath.ToSlash(entry.Path))] = true
-	}
 	entries, err := os.ReadDir(templateDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, entry := range entries {
-		if !entry.IsDir() || entry.Name() == "_shared" {
+	for _, item := range entries {
+		if !item.IsDir() {
 			continue
 		}
-		if !canonical[entry.Name()] {
-			t.Fatalf("unregistered visual template directory: %s", entry.Name())
+		name := item.Name()
+		if name == "_shared" {
+			continue
+		}
+		if !strings.HasPrefix(name, "mermaid.") {
+			t.Fatalf("non-Mermaid visual template directory should not remain: %s", name)
 		}
 	}
 }
 
-func TestVisualTemplateDiscoveryCommands(t *testing.T) {
+func TestVisualPublicMermaidTemplatesDoNotExposeCustomJSONInput(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+	for _, entry := range loadRegistry(t, templateDir).Templates {
+		t.Run(entry.ID, func(t *testing.T) {
+			base := filepath.Join(templateDir, entry.ID)
+			exampleDir := filepath.Join(base, "examples")
+			err := filepath.WalkDir(exampleDir, func(path string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				if strings.HasSuffix(path, ".input.json") || strings.HasSuffix(path, ".json") {
+					t.Fatalf("%s public examples must use Mermaid .mmd input, found %s", entry.ID, path)
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			guide := mustRead(t, filepath.Join(base, "agent-guide.md"))
+			if strings.Contains(guide, ".input.json") {
+				t.Fatalf("%s guide still mentions non-Mermaid input", entry.ID)
+			}
+			schema := loadJSONMap(t, filepath.Join(base, "schema.input.json"))
+			if schema["input_format"] != "mermaid" || schema["mermaid_syntax"] == "" {
+				t.Fatalf("%s schema must expose Mermaid input contract: %#v", entry.ID, schema)
+			}
+		})
+	}
+	jsonInput := filepath.Join(t.TempDir(), "input.json")
+	if err := os.WriteFile(jsonInput, []byte(`{"nodes":[{"id":"a"}],"edges":[]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fail := runVisual(t, "validate", "--template", "mermaid.flowchart", "--template-dir", templateDir, "--input", jsonInput, "--json")
+	assertErrorCode(t, fail, "mermaid_input_required")
+}
+
+func TestVisualTemplateDiscoveryAndDoctor(t *testing.T) {
 	root := repoRoot(t)
 	templateDir := filepath.Join(root, "templates", "visual")
 	categories := runVisualOK(t, "template", "categories", "--template-dir", templateDir, "--json")
 	catData := objectMap(t, categories["data"])
-	if catData["canonical_count"].(float64) != 34 || catData["total_count"].(float64) != 34 || catData["alias_count"].(float64) != 0 {
-		t.Fatalf("unexpected categories counts: %#v", catData)
+	if catData["canonical_count"].(float64) != 28 || catData["total_count"].(float64) < 28 || catData["alias_count"].(float64) < 1 {
+		t.Fatalf("unexpected category counts: %#v", catData)
 	}
-	items := catData["categories"].([]any)
-	gotCategories := map[string]float64{}
-	for _, item := range items {
-		obj := objectMap(t, item)
-		gotCategories[obj["id"].(string)] = obj["count"].(float64)
-	}
-	for category, want := range semanticCategoryCounts {
-		if gotCategories[category] != float64(want) {
-			t.Fatalf("category %s expected %.0f, got %#v", category, float64(want), gotCategories)
-		}
+	categoryItems := catData["categories"].([]any)
+	if len(categoryItems) != 1 || objectMap(t, categoryItems[0])["id"] != "mermaid" || objectMap(t, categoryItems[0])["count"].(float64) != 28 {
+		t.Fatalf("expected only mermaid category: %#v", categoryItems)
 	}
 
-	list := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--category", "uml", "--json")
+	list := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--json")
 	listData := objectMap(t, list["data"])
-	if listData["matched_count"].(float64) != 5 || listData["alias_count"].(float64) != 0 {
-		t.Fatalf("unexpected uml list data: %#v", listData)
+	if listData["canonical_count"].(float64) != 28 || listData["matched_count"].(float64) != 28 {
+		t.Fatalf("unexpected template list data: %#v", listData)
 	}
-	filtered := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--schema-kind", "uml_sequence_v1", "--renderer", "offline.uml.sequence.3d.v1", "--json")
-	if objectMap(t, filtered["data"])["matched_count"].(float64) != 1 {
-		t.Fatalf("expected one UML sequence match: %#v", filtered)
-	}
-	architecture := runVisualOK(t, "template", "list", "--template-dir", templateDir, "--category", "architecture", "--json")
-	if objectMap(t, architecture["data"])["matched_count"].(float64) != 1 {
-		t.Fatalf("expected one architecture template: %#v", architecture)
-	}
-}
-
-func TestVisualTemplateAgentGuideCommandAndMetadata(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	guide := runVisualOK(t, "template", "guide", "uml.sequence_3d", "--template-dir", templateDir, "--json")
-	guideData := objectMap(t, guide["data"])
-	if guideData["template_id"] != "uml.sequence_3d" || guideData["agent_guide_available"] != true {
-		t.Fatalf("unexpected guide response: %#v", guideData)
-	}
-	if !strings.Contains(guideData["raw_markdown"].(string), "participant = semantic lifeline") {
-		t.Fatalf("uml.sequence_3d guide missing sequence semantic rules")
-	}
-	sections := objectMap(t, guideData["guide"])
-	for _, section := range []string{"when_to_use_this_template", "semantic_model", "required_construction_rules", "recommended_fields", "visual_encoding_rules", "common_mistakes_to_avoid", "quality_checklist_before_render", "minimal_good_example"} {
-		if strings.TrimSpace(sections[section].(string)) == "" {
-			t.Fatalf("guide section %s missing: %#v", section, sections)
-		}
-	}
-	get := runVisualOK(t, "template", "get", "uml.sequence_3d", "--template-dir", templateDir, "--json")
-	getData := objectMap(t, get["data"])
-	if getData["agent_guide_available"] != true || getData["quality_rules_available"] != true {
-		t.Fatalf("template get did not expose guide/rules metadata: %#v", getData)
-	}
-	if getData["panel_grammar_available"] != nil || getData["panel_grammar_path"] != nil {
-		t.Fatalf("template get still exposes panel grammar metadata: %#v", getData)
-	}
-	schema := runVisualOK(t, "template", "schema", "uml.sequence_3d", "--template-dir", templateDir, "--json")
+	schema := runVisualOK(t, "template", "schema", "mermaid.sequence", "--template-dir", templateDir, "--json")
 	schemaData := objectMap(t, schema["data"])
-	if schemaData["agent_guide_available"] != true || len(schemaData["agent_guide_summary"].([]any)) == 0 {
-		t.Fatalf("template schema did not expose guide summary: %#v", schemaData)
+	if schemaData["input_format"] != "mermaid" || schemaData["example_file"] != "mermaid.sequence/examples/basic.mmd" || strings.TrimSpace(schemaData["mermaid_example"].(string)) == "" {
+		t.Fatalf("template schema must expose Mermaid example: %#v", schemaData)
 	}
-	if schemaData["panel_grammar_available"] != nil || schemaData["panel_grammar_path"] != nil || schemaData["panel_grammar_summary"] != nil {
-		t.Fatalf("template schema still exposes panel grammar metadata: %#v", schemaData)
+	guide := runVisualOK(t, "template", "guide", "mermaid.sequence", "--template-dir", templateDir, "--json")
+	if !strings.Contains(objectMap(t, guide["data"])["raw_markdown"].(string), "Mermaid") {
+		t.Fatalf("Mermaid guide should describe Mermaid input: %#v", guide)
 	}
-	cmdSchema := runVisualOK(t, "schema", "template.guide", "--json")
-	if objectMap(t, cmdSchema["data"])["command"] != "template.guide" {
-		t.Fatalf("template.guide command schema missing: %#v", cmdSchema)
-	}
-}
 
-func TestVisualAllTemplatesHaveAgentGuidesAndQualityRules(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	registry := loadRegistry(t, templateDir)
-	for _, entry := range registry.Templates {
-		t.Run(entry.ID, func(t *testing.T) {
-			guidePath := filepath.Join(templateDir, entry.ID, "agent-guide.md")
-			guide := mustRead(t, guidePath)
-			for _, want := range []string{"## When to use this template", "## Semantic model", "## Required construction rules", "## Recommended fields", "## Visual encoding rules", "## Common mistakes to avoid", "## Quality checklist before render", "## Minimal good example", "common-visual-quality.md"} {
-				if !strings.Contains(guide, want) {
-					t.Fatalf("%s guide missing %q", entry.ID, want)
-				}
-			}
-			rules := loadJSONMap(t, filepath.Join(templateDir, entry.ID, "quality.rules.json"))
-			if rules["schema"] != "efp.visual.template_quality_rules.v1" || rules["template_id"] != entry.ID {
-				t.Fatalf("%s quality rules invalid: %#v", entry.ID, rules)
-			}
-			for _, example := range []string{"good-small.input.json", "good-medium.input.json", "bad-dense.input.json", "fixed-dense.input.json"} {
-				if _, err := os.Stat(filepath.Join(templateDir, entry.ID, "examples", example)); err != nil {
-					t.Fatalf("%s missing example %s: %v", entry.ID, example, err)
-				}
-			}
-		})
-	}
-	for _, shared := range []string{"common-visual-quality.md", "agent-guide.schema.json", "quality-rules.schema.json"} {
-		if _, err := os.Stat(filepath.Join(templateDir, "_shared", "agent-guidance", shared)); err != nil {
-			t.Fatalf("missing shared guidance file %s: %v", shared, err)
-		}
-	}
-}
-
-func TestVisualArchitectureTemplateAuthoringContract(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	templateID := "architecture.isometric_overview"
-	base := filepath.Join(templateDir, templateID)
-	for _, rel := range []string{"template.yaml", "schema.input.json", "style.css", "agent-guide.md", "quality.rules.json"} {
-		info, err := os.Stat(filepath.Join(base, filepath.FromSlash(rel)))
-		if err != nil || info.IsDir() || info.Size() == 0 {
-			t.Fatalf("%s missing non-empty %s", templateID, rel)
-		}
-	}
-	for _, example := range []string{"basic.input.json", "good-small.input.json", "good-medium.input.json", "bad-dense.input.json", "fixed-dense.input.json", "bad-generic.input.json", "asset-gallery.input.json"} {
-		info, err := os.Stat(filepath.Join(base, "examples", example))
-		if err != nil || info.IsDir() || info.Size() == 0 {
-			t.Fatalf("%s missing non-empty example %s", templateID, example)
-		}
-	}
-	schemaDoc := loadJSONMap(t, filepath.Join(base, "schema.input.json"))
-	jsonSchema := objectMap(t, schemaDoc["json_schema"])
-	props := objectMap(t, jsonSchema["properties"])
-	for _, field := range []string{"schema", "title", "canvas", "camera", "theme", "zones", "entities", "links", "controls", "view", "renderHints", "visual"} {
-		if _, ok := props[field]; !ok {
-			t.Fatalf("%s architecture schema missing %s", templateID, field)
-		}
-	}
-	defs := objectMap(t, jsonSchema["$defs"])
-	zoneProps := objectMap(t, objectMap(t, defs["zone"])["properties"])
-	for _, field := range []string{"id", "label", "bounds", "presentation"} {
-		if _, ok := zoneProps[field]; !ok {
-			t.Fatalf("%s zone schema missing %s", templateID, field)
-		}
-	}
-	entityProps := objectMap(t, objectMap(t, defs["entity"])["properties"])
-	for _, field := range []string{"id", "label", "kind", "zone", "position", "size", "presentation"} {
-		if _, ok := entityProps[field]; !ok {
-			t.Fatalf("%s entity schema missing %s", templateID, field)
-		}
-	}
-	linkProps := objectMap(t, objectMap(t, defs["link"])["properties"])
-	for _, field := range []string{"id", "from", "to", "label", "directed", "route", "presentation"} {
-		if _, ok := linkProps[field]; !ok {
-			t.Fatalf("%s link schema missing %s", templateID, field)
-		}
-	}
-	presentationProps := objectMap(t, objectMap(t, defs["presentation"])["properties"])
-	for _, field := range []string{"shape", "icon", "model", "color", "arrow", "boundary", "label", "leaderLine"} {
-		if _, ok := presentationProps[field]; !ok {
-			t.Fatalf("%s architecture presentation missing %s", templateID, field)
-		}
-	}
-	renderHintProps := objectMap(t, objectMap(t, props["renderHints"])["properties"])
-	for _, field := range []string{"badgeMode", "badgeSize", "badgePlacement", "labelIcon"} {
-		if _, ok := renderHintProps[field]; !ok {
-			t.Fatalf("%s architecture renderHints missing %s", templateID, field)
-		}
-	}
-	runVisualOK(t, "validate", "--template", templateID, "--template-dir", templateDir, "--input", filepath.Join(base, "examples", "basic.input.json"), "--json")
-	runVisualOK(t, "validate", "--template", templateID, "--template-dir", templateDir, "--input", filepath.Join(base, "examples", "asset-gallery.input.json"), "--json")
-
-	get := runVisualOK(t, "template", "get", templateID, "--template-dir", templateDir, "--json")
-	getData := objectMap(t, get["data"])
-	if getData["category"] != "architecture" || getData["input_schema_kind"] != "isometric_architecture_v1" || objectMap(t, getData["renderer"])["contract"] != "offline.architecture.isometric.v1" {
-		t.Fatalf("architecture get contract mismatch: %#v", getData)
-	}
-	schema := runVisualOK(t, "template", "schema", templateID, "--template-dir", templateDir, "--json")
-	schemaData := objectMap(t, schema["data"])
-	if schemaData["agent_guide_available"] != true || len(schemaData["agent_guide_summary"].([]any)) == 0 {
-		t.Fatalf("architecture schema missing guide summary: %#v", schemaData)
-	}
-	guide := runVisualOK(t, "template", "guide", templateID, "--template-dir", templateDir, "--json")
-	guideData := objectMap(t, guide["data"])
-	if guideData["agent_guide_available"] != true || !strings.Contains(guideData["raw_markdown"].(string), "zones`, `entities`, and `links`") {
-		t.Fatalf("architecture guide unavailable or missing zones/entities/links rule: %#v", guideData)
-	}
-}
-
-func TestVisualLogoModelAssetPipelineContract(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	catalog := loadJSONMap(t, filepath.Join(root, "scripts", "assets", "logo_catalog.json"))
-	if catalog["schema"] != "efp.visual.logo_catalog.v1" || len(catalog["logos"].([]any)) < 20 {
-		t.Fatalf("logo catalog should contain at least 20 allowlisted entries: %#v", catalog)
-	}
-	for _, rel := range []string{
-		"scripts/assets/fetch_logo_assets.mjs",
-		"scripts/assets/convert_svg_to_3d.mjs",
-		"scripts/assets/vecto3d_adapter.mjs",
-		"scripts/assets/optimize_generated_models.mjs",
-		"scripts/assets/validate_asset_registry.mjs",
-		"scripts/assets/README.md",
-		"templates/visual/_shared/assets/attributions/ASSETS.md",
-		"templates/visual/_shared/assets/attributions/LOGO_SOURCES.json",
-		"templates/visual/_shared/assets/manifests/logo-catalog.json",
-		"templates/visual/_shared/assets/manifests/generated-models.json",
+	doctor := runVisualOK(t, "template", "doctor", "--template-dir", templateDir, "--json")
+	doctorData := objectMap(t, doctor["data"])
+	for key, want := range map[string]float64{
+		"checked_templates":            28,
+		"checked_examples":             28,
+		"rendered_examples":            28,
+		"canonical_templates":          28,
+		"expected_canonical_templates": 28,
+		"canonical_template_dirs":      28,
 	} {
-		info, err := os.Stat(filepath.Join(root, filepath.FromSlash(rel)))
-		if err != nil || info.IsDir() || info.Size() == 0 {
-			t.Fatalf("missing non-empty visual asset pipeline file %s", rel)
+		if doctorData[key].(float64) != want {
+			t.Fatalf("doctor expected %s=%.0f, got %#v", key, want, doctorData)
 		}
 	}
-	assetRegistryRaw := mustRead(t, filepath.Join(templateDir, "_shared", "asset-registry.json"))
-	if strings.Contains(assetRegistryRaw, "http://") || strings.Contains(assetRegistryRaw, "https://") {
-		t.Fatalf("asset-registry must not contain remote URL schemes")
-	}
-	sourceRaw := mustRead(t, filepath.Join(templateDir, "_shared", "assets", "attributions", "LOGO_SOURCES.json"))
-	if strings.Contains(sourceRaw, "http://") || strings.Contains(sourceRaw, "https://") {
-		t.Fatalf("LOGO_SOURCES must use offline source references, not remote URL schemes")
-	}
-	assetRegistry := loadJSONMap(t, filepath.Join(templateDir, "_shared", "asset-registry.json"))
-	icons := objectMap(t, assetRegistry["icons"])
-	models := objectMap(t, assetRegistry["models"])
-	for _, id := range []string{"nginx", "redis", "mysql", "jenkins", "kubernetes"} {
-		if icons[id] == nil {
-			t.Fatalf("asset registry missing downloaded logo icon %s", id)
-		}
-		modelID := id + ".logo3d"
-		if models[modelID] == nil {
-			t.Fatalf("asset registry missing generated model %s", modelID)
-		}
-		modelPath := objectMap(t, models[modelID])["path"].(string)
-		b, err := os.ReadFile(filepath.Join(templateDir, "_shared", filepath.FromSlash(modelPath)))
-		if err != nil || len(b) < 12 || string(b[:4]) != "glTF" {
-			t.Fatalf("generated model %s is not a GLB file", modelPath)
-		}
-	}
-	markRegistry := loadJSONMap(t, filepath.Join(templateDir, "_shared", "mark-registry.json"))
-	kinds := objectMap(t, markRegistry["kinds"])
-	for kind, modelID := range map[string]string{"nginx": "nginx.logo3d", "redis": "redis.logo3d", "mysql": "mysql.logo3d", "kubernetes": "kubernetes.logo3d", "elasticsearch": "elasticsearch.logo3d"} {
-		spec := objectMap(t, kinds[kind])
-		if spec["model"] != modelID {
-			t.Fatalf("mark registry kind %s should resolve model %s: %#v", kind, modelID, spec)
-		}
-	}
-	cmd := exec.Command("node", "scripts/assets/validate_asset_registry.mjs")
-	cmd.Dir = root
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("asset registry validation failed: %v\n%s", err, string(out))
+	if doctorData["offline"] != true || len(doctorData["orphan_template_dirs"].([]any)) != 0 {
+		t.Fatalf("doctor should pass offline with no orphan dirs: %#v", doctorData)
 	}
 }
 
-func TestVisualInspectInputTemplateQualityRulesWarnings(t *testing.T) {
+func TestVisualMermaidInferenceAndRender(t *testing.T) {
 	root := repoRoot(t)
 	templateDir := filepath.Join(root, "templates", "visual")
-	badSeq := runVisualOK(t, "inspect-input", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "uml.sequence_3d", "examples", "bad-dense.input.json"), "--json")
-	badSeqCodes := warningCodeSet(t, badSeq)
-	for _, code := range []string{"participant_display_name_missing", "phase_color_missing", "message_label_priority_missing", "visual_guidance_missing", "message_phase_missing", "message_curve_missing"} {
-		if !badSeqCodes[code] {
-			t.Fatalf("bad sequence missing warning %s in %#v", code, badSeqCodes)
-		}
-	}
-	goodSeq := runVisualOK(t, "inspect-input", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "uml.sequence_3d", "examples", "game-session-flow.input.json"), "--json")
-	if len(warningCodes(t, goodSeq)) >= len(warningCodes(t, badSeq)) {
-		t.Fatalf("good sequence should have fewer warnings than bad sequence")
-	}
-	for _, forbidden := range []string{"visual_guidance_unknown_refs", "message_phase_missing", "unknown_participant_ref", "duplicate_order"} {
-		if warningCodeSet(t, goodSeq)[forbidden] {
-			t.Fatalf("good sequence unexpectedly has warning %s", forbidden)
-		}
-	}
-
-	badGraph := runVisualOK(t, "inspect-input", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "relationship.dependency_graph", "examples", "dependency-dense-bad.input.json"), "--json")
-	badGraphCodes := warningCodeSet(t, badGraph)
-	for _, code := range []string{"ungrouped_nodes_high", "dominant_edge_kind", "edge_visibility_missing", "node_importance_missing", "label_too_long"} {
-		if !badGraphCodes[code] {
-			t.Fatalf("bad graph missing warning %s in %#v", code, badGraphCodes)
-		}
-	}
-	for _, w := range objectMap(t, badGraph["data"])["warnings"].([]any) {
-		warning := objectMap(t, w)
-		if strings.TrimSpace(warning["suggestion"].(string)) == "" {
-			t.Fatalf("warning missing machine-readable suggestion: %#v", warning)
-		}
-	}
-	fixedGraph := runVisualOK(t, "inspect-input", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "relationship.dependency_graph", "examples", "dependency-dense-fixed.input.json"), "--json")
-	if len(warningCodes(t, fixedGraph)) >= len(warningCodes(t, badGraph)) {
-		t.Fatalf("fixed graph should have fewer warnings than bad graph")
-	}
-
-	badIso := runVisualOK(t, "inspect-input", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "architecture.isometric_overview", "examples", "bad-generic.input.json"), "--json")
-	badIsoCodes := warningCodeSet(t, badIso)
-	for _, code := range []string{"isometric_zones_missing", "isometric_entity_kind_missing", "isometric_link_direction_missing", "isometric_missing_base_grid", "isometric_generic_graph_detected", "asset_remote_url_forbidden", "asset_model_missing", "asset_icon_unknown", "asset_logo_missing"} {
-		if !badIsoCodes[code] {
-			t.Fatalf("bad isometric input missing warning %s in %#v", code, badIsoCodes)
-		}
-	}
-	for _, item := range objectMap(t, badIso["data"])["warnings"].([]any) {
-		warning := objectMap(t, item)
-		code, _ := warning["code"].(string)
-		if strings.HasPrefix(code, "isometric_") {
-			if warning["severity"] == "" || warning["path"] == "" || warning["message"] == "" || warning["suggestion"] == "" || warning["auto_fix_hint"] == nil {
-				t.Fatalf("isometric warning missing required fields: %#v", warning)
-			}
-		}
-	}
-	goodIso := runVisualOK(t, "inspect-input", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "architecture.isometric_overview", "examples", "good-small.input.json"), "--json")
-	goodIsoCodes := warningCodeSet(t, goodIso)
-	for _, forbidden := range []string{"isometric_link_endpoint_unknown", "isometric_entity_zone_unknown", "isometric_missing_base_grid", "isometric_link_direction_missing", "isometric_link_arrow_missing"} {
-		if goodIsoCodes[forbidden] {
-			t.Fatalf("good isometric input unexpectedly has warning %s in %#v", forbidden, goodIsoCodes)
-		}
-	}
-	for _, item := range objectMap(t, goodIso["data"])["warnings"].([]any) {
-		if objectMap(t, item)["severity"] == "error" {
-			t.Fatalf("good isometric input should not have critical warnings: %#v", goodIso)
-		}
-	}
-}
-
-func TestVisualInspectPlanContract(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-
-	cmdSchema := runVisualOK(t, "schema", "inspect-plan", "--json")
-	cmdData := objectMap(t, cmdSchema["data"])
-	if cmdData["command"] != "inspect-plan" {
-		t.Fatalf("inspect-plan command schema missing: %#v", cmdData)
-	}
-	required := stringSetFromAny(cmdData["required"].([]any))
-	for _, name := range []string{"input"} {
-		if !required[name] {
-			t.Fatalf("inspect-plan schema missing required %s: %#v", name, cmdData)
-		}
-	}
-	flags := map[string]map[string]any{}
-	for _, item := range cmdData["flags"].([]any) {
-		flag := objectMap(t, item)
-		flags[flag["name"].(string)] = flag
-	}
-	for _, name := range []string{"template", "input", "out"} {
-		if flags[name] == nil {
-			t.Fatalf("inspect-plan schema missing flag %s: %#v", name, flags)
-		}
-	}
-	if flags["template"]["required"] == true || flags["input"]["required"] != true || flags["out"]["required"] == true {
-		t.Fatalf("inspect-plan required flag metadata invalid: %#v", flags)
-	}
-
-	good := runVisualOK(t, "inspect-plan", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "uml.sequence_3d", "examples", "game-session-flow.input.json"), "--out", filepath.Join(t.TempDir(), "sequence"), "--json")
-	data := objectMap(t, good["data"])
-	if data["ready"] != true || data["quality_score"].(float64) < 90 {
-		t.Fatalf("good inspect-plan should be ready with high quality: %#v", data)
-	}
-	plan := objectMap(t, data["visual_plan"])
-	if plan["schema"] != "efp.visual.plan.v1" || plan["template_id"] != "uml.sequence_3d" {
-		t.Fatalf("visual plan contract mismatch: %#v", plan)
-	}
-	ir := objectMap(t, plan["ir"])
-	if ir["schema"] != "efp.visual.ir.v1" || ir["kind"] != "uml_sequence_v1" {
-		t.Fatalf("visual IR contract mismatch: %#v", ir)
-	}
-	counts := objectMap(t, ir["counts"])
-	if counts["objects"].(float64) < 15 || counts["relationships"].(float64) < 18 {
-		t.Fatalf("visual IR too small for sequence example: %#v", counts)
-	}
-	view := objectMap(t, plan["view"])
-	if len(view["initial_focus_ids"].([]any)) == 0 || view["max_initial_objects"].(float64) == 0 {
-		t.Fatalf("visual plan view missing focus or budgets: %#v", view)
-	}
-	labels := objectMap(t, plan["labels"])
-	if labels["mode"] == "" {
-		t.Fatalf("visual plan labels missing mode: %#v", labels)
-	}
-	legend := objectMap(t, plan["legend"])
-	if legend["show"] != true || len(legend["items"].([]any)) == 0 {
-		t.Fatalf("visual plan legend missing items: %#v", legend)
-	}
-	render := objectMap(t, plan["render"])
-	command := render["command"].([]any)
-	if len(command) < 9 || command[0] != "visual" || command[1] != "render" || render["offline"] != true {
-		t.Fatalf("visual plan render hints invalid: %#v", render)
-	}
-	actions := plan["agent_next_actions"].([]any)
-	if len(actions) == 0 {
-		t.Fatalf("visual plan missing agent next actions: %#v", plan)
-	}
-
-	isoObj := runVisualOK(t, "inspect-plan", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "architecture.isometric_overview", "examples", "good-small.input.json"), "--out", filepath.Join(t.TempDir(), "isometric"), "--json")
-	isoData := objectMap(t, isoObj["data"])
-	if isoData["ready"] != true || isoData["quality_score"].(float64) < 80 {
-		t.Fatalf("good isometric inspect-plan should be ready: %#v", isoData)
-	}
-	isoPlan := objectMap(t, objectMap(t, isoData["visual_plan"])["isometric"])
-	for _, field := range []string{"base_plane", "grid"} {
-		if isoPlan[field] != true {
-			t.Fatalf("isometric plan field %s should be true: %#v", field, isoPlan)
-		}
-	}
-	for field, want := range map[string]float64{"zone_count": 2, "entity_count": 2, "link_count": 1, "positioned_entities": 2, "auto_positioned_entities": 0, "directed_links": 1, "arrow_links": 1, "top_labels": 2, "leader_lines": 2} {
-		if isoPlan[field].(float64) != want {
-			t.Fatalf("isometric plan expected %s=%.0f, got %#v", field, want, isoPlan)
-		}
-	}
-	if isoPlan["camera"] != "orthographic_isometric" || isoPlan["theme"] != "architecture_light" {
-		t.Fatalf("isometric plan camera/theme mismatch: %#v", isoPlan)
-	}
-	boundaries := objectMap(t, isoPlan["boundary_styles"])
-	if boundaries["solid"].(float64) != 2 {
-		t.Fatalf("isometric plan missing boundary styles: %#v", isoPlan)
-	}
-
-	bad := runVisualOK(t, "inspect-plan", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "relationship.dependency_graph", "examples", "dependency-dense-bad.input.json"), "--json")
-	badData := objectMap(t, bad["data"])
-	if badData["ready"] != false || badData["quality_score"].(float64) >= 70 {
-		t.Fatalf("bad inspect-plan should not be ready: %#v", badData)
-	}
-	qualityLoop := objectMap(t, badData["visual_plan"])["quality_loop"].([]any)
-	if len(qualityLoop) == 0 {
-		t.Fatalf("bad inspect-plan missing quality loop: %#v", badData)
-	}
-	codes := map[string]bool{}
-	for _, item := range qualityLoop {
-		code := objectMap(t, item)["code"].(string)
-		codes[code] = true
-	}
-	for _, code := range []string{"ungrouped_nodes_high", "edge_visibility_missing", "dominant_edge_kind", "visual_guidance_missing"} {
-		if !codes[code] {
-			t.Fatalf("bad inspect-plan missing quality loop code %s in %#v", code, codes)
-		}
-	}
-}
-
-func TestVisualMermaidInputContract(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	input := filepath.Join(templateDir, "architecture.isometric_overview", "examples", "microservice-architecture.mmd")
-
-	inspect := runVisualOK(t, "inspect-input", "--template-dir", templateDir, "--input", input, "--json")
-	inspectData := objectMap(t, inspect["data"])
-	if inspectData["template_id"] != "architecture.isometric_overview" {
-		t.Fatalf("mermaid inspect-input did not infer architecture template: %#v", inspectData)
-	}
-	summary := objectMap(t, inspectData["input_summary"])
-	if summary["kind"] != "isometric_architecture_v1" || int(summary["entities"].(float64)) < 5 || int(summary["links"].(float64)) < 5 {
-		t.Fatalf("mermaid inspect-input summary invalid: %#v", summary)
-	}
-
-	out := filepath.Join(t.TempDir(), "mermaid-architecture")
-	rendered := runVisualOK(t, "render", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
-	renderData := objectMap(t, rendered["data"])
-	if renderData["template_id"] != "architecture.isometric_overview" {
-		t.Fatalf("mermaid render did not infer architecture template: %#v", renderData)
-	}
-	if _, err := os.Stat(filepath.Join(out, "index.html")); err != nil {
-		t.Fatalf("mermaid render did not write index.html: %v", err)
-	}
-
 	flow := filepath.Join(t.TempDir(), "flow.mmd")
-	if err := os.WriteFile(flow, []byte("flowchart LR\n  A[Browser] -->|API| B[API]\n  B --> C[(DB)]\n"), 0o644); err != nil {
+	if err := os.WriteFile(flow, []byte("---\ntitle: Runtime Flow\n---\nflowchart LR\n  Browser[Browser] -->|API| Gateway[API Gateway]\n  Gateway --> Service[Order Service]\n  Service --> Database[(Order DB)]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	flowInspect := runVisualOK(t, "inspect-input", "--template-dir", templateDir, "--input", flow, "--json")
-	flowData := objectMap(t, flowInspect["data"])
-	if flowData["template_id"] != "relationship.dependency_graph" {
-		t.Fatalf("flowchart mermaid did not infer relationship template: %#v", flowData)
+	inspect := runVisualOK(t, "inspect-input", "--template-dir", templateDir, "--input", flow, "--json")
+	inspectData := objectMap(t, inspect["data"])
+	if inspectData["template_id"] != "mermaid.flowchart" {
+		t.Fatalf("flowchart should infer mermaid.flowchart: %#v", inspectData)
+	}
+	out := filepath.Join(t.TempDir(), "flowchart")
+	rendered := runVisualOK(t, "render", "--template-dir", templateDir, "--input", flow, "--out", out, "--json")
+	artifact := objectMap(t, objectMap(t, rendered["data"])["artifact"])
+	assertArtifactContract(t, artifact, "mermaid.flowchart", "Runtime Flow")
+	renderInspect := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", out, "--json")
+	renderData := objectMap(t, renderInspect["data"])
+	renderChecks := objectMap(t, renderData["checks"])
+	for _, field := range []string{"output_files", "offline_scan", "runtime_assets", "renderer_contract_match"} {
+		if renderChecks[field] != true {
+			t.Fatalf("rendered Mermaid flowchart failed artifact check %s: %#v", field, renderChecks)
+		}
+	}
+
+	for _, templateID := range []string{"mermaid.sequence", "mermaid.timeline", "mermaid.sankey", "mermaid.mindmap", "mermaid.pie", "mermaid.wardley"} {
+		t.Run(templateID, func(t *testing.T) {
+			input := filepath.Join(templateDir, templateID, "examples", "basic.mmd")
+			out := filepath.Join(t.TempDir(), strings.ReplaceAll(templateID, ".", "-"))
+			rendered := runVisualOK(t, "render", "--template", templateID, "--template-dir", templateDir, "--input", input, "--out", out, "--json")
+			artifact := objectMap(t, objectMap(t, rendered["data"])["artifact"])
+			assertArtifactContract(t, artifact, templateID, "")
+		})
 	}
 }
 
-func TestVisualInspectRenderContract(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-
-	cmdSchema := runVisualOK(t, "schema", "inspect-render", "--json")
-	cmdData := objectMap(t, cmdSchema["data"])
-	if cmdData["command"] != "inspect-render" {
-		t.Fatalf("inspect-render command schema missing: %#v", cmdData)
-	}
-	required := stringSetFromAny(cmdData["required"].([]any))
-	if !required["out"] {
-		t.Fatalf("inspect-render schema missing required out: %#v", cmdData)
-	}
-	flags := map[string]map[string]any{}
-	for _, item := range cmdData["flags"].([]any) {
-		flag := objectMap(t, item)
-		flags[flag["name"].(string)] = flag
-	}
-	if flags["screenshot"] == nil || flags["screenshot"]["required"] == true {
-		t.Fatalf("inspect-render schema missing optional screenshot flag: %#v", flags)
-	}
-
-	goodOut := filepath.Join(t.TempDir(), "sequence")
-	runVisualOK(t, "render", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "uml.sequence_3d", "examples", "game-session-flow.input.json"), "--out", goodOut, "--json")
-	good := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", goodOut, "--json")
-	goodData := objectMap(t, good["data"])
-	if goodData["ready"] != true || goodData["render_score"].(float64) < 90 {
-		t.Fatalf("good inspect-render should be ready with high score: %#v", goodData)
-	}
-	checks := objectMap(t, goodData["checks"])
-	for _, field := range []string{"output_files", "offline_scan", "runtime_assets", "three_asset", "renderer_contract_match", "template_version_match", "plan_ready", "focus_declared", "first_view_objects_within_budget", "first_view_relationships_within_budget", "labels_bounded", "relationships_visible"} {
-		if checks[field] != true {
-			t.Fatalf("inspect-render good output check %s failed: %#v", field, checks)
-		}
-	}
-	plan := objectMap(t, goodData["visual_plan"])
-	if plan["schema"] != "efp.visual.plan.v1" || objectMap(t, plan["ir"])["schema"] != "efp.visual.ir.v1" {
-		t.Fatalf("inspect-render missing visual plan contract: %#v", plan)
-	}
-
-	isometricOut := filepath.Join(t.TempDir(), "isometric")
-	runVisualOK(t, "render", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "architecture.isometric_overview", "examples", "microservice-architecture-good.input.json"), "--out", isometricOut, "--json")
-	isometric := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", isometricOut, "--json")
-	isometricData := objectMap(t, isometric["data"])
-	if isometricData["ready"] != true || isometricData["render_score"].(float64) < 90 {
-		t.Fatalf("isometric inspect-render should be ready with high score: %#v", isometricData)
-	}
-	isometricPlan := objectMap(t, isometricData["visual_plan"])
-	isometricAssets := objectMap(t, isometricPlan["assets"])
-	modelsUsed := stringSetFromAny(isometricAssets["models_used"].([]any))
-	for _, modelID := range []string{"nginx.logo3d", "redis.logo3d", "mysql.logo3d", "elasticsearch.logo3d", "spring.logo3d"} {
-		if !modelsUsed[modelID] {
-			t.Fatalf("isometric visual plan missing generated model %s in %#v", modelID, modelsUsed)
-		}
-	}
-	if anyArrayLen(isometricAssets["missing_models"]) != 0 || anyArrayLen(isometricAssets["missing_icons"]) != 0 || anyArrayLen(isometricAssets["attributions"]) == 0 {
-		t.Fatalf("isometric visual plan should use local model/icon assets with attribution: %#v", isometricAssets)
-	}
-	isometricMarks := objectMap(t, isometricPlan["marks"])
-	if isometricMarks["model_badge_count"].(float64) < 5 || isometricMarks["entity_badge_count"].(float64) < 10 {
-		t.Fatalf("isometric marks should count generated model and entity badges: %#v", isometricMarks)
-	}
-	isometricChecks := objectMap(t, isometricData["checks"])
-	for _, field := range []string{"isometric_renderer_used", "base_plane_present", "grid_present", "zones_present", "zone_boundaries_present", "entities_present", "entity_labels_present", "leader_lines_present", "directed_arrows_present", "link_labels_present", "orthographic_camera_planned", "architecture_light_theme", "no_starfield_theme", "no_studio_layout", "local_asset_registry_present", "local_icons_present", "local_generated_models_present", "no_remote_asset_urls", "asset_attributions_present", "known_entity_badges_present", "model_or_icon_fallback_works", "artifact_runtime_wired", "artifact_isometric_runtime_hook", "artifact_isometric_dom_hooks", "artifact_entity_label_hooks", "artifact_link_label_hooks", "artifact_zone_label_hooks", "artifact_base_plane_hook", "artifact_grid_hook", "artifact_leader_line_hook", "artifact_arrow_hook", "artifact_no_studio_runtime", "artifact_no_starfield_runtime", "artifact_generated_model_badge_hook"} {
-		if isometricChecks[field] != true {
-			t.Fatalf("isometric inspect-render check %s failed: %#v", field, isometricChecks)
-		}
-	}
-	galleryOut := filepath.Join(t.TempDir(), "asset-gallery")
-	runVisualOK(t, "render", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "architecture.isometric_overview", "examples", "asset-gallery.input.json"), "--out", galleryOut, "--json")
-	gallery := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", galleryOut, "--json")
-	galleryData := objectMap(t, gallery["data"])
-	if galleryData["ready"] != true {
-		t.Fatalf("asset gallery inspect-render should be ready: %#v", galleryData)
-	}
-	galleryPlan := objectMap(t, galleryData["visual_plan"])
-	galleryAssets := objectMap(t, galleryPlan["assets"])
-	if anyArrayLen(galleryAssets["models_used"]) < 14 || anyArrayLen(galleryAssets["icons_used"]) < 14 || galleryAssets["fallback_badges"].(float64) != 0 {
-		t.Fatalf("asset gallery should exercise all local badge assets without fallback: %#v", galleryAssets)
-	}
-	galleryMarks := objectMap(t, galleryPlan["marks"])
-	if galleryMarks["model_badge_count"].(float64) < 14 || galleryMarks["svg_icon_badge_count"].(float64) < 14 {
-		t.Fatalf("asset gallery should count readable model and SVG icon badges: %#v", galleryMarks)
-	}
-
-	blankScreenshot := filepath.Join(t.TempDir(), "blank.png")
-	writeSolidPNG(t, blankScreenshot, 320, 180, color.RGBA{R: 8, G: 8, B: 8, A: 255})
-	blank := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", goodOut, "--screenshot", blankScreenshot, "--json")
-	blankData := objectMap(t, blank["data"])
-	if blankData["ready"] != false || objectMap(t, blankData["checks"])["screenshot_non_blank"] != false {
-		t.Fatalf("blank screenshot should make inspect-render not ready: %#v", blankData)
-	}
-	if !warningCodeSet(t, blank)["screenshot_blank"] {
-		t.Fatalf("blank screenshot did not report screenshot_blank: %#v", blankData["warnings"])
-	}
-
-	badOut := filepath.Join(t.TempDir(), "bad-graph")
-	runVisualOK(t, "render", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", filepath.Join(templateDir, "relationship.dependency_graph", "examples", "dependency-dense-bad.input.json"), "--out", badOut, "--json")
-	bad := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", badOut, "--json")
-	badData := objectMap(t, bad["data"])
-	if badData["ready"] != false || badData["render_score"].(float64) >= 70 {
-		t.Fatalf("bad inspect-render should not be ready: %#v", badData)
-	}
-	badChecks := objectMap(t, badData["checks"])
-	if badChecks["plan_ready"] != false || badChecks["labels_bounded"] != false {
-		t.Fatalf("bad inspect-render checks should report plan and label problems: %#v", badChecks)
-	}
-	codes := warningCodeSet(t, bad)
-	for _, code := range []string{"visual_guidance_missing", "dominant_edge_kind", "render_plan_not_ready", "render_label_pressure_high"} {
-		if !codes[code] {
-			t.Fatalf("bad inspect-render missing warning %s in %#v", code, codes)
-		}
-	}
-}
-
-func TestVisualInspectBrowserContract(t *testing.T) {
+func TestVisualMermaidArchitectureBrowserContract(t *testing.T) {
 	browserPath := findTestBrowser()
 	if browserPath == "" {
 		t.Skip("Chrome/Chromium not available for browser smoke")
 	}
 	root := repoRoot(t)
 	templateDir := filepath.Join(root, "templates", "visual")
-
-	cmdSchema := runVisualOK(t, "schema", "inspect-browser", "--json")
-	cmdData := objectMap(t, cmdSchema["data"])
-	if cmdData["command"] != "inspect-browser" {
-		t.Fatalf("inspect-browser command schema missing: %#v", cmdData)
-	}
-	required := stringSetFromAny(cmdData["required"].([]any))
-	if !required["out"] {
-		t.Fatalf("inspect-browser schema missing required out: %#v", cmdData)
-	}
-	flags := map[string]map[string]any{}
-	for _, item := range cmdData["flags"].([]any) {
-		flag := objectMap(t, item)
-		flags[flag["name"].(string)] = flag
-	}
-	for _, flag := range []string{"screenshot", "browser", "timeout", "template-dir"} {
-		if flags[flag] == nil {
-			t.Fatalf("inspect-browser schema missing flag %s: %#v", flag, flags)
-		}
-	}
-
-	out := filepath.Join(t.TempDir(), "isometric-asset-gallery")
-	input := filepath.Join(templateDir, "architecture.isometric_overview", "examples", "asset-gallery.input.json")
-	runVisualOK(t, "render", "--template", "architecture.isometric_overview", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
+	out := filepath.Join(t.TempDir(), "mermaid-architecture")
+	input := filepath.Join(templateDir, "mermaid.architecture", "examples", "basic.mmd")
+	runVisualOK(t, "render", "--template", "mermaid.architecture", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
 	screenshot := filepath.Join(out, "screenshot.png")
 	inspected := runVisualOK(t, "inspect-browser", "--template-dir", templateDir, "--out", out, "--screenshot", screenshot, "--browser", browserPath, "--timeout", "90", "--json")
 	data := objectMap(t, inspected["data"])
-	if data["ready"] != true || data["browser_ready"] != true || data["render_ready"] != true || data["render_score"].(float64) < 90 {
-		t.Fatalf("inspect-browser asset gallery should be ready: %#v", data)
-	}
-	if !strings.HasPrefix(data["server_url"].(string), "http://127.0.0.1:") {
-		t.Fatalf("inspect-browser must use local HTTP server, got %s", data["server_url"])
-	}
-	info, err := os.Stat(screenshot)
-	if err != nil || info.Size() == 0 {
-		t.Fatalf("inspect-browser did not write screenshot %s", screenshot)
-	}
-	checks := objectMap(t, data["visual_checks"])
-	for _, field := range []string{"page_loaded", "runtime_data_loaded", "renderer_mounted", "screenshot_written", "no_console_errors", "no_network_errors", "no_remote_requests", "isometric_stage_present", "label_layer_present", "entity_labels_present", "link_labels_present", "zone_labels_present", "label_icons_present", "model_badges_resolved", "svg_billboards_resolved", "no_fallback_badges_in_good_example", "controls_present", "canvas_visible", "screenshot_non_blank", "screenshot_has_enough_contrast", "screenshot_has_expected_label_count"} {
-		if checks[field] != true {
-			t.Fatalf("inspect-browser check %s failed: %#v", field, checks)
-		}
-	}
-	dom := objectMap(t, data["dom"])
-	if dom["entity_labels"].(float64) < 14 || dom["visible_entity_labels"].(float64) < 14 || dom["label_icons"].(float64) < 14 || dom["label_icons_loaded"].(float64) < 14 || dom["visible_label_icons"].(float64) < 14 || dom["broken_label_icons"].(float64) != 0 || dom["model_badges"].(float64) < 14 || dom["svg_billboards"].(float64) < 14 || dom["fallback_badges"].(float64) != 0 {
-		t.Fatalf("inspect-browser DOM summary missing gallery badge hooks: %#v", dom)
+	if data["ready"] != true || data["browser_ready"] != true || data["render_ready"] != true {
+		t.Fatalf("Mermaid architecture browser inspect should be ready: %#v", data)
 	}
 	summary := objectMap(t, data["visual_summary"])
-	if summary["entity_label_count"].(float64) < 14 || summary["visible_entity_label_count"].(float64) < 14 || summary["label_icon_loaded_count"].(float64) < 14 || summary["visible_label_icon_count"].(float64) < 14 || summary["broken_label_icon_count"].(float64) != 0 || summary["approximate_label_overlap_count"] == nil || summary["screenshot_size"] == nil {
-		t.Fatalf("inspect-browser visual summary missing visual quality fields: %#v", summary)
-	}
-	rendered := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", out, "--screenshot", screenshot, "--json")
-	renderedData := objectMap(t, rendered["data"])
-	if renderedData["ready"] != true {
-		t.Fatalf("inspect-render should accept browser screenshot: %#v", renderedData)
-	}
-}
-
-func TestVisualUMLTemplateSchemaInspectAndRender(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	input := filepath.Join(templateDir, "uml.sequence_3d", "examples", "basic.input.json")
-	schema := runVisualOK(t, "template", "schema", "uml.sequence_3d", "--template-dir", templateDir, "--json")
-	data := objectMap(t, schema["data"])
-	if data["schema_file"] != "uml.sequence_3d/schema.input.json" || data["example_file"] != "uml.sequence_3d/examples/basic.input.json" {
-		t.Fatalf("unexpected schema file locations: %#v", data)
-	}
-	jsonSchema := objectMap(t, data["json_schema"])
-	properties := objectMap(t, jsonSchema["properties"])
-	for _, field := range []string{"participants", "messages", "activations", "fragments", "phases", "visual"} {
-		if _, ok := properties[field]; !ok {
-			t.Fatalf("uml.sequence_3d schema missing %s: %#v", field, properties)
-		}
-	}
-	participantProps := objectMap(t, objectMap(t, objectMap(t, properties["participants"])["items"])["properties"])
-	for _, field := range []string{"display_name", "subtitle", "lane_index", "depth", "color"} {
-		if _, ok := participantProps[field]; !ok {
-			t.Fatalf("uml sequence participant schema missing %s: %#v", field, participantProps)
-		}
-	}
-	messageProps := objectMap(t, objectMap(t, objectMap(t, properties["messages"])["items"])["properties"])
-	for _, field := range []string{"summary", "importance", "label_priority", "curve", "depth"} {
-		if _, ok := messageProps[field]; !ok {
-			t.Fatalf("uml sequence message schema missing %s: %#v", field, messageProps)
-		}
-	}
-	example := objectMap(t, data["example"])
-	if len(example["participants"].([]any)) < 6 || len(example["messages"].([]any)) < 12 {
-		t.Fatalf("uml sequence example is too small: %#v", example)
-	}
-	visual := objectMap(t, example["visual"])
-	if len(visual["initial_focus_ids"].([]any)) < 3 || len(visual["annotations"].([]any)) < 2 {
-		t.Fatalf("uml sequence example visual guidance is weak: %#v", visual)
-	}
-
-	inspect := runVisualOK(t, "inspect-input", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", input, "--json")
-	summary := objectMap(t, objectMap(t, inspect["data"])["summary"])
-	for field, want := range map[string]float64{"participants": 6, "messages": 12, "phases": 4, "activations": 4, "fragments": 2} {
-		if summary[field].(float64) != want {
-			t.Fatalf("inspect-input summary missing %s=%v: %#v", field, want, summary)
-		}
-	}
-	for _, field := range []string{"visual_focus_ids", "visual_annotations", "visual_narrative_steps"} {
-		if _, ok := summary[field]; !ok {
-			t.Fatalf("inspect-input summary missing visual field %s: %#v", field, summary)
-		}
-	}
-
-	out := filepath.Join(t.TempDir(), "uml-sequence")
-	rendered := runVisualOK(t, "render", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", input, "--out", out, "--title", "Sequence Contract", "--json")
-	artifact := objectMap(t, objectMap(t, rendered["data"])["artifact"])
-	assertArtifactContract(t, artifact, "uml.sequence_3d", "Sequence Contract")
-	files := stringSetFromAny(artifact["files"].([]any))
-	for _, file := range []string{"index.html", "manifest.json", "manifest.js", "data.js", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js", "assets/runtime/efp-visual-runtime.css", "assets/vendor/three/efp-three.module.min.js"} {
-		if !files[file] {
-			t.Fatalf("rendered artifact missing file %s in %#v", file, files)
-		}
-	}
-
-	inspected := runVisualOK(t, "inspect-output", "--out", out, "--json")
-	inspectArtifact := objectMap(t, objectMap(t, inspected["data"])["artifact"])
-	assertArtifactContract(t, inspectArtifact, "", "")
-}
-
-func TestVisualAllTemplatesExposeVisualAuthoringContract(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	registry := loadRegistry(t, templateDir)
-	for _, entry := range registry.Templates {
-		t.Run(entry.ID, func(t *testing.T) {
-			schemaDoc := loadJSONMap(t, filepath.Join(templateDir, entry.ID, "schema.input.json"))
-			jsonSchema := objectMap(t, schemaDoc["json_schema"])
-			properties := objectMap(t, jsonSchema["properties"])
-			visualSchema, ok := properties["visual"].(map[string]any)
-			if !ok {
-				t.Fatalf("%s schema missing visual authoring contract: %#v", entry.ID, properties)
-			}
-			visualProps := objectMap(t, visualSchema["properties"])
-			for _, field := range []string{"goal", "initial_focus_ids", "hidden_detail_ids", "narrative_steps", "annotations"} {
-				if _, ok := visualProps[field]; !ok {
-					t.Fatalf("%s visual schema missing %s: %#v", entry.ID, field, visualProps)
-				}
-			}
-			example := loadJSONMap(t, filepath.Join(templateDir, entry.ID, "examples", "basic.input.json"))
-			visual := objectMap(t, example["visual"])
-			if visual["goal"] == "" || len(visual["initial_focus_ids"].([]any)) == 0 || len(visual["narrative_steps"].([]any)) == 0 || len(visual["annotations"].([]any)) == 0 {
-				t.Fatalf("%s example visual guidance incomplete: %#v", entry.ID, visual)
-			}
-			inspect := runVisualOK(t, "inspect-input", "--template", entry.ID, "--template-dir", templateDir, "--input", filepath.Join(templateDir, entry.ID, "examples", "basic.input.json"), "--json")
-			summary := objectMap(t, objectMap(t, inspect["data"])["summary"])
-			if summary["visual_focus_ids"] == nil || summary["visual_annotations"] == nil {
-				t.Fatalf("%s inspect-input did not report visual guidance counts: %#v", entry.ID, summary)
-			}
-		})
-	}
-}
-
-func TestVisualAllTemplatesExposeMarkSystemAuthoringContract(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	registry := loadRegistry(t, templateDir)
-	for _, entry := range registry.Templates {
-		t.Run(entry.ID, func(t *testing.T) {
-			schemaDoc := loadJSONMap(t, filepath.Join(templateDir, entry.ID, "schema.input.json"))
-			jsonSchema := objectMap(t, schemaDoc["json_schema"])
-			properties := objectMap(t, jsonSchema["properties"])
-			for _, field := range markObjectArrays(entry.InputSchemaKind) {
-				assertObjectArrayMarkPresentation(t, entry.ID, jsonSchema, properties, field)
-			}
-			for _, field := range []string{"edges", "relationships", "messages", "links", "flows", "transitions"} {
-				if _, ok := properties[field]; ok {
-					assertRelationshipArrayMarkPresentation(t, entry.ID, jsonSchema, properties, field)
-				}
-			}
-		})
-	}
-}
-
-func TestVisualIsometricRuntimeAndInspectionContracts(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-
-	markRegistry := loadJSONMap(t, filepath.Join(templateDir, "_shared", "mark-registry.json"))
-	kinds := objectMap(t, markRegistry["kinds"])
-	for _, kind := range []string{"pc", "mobile", "cdn", "gateway", "nginx", "api_gateway", "ingress", "load_balancer", "microservice", "registry", "nacos", "admin", "mysql", "postgres", "mongodb", "redis", "oss", "minio", "file_storage", "block_storage", "queue", "kafka", "rocketmq", "rabbitmq", "log", "search", "kubernetes", "pod", "node"} {
-		if _, ok := kinds[kind]; !ok {
-			t.Fatalf("mark registry missing isometric architecture kind %s", kind)
-		}
-	}
-	assetRegistry := loadJSONMap(t, filepath.Join(templateDir, "_shared", "asset-registry.json"))
-	icons := objectMap(t, assetRegistry["icons"])
-	for _, icon := range []string{"generic.nginx", "generic.mysql", "generic.redis", "generic.nacos", "generic.kafka", "generic.postgres", "generic.mongodb", "generic.kubernetes", "generic.ingress", "generic.load_balancer"} {
-		if _, ok := icons[icon]; !ok {
-			t.Fatalf("asset registry missing isometric semantic icon alias %s", icon)
-		}
-	}
-
-	renderers := mustRead(t, filepath.Join(templateDir, "_shared", "runtime", "efp-visual-renderers.iife.js"))
-	if !strings.Contains(renderers, `runtime.registerRenderer("offline.architecture.isometric.v1", { render: renderIsometricArchitecture })`) {
-		t.Fatalf("runtime renderers do not register offline.architecture.isometric.v1")
-	}
-	if strings.Contains(renderers, "firstString(") {
-		t.Fatalf("isometric runtime must not call undefined firstString helper")
-	}
-	if strings.Contains(renderers, "studioShell") || strings.Contains(renderers, "renderStudio(") || strings.Contains(renderers, "studio-app") {
-		t.Fatalf("runtime renderers still contain legacy Studio renderer code")
-	}
-	for _, snippet := range []string{"function labelBudget", "function rectOverlaps", "function insideViewport", "function createDashedPolyline", "function createVerticalDashedLeader", "function decorateIsometricEntity", "function isometricLinkPathPoints", "function modelPathFor", "function badgeSettings", "function badgeInitials", "function createBadgeTexture", "function createModelBadge", "isGeneratedModelBadge", "isGeneratedModelBadgeLabel", "isIconBillboard", "data-low-priority", "visual-isometric-label-icon", "edgeSpec.lightBackground = true", "THREE.NormalBlending", "THREE.DoubleSide"} {
-		if !strings.Contains(renderers, snippet) {
-			t.Fatalf("isometric runtime missing readability snippet %q", snippet)
-		}
-	}
-	threeBridge := mustRead(t, filepath.Join(templateDir, "_shared", "vendor", "three", "efp-three.module.min.js"))
-	if !strings.Contains(threeBridge, "OrthographicCamera:Li") {
-		t.Fatalf("local Three bridge must export OrthographicCamera for isometric architecture")
-	}
-	css := mustRead(t, filepath.Join(templateDir, "_shared", "runtime", "efp-visual-runtime.css"))
-	for _, className := range []string{".visual-isometric-app", ".visual-isometric-stage", ".visual-isometric-toolbar", ".visual-isometric-label-layer", ".visual-isometric-inspector"} {
-		if !strings.Contains(css, className) {
-			t.Fatalf("runtime CSS missing %s", className)
-		}
-	}
-	if strings.Contains(css, ".studio-") {
-		t.Fatalf("runtime CSS still contains legacy Studio selectors")
-	}
-	templateCSS := mustRead(t, filepath.Join(templateDir, "architecture.isometric_overview", "style.css"))
-	for _, snippet := range []string{".visual-isometric-header", ".visual-isometric-title", ".visual-isometric-subtitle", ".visual-isometric-label-icon", ".visual-isometric-link-label[data-low-priority=\"true\"]"} {
-		if !strings.Contains(templateCSS, snippet) {
-			t.Fatalf("isometric template CSS missing readability selector %s", snippet)
-		}
-	}
-
-	checks := renderinspect.Checks{
-		IsometricRendererUsed:           true,
-		BasePlanePresent:                true,
-		GridPresent:                     true,
-		ZonesPresent:                    true,
-		ZoneBoundariesPresent:           true,
-		EntitiesPresent:                 true,
-		EntityLabelsPresent:             true,
-		LeaderLinesPresent:              true,
-		DirectedArrowsPresent:           true,
-		LinkLabelsPresent:               true,
-		OrthographicCameraPlanned:       true,
-		ArchitectureLightTheme:          true,
-		NoStarfieldTheme:                true,
-		NoStudioLayout:                  true,
-		ArtifactRuntimeWired:            true,
-		ArtifactIsometricRuntimeHook:    true,
-		ArtifactIsometricDOMHooks:       true,
-		ArtifactEntityLabelHooks:        true,
-		ArtifactLinkLabelHooks:          true,
-		ArtifactZoneLabelHooks:          true,
-		ArtifactBasePlaneHook:           true,
-		ArtifactGridHook:                true,
-		ArtifactLeaderLineHook:          true,
-		ArtifactArrowHook:               true,
-		ArtifactNoStudioRuntime:         true,
-		ArtifactNoStarfieldRuntime:      true,
-		ArtifactGeneratedModelBadgeHook: true,
-		LocalAssetRegistryPresent:       true,
-		LocalIconsPresent:               true,
-		LocalGeneratedModelsPresent:     true,
-		NoRemoteAssetURLs:               true,
-		AssetAttributionsPresent:        true,
-		KnownEntityBadgesPresent:        true,
-		ModelOrIconFallbackWorks:        true,
-	}
-	checkJSON, err := json.Marshal(checks)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, field := range []string{"isometric_renderer_used", "base_plane_present", "grid_present", "zones_present", "zone_boundaries_present", "entities_present", "entity_labels_present", "leader_lines_present", "directed_arrows_present", "link_labels_present", "orthographic_camera_planned", "architecture_light_theme", "no_starfield_theme", "no_studio_layout", "local_asset_registry_present", "local_icons_present", "local_generated_models_present", "no_remote_asset_urls", "asset_attributions_present", "known_entity_badges_present", "model_or_icon_fallback_works", "artifact_runtime_wired", "artifact_isometric_runtime_hook", "artifact_isometric_dom_hooks", "artifact_entity_label_hooks", "artifact_link_label_hooks", "artifact_zone_label_hooks", "artifact_base_plane_hook", "artifact_grid_hook", "artifact_leader_line_hook", "artifact_arrow_hook", "artifact_no_studio_runtime", "artifact_no_starfield_runtime", "artifact_generated_model_badge_hook"} {
-		if !strings.Contains(string(checkJSON), field) {
-			t.Fatalf("Checks JSON missing %s: %s", field, string(checkJSON))
-		}
-	}
-}
-
-func TestVisualIsometricMarkAndPreviewAnalysis(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-
-	goodInput := loadJSONMap(t, filepath.Join(templateDir, "architecture.isometric_overview", "examples", "good-small.input.json"))
-	stats := mark.Analyze(templateDir, "isometric_architecture_v1", goodInput)
-	if stats.ShapeCounts["hex_service"] == 0 || stats.ShapeCounts["database_cylinder"] == 0 {
-		t.Fatalf("isometric mark analysis did not resolve expected shapes: %#v", stats.ShapeCounts)
-	}
-	if stats.ArrowCount == 0 || stats.DirectedCount == 0 {
-		t.Fatalf("isometric mark analysis did not count directed arrows: %#v", stats)
-	}
-	if len(stats.LegendItems) == 0 {
-		t.Fatalf("isometric mark analysis did not build legend items: %#v", stats)
-	}
-
-	tpl := manifest.TemplateManifest{
-		ID:              "architecture.isometric_overview",
-		InputSchemaKind: "isometric_architecture_v1",
-		Renderer:        manifest.RendererSpec{Contract: "offline.architecture.isometric.v1"},
-		Layout:          manifest.LayoutSpec{Preset: "isometric_architecture"},
-		VisualDesign:    manifest.VisualDesign{MaxInitialNodes: 60, MaxInitialEdges: 120},
-	}
-	badInput := loadJSONMap(t, filepath.Join(templateDir, "architecture.isometric_overview", "examples", "bad-generic.input.json"))
-	_, _, badWarnings, _ := preview.Analyze(templateDir, tpl, badInput, authoring.QualityRules{})
-	badCodes := previewWarningCodes(badWarnings)
-	for _, code := range []string{"isometric_zones_missing", "isometric_entity_kind_missing", "isometric_link_direction_missing", "isometric_link_arrow_missing", "isometric_link_endpoint_unknown", "isometric_entity_zone_unknown", "isometric_generic_graph_detected", "isometric_starfield_theme_detected", "asset_remote_url_forbidden", "asset_model_missing", "asset_icon_unknown", "asset_logo_missing"} {
-		if !badCodes[code] {
-			t.Fatalf("bad isometric input missing warning %s in %#v", code, badCodes)
-		}
-	}
-	for _, warning := range badWarnings {
-		if strings.HasPrefix(warning.Code, "isometric_") {
-			if warning.Severity == "" || warning.Path == "" || warning.Message == "" || warning.Suggestion == "" || warning.AutoFixHint == nil {
-				t.Fatalf("isometric warning missing required fields: %#v", warning)
-			}
-		}
-	}
-	_, _, goodWarnings, _ := preview.Analyze(templateDir, tpl, goodInput, authoring.QualityRules{})
-	if len(goodWarnings) >= len(badWarnings) {
-		t.Fatalf("good isometric input should produce fewer warnings: good=%d bad=%d", len(goodWarnings), len(badWarnings))
-	}
-	goodCodes := previewWarningCodes(goodWarnings)
-	for _, forbidden := range []string{"isometric_link_endpoint_unknown", "isometric_entity_zone_unknown", "isometric_link_direction_missing", "isometric_link_arrow_missing", "isometric_generic_graph_detected", "isometric_starfield_theme_detected"} {
-		if goodCodes[forbidden] {
-			t.Fatalf("good isometric input unexpectedly has %s in %#v", forbidden, goodCodes)
-		}
-	}
-}
-
-func TestVisualUMLFamilyExamplesValidateAndRender(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	templates := []string{
-		"uml.sequence_3d",
-		"uml.class_structure_2_5d",
-		"uml.state_machine_3d",
-		"uml.activity_flow_3d",
-		"uml.component_deployment_3d",
-	}
-	for _, templateID := range templates {
-		t.Run(templateID, func(t *testing.T) {
-			input := filepath.Join(templateDir, templateID, "examples", "basic.input.json")
-			runVisualOK(t, "template", "schema", templateID, "--template-dir", templateDir, "--json")
-			runVisualOK(t, "validate", "--template", templateID, "--template-dir", templateDir, "--input", input, "--json")
-			runVisualOK(t, "inspect-input", "--template", templateID, "--template-dir", templateDir, "--input", input, "--json")
-			out := filepath.Join(t.TempDir(), strings.ReplaceAll(templateID, ".", "-"))
-			rendered := runVisualOK(t, "render", "--template", templateID, "--template-dir", templateDir, "--input", input, "--out", out, "--json")
-			artifact := objectMap(t, objectMap(t, rendered["data"])["artifact"])
-			assertArtifactContract(t, artifact, templateID, "")
-		})
-	}
-}
-
-func TestVisualDoctorRendersAllSemanticTemplates(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	obj := runVisualOK(t, "template", "doctor", "--template-dir", templateDir, "--json")
-	data := objectMap(t, obj["data"])
-	for key, want := range map[string]float64{
-		"checked_templates":            34,
-		"checked_examples":             34,
-		"rendered_examples":            34,
-		"canonical_templates":          34,
-		"expected_canonical_templates": 34,
-		"canonical_template_dirs":      34,
+	for field, min := range map[string]float64{
+		"entity_label_count":           4,
+		"label_icon_loaded_count":      1,
+		"svg_link_path_count":          3,
+		"link_paths_with_marker_count": 3,
+		"explicit_route_link_count":    3,
 	} {
-		if data[key].(float64) != want {
-			t.Fatalf("doctor expected %s=%.0f, got %#v", key, want, data)
+		if summary[field].(float64) < min {
+			t.Fatalf("browser visual summary expected %s >= %.0f, got %#v", field, min, summary)
 		}
 	}
-	if data["offline"] != true {
-		t.Fatalf("doctor did not report offline=true: %#v", data)
+	if summary["broken_label_icon_count"].(float64) != 0 || summary["svg_relation_layer_present"] != true || summary["inspector_raw_json_default"] != false {
+		t.Fatalf("browser visual summary failed quality checks: %#v", summary)
 	}
-	if len(data["orphan_template_dirs"].([]any)) != 0 {
-		t.Fatalf("doctor reported orphan dirs: %#v", data["orphan_template_dirs"])
-	}
-}
-
-func TestVisualRepresentativeSemanticRenders(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	for _, templateID := range []string{
-		"relationship.dependency_graph",
-		"temporal.event_trace",
-		"flow.pipeline",
-		"hierarchy.layered_architecture",
-		"evidence.claim_source_board",
-		"matrix.kpi_control",
-		"spatial.codebase_galaxy",
-	} {
-		t.Run(templateID, func(t *testing.T) {
-			input := filepath.Join(templateDir, templateID, "examples", "basic.input.json")
-			out := filepath.Join(t.TempDir(), strings.ReplaceAll(templateID, ".", "-"))
-			rendered := runVisualOK(t, "render", "--template", templateID, "--template-dir", templateDir, "--input", input, "--out", out, "--json")
-			artifact := objectMap(t, objectMap(t, rendered["data"])["artifact"])
-			assertArtifactContract(t, artifact, templateID, "")
-		})
+	if _, err := os.Stat(screenshot); err != nil {
+		t.Fatalf("inspect-browser did not write screenshot: %v", err)
 	}
 }
 
 func TestVisualRenderOverwriteAndDryRunContracts(t *testing.T) {
 	root := repoRoot(t)
 	templateDir := filepath.Join(root, "templates", "visual")
-	input := filepath.Join(templateDir, "uml.sequence_3d", "examples", "basic.input.json")
+	input := filepath.Join(templateDir, "mermaid.sequence", "examples", "basic.mmd")
 	out := filepath.Join(t.TempDir(), "render")
-	runVisualOK(t, "render", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
-	fail := runVisual(t, "render", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
+	runVisualOK(t, "render", "--template", "mermaid.sequence", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
+	fail := runVisual(t, "render", "--template", "mermaid.sequence", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
 	assertErrorCode(t, fail, "output_exists")
-	runVisualOK(t, "render", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", input, "--out", out, "--overwrite", "--json")
+	runVisualOK(t, "render", "--template", "mermaid.sequence", "--template-dir", templateDir, "--input", input, "--out", out, "--overwrite", "--json")
 	dryOut := filepath.Join(t.TempDir(), "dry-run")
-	dry := runVisualOK(t, "render", "--template", "uml.sequence_3d", "--template-dir", templateDir, "--input", input, "--out", dryOut, "--dry-run", "--json")
+	dry := runVisualOK(t, "render", "--template", "mermaid.sequence", "--template-dir", templateDir, "--input", input, "--out", dryOut, "--dry-run", "--json")
 	data := objectMap(t, dry["data"])
 	if data["dry_run"] != true || len(data["planned_files"].([]any)) == 0 {
 		t.Fatalf("dry-run contract is incomplete: %#v", data)
@@ -1262,7 +338,7 @@ func TestVisualOfflineSourceGuards(t *testing.T) {
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(path))
-		if ext != ".js" && ext != ".css" && ext != ".html" && ext != ".yaml" && ext != ".json" {
+		if ext != ".js" && ext != ".css" && ext != ".html" && ext != ".yaml" && ext != ".json" && ext != ".mmd" && ext != ".md" {
 			return nil
 		}
 		text := mustRead(t, path)
@@ -1278,524 +354,44 @@ func TestVisualOfflineSourceGuards(t *testing.T) {
 	}
 }
 
-func TestVisualSmokeScriptsUseSemanticTemplates(t *testing.T) {
+func TestVisualSmokeScriptsUseMermaidTemplates(t *testing.T) {
 	root := repoRoot(t)
-	sh := mustRead(t, filepath.Join(root, "scripts", "smoke.sh"))
-	ps := mustRead(t, filepath.Join(root, "scripts", "smoke.ps1"))
-	for _, text := range []string{sh, ps} {
-		for _, want := range []string{"uml.sequence_3d", "relationship.dependency_graph", "temporal.event_trace", "template doctor", "template schema", "template guide", "inspect-plan", "inspect-render"} {
+	for _, rel := range []string{"scripts/smoke.sh", "scripts/smoke.ps1"} {
+		text := mustRead(t, filepath.Join(root, filepath.FromSlash(rel)))
+		for _, want := range []string{"mermaid.sequence", "mermaid.flowchart", "mermaid.architecture", "basic.mmd", "template doctor", "template schema", "template guide", "inspect-plan", "inspect-render"} {
 			if !strings.Contains(text, want) {
-				t.Fatalf("smoke script missing %s", want)
+				t.Fatalf("%s missing %s", rel, want)
 			}
 		}
-		for _, old := range []string{"agent.run_trace", "codebase.module_dependency_graph", "foundation.graph_3d"} {
-			if strings.Contains(text, old) {
-				t.Fatalf("smoke script still references old template id %s", old)
-			}
+		if strings.Contains(text, ".input.json") {
+			t.Fatalf("%s still references non-Mermaid example input", rel)
 		}
 	}
 }
 
-func TestVisualGraphInteractionKeepsCameraStableForNodeDragAndExpand(t *testing.T) {
+func TestVisualRegistrySortedByID(t *testing.T) {
 	root := repoRoot(t)
-	renderer := mustRead(t, filepath.Join(root, "templates", "visual", "_shared", "runtime", "efp-visual-renderers.iife.js"))
-	for _, want := range []string{
-		"function anchorExpandedLayout(positions)",
-		"anchorExpandedLayout(positions);",
-		`} else if (dragMode === "pendingNode") {`,
-		`dragMode = "idle";`,
-		`} else if (dragMode === "orbit") {`,
-	} {
-		if !strings.Contains(renderer, want) {
-			t.Fatalf("visual 3D graph interaction contract missing %q", want)
-		}
-	}
-	if strings.Contains(renderer, `} else {
-            orbit.theta -= dx * 0.006;
-            orbit.phi -= dy * 0.005;
-          }`) {
-		t.Fatal("node drag fallback can still fall through into orbit camera movement")
-	}
-}
-
-func TestVisualRendererConsumesVisualAuthoringHints(t *testing.T) {
-	root := repoRoot(t)
-	renderer := mustRead(t, filepath.Join(root, "templates", "visual", "_shared", "runtime", "efp-visual-renderers.iife.js"))
-	for _, want := range []string{
-		"function readVisualHints(data)",
-		"function resolveMarkSpec",
-		"function createMarkMesh",
-		"function resolveEdgeSpec",
-		"function createArrowHead",
-		"renderMatrix(ctx)",
-		"data-mark-shape",
-		"TubeGeometry",
-		"initial_focus_ids",
-		"hidden_detail_ids",
-		"visual-three-annotation-label",
-		"visual-uml-phase-legend",
-		"visual-legend-overlay",
-		"lane_index",
-		"CatmullRomCurve3",
-	} {
-		if !strings.Contains(renderer, want) {
-			t.Fatalf("visual renderer missing shared visual hint support %q", want)
-		}
-	}
-	css := mustRead(t, filepath.Join(root, "templates", "visual", "_shared", "runtime", "efp-visual-runtime.css"))
-	for _, want := range []string{"visual-card-focus", "visual-card-annotation", "visual-three-annotation-label", "visual-uml-annotation-label"} {
-		if !strings.Contains(css, want) {
-			t.Fatalf("visual runtime css missing %s", want)
+	registry := loadRegistry(t, filepath.Join(root, "templates", "visual"))
+	for i := 1; i < len(registry.Templates); i++ {
+		prev := registry.Templates[i-1]
+		cur := registry.Templates[i]
+		if prev.ID > cur.ID {
+			t.Fatalf("registry ids should be sorted: %s before %s", prev.ID, cur.ID)
 		}
 	}
 }
 
-func TestVisualMarkSystemCloudArchitectureContract(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	shared := filepath.Join(templateDir, "_shared")
-	for _, rel := range []string{
-		"agent-guidance/mark-grammar.md",
-		"mark-registry.json",
-		"asset-registry.json",
-		"assets/ATTRIBUTIONS.md",
-		"assets/models/generic/placeholder.json",
-	} {
-		if info, err := os.Stat(filepath.Join(shared, filepath.FromSlash(rel))); err != nil || info.IsDir() || info.Size() == 0 {
-			t.Fatalf("missing non-empty shared mark asset %s", rel)
-		}
-	}
-	for _, rel := range []string{
-		"assets/icons/generic/service.svg",
-		"assets/icons/generic/api.svg",
-		"assets/icons/generic/database.svg",
-		"assets/icons/generic/storage.svg",
-		"assets/icons/generic/queue.svg",
-		"assets/icons/generic/stream.svg",
-		"assets/icons/generic/pipeline.svg",
-		"assets/icons/generic/job.svg",
-		"assets/icons/generic/user.svg",
-		"assets/icons/generic/external.svg",
-		"assets/icons/generic/warning.svg",
-		"assets/icons/generic/decision.svg",
-		"assets/icons/aws/lambda.svg",
-		"assets/icons/aws/s3.svg",
-		"assets/icons/aws/rds.svg",
-		"assets/icons/aws/dynamodb.svg",
-		"assets/icons/aws/ec2.svg",
-		"assets/icons/aws/eks.svg",
-		"assets/icons/aws/sqs.svg",
-		"assets/icons/aws/sns.svg",
-		"assets/icons/aws/eventbridge.svg",
-		"assets/icons/aws/api_gateway.svg",
-		"assets/icons/aws/cloudfront.svg",
-		"assets/icons/aws/cloudwatch.svg",
-		"assets/icons/aws/secrets_manager.svg",
-		"assets/icons/jenkins/jenkins.svg",
-	} {
-		if info, err := os.Stat(filepath.Join(shared, filepath.FromSlash(rel))); err != nil || info.IsDir() || info.Size() == 0 {
-			t.Fatalf("missing non-empty mark icon %s", rel)
-		}
-	}
-
-	badInput := filepath.Join(templateDir, "relationship.dependency_graph", "examples", "cloud-architecture-bad.input.json")
-	goodInput := filepath.Join(templateDir, "relationship.dependency_graph", "examples", "cloud-architecture-good.input.json")
-	bad := runVisualOK(t, "inspect-input", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", badInput, "--json")
-	badCodes := warningCodeSet(t, bad)
-	for _, code := range []string{"generic_sphere_overuse", "mark_shape_missing", "edge_direction_missing", "arrow_encoding_missing", "color_encoding_missing", "legend_missing", "asset_icon_unknown"} {
-		if !badCodes[code] {
-			t.Fatalf("cloud bad example missing mark warning %s in %#v", code, badCodes)
-		}
-	}
-	good := runVisualOK(t, "inspect-input", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", goodInput, "--json")
-	if objectMap(t, objectMap(t, good["data"]))["quality_score"].(float64) <= objectMap(t, objectMap(t, bad["data"]))["quality_score"].(float64) {
-		t.Fatalf("cloud good example should score higher than bad")
-	}
-	goodCodes := warningCodeSet(t, good)
-	for _, code := range []string{"generic_sphere_overuse", "edge_direction_missing", "arrow_encoding_missing", "color_encoding_missing", "legend_missing", "asset_icon_unknown"} {
-		if goodCodes[code] {
-			t.Fatalf("cloud good example unexpectedly has warning %s in %#v", code, goodCodes)
-		}
-	}
-
-	out := filepath.Join(t.TempDir(), "cloud-arch")
-	planObj := runVisualOK(t, "inspect-plan", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", goodInput, "--out", out, "--json")
-	planData := objectMap(t, planObj["data"])
-	if planData["ready"] != true || planData["quality_score"].(float64) < 90 {
-		t.Fatalf("cloud inspect-plan should be ready with high quality: %#v", planData)
-	}
-	plan := objectMap(t, planData["visual_plan"])
-	marks := objectMap(t, plan["marks"])
-	if marks["fallback_sphere_count"].(float64) != 0 {
-		t.Fatalf("cloud mark plan should not fall back to spheres: %#v", marks)
-	}
-	shapeCounts := objectMap(t, marks["shape_counts"])
-	for _, shape := range []string{"service_box", "database_cylinder", "queue_capsule", "cloud_plate", "ci_card"} {
-		if shapeCounts[shape] == nil {
-			t.Fatalf("cloud mark plan missing shape %s in %#v", shape, shapeCounts)
-		}
-	}
-	if len(shapeCounts) < 5 {
-		t.Fatalf("cloud mark plan should use diverse shapes: %#v", shapeCounts)
-	}
-	edges := objectMap(t, plan["edges"])
-	if edges["directed_count"].(float64) < 8 || edges["arrow_count"].(float64) < 8 || edges["undirected_count"].(float64) != 0 {
-		t.Fatalf("cloud edge plan should use visible directed arrows: %#v", edges)
-	}
-	colors := objectMap(t, plan["colors"])
-	if colors["colorBy"] != "provider" || colors["single_color"] == true || len(colors["legend_items"].([]any)) < 4 {
-		t.Fatalf("cloud color plan should expose provider legend: %#v", colors)
-	}
-	assets := objectMap(t, plan["assets"])
-	iconsUsed := stringSetFromAny(assets["icons_used"].([]any))
-	for _, icon := range []string{"aws.lambda", "aws.rds", "aws.sqs", "jenkins"} {
-		if !iconsUsed[icon] {
-			t.Fatalf("cloud asset plan missing icon %s in %#v", icon, iconsUsed)
-		}
-	}
-	if anyArrayLen(assets["missing_icons"]) != 0 || anyArrayLen(assets["attributions"]) == 0 {
-		t.Fatalf("cloud asset plan should include icons and attributions: %#v", assets)
-	}
-
-	rendered := runVisualOK(t, "render", "--template", "relationship.dependency_graph", "--template-dir", templateDir, "--input", goodInput, "--out", out, "--json")
-	artifact := objectMap(t, objectMap(t, rendered["data"])["artifact"])
-	assertArtifactContract(t, artifact, "relationship.dependency_graph", "")
-	files := stringSetFromAny(artifact["files"].([]any))
-	for _, rel := range []string{
-		"assets/agent-guidance/mark-grammar.md",
-		"assets/asset-registry.json",
-		"assets/mark-registry.json",
-		"assets/ATTRIBUTIONS.md",
-		"assets/icons/generic/database.svg",
-		"assets/icons/aws/lambda.svg",
-		"assets/icons/aws/rds.svg",
-		"assets/icons/aws/sqs.svg",
-		"assets/icons/jenkins/jenkins.svg",
-	} {
-		if !files[rel] {
-			t.Fatalf("cloud artifact missing mark asset %s in %#v", rel, files)
-		}
-	}
-	manifest := loadJSONMap(t, filepath.Join(out, "manifest.json"))
-	manifestAssets := objectMap(t, manifest["assets"])
-	if len(manifestAssets["icons"].([]any)) < 20 || len(manifestAssets["attributions"].([]any)) == 0 {
-		t.Fatalf("output manifest missing mark asset metadata: %#v", manifestAssets)
-	}
-	if _, ok := manifestAssets["mark_registry"].(map[string]any); !ok {
-		t.Fatalf("output manifest missing embedded mark registry: %#v", manifestAssets)
-	}
-	if _, ok := manifestAssets["asset_registry"].(map[string]any); !ok {
-		t.Fatalf("output manifest missing embedded asset registry: %#v", manifestAssets)
-	}
-
-	inspected := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", out, "--json")
-	renderData := objectMap(t, inspected["data"])
-	if renderData["ready"] != true || renderData["render_score"].(float64) < 90 {
-		t.Fatalf("cloud inspect-render should be ready: %#v", renderData)
-	}
-	checks := objectMap(t, renderData["checks"])
-	for _, field := range []string{"shape_diversity", "arrows_visible", "color_diversity", "legend_present", "icon_assets_present", "attributions_present"} {
-		if checks[field] != true {
-			t.Fatalf("cloud inspect-render check %s failed: %#v", field, checks)
-		}
-	}
-}
-
-func TestVisualTimelineAndEvidenceMarkContracts(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-
-	timelineInput := filepath.Join(templateDir, "temporal.incident_timeline", "examples", "marked-event-trace.input.json")
-	timelineOut := filepath.Join(t.TempDir(), "marked-timeline")
-	timelinePlanObj := runVisualOK(t, "inspect-plan", "--template", "temporal.incident_timeline", "--template-dir", templateDir, "--input", timelineInput, "--out", timelineOut, "--json")
-	timelineData := objectMap(t, timelinePlanObj["data"])
-	if timelineData["ready"] != true {
-		t.Fatalf("marked timeline inspect-plan should be ready: %#v", timelineData)
-	}
-	timelinePlan := objectMap(t, timelineData["visual_plan"])
-	timelineMarks := objectMap(t, timelinePlan["marks"])
-	timelineShapes := objectMap(t, timelineMarks["shape_counts"])
-	if len(timelineShapes) < 5 || timelineMarks["fallback_sphere_count"].(float64) > 1 {
-		t.Fatalf("marked timeline should expose diverse non-fallback marks: %#v", timelineMarks)
-	}
-	timelineColors := objectMap(t, timelinePlan["colors"])
-	if timelineColors["colorBy"] != "provider" || len(timelineColors["legend_items"].([]any)) < 4 {
-		t.Fatalf("marked timeline should expose provider color legend: %#v", timelineColors)
-	}
-	if objectMap(t, timelinePlan["legend"])["show"] != true {
-		t.Fatalf("marked timeline legend should be present: %#v", timelinePlan["legend"])
-	}
-	timelineAssets := objectMap(t, timelinePlan["assets"])
-	if anyArrayLen(timelineAssets["icons_used"]) == 0 || anyArrayLen(timelineAssets["missing_icons"]) != 0 {
-		t.Fatalf("marked timeline should use local registered icons: %#v", timelineAssets)
-	}
-	runVisualOK(t, "render", "--template", "temporal.incident_timeline", "--template-dir", templateDir, "--input", timelineInput, "--out", timelineOut, "--json")
-	timelineRender := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", timelineOut, "--json")
-	timelineRenderData := objectMap(t, timelineRender["data"])
-	if timelineRenderData["ready"] != true {
-		t.Fatalf("marked timeline inspect-render should be ready: %#v", timelineRenderData)
-	}
-	timelineChecks := objectMap(t, timelineRenderData["checks"])
-	for _, field := range []string{"shape_diversity", "color_diversity", "legend_present", "icon_assets_present", "attributions_present"} {
-		if timelineChecks[field] != true {
-			t.Fatalf("marked timeline inspect-render check %s failed: %#v", field, timelineChecks)
-		}
-	}
-
-	evidenceInput := filepath.Join(templateDir, "evidence.claim_source_board", "examples", "marked-evidence-board.input.json")
-	evidenceOut := filepath.Join(t.TempDir(), "marked-evidence")
-	evidencePlanObj := runVisualOK(t, "inspect-plan", "--template", "evidence.claim_source_board", "--template-dir", templateDir, "--input", evidenceInput, "--out", evidenceOut, "--json")
-	evidenceData := objectMap(t, evidencePlanObj["data"])
-	if evidenceData["ready"] != true {
-		t.Fatalf("marked evidence inspect-plan should be ready: %#v", evidenceData)
-	}
-	evidencePlan := objectMap(t, evidenceData["visual_plan"])
-	evidenceMarks := objectMap(t, evidencePlan["marks"])
-	evidenceShapes := objectMap(t, evidenceMarks["shape_counts"])
-	for _, shape := range []string{"hex_service", "queue_capsule", "warning_prism", "diamond", "database_cylinder", "ci_card"} {
-		if evidenceShapes[shape] == nil {
-			t.Fatalf("marked evidence plan missing shape %s in %#v", shape, evidenceShapes)
-		}
-	}
-	evidenceAssets := objectMap(t, evidencePlan["assets"])
-	evidenceIcons := stringSetFromAny(evidenceAssets["icons_used"].([]any))
-	for _, icon := range []string{"generic.api", "generic.warning", "generic.decision", "aws.sqs", "jenkins"} {
-		if !evidenceIcons[icon] {
-			t.Fatalf("marked evidence plan missing icon %s in %#v", icon, evidenceIcons)
-		}
-	}
-	evidenceEdges := objectMap(t, evidencePlan["edges"])
-	if evidenceEdges["directed_count"].(float64) < 7 || evidenceEdges["arrow_count"].(float64) < 7 {
-		t.Fatalf("marked evidence should count directed relation arrows: %#v", evidenceEdges)
-	}
-	evidenceColors := objectMap(t, evidencePlan["colors"])
-	if evidenceColors["colorBy"] != "relation" || len(evidenceColors["legend_items"].([]any)) < 3 {
-		t.Fatalf("marked evidence should expose relation color legend: %#v", evidenceColors)
-	}
-	runVisualOK(t, "render", "--template", "evidence.claim_source_board", "--template-dir", templateDir, "--input", evidenceInput, "--out", evidenceOut, "--json")
-	evidenceRender := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", evidenceOut, "--json")
-	evidenceRenderData := objectMap(t, evidenceRender["data"])
-	if evidenceRenderData["ready"] != true {
-		t.Fatalf("marked evidence inspect-render should be ready: %#v", evidenceRenderData)
-	}
-	evidenceChecks := objectMap(t, evidenceRenderData["checks"])
-	for _, field := range []string{"shape_diversity", "arrows_visible", "color_diversity", "legend_present", "icon_assets_present", "attributions_present"} {
-		if evidenceChecks[field] != true {
-			t.Fatalf("marked evidence inspect-render check %s failed: %#v", field, evidenceChecks)
-		}
-	}
-}
-
-func TestVisualMatrixMarkSystemContract(t *testing.T) {
-	root := repoRoot(t)
-	templateDir := filepath.Join(root, "templates", "visual")
-	input := filepath.Join(templateDir, "matrix.capability", "examples", "marked-cloud-capability.input.json")
-	out := filepath.Join(t.TempDir(), "marked-matrix")
-
-	planObj := runVisualOK(t, "inspect-plan", "--template", "matrix.capability", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
-	planData := objectMap(t, planObj["data"])
-	if planData["ready"] != true || planData["quality_score"].(float64) < 90 {
-		t.Fatalf("marked matrix inspect-plan should be ready with high quality: %#v", planData)
-	}
-	plan := objectMap(t, planData["visual_plan"])
-	marks := objectMap(t, plan["marks"])
-	if marks["fallback_sphere_count"].(float64) != 0 {
-		t.Fatalf("marked matrix should not fall back to spheres: %#v", marks)
-	}
-	shapeCounts := objectMap(t, marks["shape_counts"])
-	for _, shape := range []string{"service_box", "hex_service", "database_cylinder", "queue_capsule", "event_bus", "bucket", "cloud_plate", "warning_prism", "ci_card"} {
-		if shapeCounts[shape] == nil {
-			t.Fatalf("marked matrix shape_counts missing %s in %#v", shape, shapeCounts)
-		}
-	}
-	colors := objectMap(t, plan["colors"])
-	if colors["colorBy"] != "provider" || colors["single_color"] == true || len(colors["legend_items"].([]any)) < 6 {
-		t.Fatalf("marked matrix should expose provider color legend: %#v", colors)
-	}
-	assets := objectMap(t, plan["assets"])
-	iconsUsed := stringSetFromAny(assets["icons_used"].([]any))
-	for _, icon := range []string{"aws.api_gateway", "aws.lambda", "aws.rds", "aws.sqs", "aws.eventbridge", "aws.s3", "aws.secrets_manager", "jenkins"} {
-		if !iconsUsed[icon] {
-			t.Fatalf("marked matrix asset plan missing icon %s in %#v", icon, iconsUsed)
-		}
-	}
-	if anyArrayLen(assets["missing_icons"]) != 0 || anyArrayLen(assets["attributions"]) == 0 {
-		t.Fatalf("marked matrix should include local icons and attributions: %#v", assets)
-	}
-
-	rendered := runVisualOK(t, "render", "--template", "matrix.capability", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
-	artifact := objectMap(t, objectMap(t, rendered["data"])["artifact"])
-	assertArtifactContract(t, artifact, "matrix.capability", "")
-	files := stringSetFromAny(artifact["files"].([]any))
-	for _, rel := range []string{"assets/agent-guidance/mark-grammar.md", "assets/asset-registry.json", "assets/mark-registry.json", "assets/icons/aws/api_gateway.svg", "assets/icons/aws/rds.svg", "assets/icons/jenkins/jenkins.svg"} {
-		if !files[rel] {
-			t.Fatalf("marked matrix artifact missing mark asset %s in %#v", rel, files)
-		}
-	}
-
-	inspected := runVisualOK(t, "inspect-render", "--template-dir", templateDir, "--out", out, "--json")
-	renderData := objectMap(t, inspected["data"])
-	if renderData["ready"] != true || renderData["render_score"].(float64) < 90 {
-		t.Fatalf("marked matrix inspect-render should be ready: %#v", renderData)
-	}
-	checks := objectMap(t, renderData["checks"])
-	for _, field := range []string{"shape_diversity", "color_diversity", "legend_present", "icon_assets_present", "attributions_present"} {
-		if checks[field] != true {
-			t.Fatalf("marked matrix inspect-render check %s failed: %#v", field, checks)
-		}
-	}
-}
-
-func markObjectArrays(kind string) []string {
-	switch kind {
-	case "graph_v1":
-		return []string{"nodes"}
-	case "graph_events_v1":
-		return []string{"nodes", "events"}
-	case "timeline_v1":
-		return []string{"events"}
-	case "evidence_v1":
-		return []string{"claims", "sources"}
-	case "matrix_v1":
-		return []string{"items"}
-	case "uml_sequence_v1":
-		return []string{"participants"}
-	case "uml_class_v1":
-		return []string{"classes"}
-	case "uml_state_machine_v1":
-		return []string{"states"}
-	case "uml_activity_v1":
-		return []string{"actions"}
-	case "uml_component_deployment_v1":
-		return []string{"components", "deployments"}
-	case "isometric_architecture_v1":
-		return []string{"entities"}
-	default:
-		return nil
-	}
-}
-
-func assertObjectArrayMarkPresentation(t *testing.T, templateID string, jsonSchema, properties map[string]any, field string) {
-	t.Helper()
-	fieldSchema, ok := properties[field].(map[string]any)
-	if !ok {
-		t.Fatalf("%s schema missing object array %s: %#v", templateID, field, properties)
-	}
-	itemProps := arrayItemProperties(t, templateID, jsonSchema, fieldSchema)
-	presentation := objectMap(t, itemProps["presentation"])
-	presentationProps := objectMap(t, presentation["properties"])
-	for _, name := range []string{"shape", "icon", "color"} {
-		if _, ok := presentationProps[name]; !ok {
-			t.Fatalf("%s %s[] presentation missing %s: %#v", templateID, field, name, presentationProps)
-		}
-	}
-}
-
-func assertRelationshipArrayMarkPresentation(t *testing.T, templateID string, jsonSchema, properties map[string]any, field string) {
-	t.Helper()
-	fieldSchema := objectMap(t, properties[field])
-	itemProps := arrayItemProperties(t, templateID, jsonSchema, fieldSchema)
-	if _, ok := itemProps["directed"]; !ok {
-		t.Fatalf("%s %s[] missing directed field: %#v", templateID, field, itemProps)
-	}
-	presentation := objectMap(t, itemProps["presentation"])
-	presentationProps := objectMap(t, presentation["properties"])
-	for _, name := range []string{"arrow", "color"} {
-		if _, ok := presentationProps[name]; !ok {
-			t.Fatalf("%s %s[] presentation missing %s: %#v", templateID, field, name, presentationProps)
-		}
-	}
-}
-
-func arrayItemProperties(t *testing.T, templateID string, jsonSchema, fieldSchema map[string]any) map[string]any {
-	t.Helper()
-	itemSchema := objectMap(t, fieldSchema["items"])
-	if props, ok := itemSchema["properties"].(map[string]any); ok {
-		return props
-	}
-	if ref, _ := itemSchema["$ref"].(string); strings.HasPrefix(ref, "#/$defs/") {
-		defName := strings.TrimPrefix(ref, "#/$defs/")
-		defs := objectMap(t, jsonSchema["$defs"])
-		def := objectMap(t, defs[defName])
-		return objectMap(t, def["properties"])
-	}
-	t.Fatalf("%s array item schema missing properties or local $defs ref: %#v", templateID, itemSchema)
-	return nil
-}
-
-func assertRegistryEntryQuality(t *testing.T, entry visualRegistryEntry) {
-	t.Helper()
-	if entry.Title == "" || entry.Description == "" {
-		t.Fatalf("registry entry missing title or description: %#v", entry)
-	}
-	for _, re := range genericDescriptionPatterns {
-		if re.MatchString(entry.Description) {
-			t.Fatalf("%s has generic description: %s", entry.ID, entry.Description)
-		}
-	}
-	if !semanticCategoryCountsHas(entry.Category) {
-		t.Fatalf("unsupported semantic category %s for %s", entry.Category, entry.ID)
-	}
-	if !semanticSchemaKinds[entry.InputSchemaKind] {
-		t.Fatalf("unsupported schema kind %s for %s", entry.InputSchemaKind, entry.ID)
-	}
-	if !semanticRenderers[entry.Renderer] {
-		t.Fatalf("unsupported renderer %s for %s", entry.Renderer, entry.ID)
-	}
-	if !semanticLayoutPresets[entry.LayoutPreset] {
-		t.Fatalf("unsupported layout preset %s for %s", entry.LayoutPreset, entry.ID)
-	}
-	if len(entry.Tags) < 3 {
-		t.Fatalf("%s should have at least 3 tags: %#v", entry.ID, entry.Tags)
-	}
-}
-
-func assertManifestMatchesRegistry(t *testing.T, entry visualRegistryEntry, manifest visualTemplateManifest) {
-	t.Helper()
-	if manifest.ID != entry.ID || manifest.Category != entry.Category || manifest.Title != entry.Title || manifest.Description != entry.Description {
-		t.Fatalf("manifest does not match registry for %s: entry=%#v manifest=%#v", entry.ID, entry, manifest)
-	}
-	if manifest.InputSchema != "schema.input.json" || manifest.InputSchemaKind != entry.InputSchemaKind || manifest.Renderer.Contract != entry.Renderer || manifest.Layout.Preset != entry.LayoutPreset {
-		t.Fatalf("manifest contract does not match registry for %s: entry=%#v manifest=%#v", entry.ID, entry, manifest)
-	}
-	if manifest.Effects.Engine != "three.v1" || manifest.Effects.Scene == "" {
-		t.Fatalf("%s manifest must declare three.v1 effects with a scene id: %#v", entry.ID, manifest.Effects)
-	}
-	if manifest.VisualDesign.InitialView == "" || len(manifest.VisualDesign.AgentGuidance) < 3 || len(manifest.VisualDesign.Supports) < 4 {
-		t.Fatalf("%s manifest lacks visual design guidance: %#v", entry.ID, manifest.VisualDesign)
-	}
-	if !manifest.Offline.Required || !manifest.Offline.ForbidNetwork || manifest.Offline.DataMode != "js-file" {
-		t.Fatalf("%s offline contract incomplete: %#v", entry.ID, manifest.Offline)
-	}
-	if len(manifest.Styles) < 2 || len(manifest.Scripts) < 4 || len(manifest.Tags) < 3 {
-		t.Fatalf("%s manifest styles/scripts/tags incomplete: %#v", entry.ID, manifest)
-	}
-}
-
-func assertTemplateFiles(t *testing.T, templateDir string, entry visualRegistryEntry) {
+func assertMermaidTemplateFiles(t *testing.T, templateDir string, entry visualRegistryEntry) {
 	t.Helper()
 	base := filepath.Join(templateDir, entry.ID)
-	for _, rel := range []string{"template.yaml", "schema.input.json", "examples/basic.input.json", "style.css"} {
-		path := filepath.Join(base, filepath.FromSlash(rel))
-		info, err := os.Stat(path)
+	for _, rel := range []string{"template.yaml", "schema.input.json", "style.css", "agent-guide.md", "quality.rules.json", "examples/basic.mmd"} {
+		info, err := os.Stat(filepath.Join(base, filepath.FromSlash(rel)))
 		if err != nil || info.IsDir() || info.Size() == 0 {
 			t.Fatalf("%s missing non-empty %s", entry.ID, rel)
 		}
 	}
-	schema := loadJSONMap(t, filepath.Join(base, "schema.input.json"))
-	if schema["template_id"] != entry.ID || schema["input_schema_kind"] != entry.InputSchemaKind {
-		t.Fatalf("%s schema metadata mismatch: %#v", entry.ID, schema)
-	}
-	if _, ok := schema["json_schema"].(map[string]any); !ok {
-		t.Fatalf("%s schema.input.json missing json_schema: %#v", entry.ID, schema)
-	}
-	if _, ok := schema["example"].(map[string]any); !ok {
-		t.Fatalf("%s schema.input.json missing example: %#v", entry.ID, schema)
-	}
-	example := loadJSONMap(t, filepath.Join(base, "examples", "basic.input.json"))
-	title, _ := example["title"].(string)
-	if title == "" || title == "Basic Example" || title == "Example" || title == entry.Title+" Example" {
-		t.Fatalf("%s example title is generic: %q", entry.ID, title)
+	if filepath.ToSlash(entry.Path) != entry.ID+"/template.yaml" {
+		t.Fatalf("%s registry path should point to its Mermaid template directory: %s", entry.ID, entry.Path)
 	}
 }
 
@@ -1807,13 +403,19 @@ func assertArtifactContract(t *testing.T, artifact map[string]any, templateID, t
 	if title != "" && artifact["title"] != title {
 		t.Fatalf("artifact title mismatch: %#v", artifact)
 	}
-	for _, field := range []string{"out_dir", "out", "entrypoint", "relative_entrypoint", "files"} {
-		if artifact[field] == nil {
+	for _, field := range []string{"template_version", "out_dir", "out", "entrypoint", "relative_entrypoint", "files"} {
+		if artifact[field] == nil || artifact[field] == "" {
 			t.Fatalf("artifact missing %s: %#v", field, artifact)
 		}
 	}
 	if artifact["relative_entrypoint"] != "index.html" || artifact["offline"] != true || artifact["file_url_safe"] != true || artifact["http_subpath_safe"] != true {
 		t.Fatalf("artifact compatibility fields invalid: %#v", artifact)
+	}
+	files := stringSetFromAny(artifact["files"].([]any))
+	for _, file := range []string{"index.html", "manifest.json", "manifest.js", "data.js", "assets/runtime/efp-visual-runtime.iife.js", "assets/runtime/efp-visual-renderers.iife.js", "assets/runtime/efp-visual-runtime.css"} {
+		if !files[file] {
+			t.Fatalf("artifact missing file %s in %#v", file, files)
+		}
 	}
 }
 
@@ -1828,10 +430,7 @@ func runVisual(t *testing.T, args ...string) []byte {
 	cmdArgs := append([]string{"run", "./cmd/visual"}, args...)
 	cmd := exec.Command("go", cmdArgs...)
 	cmd.Dir = repoRoot(t)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return out
-	}
+	out, _ := cmd.CombinedOutput()
 	return out
 }
 
@@ -1865,16 +464,6 @@ func loadRegistry(t *testing.T, templateDir string) visualRegistry {
 	return registry
 }
 
-func loadTemplateManifest(t *testing.T, templateDir string, entry visualRegistryEntry) visualTemplateManifest {
-	t.Helper()
-	var manifest visualTemplateManifest
-	raw := mustRead(t, filepath.Join(templateDir, filepath.FromSlash(entry.Path)))
-	if err := yaml.Unmarshal([]byte(raw), &manifest); err != nil {
-		t.Fatal(err)
-	}
-	return manifest
-}
-
 func loadJSONMap(t *testing.T, path string) map[string]any {
 	t.Helper()
 	var out map[string]any
@@ -1891,43 +480,6 @@ func decodeJSONFile(t *testing.T, path string, out any) {
 	if err := json.Unmarshal(b, out); err != nil {
 		t.Fatalf("%s is invalid JSON: %v", path, err)
 	}
-}
-
-func semanticCategoryCountsHas(category string) bool {
-	_, ok := semanticCategoryCounts[category]
-	return ok
-}
-
-func warningCodes(t *testing.T, obj map[string]any) []string {
-	t.Helper()
-	data := objectMap(t, obj["data"])
-	raw, ok := data["warnings"].([]any)
-	if !ok {
-		return nil
-	}
-	out := make([]string, 0, len(raw))
-	for _, item := range raw {
-		warning := objectMap(t, item)
-		out = append(out, warning["code"].(string))
-	}
-	return out
-}
-
-func warningCodeSet(t *testing.T, obj map[string]any) map[string]bool {
-	t.Helper()
-	out := map[string]bool{}
-	for _, code := range warningCodes(t, obj) {
-		out[code] = true
-	}
-	return out
-}
-
-func previewWarningCodes(warnings []preview.Warning) map[string]bool {
-	out := map[string]bool{}
-	for _, warning := range warnings {
-		out[warning.Code] = true
-	}
-	return out
 }
 
 func objectMap(t *testing.T, value any) map[string]any {
@@ -1947,11 +499,6 @@ func stringSetFromAny(items []any) map[string]bool {
 		}
 	}
 	return out
-}
-
-func anyArrayLen(value any) int {
-	items, _ := value.([]any)
-	return len(items)
 }
 
 func findTestBrowser() string {
@@ -1983,24 +530,6 @@ func findTestBrowser() string {
 	return ""
 }
 
-func writeSolidPNG(t *testing.T, path string, width, height int, fill color.Color) {
-	t.Helper()
-	img := image.NewRGBA(image.Rect(0, 0, width, height))
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			img.Set(x, y, fill)
-		}
-	}
-	f, err := os.Create(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-	if err := png.Encode(f, img); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func mustRead(t *testing.T, path string) string {
 	t.Helper()
 	b, err := os.ReadFile(path)
@@ -2008,20 +537,4 @@ func mustRead(t *testing.T, path string) string {
 		t.Fatal(err)
 	}
 	return string(b)
-}
-
-func TestVisualRegistrySortedByCategoryThenID(t *testing.T) {
-	root := repoRoot(t)
-	registry := loadRegistry(t, filepath.Join(root, "templates", "visual"))
-	categoryOrder := map[string]int{"uml": 0, "relationship": 1, "temporal": 2, "flow": 3, "hierarchy": 4, "evidence": 5, "matrix": 6, "spatial": 7, "architecture": 8}
-	for i := 1; i < len(registry.Templates); i++ {
-		prev := registry.Templates[i-1]
-		cur := registry.Templates[i]
-		if categoryOrder[prev.Category] > categoryOrder[cur.Category] {
-			t.Fatalf("registry category order regressed at %s before %s", prev.ID, cur.ID)
-		}
-		if prev.Category == cur.Category && prev.ID > cur.ID {
-			t.Fatalf("registry ids should be sorted inside category %s: %s before %s", cur.Category, prev.ID, cur.ID)
-		}
-	}
 }

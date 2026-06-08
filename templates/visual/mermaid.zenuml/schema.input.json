@@ -1,0 +1,899 @@
+{
+  "example": {
+    "activations": [
+      {
+        "end_order": 10,
+        "label": "checkout screen active",
+        "participant_id": "portal",
+        "phase": "request",
+        "start_order": 1
+      },
+      {
+        "end_order": 9,
+        "label": "order transaction",
+        "participant_id": "api",
+        "phase": "authorize",
+        "start_order": 2
+      },
+      {
+        "end_order": 6,
+        "label": "payment authorization",
+        "participant_id": "payment",
+        "phase": "authorize",
+        "start_order": 5
+      },
+      {
+        "end_order": 7,
+        "label": "inventory reservation",
+        "participant_id": "inventory",
+        "phase": "commit",
+        "start_order": 3
+      }
+    ],
+    "fragments": [
+      {
+        "condition": "payment approved vs declined",
+        "end_order": 9,
+        "kind": "alt",
+        "start_order": 5
+      },
+      {
+        "condition": "audit retry until ack",
+        "end_order": 11,
+        "kind": "loop",
+        "start_order": 8
+      }
+    ],
+    "messages": [
+      {
+        "curve": "arc",
+        "depth": -0.16,
+        "from": "browser",
+        "id": "m1",
+        "importance": 0.55,
+        "kind": "sync",
+        "label": "submitCheckout()",
+        "label_priority": 0.52,
+        "order": 1,
+        "phase": "request",
+        "status": "running",
+        "summary": "Step 1 in the checkout authorization sequence.",
+        "to": "portal"
+      },
+      {
+        "curve": "arc",
+        "depth": -0.08,
+        "from": "portal",
+        "id": "m2",
+        "importance": 0.63,
+        "kind": "sync",
+        "label": "POST order intent",
+        "label_priority": 0.59,
+        "order": 2,
+        "phase": "request",
+        "status": "running",
+        "summary": "Step 2 in the checkout authorization sequence.",
+        "to": "api"
+      },
+      {
+        "curve": "arc",
+        "depth": 0.0,
+        "from": "api",
+        "id": "m3",
+        "importance": 0.95,
+        "kind": "sync",
+        "label": "reserveItems(orderId)",
+        "label_priority": 0.66,
+        "order": 3,
+        "phase": "authorize",
+        "status": "warning",
+        "summary": "Step 3 in the checkout authorization sequence.",
+        "to": "inventory"
+      },
+      {
+        "curve": "return",
+        "depth": 0.08,
+        "from": "inventory",
+        "id": "m4",
+        "importance": 0.79,
+        "kind": "return",
+        "label": "reservation token",
+        "label_priority": 0.73,
+        "order": 4,
+        "phase": "authorize",
+        "status": "success",
+        "summary": "Step 4 in the checkout authorization sequence.",
+        "to": "api"
+      },
+      {
+        "curve": "high_arc",
+        "depth": 0.16,
+        "from": "api",
+        "id": "m5",
+        "importance": 0.95,
+        "kind": "sync",
+        "label": "authorizePayment()",
+        "label_priority": 0.96,
+        "order": 5,
+        "phase": "authorize",
+        "status": "warning",
+        "summary": "Step 5 in the checkout authorization sequence.",
+        "to": "payment"
+      },
+      {
+        "curve": "return",
+        "depth": -0.16,
+        "from": "payment",
+        "id": "m6",
+        "importance": 0.95,
+        "kind": "return",
+        "label": "auth approved",
+        "label_priority": 0.52,
+        "order": 6,
+        "phase": "authorize",
+        "status": "success",
+        "summary": "Step 6 in the checkout authorization sequence.",
+        "to": "api"
+      },
+      {
+        "curve": "arc",
+        "depth": -0.08,
+        "from": "api",
+        "id": "m7",
+        "importance": 0.71,
+        "kind": "sync",
+        "label": "commitReservation()",
+        "label_priority": 0.59,
+        "order": 7,
+        "phase": "commit",
+        "status": "success",
+        "summary": "Step 7 in the checkout authorization sequence.",
+        "to": "inventory"
+      },
+      {
+        "curve": "high_arc",
+        "depth": 0.0,
+        "from": "api",
+        "id": "m8",
+        "importance": 0.79,
+        "kind": "async",
+        "label": "emit order.authorized",
+        "label_priority": 0.66,
+        "order": 8,
+        "phase": "notify",
+        "status": "success",
+        "summary": "Step 8 in the checkout authorization sequence.",
+        "to": "audit"
+      },
+      {
+        "curve": "return",
+        "depth": 0.08,
+        "from": "api",
+        "id": "m9",
+        "importance": 0.95,
+        "kind": "return",
+        "label": "201 order confirmed",
+        "label_priority": 0.96,
+        "order": 9,
+        "phase": "commit",
+        "status": "success",
+        "summary": "Step 9 in the checkout authorization sequence.",
+        "to": "portal"
+      },
+      {
+        "curve": "return",
+        "depth": 0.16,
+        "from": "portal",
+        "id": "m10",
+        "importance": 0.63,
+        "kind": "return",
+        "label": "render receipt",
+        "label_priority": 0.8,
+        "order": 10,
+        "phase": "notify",
+        "status": "success",
+        "summary": "Step 10 in the checkout authorization sequence.",
+        "to": "browser"
+      },
+      {
+        "curve": "arc",
+        "depth": -0.16,
+        "from": "audit",
+        "id": "m11",
+        "importance": 0.71,
+        "kind": "async",
+        "label": "ack event offset",
+        "label_priority": 0.52,
+        "order": 11,
+        "phase": "notify",
+        "status": "success",
+        "summary": "Step 11 in the checkout authorization sequence.",
+        "to": "api"
+      },
+      {
+        "curve": "self",
+        "depth": -0.08,
+        "from": "portal",
+        "id": "m12",
+        "importance": 0.79,
+        "kind": "self",
+        "label": "cache recent order",
+        "label_priority": 0.59,
+        "order": 12,
+        "phase": "notify",
+        "self": true,
+        "status": "success",
+        "summary": "Step 12 in the checkout authorization sequence.",
+        "to": "portal"
+      }
+    ],
+    "notes": [
+      "Use order to control vertical time placement.",
+      "Use fragments for loops, alternatives, and parallel regions."
+    ],
+    "participants": [
+      {
+        "color": "#63a9ff",
+        "depth": -0.55,
+        "display_name": "User Browser",
+        "group": "client",
+        "id": "browser",
+        "kind": "actor",
+        "label": "User Browser",
+        "lane_index": 0,
+        "metadata": {
+          "role": "starts checkout"
+        },
+        "subtitle": "actor"
+      },
+      {
+        "color": "#a77cff",
+        "depth": -0.25,
+        "display_name": "Portal UI",
+        "group": "frontend",
+        "id": "portal",
+        "kind": "boundary",
+        "label": "Portal UI",
+        "lane_index": 1,
+        "metadata": {
+          "route": "checkout confirmation"
+        },
+        "subtitle": "boundary"
+      },
+      {
+        "color": "#35c2a1",
+        "depth": 0.0,
+        "display_name": "Order API",
+        "group": "backend",
+        "id": "api",
+        "kind": "service",
+        "label": "Order API",
+        "lane_index": 2,
+        "metrics": {
+          "latency_ms": 84
+        },
+        "subtitle": "transaction core"
+      },
+      {
+        "color": "#e5a84c",
+        "depth": 0.45,
+        "display_name": "Payment Gateway",
+        "group": "provider",
+        "id": "payment",
+        "kind": "external",
+        "label": "Payment Gateway",
+        "lane_index": 3,
+        "metadata": {
+          "sla": "high"
+        },
+        "subtitle": "external provider"
+      },
+      {
+        "color": "#47c477",
+        "depth": 0.2,
+        "display_name": "Inventory Service",
+        "group": "backend",
+        "id": "inventory",
+        "kind": "service",
+        "label": "Inventory Service",
+        "lane_index": 4,
+        "subtitle": "reservation"
+      },
+      {
+        "color": "#ee6b73",
+        "depth": 0.72,
+        "display_name": "Audit Stream",
+        "group": "observability",
+        "id": "audit",
+        "kind": "event-log",
+        "label": "Audit Stream",
+        "lane_index": 5,
+        "subtitle": "event log"
+      }
+    ],
+    "phases": [
+      {
+        "color": "#63a9ff",
+        "id": "request",
+        "label": "Request",
+        "status": "running"
+      },
+      {
+        "color": "#e5a84c",
+        "id": "authorize",
+        "label": "Authorize",
+        "status": "warning"
+      },
+      {
+        "color": "#47c477",
+        "id": "commit",
+        "label": "Commit",
+        "status": "success"
+      },
+      {
+        "color": "#35c2a1",
+        "id": "notify",
+        "label": "Notify",
+        "status": "success"
+      }
+    ],
+    "schema": "efp.visual.input.uml.sequence.v1",
+    "title": "Mermaid ZenUML Sequence Compiled Example",
+    "visual": {
+      "annotations": [
+        {
+          "id": "note-core",
+          "label": "Transaction core",
+          "priority": 1,
+          "summary": "Most critical lifeline; activation spans request through commit.",
+          "target_id": "api"
+        },
+        {
+          "id": "note-auth",
+          "label": "External authorization",
+          "priority": 0.95,
+          "summary": "High-risk crossing to the payment provider.",
+          "target_id": "m5"
+        },
+        {
+          "id": "note-return",
+          "label": "Customer-visible result",
+          "priority": 0.88,
+          "summary": "This return determines what the user sees.",
+          "target_id": "m9"
+        }
+      ],
+      "audience": "reviewer",
+      "emphasis": [
+        "lifeline depth",
+        "phase color",
+        "message importance",
+        "progressive replay"
+      ],
+      "goal": "Explain checkout authorization by making the API transaction core, payment authorization, and return path readable before secondary audit detail.",
+      "hidden_detail_ids": [
+        "m11",
+        "m12"
+      ],
+      "initial_focus_ids": [
+        "api",
+        "m5",
+        "payment",
+        "m9"
+      ],
+      "narrative_steps": [
+        {
+          "focus_ids": [
+            "browser",
+            "portal",
+            "api",
+            "m2"
+          ],
+          "id": "request",
+          "summary": "Start with browser, portal, and Order API lifelines.",
+          "title": "Request enters the transaction core"
+        },
+        {
+          "focus_ids": [
+            "m3",
+            "inventory",
+            "m5",
+            "payment"
+          ],
+          "id": "authorize",
+          "summary": "Highlight inventory reservation and payment authorization paths.",
+          "title": "Authorization crosses service boundaries"
+        },
+        {
+          "focus_ids": [
+            "m7",
+            "m9",
+            "portal"
+          ],
+          "id": "commit",
+          "summary": "Show the successful commit and response path without expanding audit detail first.",
+          "title": "Commit and return the result"
+        }
+      ]
+    },
+    "metadata": {
+      "source": "compiled_from_mermaid"
+    }
+  },
+  "input_schema_kind": "uml_sequence_v1",
+  "json_schema": {
+    "$schema": "json-schema-draft-2020-12",
+    "properties": {
+      "activations": {
+        "items": {
+          "properties": {
+            "end_order": {
+              "type": "number"
+            },
+            "label": {
+              "type": "string"
+            },
+            "participant_id": {
+              "type": "string"
+            },
+            "phase": {
+              "type": "string"
+            },
+            "start_order": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "participant_id",
+            "start_order",
+            "end_order"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "fragments": {
+        "items": {
+          "properties": {
+            "condition": {
+              "type": "string"
+            },
+            "end_order": {
+              "type": "number"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "start_order": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "start_order",
+            "end_order"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "messages": {
+        "items": {
+          "properties": {
+            "curve": {
+              "description": "3D routing style for the message path.",
+              "enum": [
+                "straight",
+                "arc",
+                "high_arc",
+                "return",
+                "loop",
+                "self"
+              ],
+              "type": "string"
+            },
+            "depth": {
+              "description": "Optional z-depth offset for this message path.",
+              "type": "number"
+            },
+            "directed": {
+              "description": "Set true when relationship direction matters.",
+              "type": "boolean"
+            },
+            "from": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "importance": {
+              "description": "0-1 visual emphasis for labels and path glow.",
+              "type": "number"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "labelPriority": {
+              "enum": [
+                "always",
+                "important",
+                "normal",
+                "hover",
+                "hidden"
+              ],
+              "type": "string"
+            },
+            "label_priority": {
+              "description": "0-1 hint for label level-of-detail.",
+              "type": "number"
+            },
+            "order": {
+              "type": "number"
+            },
+            "payload": {
+              "type": "object"
+            },
+            "phase": {
+              "type": "string"
+            },
+            "presentation": {
+              "additionalProperties": true,
+              "properties": {
+                "arrow": {
+                  "description": "Arrow direction encoding for directed relationships.",
+                  "enum": [
+                    "forward",
+                    "reverse",
+                    "none"
+                  ],
+                  "type": "string"
+                },
+                "color": {
+                  "description": "Semantic hex color for this relationship.",
+                  "type": "string"
+                },
+                "curve": {
+                  "description": "3D path shape hint.",
+                  "enum": [
+                    "straight",
+                    "arc",
+                    "high_arc",
+                    "return",
+                    "self",
+                    "loop"
+                  ],
+                  "type": "string"
+                },
+                "flow": {
+                  "description": "Animate particles along the edge when it represents movement or causal flow.",
+                  "type": "boolean"
+                },
+                "lineStyle": {
+                  "description": "Line style for relationship semantics.",
+                  "enum": [
+                    "solid",
+                    "dashed",
+                    "dotted"
+                  ],
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "status": {
+              "type": "string"
+            },
+            "summary": {
+              "description": "Short explanation used by inspector or focused labels.",
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "order",
+            "from",
+            "to",
+            "label"
+          ],
+          "type": "object"
+        },
+        "minItems": 1,
+        "type": "array"
+      },
+      "notes": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "participants": {
+        "items": {
+          "properties": {
+            "color": {
+              "description": "Optional local hex color for the lifeline material.",
+              "type": "string"
+            },
+            "depth": {
+              "description": "Optional z-depth offset for 3D staging.",
+              "type": "number"
+            },
+            "display_name": {
+              "description": "Large label shown above the 3D lifeline.",
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "labelPriority": {
+              "enum": [
+                "always",
+                "important",
+                "normal",
+                "hover",
+                "hidden"
+              ],
+              "type": "string"
+            },
+            "label_priority": {
+              "enum": [
+                "always",
+                "important",
+                "normal",
+                "hover",
+                "hidden"
+              ],
+              "type": "string"
+            },
+            "lane_index": {
+              "description": "Horizontal ordering of the lifeline from left to right.",
+              "type": "number"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "platform": {
+              "description": "Platform id such as jenkins or aws.",
+              "type": "string"
+            },
+            "presentation": {
+              "additionalProperties": true,
+              "properties": {
+                "color": {
+                  "description": "Semantic hex color. Prefer provider/service/kind/status palettes unless a specific emphasis color is needed.",
+                  "type": "string"
+                },
+                "depth": {
+                  "description": "Optional 3D depth or tier hint.",
+                  "type": "number"
+                },
+                "icon": {
+                  "description": "Local icon id from templates/visual/_shared/asset-registry.json, such as generic.database, aws.lambda, aws.s3, or jenkins.",
+                  "type": "string"
+                },
+                "lane": {
+                  "description": "Optional lane/tier hint for stable layout.",
+                  "type": "string"
+                },
+                "mesh": {
+                  "description": "Three.js mesh hint such as box, card, cylinder, capsule, cloud, octahedron, cone, hex_prism, or sphere.",
+                  "type": "string"
+                },
+                "shape": {
+                  "description": "Semantic visual shape such as service_box, database_cylinder, queue_capsule, cloud_plate, actor_card, diamond, or warning_prism.",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "provider": {
+              "description": "Cloud/provider namespace such as aws.",
+              "type": "string"
+            },
+            "service": {
+              "description": "Provider service id such as lambda, s3, rds, sqs, eventbridge, or api_gateway.",
+              "type": "string"
+            },
+            "subtitle": {
+              "description": "Small secondary label under display_name.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "label"
+          ],
+          "type": "object"
+        },
+        "minItems": 2,
+        "type": "array"
+      },
+      "phases": {
+        "items": {
+          "properties": {
+            "color": {
+              "description": "Optional local hex color used for messages in this phase.",
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "label"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "renderHints": {
+        "additionalProperties": true,
+        "properties": {
+          "colorBy": {
+            "description": "Semantic color grouping used to build legend items.",
+            "type": "string"
+          },
+          "iconMode": {
+            "description": "Use billboard for local SVG icon planes on 3D marks.",
+            "enum": [
+              "billboard",
+              "none"
+            ],
+            "type": "string"
+          },
+          "palette": {
+            "description": "Palette id such as semantic_dark, cloud_provider, status, phase, or risk.",
+            "type": "string"
+          },
+          "showLegend": {
+            "description": "Set true when color encodes meaning.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "schema": {
+        "const": "efp.visual.input.uml.sequence.v1"
+      },
+      "title": {
+        "type": "string"
+      },
+      "view": {
+        "additionalProperties": true,
+        "properties": {
+          "colorBy": {
+            "description": "Semantic color grouping, such as provider, kind, status, group, phase, risk, or severity.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "visual": {
+        "description": "Visual authoring guidance for agents. Use this to control the first readable view, focus, hidden detail, narrative steps, and annotations without generating JavaScript.",
+        "properties": {
+          "annotations": {
+            "description": "Short callouts attached to existing semantic IDs.",
+            "items": {
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "priority": {
+                  "type": "number"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "target_id",
+                "label"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "audience": {
+            "description": "Primary viewer, such as reviewer, operator, engineer, or stakeholder.",
+            "type": "string"
+          },
+          "emphasis": {
+            "description": "Short visual emphasis words such as bottleneck, risk, handoff, phase, or dependency.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "goal": {
+            "description": "One sentence describing what the viewer should understand first.",
+            "type": "string"
+          },
+          "hidden_detail_ids": {
+            "description": "Low-value detail IDs that may stay collapsed, muted, or hidden until search/focus.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "initial_focus_ids": {
+            "description": "IDs that should be emphasized in the initial view.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "narrative_steps": {
+            "description": "Ordered story beats the renderer and inspector can use to explain the diagram progressively.",
+            "items": {
+              "properties": {
+                "focus_ids": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "title"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "required": [
+      "schema",
+      "participants",
+      "messages"
+    ],
+    "type": "object"
+  },
+  "schema": "efp.visual.template_input_schema.v1",
+  "template_id": "mermaid.zenuml",
+  "mermaid_syntax": "zenuml",
+  "input_format": "mermaid"
+}

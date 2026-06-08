@@ -1,0 +1,9 @@
+---
+title: Mermaid ZenUML Example
+---
+zenuml
+  title Checkout Flow
+  User->Portal: submit order
+  Portal->API: create order
+  API->Database: write order
+  API-->Portal: created

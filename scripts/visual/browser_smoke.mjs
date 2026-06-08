@@ -313,7 +313,7 @@ const expression = `(() => {
     labelLayerBounds: rect(layer),
     canvasBounds: rect(canvas),
     screenshotSize: { width: Math.round(window.innerWidth || 0), height: Math.round(window.innerHeight || 0) },
-    ready: !!q("[data-visual-template='architecture.isometric_overview'][data-visual-renderer='offline.architecture.isometric.v1']") &&
+    ready: !!q("[data-visual-renderer='offline.architecture.isometric.v1']") &&
       !!q(".visual-isometric-ready") &&
       !!q(".visual-isometric-label-layer") &&
       (linkData.length === 0 || !!relationLayer) &&

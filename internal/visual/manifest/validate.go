@@ -149,23 +149,20 @@ func ValidateRegistry(r Registry) error {
 }
 
 func ValidateExpectedCategoryCounts(counts, expected map[string]int) error {
-	for _, category := range SupportedCategoryOrder {
-		want, ok := expected[category]
-		if !ok {
-			return metadata.NewError("template_registry_invalid", "visual template registry expected category count is missing for "+category+".", "Add registry.expected.categories."+category+" to templates/visual/registry.json.", 400)
+	for category, want := range expected {
+		if !SupportedCategories[category] {
+			return metadata.NewError("template_registry_invalid", "visual template registry expected category is not supported: "+category, "Use one of: "+strings.Join(SupportedCategoryOrder, ", ")+".", 400)
 		}
 		if counts[category] != want {
 			return metadata.NewError("template_registry_invalid", "visual template registry expected category count mismatch for "+category+".", "Expected "+category+"="+itoa(want)+", got "+itoa(counts[category])+".", 400)
 		}
 	}
-	for category := range expected {
-		if !SupportedCategories[category] {
-			return metadata.NewError("template_registry_invalid", "visual template registry expected category is not supported: "+category, "Use one of: "+strings.Join(SupportedCategoryOrder, ", ")+".", 400)
-		}
-	}
 	for category, count := range counts {
 		if count > 0 && !SupportedCategories[category] {
 			return metadata.NewError("template_registry_invalid", "visual template category is not supported: "+category, "Use one of: "+strings.Join(SupportedCategoryOrder, ", ")+".", 400)
+		}
+		if _, ok := expected[category]; !ok {
+			return metadata.NewError("template_registry_invalid", "visual template registry expected category count is missing for "+category+".", "Add registry.expected.categories."+category+" to templates/visual/registry.json.", 400)
 		}
 	}
 	return nil
@@ -202,6 +199,7 @@ var SupportedInputSchemaKinds = map[string]bool{
 }
 
 var SupportedCategoryOrder = []string{
+	"mermaid",
 	"uml",
 	"relationship",
 	"temporal",
@@ -214,6 +212,7 @@ var SupportedCategoryOrder = []string{
 }
 
 var SupportedCategories = map[string]bool{
+	"mermaid":      true,
 	"uml":          true,
 	"relationship": true,
 	"temporal":     true,
@@ -229,18 +228,10 @@ var SupportedEffectEngines = map[string]bool{
 	"three.v1": true,
 }
 
-const DefaultExpectedCanonicalCount = 34
+const DefaultExpectedCanonicalCount = 28
 
 var ExpectedCategoryCounts = map[string]int{
-	"uml":          5,
-	"relationship": 4,
-	"temporal":     4,
-	"flow":         4,
-	"hierarchy":    4,
-	"evidence":     4,
-	"matrix":       4,
-	"spatial":      4,
-	"architecture": 1,
+	"mermaid": 28,
 }
 
 var SupportedLayoutPresets = map[string]bool{

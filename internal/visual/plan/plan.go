@@ -254,7 +254,7 @@ func Inspect(opts Options) (Result, error) {
 	if templateID == "" {
 		inferred, ok := mermaid.InferTemplateID(raw)
 		if !ok {
-			return Result{}, metadata.NewError("template_required", "visual inspect-plan requires --template for JSON input.", "Pass --template <template-id>, or pass a Mermaid .mmd input so the template can be inferred.", 400)
+			return Result{}, metadata.NewError("mermaid_input_required", "visual inspect-plan accepts Mermaid input.", "Pass a valid Mermaid .mmd file.", 400)
 		}
 		templateID = inferred
 	}
@@ -268,6 +268,9 @@ func Inspect(opts Options) (Result, error) {
 	}
 	if err := manifest.ValidateTemplateManifest(opts.TemplateDir, entry, &tpl); err != nil {
 		return Result{}, err
+	}
+	if !mermaid.IsMermaid(raw) {
+		return Result{}, metadata.NewError("mermaid_input_required", "visual inspect-plan accepts Mermaid input for public templates.", "Pass a valid Mermaid .mmd file or omit --template so the CLI can infer the Mermaid template.", 400)
 	}
 	raw, err = mermaid.CompileIfNeeded(tpl.InputSchemaKind, raw)
 	if err != nil {
@@ -854,16 +857,16 @@ func nextActions(templateID, outDir string, warnings []preview.Warning) []Workfl
 	var out []WorkflowAction
 	if len(warnings) > 0 {
 		out = append(out, WorkflowAction{Step: "revise_input", Reason: "inspect-plan found quality warnings; apply visual_plan.quality_loop suggestions before render"})
-		out = append(out, WorkflowAction{Step: "rerun_inspect_plan", Command: "visual inspect-plan --template " + templateID + " --input <input.mmd|input.json> --json"})
+		out = append(out, WorkflowAction{Step: "rerun_inspect_plan", Command: "visual inspect-plan --template " + templateID + " --input <input.mmd> --json"})
 	}
-	cmd := "visual render --template " + templateID + " --input <input.mmd|input.json> --out " + nonEmpty(outDir, "<out-dir>") + " --json"
+	cmd := "visual render --template " + templateID + " --input <input.mmd> --out " + nonEmpty(outDir, "<out-dir>") + " --json"
 	out = append(out, WorkflowAction{Step: "render", Command: cmd})
 	out = append(out, WorkflowAction{Step: "return_entrypoint", Reason: "Return data.artifact.entrypoint from render output"})
 	return out
 }
 
 func renderCommand(templateID, outDir string) []string {
-	return []string{"visual", "render", "--template", templateID, "--input", "<input.mmd|input.json>", "--out", nonEmpty(outDir, "<out-dir>"), "--json"}
+	return []string{"visual", "render", "--template", templateID, "--input", "<input.mmd>", "--out", nonEmpty(outDir, "<out-dir>"), "--json"}
 }
 
 func blockingWarningCodes(warnings []preview.Warning) []string {
@@ -901,7 +904,7 @@ func readInput(path string, stdin io.Reader) ([]byte, error) {
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, metadata.NewError("input_read_failed", "failed to read visual input: "+err.Error(), "Pass a readable JSON or Mermaid file path to --input.", 400)
+		return nil, metadata.NewError("input_read_failed", "failed to read visual input: "+err.Error(), "Pass a readable Mermaid file path to --input.", 400)
 	}
 	return b, nil
 }

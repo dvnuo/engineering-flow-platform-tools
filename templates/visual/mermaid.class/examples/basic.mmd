@@ -1,0 +1,11 @@
+---
+title: Mermaid Class Diagram Example
+---
+classDiagram
+  class OrderController
+  class OrderService
+  class OrderRepository
+  class Order
+  OrderController --> OrderService : delegates
+  OrderService --> OrderRepository : persists
+  OrderRepository --> Order : maps

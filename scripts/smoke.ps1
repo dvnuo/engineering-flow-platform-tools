@@ -32,30 +32,53 @@ go run ./cmd/visual version --json | Out-Null
 
 go run ./cmd/visual template categories --template-dir ./templates/visual --json | Out-Null
 go run ./cmd/visual template list --template-dir ./templates/visual --json | Out-Null
-go run ./cmd/visual template list --template-dir ./templates/visual --category uml --json | Out-Null
-go run ./cmd/visual template schema uml.sequence_3d --template-dir ./templates/visual --json | Out-Null
-go run ./cmd/visual template guide uml.sequence_3d --template-dir ./templates/visual --json | Out-Null
-go run ./cmd/visual template schema relationship.dependency_graph --template-dir ./templates/visual --json | Out-Null
-go run ./cmd/visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json | Out-Null
+go run ./cmd/visual template list --template-dir ./templates/visual --category mermaid --json | Out-Null
+go run ./cmd/visual template schema mermaid.sequence --template-dir ./templates/visual --json | Out-Null
+go run ./cmd/visual template guide mermaid.sequence --template-dir ./templates/visual --json | Out-Null
+go run ./cmd/visual template schema mermaid.flowchart --template-dir ./templates/visual --json | Out-Null
+go run ./cmd/visual template schema mermaid.architecture --template-dir ./templates/visual --json | Out-Null
+go run ./cmd/visual inspect-input --template mermaid.sequence --template-dir ./templates/visual --input ./templates/visual/mermaid.sequence/examples/basic.mmd --json | Out-Null
 go run ./cmd/visual template doctor --template-dir ./templates/visual --json | Out-Null
 $planOut = Join-Path ([System.IO.Path]::GetTempPath()) "visual-plan-smoke"
-go run ./cmd/visual inspect-plan --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out $planOut --json | Out-Null
+go run ./cmd/visual inspect-plan --template mermaid.sequence --template-dir ./templates/visual --input ./templates/visual/mermaid.sequence/examples/basic.mmd --out $planOut --json | Out-Null
 
 $tmp = New-Item -ItemType Directory -Force -Path (Join-Path ([System.IO.Path]::GetTempPath()) ("visual-" + [System.Guid]::NewGuid().ToString("N")))
 $templates = @(
-  'uml.sequence_3d',
-  'relationship.dependency_graph',
-  'temporal.event_trace',
-  'flow.pipeline',
-  'hierarchy.layered_architecture',
-  'evidence.claim_source_board',
-  'matrix.kpi_control',
-  'spatial.codebase_galaxy'
+  'mermaid.sequence',
+  'mermaid.flowchart',
+  'mermaid.timeline',
+  'mermaid.sankey',
+  'mermaid.mindmap',
+  'mermaid.pie',
+  'mermaid.wardley'
 )
 foreach ($template in $templates) {
   $out = Join-Path $tmp.FullName ($template -replace '\.', '-')
-  $inputPath = Join-Path (Join-Path (Join-Path 'templates' 'visual') $template) (Join-Path 'examples' 'basic.input.json')
+  $inputPath = Join-Path (Join-Path (Join-Path 'templates' 'visual') $template) (Join-Path 'examples' 'basic.mmd')
   go run ./cmd/visual render --template $template --template-dir ./templates/visual --input $inputPath --out $out --title "Smoke $template" --json | Out-Null
   if (-not (Test-Path (Join-Path $out 'index.html'))) { throw "visual smoke did not create index.html for $template" }
   go run ./cmd/visual inspect-render --template-dir ./templates/visual --out $out --json | Out-Null
+}
+
+$gallery = Join-Path $tmp.FullName 'mermaid-architecture'
+go run ./cmd/visual render `
+  --template mermaid.architecture `
+  --template-dir ./templates/visual `
+  --input ./templates/visual/mermaid.architecture/examples/basic.mmd `
+  --out $gallery `
+  --json | Out-Null
+
+if ($env:EFP_SKIP_BROWSER_SMOKE -ne '1') {
+  $screenshot = Join-Path $gallery 'screenshot.png'
+  go run ./cmd/visual inspect-browser `
+    --template-dir ./templates/visual `
+    --out $gallery `
+    --screenshot $screenshot `
+    --timeout 90 `
+    --json | Out-Null
+  go run ./cmd/visual inspect-render `
+    --template-dir ./templates/visual `
+    --out $gallery `
+    --screenshot $screenshot `
+    --json | Out-Null
 }

@@ -67,19 +67,19 @@ func NewRoot() *cobra.Command {
 		Short:   "Generate complete offline static visualization artifacts from local templates",
 		Long: strings.TrimSpace(`visual is a terminal-invoked CLI for agents and scripts that need deterministic offline HTML/SVG artifacts.
 
-It reads local templates from ~/.efp/template/visual by default, with checkout and release fallbacks, accepts Mermaid or JSON input, copies local assets, and writes index.html, manifest.json, manifest.js, data.js, and assets/** to an output directory. It does not start a server, call Portal, call MCP, use Node/npm, download assets, or generate arbitrary JavaScript.`),
+It reads local templates from ~/.efp/template/visual by default, with checkout and release fallbacks, accepts Mermaid input, copies local assets, and writes index.html, manifest.json, manifest.js, data.js, and assets/** to an output directory. It does not start a server, call Portal, call MCP, use Node/npm, download assets, or generate arbitrary JavaScript.`),
 		Examples: []string{
 			`visual commands --json`,
 			`visual schema render --json`,
 			`visual template list --template-dir ./templates/visual --json`,
-			`visual template list --template-dir ./templates/visual --category uml --json`,
-			`visual template schema uml.sequence_3d --template-dir ./templates/visual --json`,
-			`visual template guide uml.sequence_3d --template-dir ./templates/visual --json`,
-			`visual inspect-input --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --json`,
-			`visual inspect-plan --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --out ./out/mermaid-architecture --json`,
+			`visual template list --template-dir ./templates/visual --category mermaid --json`,
+			`visual template schema mermaid.sequence --template-dir ./templates/visual --json`,
+			`visual template guide mermaid.sequence --template-dir ./templates/visual --json`,
+			`visual inspect-input --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --json`,
+			`visual inspect-plan --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --out ./out/mermaid-architecture --json`,
 			`visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json`,
 			`visual inspect-browser --template-dir ./templates/visual --out ./out/isometric-asset-gallery --json`,
-			`visual render --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --out ./out/mermaid-architecture --json`,
+			`visual render --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --out ./out/mermaid-architecture --json`,
 		},
 		Instructions: "copy cmd/visual/visual-cli.instructions.md to ~/.copilot/instructions/visual-cli.instructions.md.",
 	})

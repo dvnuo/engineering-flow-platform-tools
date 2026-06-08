@@ -70,6 +70,7 @@ func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
 		"assert.text":        {"contains", "selector", "ref", "not", "session", "target-id", "timeout"},
 		"assert.url":         {"contains", "not", "session", "target-id", "timeout"},
 		"assert.count":       {"selector", "equals", "min", "max", "session", "target-id", "timeout"},
+		"workflow.run":       {"file", "dry-run", "session", "target-id", "timeout", "continue-on-error"},
 		"frame.list":         {"session", "target-id", "timeout"},
 		"frame.snapshot":     {"frame-id", "include-html", "max-text-bytes", "max-html-bytes", "session", "target-id", "timeout"},
 		"network.start":      {"session", "target-id", "timeout", "limit", "filter"},

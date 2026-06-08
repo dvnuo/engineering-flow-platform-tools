@@ -100,6 +100,9 @@ func normalizeSelectorHint(raw string) string {
 	if raw == "" {
 		return ""
 	}
+	if sensitiveSelectorHint(raw) {
+		return "REDACTED_SELECTOR"
+	}
 	return TruncateBytes(RedactString(raw), 500)
 }
 

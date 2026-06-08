@@ -13,6 +13,7 @@ import (
 var (
 	embeddedURLPattern        = regexp.MustCompile(`https?://[^\s"'<>]+`)
 	sensitiveJSONFieldPattern = regexp.MustCompile(`(?i)(["']?[A-Za-z0-9_.~-]*(?:access_token|id_token|refresh_token|token|code|auth|ticket|session|sig|signature|key|password|jwt|saml|secret|credential|cookie|authorization|header|localstorage|sessionstorage)[A-Za-z0-9_.~-]*["']?\s*:\s*)(["'][^"']*["']|[^,}\]\s]+)`)
+	sensitiveSelectorPattern  = regexp.MustCompile(`(?i)(access[_-]?token|id[_-]?token|refresh[_-]?token|password|passwd|pwd|jwt|saml|secret|credential|cookie|authorization|session|api[_-]?key)`)
 )
 
 var sensitiveFieldWords = []string{
@@ -118,4 +119,8 @@ func sensitiveFieldName(key string) bool {
 func looksLikeURL(s string) bool {
 	u, err := url.Parse(strings.TrimSpace(s))
 	return err == nil && u != nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
+}
+
+func sensitiveSelectorHint(raw string) bool {
+	return sensitiveSelectorPattern.MatchString(raw)
 }

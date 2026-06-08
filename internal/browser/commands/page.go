@@ -18,6 +18,7 @@ func pageCmd(o *Opts) *cobra.Command {
 	c.AddCommand(
 		pageSnapshotCmd(o),
 		pageExtractCmd(o),
+		pageAXCmd(o),
 		pageClickCmd(o),
 		pageTypeCmd(o),
 		pageUploadCmd(o),
@@ -85,6 +86,32 @@ func pageExtractCmd(o *Opts) *cobra.Command {
 	c.Flags().IntVar(&opts.Limit, "limit", 20, "Maximum number of matching elements to return.")
 	c.Flags().BoolVar(&opts.IncludeHTML, "include-html", false, "Include redacted and truncated outer HTML for each matching element.")
 	c.Flags().IntVar(&opts.MaxHTMLBytes, "max-html-bytes", 20000, "Maximum bytes of redacted outer HTML per element when --include-html is set.")
+	return c
+}
+
+func pageAXCmd(o *Opts) *cobra.Command {
+	opts := automation.AXOptions{PageOptions: defaultPageOptions(), Limit: 100}
+	c := &cobra.Command{
+		Use:   "ax",
+		Short: "Snapshot page accessibility-style refs",
+		Long:  "Return a bounded DOM/ARIA accessibility-style tree with stable short-session refs, redacted names, state flags, bounds, and selector hints for agent interaction.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.AX(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().IntVar(&opts.Limit, "limit", 100, "Maximum number of accessibility-style nodes to return.")
+	c.Flags().BoolVar(&opts.IncludeHidden, "include-hidden", false, "Include hidden nodes in the accessibility-style snapshot.")
 	return c
 }
 

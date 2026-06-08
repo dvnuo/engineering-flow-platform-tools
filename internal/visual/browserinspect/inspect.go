@@ -35,6 +35,7 @@ type Options struct {
 	CameraTheta    float64
 	CameraPhi      float64
 	CameraZoom     float64
+	OrbitSmoke     bool
 }
 
 type Result struct {
@@ -127,6 +128,29 @@ type DOMSummary struct {
 	Controls               int      `json:"controls"`
 	Canvas                 int      `json:"canvas"`
 	RuntimeDataRequested   bool     `json:"runtime_data_requested"`
+	RelationLayerMode      string   `json:"relation_layer_mode,omitempty"`
+	WorldRelationLayer     bool     `json:"world_relation_layer_present"`
+	GroundLinkMeshes       int      `json:"ground_link_mesh_count"`
+	GroundArrowheads       int      `json:"ground_arrowhead_count"`
+	GroundLinkHitAreas     int      `json:"ground_link_hit_area_count"`
+	GroundLinkLabels       int      `json:"ground_link_label_mesh_count"`
+	GroundLinkTextures     int      `json:"ground_link_label_texture_ready_count"`
+	GroundLabelsVisible    int      `json:"ground_link_label_visible_count"`
+	GroundLabelsFlipped    int      `json:"ground_link_label_flipped_count"`
+	ScreenSVGVisible       bool     `json:"screen_svg_relation_layer_visible"`
+	SVGDebugLayer          bool     `json:"svg_debug_relation_layer_present"`
+	EntityLabelAnchors     int      `json:"entity_label_anchor_count"`
+	LinkLabelAnchors       int      `json:"link_label_anchor_count"`
+	ZoneLabelAnchors       int      `json:"zone_label_anchor_count"`
+	WorldLeaderLines       int      `json:"world_leader_line_count"`
+	OrbitSmokeEnabled      bool     `json:"orbit_smoke_enabled"`
+	OrbitEntityMaxDelta    float64  `json:"orbit_entity_label_return_max_delta_px,omitempty"`
+	OrbitEntityAvgDelta    float64  `json:"orbit_entity_label_return_avg_delta_px,omitempty"`
+	OrbitLinkMaxDelta      float64  `json:"orbit_link_label_return_max_delta_px,omitempty"`
+	OrbitLinkAvgDelta      float64  `json:"orbit_link_label_return_avg_delta_px,omitempty"`
+	OrbitMissingEntities   int      `json:"orbit_missing_entity_labels_after_rotate,omitempty"`
+	OrbitMissingLinks      int      `json:"orbit_missing_link_labels_after_rotate,omitempty"`
+	OrbitLayerStable       bool     `json:"orbit_relation_layer_mode_stable"`
 }
 
 type Rect struct {
@@ -189,6 +213,29 @@ type VisualSummary struct {
 	LabelLayerBounds               *Rect          `json:"label_layer_bounds,omitempty"`
 	CanvasBounds                   *Rect          `json:"canvas_bounds,omitempty"`
 	ScreenshotSize                 *Rect          `json:"screenshot_size,omitempty"`
+	RelationLayerMode              string         `json:"relation_layer_mode,omitempty"`
+	WorldRelationLayerPresent      bool           `json:"world_relation_layer_present"`
+	GroundLinkMeshCount            int            `json:"ground_link_mesh_count"`
+	GroundArrowheadCount           int            `json:"ground_arrowhead_count"`
+	GroundLinkHitAreaCount         int            `json:"ground_link_hit_area_count"`
+	GroundLinkLabelMeshCount       int            `json:"ground_link_label_mesh_count"`
+	GroundLinkLabelTextureReady    int            `json:"ground_link_label_texture_ready_count"`
+	GroundLinkLabelVisibleCount    int            `json:"ground_link_label_visible_count"`
+	GroundLinkLabelFlippedCount    int            `json:"ground_link_label_flipped_count"`
+	ScreenSVGRelationLayerVisible  bool           `json:"screen_svg_relation_layer_visible"`
+	SVGDebugRelationLayerPresent   bool           `json:"svg_debug_relation_layer_present"`
+	EntityLabelAnchorCount         int            `json:"entity_label_anchor_count"`
+	LinkLabelAnchorCount           int            `json:"link_label_anchor_count"`
+	ZoneLabelAnchorCount           int            `json:"zone_label_anchor_count"`
+	WorldLeaderLineCount           int            `json:"world_leader_line_count"`
+	OrbitSmokeEnabled              bool           `json:"orbit_smoke_enabled"`
+	OrbitEntityLabelReturnMaxDelta float64        `json:"orbit_entity_label_return_max_delta_px,omitempty"`
+	OrbitEntityLabelReturnAvgDelta float64        `json:"orbit_entity_label_return_avg_delta_px,omitempty"`
+	OrbitLinkLabelReturnMaxDelta   float64        `json:"orbit_link_label_return_max_delta_px,omitempty"`
+	OrbitLinkLabelReturnAvgDelta   float64        `json:"orbit_link_label_return_avg_delta_px,omitempty"`
+	OrbitMissingEntityLabels       int            `json:"orbit_missing_entity_labels_after_rotate,omitempty"`
+	OrbitMissingLinkLabels         int            `json:"orbit_missing_link_labels_after_rotate,omitempty"`
+	OrbitRelationLayerModeStable   bool           `json:"orbit_relation_layer_mode_stable"`
 }
 
 func Inspect(opts Options) (Result, error) {
@@ -297,6 +344,29 @@ func Inspect(opts Options) (Result, error) {
 		Controls:               nodeResult.Data.Summary.Controls,
 		Canvas:                 nodeResult.Data.Summary.Canvas,
 		RuntimeDataRequested:   hasRequest(requests, "/data.js") && hasRequest(requests, "/manifest.js"),
+		RelationLayerMode:      nodeResult.Data.Summary.RelationLayerMode,
+		WorldRelationLayer:     nodeResult.Data.Summary.WorldRelationLayerPresent,
+		GroundLinkMeshes:       nodeResult.Data.Summary.GroundLinkMeshCount,
+		GroundArrowheads:       nodeResult.Data.Summary.GroundArrowheadCount,
+		GroundLinkHitAreas:     nodeResult.Data.Summary.GroundLinkHitAreaCount,
+		GroundLinkLabels:       nodeResult.Data.Summary.GroundLinkLabelMeshCount,
+		GroundLinkTextures:     nodeResult.Data.Summary.GroundLinkLabelTextureReady,
+		GroundLabelsVisible:    nodeResult.Data.Summary.GroundLinkLabelVisibleCount,
+		GroundLabelsFlipped:    nodeResult.Data.Summary.GroundLinkLabelFlippedCount,
+		ScreenSVGVisible:       nodeResult.Data.Summary.ScreenSVGRelationLayerVisible,
+		SVGDebugLayer:          nodeResult.Data.Summary.SVGDebugRelationLayerPresent,
+		EntityLabelAnchors:     nodeResult.Data.Summary.EntityLabelAnchorCount,
+		LinkLabelAnchors:       nodeResult.Data.Summary.LinkLabelAnchorCount,
+		ZoneLabelAnchors:       nodeResult.Data.Summary.ZoneLabelAnchorCount,
+		WorldLeaderLines:       nodeResult.Data.Summary.WorldLeaderLineCount,
+		OrbitSmokeEnabled:      nodeResult.Data.Summary.OrbitSmokeEnabled,
+		OrbitEntityMaxDelta:    nodeResult.Data.Summary.OrbitEntityLabelReturnMaxDelta,
+		OrbitEntityAvgDelta:    nodeResult.Data.Summary.OrbitEntityLabelReturnAvgDelta,
+		OrbitLinkMaxDelta:      nodeResult.Data.Summary.OrbitLinkLabelReturnMaxDelta,
+		OrbitLinkAvgDelta:      nodeResult.Data.Summary.OrbitLinkLabelReturnAvgDelta,
+		OrbitMissingEntities:   nodeResult.Data.Summary.OrbitMissingEntityLabels,
+		OrbitMissingLinks:      nodeResult.Data.Summary.OrbitMissingLinkLabels,
+		OrbitLayerStable:       nodeResult.Data.Summary.OrbitRelationLayerModeStable,
 	}
 	renderResult, renderWarnings := inspectRenderedScreenshot(opts, outDir, screenshot)
 	checks := buildChecks(domSummary, requests, screenshot, nodeResult, renderResult)
@@ -397,6 +467,29 @@ type browserDOMSummary struct {
 	LabelLayerBounds               *Rect          `json:"labelLayerBounds"`
 	CanvasBounds                   *Rect          `json:"canvasBounds"`
 	ScreenshotSize                 *Rect          `json:"screenshotSize"`
+	RelationLayerMode              string         `json:"relationLayerMode"`
+	WorldRelationLayerPresent      bool           `json:"worldRelationLayerPresent"`
+	GroundLinkMeshCount            int            `json:"groundLinkMeshCount"`
+	GroundArrowheadCount           int            `json:"groundArrowheadCount"`
+	GroundLinkHitAreaCount         int            `json:"groundLinkHitAreaCount"`
+	GroundLinkLabelMeshCount       int            `json:"groundLinkLabelMeshCount"`
+	GroundLinkLabelTextureReady    int            `json:"groundLinkLabelTextureReadyCount"`
+	GroundLinkLabelVisibleCount    int            `json:"groundLinkLabelVisibleCount"`
+	GroundLinkLabelFlippedCount    int            `json:"groundLinkLabelFlippedCount"`
+	ScreenSVGRelationLayerVisible  bool           `json:"screenSvgRelationLayerVisible"`
+	SVGDebugRelationLayerPresent   bool           `json:"svgDebugRelationLayerPresent"`
+	EntityLabelAnchorCount         int            `json:"entityLabelAnchorCount"`
+	LinkLabelAnchorCount           int            `json:"linkLabelAnchorCount"`
+	ZoneLabelAnchorCount           int            `json:"zoneLabelAnchorCount"`
+	WorldLeaderLineCount           int            `json:"worldLeaderLineCount"`
+	OrbitSmokeEnabled              bool           `json:"orbitSmokeEnabled"`
+	OrbitEntityLabelReturnMaxDelta float64        `json:"orbitEntityLabelReturnMaxDeltaPx"`
+	OrbitEntityLabelReturnAvgDelta float64        `json:"orbitEntityLabelReturnAvgDeltaPx"`
+	OrbitLinkLabelReturnMaxDelta   float64        `json:"orbitLinkLabelReturnMaxDeltaPx"`
+	OrbitLinkLabelReturnAvgDelta   float64        `json:"orbitLinkLabelReturnAvgDeltaPx"`
+	OrbitMissingEntityLabels       int            `json:"orbitMissingEntityLabelsAfterRotate"`
+	OrbitMissingLinkLabels         int            `json:"orbitMissingLinkLabelsAfterRotate"`
+	OrbitRelationLayerModeStable   bool           `json:"orbitRelationLayerModeStable"`
 	Ready                          bool           `json:"ready"`
 }
 
@@ -552,6 +645,9 @@ func runBrowserSmoke(ctx context.Context, browserPath, url, screenshot string, o
 	}
 	if opts.CameraZoom != 0 {
 		args = append(args, "--camera-zoom", fmt.Sprintf("%g", opts.CameraZoom))
+	}
+	if opts.OrbitSmoke {
+		args = append(args, "--orbit-smoke")
 	}
 	cmd := exec.CommandContext(ctx, nodePath, append([]string{scriptPath}, args...)...)
 	out, err := cmd.CombinedOutput()
@@ -752,6 +848,29 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		LabelLayerBounds:               nodeResult.Data.Summary.LabelLayerBounds,
 		CanvasBounds:                   nodeResult.Data.Summary.CanvasBounds,
 		ScreenshotSize:                 screenshotSize,
+		RelationLayerMode:              summary.RelationLayerMode,
+		WorldRelationLayerPresent:      summary.WorldRelationLayer,
+		GroundLinkMeshCount:            summary.GroundLinkMeshes,
+		GroundArrowheadCount:           summary.GroundArrowheads,
+		GroundLinkHitAreaCount:         summary.GroundLinkHitAreas,
+		GroundLinkLabelMeshCount:       summary.GroundLinkLabels,
+		GroundLinkLabelTextureReady:    summary.GroundLinkTextures,
+		GroundLinkLabelVisibleCount:    summary.GroundLabelsVisible,
+		GroundLinkLabelFlippedCount:    summary.GroundLabelsFlipped,
+		ScreenSVGRelationLayerVisible:  summary.ScreenSVGVisible,
+		SVGDebugRelationLayerPresent:   summary.SVGDebugLayer,
+		EntityLabelAnchorCount:         summary.EntityLabelAnchors,
+		LinkLabelAnchorCount:           summary.LinkLabelAnchors,
+		ZoneLabelAnchorCount:           summary.ZoneLabelAnchors,
+		WorldLeaderLineCount:           summary.WorldLeaderLines,
+		OrbitSmokeEnabled:              summary.OrbitSmokeEnabled,
+		OrbitEntityLabelReturnMaxDelta: summary.OrbitEntityMaxDelta,
+		OrbitEntityLabelReturnAvgDelta: summary.OrbitEntityAvgDelta,
+		OrbitLinkLabelReturnMaxDelta:   summary.OrbitLinkMaxDelta,
+		OrbitLinkLabelReturnAvgDelta:   summary.OrbitLinkAvgDelta,
+		OrbitMissingEntityLabels:       summary.OrbitMissingEntities,
+		OrbitMissingLinkLabels:         summary.OrbitMissingLinks,
+		OrbitRelationLayerModeStable:   summary.OrbitLayerStable,
 	}
 }
 
@@ -834,17 +953,49 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	if hasArchitectureFlowGroup && totalDeclaredLinks >= 12 && summary.ExplicitRouteLinks < 12 {
 		add("browser_heuristic_routes_too_many_for_golden_example", "warning", fmt.Sprintf("The golden architecture example has too few explicit relation routes: %d explicit, %d heuristic.", summary.ExplicitRouteLinks, summary.HeuristicRouteLinks), "Add explicit route arrays to at least 12 important links; prefer explicit routes for all golden example links.", "add_golden_explicit_routes")
 	}
-	if totalDeclaredLinks > 0 && !summary.SVGRelationLayer {
-		add("browser_svg_relation_layer_missing", "error", "The SVG relation overlay layer is missing.", "Render relation routes through .visual-isometric-relation-svg above the canvas.", "restore_svg_relation_layer")
+	if totalDeclaredLinks > 0 && summary.RelationLayerMode != "" && summary.RelationLayerMode != "world_ground" && summary.RelationLayerMode != "svg_debug" {
+		add("browser_relation_layer_screen_space_default", "error", "The default relation layer mode is not world_ground.", "Set renderHints.relationLayer to world_ground so links, arrows, and link labels are stable Three.js world objects.", "set_world_ground_relation_layer")
 	}
-	if totalDeclaredLinks > 0 && summary.SVGLinkPathCount == 0 {
-		add("browser_svg_link_paths_missing", "error", "The SVG relation overlay has no link paths.", "Project link routes into SVG path elements with data-link-id hooks.", "render_svg_link_paths")
+	if totalDeclaredLinks > 0 && summary.RelationLayerMode == "svg_debug" && !summary.SVGRelationLayer {
+		add("browser_svg_relation_layer_missing", "error", "The SVG debug relation overlay layer is missing.", "Render debug relation routes through .visual-isometric-relation-svg only when relationLayer=svg_debug.", "restore_svg_debug_relation_layer")
 	}
-	if summary.PrimaryLinkCount > 0 && summary.SVGPrimaryPathCount < summary.PrimaryLinkCount {
-		add("browser_primary_arrows_missing", "warning", "Some primary relation paths are missing from the SVG overlay.", "Ensure primary role links create SVG paths with marker-end arrows.", "render_primary_relation_paths")
+	if totalDeclaredLinks > 0 && summary.RelationLayerMode == "svg_debug" && summary.SVGLinkPathCount == 0 {
+		add("browser_svg_link_paths_missing", "error", "The SVG debug relation overlay has no link paths.", "Project debug link routes into SVG path elements with data-link-id hooks.", "render_svg_debug_link_paths")
 	}
-	if summary.LinkPathsWithoutMarker > 0 {
-		add("browser_link_paths_without_marker", "warning", fmt.Sprintf("Some SVG link paths have no marker-end arrow: %d.", summary.LinkPathsWithoutMarker), "Directed architecture links should set marker-end on their SVG path.", "add_svg_arrow_markers")
+	if totalDeclaredLinks > 0 && summary.RelationLayerMode != "svg_debug" && summary.ScreenSVGVisible {
+		add("browser_svg_relation_layer_visible_in_default_mode", "error", "The screen-space SVG relation layer is visible in the default mode.", "Hide SVG relation overlay by default; use Three.js world-space ground links instead.", "hide_svg_relation_layer")
+	}
+	if totalDeclaredLinks > 0 && summary.RelationLayerMode == "world_ground" && summary.GroundLinkMeshes == 0 {
+		add("browser_ground_links_missing", "error", "No world-space ground link meshes were reported.", "Render relation paths as Three.js world-space ground ribbons/tubes.", "render_ground_links")
+	}
+	if totalDeclaredLinks > 0 && summary.RelationLayerMode == "world_ground" && summary.GroundArrowheads == 0 {
+		add("browser_ground_arrowheads_missing", "error", "No world-space ground arrowheads were reported.", "Render directed relation arrows as Three.js world-space meshes attached to the route end.", "render_ground_arrowheads")
+	}
+	if totalDeclaredLinks > 0 && summary.RelationLayerMode == "world_ground" && summary.GroundLinkLabels == 0 {
+		add("browser_ground_link_labels_missing", "warning", "No world-space ground link labels were reported.", "Create CanvasTexture link label planes aligned to the route segment.", "render_ground_link_labels")
+	}
+	if summary.GroundLinkLabels > 0 && summary.GroundLinkTextures < summary.GroundLinkLabels {
+		add("browser_ground_link_label_textures_missing", "warning", fmt.Sprintf("Some ground link labels do not have ready text textures: %d/%d ready.", summary.GroundLinkTextures, summary.GroundLinkLabels), "Ensure CanvasTexture labels are created and marked needsUpdate=true.", "fix_ground_label_textures")
+	}
+	if summary.VisibleEntityLabels > 0 && summary.EntityLabelAnchors < summary.VisibleEntityLabels {
+		add("browser_label_anchor_missing", "warning", fmt.Sprintf("Some visible entity labels do not have stable world anchors: %d anchors for %d visible labels.", summary.EntityLabelAnchors, summary.VisibleEntityLabels), "Store stable data-anchor-* metadata and avoid per-frame label reallocation.", "fix_label_anchors")
+	}
+	if summary.VisibleEntityLabels > 0 && summary.WorldLeaderLines < summary.VisibleEntityLabels {
+		add("browser_world_leader_lines_missing", "warning", fmt.Sprintf("World-space leader lines are fewer than visible entity labels: %d/%d.", summary.WorldLeaderLines, summary.VisibleEntityLabels), "Render entity leader lines as Three.js world-space dashed segments.", "render_world_leader_lines")
+	}
+	if summary.OrbitSmokeEnabled {
+		if !summary.OrbitLayerStable {
+			add("browser_orbit_relation_layer_unstable", "error", "Orbit smoke reported an unstable relation layer mode.", "Keep relationLayerMode stable during camera orbit.", "fix_orbit_relation_layer_mode")
+		}
+		if summary.OrbitMissingEntities > 0 || summary.OrbitMissingLinks > 0 {
+			add("browser_orbit_labels_missing", "error", fmt.Sprintf("Orbit smoke lost labels after rotate: entities=%d links=%d.", summary.OrbitMissingEntities, summary.OrbitMissingLinks), "Keep label anchors stable and do not recreate labels during orbit.", "fix_orbit_label_retention")
+		}
+		if summary.OrbitEntityMaxDelta > 4 {
+			add("browser_orbit_entity_label_jitter_high", "warning", fmt.Sprintf("Entity labels did not return to their initial projected positions after orbit: max %.2fpx.", summary.OrbitEntityMaxDelta), "Use stable world anchors and avoid collision layout during orbit drag.", "reduce_entity_label_jitter")
+		}
+		if summary.OrbitLinkMaxDelta > 5 {
+			add("browser_orbit_link_label_jitter_high", "warning", fmt.Sprintf("Ground link labels did not return to their initial projected positions after orbit: max %.2fpx.", summary.OrbitLinkMaxDelta), "Keep ground link label anchors and route segment selection stable.", "reduce_link_label_jitter")
+		}
 	}
 	if summary.VisibleAuxiliaryLabels > 2 {
 		add("browser_auxiliary_links_too_prominent", "warning", fmt.Sprintf("Too many auxiliary link labels are visible: %d.", summary.VisibleAuxiliaryLabels), "Hide auxiliary labels in overview unless they explain an important exception.", "hide_auxiliary_labels")

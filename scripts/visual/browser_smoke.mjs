@@ -39,6 +39,7 @@ const dragZ = Number(args["drag-z"] || 0);
 const cameraTheta = Number(args["camera-theta"] || 0);
 const cameraPhi = Number(args["camera-phi"] || 0);
 const cameraZoom = Number(args["camera-zoom"] || 0);
+const orbitSmokeEnabled = args["orbit-smoke"] === "true";
 if (!url) fail("browser_url_missing", "--url is required.", "Pass the local HTTP URL for the rendered index.html.");
 if (!browserPath) fail("browser_runtime_missing", "--browser is required.", "Pass a Chrome or Chromium executable path.");
 if (!screenshot) fail("browser_screenshot_missing", "--screenshot is required.", "Pass the screenshot output path.");
@@ -179,6 +180,12 @@ const expression = `(() => {
   const zoneLabelNodes = qa(".visual-isometric-zone-label");
   const relationLayer = q(".visual-isometric-relation-svg[data-relation-layer='true']");
   const svgLinkPathNodes = qa(".visual-isometric-link-path");
+  const debugApi = window.__EFP_VISUAL_DEBUG__;
+  const debugSummary = debugApi?.getSummary ? (debugApi.getSummary() || {}) : {};
+  const relationLayerMode = String(debugSummary.relationLayerMode || q("[data-relation-layer-mode]")?.getAttribute("data-relation-layer-mode") || "");
+  const worldGroundMode = relationLayerMode === "world_ground";
+  const groundLinkLabelVisibleCount = Number(debugSummary.groundLinkLabelVisibleCount || 0);
+  const groundLinkLabelMeshCount = Number(debugSummary.groundLinkLabelMeshCount || 0);
   const imageLoaded = (node) => !(node instanceof HTMLImageElement) || (node.complete && node.naturalWidth > 0 && node.naturalHeight > 0);
   const imageBroken = (node) => node instanceof HTMLImageElement && (!node.complete || node.naturalWidth === 0 || node.naturalHeight === 0);
   const labelRect = (node) => {
@@ -221,11 +228,14 @@ const expression = `(() => {
   const primaryLinkCount = linkData.filter((link) => roleOf(link) === "primary").length;
   const secondaryLinkCount = linkData.filter((link) => roleOf(link) === "secondary").length;
   const auxiliaryLinkCount = linkData.filter((link) => roleOf(link) === "auxiliary").length;
-  const visiblePrimaryLinkLabelCount = linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").length;
-  const visibleSecondaryLinkLabelCount = linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "secondary").length;
-  const visibleAuxiliaryLinkLabelCount = linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "auxiliary").length;
+  const domVisibleLinkLabels = linkLabelNodes.filter(isVisible).length;
+  const visiblePrimaryLinkLabelCount = worldGroundMode ? Math.min(primaryLinkCount, groundLinkLabelVisibleCount) : linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").length;
+  const visibleSecondaryLinkLabelCount = worldGroundMode ? Math.max(0, Math.min(secondaryLinkCount, groundLinkLabelVisibleCount - visiblePrimaryLinkLabelCount)) : linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "secondary").length;
+  const visibleAuxiliaryLinkLabelCount = worldGroundMode ? Math.max(0, groundLinkLabelVisibleCount - visiblePrimaryLinkLabelCount - visibleSecondaryLinkLabelCount) : linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "auxiliary").length;
   const routeGroups = Array.from(new Set(linkData.map(pathGroupOf))).filter(Boolean).sort();
-  const primaryPathGroupsVisible = Array.from(new Set(linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").map((node) => node.getAttribute("data-path-group") || ""))).filter(Boolean).sort();
+  const primaryPathGroupsVisible = worldGroundMode
+    ? Array.from(new Set(linkData.filter((link) => roleOf(link) === "primary").slice(0, groundLinkLabelVisibleCount).map(pathGroupOf))).filter(Boolean).sort()
+    : Array.from(new Set(linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").map((node) => node.getAttribute("data-path-group") || ""))).filter(Boolean).sort();
   const hasExplicitRoute = (link) => Array.isArray(link?.route) && link.route.length >= 2;
   const explicitRouteLinkCount = linkData.filter(hasExplicitRoute).length;
   const heuristicRouteLinkCount = Math.max(0, linkData.length - explicitRouteLinkCount);
@@ -268,13 +278,13 @@ const expression = `(() => {
     labelLayer: !!q(".visual-isometric-label-layer"),
     labelLayoutPass,
     entityLabels: qa("[data-entity-id]").length,
-    linkLabels: linkLabelNodes.length,
+    linkLabels: Math.max(linkLabelNodes.length, groundLinkLabelMeshCount),
     zoneLabels: qa("[data-zone-id]").length,
     labelIcons: qa('[data-has-label-icon="true"]').length,
     labelIconsLoaded: labelIconNodes.filter(imageLoaded).length,
     brokenLabelIcons: labelIconNodes.filter(imageBroken).length,
     visibleEntityLabels: entityLabelNodes.filter(isVisible).length,
-    visibleLinkLabels: linkLabelNodes.filter(isVisible).length,
+    visibleLinkLabels: Math.max(domVisibleLinkLabels, groundLinkLabelVisibleCount),
     visibleZoneLabels: zoneLabelNodes.filter(isVisible).length,
     visibleLabelIcons: labelIconNodes.filter((node) => isVisible(node.closest(".visual-isometric-entity-label") || node) && imageLoaded(node)).length,
     primaryLinkCount,
@@ -284,7 +294,7 @@ const expression = `(() => {
     primaryVisibleLabelCount: visiblePrimaryLinkLabelCount,
     visibleSecondaryLinkLabelCount,
     visibleAuxiliaryLinkLabelCount,
-    overviewLinkLabelCount: linkLabelNodes.filter(isVisible).length,
+    overviewLinkLabelCount: Math.max(domVisibleLinkLabels, groundLinkLabelVisibleCount),
     linkOpacityBuckets: { strong: primaryLinkCount, medium: secondaryLinkCount, low: auxiliaryLinkCount },
     zoneCountVisible: zoneLabelNodes.filter(isVisible).length,
     primaryPathGroupsVisible,
@@ -320,10 +330,12 @@ const expression = `(() => {
     labelLayerBounds: rect(layer),
     canvasBounds: rect(canvas),
     screenshotSize: { width: Math.round(window.innerWidth || 0), height: Math.round(window.innerHeight || 0) },
+    ...debugSummary,
+    relationLayerMode,
     ready: !!q("[data-visual-renderer='offline.architecture.isometric.v1']") &&
       !!q(".visual-isometric-ready") &&
       !!q(".visual-isometric-label-layer") &&
-      (linkData.length === 0 || !!relationLayer) &&
+      (linkData.length === 0 || worldGroundMode || !!relationLayer) &&
       labelLayoutPass >= 2 &&
       qa("[data-entity-id]").length > 0
   };
@@ -412,6 +424,23 @@ try {
   await sleep(700);
   const finalResult = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }).catch(() => ({}));
   summary = finalResult.result?.value || summary;
+  if (orbitSmokeEnabled) {
+    const orbitResult = await cdp.send("Runtime.evaluate", {
+      expression: `(() => {
+        const api = window.__EFP_VISUAL_DEBUG__;
+        if (!api || !api.orbitSmoke) {
+          return { orbitSmokeEnabled: true, orbitMissingEntityLabelsAfterRotate: -1, orbitMissingLinkLabelsAfterRotate: -1, orbitRelationLayerModeStable: false };
+        }
+        return api.orbitSmoke({ yawDelta: 8 });
+      })()`,
+      returnByValue: true,
+      awaitPromise: true
+    }).catch(() => ({}));
+    const orbitSummary = orbitResult.result?.value || { orbitSmokeEnabled: true, orbitRelationLayerModeStable: false };
+    await sleep(350);
+    const afterOrbitResult = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }).catch(() => ({}));
+    summary = { ...(afterOrbitResult.result?.value || summary), ...orbitSummary };
+  }
   const shot = await cdp.send("Page.captureScreenshot", { format: "png", fromSurface: true, captureBeyondViewport: false });
   await writeFile(screenshot, Buffer.from(shot.data || "", "base64"));
   cdp.close();

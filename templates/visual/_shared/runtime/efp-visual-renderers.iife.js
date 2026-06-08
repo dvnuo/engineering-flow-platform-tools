@@ -628,7 +628,8 @@
   }
 
   function createBadgeTexture(THREE, text, color) {
-    if (!THREE.CanvasTexture || typeof document === "undefined") return null;
+    var TextureCtor = THREE.CanvasTexture || THREE.Texture;
+    if (!TextureCtor || typeof document === "undefined") return null;
     var canvas = document.createElement("canvas");
     canvas.width = 384;
     canvas.height = 128;
@@ -645,7 +646,7 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 2);
-    var texture = new THREE.CanvasTexture(canvas);
+    var texture = new TextureCtor(canvas);
     if (THREE.SRGBColorSpace) {
       texture.colorSpace = THREE.SRGBColorSpace;
     }
@@ -1702,8 +1703,81 @@
     return out;
   }
 
+  function createGroundRibbonMesh(THREE, points, edgeSpec, radius) {
+    if (!THREE.BufferGeometry || !THREE.Float32BufferAttribute || !THREE.Mesh || !THREE.MeshBasicMaterial) return null;
+    var color = colorValue(edgeSpec.color, 0x63a9ff);
+    var width = Math.max(0.026, (radius || 0.016) * 1.9);
+    var half = width * 0.5;
+    var positions = [];
+    var dashed = edgeSpec.lineStyle === "dashed" || edgeSpec.lineStyle === "dash";
+    var dashLength = edgeSpec.dashLength || 0.34;
+    var gapLength = edgeSpec.gapLength || 0.2;
+
+    function pushQuad(a, b) {
+      var delta = b.clone().sub(a);
+      delta.y = 0;
+      if (delta.length() < 0.001) return;
+      var side = new THREE.Vector3(0, 1, 0).cross(delta.normalize()).normalize().multiplyScalar(half);
+      var a1 = a.clone().add(side);
+      var a2 = a.clone().sub(side);
+      var b1 = b.clone().add(side);
+      var b2 = b.clone().sub(side);
+      [a1, a2, b1, a2, b2, b1].forEach(function (p) {
+        positions.push(p.x, p.y, p.z);
+      });
+    }
+
+    (points || []).forEach(function (point) {
+      point.y = Math.max(point.y || 0, 0.058);
+    });
+    for (var i = 0; i < points.length - 1; i += 1) {
+      var start = points[i];
+      var end = points[i + 1];
+      var segment = end.clone().sub(start);
+      var length = segment.length();
+      if (length < 0.001) continue;
+      if (!dashed) {
+        pushQuad(start, end);
+        continue;
+      }
+      var dir = segment.clone().normalize();
+      var cursor = 0;
+      while (cursor < length) {
+        var from = cursor;
+        var to = Math.min(length, cursor + dashLength);
+        if (to > from + 0.02) {
+          pushQuad(start.clone().add(dir.clone().multiplyScalar(from)), start.clone().add(dir.clone().multiplyScalar(to)));
+        }
+        cursor += dashLength + gapLength;
+      }
+    }
+    if (positions.length < 18) return null;
+    var geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    if (geometry.computeBoundingSphere) geometry.computeBoundingSphere();
+    var material = new THREE.MeshBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: edgeSpec.opacity === undefined ? 0.82 : edgeSpec.opacity,
+      depthTest: true,
+      depthWrite: false,
+      side: THREE.DoubleSide || 2
+    });
+    var mesh = new THREE.Mesh(geometry, material);
+    mesh.renderOrder = 3;
+    mesh.userData.isEdgeTube = true;
+    mesh.userData.isGroundRibbon = true;
+    mesh.userData.baseOpacity = edgeSpec.opacity;
+    mesh.userData.targetOpacity = edgeSpec.opacity;
+    return mesh;
+  }
+
   function createEdgeTube(THREE, curve, edgeSpec, radius) {
     var color = colorValue(edgeSpec.color, 0x63a9ff);
+    if (edgeSpec.groundRibbon) {
+      var ribbon = createGroundRibbonMesh(THREE, curvePoints(curve, 18), edgeSpec, radius);
+      if (ribbon) return ribbon;
+    }
     var geometry = THREE.TubeGeometry ? new THREE.TubeGeometry(curve, 18, radius || 0.012, 8, false) : new THREE.BufferGeometry().setFromPoints(curvePoints(curve, 18));
     var blendMode = edgeSpec.lightBackground ? THREE.NormalBlending : THREE.AdditiveBlending;
     var material = THREE.TubeGeometry ? new THREE.MeshBasicMaterial({
@@ -1725,6 +1799,35 @@
     object.userData.baseOpacity = edgeSpec.opacity;
     object.userData.targetOpacity = edgeSpec.opacity;
     return object;
+  }
+
+  function createEdgeHitArea(THREE, curve, radius) {
+    if (!THREE.MeshBasicMaterial && !THREE.LineBasicMaterial) {
+      return null;
+    }
+    var geometry = THREE.TubeGeometry
+      ? new THREE.TubeGeometry(curve, 18, Math.max(0.045, radius || 0.045), 8, false)
+      : new THREE.BufferGeometry().setFromPoints(curvePoints(curve, 18));
+    var material = THREE.TubeGeometry ? new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.001,
+      depthTest: false,
+      depthWrite: false
+    }) : new THREE.LineBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.001,
+      depthTest: false,
+      depthWrite: false
+    });
+    var mesh = THREE.TubeGeometry ? new THREE.Mesh(geometry, material) : new THREE.Line(geometry, material);
+    mesh.visible = true;
+    mesh.renderOrder = 22;
+    mesh.userData.isGroundLinkHitArea = true;
+    mesh.userData.baseOpacity = 0.001;
+    mesh.userData.targetOpacity = 0.001;
+    return mesh;
   }
 
   function createArrowHead(THREE, curve, edgeSpec) {
@@ -4264,15 +4367,22 @@
     container.textContent = "";
     var renderHints = data && data.renderHints && typeof data.renderHints === "object" ? data.renderHints : {};
     var presentationMode = renderHints.presentationMode === true || renderHints.presentation_mode === true || renderHints.chrome === "presentation";
+    var relationLayerMode = normalizeMarkKey(renderHints.relationLayer || renderHints.relation_layer || "world_ground") || "world_ground";
     var app = el("div", "visual-isometric-app");
     if (presentationMode) {
       app.classList.add("visual-isometric-presentation-mode");
       app.setAttribute("data-presentation-mode", "true");
     }
+    if (relationLayerMode !== "svg_debug") {
+      app.classList.add("visual-isometric-world-ground-relations");
+    } else {
+      app.classList.add("visual-isometric-svg-debug-relations");
+    }
     app.setAttribute("data-isometric-renderer", "true");
     app.setAttribute("data-visual-template", "architecture.isometric_overview");
     app.setAttribute("data-visual-renderer", "offline.architecture.isometric.v1");
     app.setAttribute("data-architecture-light", "true");
+    app.setAttribute("data-relation-layer-mode", relationLayerMode);
     var header = el("header", "visual-isometric-header");
     header.appendChild(el("h1", "visual-isometric-title", data.title || manifest.title || "Isometric Architecture"));
     header.appendChild(el("div", "visual-isometric-subtitle", data.subtitle || data.goal || "Offline Three.js architecture overview"));
@@ -4629,6 +4739,99 @@
     return node;
   }
 
+  function setLabelAnchorMetadata(node, point, offset) {
+    if (!node || !point) return;
+    node.setAttribute("data-anchor-x", String(Math.round(point.x * 1000) / 1000));
+    node.setAttribute("data-anchor-y", String(Math.round(point.y * 1000) / 1000));
+    node.setAttribute("data-anchor-z", String(Math.round(point.z * 1000) / 1000));
+    if (offset) {
+      node.setAttribute("data-label-offset-x", String(Math.round(numberValue(offset.x, 0) * 1000) / 1000));
+      node.setAttribute("data-label-offset-y", String(Math.round(numberValue(offset.y, 0) * 1000) / 1000));
+      node.setAttribute("data-label-offset-z", String(Math.round(numberValue(offset.z, 0) * 1000) / 1000));
+    }
+  }
+
+  function drawRoundedRect(ctx, x, y, w, h, r) {
+    var radius = Math.max(0, Math.min(r || 0, Math.min(w, h) / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
+  function createTextTexture(THREE, text, options) {
+    options = options || {};
+    var value = compactLabelText(text || "", options.maxLength || 22);
+    var dpr = Math.max(2, Math.min(3, window.devicePixelRatio || 2));
+    var fontSize = options.fontSize || 24;
+    var weight = options.weight || 800;
+    var paddingX = options.paddingX || 12;
+    var paddingY = options.paddingY || 7;
+    var scratch = document.createElement("canvas").getContext("2d");
+    scratch.font = weight + " " + fontSize + "px system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+    var textWidth = Math.ceil(scratch.measureText(value).width);
+    var widthPx = Math.max(options.minWidth || 58, Math.min(options.maxWidth || 260, textWidth + paddingX * 2));
+    var heightPx = Math.max(options.minHeight || 34, fontSize + paddingY * 2);
+    var canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(widthPx * dpr);
+    canvas.height = Math.ceil(heightPx * dpr);
+    var ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, widthPx, heightPx);
+    ctx.shadowColor = options.shadowColor || "rgba(15, 23, 42, 0.14)";
+    ctx.shadowBlur = options.shadowBlur === undefined ? 8 : options.shadowBlur;
+    ctx.shadowOffsetY = options.shadowOffsetY === undefined ? 3 : options.shadowOffsetY;
+    drawRoundedRect(ctx, 1, 1, widthPx - 2, heightPx - 2, options.radius || 6);
+    ctx.fillStyle = options.background || "rgba(255, 255, 255, 0.96)";
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.lineWidth = options.borderWidth || 1;
+    ctx.strokeStyle = options.border || "rgba(100, 116, 139, 0.22)";
+    ctx.stroke();
+    ctx.fillStyle = options.color || "#111827";
+    ctx.font = weight + " " + fontSize + "px system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(value, widthPx / 2, heightPx / 2 + 0.5);
+    var TextureCtor = THREE.CanvasTexture || THREE.Texture;
+    if (!TextureCtor) {
+      return {
+        texture: null,
+        text: value,
+        widthPx: widthPx,
+        heightPx: heightPx,
+        ready: false
+      };
+    }
+    var texture = new TextureCtor(canvas);
+    texture.needsUpdate = true;
+    if (THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
+    if (THREE.LinearFilter) {
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+    }
+    return {
+      texture: texture,
+      text: value,
+      widthPx: widthPx,
+      heightPx: heightPx,
+      ready: true
+    };
+  }
+
+  function disposeMaterialMap(material) {
+    if (!material) return;
+    if (material.map && material.map.dispose) material.map.dispose();
+    if (material.dispose) material.dispose();
+  }
+
   function isometricEntityLabelOffset(index, size) {
     var pattern = [
       { x: -0.22, z: -0.18, y: 0.06 },
@@ -4680,6 +4883,11 @@
     var center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
     var span = Math.max(8, maxX - minX, maxY - minY);
     var inputRenderHints = data && data.renderHints && typeof data.renderHints === "object" ? data.renderHints : {};
+    var relationLayerMode = normalizeMarkKey(inputRenderHints.relationLayer || inputRenderHints.relation_layer || "world_ground") || "world_ground";
+    var svgRelationEnabled = relationLayerMode === "svg_debug";
+    var linkLabelMode = normalizeMarkKey(inputRenderHints.linkLabelMode || inputRenderHints.link_label_mode || "ground_aligned") || "ground_aligned";
+    var linkLabelReadabilityFlip = normalizeMarkKey(inputRenderHints.linkLabelReadabilityFlip || inputRenderHints.link_label_readability_flip || "camera_idle") || "camera_idle";
+    var linkLabelMaxVisible = Math.max(0, Math.min(20, numberValue(inputRenderHints.linkLabelMaxVisible || inputRenderHints.link_label_max_visible, 7)));
     var layoutScale = Math.max(0.85, Math.min(1.55, numberValue(inputRenderHints.layoutScale || inputRenderHints.layout_scale, 1)));
     var scale = (8.65 * layoutScale) / span;
     var width = Math.max(760, shell.stage.clientWidth || 1024);
@@ -4706,9 +4914,11 @@
     var zoneRoot = new THREE.Group();
     var entityRoot = new THREE.Group();
     var linkRoot = new THREE.Group();
+    var relationLabelRoot = new THREE.Group();
     var leaderRoot = new THREE.Group();
     root.add(zoneRoot);
     root.add(linkRoot);
+    root.add(relationLabelRoot);
     root.add(entityRoot);
     root.add(leaderRoot);
     scene.add(root);
@@ -4807,6 +5017,7 @@
         entityPriority += 0.28;
       }
       var labelRecord = { element: label, point: anchor, visible: shouldShowIsometricEntityLabel(item), type: "entity", priority: entityPriority, id: item.id, entityID: item.id, offset: offset };
+      setLabelAnchorMetadata(label, anchor, offset);
       labels.push(labelRecord);
       var leaderFrom = isMermaidArchitecture ? new THREE.Vector3(world.x, size.h * 0.78, world.z) : new THREE.Vector3(world.x, size.h * 0.38, world.z);
       var leader = createDashedLeader(THREE, leaderFrom, anchor.clone().add(new THREE.Vector3(0, -0.06, 0)));
@@ -4819,6 +5030,7 @@
 
     var laneCounters = {};
     var relationLinks = [];
+    var groundLinkLabels = [];
     var linkLabelsCreated = 0;
     function linkRole(link) {
       var presentation = link && link.presentation && typeof link.presentation === "object" ? link.presentation : {};
@@ -4874,14 +5086,14 @@
       if (role === "primary") {
         edgeSpec.opacity = 0.98;
         edgeSpec.flow = false;
-        edgeSpec.arrowScale = isMermaidArchitecture ? 0.78 : 0.92;
-        return { radius: isMermaidArchitecture ? 0.046 : 0.028, secondary: false, role: role };
+        edgeSpec.arrowScale = isMermaidArchitecture ? 0.86 : 0.92;
+        return { radius: isMermaidArchitecture ? 0.018 : 0.028, secondary: false, role: role };
       }
       if (role === "secondary" && !secondary) {
         edgeSpec.opacity = Math.max(0.48, Math.min(0.62, edgeSpec.opacity || 0.54));
         edgeSpec.flow = false;
         edgeSpec.arrowScale = 1.05;
-        return { radius: isMermaidArchitecture ? 0.032 : 0.017, secondary: false, role: role };
+        return { radius: isMermaidArchitecture ? 0.011 : 0.017, secondary: false, role: role };
       }
       if (isOverviewMode() && secondary) {
         edgeSpec.opacity = Math.max(0.2, Math.min(0.34, edgeSpec.opacity || 0.28));
@@ -4890,7 +5102,7 @@
         if (role === "auxiliary") {
           edgeSpec.lineStyle = edgeSpec.lineStyle || "dashed";
         }
-        return { radius: isMermaidArchitecture ? 0.018 : 0.008 + Math.min(0.004, q.importance * 0.006), secondary: true, role: role };
+        return { radius: isMermaidArchitecture ? 0.007 : 0.008 + Math.min(0.004, q.importance * 0.006), secondary: true, role: role };
       }
       edgeSpec.opacity = Math.max(edgeSpec.opacity || 0.74, cls === "main" ? 0.9 : 0.74);
       edgeSpec.flow = edgeSpec.flow && (cls === "main" || cls === "cache" || cls === "storage" || cls === "service");
@@ -5023,36 +5235,54 @@
       var tube = routeMesh.mesh;
       tube.userData.isDirectedArrow = !!edgeSpec.directed;
       tube.userData.isOverviewSecondary = !!edgeStyle.secondary;
-      var worldTubeOpacity = isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.82 : edgeStyle.role === "secondary" ? 0.48 : 0.18;
+      var worldTubeOpacity = relationLayerMode === "world_ground" ? (edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.5 : 0.22) : (isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.82 : edgeStyle.role === "secondary" ? 0.48 : 0.18);
       if (tube.material) {
         tube.material.opacity = worldTubeOpacity;
+        tube.material.depthTest = relationLayerMode !== "world_ground" ? false : true;
       }
       tube.userData.baseOpacity = worldTubeOpacity;
       tube.userData.targetOpacity = tube.userData.baseOpacity;
+      tube.userData.relationLayerMode = relationLayerMode;
+      tube.userData.isGroundLinkMesh = relationLayerMode === "world_ground";
       linkRoot.add(tube);
+      var hitArea = relationLayerMode === "world_ground" ? createEdgeHitArea(THREE, curve, Math.max(edgeStyle.radius * 2.8, 0.05)) : null;
+      if (hitArea) {
+        hitArea.userData.relationLayerMode = relationLayerMode;
+        hitArea.userData.linkId = link.id || "";
+        hitArea.userData.payload = link;
+        linkRoot.add(hitArea);
+      }
       var arrow = createRouteArrowhead(pathPoints, edgeSpec);
       if (arrow) {
         arrow.userData.isDirectedArrow = true;
         arrow.userData.isOverviewSecondary = !!edgeStyle.secondary;
-        var worldArrowOpacity = isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.55 : 0.24;
+        var worldArrowOpacity = relationLayerMode === "world_ground" ? (edgeStyle.role === "primary" ? 0.96 : edgeStyle.role === "secondary" ? 0.58 : 0.26) : (isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.55 : 0.24);
         if (arrow.material) {
           arrow.material.opacity = worldArrowOpacity;
+          arrow.material.depthTest = relationLayerMode !== "world_ground" ? false : true;
         }
         arrow.userData.baseOpacity = worldArrowOpacity;
         arrow.userData.targetOpacity = arrow.userData.baseOpacity;
+        arrow.userData.relationLayerMode = relationLayerMode;
+        arrow.userData.isGroundArrowhead = relationLayerMode === "world_ground";
         linkRoot.add(arrow);
       }
       createFlowParticles(THREE, curve, edgeSpec, edgeSpec.flow && !edgeStyle.secondary ? 2 : 0).forEach(function (marker) { linkRoot.add(marker); });
-      var showRelationLabel = !isAssetGallery && shouldShowIsometricLinkLabel(link) && linkLabelsCreated < 8;
+      var showRelationLabel = !isAssetGallery && shouldShowIsometricLinkLabel(link) && linkLabelsCreated < linkLabelMaxVisible;
       if (showRelationLabel) {
         linkLabelsCreated += 1;
       }
       createRelationPath(link, edgeSpec, edgeStyle, pathPoints, showRelationLabel);
       if (relationLinks.length) {
-        relationLinks[relationLinks.length - 1].tube = tube;
-        relationLinks[relationLinks.length - 1].arrow3D = arrow;
-        relationLinks[relationLinks.length - 1].curve = curve;
-        relationLinks[relationLinks.length - 1].restLength = pathPoints[0].distanceTo(pathPoints[pathPoints.length - 1]);
+        var currentRelation = relationLinks[relationLinks.length - 1];
+        currentRelation.tube = tube;
+        currentRelation.hitArea = hitArea;
+        currentRelation.arrow3D = arrow;
+        currentRelation.curve = curve;
+        currentRelation.restLength = pathPoints[0].distanceTo(pathPoints[pathPoints.length - 1]);
+        if (relationLayerMode === "world_ground" && showRelationLabel) {
+          currentRelation.groundLabel = createGroundLinkLabel(link, pathPoints, edgeStyle, edgeSpec);
+        }
       }
     });
     relationLinks.slice().sort(function (a, b) {
@@ -5076,6 +5306,8 @@
     var pointer = new THREE.Vector2();
     var raycaster = new THREE.Raycaster();
     var meshes = entities.map(function (item) { return entityByID[item.id] && entityByID[item.id].object; }).filter(Boolean);
+    var cameraLastMovedAt = Date.now();
+    var lastGroundLabelReadabilityAt = 0;
 
     function updateCamera() {
       var aspect = width / height;
@@ -5093,6 +5325,7 @@
       );
       camera.lookAt(target);
       camera.updateProjectionMatrix();
+      camera.updateMatrixWorld(true);
     }
 
     function projectWorldToScreen(world, cameraObject, activeRenderer, container) {
@@ -5132,7 +5365,7 @@
 
     function computeEntityPorts(entity) {
       var b = computeEntityBounds(entity);
-      var routeY = isMermaidArchitecture ? 0.18 : 0.07;
+      var routeY = relationLayerMode === "world_ground" ? 0.058 : (isMermaidArchitecture ? 0.18 : 0.07);
       return {
         center: b.center,
         north: new THREE.Vector3(b.center.x, routeY, b.minZ - 0.06),
@@ -5227,7 +5460,7 @@
       if (route.length >= 2) {
         var middle = route.slice(1, -1).map(function (point) {
           var world = isometricWorld(point, scale, center);
-          return new THREE.Vector3(world.x, isMermaidArchitecture ? 0.18 : 0.07, world.z);
+          return new THREE.Vector3(world.x, relationLayerMode === "world_ground" ? 0.058 : (isMermaidArchitecture ? 0.18 : 0.07), world.z);
         });
         return [ports.start].concat(middle).concat([ports.end]);
       }
@@ -5235,15 +5468,15 @@
       link.__efpReservedLane = lane;
       var cls = routeClass(link);
       if (lane.x !== undefined) {
-        return avoidEntityIntersections([ports.start, new THREE.Vector3(lane.x, isMermaidArchitecture ? 0.18 : 0.07, ports.start.z), new THREE.Vector3(lane.x, isMermaidArchitecture ? 0.18 : 0.07, ports.end.z), ports.end]);
+        return avoidEntityIntersections([ports.start, new THREE.Vector3(lane.x, relationLayerMode === "world_ground" ? 0.058 : (isMermaidArchitecture ? 0.18 : 0.07), ports.start.z), new THREE.Vector3(lane.x, relationLayerMode === "world_ground" ? 0.058 : (isMermaidArchitecture ? 0.18 : 0.07), ports.end.z), ports.end]);
       }
       if (lane.z !== undefined) {
-        return avoidEntityIntersections([ports.start, new THREE.Vector3(ports.start.x, isMermaidArchitecture ? 0.18 : 0.07, lane.z), new THREE.Vector3(ports.end.x, isMermaidArchitecture ? 0.18 : 0.07, lane.z), ports.end]);
+        return avoidEntityIntersections([ports.start, new THREE.Vector3(ports.start.x, relationLayerMode === "world_ground" ? 0.058 : (isMermaidArchitecture ? 0.18 : 0.07), lane.z), new THREE.Vector3(ports.end.x, relationLayerMode === "world_ground" ? 0.058 : (isMermaidArchitecture ? 0.18 : 0.07), lane.z), ports.end]);
       }
       if (cls === "main" && Math.abs(ports.start.z - ports.end.z) < scale * 0.4) {
         return [ports.start, ports.end];
       }
-      return avoidEntityIntersections([ports.start, new THREE.Vector3(ports.end.x, isMermaidArchitecture ? 0.18 : 0.07, ports.start.z), ports.end]);
+      return avoidEntityIntersections([ports.start, new THREE.Vector3(ports.end.x, relationLayerMode === "world_ground" ? 0.058 : (isMermaidArchitecture ? 0.18 : 0.07), ports.start.z), ports.end]);
     }
 
     function simplifyWorldRoute(route) {
@@ -5285,7 +5518,8 @@
 
     function createRouteMesh(route, edgeSpec, radius) {
       var routed = routeCurve(route, edgeSpec);
-      return { route: routed.route, curve: routed.curve, mesh: createEdgeTube(THREE, routed.curve, edgeSpec, radius) };
+      var meshSpec = relationLayerMode === "world_ground" ? Object.assign({}, edgeSpec, { groundRibbon: true }) : edgeSpec;
+      return { route: routed.route, curve: routed.curve, mesh: createEdgeTube(THREE, routed.curve, meshSpec, radius) };
     }
 
     function createRouteArrowhead(route, edgeSpec) {
@@ -5299,6 +5533,159 @@
         if (length > best.length) best = { start: route[i], end: route[i + 1], length: length };
       }
       return best.start.clone().lerp(best.end, 0.5).add(new THREE.Vector3(0, 0.18, 0));
+    }
+
+    function computeRouteLabelSegment(route) {
+      var points = simplifyWorldRoute(route || []);
+      var best = null;
+      for (var i = 0; i < points.length - 1; i += 1) {
+        var start = points[i].clone();
+        var end = points[i + 1].clone();
+        var delta = end.clone().sub(start);
+        delta.y = 0;
+        var length = delta.length();
+        if (length < 0.04) continue;
+        if (!best || length > best.length) {
+          var dir = delta.clone().normalize();
+          var side = new THREE.Vector3(0, 1, 0).cross(dir).normalize();
+          if (side.length() < 0.001) side.set(0, 0, 1);
+          best = {
+            index: i,
+            start: start,
+            end: end,
+            length: length,
+            direction: dir,
+            side: side,
+            anchor: start.clone().lerp(end, 0.5).add(side.clone().multiplyScalar(0.14))
+          };
+        }
+      }
+      if (!best && points.length >= 2) {
+        var fallbackDir = points[points.length - 1].clone().sub(points[0]);
+        fallbackDir.y = 0;
+        if (fallbackDir.length() < 0.001) fallbackDir.set(1, 0, 0);
+        fallbackDir.normalize();
+        var fallbackSide = new THREE.Vector3(0, 1, 0).cross(fallbackDir).normalize();
+        best = {
+          index: 0,
+          start: points[0],
+          end: points[points.length - 1],
+          length: points[0].distanceTo(points[points.length - 1]),
+          direction: fallbackDir,
+          side: fallbackSide.length() > 0.001 ? fallbackSide : new THREE.Vector3(0, 0, 1),
+          anchor: points[0].clone().lerp(points[points.length - 1], 0.5)
+        };
+      }
+      return best;
+    }
+
+    function groundLabelWorldSize(textureInfo, role) {
+      var pxPerWorld = role === "primary" ? 118 : role === "auxiliary" ? 138 : 126;
+      var widthWorld = Math.max(0.34, Math.min(1.25, textureInfo.widthPx / pxPerWorld));
+      var heightWorld = Math.max(0.13, Math.min(0.28, textureInfo.heightPx / pxPerWorld));
+      return { w: widthWorld, h: heightWorld };
+    }
+
+    function setGroundLabelBasis(record) {
+      if (!record || !record.plane) return;
+      var dir = record.direction.clone();
+      if (record.flipped) dir.multiplyScalar(-1);
+      var side = new THREE.Vector3(0, 1, 0).cross(dir).normalize();
+      if (side.length() < 0.001) side.copy(record.side || new THREE.Vector3(0, 0, 1));
+      var up = new THREE.Vector3(0, 1, 0);
+      var matrix = new THREE.Matrix4().makeBasis(dir, side, up);
+      record.plane.quaternion.setFromRotationMatrix(matrix);
+      record.plane.position.copy(record.anchor);
+      record.plane.position.y = 0.14;
+    }
+
+    function createGroundLinkLabel(link, route, edgeStyle, edgeSpec) {
+      if (linkLabelMode !== "ground_aligned" || !link || !link.label) return null;
+      var segment = computeRouteLabelSegment(route);
+      if (!segment) return null;
+      var role = relationRoleClass(edgeStyle.role || linkRole(link));
+      var textureInfo = createTextTexture(THREE, link.label || link.kind || "link", {
+        maxLength: 22,
+        fontSize: role === "primary" ? 23 : 21,
+        weight: role === "primary" ? 850 : 800,
+        background: "rgba(255,255,255,0.96)",
+        border: role === "primary" ? "rgba(17,24,39,0.26)" : "rgba(100,116,139,0.22)",
+        color: "#111827",
+        shadowBlur: 8,
+        shadowOffsetY: 3
+      });
+      var size = groundLabelWorldSize(textureInfo, role);
+      var geometry = new THREE.PlaneGeometry(size.w, size.h);
+      var material = new THREE.MeshBasicMaterial({
+        map: textureInfo.texture,
+        transparent: true,
+        opacity: role === "auxiliary" ? 0.82 : 0.96,
+        depthTest: false,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      });
+      var plane = new THREE.Mesh(geometry, material);
+      plane.renderOrder = 18;
+      var record = {
+        linkId: link.id || "",
+        role: role,
+        pathGroup: linkPathGroup(link) || routeClass(link),
+        label: textureInfo.text,
+        routeSegmentIndex: segment.index,
+        anchor: segment.anchor.clone(),
+        direction: segment.direction.clone(),
+        side: segment.side.clone(),
+        plane: plane,
+        texture: textureInfo.texture,
+        textureReady: !!textureInfo.ready,
+        flipped: false,
+        lastFlipAt: 0,
+        visible: true
+      };
+      plane.userData = {
+        isGroundLinkLabel: true,
+        linkId: record.linkId,
+        role: record.role,
+        pathGroup: record.pathGroup,
+        textureReady: record.textureReady
+      };
+      setGroundLabelBasis(record);
+      relationLabelRoot.add(plane);
+      groundLinkLabels.push(record);
+      return record;
+    }
+
+    function updateGroundLinkLabel(record, route) {
+      if (!record || !record.plane) return;
+      var segment = computeRouteLabelSegment(route);
+      if (!segment) return;
+      record.routeSegmentIndex = segment.index;
+      record.anchor.copy(segment.anchor);
+      record.direction.copy(segment.direction);
+      record.side.copy(segment.side);
+      setGroundLabelBasis(record);
+    }
+
+    function updateGroundLabelReadability(force) {
+      if (linkLabelReadabilityFlip === "no_flip") return;
+      var now = Date.now();
+      groundLinkLabels.forEach(function (record) {
+        if (!record || !record.visible || !record.plane) return;
+        if (!force && now - record.lastFlipAt < 300) return;
+        var left = record.anchor.clone().add(record.direction.clone().multiplyScalar(-0.45));
+        var right = record.anchor.clone().add(record.direction.clone().multiplyScalar(0.45));
+        var leftScreen = projectWorldToScreen(left, camera, renderer, shell.stage);
+        var rightScreen = projectWorldToScreen(right, camera, renderer, shell.stage);
+        if (!leftScreen.visible || !rightScreen.visible) return;
+        var dx = rightScreen.x - leftScreen.x;
+        if (Math.abs(dx) < 8) return;
+        var shouldFlip = dx < 0;
+        if (shouldFlip !== record.flipped) {
+          record.flipped = shouldFlip;
+          record.lastFlipAt = now;
+          setGroundLabelBasis(record);
+        }
+      });
     }
 
     function simplifyScreenRoute(points) {
@@ -5399,6 +5786,7 @@
         record.object.position.z + offset.z
       );
       record.labelRecord.point.copy(to);
+      setLabelAnchorMetadata(record.labelRecord.element, to, offset);
       var fresh = createDashedLeader(THREE, from, to.clone().add(new THREE.Vector3(0, -0.06, 0)));
       while (fresh.children.length) {
         record.leader.add(fresh.children.shift());
@@ -5425,6 +5813,17 @@
         relation.tube.userData.curve = routeMesh.curve;
         if (routeMesh.mesh.material && routeMesh.mesh.material.dispose) routeMesh.mesh.material.dispose();
       }
+      if (relation.hitArea && relation.curve) {
+        disposeGeometry(relation.hitArea.geometry);
+        var nextHitArea = createEdgeHitArea(THREE, relation.curve, Math.max(relation.edgeStyle.radius * 2.8, 0.05));
+        if (nextHitArea && nextHitArea.geometry) {
+          relation.hitArea.geometry = nextHitArea.geometry;
+          if (nextHitArea.material && nextHitArea.material.dispose) nextHitArea.material.dispose();
+        } else {
+          relation.hitArea.geometry = new THREE.BufferGeometry().setFromPoints(curvePoints(relation.curve, 18));
+        }
+        relation.hitArea.userData.curve = relation.curve;
+      }
       var nextArrow = createRouteArrowhead(route, relation.edgeSpec);
       if (relation.arrow3D && nextArrow) {
         disposeGeometry(relation.arrow3D.geometry);
@@ -5432,6 +5831,9 @@
         relation.arrow3D.position.copy(nextArrow.position);
         relation.arrow3D.quaternion.copy(nextArrow.quaternion);
         if (nextArrow.material && nextArrow.material.dispose) nextArrow.material.dispose();
+      }
+      if (relation.groundLabel) {
+        updateGroundLinkLabel(relation.groundLabel, relation.pathPoints);
       }
     }
 
@@ -5541,6 +5943,23 @@
       shell.relationSvg.setAttribute("width", String(width));
       shell.relationSvg.setAttribute("height", String(height));
       shell.relationSvg.setAttribute("viewBox", "0 0 " + width + " " + height);
+      if (!svgRelationEnabled) {
+        shell.relationLayer.style.display = "none";
+        relationLinks.forEach(function (relation) {
+          if (relation.path) relation.path.style.display = "none";
+          if (relation.arrow) relation.arrow.style.display = "none";
+          if (relation.label) {
+            relation.label.style.display = "none";
+            relation.label.style.visibility = "hidden";
+            relation.label.style.opacity = "0";
+          }
+          if (relation.groundLabel && relation.groundLabel.plane) {
+            relation.groundLabel.visible = labelsVisible && arrowsVisible && (relation.labelVisible || relation.hovered || selectedLink === relation.link.id);
+            relation.groundLabel.plane.visible = relation.groundLabel.visible;
+          }
+        });
+        return;
+      }
       shell.relationLayer.style.display = arrowsVisible ? "" : "none";
       relationLinks.forEach(function (relation) {
         var screen = simplifyScreenRoute(relation.pathPoints.map(function (point) {
@@ -5560,6 +5979,10 @@
         if (labelVisible) {
           var labelPoint = relationLabelScreenPoint(screen);
           relation.label.style.transform = "translate3d(" + labelPoint.x.toFixed(2) + "px, " + labelPoint.y.toFixed(2) + "px, 0) translate(-50%, -50%)";
+        }
+        if (relation.groundLabel && relation.groundLabel.plane) {
+          relation.groundLabel.visible = false;
+          relation.groundLabel.plane.visible = false;
         }
       });
     }
@@ -5663,6 +6086,7 @@
       cameraState.panX = 0;
       cameraState.panZ = 0;
       cameraState.zoom = initialZoom;
+      cameraLastMovedAt = Date.now();
     }));
     shell.controls.appendChild(createIsometricButton("Focus", "focus", function () {
       var focusIDs = data.visual && Array.isArray(data.visual.initial_focus_ids) ? data.visual.initial_focus_ids : [];
@@ -5670,6 +6094,7 @@
         var point = entityByID[focusIDs[0]].world;
         cameraState.panX = point.x;
         cameraState.panZ = point.z;
+        cameraLastMovedAt = Date.now();
       }
     }));
     shell.controls.appendChild(createIsometricButton("Isolate zone", "isolate", function () {
@@ -5683,6 +6108,13 @@
     shell.controls.appendChild(createIsometricButton("Labels", "toggle_labels", function () {
       labelsVisible = !labelsVisible;
       leaderRoot.visible = labelsVisible;
+      relationLabelRoot.visible = labelsVisible;
+      relationLinks.forEach(function (relation) {
+        if (relation.groundLabel && relation.groundLabel.plane) {
+          relation.groundLabel.visible = labelsVisible && arrowsVisible && relation.labelVisible;
+          relation.groundLabel.plane.visible = relation.groundLabel.visible;
+        }
+      });
     }));
     shell.controls.appendChild(createIsometricButton("Boundaries", "toggle_boundaries", function () {
       boundariesVisible = !boundariesVisible;
@@ -5691,6 +6123,7 @@
     shell.controls.appendChild(createIsometricButton("Arrows", "toggle_arrows", function () {
       arrowsVisible = !arrowsVisible;
       linkRoot.visible = arrowsVisible;
+      relationLabelRoot.visible = labelsVisible && arrowsVisible;
       updateRelationLayer();
     }));
     shell.controls.appendChild(createIsometricButton("Export", "export_json", function () {
@@ -5776,6 +6209,7 @@
       if (drag.mode === "rotate") {
         cameraState.theta -= dx * 0.006;
         cameraState.phi = Math.max(0.22, Math.min(1.48, cameraState.phi - dy * 0.003));
+        cameraLastMovedAt = Date.now();
       } else if (drag.mode === "entity" && drag.entity) {
         var planePoint = new THREE.Vector3();
         if (pointerWorldOnPlane(event, drag.entity.object.position.y, planePoint)) {
@@ -5791,6 +6225,7 @@
       } else {
         cameraState.panX -= dx * 0.01 / cameraState.zoom;
         cameraState.panZ -= dy * 0.01 / cameraState.zoom;
+        cameraLastMovedAt = Date.now();
       }
     });
     shell.stage.addEventListener("pointerup", function (event) {
@@ -5805,7 +6240,152 @@
     shell.stage.addEventListener("wheel", function (event) {
       event.preventDefault();
       cameraState.zoom = Math.max(0.55, Math.min(2.6, cameraState.zoom * (event.deltaY > 0 ? 0.92 : 1.08)));
+      cameraLastMovedAt = Date.now();
     }, { passive: false });
+
+    function relationLayerSummary() {
+      var groundLinkMeshCount = relationLinks.filter(function (relation) {
+        return relation.tube && relation.tube.userData && relation.tube.userData.isGroundLinkMesh;
+      }).length;
+      var groundArrowheadCount = relationLinks.filter(function (relation) {
+        return relation.arrow3D && relation.arrow3D.userData && relation.arrow3D.userData.isGroundArrowhead;
+      }).length;
+      var groundLinkHitAreaCount = relationLinks.filter(function (relation) {
+        return relation.hitArea && relation.hitArea.userData && relation.hitArea.userData.isGroundLinkHitArea;
+      }).length;
+      var groundLinkLabelMeshCount = groundLinkLabels.length;
+      var groundLinkLabelTextureReadyCount = groundLinkLabels.filter(function (item) { return item.textureReady; }).length;
+      var groundLinkLabelVisibleCount = groundLinkLabels.filter(function (item) { return item.plane && item.plane.visible; }).length;
+      return {
+        relationLayerMode: relationLayerMode,
+        worldRelationLayerPresent: relationLayerMode === "world_ground",
+        groundLinkMeshCount: groundLinkMeshCount,
+        groundArrowheadCount: groundArrowheadCount,
+        groundLinkHitAreaCount: groundLinkHitAreaCount,
+        groundLinkLabelMeshCount: groundLinkLabelMeshCount,
+        groundLinkLabelTextureReadyCount: groundLinkLabelTextureReadyCount,
+        groundLinkLabelVisibleCount: groundLinkLabelVisibleCount,
+        groundLinkLabelFlippedCount: groundLinkLabels.filter(function (item) { return item.flipped; }).length,
+        screenSvgRelationLayerVisible: svgRelationEnabled && shell.relationLayer.style.display !== "none",
+        svgDebugRelationLayerPresent: !!shell.relationSvg,
+        entityLabelAnchorCount: labels.filter(function (label) { return label.type === "entity"; }).length,
+        linkLabelAnchorCount: groundLinkLabels.length,
+        zoneLabelAnchorCount: labels.filter(function (label) { return label.type === "zone"; }).length,
+        worldLeaderLineCount: leaderRoot.children.filter(function (child) { return child && child.userData && child.userData.isLeaderLine; }).length
+      };
+    }
+
+    function projectedAnchorMap(items, idKey, pointKey) {
+      var out = {};
+      (items || []).forEach(function (item) {
+        var id = item[idKey] || item.id || item.entityID || item.linkId || "";
+        var point = item[pointKey] || item.point || item.anchor;
+        if (!id || !point) return;
+        var projected = projectWorldToScreen(point, camera, renderer, shell.stage);
+        if (!projected.visible) return;
+        out[id] = { x: projected.x, y: projected.y };
+      });
+      return out;
+    }
+
+    function pointDeltaStats(before, after) {
+      var max = 0;
+      var sum = 0;
+      var count = 0;
+      var missing = 0;
+      Object.keys(before).forEach(function (id) {
+        if (!after[id]) {
+          missing += 1;
+          return;
+        }
+        var dx = after[id].x - before[id].x;
+        var dy = after[id].y - before[id].y;
+        var delta = Math.sqrt(dx * dx + dy * dy);
+        max = Math.max(max, delta);
+        sum += delta;
+        count += 1;
+      });
+      return {
+        max: Math.round(max * 100) / 100,
+        avg: count ? Math.round((sum / count) * 100) / 100 : 0,
+        missing: missing
+      };
+    }
+
+    function getLabelAnchors() {
+      return labels.filter(function (label) { return label.type === "entity" || label.type === "zone"; }).map(function (label) {
+        return {
+          id: label.entityID || label.id || label.element && (label.element.getAttribute("data-zone-id") || label.element.getAttribute("data-entity-id")) || "",
+          type: label.type,
+          x: Math.round(label.point.x * 1000) / 1000,
+          y: Math.round(label.point.y * 1000) / 1000,
+          z: Math.round(label.point.z * 1000) / 1000
+        };
+      });
+    }
+
+    function getLinkLabelAnchors() {
+      return groundLinkLabels.map(function (label) {
+        return {
+          id: label.linkId,
+          role: label.role,
+          pathGroup: label.pathGroup,
+          x: Math.round(label.anchor.x * 1000) / 1000,
+          y: Math.round(label.anchor.y * 1000) / 1000,
+          z: Math.round(label.anchor.z * 1000) / 1000,
+          flipped: !!label.flipped,
+          visible: !!(label.plane && label.plane.visible)
+        };
+      });
+    }
+
+    function debugSummary() {
+      var relationSummary = relationLayerSummary();
+      return Object.assign({
+        template: manifest.id || data.template_id || data.template || "architecture.isometric_overview",
+        renderer: "offline.architecture.isometric.v1"
+      }, relationSummary);
+    }
+
+    function orbitSmoke(options) {
+      options = options || {};
+      var original = { theta: cameraState.theta, phi: cameraState.phi, zoom: cameraState.zoom, panX: cameraState.panX, panZ: cameraState.panZ };
+      var yawDelta = numberValue(options.yawDelta, 8) * Math.PI / 180;
+      updateCamera();
+      updateLabels();
+      updateGroundLabelReadability(true);
+      var entityBefore = projectedAnchorMap(labels.filter(function (label) { return label.type === "entity"; }), "entityID", "point");
+      var linkBefore = projectedAnchorMap(groundLinkLabels, "linkId", "anchor");
+      cameraState.theta += yawDelta;
+      updateCamera();
+      updateLabels();
+      updateGroundLabelReadability(false);
+      var entityAfter = projectedAnchorMap(labels.filter(function (label) { return label.type === "entity"; }), "entityID", "point");
+      var linkAfter = projectedAnchorMap(groundLinkLabels, "linkId", "anchor");
+      cameraState.theta = original.theta;
+      cameraState.phi = original.phi;
+      cameraState.zoom = original.zoom;
+      cameraState.panX = original.panX;
+      cameraState.panZ = original.panZ;
+      updateCamera();
+      updateLabels();
+      updateGroundLabelReadability(true);
+      var entityReturn = projectedAnchorMap(labels.filter(function (label) { return label.type === "entity"; }), "entityID", "point");
+      var linkReturn = projectedAnchorMap(groundLinkLabels, "linkId", "anchor");
+      var entityStats = pointDeltaStats(entityBefore, entityReturn);
+      var linkStats = pointDeltaStats(linkBefore, linkReturn);
+      return {
+        orbitSmokeEnabled: true,
+        orbitEntityLabelReturnMaxDeltaPx: entityStats.max,
+        orbitEntityLabelReturnAvgDeltaPx: entityStats.avg,
+        orbitLinkLabelReturnMaxDeltaPx: linkStats.max,
+        orbitLinkLabelReturnAvgDeltaPx: linkStats.avg,
+        orbitMissingEntityLabelsAfterRotate: pointDeltaStats(entityBefore, entityAfter).missing,
+        orbitMissingLinkLabelsAfterRotate: pointDeltaStats(linkBefore, linkAfter).missing,
+        orbitRelationLayerModeStable: relationLayerMode === "world_ground",
+        relationLayerMode: relationLayerMode
+      };
+    }
 
     window.__EFP_ISOMETRIC_SCENE__ = {
       setCamera: function (next) {
@@ -5816,6 +6396,7 @@
         if (Number.isFinite(Number(next.panX))) cameraState.panX = Number(next.panX);
         if (Number.isFinite(Number(next.panZ))) cameraState.panZ = Number(next.panZ);
         updateCamera();
+        cameraLastMovedAt = Date.now();
         syncDynamicScene("");
         return this.stats();
       },
@@ -5830,14 +6411,21 @@
         return this.stats();
       },
       stats: function () {
-        return {
+        return Object.assign({
           entities: Object.keys(entityByID).length,
           links: relationLinks.length,
           worldLinksVisible: linkRoot.visible,
           svgRelationLayerVisible: shell.relationLayer.style.display !== "none",
           camera: { theta: cameraState.theta, phi: cameraState.phi, zoom: cameraState.zoom, panX: cameraState.panX, panZ: cameraState.panZ }
-        };
+        }, relationLayerSummary());
       }
+    };
+    window.__EFP_VISUAL_DEBUG__ = {
+      getSummary: debugSummary,
+      getLabelAnchors: getLabelAnchors,
+      getLinkLabelAnchors: getLinkLabelAnchors,
+      getRelationLayerSummary: relationLayerSummary,
+      orbitSmoke: orbitSmoke
     };
 
     function resize() {
@@ -5887,6 +6475,10 @@
         });
       });
       updateLabels();
+      if (relationLayerMode === "world_ground" && !drag.active && Date.now() - cameraLastMovedAt > 190 && Date.now() - lastGroundLabelReadabilityAt > 140) {
+        updateGroundLabelReadability(false);
+        lastGroundLabelReadabilityAt = Date.now();
+      }
       renderer.render(scene, camera);
       window.requestAnimationFrame(animate);
     }

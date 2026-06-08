@@ -122,6 +122,14 @@ body {
   pointer-events: none;
 }
 
+.visual-isometric-world-ground-relations .visual-isometric-relation-layer {
+  display: none;
+}
+
+.visual-isometric-svg-debug-relations .visual-isometric-relation-layer {
+  display: block;
+}
+
 .visual-isometric-relation-svg {
   position: absolute;
   inset: 0;
@@ -229,6 +237,14 @@ body {
   font-weight: 800;
   box-shadow: 0 8px 18px rgb(31 41 55 / 0.16);
   user-select: none;
+}
+
+.visual-isometric-world-ground-relations .visual-isometric-link-label {
+  display: none;
+}
+
+.visual-isometric-svg-debug-relations .visual-isometric-link-label {
+  display: block;
 }
 
 .visual-isometric-link-label-primary {

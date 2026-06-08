@@ -10,6 +10,7 @@ import (
 
 func inspectBrowserCmd(o *Opts) *cobra.Command {
 	var outDir, screenshotPath, browserPath, scenario, entityID string
+	var orbitSmoke bool
 	var timeoutSeconds int
 	var dragX, dragZ, cameraTheta, cameraPhi, cameraZoom float64
 	c := &cobra.Command{
@@ -37,6 +38,7 @@ func inspectBrowserCmd(o *Opts) *cobra.Command {
 				CameraTheta:    cameraTheta,
 				CameraPhi:      cameraPhi,
 				CameraZoom:     cameraZoom,
+				OrbitSmoke:     orbitSmoke,
 			})
 			if err != nil {
 				return print(cmd, o, failureFromError(err, "visual_browser_inspect_failed"))
@@ -55,5 +57,6 @@ func inspectBrowserCmd(o *Opts) *cobra.Command {
 	c.Flags().Float64Var(&cameraTheta, "camera-theta", 0, "Override isometric camera theta for scenario screenshots")
 	c.Flags().Float64Var(&cameraPhi, "camera-phi", 0, "Override isometric camera phi for scenario screenshots")
 	c.Flags().Float64Var(&cameraZoom, "camera-zoom", 0, "Override isometric camera zoom for scenario screenshots")
+	c.Flags().BoolVar(&orbitSmoke, "orbit-smoke", false, "Run a small programmatic orbit and report label/relationship stability deltas")
 	return c
 }

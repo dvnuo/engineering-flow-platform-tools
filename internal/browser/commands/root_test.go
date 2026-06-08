@@ -61,6 +61,11 @@ func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
 		"page.uncheck":  {"selector", "ref", "session", "target-id", "timeout"},
 		"page.press":    {"selector", "ref", "key", "session", "target-id", "timeout"},
 		"page.upload":   {"selector", "file", "clear", "session", "target-id", "timeout"},
+		"network.start": {"session", "target-id", "timeout", "limit", "filter"},
+		"network.stop":  {"session", "target-id", "timeout"},
+		"network.list":  {"session", "target-id", "timeout", "filter", "limit", "method", "status"},
+		"network.wait":  {"session", "target-id", "timeout", "url-contains", "method", "status", "limit"},
+		"network.clear": {"session", "target-id", "timeout"},
 		"download.list": {"session"},
 		"download.wait": {"session", "filename-contains", "timeout"},
 	}

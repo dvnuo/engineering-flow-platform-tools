@@ -31,7 +31,7 @@ func NewRootWithRunner(r probe.Runner) *cobra.Command {
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
 	c.PersistentFlags().StringVar(&o.Format, "format", "table", "")
 	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "")
-	c.AddCommand(probeCmd(o, r), sessionCmd(o), tabCmd(o), pageCmd(o), downloadCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	c.AddCommand(probeCmd(o, r), sessionCmd(o), tabCmd(o), pageCmd(o), networkCmd(o), downloadCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
 	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
 		Product: "browser",
 		Binary:  "browser",

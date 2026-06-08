@@ -33,6 +33,24 @@ body {
     linear-gradient(180deg, #faf8ff 0%, #eef4fb 100%);
 }
 
+.visual-isometric-presentation-mode {
+  background:
+    linear-gradient(180deg, #eef0ff 0%, #f7faff 38%, #f9fbff 100%);
+}
+
+.visual-isometric-presentation-mode .visual-isometric-header,
+.visual-isometric-presentation-mode .visual-isometric-toolbar,
+.visual-isometric-presentation-mode .visual-isometric-inspector {
+  display: none;
+}
+
+.visual-isometric-presentation-mode .visual-isometric-stage {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% 52%, rgb(255 255 255 / 0.62) 0%, rgb(242 246 255 / 0.32) 62%, transparent 82%),
+    linear-gradient(180deg, #eef0ff 0%, #f8fbff 68%, #eef5ff 100%);
+}
+
 .visual-isometric-stage canvas {
   position: absolute;
   inset: 0;

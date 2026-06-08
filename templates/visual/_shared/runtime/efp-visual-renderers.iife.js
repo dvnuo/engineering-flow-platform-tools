@@ -4086,9 +4086,9 @@
     svg.setAttribute("data-relation-layer", "true");
     svg.setAttribute("aria-hidden", "true");
     var defs = svgEl("defs");
-    createRelationMarker(defs, "visual-isometric-arrow-primary", 18, 11.5, "#111827");
-    createRelationMarker(defs, "visual-isometric-arrow-secondary", 11.5, 11, "#334155");
-    createRelationMarker(defs, "visual-isometric-arrow-auxiliary", 9, 10.5, "#64748b");
+    createRelationMarker(defs, "visual-isometric-arrow-primary", 14, 11.2, "#111827");
+    createRelationMarker(defs, "visual-isometric-arrow-secondary", 12.5, 11, "#334155");
+    createRelationMarker(defs, "visual-isometric-arrow-auxiliary", 10.5, 10.6, "#64748b");
     svg.appendChild(defs);
     layer.appendChild(svg);
     return { layer: layer, svg: svg };
@@ -4255,7 +4255,13 @@
 
   function createIsometricShell(container, manifest, data) {
     container.textContent = "";
+    var renderHints = data && data.renderHints && typeof data.renderHints === "object" ? data.renderHints : {};
+    var presentationMode = renderHints.presentationMode === true || renderHints.presentation_mode === true || renderHints.chrome === "presentation";
     var app = el("div", "visual-isometric-app");
+    if (presentationMode) {
+      app.classList.add("visual-isometric-presentation-mode");
+      app.setAttribute("data-presentation-mode", "true");
+    }
     app.setAttribute("data-isometric-renderer", "true");
     app.setAttribute("data-visual-template", "architecture.isometric_overview");
     app.setAttribute("data-visual-renderer", "offline.architecture.isometric.v1");
@@ -4685,7 +4691,10 @@
     var target = new THREE.Vector3(0, 0, 0);
     var inputCamera = data.camera || {};
     var initialZoom = Math.max(0.72, Math.min(1.55, numberValue(inputCamera.zoom, 1.02)));
-    var cameraState = { theta: Math.PI / 4, phi: Math.PI / 3.28, radius: 11, panX: 0, panZ: 0, zoom: initialZoom };
+    var initialTheta = Math.max(-Math.PI, Math.min(Math.PI, numberValue(inputCamera.theta, Math.PI / 4)));
+    var initialPhi = Math.max(0.46, Math.min(1.36, numberValue(inputCamera.phi, Math.PI / 3.28)));
+    var initialRadius = Math.max(7.5, Math.min(18, numberValue(inputCamera.radius, 11)));
+    var cameraState = { theta: initialTheta, phi: initialPhi, radius: initialRadius, panX: 0, panZ: 0, zoom: initialZoom };
     var root = new THREE.Group();
     var zoneRoot = new THREE.Group();
     var entityRoot = new THREE.Group();
@@ -4890,15 +4899,15 @@
     }
 
     function relationStrokeWidth(role) {
-      if (role === "primary") return 7.4;
-      if (role === "auxiliary") return 1.9;
-      return 3.1;
+      if (role === "primary") return 5.8;
+      if (role === "auxiliary") return 3;
+      return 4.4;
     }
 
     function relationOpacity(role, edgeSpec) {
-      if (role === "primary") return 0.96;
-      if (role === "auxiliary") return Math.min(0.34, edgeSpec.opacity || 0.3);
-      return Math.min(0.62, edgeSpec.opacity || 0.56);
+      if (role === "primary") return 0.94;
+      if (role === "auxiliary") return Math.min(0.38, edgeSpec.opacity || 0.34);
+      return Math.min(0.74, edgeSpec.opacity || 0.68);
     }
 
     function createRelationPath(link, edgeSpec, edgeStyle, pathPoints, initiallyVisibleLabel) {
@@ -5174,10 +5183,10 @@
       var route = Array.isArray(link.route) ? link.route : [];
       var ports = chooseLinkPorts(fromEntity, toEntity, link);
       if (route.length >= 2) {
-        return [ports.start].concat(route.map(function (point) {
+        return route.map(function (point) {
           var world = isometricWorld(point, scale, center);
           return new THREE.Vector3(world.x, 0.07, world.z);
-        })).concat([ports.end]);
+        });
       }
       var lane = reserveRouteLane(routeClass(link), fromEntity, toEntity, link);
       var cls = routeClass(link);
@@ -5272,9 +5281,9 @@
       var uy = dy / length;
       var px = -uy;
       var py = ux;
-      var arrowLength = role === "primary" ? 30 : role === "auxiliary" ? 11 : 15;
-      var arrowHalf = role === "primary" ? 11 : role === "auxiliary" ? 4.4 : 6;
-      var backoff = role === "primary" ? 12 : role === "auxiliary" ? 5 : 7;
+      var arrowLength = role === "primary" ? 22 : role === "auxiliary" ? 15 : 18;
+      var arrowHalf = role === "primary" ? 8.2 : role === "auxiliary" ? 5.2 : 6.5;
+      var backoff = role === "primary" ? 8 : role === "auxiliary" ? 5 : 6;
       var tip = { x: rawTip.x - ux * backoff, y: rawTip.y - uy * backoff };
       var back = { x: tip.x - ux * arrowLength, y: tip.y - uy * arrowLength };
       return [
@@ -5418,9 +5427,9 @@
       showSelected(null);
     }));
     shell.controls.appendChild(createIsometricButton("Reset", "reset_camera", function () {
-      cameraState.theta = Math.PI / 4;
-      cameraState.phi = Math.PI / 3.28;
-      cameraState.radius = 11;
+      cameraState.theta = initialTheta;
+      cameraState.phi = initialPhi;
+      cameraState.radius = initialRadius;
       cameraState.panX = 0;
       cameraState.panZ = 0;
       cameraState.zoom = initialZoom;

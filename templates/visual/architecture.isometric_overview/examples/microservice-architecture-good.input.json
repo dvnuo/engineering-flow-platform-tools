@@ -24,7 +24,10 @@
       "y": 0,
       "z": 9.3
     },
-    "zoom": 0.78
+    "zoom": 1.22,
+    "theta": 0.8,
+    "phi": 1.06,
+    "radius": 11.3
   },
   "zones": [
     {
@@ -874,7 +877,7 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 3.8,
+          "x": 2.1,
           "y": 1.5
         },
         {
@@ -886,7 +889,7 @@
           "y": 5.2
         },
         {
-          "x": 7.5,
+          "x": 8,
           "y": 5.2
         }
       ],
@@ -899,8 +902,8 @@
         "role": "primary",
         "pathGroup": "entry",
         "color": "#111827",
-        "opacity": 0.95,
-        "width": 5,
+        "opacity": 0.94,
+        "width": 5.8,
         "arrowSize": "large"
       },
       "role": "primary",
@@ -920,20 +923,20 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 4.8,
+          "x": 3.4,
           "y": 3.3
         },
         {
-          "x": 5.55,
+          "x": 5.4,
           "y": 3.3
         },
         {
-          "x": 5.55,
-          "y": 5
+          "x": 5.4,
+          "y": 5.05
         },
         {
-          "x": 7.5,
-          "y": 5
+          "x": 8,
+          "y": 5.05
         }
       ],
       "routeStyle": "orthogonal",
@@ -945,8 +948,8 @@
         "role": "secondary",
         "pathGroup": "entry",
         "color": "#334155",
-        "opacity": 0.56,
-        "width": 3,
+        "opacity": 0.68,
+        "width": 4.4,
         "arrowSize": "medium"
       },
       "role": "secondary",
@@ -965,20 +968,20 @@
       "kind": "static_resource",
       "route": [
         {
-          "x": 5.6,
+          "x": 4.9,
           "y": 4.5
         },
         {
-          "x": 6.1,
+          "x": 6,
           "y": 4.5
         },
         {
-          "x": 6.1,
-          "y": 5.45
+          "x": 6,
+          "y": 5.35
         },
         {
-          "x": 7.5,
-          "y": 5.45
+          "x": 8,
+          "y": 5.35
         }
       ],
       "routeStyle": "orthogonal",
@@ -988,8 +991,8 @@
         "role": "secondary",
         "pathGroup": "entry",
         "color": "#334155",
-        "opacity": 0.56,
-        "width": 3,
+        "opacity": 0.68,
+        "width": 4.4,
         "arrowSize": "medium"
       },
       "importance": 0.65,
@@ -1010,19 +1013,19 @@
       "kind": "reverse_proxy",
       "route": [
         {
-          "x": 10.6,
+          "x": 9.7,
           "y": 5.2
         },
         {
-          "x": 12,
+          "x": 11.7,
           "y": 5.2
         },
         {
-          "x": 12,
+          "x": 11.7,
           "y": 6.4
         },
         {
-          "x": 13.8,
+          "x": 14.3,
           "y": 6.4
         }
       ],
@@ -1035,8 +1038,8 @@
         "role": "primary",
         "pathGroup": "gateway",
         "color": "#111827",
-        "opacity": 0.95,
-        "width": 5,
+        "opacity": 0.94,
+        "width": 5.8,
         "arrowSize": "large"
       },
       "role": "primary",
@@ -1060,9 +1063,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "entry",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.28,
@@ -1072,12 +1075,12 @@
       "pathGroup": "entry",
       "route": [
         {
-          "x": 8,
-          "y": 4.55
+          "x": 8.2,
+          "y": 4.7
         },
         {
           "x": 5.2,
-          "y": 4.55
+          "y": 4.7
         }
       ],
       "metadata": {
@@ -1093,12 +1096,20 @@
       "kind": "load_balancing",
       "route": [
         {
-          "x": 17.6,
+          "x": 16.1,
           "y": 6.4
         },
         {
-          "x": 19.2,
+          "x": 18,
           "y": 6.4
+        },
+        {
+          "x": 18,
+          "y": 6.6
+        },
+        {
+          "x": 20,
+          "y": 6.6
         }
       ],
       "routeStyle": "orthogonal",
@@ -1110,8 +1121,8 @@
         "role": "primary",
         "pathGroup": "gateway",
         "color": "#111827",
-        "opacity": 0.95,
-        "width": 5,
+        "opacity": 0.94,
+        "width": 5.8,
         "arrowSize": "large"
       },
       "role": "primary",
@@ -1131,20 +1142,24 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 17.8,
+          "x": 16.1,
           "y": 6.9
         },
         {
-          "x": 19,
+          "x": 18.4,
           "y": 6.9
         },
         {
-          "x": 19,
-          "y": 7.35
+          "x": 18.4,
+          "y": 7.45
         },
         {
-          "x": 22.2,
-          "y": 7.35
+          "x": 22.7,
+          "y": 7.45
+        },
+        {
+          "x": 22.7,
+          "y": 6.8
         }
       ],
       "routeStyle": "orthogonal",
@@ -1154,8 +1169,8 @@
         "role": "secondary",
         "pathGroup": "gateway",
         "color": "#334155",
-        "opacity": 0.56,
-        "width": 3,
+        "opacity": 0.68,
+        "width": 4.4,
         "arrowSize": "medium"
       },
       "importance": 0.46,
@@ -1176,20 +1191,24 @@
       "kind": "api_call",
       "route": [
         {
-          "x": 17.8,
+          "x": 16.1,
           "y": 7.25
         },
         {
-          "x": 19,
+          "x": 18.8,
           "y": 7.25
         },
         {
-          "x": 19,
-          "y": 8.2
+          "x": 18.8,
+          "y": 8.25
         },
         {
-          "x": 25,
-          "y": 8.2
+          "x": 25.2,
+          "y": 8.25
+        },
+        {
+          "x": 25.2,
+          "y": 7.2
         }
       ],
       "routeStyle": "orthogonal",
@@ -1199,8 +1218,8 @@
         "role": "secondary",
         "pathGroup": "gateway",
         "color": "#334155",
-        "opacity": 0.56,
-        "width": 3,
+        "opacity": 0.68,
+        "width": 4.4,
         "arrowSize": "medium"
       },
       "importance": 0.42,
@@ -1221,31 +1240,31 @@
       "kind": "registering_service",
       "route": [
         {
-          "x": 20.8,
-          "y": 5.4
+          "x": 27.2,
+          "y": 5.25
         },
         {
-          "x": 20.8,
-          "y": 4.7
-        },
-        {
-          "x": 28.6,
-          "y": 4.7
+          "x": 27.2,
+          "y": 4.6
         },
         {
           "x": 30.4,
-          "y": 3
+          "y": 4.6
+        },
+        {
+          "x": 30.4,
+          "y": 2.8
         }
       ],
       "routeStyle": "orthogonal",
       "presentation": {
         "arrow": "forward",
-        "lineStyle": "dashed",
+        "lineStyle": "solid",
         "role": "secondary",
         "pathGroup": "registry",
-        "color": "#0f766e",
-        "opacity": 0.56,
-        "width": 3,
+        "color": "#334155",
+        "opacity": 0.68,
+        "width": 4.4,
         "arrowSize": "medium"
       },
       "importance": 0.82,
@@ -1266,20 +1285,24 @@
       "kind": "register",
       "route": [
         {
-          "x": 23.6,
-          "y": 5.25
+          "x": 27.6,
+          "y": 5.55
         },
         {
-          "x": 23.6,
-          "y": 4.35
+          "x": 29,
+          "y": 5.55
         },
         {
-          "x": 33.9,
-          "y": 4.35
+          "x": 29,
+          "y": 4.25
         },
         {
           "x": 34.2,
-          "y": 3
+          "y": 4.25
+        },
+        {
+          "x": 34.2,
+          "y": 2.8
         }
       ],
       "routeStyle": "orthogonal",
@@ -1288,9 +1311,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "registry",
-        "color": "#0f766e",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.34,
@@ -1311,16 +1334,24 @@
       "kind": "pull_consumption",
       "route": [
         {
-          "x": 15.2,
-          "y": 3.9
+          "x": 16,
+          "y": 5.35
         },
         {
-          "x": 28.8,
-          "y": 3.9
+          "x": 18.2,
+          "y": 5.35
+        },
+        {
+          "x": 18.2,
+          "y": 3.8
         },
         {
           "x": 32.3,
-          "y": 4.2
+          "y": 3.8
+        },
+        {
+          "x": 32.3,
+          "y": 4
         }
       ],
       "routeStyle": "orthogonal",
@@ -1329,9 +1360,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "registry",
-        "color": "#0f766e",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.32,
@@ -1352,20 +1383,24 @@
       "kind": "health_check",
       "route": [
         {
+          "x": 8.8,
+          "y": 14
+        },
+        {
           "x": 11.4,
           "y": 14
         },
         {
           "x": 11.4,
-          "y": 11.5
+          "y": 12
         },
         {
-          "x": 19,
-          "y": 11.5
+          "x": 19.6,
+          "y": 12
         },
         {
-          "x": 20.8,
-          "y": 10
+          "x": 19.6,
+          "y": 10.6
         }
       ],
       "routeStyle": "orthogonal",
@@ -1374,9 +1409,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "health",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.32,
@@ -1397,16 +1432,20 @@
       "kind": "data_cache",
       "route": [
         {
-          "x": 20.8,
-          "y": 12.7
+          "x": 27.7,
+          "y": 8.55
         },
         {
-          "x": 31.8,
-          "y": 12.7
+          "x": 29.5,
+          "y": 8.55
         },
         {
-          "x": 31.8,
-          "y": 10.2
+          "x": 29.5,
+          "y": 9.15
+        },
+        {
+          "x": 31.3,
+          "y": 9.15
         }
       ],
       "routeStyle": "orthogonal",
@@ -1418,8 +1457,8 @@
         "role": "secondary",
         "pathGroup": "cache",
         "color": "#334155",
-        "opacity": 0.56,
-        "width": 3,
+        "opacity": 0.68,
+        "width": 4.4,
         "arrowSize": "medium"
       },
       "role": "secondary",
@@ -1438,16 +1477,20 @@
       "kind": "data_cache",
       "route": [
         {
-          "x": 23.6,
-          "y": 12.45
+          "x": 27.7,
+          "y": 9.45
         },
         {
-          "x": 34.2,
-          "y": 12.45
+          "x": 30.2,
+          "y": 9.45
         },
         {
-          "x": 34.2,
-          "y": 10.3
+          "x": 30.2,
+          "y": 10.45
+        },
+        {
+          "x": 33.5,
+          "y": 10.45
         }
       ],
       "routeStyle": "orthogonal",
@@ -1456,9 +1499,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "cache",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.3,
@@ -1479,16 +1522,20 @@
       "kind": "data_storage",
       "route": [
         {
-          "x": 20.8,
-          "y": 13.2
+          "x": 23.2,
+          "y": 12.1
+        },
+        {
+          "x": 23.2,
+          "y": 13.45
         },
         {
           "x": 25,
-          "y": 13.2
+          "y": 13.45
         },
         {
           "x": 25,
-          "y": 14.2
+          "y": 14.6
         }
       ],
       "routeStyle": "orthogonal",
@@ -1500,8 +1547,8 @@
         "role": "secondary",
         "pathGroup": "data",
         "color": "#334155",
-        "opacity": 0.56,
-        "width": 3,
+        "opacity": 0.68,
+        "width": 4.4,
         "arrowSize": "medium"
       },
       "role": "secondary",
@@ -1520,16 +1567,20 @@
       "kind": "data_storage",
       "route": [
         {
-          "x": 21.8,
-          "y": 13.45
+          "x": 22.2,
+          "y": 12.2
         },
         {
-          "x": 24.7,
-          "y": 13.45
-        },
-        {
-          "x": 24.7,
+          "x": 22.2,
           "y": 14.2
+        },
+        {
+          "x": 24.6,
+          "y": 14.2
+        },
+        {
+          "x": 24.6,
+          "y": 14.6
         }
       ],
       "routeStyle": "orthogonal",
@@ -1538,9 +1589,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "data",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.32,
@@ -1561,11 +1612,19 @@
       "kind": "replication",
       "route": [
         {
-          "x": 26.3,
+          "x": 25.5,
           "y": 15.2
         },
         {
-          "x": 26.8,
+          "x": 26.6,
+          "y": 15.2
+        },
+        {
+          "x": 26.6,
+          "y": 15.8
+        },
+        {
+          "x": 27.6,
           "y": 15.8
         }
       ],
@@ -1577,9 +1636,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "data",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "role": "auxiliary",
@@ -1598,16 +1657,24 @@
       "kind": "distributed_file_service",
       "route": [
         {
-          "x": 26.1,
-          "y": 13.55
+          "x": 20,
+          "y": 12.35
+        },
+        {
+          "x": 18,
+          "y": 12.35
+        },
+        {
+          "x": 18,
+          "y": 13.8
         },
         {
           "x": 14.8,
-          "y": 13.55
+          "y": 13.8
         },
         {
           "x": 14.8,
-          "y": 14.2
+          "y": 14.5
         }
       ],
       "routeStyle": "orthogonal",
@@ -1616,9 +1683,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "storage",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.32,
@@ -1639,16 +1706,24 @@
       "kind": "distributed_file_service",
       "route": [
         {
-          "x": 24.8,
-          "y": 13.95
+          "x": 22.2,
+          "y": 12.65
+        },
+        {
+          "x": 20.4,
+          "y": 12.65
+        },
+        {
+          "x": 20.4,
+          "y": 13.6
         },
         {
           "x": 17.4,
-          "y": 13.95
+          "y": 13.6
         },
         {
           "x": 17.4,
-          "y": 15.15
+          "y": 15.3
         }
       ],
       "routeStyle": "orthogonal",
@@ -1657,9 +1732,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "storage",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.28,
@@ -1680,16 +1755,16 @@
       "kind": "distributed_file_service",
       "route": [
         {
-          "x": 21.8,
-          "y": 13.75
+          "x": 22,
+          "y": 12.95
         },
         {
           "x": 20,
-          "y": 13.75
+          "y": 12.95
         },
         {
           "x": 20,
-          "y": 14.2
+          "y": 14.4
         }
       ],
       "routeStyle": "orthogonal",
@@ -1698,9 +1773,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "storage",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.28,
@@ -1721,7 +1796,7 @@
       "kind": "log_collection",
       "route": [
         {
-          "x": 33.4,
+          "x": 32.9,
           "y": 15.1
         },
         {
@@ -1737,9 +1812,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "observability",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "role": "auxiliary",
@@ -1762,9 +1837,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "service",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.28,
@@ -1774,11 +1849,11 @@
       "labelPriority": "hidden",
       "route": [
         {
-          "x": 21.8,
+          "x": 21.6,
           "y": 6.6
         },
         {
-          "x": 22.6,
+          "x": 22.8,
           "y": 6.6
         }
       ],
@@ -1799,9 +1874,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "service",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.28,
@@ -1811,11 +1886,11 @@
       "labelPriority": "hidden",
       "route": [
         {
-          "x": 24.5,
+          "x": 24.4,
           "y": 6.6
         },
         {
-          "x": 25.2,
+          "x": 25.3,
           "y": 6.9
         }
       ],
@@ -1832,12 +1907,20 @@
       "kind": "feign_call",
       "route": [
         {
-          "x": 26.1,
-          "y": 9.2
+          "x": 27.2,
+          "y": 8.2
+        },
+        {
+          "x": 27.2,
+          "y": 9.65
         },
         {
           "x": 21.8,
-          "y": 9.2
+          "y": 9.65
+        },
+        {
+          "x": 21.8,
+          "y": 10.1
         }
       ],
       "routeStyle": "orthogonal",
@@ -1846,9 +1929,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "service",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.28,
@@ -1873,9 +1956,9 @@
         "lineStyle": "dashed",
         "role": "auxiliary",
         "pathGroup": "service",
-        "color": "#64748b",
-        "opacity": 0.26,
-        "width": 2,
+        "color": "#475569",
+        "opacity": 0.34,
+        "width": 3,
         "arrowSize": "small"
       },
       "importance": 0.28,
@@ -1889,7 +1972,7 @@
           "y": 10.5
         },
         {
-          "x": 23.8,
+          "x": 23.9,
           "y": 10.5
         }
       ],
@@ -2027,6 +2110,7 @@
     "badgePlacement": "front",
     "labelIcon": true,
     "palette": "engineering_drafting",
-    "layoutScale": 1.45
+    "layoutScale": 1.45,
+    "presentationMode": true
   }
 }

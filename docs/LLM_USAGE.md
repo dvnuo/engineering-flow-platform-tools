@@ -72,13 +72,17 @@ Recommended template categories:
 - Use `browser page outline`, `table`, and `list` when an agent needs navigable page structure or structured data instead of raw text.
 - Use `--pierce` on `page extract`, `page outline`, or `page ax` only when open shadow-root traversal is needed; closed shadow roots are not accessible.
 - Use `browser page network` for sanitized resource timing/API observation; it returns no headers, cookies, or bodies.
-- Use `browser network start/list/wait/stop/clear` when the user will manually interact and the agent later needs sanitized HAR-lite metadata. It records only after `start` and never returns headers, cookies, storage, or bodies.
+- Use `browser page metrics` for navigation, paint/resource aggregate, DOM node count, long-task count, and bounded largest-resource timing metadata. It is not a trace and returns no headers, cookies, storage, or bodies.
+- Use `browser assert visible|text|url|count` for JSON-first page state checks. Assertion failures return `ok=false`, `error.code=assertion_failed`, and sanitized details in `data`.
+- Console/network assertions are not separate assertion commands in this pass; use `browser network wait/list` and `browser page console/errors`.
+- Use `browser workflow run --file flow.yaml --dry-run --json` before executing YAML workflows. Workflows call only whitelisted browser actions/assertions and never execute shell commands, arbitrary browser CLI strings, arbitrary JavaScript, `page eval`, or `page fetch`.
+- Use `browser network start/list/wait/export/stop/clear` when the user will manually interact and the agent later needs sanitized HAR-lite metadata. It records only after `start`; `network export` writes JSON/HAR-lite metadata and returns path/count/size only. Network commands never return headers, cookies, storage, or bodies.
 - Use `browser page console` and `browser page errors` for redacted console/runtime diagnostics. They capture events only after recorder injection and do not return object previews.
 - Use `browser frame list` before `browser frame snapshot --frame-id <id>` when frame-specific reads are needed. Frame URLs and titles are redacted.
 - Use `browser page click`, `type`, `select`, `check`, `uncheck`, `press`, `upload`, `wait`, `screenshot`, `eval`, and `fetch` only as bounded actions against the active or selected tab.
 - Prefer `--ref` from `browser page ax` when selectors are unstable. Selector/ref actions return metadata only and do not echo typed text or selected values.
 - `browser page wait` can wait for selectors, current URL substrings, visible text, resource timing idle windows, DOM stability windows, or a bounded duration.
-- `browser page screenshot` writes a PNG artifact and returns metadata rather than binary image data.
+- `browser page screenshot` writes a PNG artifact and returns metadata rather than binary image data. Element screenshots require a visible `--selector` or fresh `--ref`; rerun `browser page ax` if a ref is stale.
 - `browser page eval` rejects cookie, storage, header, credential, and network APIs; returned values are recursively redacted.
 - `browser page fetch` performs GET with credentials omitted, rejects unsafe URL schemes, returns no headers, and redacts the body preview.
 - `browser page upload` validates local regular files and returns file metadata only; it never prints file contents.

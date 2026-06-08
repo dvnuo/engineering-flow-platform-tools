@@ -39,7 +39,7 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 ### Browser
 
-`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. Persistent sessions can also inspect redacted page structure, accessibility-style refs, frames, console/runtime errors, sanitized resource timing summaries, HAR-lite recorder metadata, tables/lists, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
+`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. Persistent sessions can also inspect redacted page structure, accessibility-style refs, assertions, whitelisted workflows, frames, console/runtime errors, sanitized resource timing summaries, performance metadata, HAR-lite recorder/export metadata, tables/lists, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
 
@@ -287,13 +287,19 @@ browser page extract --session default --selector ".user-avatar" --json
 browser page ax --session default --json
 browser page outline --session default --json
 browser page network --session default --filter "/api/" --json
+browser page metrics --session default --limit-resources 10 --json
 browser page console --session default --level error --json
 browser frame list --session default --json
 browser page table --session default --selector "table.results" --json
 browser page list --session default --selector "nav" --json
 browser page screenshot --session default --out result/page-screenshot.png --json
+browser page screenshot --session default --selector ".avatar" --out result/avatar.png --json
+browser assert visible --session default --selector ".ready" --json
+browser assert count --session default --selector ".result" --min 1 --json
+browser workflow run --file flow.yaml --dry-run --json
 browser network start --session default --limit 500 --json
 browser network list --session default --filter "/api/" --json
+browser network export --session default --out result/network.har-lite.json --format har-lite --json
 ```
 
 Bounded page actions:

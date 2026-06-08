@@ -113,15 +113,22 @@ var browserCommands = []string{
 	"browser page errors",
 	"browser page console-clear",
 	"browser page network",
+	"browser page metrics",
 	"browser page outline",
 	"browser page table",
 	"browser page list",
+	"browser assert visible",
+	"browser assert text",
+	"browser assert url",
+	"browser assert count",
+	"browser workflow run",
 	"browser frame list",
 	"browser frame snapshot",
 	"browser network start",
 	"browser network stop",
 	"browser network list",
 	"browser network wait",
+	"browser network export",
 	"browser network clear",
 	"browser download list",
 	"browser download wait",
@@ -717,8 +724,8 @@ func browserExplicit(name string) (explicitMeta, bool) {
 			Flags: append([]string{"selector", "file", "clear"}, pageFlags...), Required: []string{"selector", "file|clear"}, Risk: "write", Example: "browser page upload --selector input[type=file] --file ./report.pdf --json"},
 		"page.wait": {Description: "Wait for selector, text, URL, network-idle, DOM-stable, or bounded-duration conditions in the selected page target.",
 			Flags: append([]string{"selector", "duration-ms", "url-contains", "text", "network-idle-ms", "dom-stable-ms"}, pageFlags...), Required: []string{"selector|duration-ms|url-contains|text|network-idle-ms|dom-stable-ms"}, Risk: "read", Example: "browser page wait --selector .ready --network-idle-ms 500 --json"},
-		"page.screenshot": {Description: "Capture the selected page target to a PNG artifact and return file metadata instead of image bytes.",
-			Flags: append([]string{"out", "full-page"}, pageFlags...), Risk: "read", Example: "browser page screenshot --out result/page-screenshot.png --json"},
+		"page.screenshot": {Description: "Capture the selected page target or one visible selector/ref element to a PNG artifact and return file metadata instead of image bytes.",
+			Flags: append([]string{"out", "full-page", "selector", "ref"}, pageFlags...), Risk: "read", Example: "browser page screenshot --selector .avatar --out result/avatar.png --json"},
 		"page.eval": {Description: "Evaluate a bounded JavaScript expression and recursively redact returned serializable values.",
 			Flags: append([]string{"expr", "max-string-bytes"}, pageFlags...), Required: []string{"expr"}, Risk: "write", Example: "browser page eval --expr 'document.title' --json"},
 		"page.fetch": {Description: "Fetch an HTTP, HTTPS, or relative URL from the page context with credentials omitted and no headers returned.",
@@ -731,12 +738,24 @@ func browserExplicit(name string) (explicitMeta, bool) {
 			Flags: pageFlags, Risk: "write", Example: "browser page console-clear --json"},
 		"page.network": {Description: "Return sanitized page resource timing summaries, favoring API-like fetch/XHR entries by default.",
 			Flags: append([]string{"filter", "limit", "all"}, pageFlags...), Risk: "read", Example: "browser page network --filter /api/ --json"},
+		"page.metrics": {Description: "Return safe browser performance timing metadata, DOM node count, long-task counts, resource aggregates, and bounded largest resources.",
+			Flags: append([]string{"limit-resources", "filter"}, pageFlags...), Risk: "read", Example: "browser page metrics --limit-resources 10 --json"},
 		"page.outline": {Description: "Return a redacted DOM-derived outline of headings, links, buttons, fields, forms, tables, and lists.",
 			Flags: append([]string{"limit", "include-hidden", "pierce"}, pageFlags...), Risk: "read", Example: "browser page outline --limit 100 --json"},
 		"page.table": {Description: "Extract structured table captions, headers, rows, cells, spans, and counts from the selected page.",
 			Flags: append([]string{"selector", "limit-rows", "limit-cells", "include-html"}, pageFlags...), Risk: "read", Example: "browser page table --selector table.results --json"},
 		"page.list": {Description: "Extract structured ordered, unordered, and role=list data with item text, hrefs, and nesting levels.",
 			Flags: append([]string{"selector", "limit-items"}, pageFlags...), Risk: "read", Example: "browser page list --selector nav --json"},
+		"assert.visible": {Description: "Assert that a selector or accessibility ref resolves to a visible page element.",
+			Flags: append([]string{"selector", "ref", "not"}, pageFlags...), Required: []string{"selector|ref"}, Risk: "read", Example: "browser assert visible --selector .ready --json"},
+		"assert.text": {Description: "Assert that the page body or selected element text contains a substring without returning raw page text snippets.",
+			Flags: append([]string{"contains", "selector", "ref", "not"}, pageFlags...), Required: []string{"contains"}, Risk: "read", Example: "browser assert text --contains 'Signed in' --json"},
+		"assert.url": {Description: "Assert that the current page URL contains a substring, returning only redacted URL metadata.",
+			Flags: append([]string{"contains", "not"}, pageFlags...), Required: []string{"contains"}, Risk: "read", Example: "browser assert url --contains /dashboard --json"},
+		"assert.count": {Description: "Assert a CSS selector count using an exact count or inclusive min/max bounds.",
+			Flags: append([]string{"selector", "equals", "min", "max"}, pageFlags...), Required: []string{"selector", "equals|min|max"}, Risk: "read", Example: "browser assert count --selector .result --min 1 --json"},
+		"workflow.run": {Description: "Parse, dry-run, or execute a YAML workflow made only of whitelisted browser actions and assertions.",
+			Flags: append([]string{"file", "dry-run", "session", "target-id", "timeout", "continue-on-error"}, common...), Required: []string{"file"}, Risk: "write", Example: "browser workflow run --file flow.yaml --dry-run --json"},
 		"frame.list": {Description: "List the DevTools frame tree for the selected page target with redacted frame URLs and names.",
 			Flags: pageFlags, Risk: "read", Example: "browser frame list --session default --json"},
 		"frame.snapshot": {Description: "Snapshot a selected frame with redacted URL, title, text, and optional HTML preview.",
@@ -749,6 +768,8 @@ func browserExplicit(name string) (explicitMeta, bool) {
 			Flags: append([]string{"filter", "limit", "method", "status"}, pageFlags...), Risk: "read", Example: "browser network list --session default --filter /api/ --json"},
 		"network.wait": {Description: "Wait for a recorded network event matching a URL substring and optional status or method.",
 			Flags: append([]string{"url-contains", "method", "status", "limit"}, pageFlags...), Required: []string{"url-contains"}, Risk: "read", Example: "browser network wait --session default --url-contains /api/ --status 200 --json"},
+		"network.export": {Description: "Write sanitized recorded network metadata to a JSON or HAR-lite artifact and return path/count/size metadata only.",
+			Flags: append([]string{"out", "format", "filter", "limit"}, pageFlags...), Required: []string{"out"}, Risk: "read", Example: "browser network export --out result/network.har-lite.json --format har-lite --json"},
 		"network.clear": {Description: "Clear page-side network recorder entries and persist an empty sanitized artifact.",
 			Flags: pageFlags, Risk: "write", Example: "browser network clear --session default --json"},
 		"download.list": {Description: "List completed files in a browser session download directory without reading file contents.",
@@ -1277,9 +1298,9 @@ func flagTypeFor(command, name string) string {
 
 func flagType(name string) string {
 	switch name {
-	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot":
+	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error":
 		return "bool"
-	case "sample-rows", "max-create", "wait", "timeout", "max-network-events":
+	case "sample-rows", "max-create", "wait", "timeout", "max-network-events", "limit", "limit-resources", "duration-ms", "network-idle-ms", "dom-stable-ms", "equals", "min", "max", "index", "status", "limit-rows", "limit-cells", "limit-items":
 		return "int"
 	case "min-confidence":
 		return "float"
@@ -1317,10 +1338,16 @@ func flagDescription(command, name string) string {
 	case "json":
 		return "Print JSON envelope."
 	case "format":
+		if command == "network.export" {
+			return "Network export artifact format: json or har-lite. Use --json for the command envelope."
+		}
 		return "Output format: table, json, or yaml."
 	case "verbose":
 		return "Print additional diagnostic details when available; secrets must remain redacted."
 	case "dry-run":
+		if command == "workflow.run" {
+			return "Parse and validate the workflow without attaching to a browser or executing steps."
+		}
 		return "Preview write request without sending it."
 	case "yes":
 		return "Confirm destructive operations."
@@ -1365,6 +1392,9 @@ func flagDescription(command, name string) string {
 	case "issues":
 		return "Comma-separated Jira test issue keys."
 	case "status":
+		if strings.HasPrefix(command, "network.") {
+			return "Optional HTTP status filter when status is available."
+		}
 		return "Zephyr execution status name or alias, such as PASS, PASSED, FAIL, WIP, BLOCKED, or UNEXECUTED."
 	case "comment":
 		return "Comment text."
@@ -1387,6 +1417,9 @@ func flagDescription(command, name string) string {
 	case "entity-id":
 		return "Zephyr attachment entity id."
 	case "file":
+		if command == "workflow.run" {
+			return "Workflow YAML file to parse and run."
+		}
 		return "File path to upload."
 	case "jql":
 		return "Jira JQL query."
@@ -1556,10 +1589,25 @@ func flagDescription(command, name string) string {
 		}
 		return "Text term used to build a Confluence content search query."
 	case "selector":
+		if strings.HasPrefix(command, "assert.") {
+			return "CSS selector for the assertion target."
+		}
 		if strings.HasPrefix(command, "page.") {
 			return "CSS selector for the page element to read or automate."
 		}
 		return "CSS selector used as a deterministic login-success signal."
+	case "ref":
+		return "Accessibility ref from browser page ax for the page element target."
+	case "contains":
+		return "Substring to assert; output returns only redacted/truncated expectation metadata and byte counts."
+	case "equals":
+		return "Exact expected selector count."
+	case "min":
+		return "Minimum expected selector count."
+	case "max":
+		return "Maximum expected selector count."
+	case "not":
+		return "Invert the assertion."
 	case "session":
 		return "Browser automation session name."
 	case "target-id":
@@ -1577,6 +1625,9 @@ func flagDescription(command, name string) string {
 	case "duration-ms":
 		return "Bounded page wait duration in milliseconds."
 	case "url-contains":
+		if command == "network.wait" {
+			return "URL substring to wait for in sanitized recorded network metadata."
+		}
 		return "Substring that must appear in the current page URL before page wait returns."
 	case "network-idle-ms":
 		return "Milliseconds that resource timing entries must remain unchanged before page wait returns."
@@ -1585,6 +1636,12 @@ func flagDescription(command, name string) string {
 	case "filter":
 		if command == "page.network" {
 			return "Case-insensitive filter for resource URL, initiator type, resource type, or API-like marker."
+		}
+		if command == "page.metrics" {
+			return "Case-insensitive filter for resource URL, resource type, or initiator type."
+		}
+		if strings.HasPrefix(command, "network.") {
+			return "Case-insensitive filter for sanitized URL, method, resource type, initiator type, or source."
 		}
 		return "Filter string."
 	case "all":
@@ -1600,10 +1657,19 @@ func flagDescription(command, name string) string {
 		return "Maximum number of cells to return per extracted table row."
 	case "limit-items":
 		return "Maximum number of items to return per extracted page list."
+	case "limit-resources":
+		return "Maximum number of largest matching resource timing entries to return."
 	case "filename-contains":
 		return "Case-insensitive substring that a completed download filename must contain."
 	case "full-page":
-		return "Capture the full page instead of only the current viewport."
+		return "Capture the full page instead of only the current viewport; cannot be combined with element screenshot selector/ref."
+	case "continue-on-error":
+		return "Continue later workflow steps after a step fails; final workflow result still fails."
+	case "method":
+		if strings.HasPrefix(command, "network.") {
+			return "Optional HTTP method filter such as GET or POST when method is available."
+		}
+		return "HTTP method."
 	case "expr":
 		return "JavaScript expression to evaluate; storage, cookie, header, credential, and network APIs are rejected."
 	case "clear":
@@ -1618,14 +1684,23 @@ func flagDescription(command, name string) string {
 	case "wait":
 		return "Seconds to wait after the page body is ready."
 	case "timeout":
+		if command == "workflow.run" {
+			return "Maximum seconds per browser page action/assertion step."
+		}
 		if strings.HasPrefix(command, "page.") {
 			return "Maximum seconds to wait for this page command."
+		}
+		if strings.HasPrefix(command, "assert.") || strings.HasPrefix(command, "network.") {
+			return "Maximum seconds to wait for this browser command."
 		}
 		if command == "download.wait" {
 			return "Maximum seconds to wait for a completed matching download."
 		}
 		return "Overall probe timeout in seconds."
 	case "out":
+		if command == "network.export" {
+			return "Output file path for the sanitized network export."
+		}
 		if command == "page.screenshot" {
 			return "Screenshot output PNG path; defaults under ~/.efp/browser/artifacts."
 		}

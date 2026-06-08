@@ -497,15 +497,22 @@ confluence page get --url <page-url>
 - browser page errors
 - browser page console-clear
 - browser page network
+- browser page metrics
 - browser page outline
 - browser page table
 - browser page list
+- browser assert visible
+- browser assert text
+- browser assert url
+- browser assert count
+- browser workflow run
 - browser frame list
 - browser frame snapshot
 - browser network start
 - browser network stop
 - browser network list
 - browser network wait
+- browser network export
 - browser network clear
 - browser download list
 - browser download wait
@@ -527,8 +534,12 @@ browser page extract --session default --selector .user-avatar --json
 browser page ax --session default --json
 browser page outline --session default --json
 browser page network --session default --filter /api/ --json
+browser page metrics --session default --limit-resources 10 --json
+browser assert visible --session default --selector .ready --json
+browser workflow run --file flow.yaml --dry-run --json
 browser network start --session default --limit 500 --json
 browser network list --session default --filter /api/ --json
+browser network export --session default --out result/network.har-lite.json --format har-lite --json
 ```
 
 ### Page Actions
@@ -541,12 +552,16 @@ browser network list --session default --filter /api/ --json
 - `browser page press --key <key> [--selector <css>|--ref <ref>]` presses a key, optionally focusing a target first.
 - `browser page upload --selector <css> --file <path>` attaches local regular files to an input[type=file] and returns file metadata only.
 - `browser page wait --selector <css>`, `--duration-ms <n>`, `--url-contains <text>`, `--text <text>`, `--network-idle-ms <n>`, or `--dom-stable-ms <n>` waits within the command timeout.
-- `browser page screenshot --out <file>` writes a PNG artifact and returns path/size metadata.
+- `browser page screenshot --out <file> [--selector <css>|--ref <ref>]` writes a page or visible-element PNG artifact and returns path/size metadata. Element screenshots require a visible selector/ref; stale refs require rerunning `browser page ax`.
 - `browser page eval --expr <js>` rejects cookie, storage, header, credential, and network APIs, then redacts returned values.
 - `browser page fetch --url <url-or-path>` runs a GET fetch with credentials omitted, rejects unsafe URL schemes, returns no headers, and redacts the body preview.
 - `browser page console`, `browser page errors`, and `browser page console-clear` use a bounded page-side recorder for console API calls and runtime errors; messages, URLs, and stacks are redacted/truncated and object previews are not returned.
 - `browser page network [--filter <text>] [--all]` returns resource timing summaries with redacted URLs and no headers or bodies.
-- `browser network start|stop|list|wait|clear` records sanitized HAR-lite metadata after `start` via a bounded page-side fetch/XHR/resource recorder. It stores metadata under `EFP_BROWSER_HOME` and never returns headers, cookies, storage, or bodies.
+- `browser page metrics [--limit-resources <n>] [--filter <text>]` returns browser timing metadata only: navigation, paint/resource aggregates, DOM node count, long-task count, and redacted largest resource URLs.
+- `browser assert visible|text|url|count` returns JSON-first assertion pass/fail metadata. Assertion failures use `ok=false` and `error.code=assertion_failed`; failure envelopes also include `data` with sanitized assertion details.
+- Dedicated console/network assertion commands are not included in this pass; use `browser network wait/list` and `browser page console/errors` for those checks.
+- `browser workflow run --file flow.yaml [--dry-run]` parses and runs YAML workflows made only of whitelisted browser actions/assertions. It does not execute shell commands, arbitrary browser CLI strings, arbitrary JavaScript, `page eval`, or `page fetch`.
+- `browser network start|stop|list|wait|export|clear` records or exports sanitized HAR-lite metadata after `start` via a bounded page-side fetch/XHR/resource recorder. It stores metadata under `EFP_BROWSER_HOME` and never returns headers, cookies, storage, or bodies. `network export` writes JSON/HAR-lite metadata only and returns path/count/size metadata.
 - `browser page extract`, `browser page outline`, and `browser page ax` accept `--pierce` to traverse open shadow roots. Closed shadow roots are not accessible.
 - `browser frame list` returns the DevTools frame tree with redacted frame URLs and names.
 - `browser frame snapshot --frame-id <id>` snapshots one frame through DevTools with redacted URL, title, text, and optional HTML preview.

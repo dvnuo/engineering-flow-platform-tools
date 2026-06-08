@@ -23,6 +23,7 @@ type AXOptions struct {
 	PageOptions
 	Limit         int
 	IncludeHidden bool
+	Pierce        bool
 }
 
 type AXBounds struct {
@@ -61,6 +62,7 @@ type AXResult struct {
 	Title         string    `json:"title"`
 	Limit         int       `json:"limit"`
 	IncludeHidden bool      `json:"include_hidden"`
+	Pierce        bool      `json:"pierce,omitempty"`
 	Count         int       `json:"count"`
 	Source        string    `json:"source"`
 	RefPath       string    `json:"ref_path,omitempty"`
@@ -123,6 +125,7 @@ func (m *Manager) AX(ctx context.Context, opts AXOptions) (AXResult, error) {
 		Title:         RedactString(title),
 		Limit:         opts.Limit,
 		IncludeHidden: opts.IncludeHidden,
+		Pierce:        opts.Pierce,
 		Count:         raw.Count,
 		Source:        axSourceDOMARIA,
 		RefPath:       refPath,
@@ -297,6 +300,7 @@ func axExpression(opts AXOptions) string {
 	return `(function () {
   const limit = ` + strconv.Itoa(opts.Limit) + `;
   const includeHidden = ` + strconv.FormatBool(opts.IncludeHidden) + `;
+  const pierce = ` + strconv.FormatBool(opts.Pierce) + `;
   const selector = [
     "h1","h2","h3","h4","h5","h6",
     "a[href]","button","input","select","textarea","label","form",
@@ -443,7 +447,7 @@ func axExpression(opts AXOptions) string {
     if (raw === "false") return false;
     return Boolean(propName && el[propName]);
   };
-  const nodes = Array.from(new Set(Array.from(document.querySelectorAll(selector))));
+  const nodes = Array.from(new Set(querySelectorAllPierce(document, selector, pierce, 10000)));
   const output = [];
   let count = 0;
   for (const el of nodes) {
@@ -480,5 +484,6 @@ func axExpression(opts AXOptions) string {
     }
   }
   return {count, nodes: output};
-})()`
+})()
+` + shadowTraversalExpression()
 }

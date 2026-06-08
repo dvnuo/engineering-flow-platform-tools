@@ -44,6 +44,7 @@ type ExtractOptions struct {
 	Selector     string
 	Limit        int
 	IncludeHTML  bool
+	Pierce       bool
 	MaxHTMLBytes int
 }
 
@@ -62,6 +63,7 @@ type ExtractResult struct {
 	Session  string             `json:"session"`
 	TargetID string             `json:"target_id"`
 	Selector string             `json:"selector"`
+	Pierce   bool               `json:"pierce,omitempty"`
 	Count    int                `json:"count"`
 	Limit    int                `json:"limit"`
 	URL      string             `json:"url"`
@@ -246,7 +248,7 @@ func (m *Manager) Extract(ctx context.Context, opts ExtractOptions) (ExtractResu
 	if err := chromedp.Run(pageCtx,
 		chromedp.Location(&finalURL),
 		chromedp.Title(&title),
-		chromedp.Evaluate(extractExpression(opts.Selector, opts.Limit, opts.IncludeHTML), &raw, chromedp.EvalAsValue),
+		chromedp.Evaluate(extractExpression(opts.Selector, opts.Limit, opts.IncludeHTML, opts.Pierce), &raw, chromedp.EvalAsValue),
 	); err != nil {
 		return ExtractResult{}, mapPageError(err, "automation_failed")
 	}
@@ -254,6 +256,7 @@ func (m *Manager) Extract(ctx context.Context, opts ExtractOptions) (ExtractResu
 		Session:  session.Name,
 		TargetID: target.ID,
 		Selector: opts.Selector,
+		Pierce:   opts.Pierce,
 		Count:    raw.Count,
 		Limit:    opts.Limit,
 		URL:      RedactURL(finalURL),
@@ -538,12 +541,13 @@ func pageActionResult(session Session, target Target, action, selector, ref, fin
 	}
 }
 
-func extractExpression(selector string, limit int, includeHTML bool) string {
+func extractExpression(selector string, limit int, includeHTML, pierce bool) string {
 	return `(function () {
   const selector = ` + strconv.Quote(selector) + `;
   const limit = ` + strconv.Itoa(limit) + `;
   const includeHTML = ` + strconv.FormatBool(includeHTML) + `;
-  const nodes = Array.from(document.querySelectorAll(selector));
+  const pierce = ` + strconv.FormatBool(pierce) + `;
+  const nodes = querySelectorAllPierce(document, selector, pierce, 10000);
   return {
     count: nodes.length,
     elements: nodes.slice(0, limit).map((el, index) => ({
@@ -557,7 +561,8 @@ func extractExpression(selector string, limit int, includeHTML bool) string {
       html: includeHTML ? String(el.outerHTML || "") : ""
     }))
   };
-})()`
+})()
+` + shadowTraversalExpression()
 }
 
 func validateWaitOptions(opts WaitOptions) error {
@@ -921,6 +926,9 @@ func sanitizeExtractedElements(elements []ExtractedElement, includeHTML bool, ma
 func mapPageError(err error, code string) error {
 	if err == nil {
 		return nil
+	}
+	if _, ok := err.(*Error); ok {
+		return err
 	}
 	msg := strings.ToLower(err.Error())
 	if strings.Contains(msg, "deadline") || strings.Contains(msg, "timeout") {

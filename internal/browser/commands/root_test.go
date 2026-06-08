@@ -53,7 +53,7 @@ func TestSchemaProbeRequiresURL(t *testing.T) {
 func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
 	cases := map[string][]string{
 		"session.start":      {"download-dir"},
-		"page.ax":            {"limit", "include-hidden", "session", "target-id", "timeout"},
+		"page.ax":            {"limit", "include-hidden", "pierce", "session", "target-id", "timeout"},
 		"page.click":         {"selector", "ref", "session", "target-id", "timeout"},
 		"page.type":          {"selector", "ref", "text", "clear", "session", "target-id", "timeout"},
 		"page.select":        {"selector", "ref", "value", "label", "index", "session", "target-id", "timeout"},
@@ -64,6 +64,10 @@ func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
 		"page.console":       {"level", "limit", "session", "target-id", "timeout"},
 		"page.errors":        {"limit", "session", "target-id", "timeout"},
 		"page.console-clear": {"session", "target-id", "timeout"},
+		"page.extract":       {"selector", "limit", "include-html", "pierce", "max-html-bytes", "session", "target-id", "timeout"},
+		"page.outline":       {"limit", "include-hidden", "pierce", "session", "target-id", "timeout"},
+		"frame.list":         {"session", "target-id", "timeout"},
+		"frame.snapshot":     {"frame-id", "include-html", "max-text-bytes", "max-html-bytes", "session", "target-id", "timeout"},
 		"network.start":      {"session", "target-id", "timeout", "limit", "filter"},
 		"network.stop":       {"session", "target-id", "timeout"},
 		"network.list":       {"session", "target-id", "timeout", "filter", "limit", "method", "status"},

@@ -92,6 +92,7 @@ func pageExtractCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&opts.Selector, "selector", "", "CSS selector for elements to extract from the current page.")
 	c.Flags().IntVar(&opts.Limit, "limit", 20, "Maximum number of matching elements to return.")
 	c.Flags().BoolVar(&opts.IncludeHTML, "include-html", false, "Include redacted and truncated outer HTML for each matching element.")
+	c.Flags().BoolVar(&opts.Pierce, "pierce", false, "Traverse open shadow roots when matching elements; closed shadow roots are not accessible.")
 	c.Flags().IntVar(&opts.MaxHTMLBytes, "max-html-bytes", 20000, "Maximum bytes of redacted outer HTML per element when --include-html is set.")
 	return c
 }
@@ -119,6 +120,7 @@ func pageAXCmd(o *Opts) *cobra.Command {
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().IntVar(&opts.Limit, "limit", 100, "Maximum number of accessibility-style nodes to return.")
 	c.Flags().BoolVar(&opts.IncludeHidden, "include-hidden", false, "Include hidden nodes in the accessibility-style snapshot.")
+	c.Flags().BoolVar(&opts.Pierce, "pierce", false, "Traverse open shadow roots in the accessibility-style snapshot; closed shadow roots are not accessible.")
 	return c
 }
 
@@ -534,6 +536,7 @@ func pageOutlineCmd(o *Opts) *cobra.Command {
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().IntVar(&opts.Limit, "limit", 100, "Maximum number of outline elements to return.")
 	c.Flags().BoolVar(&opts.IncludeHidden, "include-hidden", false, "Include hidden elements when deriving the page outline.")
+	c.Flags().BoolVar(&opts.Pierce, "pierce", false, "Traverse open shadow roots when deriving the page outline; closed shadow roots are not accessible.")
 	return c
 }
 

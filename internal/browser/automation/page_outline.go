@@ -12,6 +12,7 @@ type OutlineOptions struct {
 	PageOptions
 	Limit         int
 	IncludeHidden bool
+	Pierce        bool
 }
 
 type OutlineElement struct {
@@ -40,6 +41,7 @@ type OutlineResult struct {
 	Title         string           `json:"title"`
 	Limit         int              `json:"limit"`
 	IncludeHidden bool             `json:"include_hidden"`
+	Pierce        bool             `json:"pierce,omitempty"`
 	Count         int              `json:"count"`
 	Elements      []OutlineElement `json:"elements"`
 }
@@ -62,7 +64,7 @@ func (m *Manager) Outline(ctx context.Context, opts OutlineOptions) (OutlineResu
 	if err := chromedp.Run(pageCtx,
 		chromedp.Location(&finalURL),
 		chromedp.Title(&title),
-		chromedp.Evaluate(outlineExpression(opts.Limit, opts.IncludeHidden), &raw, chromedp.EvalAsValue),
+		chromedp.Evaluate(outlineExpression(opts.Limit, opts.IncludeHidden, opts.Pierce), &raw, chromedp.EvalAsValue),
 	); err != nil {
 		return OutlineResult{}, mapPageError(err, "automation_failed")
 	}
@@ -73,6 +75,7 @@ func (m *Manager) Outline(ctx context.Context, opts OutlineOptions) (OutlineResu
 		Title:         RedactString(title),
 		Limit:         opts.Limit,
 		IncludeHidden: opts.IncludeHidden,
+		Pierce:        opts.Pierce,
 		Count:         raw.Count,
 		Elements:      sanitizeOutlineElements(raw.Elements),
 	}, nil
@@ -106,13 +109,14 @@ func normalizeSelectorHint(raw string) string {
 	return TruncateBytes(RedactString(raw), 500)
 }
 
-func outlineExpression(limit int, includeHidden bool) string {
+func outlineExpression(limit int, includeHidden, pierce bool) string {
 	if limit <= 0 {
 		limit = 100
 	}
 	return `(function () {
   const limit = ` + strconv.Itoa(limit) + `;
   const includeHidden = ` + strconv.FormatBool(includeHidden) + `;
+  const pierce = ` + strconv.FormatBool(pierce) + `;
   const selector = [
     "h1","h2","h3","h4","h5","h6",
     "a[href]","button","input","select","textarea","label","form",
@@ -225,7 +229,7 @@ func outlineExpression(limit int, includeHidden bool) string {
     }
     return parts.join(" > ");
   };
-  const nodes = Array.from(new Set(Array.from(document.querySelectorAll(selector))));
+  const nodes = Array.from(new Set(querySelectorAllPierce(document, selector, pierce, 10000)));
   const elements = [];
   let count = 0;
   for (const el of nodes) {
@@ -258,5 +262,6 @@ func outlineExpression(limit int, includeHidden bool) string {
     }
   }
   return {count, elements};
-})()`
+})()
+` + shadowTraversalExpression()
 }

@@ -3,6 +3,8 @@ package automation
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -113,5 +115,96 @@ steps:
 	}
 	if result.Config.SessionName != "cli-session" || result.Config.TargetID != "cli-target" || result.Config.TimeoutSeconds != 9 || result.Config.ContinueOnError {
 		t.Fatalf("overrides not applied: %#v", result.Config)
+	}
+}
+
+func TestWorkflowVariablesLoopsConditionsSmartWaitAndReport(t *testing.T) {
+	def, err := ParseWorkflowYAML([]byte(`
+vars:
+  enabled: "true"
+  hidden: "false"
+smart_wait:
+  network_idle_ms: 500
+  dom_stable_ms: 400
+steps:
+  - action: page.click
+    selector: ".row-{{item}}"
+    for_each: [a, b]
+    if: "{{vars.enabled}}"
+  - action: page.type
+    selector: "#secret"
+    text: "{{vars.secret_text}}"
+    if: "{{vars.hidden}}"
+  - action: human.wait
+    duration_ms: 1000
+    prompt: "manual check"
+`))
+	if err != nil {
+		t.Fatalf("ParseWorkflowYAML failed: %v", err)
+	}
+	report := filepath.Join(t.TempDir(), "workflow-report.json")
+	result, err := RunWorkflow(context.Background(), nil, WorkflowRunOptions{
+		Definition:   def,
+		DryRun:       true,
+		VarOverrides: []string{"secret_text=typed-secret-value"},
+		ReportOut:    report,
+		AllowHuman:   true,
+	})
+	if err != nil {
+		t.Fatalf("RunWorkflow dry-run failed: %v", err)
+	}
+	if result.StepCount != 4 || result.CompletedSteps != 4 {
+		t.Fatalf("expected expanded steps, got %#v", result)
+	}
+	if !result.Steps[2].Plan.Skipped || result.Steps[2].Status != "skipped" {
+		t.Fatalf("condition skip not reflected: %#v", result.Steps[2])
+	}
+	if result.Config.SmartWait.NetworkIdleMilliseconds != 500 || result.Config.SmartWait.DOMStableMilliseconds != 400 {
+		t.Fatalf("smart_wait config missing: %#v", result.Config.SmartWait)
+	}
+	if result.ReportPath != report || result.ReportBytes == 0 {
+		t.Fatalf("report metadata missing: %#v", result)
+	}
+	b, err := os.ReadFile(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := string(b)
+	for _, leaked := range []string{"typed-secret-value", "access_token"} {
+		if strings.Contains(out, leaked) {
+			t.Fatalf("workflow report leaked %q in %s", leaked, out)
+		}
+	}
+}
+
+func TestWorkflowParsesNewAutomationActions(t *testing.T) {
+	def, err := ParseWorkflowYAML([]byte(`
+steps:
+  - action: page.extract_schema
+    file: schema.yaml
+  - action: form.inspect
+    selector: form
+  - action: form.fill
+    file: values.yaml
+  - action: page.metrics
+    limit: 5
+  - action: network.export
+    out: network.json
+    format: har-lite
+  - action: assert.screenshot
+    baseline: baseline.png
+    out: actual.png
+    diff_out: diff.png
+    threshold: 0.02
+`))
+	if err != nil {
+		t.Fatalf("ParseWorkflowYAML failed: %v", err)
+	}
+	result, err := RunWorkflow(context.Background(), nil, WorkflowRunOptions{Definition: def, DryRun: true})
+	if err != nil {
+		t.Fatalf("RunWorkflow dry-run failed: %v", err)
+	}
+	if len(result.Steps) != 6 || result.Steps[5].Plan.Threshold == nil {
+		t.Fatalf("new actions not planned: %#v", result.Steps)
 	}
 }

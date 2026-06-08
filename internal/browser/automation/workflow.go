@@ -2,9 +2,12 @@ package automation
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,25 +16,35 @@ import (
 
 const workflowFailureCode = "workflow_failed"
 
+var workflowTemplatePattern = regexp.MustCompile(`\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}`)
+
 var workflowAllowedActions = map[string]bool{
-	"tab.open":        true,
-	"page.wait":       true,
-	"page.click":      true,
-	"page.type":       true,
-	"page.press":      true,
-	"page.select":     true,
-	"page.check":      true,
-	"page.uncheck":    true,
-	"page.screenshot": true,
-	"assert.visible":  true,
-	"assert.text":     true,
-	"assert.url":      true,
-	"assert.count":    true,
-	"network.start":   true,
-	"network.wait":    true,
-	"network.list":    true,
-	"page.console":    true,
-	"page.errors":     true,
+	"tab.open":            true,
+	"page.wait":           true,
+	"page.click":          true,
+	"page.type":           true,
+	"page.press":          true,
+	"page.select":         true,
+	"page.check":          true,
+	"page.uncheck":        true,
+	"page.screenshot":     true,
+	"page.extract_schema": true,
+	"page.metrics":        true,
+	"assert.visible":      true,
+	"assert.text":         true,
+	"assert.url":          true,
+	"assert.count":        true,
+	"assert.screenshot":   true,
+	"network.start":       true,
+	"network.wait":        true,
+	"network.list":        true,
+	"network.export":      true,
+	"page.console":        true,
+	"page.errors":         true,
+	"form.inspect":        true,
+	"form.fill":           true,
+	"human.wait":          true,
+	"human.confirm":       true,
 }
 
 type WorkflowRunOptions struct {
@@ -46,96 +59,141 @@ type WorkflowRunOptions struct {
 	TargetOverride   bool
 	TimeoutOverride  bool
 	ContinueOverride bool
+	VarOverrides     []string
+	ReportOut        string
+	AllowHuman       bool
+	AutoConfirm      bool
 }
 
 type WorkflowDefinition struct {
-	SessionName     string         `json:"session,omitempty"`
-	TargetID        string         `json:"target_id,omitempty"`
-	TimeoutSeconds  int            `json:"timeout,omitempty"`
-	ContinueOnError bool           `json:"continue_on_error,omitempty"`
-	Steps           []WorkflowStep `json:"steps"`
+	SessionName     string            `json:"session,omitempty"`
+	TargetID        string            `json:"target_id,omitempty"`
+	TimeoutSeconds  int               `json:"timeout,omitempty"`
+	ContinueOnError bool              `json:"continue_on_error,omitempty"`
+	Vars            map[string]string `json:"-"`
+	SmartWait       WorkflowSmartWait `json:"smart_wait,omitempty"`
+	Steps           []WorkflowStep    `json:"steps"`
 }
 
 type WorkflowStep struct {
-	Action                  string `json:"action"`
-	Name                    string `json:"name,omitempty"`
+	Action                  string            `json:"action"`
+	Name                    string            `json:"name,omitempty"`
+	Selector                string            `json:"selector,omitempty"`
+	Ref                     string            `json:"ref,omitempty"`
+	Contains                string            `json:"contains,omitempty"`
+	URL                     string            `json:"url,omitempty"`
+	URLContains             string            `json:"url_contains,omitempty"`
+	File                    string            `json:"file,omitempty"`
+	Baseline                string            `json:"baseline,omitempty"`
+	DiffOut                 string            `json:"diff_out,omitempty"`
+	Format                  string            `json:"format,omitempty"`
+	Text                    string            `json:"-"`
+	Key                     string            `json:"key,omitempty"`
+	Value                   string            `json:"-"`
+	Label                   string            `json:"-"`
+	Out                     string            `json:"out,omitempty"`
+	Filter                  string            `json:"filter,omitempty"`
+	Method                  string            `json:"method,omitempty"`
+	Level                   string            `json:"level,omitempty"`
+	If                      string            `json:"if,omitempty"`
+	As                      string            `json:"as,omitempty"`
+	Prompt                  string            `json:"prompt,omitempty"`
+	Not                     bool              `json:"not,omitempty"`
+	Clear                   bool              `json:"clear,omitempty"`
+	FullPage                bool              `json:"full_page,omitempty"`
+	FullPageSet             bool              `json:"-"`
+	ForEach                 []string          `json:"-"`
+	SmartWait               WorkflowSmartWait `json:"smart_wait,omitempty"`
+	Skip                    bool              `json:"-"`
+	SkipReason              string            `json:"-"`
+	Equals                  int               `json:"equals,omitempty"`
+	Min                     int               `json:"min,omitempty"`
+	Max                     int               `json:"max,omitempty"`
+	Index                   int               `json:"index,omitempty"`
+	Limit                   int               `json:"limit,omitempty"`
+	Status                  int               `json:"status,omitempty"`
+	Threshold               float64           `json:"threshold,omitempty"`
+	DurationMilliseconds    int               `json:"duration_ms,omitempty"`
+	NetworkIdleMilliseconds int               `json:"network_idle_ms,omitempty"`
+	DOMStableMilliseconds   int               `json:"dom_stable_ms,omitempty"`
+	HasEquals               bool              `json:"-"`
+	HasMin                  bool              `json:"-"`
+	HasMax                  bool              `json:"-"`
+	HasIndex                bool              `json:"-"`
+	HasThreshold            bool              `json:"-"`
+}
+
+type WorkflowSmartWait struct {
 	Selector                string `json:"selector,omitempty"`
-	Ref                     string `json:"ref,omitempty"`
-	Contains                string `json:"contains,omitempty"`
-	URL                     string `json:"url,omitempty"`
 	URLContains             string `json:"url_contains,omitempty"`
-	Text                    string `json:"-"`
-	Key                     string `json:"key,omitempty"`
-	Value                   string `json:"-"`
-	Label                   string `json:"-"`
-	Out                     string `json:"out,omitempty"`
-	Filter                  string `json:"filter,omitempty"`
-	Method                  string `json:"method,omitempty"`
-	Level                   string `json:"level,omitempty"`
-	Not                     bool   `json:"not,omitempty"`
-	Clear                   bool   `json:"clear,omitempty"`
-	FullPage                bool   `json:"full_page,omitempty"`
-	FullPageSet             bool   `json:"-"`
-	Equals                  int    `json:"equals,omitempty"`
-	Min                     int    `json:"min,omitempty"`
-	Max                     int    `json:"max,omitempty"`
-	Index                   int    `json:"index,omitempty"`
-	Limit                   int    `json:"limit,omitempty"`
-	Status                  int    `json:"status,omitempty"`
+	Text                    string `json:"text,omitempty"`
 	DurationMilliseconds    int    `json:"duration_ms,omitempty"`
 	NetworkIdleMilliseconds int    `json:"network_idle_ms,omitempty"`
 	DOMStableMilliseconds   int    `json:"dom_stable_ms,omitempty"`
-	HasEquals               bool   `json:"-"`
-	HasMin                  bool   `json:"-"`
-	HasMax                  bool   `json:"-"`
-	HasIndex                bool   `json:"-"`
 }
 
 type WorkflowConfig struct {
-	SessionName     string `json:"session"`
-	TargetID        string `json:"target_id,omitempty"`
-	TimeoutSeconds  int    `json:"timeout"`
-	ContinueOnError bool   `json:"continue_on_error,omitempty"`
+	SessionName     string            `json:"session"`
+	TargetID        string            `json:"target_id,omitempty"`
+	TimeoutSeconds  int               `json:"timeout"`
+	ContinueOnError bool              `json:"continue_on_error,omitempty"`
+	AllowHuman      bool              `json:"allow_human,omitempty"`
+	AutoConfirm     bool              `json:"auto_confirm,omitempty"`
+	SmartWait       WorkflowSmartWait `json:"smart_wait,omitempty"`
 }
 
 type WorkflowStepPlan struct {
-	Index                   int    `json:"index"`
-	Name                    string `json:"name,omitempty"`
-	Action                  string `json:"action"`
-	Selector                string `json:"selector,omitempty"`
-	Ref                     string `json:"ref,omitempty"`
-	URL                     string `json:"url,omitempty"`
-	URLContainsPreview      string `json:"url_contains_preview,omitempty"`
-	URLContainsBytes        int    `json:"url_contains_bytes,omitempty"`
-	ContainsPreview         string `json:"contains_preview,omitempty"`
-	ContainsBytes           int    `json:"contains_bytes,omitempty"`
-	HasText                 bool   `json:"has_text,omitempty"`
-	TextBytes               int    `json:"text_bytes,omitempty"`
-	Clear                   bool   `json:"clear,omitempty"`
-	Key                     string `json:"key,omitempty"`
-	SelectionMode           string `json:"selection_mode,omitempty"`
-	Out                     string `json:"out,omitempty"`
-	Filter                  string `json:"filter,omitempty"`
-	Method                  string `json:"method,omitempty"`
-	Level                   string `json:"level,omitempty"`
-	Not                     bool   `json:"not,omitempty"`
-	FullPage                *bool  `json:"full_page,omitempty"`
-	Equals                  *int   `json:"equals,omitempty"`
-	Min                     *int   `json:"min,omitempty"`
-	Max                     *int   `json:"max,omitempty"`
-	IndexValue              *int   `json:"index_value,omitempty"`
-	Limit                   int    `json:"limit,omitempty"`
-	Status                  int    `json:"status,omitempty"`
-	DurationMilliseconds    int    `json:"duration_ms,omitempty"`
-	NetworkIdleMilliseconds int    `json:"network_idle_ms,omitempty"`
-	DOMStableMilliseconds   int    `json:"dom_stable_ms,omitempty"`
+	Index                   int                `json:"index"`
+	Name                    string             `json:"name,omitempty"`
+	Action                  string             `json:"action"`
+	Selector                string             `json:"selector,omitempty"`
+	Ref                     string             `json:"ref,omitempty"`
+	URL                     string             `json:"url,omitempty"`
+	URLContainsPreview      string             `json:"url_contains_preview,omitempty"`
+	URLContainsBytes        int                `json:"url_contains_bytes,omitempty"`
+	File                    string             `json:"file,omitempty"`
+	Baseline                string             `json:"baseline,omitempty"`
+	DiffOut                 string             `json:"diff_out,omitempty"`
+	Format                  string             `json:"format,omitempty"`
+	ContainsPreview         string             `json:"contains_preview,omitempty"`
+	ContainsBytes           int                `json:"contains_bytes,omitempty"`
+	HasText                 bool               `json:"has_text,omitempty"`
+	TextBytes               int                `json:"text_bytes,omitempty"`
+	Clear                   bool               `json:"clear,omitempty"`
+	Key                     string             `json:"key,omitempty"`
+	SelectionMode           string             `json:"selection_mode,omitempty"`
+	Out                     string             `json:"out,omitempty"`
+	Filter                  string             `json:"filter,omitempty"`
+	Method                  string             `json:"method,omitempty"`
+	Level                   string             `json:"level,omitempty"`
+	IfPreview               string             `json:"if_preview,omitempty"`
+	ForEachCount            int                `json:"for_each_count,omitempty"`
+	As                      string             `json:"as,omitempty"`
+	PromptPreview           string             `json:"prompt_preview,omitempty"`
+	PromptBytes             int                `json:"prompt_bytes,omitempty"`
+	Skipped                 bool               `json:"skipped,omitempty"`
+	SkipReason              string             `json:"skip_reason,omitempty"`
+	Not                     bool               `json:"not,omitempty"`
+	FullPage                *bool              `json:"full_page,omitempty"`
+	Equals                  *int               `json:"equals,omitempty"`
+	Min                     *int               `json:"min,omitempty"`
+	Max                     *int               `json:"max,omitempty"`
+	IndexValue              *int               `json:"index_value,omitempty"`
+	Limit                   int                `json:"limit,omitempty"`
+	Status                  int                `json:"status,omitempty"`
+	Threshold               *float64           `json:"threshold,omitempty"`
+	DurationMilliseconds    int                `json:"duration_ms,omitempty"`
+	NetworkIdleMilliseconds int                `json:"network_idle_ms,omitempty"`
+	DOMStableMilliseconds   int                `json:"dom_stable_ms,omitempty"`
+	SmartWait               *WorkflowSmartWait `json:"smart_wait,omitempty"`
 }
 
 type WorkflowStepError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Hint    string `json:"hint,omitempty"`
-	Status  int    `json:"status,omitempty"`
+	Code        string   `json:"code"`
+	Message     string   `json:"message"`
+	Hint        string   `json:"hint,omitempty"`
+	Status      int      `json:"status,omitempty"`
+	NextActions []string `json:"next_actions,omitempty"`
 }
 
 type WorkflowStepResult struct {
@@ -161,6 +219,8 @@ type WorkflowRunResult struct {
 	DurationMilliseconds int                  `json:"duration_ms,omitempty"`
 	Steps                []WorkflowStepResult `json:"steps"`
 	Limitation           string               `json:"limitation"`
+	ReportPath           string               `json:"report_path,omitempty"`
+	ReportBytes          int64                `json:"report_bytes,omitempty"`
 }
 
 type WorkflowError struct {
@@ -220,6 +280,14 @@ func RunWorkflow(ctx context.Context, mgr *Manager, opts WorkflowRunOptions) (Wo
 		}
 		def = loaded
 	}
+	vars, err := workflowVars(def, opts)
+	if err != nil {
+		return WorkflowRunResult{}, err
+	}
+	def, err = expandWorkflow(def, vars)
+	if err != nil {
+		return WorkflowRunResult{}, err
+	}
 	if err := ValidateWorkflow(def); err != nil {
 		return WorkflowRunResult{}, err
 	}
@@ -238,17 +306,25 @@ func RunWorkflow(ctx context.Context, mgr *Manager, opts WorkflowRunOptions) (Wo
 		result.Status = "planned"
 		for i, step := range def.Steps {
 			plan := workflowStepPlan(i, step)
+			status := "planned"
+			pass := true
+			if step.Skip {
+				status = "skipped"
+			}
 			result.Steps = append(result.Steps, WorkflowStepResult{
 				Index:  i,
 				Name:   plan.Name,
 				Action: plan.Action,
-				Status: "planned",
-				Pass:   true,
+				Status: status,
+				Pass:   pass,
 				Plan:   plan,
 			})
 		}
 		result.CompletedSteps = len(result.Steps)
 		result.DurationMilliseconds = elapsedMilliseconds(start)
+		if err := writeWorkflowReport(opts.ReportOut, &result); err != nil {
+			return WorkflowRunResult{}, err
+		}
 		return result, nil
 	}
 	if mgr == nil {
@@ -264,6 +340,14 @@ func RunWorkflow(ctx context.Context, mgr *Manager, opts WorkflowRunOptions) (Wo
 			Status: "passed",
 			Pass:   true,
 			Plan:   plan,
+		}
+		if step.Skip {
+			stepResult.Status = "skipped"
+			stepResult.Data = map[string]any{"reason": step.SkipReason}
+			stepResult.DurationMilliseconds = elapsedMilliseconds(stepStart)
+			result.Steps = append(result.Steps, stepResult)
+			result.CompletedSteps = len(result.Steps)
+			continue
 		}
 		data, err := executeWorkflowStep(ctx, mgr, config, step)
 		if err != nil {
@@ -285,6 +369,9 @@ func RunWorkflow(ctx context.Context, mgr *Manager, opts WorkflowRunOptions) (Wo
 		}
 	}
 	result.DurationMilliseconds = elapsedMilliseconds(start)
+	if err := writeWorkflowReport(opts.ReportOut, &result); err != nil {
+		return WorkflowRunResult{}, err
+	}
 	if !result.Pass {
 		return result, &WorkflowError{
 			Base:   NewError(workflowFailureCode, "Browser workflow failed.", "Inspect data.steps for the first failing whitelisted step.", 412),
@@ -296,6 +383,33 @@ func RunWorkflow(ctx context.Context, mgr *Manager, opts WorkflowRunOptions) (Wo
 
 func executeWorkflowStep(ctx context.Context, mgr *Manager, config WorkflowConfig, step WorkflowStep) (any, error) {
 	page := PageOptions{SessionName: config.SessionName, TargetID: config.TargetID, TimeoutSeconds: config.TimeoutSeconds}
+	data, err := executeWorkflowAction(ctx, mgr, config, page, step)
+	if err != nil {
+		return nil, err
+	}
+	wait := step.SmartWait
+	if !workflowSmartWaitEnabled(wait) {
+		wait = config.SmartWait
+	}
+	if workflowSmartWaitEnabled(wait) && step.Action != "page.wait" && !strings.HasPrefix(step.Action, "human.") {
+		waitResult, err := mgr.Wait(ctx, WaitOptions{
+			PageOptions:             page,
+			Selector:                wait.Selector,
+			DurationMilliseconds:    wait.DurationMilliseconds,
+			URLContains:             wait.URLContains,
+			Text:                    wait.Text,
+			NetworkIdleMilliseconds: wait.NetworkIdleMilliseconds,
+			DOMStableMilliseconds:   wait.DOMStableMilliseconds,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"result": data, "smart_wait": waitResult}, nil
+	}
+	return data, nil
+}
+
+func executeWorkflowAction(ctx context.Context, mgr *Manager, config WorkflowConfig, page PageOptions, step WorkflowStep) (any, error) {
 	switch step.Action {
 	case "tab.open":
 		return mgr.OpenTab(ctx, config.SessionName, step.URL)
@@ -323,6 +437,10 @@ func executeWorkflowStep(ctx context.Context, mgr *Manager, config WorkflowConfi
 		return mgr.Check(ctx, CheckOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref, Checked: false})
 	case "page.screenshot":
 		return mgr.Screenshot(ctx, ScreenshotOptions{PageOptions: page, OutPath: step.Out, FullPage: workflowFullPage(step), FullPageSet: step.FullPageSet})
+	case "page.extract_schema":
+		return mgr.ExtractSchema(ctx, ExtractSchemaOptions{PageOptions: page, File: step.File, Limit: step.Limit})
+	case "page.metrics":
+		return mgr.Metrics(ctx, MetricsOptions{PageOptions: page, LimitResources: step.Limit, Filter: step.Filter})
 	case "assert.visible":
 		return mgr.AssertVisible(ctx, AssertionOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref, Not: step.Not, Equals: -1, Min: -1, Max: -1})
 	case "assert.text":
@@ -331,16 +449,49 @@ func executeWorkflowStep(ctx context.Context, mgr *Manager, config WorkflowConfi
 		return mgr.AssertURL(ctx, AssertionOptions{PageOptions: page, Contains: step.Contains, Not: step.Not, Equals: -1, Min: -1, Max: -1})
 	case "assert.count":
 		return mgr.AssertCount(ctx, workflowCountAssertionOptions(page, step))
+	case "assert.screenshot":
+		return mgr.AssertScreenshot(ctx, ScreenshotAssertionOptions{PageOptions: page, Baseline: step.Baseline, OutPath: step.Out, DiffPath: step.DiffOut, Selector: step.Selector, Ref: step.Ref, Threshold: workflowThreshold(step), FullPage: workflowFullPage(step), FullPageSet: step.FullPageSet})
 	case "network.start":
 		return mgr.NetworkStart(ctx, NetworkRecorderOptions{PageOptions: page, Filter: step.Filter, Limit: step.Limit, Status: -1})
 	case "network.wait":
 		return mgr.NetworkWait(ctx, NetworkWaitOptions{NetworkRecorderOptions: NetworkRecorderOptions{PageOptions: page, Limit: step.Limit, Method: step.Method, Status: workflowStatus(step.Status)}, URLContains: step.URLContains})
 	case "network.list":
 		return mgr.NetworkList(ctx, NetworkRecorderOptions{PageOptions: page, Filter: step.Filter, Limit: step.Limit, Method: step.Method, Status: workflowStatus(step.Status)})
+	case "network.export":
+		return mgr.NetworkExport(ctx, NetworkExportOptions{PageOptions: page, OutPath: step.Out, Format: step.Format, Filter: step.Filter, Limit: step.Limit})
 	case "page.console":
 		return mgr.Console(ctx, ConsoleOptions{PageOptions: page, Level: step.Level, Limit: step.Limit})
 	case "page.errors":
 		return mgr.RuntimeErrors(ctx, ConsoleOptions{PageOptions: page, Limit: step.Limit})
+	case "form.inspect":
+		return mgr.FormInspect(ctx, FormInspectOptions{PageOptions: page, Selector: step.Selector, Limit: step.Limit})
+	case "form.fill":
+		return mgr.FormFill(ctx, FormFillOptions{PageOptions: page, File: step.File})
+	case "human.wait":
+		if !config.AllowHuman {
+			return nil, NewError("human_action_disabled", "human.wait requires --allow-human.", "Rerun with --allow-human when the workflow intentionally pauses for manual browser interaction.", 409)
+		}
+		start := time.Now()
+		select {
+		case <-ctx.Done():
+			return nil, NewError("timeout", ctx.Err().Error(), "The human wait was canceled or timed out.", 408)
+		case <-time.After(time.Duration(step.DurationMilliseconds) * time.Millisecond):
+		}
+		return map[string]any{
+			"action":      "human.wait",
+			"duration_ms": step.DurationMilliseconds,
+			"waited_ms":   elapsedMilliseconds(start),
+			"prompt":      TruncateBytes(RedactString(step.Prompt), 500),
+		}, nil
+	case "human.confirm":
+		if !config.AllowHuman || !config.AutoConfirm {
+			return nil, NewError("human_confirmation_required", "human.confirm requires --allow-human --yes.", "Inspect the browser manually, then rerun with --allow-human --yes only when the user has confirmed the step.", 409)
+		}
+		return map[string]any{
+			"action":    "human.confirm",
+			"prompt":    TruncateBytes(RedactString(step.Prompt), 500),
+			"confirmed": true,
+		}, nil
 	default:
 		return nil, invalidWorkflow("unsupported action "+step.Action, "Use only documented workflow actions.")
 	}
@@ -354,26 +505,76 @@ func workflowErrorData(err error) any {
 	return nil
 }
 
+func writeWorkflowReport(path string, result *WorkflowRunResult) error {
+	path = strings.TrimSpace(path)
+	if path == "" || result == nil {
+		return nil
+	}
+	path = filepath.Clean(expandHome(path))
+	if path == "" || path == "." {
+		return invalidArgs("--report-out must point at a JSON file", "Pass a writable report path such as result/workflow-run.json.")
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return NewError("artifact_write_failed", err.Error(), "Check --report-out directory permissions.", 500)
+	}
+	result.ReportPath = path
+	b, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return NewError("automation_failed", err.Error(), "Workflow report could not be encoded.", 500)
+	}
+	b = append(b, '\n')
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		return NewError("artifact_write_failed", err.Error(), "Workflow report could not be written.", 500)
+	}
+	stat, err := os.Stat(path)
+	if err != nil {
+		return NewError("artifact_write_failed", err.Error(), "Workflow report was written but metadata could not be read.", 500)
+	}
+	result.ReportBytes = stat.Size()
+	return nil
+}
+
 func workflowStepError(err error) *WorkflowStepError {
 	var autoErr *Error
 	if errors.As(err, &autoErr) {
 		return &WorkflowStepError{
-			Code:    autoErr.Code,
-			Message: RedactError(autoErr.Message),
-			Hint:    autoErr.Hint,
-			Status:  autoErr.Status,
+			Code:        autoErr.Code,
+			Message:     RedactError(autoErr.Message),
+			Hint:        autoErr.Hint,
+			Status:      autoErr.Status,
+			NextActions: browserAutomationNextActions(autoErr.Code),
 		}
 	}
 	var assertErr *AssertionError
 	if errors.As(err, &assertErr) && assertErr.Base != nil {
 		return &WorkflowStepError{
-			Code:    assertErr.Base.Code,
-			Message: RedactError(assertErr.Base.Message),
-			Hint:    assertErr.Base.Hint,
-			Status:  assertErr.Base.Status,
+			Code:        assertErr.Base.Code,
+			Message:     RedactError(assertErr.Base.Message),
+			Hint:        assertErr.Base.Hint,
+			Status:      assertErr.Base.Status,
+			NextActions: browserAutomationNextActions(assertErr.Base.Code),
 		}
 	}
-	return &WorkflowStepError{Code: "automation_failed", Message: RedactError(err.Error()), Status: 500}
+	return &WorkflowStepError{Code: "automation_failed", Message: RedactError(err.Error()), Status: 500, NextActions: browserAutomationNextActions("automation_failed")}
+}
+
+func browserAutomationNextActions(code string) []string {
+	switch code {
+	case "assertion_failed":
+		return []string{"Run browser page ax --json if refs may be stale.", "Add or tune a page.wait step before the assertion.", "Inspect browser page screenshot metadata or page snapshot output."}
+	case "selector_not_found", "target_not_found":
+		return []string{"Run browser tab list --json and browser page ax --json.", "Prefer a fresh --ref from page ax when selectors are unstable.", "Add browser page wait before the action."}
+	case "session_not_running", "devtools_unavailable":
+		return []string{"Run browser session status --json.", "Restart with browser session start --json or attach an explicit DevTools port.", "Verify the browser was launched with remote debugging on 127.0.0.1."}
+	case "human_action_disabled":
+		return []string{"Rerun with --allow-human only when the workflow intentionally pauses for manual browser interaction."}
+	case "human_confirmation_required":
+		return []string{"Ask the user to inspect the browser.", "Rerun with --allow-human --yes only after explicit user confirmation."}
+	case "workflow_invalid", "invalid_args":
+		return []string{"Run browser schema workflow.run --json.", "Use browser workflow run --dry-run --json before executing."}
+	default:
+		return []string{"Inspect data.steps for the failing step.", "Rerun browser workflow run --dry-run --json to validate the plan.", "Use browser page snapshot/ax/console/errors for diagnosis."}
+	}
 }
 
 func workflowConfig(def WorkflowDefinition, opts WorkflowRunOptions) WorkflowConfig {
@@ -399,12 +600,24 @@ func workflowConfig(def WorkflowDefinition, opts WorkflowRunOptions) WorkflowCon
 	if opts.ContinueOverride {
 		continueOnError = opts.ContinueOnError
 	}
-	return WorkflowConfig{SessionName: session, TargetID: targetID, TimeoutSeconds: timeout, ContinueOnError: continueOnError}
+	return WorkflowConfig{
+		SessionName:     session,
+		TargetID:        targetID,
+		TimeoutSeconds:  timeout,
+		ContinueOnError: continueOnError,
+		AllowHuman:      opts.AllowHuman,
+		AutoConfirm:     opts.AutoConfirm,
+		SmartWait:       def.SmartWait,
+	}
 }
 
 func normalizeWorkflowDefinition(def WorkflowDefinition) WorkflowDefinition {
 	def.SessionName = strings.TrimSpace(def.SessionName)
 	def.TargetID = strings.TrimSpace(def.TargetID)
+	if def.Vars == nil {
+		def.Vars = map[string]string{}
+	}
+	def.SmartWait = normalizeWorkflowSmartWait(def.SmartWait)
 	for i := range def.Steps {
 		def.Steps[i] = normalizeWorkflowStep(def.Steps[i])
 	}
@@ -418,11 +631,19 @@ func normalizeWorkflowStep(step WorkflowStep) WorkflowStep {
 	step.Ref = strings.TrimSpace(step.Ref)
 	step.URL = strings.TrimSpace(step.URL)
 	step.URLContains = strings.TrimSpace(step.URLContains)
+	step.File = strings.TrimSpace(step.File)
+	step.Baseline = strings.TrimSpace(step.Baseline)
+	step.DiffOut = strings.TrimSpace(step.DiffOut)
+	step.Format = strings.ToLower(strings.TrimSpace(step.Format))
 	step.Key = strings.TrimSpace(step.Key)
 	step.Out = strings.TrimSpace(step.Out)
 	step.Filter = strings.TrimSpace(step.Filter)
 	step.Method = strings.TrimSpace(step.Method)
 	step.Level = strings.ToLower(strings.TrimSpace(step.Level))
+	step.If = strings.TrimSpace(step.If)
+	step.As = strings.TrimSpace(step.As)
+	step.Prompt = strings.TrimSpace(step.Prompt)
+	step.SmartWait = normalizeWorkflowSmartWait(step.SmartWait)
 	if !step.HasEquals {
 		step.Equals = -1
 	}
@@ -435,10 +656,199 @@ func normalizeWorkflowStep(step WorkflowStep) WorkflowStep {
 	if !step.HasIndex {
 		step.Index = -1
 	}
+	if !step.HasThreshold {
+		step.Threshold = 0
+	}
 	return step
 }
 
+func workflowVars(def WorkflowDefinition, opts WorkflowRunOptions) (map[string]string, error) {
+	vars := map[string]string{}
+	for key, value := range def.Vars {
+		key = normalizeWorkflowVarName(key)
+		if key == "" {
+			return nil, invalidWorkflow("variable names must be non-empty", "Use variable names like query or row_id.")
+		}
+		vars[key] = value
+	}
+	for _, raw := range opts.VarOverrides {
+		key, value, ok := strings.Cut(raw, "=")
+		if !ok {
+			return nil, invalidArgs("--var must be name=value", "Pass repeated --var flags such as --var query=abc.")
+		}
+		key = normalizeWorkflowVarName(key)
+		if key == "" {
+			return nil, invalidArgs("--var name must be non-empty", "Pass repeated --var flags such as --var query=abc.")
+		}
+		vars[key] = value
+	}
+	return vars, nil
+}
+
+func expandWorkflow(def WorkflowDefinition, vars map[string]string) (WorkflowDefinition, error) {
+	def.SessionName = expandWorkflowString(def.SessionName, vars)
+	def.TargetID = expandWorkflowString(def.TargetID, vars)
+	def.SmartWait = expandWorkflowSmartWait(def.SmartWait, vars)
+	expanded := make([]WorkflowStep, 0, len(def.Steps))
+	for _, step := range def.Steps {
+		as := normalizeWorkflowVarName(step.As)
+		if as == "" {
+			as = "item"
+		}
+		items := step.ForEach
+		if len(items) == 0 {
+			var err error
+			next, err := expandWorkflowStep(step, vars)
+			if err != nil {
+				return WorkflowDefinition{}, err
+			}
+			expanded = append(expanded, next)
+			continue
+		}
+		for _, item := range items {
+			localVars := copyWorkflowVars(vars)
+			localVars[as] = expandWorkflowString(item, vars)
+			if as != "item" {
+				localVars["item"] = localVars[as]
+			}
+			next, err := expandWorkflowStep(step, localVars)
+			if err != nil {
+				return WorkflowDefinition{}, err
+			}
+			next.ForEach = nil
+			expanded = append(expanded, next)
+		}
+	}
+	def.Steps = expanded
+	return def, nil
+}
+
+func expandWorkflowStep(step WorkflowStep, vars map[string]string) (WorkflowStep, error) {
+	var missing []string
+	expand := func(raw string) string {
+		return workflowTemplatePattern.ReplaceAllStringFunc(raw, func(match string) string {
+			name := workflowTemplatePattern.FindStringSubmatch(match)[1]
+			value, ok := lookupWorkflowVar(name, vars)
+			if !ok {
+				missing = append(missing, name)
+				return ""
+			}
+			return value
+		})
+	}
+	step.Action = expand(step.Action)
+	step.Name = expand(step.Name)
+	step.Selector = expand(step.Selector)
+	step.Ref = expand(step.Ref)
+	step.Contains = expand(step.Contains)
+	step.URL = expand(step.URL)
+	step.URLContains = expand(step.URLContains)
+	step.File = expand(step.File)
+	step.Baseline = expand(step.Baseline)
+	step.DiffOut = expand(step.DiffOut)
+	step.Format = expand(step.Format)
+	step.Text = expand(step.Text)
+	step.Key = expand(step.Key)
+	step.Value = expand(step.Value)
+	step.Label = expand(step.Label)
+	step.Out = expand(step.Out)
+	step.Filter = expand(step.Filter)
+	step.Method = expand(step.Method)
+	step.Level = expand(step.Level)
+	step.If = expand(step.If)
+	step.Prompt = expand(step.Prompt)
+	step.SmartWait = expandWorkflowSmartWait(step.SmartWait, vars)
+	if len(missing) > 0 {
+		return WorkflowStep{}, invalidWorkflow("undefined workflow variable "+missing[0], "Define it under vars: or pass --var "+missing[0]+"=value.")
+	}
+	step = normalizeWorkflowStep(step)
+	if !workflowConditionPass(step.If) {
+		step.Skip = true
+		step.SkipReason = "if condition evaluated false"
+	}
+	return step, nil
+}
+
+func copyWorkflowVars(vars map[string]string) map[string]string {
+	out := make(map[string]string, len(vars))
+	for key, value := range vars {
+		out[key] = value
+	}
+	return out
+}
+
+func lookupWorkflowVar(raw string, vars map[string]string) (string, bool) {
+	name := normalizeWorkflowVarName(raw)
+	if strings.HasPrefix(name, "vars.") {
+		name = strings.TrimPrefix(name, "vars.")
+	}
+	value, ok := vars[name]
+	return value, ok
+}
+
+func normalizeWorkflowVarName(raw string) string {
+	return strings.Trim(strings.TrimSpace(raw), ".")
+}
+
+func workflowConditionPass(raw string) bool {
+	value := strings.ToLower(strings.TrimSpace(raw))
+	if value == "" {
+		return true
+	}
+	switch value {
+	case "0", "false", "no", "off", "null", "nil", `""`, "''":
+		return false
+	default:
+		return true
+	}
+}
+
+func normalizeWorkflowSmartWait(wait WorkflowSmartWait) WorkflowSmartWait {
+	wait.Selector = strings.TrimSpace(wait.Selector)
+	wait.URLContains = strings.TrimSpace(wait.URLContains)
+	wait.Text = strings.TrimSpace(wait.Text)
+	if wait.DurationMilliseconds < 0 {
+		wait.DurationMilliseconds = 0
+	}
+	if wait.NetworkIdleMilliseconds < 0 {
+		wait.NetworkIdleMilliseconds = 0
+	}
+	if wait.DOMStableMilliseconds < 0 {
+		wait.DOMStableMilliseconds = 0
+	}
+	return wait
+}
+
+func expandWorkflowSmartWait(wait WorkflowSmartWait, vars map[string]string) WorkflowSmartWait {
+	wait.Selector = expandWorkflowString(wait.Selector, vars)
+	wait.URLContains = expandWorkflowString(wait.URLContains, vars)
+	wait.Text = expandWorkflowString(wait.Text, vars)
+	return normalizeWorkflowSmartWait(wait)
+}
+
+func expandWorkflowString(raw string, vars map[string]string) string {
+	return workflowTemplatePattern.ReplaceAllStringFunc(raw, func(match string) string {
+		name := workflowTemplatePattern.FindStringSubmatch(match)[1]
+		if value, ok := lookupWorkflowVar(name, vars); ok {
+			return value
+		}
+		return ""
+	})
+}
+
+func workflowSmartWaitEnabled(wait WorkflowSmartWait) bool {
+	return strings.TrimSpace(wait.Selector) != "" ||
+		strings.TrimSpace(wait.URLContains) != "" ||
+		strings.TrimSpace(wait.Text) != "" ||
+		wait.DurationMilliseconds > 0 ||
+		wait.NetworkIdleMilliseconds > 0 ||
+		wait.DOMStableMilliseconds > 0
+}
+
 func validateWorkflowStep(step WorkflowStep) error {
+	if step.Skip {
+		return nil
+	}
 	if strings.TrimSpace(step.Action) == "" {
 		return invalidWorkflow("action is required", "Pass action: <allowed-action> for each step.")
 	}
@@ -475,6 +885,13 @@ func validateWorkflowStep(step WorkflowStep) error {
 		return err
 	case "page.screenshot":
 		return nil
+	case "page.extract_schema":
+		if strings.TrimSpace(step.File) == "" {
+			return invalidArgs("file is required", "Pass file for page.extract_schema.")
+		}
+		return nil
+	case "page.metrics":
+		return nil
 	case "assert.text":
 		if strings.TrimSpace(step.Contains) == "" {
 			return invalidArgs("contains is required", "Pass contains for assert.text.")
@@ -487,12 +904,34 @@ func validateWorkflowStep(step WorkflowStep) error {
 		return nil
 	case "assert.count":
 		return validateCountAssertionOptions(workflowCountAssertionOptions(PageOptions{}, step))
+	case "assert.screenshot":
+		if strings.TrimSpace(step.Baseline) == "" || strings.TrimSpace(step.DiffOut) == "" {
+			return invalidArgs("baseline and diff_out are required", "Pass baseline and diff_out for assert.screenshot.")
+		}
+		return validateOptionalActionTarget(step.Selector, step.Ref, "assert.screenshot")
 	case "network.wait":
 		if strings.TrimSpace(step.URLContains) == "" {
 			return invalidArgs("url_contains is required", "Pass url_contains for network.wait.")
 		}
 		return nil
-	case "network.start", "network.list", "page.console", "page.errors":
+	case "network.start", "network.list", "page.console", "page.errors", "form.inspect":
+		return nil
+	case "network.export":
+		if strings.TrimSpace(step.Out) == "" {
+			return invalidArgs("out is required", "Pass out for network.export.")
+		}
+		return nil
+	case "form.fill":
+		if strings.TrimSpace(step.File) == "" {
+			return invalidArgs("file is required", "Pass file for form.fill.")
+		}
+		return nil
+	case "human.wait":
+		if step.DurationMilliseconds <= 0 {
+			return invalidArgs("duration_ms is required for human.wait", "Pass a bounded duration_ms while the user manually interacts.")
+		}
+		return nil
+	case "human.confirm":
 		return nil
 	default:
 		return nil
@@ -509,6 +948,10 @@ func workflowStepPlan(index int, step WorkflowStep) WorkflowStepPlan {
 		URL:                     RedactURL(step.URL),
 		URLContainsPreview:      TruncateBytes(RedactString(step.URLContains), 500),
 		URLContainsBytes:        len(step.URLContains),
+		File:                    RedactString(step.File),
+		Baseline:                RedactString(step.Baseline),
+		DiffOut:                 RedactString(step.DiffOut),
+		Format:                  RedactString(step.Format),
 		ContainsPreview:         TruncateBytes(RedactString(step.Contains), 500),
 		ContainsBytes:           len(step.Contains),
 		HasText:                 step.Text != "",
@@ -519,6 +962,13 @@ func workflowStepPlan(index int, step WorkflowStep) WorkflowStepPlan {
 		Filter:                  RedactString(step.Filter),
 		Method:                  normalizeNetworkMethod(step.Method),
 		Level:                   RedactString(step.Level),
+		IfPreview:               TruncateBytes(RedactString(step.If), 500),
+		ForEachCount:            len(step.ForEach),
+		As:                      RedactString(step.As),
+		PromptPreview:           TruncateBytes(RedactString(step.Prompt), 500),
+		PromptBytes:             len(step.Prompt),
+		Skipped:                 step.Skip,
+		SkipReason:              step.SkipReason,
 		Not:                     step.Not,
 		Limit:                   step.Limit,
 		Status:                  statusForOutput(step.Status),
@@ -542,9 +992,19 @@ func workflowStepPlan(index int, step WorkflowStep) WorkflowStepPlan {
 		value := step.Index
 		plan.IndexValue = &value
 	}
+	if step.HasThreshold {
+		value := step.Threshold
+		plan.Threshold = &value
+	}
 	if step.FullPageSet || step.Action == "page.screenshot" {
 		value := workflowFullPage(step)
 		plan.FullPage = &value
+	}
+	if workflowSmartWaitEnabled(step.SmartWait) {
+		value := step.SmartWait
+		value.Text = TruncateBytes(RedactString(value.Text), 500)
+		value.URLContains = TruncateBytes(RedactString(value.URLContains), 500)
+		plan.SmartWait = &value
 	}
 	if strings.TrimSpace(step.Value) != "" {
 		plan.SelectionMode = "value"
@@ -591,6 +1051,19 @@ func workflowStatus(status int) int {
 	return status
 }
 
+func workflowThreshold(step WorkflowStep) float64 {
+	if !step.HasThreshold {
+		return 0
+	}
+	if step.Threshold < 0 {
+		return 0
+	}
+	if step.Threshold > 1 {
+		return 1
+	}
+	return step.Threshold
+}
+
 func invalidWorkflow(message, hint string) *Error {
 	return NewError("workflow_invalid", message, hint, 400)
 }
@@ -617,6 +1090,14 @@ func (w *WorkflowDefinition) UnmarshalYAML(value *yaml.Node) error {
 			}
 		case "continue_on_error":
 			if err := val.Decode(&w.ContinueOnError); err != nil {
+				return err
+			}
+		case "vars":
+			if err := val.Decode(&w.Vars); err != nil {
+				return err
+			}
+		case "smart_wait":
+			if err := val.Decode(&w.SmartWait); err != nil {
 				return err
 			}
 		case "steps":
@@ -666,6 +1147,22 @@ func (s *WorkflowStep) UnmarshalYAML(value *yaml.Node) error {
 			if err := val.Decode(&s.URLContains); err != nil {
 				return err
 			}
+		case "file":
+			if err := val.Decode(&s.File); err != nil {
+				return err
+			}
+		case "baseline":
+			if err := val.Decode(&s.Baseline); err != nil {
+				return err
+			}
+		case "diff_out":
+			if err := val.Decode(&s.DiffOut); err != nil {
+				return err
+			}
+		case "format":
+			if err := val.Decode(&s.Format); err != nil {
+				return err
+			}
 		case "text":
 			if err := val.Decode(&s.Text); err != nil {
 				return err
@@ -696,6 +1193,28 @@ func (s *WorkflowStep) UnmarshalYAML(value *yaml.Node) error {
 			}
 		case "level":
 			if err := val.Decode(&s.Level); err != nil {
+				return err
+			}
+		case "if":
+			if err := val.Decode(&s.If); err != nil {
+				return err
+			}
+		case "for_each":
+			values, err := decodeWorkflowStringSlice(val)
+			if err != nil {
+				return err
+			}
+			s.ForEach = values
+		case "as":
+			if err := val.Decode(&s.As); err != nil {
+				return err
+			}
+		case "prompt":
+			if err := val.Decode(&s.Prompt); err != nil {
+				return err
+			}
+		case "smart_wait":
+			if err := val.Decode(&s.SmartWait); err != nil {
 				return err
 			}
 		case "not":
@@ -739,6 +1258,11 @@ func (s *WorkflowStep) UnmarshalYAML(value *yaml.Node) error {
 			if err := val.Decode(&s.Status); err != nil {
 				return err
 			}
+		case "threshold":
+			if err := val.Decode(&s.Threshold); err != nil {
+				return err
+			}
+			s.HasThreshold = true
 		case "duration_ms":
 			if err := val.Decode(&s.DurationMilliseconds); err != nil {
 				return err
@@ -756,6 +1280,89 @@ func (s *WorkflowStep) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 	return nil
+}
+
+func (w *WorkflowSmartWait) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind == yaml.ScalarNode {
+		var enabled bool
+		if err := value.Decode(&enabled); err != nil {
+			return fmt.Errorf("smart_wait must be a mapping")
+		}
+		if !enabled {
+			*w = WorkflowSmartWait{}
+			return nil
+		}
+		w.NetworkIdleMilliseconds = 500
+		w.DOMStableMilliseconds = 500
+		return nil
+	}
+	if value.Kind != yaml.MappingNode {
+		return fmt.Errorf("smart_wait must be a mapping")
+	}
+	for i := 0; i < len(value.Content); i += 2 {
+		key := normalizeWorkflowKey(value.Content[i].Value)
+		val := value.Content[i+1]
+		switch key {
+		case "selector":
+			if err := val.Decode(&w.Selector); err != nil {
+				return err
+			}
+		case "url_contains":
+			if err := val.Decode(&w.URLContains); err != nil {
+				return err
+			}
+		case "text":
+			if err := val.Decode(&w.Text); err != nil {
+				return err
+			}
+		case "duration_ms":
+			if err := val.Decode(&w.DurationMilliseconds); err != nil {
+				return err
+			}
+		case "network_idle_ms":
+			if err := val.Decode(&w.NetworkIdleMilliseconds); err != nil {
+				return err
+			}
+		case "dom_stable_ms":
+			if err := val.Decode(&w.DOMStableMilliseconds); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unsupported smart_wait field %q", value.Content[i].Value)
+		}
+	}
+	return nil
+}
+
+func decodeWorkflowStringSlice(value *yaml.Node) ([]string, error) {
+	switch value.Kind {
+	case yaml.SequenceNode:
+		out := make([]string, 0, len(value.Content))
+		for _, item := range value.Content {
+			var s string
+			if err := item.Decode(&s); err != nil {
+				return nil, err
+			}
+			out = append(out, s)
+		}
+		return out, nil
+	case yaml.ScalarNode:
+		var raw string
+		if err := value.Decode(&raw); err != nil {
+			return nil, err
+		}
+		parts := strings.Split(raw, ",")
+		out := make([]string, 0, len(parts))
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				out = append(out, part)
+			}
+		}
+		return out, nil
+	default:
+		return nil, fmt.Errorf("for_each must be a string or sequence")
+	}
 }
 
 func normalizeWorkflowKey(raw string) string {

@@ -196,7 +196,17 @@ func (m *Manager) Stop(ctx context.Context, opts StopOptions) (Session, error) {
 		return session, nil
 	}
 	if session.PID <= 0 {
-		return Session{}, NewError("automation_failed", "Session metadata does not include a browser process id.", "Only sessions started by this CLI can be stopped by this CLI.", 500)
+		session.Alive = false
+		session.BrowserWebSocketURL = ""
+		if !opts.KeepMetadata {
+			if err := m.Store.Remove(name); err != nil {
+				return session, err
+			}
+			session.MetadataPath = ""
+		} else if err := m.Store.Save(session); err != nil {
+			return session, err
+		}
+		return session, nil
 	}
 	process, err := os.FindProcess(session.PID)
 	if err != nil {
@@ -216,6 +226,80 @@ func (m *Manager) Stop(ctx context.Context, opts StopOptions) (Session, error) {
 		return session, err
 	}
 	return session, nil
+}
+
+func (m *Manager) Attach(ctx context.Context, opts AttachOptions) (Session, error) {
+	if err := m.ensureStore(); err != nil {
+		return Session{}, err
+	}
+	name := defaultSessionName(opts.Name)
+	if err := ValidateSessionName(name); err != nil {
+		return Session{}, err
+	}
+	addr := strings.TrimSpace(opts.DebugAddr)
+	if addr == "" {
+		addr = LocalDebugAddr
+	}
+	if addr != LocalDebugAddr {
+		return Session{}, invalidArgs("--debug-addr must be 127.0.0.1", "Attach only to an explicitly exposed local DevTools endpoint.")
+	}
+	if opts.DebugPort <= 0 || opts.DebugPort > 65535 {
+		return Session{}, invalidArgs("--debug-port must be between 1 and 65535", "Launch Chrome/Edge with --remote-debugging-port=<port>, then pass that port explicitly.")
+	}
+	client := NewDevToolsClient(addr, opts.DebugPort)
+	version, err := client.Version(ctx)
+	if err != nil {
+		return Session{}, err
+	}
+	now := m.now()
+	session := Session{
+		Name:                name,
+		DebugAddr:           addr,
+		DebugPort:           opts.DebugPort,
+		BrowserWebSocketURL: version.WebSocketDebuggerURL,
+		CreatedAt:           now,
+		LastSeenAt:          now,
+		Alive:               strings.TrimSpace(version.WebSocketDebuggerURL) != "",
+	}
+	if err := m.Store.Save(session); err != nil {
+		return Session{}, err
+	}
+	session.MetadataPath, _ = m.Store.MetadataPath(session.Name)
+	return session, nil
+}
+
+func (m *Manager) Discover(ctx context.Context, opts DiscoverOptions) ([]DiscoveredSession, error) {
+	addr := strings.TrimSpace(opts.DebugAddr)
+	if addr == "" {
+		addr = LocalDebugAddr
+	}
+	if addr != LocalDebugAddr {
+		return nil, invalidArgs("--debug-addr must be 127.0.0.1", "Discovery is intentionally limited to explicit local DevTools endpoints.")
+	}
+	ports := sanitizeDiscoverPorts(opts.Ports)
+	if len(ports) == 0 {
+		ports = []int{9222, 9223, 9224}
+	}
+	out := make([]DiscoveredSession, 0, len(ports))
+	now := m.now()
+	for _, port := range ports {
+		client := NewDevToolsClient(addr, port)
+		item := DiscoveredSession{DebugAddr: addr, DebugPort: port, CheckedAt: now}
+		version, err := client.Version(ctx)
+		if err == nil {
+			item.Alive = strings.TrimSpace(version.WebSocketDebuggerURL) != ""
+			item.Browser = RedactString(version.Browser)
+			item.ProtocolVersion = RedactString(version.ProtocolVersion)
+			item.BrowserWebSocketURL = version.WebSocketDebuggerURL
+			if targets, listErr := client.ListTargets(ctx); listErr == nil {
+				for _, target := range PageTargets(targets) {
+					item.Targets = append(item.Targets, RedactedTarget(target))
+				}
+			}
+		}
+		out = append(out, item)
+	}
+	return out, nil
 }
 
 func (m *Manager) Refresh(ctx context.Context, session Session) Session {
@@ -330,6 +414,19 @@ func freeLocalPort() (int, error) {
 		return 0, fmt.Errorf("listener did not return a TCP address")
 	}
 	return addr.Port, nil
+}
+
+func sanitizeDiscoverPorts(raw []int) []int {
+	seen := map[int]bool{}
+	out := make([]int, 0, len(raw))
+	for _, port := range raw {
+		if port <= 0 || port > 65535 || seen[port] {
+			continue
+		}
+		seen[port] = true
+		out = append(out, port)
+	}
+	return out
 }
 
 func openDevNull() (*os.File, func()) {

@@ -17,7 +17,7 @@ func assertCmd(o *Opts) *cobra.Command {
 		Short: "Assert browser page state",
 		Long:  "Run safe browser page assertions that return JSON-first pass/fail metadata without exposing cookies, storage, headers, bodies, or raw page content.",
 	}
-	c.AddCommand(assertVisibleCmd(o), assertTextCmd(o), assertURLCmd(o), assertCountCmd(o))
+	c.AddCommand(assertVisibleCmd(o), assertTextCmd(o), assertURLCmd(o), assertCountCmd(o), assertScreenshotCmd(o))
 	return c
 }
 
@@ -99,6 +99,36 @@ func assertCountCmd(o *Opts) *cobra.Command {
 	c.Flags().IntVar(&opts.Equals, "equals", -1, "Exact expected selector count.")
 	c.Flags().IntVar(&opts.Min, "min", -1, "Minimum expected selector count.")
 	c.Flags().IntVar(&opts.Max, "max", -1, "Maximum expected selector count.")
+	return c
+}
+
+func assertScreenshotCmd(o *Opts) *cobra.Command {
+	opts := automation.ScreenshotAssertionOptions{PageOptions: defaultPageOptions(), Threshold: 0}
+	c := &cobra.Command{
+		Use:   "screenshot",
+		Short: "Assert a screenshot matches a baseline PNG",
+		Long:  "Capture a page or element screenshot, compare it against a baseline PNG, write a PNG diff artifact, and return sanitized visual assertion metadata.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			opts.FullPageSet = cmd.Flags().Changed("full-page")
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.AssertScreenshot(ctx, opts)
+			return printAssertion(cmd, o, result, err)
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Baseline, "baseline", "", "Baseline PNG path.")
+	c.Flags().StringVar(&opts.OutPath, "out", "", "Output path for the freshly captured actual screenshot PNG.")
+	c.Flags().StringVar(&opts.DiffPath, "diff-out", "", "Output path for the PNG visual diff artifact.")
+	c.Flags().StringVar(&opts.Selector, "selector", "", "Optional CSS selector for an element screenshot assertion.")
+	c.Flags().StringVar(&opts.Ref, "ref", "", "Optional accessibility ref from browser page ax for an element screenshot assertion.")
+	c.Flags().Float64Var(&opts.Threshold, "threshold", 0, "Maximum allowed changed-pixel ratio from 0 to 1.")
+	c.Flags().BoolVar(&opts.FullPage, "full-page", true, "Capture the full page when no selector/ref is provided.")
+	c.Flags().Lookup("full-page").DefValue = "true"
 	return c
 }
 

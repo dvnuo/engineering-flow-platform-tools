@@ -17,7 +17,7 @@ func workflowCmd(o *Opts) *cobra.Command {
 		Short: "Run whitelisted browser automation workflows",
 		Long:  "Parse, validate, dry-run, or execute a YAML workflow made only of whitelisted browser page, assert, network, console, and tab actions.",
 	}
-	c.AddCommand(workflowRunCmd(o))
+	c.AddCommand(workflowRunCmd(o), workflowRecordCmd(o))
 	return c
 }
 
@@ -64,6 +64,37 @@ func workflowRunCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&targetID, "target-id", "", "Optional DevTools page target id to use for page, assert, network, and console steps.")
 	c.Flags().IntVar(&timeout, "timeout", 30, "Maximum seconds per browser page action/assertion step.")
 	c.Flags().BoolVar(&opts.ContinueOnError, "continue-on-error", false, "Continue running later steps after a step fails; the final workflow result still fails.")
+	c.Flags().StringArrayVar(&opts.VarOverrides, "var", nil, "Workflow variable override as name=value. Repeatable; values are not echoed in workflow plans.")
+	c.Flags().StringVar(&opts.ReportOut, "report-out", "", "Optional JSON path for a sanitized workflow run audit report.")
+	c.Flags().BoolVar(&opts.AllowHuman, "allow-human", false, "Allow bounded human.wait pauses in workflows.")
+	c.Flags().BoolVar(&opts.AutoConfirm, "yes", false, "Allow human.confirm steps after explicit user confirmation.")
+	return c
+}
+
+func workflowRecordCmd(o *Opts) *cobra.Command {
+	opts := automation.WorkflowRecordOptions{PageOptions: defaultPageOptions(), DurationMilliseconds: 10000, Limit: 200}
+	c := &cobra.Command{
+		Use:   "record",
+		Short: "Record safe manual browser actions to a workflow skeleton",
+		Long:  "Install a bounded page-side recorder for manual browser clicks, check changes, key presses, and input changes, then write a sanitized workflow YAML skeleton. Typed text is replaced with empty variables.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second+time.Duration(opts.DurationMilliseconds)*time.Millisecond)
+			defer cancel()
+			result, err := mgr.RecordWorkflow(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.OutPath, "out", "", "Output workflow YAML path.")
+	c.Flags().IntVar(&opts.DurationMilliseconds, "duration-ms", 10000, "Recording duration in milliseconds while the user manually interacts.")
+	c.Flags().IntVar(&opts.Limit, "limit", 200, "Maximum number of recorded safe events.")
 	return c
 }
 

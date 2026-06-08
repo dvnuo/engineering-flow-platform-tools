@@ -31,13 +31,15 @@ type AssertionExpected struct {
 }
 
 type AssertionObserved struct {
-	Visible     *bool `json:"visible,omitempty"`
-	Contains    *bool `json:"contains,omitempty"`
-	Count       *int  `json:"count,omitempty"`
-	TextBytes   int   `json:"text_bytes,omitempty"`
-	URLBytes    int   `json:"url_bytes,omitempty"`
-	TitleBytes  int   `json:"title_bytes,omitempty"`
-	TargetCount int   `json:"target_count,omitempty"`
+	Visible         *bool    `json:"visible,omitempty"`
+	Contains        *bool    `json:"contains,omitempty"`
+	Count           *int     `json:"count,omitempty"`
+	TextBytes       int      `json:"text_bytes,omitempty"`
+	URLBytes        int      `json:"url_bytes,omitempty"`
+	TitleBytes      int      `json:"title_bytes,omitempty"`
+	TargetCount     int      `json:"target_count,omitempty"`
+	DifferenceRatio *float64 `json:"difference_ratio,omitempty"`
+	ComparedPixels  int      `json:"compared_pixels,omitempty"`
 }
 
 type AssertionResult struct {
@@ -52,6 +54,7 @@ type AssertionResult struct {
 	Title     string            `json:"title"`
 	Expected  AssertionExpected `json:"expected,omitempty"`
 	Observed  AssertionObserved `json:"observed"`
+	Artifacts map[string]string `json:"artifacts,omitempty"`
 	Message   string            `json:"message,omitempty"`
 }
 

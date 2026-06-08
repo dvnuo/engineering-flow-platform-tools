@@ -18,6 +18,7 @@ func pageCmd(o *Opts) *cobra.Command {
 	c.AddCommand(
 		pageSnapshotCmd(o),
 		pageExtractCmd(o),
+		pageExtractSchemaCmd(o),
 		pageAXCmd(o),
 		pageClickCmd(o),
 		pageTypeCmd(o),
@@ -95,6 +96,32 @@ func pageExtractCmd(o *Opts) *cobra.Command {
 	c.Flags().BoolVar(&opts.IncludeHTML, "include-html", false, "Include redacted and truncated outer HTML for each matching element.")
 	c.Flags().BoolVar(&opts.Pierce, "pierce", false, "Traverse open shadow roots when matching elements; closed shadow roots are not accessible.")
 	c.Flags().IntVar(&opts.MaxHTMLBytes, "max-html-bytes", 20000, "Maximum bytes of redacted outer HTML per element when --include-html is set.")
+	return c
+}
+
+func pageExtractSchemaCmd(o *Opts) *cobra.Command {
+	opts := automation.ExtractSchemaOptions{PageOptions: defaultPageOptions(), Limit: 50}
+	c := &cobra.Command{
+		Use:   "extract-schema",
+		Short: "Extract structured page data using a YAML schema",
+		Long:  "Extract selector-declared text or attribute values from the current page into stable JSON fields. Results are redacted and truncated.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.ExtractSchema(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.File, "file", "", "YAML extraction schema file.")
+	c.Flags().IntVar(&opts.Limit, "limit", 50, "Default maximum number of matching values for fields with many: true.")
 	return c
 }
 

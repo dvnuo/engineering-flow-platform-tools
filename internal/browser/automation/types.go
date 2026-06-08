@@ -41,6 +41,28 @@ type StopOptions struct {
 	KeepMetadata bool
 }
 
+type AttachOptions struct {
+	Name      string
+	DebugAddr string
+	DebugPort int
+}
+
+type DiscoverOptions struct {
+	DebugAddr string
+	Ports     []int
+}
+
+type DiscoveredSession struct {
+	DebugAddr           string    `json:"debug_addr"`
+	DebugPort           int       `json:"debug_port"`
+	Alive               bool      `json:"alive"`
+	Browser             string    `json:"browser,omitempty"`
+	ProtocolVersion     string    `json:"protocol_version,omitempty"`
+	BrowserWebSocketURL string    `json:"browser_websocket_url,omitempty"`
+	Targets             []Target  `json:"targets,omitempty"`
+	CheckedAt           time.Time `json:"checked_at"`
+}
+
 type VersionInfo struct {
 	Browser              string `json:"browser,omitempty"`
 	ProtocolVersion      string `json:"protocol_version,omitempty"`

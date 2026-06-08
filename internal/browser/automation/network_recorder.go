@@ -12,14 +12,16 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-const networkRecorderLimitation = "Records fetch/XHR events only after browser network start injects the page-side recorder; resource timing entries are metadata-only and may not include method or status. Headers, bodies, cookies, and storage are never captured."
+const networkRecorderLimitation = "Records fetch/XHR events only after browser network start injects the page-side recorder; resource timing entries are metadata-only and may not include method, status, or body. Response body previews are captured by default for fetch/XHR only, redacted, truncated, and never include headers, cookies, storage, or request bodies."
 
 type NetworkRecorderOptions struct {
 	PageOptions
-	Filter string
-	Limit  int
-	Method string
-	Status int
+	Filter       string
+	Limit        int
+	Method       string
+	Status       int
+	Body         bool
+	MaxBodyBytes int
 }
 
 type NetworkWaitOptions struct {
@@ -43,6 +45,10 @@ type NetworkRecordEntry struct {
 	DecodedSizeBytes     int64   `json:"decoded_size_bytes,omitempty"`
 	Source               string  `json:"source,omitempty"`
 	Error                string  `json:"error,omitempty"`
+	BodyPreview          string  `json:"body_preview,omitempty"`
+	BodyLength           int     `json:"body_length,omitempty"`
+	BodyTruncated        bool    `json:"body_truncated,omitempty"`
+	BodyCaptured         bool    `json:"body_captured,omitempty"`
 }
 
 type rawNetworkRecordEntry struct {
@@ -60,6 +66,10 @@ type rawNetworkRecordEntry struct {
 	DecodedSizeBytes     int64   `json:"decoded_size_bytes"`
 	Source               string  `json:"source"`
 	Error                string  `json:"error"`
+	BodyPreview          string  `json:"body_preview"`
+	BodyLength           int     `json:"body_length"`
+	BodyTruncated        bool    `json:"body_truncated"`
+	BodyCaptured         bool    `json:"body_captured"`
 }
 
 type rawNetworkRecorderSnapshot struct {
@@ -70,50 +80,56 @@ type rawNetworkRecorderSnapshot struct {
 }
 
 type NetworkRecorderResult struct {
-	Session    string               `json:"session"`
-	TargetID   string               `json:"target_id"`
-	Action     string               `json:"action"`
-	URL        string               `json:"url"`
-	Title      string               `json:"title"`
-	Running    bool                 `json:"running"`
-	Filter     string               `json:"filter,omitempty"`
-	Method     string               `json:"method,omitempty"`
-	Status     int                  `json:"status,omitempty"`
-	Limit      int                  `json:"limit"`
-	Count      int                  `json:"count"`
-	Entries    []NetworkRecordEntry `json:"entries,omitempty"`
-	Artifact   string               `json:"artifact_path,omitempty"`
-	UpdatedAt  time.Time            `json:"updated_at"`
-	Limitation string               `json:"limitation"`
+	Session      string               `json:"session"`
+	TargetID     string               `json:"target_id"`
+	Action       string               `json:"action"`
+	URL          string               `json:"url"`
+	Title        string               `json:"title"`
+	Running      bool                 `json:"running"`
+	Filter       string               `json:"filter,omitempty"`
+	Method       string               `json:"method,omitempty"`
+	Status       int                  `json:"status,omitempty"`
+	Body         bool                 `json:"body"`
+	MaxBodyBytes int                  `json:"max_body_bytes,omitempty"`
+	Limit        int                  `json:"limit"`
+	Count        int                  `json:"count"`
+	Entries      []NetworkRecordEntry `json:"entries,omitempty"`
+	Artifact     string               `json:"artifact_path,omitempty"`
+	UpdatedAt    time.Time            `json:"updated_at"`
+	Limitation   string               `json:"limitation"`
 }
 
 type NetworkWaitResult struct {
-	Session     string             `json:"session"`
-	TargetID    string             `json:"target_id"`
-	Action      string             `json:"action"`
-	URL         string             `json:"url"`
-	Title       string             `json:"title"`
-	Matched     bool               `json:"matched"`
-	URLContains string             `json:"url_contains"`
-	Method      string             `json:"method,omitempty"`
-	Status      int                `json:"status,omitempty"`
-	Timeout     int                `json:"timeout"`
-	Entry       NetworkRecordEntry `json:"entry,omitempty"`
-	Artifact    string             `json:"artifact_path,omitempty"`
-	UpdatedAt   time.Time          `json:"updated_at"`
-	Limitation  string             `json:"limitation"`
+	Session      string             `json:"session"`
+	TargetID     string             `json:"target_id"`
+	Action       string             `json:"action"`
+	URL          string             `json:"url"`
+	Title        string             `json:"title"`
+	Matched      bool               `json:"matched"`
+	URLContains  string             `json:"url_contains"`
+	Method       string             `json:"method,omitempty"`
+	Status       int                `json:"status,omitempty"`
+	Body         bool               `json:"body"`
+	MaxBodyBytes int                `json:"max_body_bytes,omitempty"`
+	Timeout      int                `json:"timeout"`
+	Entry        NetworkRecordEntry `json:"entry,omitempty"`
+	Artifact     string             `json:"artifact_path,omitempty"`
+	UpdatedAt    time.Time          `json:"updated_at"`
+	Limitation   string             `json:"limitation"`
 }
 
 type NetworkRecorderArtifact struct {
-	Session    string               `json:"session"`
-	TargetID   string               `json:"target_id"`
-	Running    bool                 `json:"running"`
-	Filter     string               `json:"filter,omitempty"`
-	Limit      int                  `json:"limit"`
-	Count      int                  `json:"count"`
-	Entries    []NetworkRecordEntry `json:"entries"`
-	UpdatedAt  time.Time            `json:"updated_at"`
-	Limitation string               `json:"limitation"`
+	Session      string               `json:"session"`
+	TargetID     string               `json:"target_id"`
+	Running      bool                 `json:"running"`
+	Filter       string               `json:"filter,omitempty"`
+	Limit        int                  `json:"limit"`
+	Body         bool                 `json:"body"`
+	MaxBodyBytes int                  `json:"max_body_bytes,omitempty"`
+	Count        int                  `json:"count"`
+	Entries      []NetworkRecordEntry `json:"entries"`
+	UpdatedAt    time.Time            `json:"updated_at"`
+	Limitation   string               `json:"limitation"`
 }
 
 func (m *Manager) NetworkStart(ctx context.Context, opts NetworkRecorderOptions) (NetworkRecorderResult, error) {
@@ -127,7 +143,7 @@ func (m *Manager) NetworkStart(ctx context.Context, opts NetworkRecorderOptions)
 	var finalURL, title string
 	var raw rawNetworkRecorderSnapshot
 	if err := chromedp.Run(pageCtx,
-		chromedp.Evaluate(networkRecorderStartExpression(opts.Limit), &raw, chromedp.EvalAsValue),
+		chromedp.Evaluate(networkRecorderStartExpression(opts), &raw, chromedp.EvalAsValue),
 		chromedp.Location(&finalURL),
 		chromedp.Title(&title),
 	); err != nil {
@@ -167,7 +183,7 @@ func (m *Manager) NetworkList(ctx context.Context, opts NetworkRecorderOptions) 
 	var finalURL, title string
 	var raw rawNetworkRecorderSnapshot
 	if err := chromedp.Run(pageCtx,
-		chromedp.Evaluate(networkRecorderCollectExpression(opts.Limit), &raw, chromedp.EvalAsValue),
+		chromedp.Evaluate(networkRecorderCollectExpression(opts), &raw, chromedp.EvalAsValue),
 		chromedp.Location(&finalURL),
 		chromedp.Title(&title),
 	); err != nil {
@@ -213,7 +229,7 @@ func (m *Manager) NetworkWait(ctx context.Context, opts NetworkWaitOptions) (Net
 	var lastRaw rawNetworkRecorderSnapshot
 	for {
 		if err := chromedp.Run(pageCtx,
-			chromedp.Evaluate(networkRecorderCollectExpression(opts.Limit), &lastRaw, chromedp.EvalAsValue),
+			chromedp.Evaluate(networkRecorderCollectExpression(opts.NetworkRecorderOptions), &lastRaw, chromedp.EvalAsValue),
 			chromedp.Location(&finalURL),
 			chromedp.Title(&title),
 		); err != nil {
@@ -227,20 +243,22 @@ func (m *Manager) NetworkWait(ctx context.Context, opts NetworkWaitOptions) (Net
 					return NetworkWaitResult{}, err
 				}
 				return NetworkWaitResult{
-					Session:     session.Name,
-					TargetID:    target.ID,
-					Action:      "wait",
-					URL:         RedactURL(finalURL),
-					Title:       RedactString(title),
-					Matched:     true,
-					URLContains: RedactString(opts.URLContains),
-					Method:      normalizeNetworkMethod(opts.Method),
-					Status:      statusForOutput(opts.Status),
-					Timeout:     PageTimeoutSeconds(opts.TimeoutSeconds),
-					Entry:       entry,
-					Artifact:    artifact,
-					UpdatedAt:   m.now(),
-					Limitation:  networkRecorderLimitation,
+					Session:      session.Name,
+					TargetID:     target.ID,
+					Action:       "wait",
+					URL:          RedactURL(finalURL),
+					Title:        RedactString(title),
+					Matched:      true,
+					URLContains:  RedactString(opts.URLContains),
+					Method:       normalizeNetworkMethod(opts.Method),
+					Status:       statusForOutput(opts.Status),
+					Body:         opts.Body,
+					MaxBodyBytes: opts.MaxBodyBytes,
+					Timeout:      PageTimeoutSeconds(opts.TimeoutSeconds),
+					Entry:        entry,
+					Artifact:     artifact,
+					UpdatedAt:    m.now(),
+					Limitation:   networkRecorderLimitation,
 				}, nil
 			}
 		}
@@ -266,6 +284,12 @@ func normalizeNetworkRecorderOptions(opts NetworkRecorderOptions) NetworkRecorde
 	if opts.Status <= 0 {
 		opts.Status = -1
 	}
+	if opts.MaxBodyBytes <= 0 {
+		opts.MaxBodyBytes = 20000
+	}
+	if opts.MaxBodyBytes > 200000 {
+		opts.MaxBodyBytes = 200000
+	}
 	return opts
 }
 
@@ -277,21 +301,23 @@ func (m *Manager) networkRecorderResult(session Session, target Target, action, 
 		return NetworkRecorderResult{}, err
 	}
 	return NetworkRecorderResult{
-		Session:    session.Name,
-		TargetID:   target.ID,
-		Action:     action,
-		URL:        RedactURL(finalURL),
-		Title:      RedactString(title),
-		Running:    raw.Running,
-		Filter:     RedactString(opts.Filter),
-		Method:     opts.Method,
-		Status:     statusForOutput(opts.Status),
-		Limit:      opts.Limit,
-		Count:      count,
-		Entries:    entries,
-		Artifact:   artifact,
-		UpdatedAt:  now,
-		Limitation: networkRecorderLimitation,
+		Session:      session.Name,
+		TargetID:     target.ID,
+		Action:       action,
+		URL:          RedactURL(finalURL),
+		Title:        RedactString(title),
+		Running:      raw.Running,
+		Filter:       RedactString(opts.Filter),
+		Method:       opts.Method,
+		Status:       statusForOutput(opts.Status),
+		Body:         opts.Body,
+		MaxBodyBytes: opts.MaxBodyBytes,
+		Limit:        opts.Limit,
+		Count:        count,
+		Entries:      entries,
+		Artifact:     artifact,
+		UpdatedAt:    now,
+		Limitation:   networkRecorderLimitation,
 	}, nil
 }
 
@@ -300,7 +326,7 @@ func sanitizeNetworkRecordEntries(raw []rawNetworkRecordEntry, opts NetworkRecor
 	out := make([]NetworkRecordEntry, 0, minInt(opts.Limit, len(raw)))
 	count := 0
 	for _, entry := range raw {
-		clean := sanitizeNetworkRecordEntry(entry)
+		clean := sanitizeNetworkRecordEntry(entry, opts)
 		if !networkRecordMatches(clean, opts) {
 			continue
 		}
@@ -314,8 +340,8 @@ func sanitizeNetworkRecordEntries(raw []rawNetworkRecordEntry, opts NetworkRecor
 	return out, count
 }
 
-func sanitizeNetworkRecordEntry(raw rawNetworkRecordEntry) NetworkRecordEntry {
-	return NetworkRecordEntry{
+func sanitizeNetworkRecordEntry(raw rawNetworkRecordEntry, opts NetworkRecorderOptions) NetworkRecordEntry {
+	entry := NetworkRecordEntry{
 		ID:                   TruncateBytes(RedactString(raw.ID), 120),
 		URL:                  RedactURL(raw.URL),
 		Method:               normalizeNetworkMethod(raw.Method),
@@ -331,6 +357,14 @@ func sanitizeNetworkRecordEntry(raw rawNetworkRecordEntry) NetworkRecordEntry {
 		Source:               strings.ToLower(TruncateBytes(RedactString(raw.Source), 80)),
 		Error:                TruncateBytes(RedactError(raw.Error), 500),
 	}
+	if opts.Body && raw.BodyCaptured {
+		body := TruncateBytes(RedactString(raw.BodyPreview), opts.MaxBodyBytes)
+		entry.BodyPreview = body
+		entry.BodyLength = nonNegativeInt(raw.BodyLength)
+		entry.BodyTruncated = raw.BodyTruncated || len(body) > opts.MaxBodyBytes
+		entry.BodyCaptured = true
+	}
+	return entry
 }
 
 func networkRecordMatches(entry NetworkRecordEntry, opts NetworkRecorderOptions) bool {
@@ -377,15 +411,17 @@ func (m *Manager) writeNetworkArtifact(session Session, target Target, running b
 		return "", NewError("artifact_write_failed", err.Error(), "Check permissions for browser network artifacts.", 500)
 	}
 	artifact := NetworkRecorderArtifact{
-		Session:    session.Name,
-		TargetID:   target.ID,
-		Running:    running,
-		Filter:     RedactString(opts.Filter),
-		Limit:      opts.Limit,
-		Count:      count,
-		Entries:    entries,
-		UpdatedAt:  now,
-		Limitation: networkRecorderLimitation,
+		Session:      session.Name,
+		TargetID:     target.ID,
+		Running:      running,
+		Filter:       RedactString(opts.Filter),
+		Limit:        opts.Limit,
+		Body:         opts.Body,
+		MaxBodyBytes: opts.MaxBodyBytes,
+		Count:        count,
+		Entries:      entries,
+		UpdatedAt:    now,
+		Limitation:   networkRecorderLimitation,
 	}
 	b, err := json.MarshalIndent(artifact, "", "  ")
 	if err != nil {
@@ -463,17 +499,17 @@ func nonNegativeInt64(value int64) int64 {
 	return value
 }
 
-func networkRecorderStartExpression(limit int) string {
+func networkRecorderStartExpression(opts NetworkRecorderOptions) string {
 	return networkRecorderLibraryExpression() + `
 (function () {
-  return window.__efpBrowserNetworkRecorder.install(` + strconv.Itoa(limit) + `);
+  return window.__efpBrowserNetworkRecorder.install(` + strconv.Itoa(opts.Limit) + `, ` + strconv.FormatBool(opts.Body) + `, ` + strconv.Itoa(opts.MaxBodyBytes) + `);
 })()`
 }
 
-func networkRecorderCollectExpression(limit int) string {
+func networkRecorderCollectExpression(opts NetworkRecorderOptions) string {
 	return networkRecorderLibraryExpression() + `
 (function () {
-  return window.__efpBrowserNetworkRecorder.collect(` + strconv.Itoa(limit) + `);
+  return window.__efpBrowserNetworkRecorder.collect(` + strconv.Itoa(opts.Limit) + `, ` + strconv.FormatBool(opts.Body) + `, ` + strconv.Itoa(opts.MaxBodyBytes) + `);
 })()`
 }
 
@@ -493,7 +529,7 @@ func networkRecorderClearExpression() string {
 
 func networkRecorderLibraryExpression() string {
 	return `(function () {
-  if (window.__efpBrowserNetworkRecorder && window.__efpBrowserNetworkRecorder.version === 1) return;
+  if (window.__efpBrowserNetworkRecorder && window.__efpBrowserNetworkRecorder.version === 2) return;
   const now = () => Date.now();
   const performanceNow = () => (window.performance && performance.now) ? performance.now() : 0;
   const normalizeURL = (value) => {
@@ -514,9 +550,11 @@ func networkRecorderLibraryExpression() string {
     return String(method || "GET").toUpperCase().slice(0, 20);
   };
   const state = {
-    version: 1,
+    version: 2,
     running: false,
     limit: 500,
+    body: true,
+    max_body_bytes: 20000,
     sequence: 0,
     entries: [],
     originals: {
@@ -545,7 +583,11 @@ func networkRecorderLibraryExpression() string {
     encoded_size_bytes: Number(entry.encodedBodySize || 0),
     decoded_size_bytes: Number(entry.decodedBodySize || 0),
     source: "resource_timing",
-    error: ""
+    error: "",
+    body_preview: "",
+    body_length: 0,
+    body_truncated: false,
+    body_captured: false
   });
   const collectResources = () => {
     const resources = (window.performance && performance.getEntriesByType) ? performance.getEntriesByType("resource") : [];
@@ -558,8 +600,26 @@ func networkRecorderLibraryExpression() string {
       }
     }
   };
-  state.install = (limit) => {
+  const attachBodyPreview = async (record, response) => {
+    if (!state.body || !response || !response.clone) return;
+    try {
+      const clone = response.clone();
+      const body = await clone.text();
+      record.body_length = body.length;
+      record.body_preview = body.slice(0, state.max_body_bytes);
+      record.body_truncated = body.length > state.max_body_bytes;
+      record.body_captured = true;
+    } catch (err) {
+      record.body_preview = "";
+      record.body_length = 0;
+      record.body_truncated = false;
+      record.body_captured = false;
+    }
+  };
+  state.install = (limit, body, maxBodyBytes) => {
     state.limit = Math.max(1, Math.min(5000, Number(limit || state.limit || 500)));
+    state.body = body !== false;
+    state.max_body_bytes = Math.max(0, Math.min(200000, Number(maxBodyBytes || state.max_body_bytes || 20000)));
     state.running = true;
     collectResources();
     if (!state.observer && window.PerformanceObserver) {
@@ -588,13 +648,18 @@ func networkRecorderLibraryExpression() string {
           encoded_size_bytes: 0,
           decoded_size_bytes: 0,
           source: "fetch",
-          error: ""
+          error: "",
+          body_preview: "",
+          body_length: 0,
+          body_truncated: false,
+          body_captured: false
         };
         try {
           const response = await state.originals.fetch.apply(this, arguments);
           record.status = Number(response && response.status || 0);
           record.ended_at_ms = now();
           record.duration_ms = performanceNow() - startedPerf;
+          await attachBodyPreview(record, response);
           push(record);
           return response;
         } catch (err) {
@@ -624,7 +689,11 @@ func networkRecorderLibraryExpression() string {
           encoded_size_bytes: 0,
           decoded_size_bytes: 0,
           source: "xhr",
-          error: ""
+          error: "",
+          body_preview: "",
+          body_length: 0,
+          body_truncated: false,
+          body_captured: false
         };
         return state.originals.xhrOpen.apply(this, arguments);
       };
@@ -638,6 +707,15 @@ func networkRecorderLibraryExpression() string {
           record.status = Number(this.status || 0);
           record.ended_at_ms = now();
           record.duration_ms = performanceNow() - startedPerf;
+          if (state.body) {
+            try {
+              const body = String(this.responseText || "");
+              record.body_length = body.length;
+              record.body_preview = body.slice(0, state.max_body_bytes);
+              record.body_truncated = body.length > state.max_body_bytes;
+              record.body_captured = true;
+            } catch (_) {}
+          }
           push(record);
         };
         this.addEventListener("loadend", finalize, {once: true});
@@ -645,16 +723,18 @@ func networkRecorderLibraryExpression() string {
         return state.originals.xhrSend.apply(this, arguments);
       };
     }
-    return state.collect(state.limit);
+    return state.collect(state.limit, state.body, state.max_body_bytes);
   };
-  state.collect = (limit) => {
+  state.collect = (limit, body, maxBodyBytes) => {
     state.limit = Math.max(1, Math.min(5000, Number(limit || state.limit || 500)));
+    state.body = body !== false;
+    state.max_body_bytes = Math.max(0, Math.min(200000, Number(maxBodyBytes || state.max_body_bytes || 20000)));
     collectResources();
     return {running: state.running, limit: state.limit, count: state.entries.length, entries: state.entries.slice(-state.limit)};
   };
   state.clear = () => {
     state.entries = [];
-    return state.collect(state.limit);
+    return state.collect(state.limit, state.body, state.max_body_bytes);
   };
   state.stop = () => {
     state.running = false;
@@ -663,7 +743,7 @@ func networkRecorderLibraryExpression() string {
     if (state.originals.fetch) window.fetch = state.originals.fetch;
     if (state.originals.xhrOpen && window.XMLHttpRequest && window.XMLHttpRequest.prototype) XMLHttpRequest.prototype.open = state.originals.xhrOpen;
     if (state.originals.xhrSend && window.XMLHttpRequest && window.XMLHttpRequest.prototype) XMLHttpRequest.prototype.send = state.originals.xhrSend;
-    return state.collect(state.limit);
+    return state.collect(state.limit, state.body, state.max_body_bytes);
   };
   window.__efpBrowserNetworkRecorder = state;
 })()`

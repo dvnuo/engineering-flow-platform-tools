@@ -61,6 +61,7 @@ type WorkflowRunOptions struct {
 	ContinueOverride bool
 	VarOverrides     []string
 	ReportOut        string
+	EvidenceDir      string
 	AllowHuman       bool
 	AutoConfirm      bool
 }
@@ -80,6 +81,7 @@ type WorkflowStep struct {
 	Name                    string            `json:"name,omitempty"`
 	Selector                string            `json:"selector,omitempty"`
 	Ref                     string            `json:"ref,omitempty"`
+	Locators                []ElementLocator  `json:"locators,omitempty"`
 	Contains                string            `json:"contains,omitempty"`
 	URL                     string            `json:"url,omitempty"`
 	URLContains             string            `json:"url_contains,omitempty"`
@@ -148,6 +150,7 @@ type WorkflowStepPlan struct {
 	Action                  string             `json:"action"`
 	Selector                string             `json:"selector,omitempty"`
 	Ref                     string             `json:"ref,omitempty"`
+	LocatorCount            int                `json:"locator_count,omitempty"`
 	URL                     string             `json:"url,omitempty"`
 	URLContainsPreview      string             `json:"url_contains_preview,omitempty"`
 	URLContainsBytes        int                `json:"url_contains_bytes,omitempty"`
@@ -221,6 +224,9 @@ type WorkflowRunResult struct {
 	Limitation           string               `json:"limitation"`
 	ReportPath           string               `json:"report_path,omitempty"`
 	ReportBytes          int64                `json:"report_bytes,omitempty"`
+	EvidenceDir          string               `json:"evidence_dir,omitempty"`
+	EvidenceManifest     string               `json:"evidence_manifest,omitempty"`
+	EvidenceBytes        int64                `json:"evidence_bytes,omitempty"`
 }
 
 type WorkflowError struct {
@@ -369,6 +375,11 @@ func RunWorkflow(ctx context.Context, mgr *Manager, opts WorkflowRunOptions) (Wo
 		}
 	}
 	result.DurationMilliseconds = elapsedMilliseconds(start)
+	if !opts.DryRun && strings.TrimSpace(opts.EvidenceDir) != "" {
+		if err := writeWorkflowEvidenceBundle(ctx, mgr, config, opts.EvidenceDir, &result); err != nil {
+			return WorkflowRunResult{}, err
+		}
+	}
 	if err := writeWorkflowReport(opts.ReportOut, &result); err != nil {
 		return WorkflowRunResult{}, err
 	}
@@ -424,39 +435,39 @@ func executeWorkflowAction(ctx context.Context, mgr *Manager, config WorkflowCon
 			DOMStableMilliseconds:   step.DOMStableMilliseconds,
 		})
 	case "page.click":
-		return mgr.Click(ctx, ClickOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref})
+		return executeWorkflowClick(ctx, mgr, config, page, step)
 	case "page.type":
-		return mgr.Type(ctx, TypeOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref, Text: step.Text, Clear: step.Clear})
+		return executeWorkflowType(ctx, mgr, page, step)
 	case "page.press":
-		return mgr.Press(ctx, PressOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref, Key: step.Key})
+		return executeWorkflowPress(ctx, mgr, page, step)
 	case "page.select":
-		return mgr.Select(ctx, SelectOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref, Value: step.Value, Label: step.Label, Index: workflowSelectIndex(step)})
+		return executeWorkflowSelect(ctx, mgr, page, step)
 	case "page.check":
-		return mgr.Check(ctx, CheckOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref, Checked: true})
+		return executeWorkflowCheck(ctx, mgr, page, step, true)
 	case "page.uncheck":
-		return mgr.Check(ctx, CheckOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref, Checked: false})
+		return executeWorkflowCheck(ctx, mgr, page, step, false)
 	case "page.screenshot":
-		return mgr.Screenshot(ctx, ScreenshotOptions{PageOptions: page, OutPath: step.Out, FullPage: workflowFullPage(step), FullPageSet: step.FullPageSet})
+		return executeWorkflowScreenshot(ctx, mgr, page, step)
 	case "page.extract_schema":
 		return mgr.ExtractSchema(ctx, ExtractSchemaOptions{PageOptions: page, File: step.File, Limit: step.Limit})
 	case "page.metrics":
 		return mgr.Metrics(ctx, MetricsOptions{PageOptions: page, LimitResources: step.Limit, Filter: step.Filter})
 	case "assert.visible":
-		return mgr.AssertVisible(ctx, AssertionOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref, Not: step.Not, Equals: -1, Min: -1, Max: -1})
+		return executeWorkflowAssertVisible(ctx, mgr, page, step)
 	case "assert.text":
-		return mgr.AssertText(ctx, AssertionOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref, Contains: step.Contains, Not: step.Not, Equals: -1, Min: -1, Max: -1})
+		return executeWorkflowAssertText(ctx, mgr, page, step)
 	case "assert.url":
 		return mgr.AssertURL(ctx, AssertionOptions{PageOptions: page, Contains: step.Contains, Not: step.Not, Equals: -1, Min: -1, Max: -1})
 	case "assert.count":
 		return mgr.AssertCount(ctx, workflowCountAssertionOptions(page, step))
 	case "assert.screenshot":
-		return mgr.AssertScreenshot(ctx, ScreenshotAssertionOptions{PageOptions: page, Baseline: step.Baseline, OutPath: step.Out, DiffPath: step.DiffOut, Selector: step.Selector, Ref: step.Ref, Threshold: workflowThreshold(step), FullPage: workflowFullPage(step), FullPageSet: step.FullPageSet})
+		return executeWorkflowAssertScreenshot(ctx, mgr, page, step)
 	case "network.start":
-		return mgr.NetworkStart(ctx, NetworkRecorderOptions{PageOptions: page, Filter: step.Filter, Limit: step.Limit, Status: -1})
+		return mgr.NetworkStart(ctx, NetworkRecorderOptions{PageOptions: page, Filter: step.Filter, Limit: step.Limit, Status: -1, Body: true, MaxBodyBytes: 20000})
 	case "network.wait":
-		return mgr.NetworkWait(ctx, NetworkWaitOptions{NetworkRecorderOptions: NetworkRecorderOptions{PageOptions: page, Limit: step.Limit, Method: step.Method, Status: workflowStatus(step.Status)}, URLContains: step.URLContains})
+		return mgr.NetworkWait(ctx, NetworkWaitOptions{NetworkRecorderOptions: NetworkRecorderOptions{PageOptions: page, Limit: step.Limit, Method: step.Method, Status: workflowStatus(step.Status), Body: true, MaxBodyBytes: 20000}, URLContains: step.URLContains})
 	case "network.list":
-		return mgr.NetworkList(ctx, NetworkRecorderOptions{PageOptions: page, Filter: step.Filter, Limit: step.Limit, Method: step.Method, Status: workflowStatus(step.Status)})
+		return mgr.NetworkList(ctx, NetworkRecorderOptions{PageOptions: page, Filter: step.Filter, Limit: step.Limit, Method: step.Method, Status: workflowStatus(step.Status), Body: true, MaxBodyBytes: 20000})
 	case "network.export":
 		return mgr.NetworkExport(ctx, NetworkExportOptions{PageOptions: page, OutPath: step.Out, Format: step.Format, Filter: step.Filter, Limit: step.Limit})
 	case "page.console":
@@ -501,6 +512,301 @@ func workflowErrorData(err error) any {
 	var assertErr *AssertionError
 	if errors.As(err, &assertErr) {
 		return assertErr.Result
+	}
+	return nil
+}
+
+func executeWorkflowClick(ctx context.Context, mgr *Manager, config WorkflowConfig, page PageOptions, step WorkflowStep) (any, error) {
+	selector, ref, err := workflowActionTarget(ctx, mgr, page, step)
+	if err != nil {
+		return nil, err
+	}
+	result, err := mgr.Click(ctx, ClickOptions{PageOptions: page, Selector: selector, Ref: ref, AllowRisky: config.AutoConfirm})
+	if err == nil || len(step.Locators) == 0 || !workflowCanRetryWithLocator(err) {
+		return result, err
+	}
+	selector, resolveErr := mgr.ResolveLocatorSelector(ctx, page, step.Locators)
+	if resolveErr != nil {
+		return result, err
+	}
+	return mgr.Click(ctx, ClickOptions{PageOptions: page, Selector: selector, AllowRisky: config.AutoConfirm})
+}
+
+func executeWorkflowType(ctx context.Context, mgr *Manager, page PageOptions, step WorkflowStep) (any, error) {
+	selector, ref, err := workflowActionTarget(ctx, mgr, page, step)
+	if err != nil {
+		return nil, err
+	}
+	result, err := mgr.Type(ctx, TypeOptions{PageOptions: page, Selector: selector, Ref: ref, Text: step.Text, Clear: step.Clear})
+	if selector, ok := workflowRetrySelector(ctx, mgr, page, step, err); ok {
+		return mgr.Type(ctx, TypeOptions{PageOptions: page, Selector: selector, Text: step.Text, Clear: step.Clear})
+	}
+	return result, err
+}
+
+func executeWorkflowPress(ctx context.Context, mgr *Manager, page PageOptions, step WorkflowStep) (any, error) {
+	selector, ref, err := workflowActionTarget(ctx, mgr, page, step)
+	if err != nil {
+		return nil, err
+	}
+	result, err := mgr.Press(ctx, PressOptions{PageOptions: page, Selector: selector, Ref: ref, Key: step.Key})
+	if selector, ok := workflowRetrySelector(ctx, mgr, page, step, err); ok {
+		return mgr.Press(ctx, PressOptions{PageOptions: page, Selector: selector, Key: step.Key})
+	}
+	return result, err
+}
+
+func executeWorkflowSelect(ctx context.Context, mgr *Manager, page PageOptions, step WorkflowStep) (any, error) {
+	selector, ref, err := workflowActionTarget(ctx, mgr, page, step)
+	if err != nil {
+		return nil, err
+	}
+	result, err := mgr.Select(ctx, SelectOptions{PageOptions: page, Selector: selector, Ref: ref, Value: step.Value, Label: step.Label, Index: workflowSelectIndex(step)})
+	if selector, ok := workflowRetrySelector(ctx, mgr, page, step, err); ok {
+		return mgr.Select(ctx, SelectOptions{PageOptions: page, Selector: selector, Value: step.Value, Label: step.Label, Index: workflowSelectIndex(step)})
+	}
+	return result, err
+}
+
+func executeWorkflowCheck(ctx context.Context, mgr *Manager, page PageOptions, step WorkflowStep, checked bool) (any, error) {
+	selector, ref, err := workflowActionTarget(ctx, mgr, page, step)
+	if err != nil {
+		return nil, err
+	}
+	result, err := mgr.Check(ctx, CheckOptions{PageOptions: page, Selector: selector, Ref: ref, Checked: checked})
+	if selector, ok := workflowRetrySelector(ctx, mgr, page, step, err); ok {
+		return mgr.Check(ctx, CheckOptions{PageOptions: page, Selector: selector, Checked: checked})
+	}
+	return result, err
+}
+
+func executeWorkflowScreenshot(ctx context.Context, mgr *Manager, page PageOptions, step WorkflowStep) (any, error) {
+	selector, ref, err := workflowOptionalActionTarget(ctx, mgr, page, step)
+	if err != nil {
+		return nil, err
+	}
+	result, err := mgr.Screenshot(ctx, ScreenshotOptions{PageOptions: page, OutPath: step.Out, FullPage: workflowFullPage(step), FullPageSet: step.FullPageSet, Selector: selector, Ref: ref})
+	if selector, ok := workflowRetrySelector(ctx, mgr, page, step, err); ok {
+		return mgr.Screenshot(ctx, ScreenshotOptions{PageOptions: page, OutPath: step.Out, FullPage: workflowFullPage(step), FullPageSet: step.FullPageSet, Selector: selector})
+	}
+	return result, err
+}
+
+func executeWorkflowAssertVisible(ctx context.Context, mgr *Manager, page PageOptions, step WorkflowStep) (any, error) {
+	selector, ref, err := workflowActionTarget(ctx, mgr, page, step)
+	if err != nil {
+		return nil, err
+	}
+	result, err := mgr.AssertVisible(ctx, AssertionOptions{PageOptions: page, Selector: selector, Ref: ref, Not: step.Not, Equals: -1, Min: -1, Max: -1})
+	if selector, ok := workflowRetrySelector(ctx, mgr, page, step, err); ok {
+		return mgr.AssertVisible(ctx, AssertionOptions{PageOptions: page, Selector: selector, Not: step.Not, Equals: -1, Min: -1, Max: -1})
+	}
+	return result, err
+}
+
+func executeWorkflowAssertText(ctx context.Context, mgr *Manager, page PageOptions, step WorkflowStep) (any, error) {
+	selector, ref, err := workflowActionTarget(ctx, mgr, page, step)
+	if err != nil {
+		return nil, err
+	}
+	result, err := mgr.AssertText(ctx, AssertionOptions{PageOptions: page, Selector: selector, Ref: ref, Contains: step.Contains, Not: step.Not, Equals: -1, Min: -1, Max: -1})
+	if selector, ok := workflowRetrySelector(ctx, mgr, page, step, err); ok {
+		return mgr.AssertText(ctx, AssertionOptions{PageOptions: page, Selector: selector, Contains: step.Contains, Not: step.Not, Equals: -1, Min: -1, Max: -1})
+	}
+	return result, err
+}
+
+func executeWorkflowAssertScreenshot(ctx context.Context, mgr *Manager, page PageOptions, step WorkflowStep) (any, error) {
+	selector, ref, err := workflowOptionalActionTarget(ctx, mgr, page, step)
+	if err != nil {
+		return nil, err
+	}
+	result, err := mgr.AssertScreenshot(ctx, ScreenshotAssertionOptions{PageOptions: page, Baseline: step.Baseline, OutPath: step.Out, DiffPath: step.DiffOut, Selector: selector, Ref: ref, Threshold: workflowThreshold(step), FullPage: workflowFullPage(step), FullPageSet: step.FullPageSet})
+	if selector, ok := workflowRetrySelector(ctx, mgr, page, step, err); ok {
+		return mgr.AssertScreenshot(ctx, ScreenshotAssertionOptions{PageOptions: page, Baseline: step.Baseline, OutPath: step.Out, DiffPath: step.DiffOut, Selector: selector, Threshold: workflowThreshold(step), FullPage: workflowFullPage(step), FullPageSet: step.FullPageSet})
+	}
+	return result, err
+}
+
+func workflowRetrySelector(ctx context.Context, mgr *Manager, page PageOptions, step WorkflowStep, err error) (string, bool) {
+	if err == nil || len(step.Locators) == 0 || !workflowCanRetryWithLocator(err) {
+		return "", false
+	}
+	selector, resolveErr := mgr.ResolveLocatorSelector(ctx, page, step.Locators)
+	if resolveErr != nil {
+		return "", false
+	}
+	return selector, true
+}
+
+func workflowActionTarget(ctx context.Context, mgr *Manager, page PageOptions, step WorkflowStep) (string, string, error) {
+	if strings.TrimSpace(step.Selector) != "" || strings.TrimSpace(step.Ref) != "" {
+		return step.Selector, step.Ref, nil
+	}
+	if len(step.Locators) == 0 {
+		return "", "", validateActionTarget("", "", step.Action)
+	}
+	selector, err := mgr.ResolveLocatorSelector(ctx, page, step.Locators)
+	if err != nil {
+		return "", "", err
+	}
+	return selector, "", nil
+}
+
+func workflowOptionalActionTarget(ctx context.Context, mgr *Manager, page PageOptions, step WorkflowStep) (string, string, error) {
+	if strings.TrimSpace(step.Selector) != "" || strings.TrimSpace(step.Ref) != "" {
+		return step.Selector, step.Ref, nil
+	}
+	if len(step.Locators) == 0 {
+		return "", "", nil
+	}
+	selector, err := mgr.ResolveLocatorSelector(ctx, page, step.Locators)
+	if err != nil {
+		return "", "", err
+	}
+	return selector, "", nil
+}
+
+func workflowCanRetryWithLocator(err error) bool {
+	var autoErr *Error
+	if !errors.As(err, &autoErr) {
+		return false
+	}
+	switch autoErr.Code {
+	case "selector_not_found", "ref_not_found", "automation_failed":
+		return true
+	default:
+		return false
+	}
+}
+
+func validateWorkflowActionTarget(step WorkflowStep) error {
+	if strings.TrimSpace(step.Selector) == "" && strings.TrimSpace(step.Ref) == "" && len(step.Locators) > 0 {
+		return nil
+	}
+	return validateActionTarget(step.Selector, step.Ref, step.Action)
+}
+
+func validateWorkflowOptionalActionTarget(step WorkflowStep) error {
+	return validateOptionalActionTarget(step.Selector, step.Ref, step.Action)
+}
+
+func validateWorkflowSelectOptions(step WorkflowStep) (string, error) {
+	if strings.TrimSpace(step.Selector) == "" && strings.TrimSpace(step.Ref) == "" && len(step.Locators) > 0 {
+		modes := 0
+		mode := ""
+		if strings.TrimSpace(step.Value) != "" {
+			modes++
+			mode = "value"
+		}
+		if strings.TrimSpace(step.Label) != "" {
+			modes++
+			mode = "label"
+		}
+		if workflowSelectIndex(step) >= 0 {
+			modes++
+			mode = "index"
+		}
+		if modes == 0 {
+			return "", invalidArgs("value, label, or index is required", "Pass exactly one selection target for page.select.")
+		}
+		if modes > 1 {
+			return "", invalidArgs("pass only one of value, label, or index", "Selection output reports only the selection mode and count.")
+		}
+		return mode, nil
+	}
+	return validateSelectOptions(SelectOptions{Selector: step.Selector, Ref: step.Ref, Value: step.Value, Label: step.Label, Index: workflowSelectIndex(step)})
+}
+
+type workflowEvidenceManifest struct {
+	Session     string                        `json:"session"`
+	TargetID    string                        `json:"target_id,omitempty"`
+	Workflow    WorkflowRunResult             `json:"workflow"`
+	Artifacts   map[string]string             `json:"artifacts"`
+	Captures    map[string]workflowCaptureRef `json:"captures"`
+	GeneratedAt time.Time                     `json:"generated_at"`
+	Limitation  string                        `json:"limitation"`
+}
+
+type workflowCaptureRef struct {
+	Path  string `json:"path,omitempty"`
+	Error string `json:"error,omitempty"`
+}
+
+func writeWorkflowEvidenceBundle(ctx context.Context, mgr *Manager, config WorkflowConfig, dir string, result *WorkflowRunResult) error {
+	if mgr == nil || result == nil {
+		return nil
+	}
+	dir = filepath.Clean(expandHome(strings.TrimSpace(dir)))
+	if dir == "" || dir == "." {
+		return invalidArgs("--evidence-dir must point at a directory", "Pass a writable directory such as result/evidence.")
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return NewError("artifact_write_failed", err.Error(), "Check --evidence-dir permissions.", 500)
+	}
+	page := PageOptions{SessionName: config.SessionName, TargetID: config.TargetID, TimeoutSeconds: config.TimeoutSeconds}
+	captures := map[string]workflowCaptureRef{}
+	artifacts := map[string]string{}
+	writeCapture := func(name string, value any, err error) {
+		if err != nil {
+			captures[name] = workflowCaptureRef{Error: RedactError(err.Error())}
+			return
+		}
+		path := filepath.Join(dir, name+".json")
+		if writeErr := writeWorkflowJSONFile(path, value); writeErr != nil {
+			captures[name] = workflowCaptureRef{Error: RedactError(writeErr.Error())}
+			return
+		}
+		captures[name] = workflowCaptureRef{Path: path}
+		artifacts[name] = path
+	}
+	snapshot, snapshotErr := mgr.Snapshot(ctx, SnapshotOptions{PageOptions: page, MaxTextBytes: 4000})
+	writeCapture("final-snapshot", snapshot, snapshotErr)
+	metrics, metricsErr := mgr.Metrics(ctx, MetricsOptions{PageOptions: page, LimitResources: 20})
+	writeCapture("metrics", metrics, metricsErr)
+	consoleResult, consoleErr := mgr.Console(ctx, ConsoleOptions{PageOptions: page, Limit: 100})
+	writeCapture("console", consoleResult, consoleErr)
+	errorsResult, errorsErr := mgr.RuntimeErrors(ctx, ConsoleOptions{PageOptions: page, Limit: 100})
+	writeCapture("errors", errorsResult, errorsErr)
+	network, networkErr := mgr.NetworkList(ctx, NetworkRecorderOptions{PageOptions: page, Limit: 1000, Status: -1, Body: true, MaxBodyBytes: 20000})
+	writeCapture("network", network, networkErr)
+	screenshotPath := filepath.Join(dir, "final.png")
+	screenshot, screenshotErr := mgr.Screenshot(ctx, ScreenshotOptions{PageOptions: page, OutPath: screenshotPath, FullPage: true})
+	writeCapture("final-screenshot", screenshot, screenshotErr)
+	if screenshotErr == nil {
+		artifacts["final-screenshot-png"] = screenshotPath
+	}
+	manifest := workflowEvidenceManifest{
+		Session:     config.SessionName,
+		TargetID:    config.TargetID,
+		Workflow:    *result,
+		Artifacts:   artifacts,
+		Captures:    captures,
+		GeneratedAt: mgr.now(),
+		Limitation:  "Evidence bundles contain redacted browser metadata and screenshot file paths. Screenshots may still show visible page content.",
+	}
+	manifestPath := filepath.Join(dir, "manifest.json")
+	if err := writeWorkflowJSONFile(manifestPath, manifest); err != nil {
+		return err
+	}
+	stat, err := os.Stat(manifestPath)
+	if err != nil {
+		return NewError("artifact_write_failed", err.Error(), "Evidence manifest was written but metadata could not be read.", 500)
+	}
+	result.EvidenceDir = dir
+	result.EvidenceManifest = manifestPath
+	result.EvidenceBytes = stat.Size()
+	return nil
+}
+
+func writeWorkflowJSONFile(path string, value any) error {
+	b, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return NewError("automation_failed", err.Error(), "Evidence artifact could not be encoded.", 500)
+	}
+	b = append(b, '\n')
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		return NewError("artifact_write_failed", err.Error(), "Evidence artifact could not be written.", 500)
 	}
 	return nil
 }
@@ -570,6 +876,8 @@ func browserAutomationNextActions(code string) []string {
 		return []string{"Rerun with --allow-human only when the workflow intentionally pauses for manual browser interaction."}
 	case "human_confirmation_required":
 		return []string{"Ask the user to inspect the browser.", "Rerun with --allow-human --yes only after explicit user confirmation."}
+	case "risky_action_requires_confirmation":
+		return []string{"Ask the user to confirm the risky browser action.", "Rerun the page click with --yes or the workflow with --yes only after confirmation.", "Prefer inserting a human.confirm step before the risky action."}
 	case "workflow_invalid", "invalid_args":
 		return []string{"Run browser schema workflow.run --json.", "Use browser workflow run --dry-run --json before executing."}
 	default:
@@ -629,6 +937,7 @@ func normalizeWorkflowStep(step WorkflowStep) WorkflowStep {
 	step.Name = TruncateBytes(RedactString(step.Name), 200)
 	step.Selector = strings.TrimSpace(step.Selector)
 	step.Ref = strings.TrimSpace(step.Ref)
+	step.Locators = normalizeWorkflowLocators(step.Locators)
 	step.URL = strings.TrimSpace(step.URL)
 	step.URLContains = strings.TrimSpace(step.URLContains)
 	step.File = strings.TrimSpace(step.File)
@@ -740,6 +1049,7 @@ func expandWorkflowStep(step WorkflowStep, vars map[string]string) (WorkflowStep
 	step.Name = expand(step.Name)
 	step.Selector = expand(step.Selector)
 	step.Ref = expand(step.Ref)
+	step.Locators = expandWorkflowLocators(step.Locators, vars)
 	step.Contains = expand(step.Contains)
 	step.URL = expand(step.URL)
 	step.URLContains = expand(step.URLContains)
@@ -826,6 +1136,35 @@ func expandWorkflowSmartWait(wait WorkflowSmartWait, vars map[string]string) Wor
 	return normalizeWorkflowSmartWait(wait)
 }
 
+func normalizeWorkflowLocators(raw []ElementLocator) []ElementLocator {
+	locators := sanitizeElementLocators(raw)
+	if len(locators) == 0 {
+		return nil
+	}
+	return locators
+}
+
+func expandWorkflowLocators(raw []ElementLocator, vars map[string]string) []ElementLocator {
+	if len(raw) == 0 {
+		return nil
+	}
+	out := make([]ElementLocator, 0, len(raw))
+	for _, locator := range raw {
+		locator.Selector = expandWorkflowString(locator.Selector, vars)
+		locator.Role = expandWorkflowString(locator.Role, vars)
+		locator.Name = expandWorkflowString(locator.Name, vars)
+		locator.Text = expandWorkflowString(locator.Text, vars)
+		locator.Label = expandWorkflowString(locator.Label, vars)
+		locator.Placeholder = expandWorkflowString(locator.Placeholder, vars)
+		locator.NearText = expandWorkflowString(locator.NearText, vars)
+		locator = normalizeElementLocator(locator)
+		if hasElementLocator(locator) {
+			out = append(out, locator)
+		}
+	}
+	return out
+}
+
 func expandWorkflowString(raw string, vars map[string]string) string {
 	return workflowTemplatePattern.ReplaceAllStringFunc(raw, func(match string) string {
 		name := workflowTemplatePattern.FindStringSubmatch(match)[1]
@@ -868,7 +1207,7 @@ func validateWorkflowStep(step WorkflowStep) error {
 			DOMStableMilliseconds:   step.DOMStableMilliseconds,
 		})
 	case "page.click", "page.type", "page.check", "page.uncheck", "assert.visible":
-		if err := validateActionTarget(step.Selector, step.Ref, step.Action); err != nil {
+		if err := validateWorkflowActionTarget(step); err != nil {
 			return err
 		}
 		if step.Action == "page.type" && strings.TrimSpace(step.Text) == "" {
@@ -879,9 +1218,9 @@ func validateWorkflowStep(step WorkflowStep) error {
 		if _, err := NormalizePressKey(step.Key); err != nil {
 			return err
 		}
-		return validateOptionalActionTarget(step.Selector, step.Ref, step.Action)
+		return validateWorkflowOptionalActionTarget(step)
 	case "page.select":
-		_, err := validateSelectOptions(SelectOptions{Selector: step.Selector, Ref: step.Ref, Value: step.Value, Label: step.Label, Index: workflowSelectIndex(step)})
+		_, err := validateWorkflowSelectOptions(step)
 		return err
 	case "page.screenshot":
 		return nil
@@ -896,7 +1235,7 @@ func validateWorkflowStep(step WorkflowStep) error {
 		if strings.TrimSpace(step.Contains) == "" {
 			return invalidArgs("contains is required", "Pass contains for assert.text.")
 		}
-		return validateOptionalActionTarget(step.Selector, step.Ref, step.Action)
+		return validateWorkflowOptionalActionTarget(step)
 	case "assert.url":
 		if strings.TrimSpace(step.Contains) == "" {
 			return invalidArgs("contains is required", "Pass contains for assert.url.")
@@ -908,7 +1247,7 @@ func validateWorkflowStep(step WorkflowStep) error {
 		if strings.TrimSpace(step.Baseline) == "" || strings.TrimSpace(step.DiffOut) == "" {
 			return invalidArgs("baseline and diff_out are required", "Pass baseline and diff_out for assert.screenshot.")
 		}
-		return validateOptionalActionTarget(step.Selector, step.Ref, "assert.screenshot")
+		return validateWorkflowOptionalActionTarget(step)
 	case "network.wait":
 		if strings.TrimSpace(step.URLContains) == "" {
 			return invalidArgs("url_contains is required", "Pass url_contains for network.wait.")
@@ -945,6 +1284,7 @@ func workflowStepPlan(index int, step WorkflowStep) WorkflowStepPlan {
 		Action:                  step.Action,
 		Selector:                normalizeSelectorHint(step.Selector),
 		Ref:                     RedactString(step.Ref),
+		LocatorCount:            len(step.Locators),
 		URL:                     RedactURL(step.URL),
 		URLContainsPreview:      TruncateBytes(RedactString(step.URLContains), 500),
 		URLContainsBytes:        len(step.URLContains),
@@ -1133,6 +1473,10 @@ func (s *WorkflowStep) UnmarshalYAML(value *yaml.Node) error {
 			}
 		case "ref":
 			if err := val.Decode(&s.Ref); err != nil {
+				return err
+			}
+		case "locators":
+			if err := val.Decode(&s.Locators); err != nil {
 				return err
 			}
 		case "contains":

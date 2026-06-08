@@ -78,7 +78,14 @@ type NetworkHARLiteRequest struct {
 }
 
 type NetworkHARLiteResponse struct {
-	Status int `json:"status,omitempty"`
+	Status  int                         `json:"status,omitempty"`
+	Content *NetworkHARLiteResponseBody `json:"content,omitempty"`
+}
+
+type NetworkHARLiteResponseBody struct {
+	Text      string `json:"text,omitempty"`
+	Length    int    `json:"length,omitempty"`
+	Truncated bool   `json:"truncated,omitempty"`
 }
 
 type NetworkHARLiteSizes struct {
@@ -179,6 +186,14 @@ func networkExportEntries(raw []NetworkRecordEntry, opts NetworkExportOptions) (
 		entry.InitiatorType = strings.ToLower(TruncateBytes(RedactString(entry.InitiatorType), 80))
 		entry.Source = strings.ToLower(TruncateBytes(RedactString(entry.Source), 80))
 		entry.Error = TruncateBytes(RedactError(entry.Error), 500)
+		if entry.BodyCaptured {
+			entry.BodyPreview = TruncateBytes(RedactString(entry.BodyPreview), 20000)
+			entry.BodyLength = nonNegativeInt(entry.BodyLength)
+		} else {
+			entry.BodyPreview = ""
+			entry.BodyLength = 0
+			entry.BodyTruncated = false
+		}
 		if !networkRecordMatches(entry, recorderOpts) {
 			continue
 		}
@@ -222,6 +237,10 @@ func marshalNetworkExportArtifact(sessionName, targetID string, opts NetworkExpo
 func networkHARLiteArtifact(entries []NetworkRecordEntry, count int, now time.Time) NetworkHARLiteArtifact {
 	out := make([]NetworkHARLiteEntry, 0, len(entries))
 	for _, entry := range entries {
+		response := NetworkHARLiteResponse{Status: entry.Status}
+		if entry.BodyCaptured {
+			response.Content = &NetworkHARLiteResponseBody{Text: entry.BodyPreview, Length: entry.BodyLength, Truncated: entry.BodyTruncated}
+		}
 		out = append(out, NetworkHARLiteEntry{
 			StartedAt: entry.StartedAt,
 			Time:      entry.DurationMilliseconds,
@@ -229,7 +248,7 @@ func networkHARLiteArtifact(entries []NetworkRecordEntry, count int, now time.Ti
 				Method: entry.Method,
 				URL:    entry.URL,
 			},
-			Response:      NetworkHARLiteResponse{Status: entry.Status},
+			Response:      response,
 			ResourceType:  entry.ResourceType,
 			InitiatorType: entry.InitiatorType,
 			Sizes: NetworkHARLiteSizes{

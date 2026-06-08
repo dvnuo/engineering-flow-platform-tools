@@ -20,13 +20,14 @@ type WorkflowRecordOptions struct {
 }
 
 type WorkflowRecordedEvent struct {
-	Index     int       `json:"index"`
-	Action    string    `json:"action"`
-	Selector  string    `json:"selector,omitempty"`
-	Key       string    `json:"key,omitempty"`
-	InputKind string    `json:"input_kind,omitempty"`
-	TextBytes int       `json:"text_bytes,omitempty"`
-	At        time.Time `json:"at"`
+	Index     int              `json:"index"`
+	Action    string           `json:"action"`
+	Selector  string           `json:"selector,omitempty"`
+	Key       string           `json:"key,omitempty"`
+	InputKind string           `json:"input_kind,omitempty"`
+	TextBytes int              `json:"text_bytes,omitempty"`
+	Locators  []ElementLocator `json:"locators,omitempty"`
+	At        time.Time        `json:"at"`
 }
 
 type WorkflowRecordResult struct {
@@ -46,11 +47,12 @@ type WorkflowRecordResult struct {
 }
 
 type workflowRecordRawEvent struct {
-	Action    string `json:"action"`
-	Selector  string `json:"selector"`
-	Key       string `json:"key"`
-	InputKind string `json:"input_kind"`
-	TextBytes int    `json:"text_bytes"`
+	Action    string           `json:"action"`
+	Selector  string           `json:"selector"`
+	Key       string           `json:"key"`
+	InputKind string           `json:"input_kind"`
+	TextBytes int              `json:"text_bytes"`
+	Locators  []ElementLocator `json:"locators"`
 }
 
 type workflowRecordFile struct {
@@ -60,13 +62,14 @@ type workflowRecordFile struct {
 }
 
 type workflowRecordFileStep struct {
-	Action   string `yaml:"action"`
-	Name     string `yaml:"name,omitempty"`
-	Selector string `yaml:"selector,omitempty"`
-	Text     string `yaml:"text,omitempty"`
-	Label    string `yaml:"label,omitempty"`
-	Key      string `yaml:"key,omitempty"`
-	Clear    bool   `yaml:"clear,omitempty"`
+	Action   string           `yaml:"action"`
+	Name     string           `yaml:"name,omitempty"`
+	Selector string           `yaml:"selector,omitempty"`
+	Locators []ElementLocator `yaml:"locators,omitempty"`
+	Text     string           `yaml:"text,omitempty"`
+	Label    string           `yaml:"label,omitempty"`
+	Key      string           `yaml:"key,omitempty"`
+	Clear    bool             `yaml:"clear,omitempty"`
 }
 
 func (m *Manager) RecordWorkflow(ctx context.Context, opts WorkflowRecordOptions) (WorkflowRecordResult, error) {
@@ -164,9 +167,10 @@ func workflowRecordFileFromEvents(raw []workflowRecordRawEvent, session string, 
 			Key:       RedactString(item.Key),
 			InputKind: RedactString(item.InputKind),
 			TextBytes: item.TextBytes,
+			Locators:  sanitizeElementLocators(item.Locators),
 			At:        now,
 		}
-		step := workflowRecordFileStep{Action: action, Selector: selector}
+		step := workflowRecordFileStep{Action: action, Selector: selector, Locators: workflowRecordLocators(selector, item.Locators)}
 		switch action {
 		case "page.type":
 			textIndex++
@@ -194,15 +198,96 @@ func workflowRecordFileFromEvents(raw []workflowRecordRawEvent, session string, 
 	return events, file
 }
 
+func workflowRecordLocators(selector string, raw []ElementLocator) []ElementLocator {
+	locators := sanitizeElementLocators(raw)
+	if strings.TrimSpace(selector) != "" {
+		locators = append([]ElementLocator{{Selector: selector}}, locators...)
+	}
+	out := make([]ElementLocator, 0, len(locators))
+	seen := map[string]bool{}
+	for _, locator := range locators {
+		key := strings.Join([]string{
+			locator.Selector,
+			locator.Role,
+			locator.Name,
+			locator.Text,
+			locator.Label,
+			locator.Placeholder,
+			locator.NearText,
+			strconv.Itoa(locator.Nth),
+		}, "\x00")
+		if seen[key] || !hasElementLocator(locator) {
+			continue
+		}
+		seen[key] = true
+		out = append(out, locator)
+	}
+	return out
+}
+
 func workflowRecordInstallExpression(limit int) string {
 	return `(function () {
   const limit = ` + strconv.Itoa(limit) + `;
   const root = window.__efpWorkflowRecorder = {events: []};
+  const sensitiveNamePattern = /(token|secret|password|passwd|pwd|cookie|auth|authorization|credential|jwt|saml|session|access[_-]?token|refresh[_-]?token|id[_-]?token|api[_-]?key)/i;
   const cssEscape = (value) => {
     if (window.CSS && CSS.escape) return CSS.escape(String(value));
     return String(value).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
   };
   const attr = (el, name) => String((el && el.getAttribute(name)) || "").trim();
+  const textOf = (el, max) => String((el && (el.innerText || el.textContent)) || "").replace(/\s+/g, " ").trim().slice(0, max);
+  const safeAttr = (el, name, max) => {
+    const value = attr(el, name);
+    if (!value || sensitiveNamePattern.test(name) || sensitiveNamePattern.test(value)) return "";
+    return value.slice(0, max);
+  };
+  const isSensitiveElement = (el) => {
+    const tag = String(el.tagName || "").toLowerCase();
+    const type = attr(el, "type").toLowerCase();
+    if (tag === "input" && type === "password") return true;
+    const fields = ["id","name","autocomplete","aria-label","placeholder","title"].map(name => attr(el, name)).join(" ");
+    return sensitiveNamePattern.test(fields);
+  };
+  const labelFor = (el) => {
+    if (isSensitiveElement(el)) return "";
+    const labels = [];
+    if (el.labels) for (const label of Array.from(el.labels)) labels.push(textOf(label, 500));
+    const id = attr(el, "id");
+    if (id && !sensitiveNamePattern.test(id)) {
+      const byFor = document.querySelector("label[for='" + cssEscape(id) + "']");
+      if (byFor) labels.push(textOf(byFor, 500));
+    }
+    return labels.filter(Boolean).join(" ").trim().slice(0, 500);
+  };
+  const roleFor = (el, tag) => {
+    const role = attr(el, "role");
+    if (role) return role.toLowerCase();
+    if (tag === "a") return "link";
+    if (tag === "button") return "button";
+    if (tag === "input") {
+      const type = attr(el, "type").toLowerCase() || "text";
+      if (["button","submit","reset","image"].includes(type)) return "button";
+      if (type === "checkbox") return "checkbox";
+      if (type === "radio") return "radio";
+      return "textbox";
+    }
+    if (tag === "textarea") return "textbox";
+    if (tag === "select") return "combobox";
+    return "";
+  };
+  const nameFor = (el, tag, role) => {
+    if (isSensitiveElement(el)) return labelFor(el);
+    const aria = safeAttr(el, "aria-label", 500);
+    const label = labelFor(el);
+    const placeholder = safeAttr(el, "placeholder", 500);
+    const title = safeAttr(el, "title", 500);
+    if (aria) return aria;
+    if (label) return label;
+    if (placeholder && (tag === "input" || tag === "textarea")) return placeholder;
+    if (title) return title;
+    if (role === "button" || role === "link" || tag === "button" || tag === "a") return textOf(el, 500);
+    return "";
+  };
   const selectorFor = (el) => {
     if (!el || el.nodeType !== 1) return "";
     const id = attr(el, "id");
@@ -232,6 +317,22 @@ func workflowRecordInstallExpression(limit int) string {
   };
   const push = (event) => {
     if (root.events.length >= limit) return;
+    const target = event.target_element;
+    delete event.target_element;
+    if (target && target.nodeType === 1) {
+      const tag = String(target.tagName || "").toLowerCase();
+      const role = roleFor(target, tag);
+      const name = nameFor(target, tag, role);
+      const label = labelFor(target);
+      const placeholder = isSensitiveElement(target) ? "" : safeAttr(target, "placeholder", 500);
+      const text = (tag === "input" || tag === "textarea" || tag === "select" || isSensitiveElement(target)) ? "" : textOf(target, 500);
+      const locators = [{selector: event.selector}];
+      if (role && name) locators.push({role, name});
+      if (role && text) locators.push({role, text});
+      if (label) locators.push({label});
+      if (placeholder) locators.push({placeholder});
+      event.locators = locators;
+    }
     root.events.push(event);
   };
   document.addEventListener("click", (event) => {
@@ -241,10 +342,10 @@ func workflowRecordInstallExpression(limit int) string {
     const type = String(target.type || "").toLowerCase();
     if (tag === "input" && ["text","search","email","password","tel","url","number"].includes(type)) return;
     if (tag === "input" && ["checkbox","radio"].includes(type)) {
-      push({action: target.checked ? "page.check" : "page.uncheck", selector: selectorFor(target), input_kind: type});
+      push({action: target.checked ? "page.check" : "page.uncheck", selector: selectorFor(target), input_kind: type, target_element: target});
       return;
     }
-    push({action: "page.click", selector: selectorFor(target), input_kind: tag || type});
+    push({action: "page.click", selector: selectorFor(target), input_kind: tag || type, target_element: target});
   }, true);
   document.addEventListener("change", (event) => {
     const target = event.target;
@@ -252,20 +353,20 @@ func workflowRecordInstallExpression(limit int) string {
     const type = String(target && target.type || "").toLowerCase();
     if (!target) return;
     if (tag === "input" && ["checkbox","radio"].includes(type)) {
-      push({action: target.checked ? "page.check" : "page.uncheck", selector: selectorFor(target), input_kind: type});
+      push({action: target.checked ? "page.check" : "page.uncheck", selector: selectorFor(target), input_kind: type, target_element: target});
       return;
     }
     if (tag === "select") {
-      push({action: "page.select", selector: selectorFor(target), input_kind: "select", text_bytes: String(target.value || "").length});
+      push({action: "page.select", selector: selectorFor(target), input_kind: "select", text_bytes: String(target.value || "").length, target_element: target});
       return;
     }
     if (tag === "input" || tag === "textarea") {
-      push({action: "page.type", selector: selectorFor(target), input_kind: type || tag, text_bytes: String(target.value || "").length});
+      push({action: "page.type", selector: selectorFor(target), input_kind: type || tag, text_bytes: String(target.value || "").length, target_element: target});
     }
   }, true);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === "Escape" || event.key === "Tab") {
-      push({action: "page.press", selector: selectorFor(event.target), key: event.key, input_kind: "key"});
+      push({action: "page.press", selector: selectorFor(event.target), key: event.key, input_kind: "key", target_element: event.target});
     }
   }, true);
   return {installed: true, limit};

@@ -19,6 +19,7 @@ func pageCmd(o *Opts) *cobra.Command {
 		pageSnapshotCmd(o),
 		pageExtractCmd(o),
 		pageExtractSchemaCmd(o),
+		pageFindCmd(o),
 		pageAXCmd(o),
 		pageClickCmd(o),
 		pageTypeCmd(o),
@@ -38,8 +39,46 @@ func pageCmd(o *Opts) *cobra.Command {
 		pageMetricsCmd(o),
 		pageOutlineCmd(o),
 		pageTableCmd(o),
+		pageTableExportCmd(o),
 		pageListCmd(o),
+		pageListExportCmd(o),
+		pageScrollCollectCmd(o),
+		pageDiffCmd(o),
 	)
+	return c
+}
+
+func pageFindCmd(o *Opts) *cobra.Command {
+	opts := automation.PageFindOptions{PageOptions: defaultPageOptions(), Limit: 20}
+	c := &cobra.Command{
+		Use:   "find",
+		Short: "Find page elements by semantic locators",
+		Long:  "Find page elements by selector, role, accessible name, visible text, label, placeholder, or nearby text, returning stable refs and fallback locator candidates for agents.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Find(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Locator.Selector, "selector", "", "Optional CSS selector to seed semantic finding.")
+	c.Flags().StringVar(&opts.Locator.Role, "role", "", "ARIA-style role to match, such as button, link, textbox, checkbox, combobox, or heading.")
+	c.Flags().StringVar(&opts.Locator.Name, "name", "", "Accessible name substring to match.")
+	c.Flags().StringVar(&opts.Locator.Text, "text", "", "Visible text substring to match.")
+	c.Flags().StringVar(&opts.Locator.Label, "label", "", "Associated form label substring to match.")
+	c.Flags().StringVar(&opts.Locator.Placeholder, "placeholder", "", "Input placeholder substring to match.")
+	c.Flags().StringVar(&opts.Locator.NearText, "near-text", "", "Text near the candidate element to match.")
+	c.Flags().IntVar(&opts.Locator.Nth, "nth", 0, "One-based match index within this locator; 0 returns all matches up to --limit.")
+	c.Flags().IntVar(&opts.Limit, "limit", 20, "Maximum number of matching elements to return.")
+	c.Flags().BoolVar(&opts.IncludeHidden, "include-hidden", false, "Include hidden elements in semantic matching.")
 	return c
 }
 
@@ -175,6 +214,7 @@ func pageClickCmd(o *Opts) *cobra.Command {
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().StringVar(&opts.Selector, "selector", "", "CSS selector for the visible element to click.")
 	c.Flags().StringVar(&opts.Ref, "ref", "", "Accessibility ref from browser page ax for the visible element to click.")
+	c.Flags().BoolVar(&opts.AllowRisky, "yes", false, "Confirm a click that appears to be a risky action such as submit, delete, pay, save, approve, or publish.")
 	return c
 }
 
@@ -648,6 +688,116 @@ func pageListCmd(o *Opts) *cobra.Command {
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().StringVar(&opts.Selector, "selector", "", "Optional CSS selector for a list or container whose lists should be extracted.")
 	c.Flags().IntVar(&opts.LimitItems, "limit-items", 100, "Maximum number of items to return per list.")
+	return c
+}
+
+func pageTableExportCmd(o *Opts) *cobra.Command {
+	opts := automation.DataExportOptions{PageOptions: defaultPageOptions(), Format: "json", LimitRows: 500, LimitCells: 50}
+	c := &cobra.Command{
+		Use:   "table-export",
+		Short: "Export page tables to JSON or CSV",
+		Long:  "Extract page tables and write redacted structured table data to a JSON or CSV artifact.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.TableExport(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "Optional CSS selector for a table or container whose tables should be exported.")
+	c.Flags().StringVar(&opts.OutPath, "out", "", "Output file path for the table export.")
+	c.Flags().StringVar(&opts.Format, "format", "json", "Export format: json or csv.")
+	c.Flags().IntVar(&opts.LimitRows, "limit-rows", 500, "Maximum number of rows to export per table.")
+	c.Flags().IntVar(&opts.LimitCells, "limit-cells", 50, "Maximum number of cells to export per row.")
+	return c
+}
+
+func pageListExportCmd(o *Opts) *cobra.Command {
+	opts := automation.DataExportOptions{PageOptions: defaultPageOptions(), Format: "json", LimitItems: 1000}
+	c := &cobra.Command{
+		Use:   "list-export",
+		Short: "Export page lists to JSON or CSV",
+		Long:  "Extract page lists and write redacted structured list data to a JSON or CSV artifact.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.ListExport(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "Optional CSS selector for a list or container whose lists should be exported.")
+	c.Flags().StringVar(&opts.OutPath, "out", "", "Output file path for the list export.")
+	c.Flags().StringVar(&opts.Format, "format", "json", "Export format: json or csv.")
+	c.Flags().IntVar(&opts.LimitItems, "limit-items", 1000, "Maximum number of list items to export per list.")
+	return c
+}
+
+func pageScrollCollectCmd(o *Opts) *cobra.Command {
+	opts := automation.ScrollCollectOptions{PageOptions: defaultPageOptions(), Format: "json", Limit: 500, MaxScrolls: 20, ScrollStep: 900, IntervalMilliseconds: 250}
+	c := &cobra.Command{
+		Use:   "scroll-collect",
+		Short: "Collect repeated page items while scrolling",
+		Long:  "Scroll a page or scrollable container, collect repeated item text and links, deduplicate them, and optionally write a JSON or CSV artifact.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.ScrollCollect(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "Optional scrollable container selector; defaults to the page scroller.")
+	c.Flags().StringVar(&opts.ItemSelector, "item-selector", "", "Optional selector for repeated items to collect during scrolling.")
+	c.Flags().StringVar(&opts.OutPath, "out", "", "Optional output file path for collected items.")
+	c.Flags().StringVar(&opts.Format, "format", "json", "Export format when --out is set: json or csv.")
+	c.Flags().IntVar(&opts.Limit, "limit", 500, "Maximum number of unique items to collect.")
+	c.Flags().IntVar(&opts.MaxScrolls, "max-scrolls", 20, "Maximum number of scroll steps.")
+	c.Flags().IntVar(&opts.ScrollStep, "scroll-step", 900, "Pixels to scroll per step.")
+	c.Flags().IntVar(&opts.IntervalMilliseconds, "interval-ms", 250, "Milliseconds to wait after each scroll step.")
+	return c
+}
+
+func pageDiffCmd(o *Opts) *cobra.Command {
+	opts := automation.PageDiffOptions{Limit: 100}
+	c := &cobra.Command{
+		Use:   "diff",
+		Short: "Diff two browser page state JSON files",
+		Long:  "Compare two JSON files, including browser --json envelopes, and return redacted changed JSON paths with before/after previews.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			result, err := automation.PageDiff(opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	c.Flags().StringVar(&opts.BeforeFile, "before", "", "Before JSON file, such as a browser page snapshot envelope.")
+	c.Flags().StringVar(&opts.AfterFile, "after", "", "After JSON file, such as a browser page snapshot envelope.")
+	c.Flags().StringVar(&opts.OutPath, "out", "", "Optional JSON file path to write the diff result.")
+	c.Flags().IntVar(&opts.Limit, "limit", 100, "Maximum number of changed JSON paths to return.")
 	return c
 }
 

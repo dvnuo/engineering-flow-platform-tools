@@ -13,7 +13,7 @@ func networkCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "network",
 		Short: "Record sanitized browser network metadata",
-		Long:  "Start, stop, list, wait for, or clear a bounded page-side network recorder that stores sanitized HAR-lite metadata without headers, cookies, storage, or bodies.",
+		Long:  "Start, stop, list, wait for, or clear a bounded page-side network recorder that stores sanitized HAR-lite metadata plus redacted fetch/XHR response body previews by default, without headers, cookies, storage, or request bodies.",
 	}
 	c.AddCommand(
 		networkStartCmd(o),
@@ -27,7 +27,7 @@ func networkCmd(o *Opts) *cobra.Command {
 }
 
 func networkStartCmd(o *Opts) *cobra.Command {
-	opts := automation.NetworkRecorderOptions{PageOptions: defaultPageOptions(), Limit: 500, Status: -1}
+	opts := automation.NetworkRecorderOptions{PageOptions: defaultPageOptions(), Limit: 500, Status: -1, Body: true, MaxBodyBytes: 20000}
 	c := &cobra.Command{
 		Use:   "start",
 		Short: "Start network event recording",
@@ -49,11 +49,13 @@ func networkStartCmd(o *Opts) *cobra.Command {
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().IntVar(&opts.Limit, "limit", 500, "Maximum number of network metadata events to keep for this page target.")
 	c.Flags().StringVar(&opts.Filter, "filter", "", "Optional case-insensitive filter applied when returning and storing events.")
+	c.Flags().BoolVar(&opts.Body, "body", true, "Capture redacted fetch/XHR response body previews by default.")
+	c.Flags().IntVar(&opts.MaxBodyBytes, "max-body-bytes", 20000, "Maximum bytes of redacted response body preview per fetch/XHR event.")
 	return c
 }
 
 func networkStopCmd(o *Opts) *cobra.Command {
-	opts := automation.NetworkRecorderOptions{PageOptions: defaultPageOptions(), Limit: 500, Status: -1}
+	opts := automation.NetworkRecorderOptions{PageOptions: defaultPageOptions(), Limit: 500, Status: -1, Body: true, MaxBodyBytes: 20000}
 	c := &cobra.Command{
 		Use:   "stop",
 		Short: "Stop network event recording",
@@ -77,11 +79,11 @@ func networkStopCmd(o *Opts) *cobra.Command {
 }
 
 func networkListCmd(o *Opts) *cobra.Command {
-	opts := automation.NetworkRecorderOptions{PageOptions: defaultPageOptions(), Limit: 500, Status: -1}
+	opts := automation.NetworkRecorderOptions{PageOptions: defaultPageOptions(), Limit: 500, Status: -1, Body: true, MaxBodyBytes: 20000}
 	c := &cobra.Command{
 		Use:   "list",
 		Short: "List recorded network events",
-		Long:  "Return sanitized HAR-lite network metadata from the selected page recorder artifact and page state without headers, cookies, storage, or bodies.",
+		Long:  "Return sanitized HAR-lite network metadata and redacted fetch/XHR response body previews from the selected page recorder artifact and page state, without headers, cookies, storage, or request bodies.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			mgr, err := automation.DefaultManager()
 			if err != nil {
@@ -101,11 +103,13 @@ func networkListCmd(o *Opts) *cobra.Command {
 	c.Flags().IntVar(&opts.Limit, "limit", 500, "Maximum number of matching network metadata events to return.")
 	c.Flags().StringVar(&opts.Method, "method", "", "Optional HTTP method filter such as GET or POST when method is available.")
 	c.Flags().IntVar(&opts.Status, "status", -1, "Optional HTTP status filter when status is available.")
+	c.Flags().BoolVar(&opts.Body, "body", true, "Return redacted fetch/XHR response body previews by default.")
+	c.Flags().IntVar(&opts.MaxBodyBytes, "max-body-bytes", 20000, "Maximum bytes of redacted response body preview per fetch/XHR event.")
 	return c
 }
 
 func networkWaitCmd(o *Opts) *cobra.Command {
-	opts := automation.NetworkWaitOptions{NetworkRecorderOptions: automation.NetworkRecorderOptions{PageOptions: defaultPageOptions(), Limit: 500, Status: -1}}
+	opts := automation.NetworkWaitOptions{NetworkRecorderOptions: automation.NetworkRecorderOptions{PageOptions: defaultPageOptions(), Limit: 500, Status: -1, Body: true, MaxBodyBytes: 20000}}
 	c := &cobra.Command{
 		Use:   "wait",
 		Short: "Wait for a recorded network event",
@@ -129,6 +133,8 @@ func networkWaitCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&opts.Method, "method", "", "Optional HTTP method filter such as GET or POST when method is available.")
 	c.Flags().IntVar(&opts.Status, "status", -1, "Optional HTTP status filter when status is available.")
 	c.Flags().IntVar(&opts.Limit, "limit", 500, "Maximum number of recorded events to scan per poll.")
+	c.Flags().BoolVar(&opts.Body, "body", true, "Return redacted fetch/XHR response body previews by default.")
+	c.Flags().IntVar(&opts.MaxBodyBytes, "max-body-bytes", 20000, "Maximum bytes of redacted response body preview per fetch/XHR event.")
 	return c
 }
 
@@ -137,7 +143,7 @@ func networkExportCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "export",
 		Short: "Export sanitized recorded network metadata",
-		Long:  "Write sanitized HAR-lite or JSON network recorder metadata for the selected page target. The export contains URL, method, status, type, timing, and size metadata only; it never includes headers, cookies, storage, or bodies.",
+		Long:  "Write sanitized HAR-lite or JSON network recorder metadata plus redacted fetch/XHR response body previews when captured. Exports never include headers, cookies, storage, or request bodies.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			mgr, err := automation.DefaultManager()
 			if err != nil {
@@ -161,7 +167,7 @@ func networkExportCmd(o *Opts) *cobra.Command {
 }
 
 func networkClearCmd(o *Opts) *cobra.Command {
-	opts := automation.NetworkRecorderOptions{PageOptions: defaultPageOptions(), Limit: 500, Status: -1}
+	opts := automation.NetworkRecorderOptions{PageOptions: defaultPageOptions(), Limit: 500, Status: -1, Body: true, MaxBodyBytes: 20000}
 	c := &cobra.Command{
 		Use:   "clear",
 		Short: "Clear recorded network events",

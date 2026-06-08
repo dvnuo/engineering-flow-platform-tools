@@ -66,6 +66,7 @@ func workflowRunCmd(o *Opts) *cobra.Command {
 	c.Flags().BoolVar(&opts.ContinueOnError, "continue-on-error", false, "Continue running later steps after a step fails; the final workflow result still fails.")
 	c.Flags().StringArrayVar(&opts.VarOverrides, "var", nil, "Workflow variable override as name=value. Repeatable; values are not echoed in workflow plans.")
 	c.Flags().StringVar(&opts.ReportOut, "report-out", "", "Optional JSON path for a sanitized workflow run audit report.")
+	c.Flags().StringVar(&opts.EvidenceDir, "evidence-dir", "", "Optional directory for a workflow evidence bundle; disabled by default.")
 	c.Flags().BoolVar(&opts.AllowHuman, "allow-human", false, "Allow bounded human.wait pauses in workflows.")
 	c.Flags().BoolVar(&opts.AutoConfirm, "yes", false, "Allow human.confirm steps after explicit user confirmation.")
 	return c

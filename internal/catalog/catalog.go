@@ -100,6 +100,7 @@ var browserCommands = []string{
 	"browser page snapshot",
 	"browser page extract",
 	"browser page extract-schema",
+	"browser page find",
 	"browser page ax",
 	"browser page click",
 	"browser page type",
@@ -119,7 +120,11 @@ var browserCommands = []string{
 	"browser page metrics",
 	"browser page outline",
 	"browser page table",
+	"browser page table-export",
 	"browser page list",
+	"browser page list-export",
+	"browser page scroll-collect",
+	"browser page diff",
 	"browser assert visible",
 	"browser assert text",
 	"browser assert url",
@@ -719,10 +724,12 @@ func browserExplicit(name string) (explicitMeta, bool) {
 			Flags: append([]string{"selector", "limit", "include-html", "pierce", "max-html-bytes"}, pageFlags...), Required: []string{"selector"}, Risk: "read", Example: "browser page extract --selector .user-avatar --json"},
 		"page.extract-schema": {Description: "Extract selector-declared structured page fields from a YAML schema as redacted stable JSON.",
 			Flags: append([]string{"file", "limit"}, pageFlags...), Required: []string{"file"}, Risk: "read", Example: "browser page extract-schema --file schema.yaml --json"},
+		"page.find": {Description: "Find page elements by semantic locators such as role, name, text, label, placeholder, nearby text, or CSS selector.",
+			Flags: append([]string{"selector", "role", "name", "text", "label", "placeholder", "near-text", "nth", "limit", "include-hidden"}, pageFlags...), Risk: "read", Example: "browser page find --role button --name Save --json"},
 		"page.ax": {Description: "Return a bounded DOM/ARIA accessibility-style tree with stable refs for short-session agent interactions.",
 			Flags: append([]string{"limit", "include-hidden", "pierce"}, pageFlags...), Risk: "read", Example: "browser page ax --limit 100 --json"},
 		"page.click": {Description: "Click a visible element in the selected page target and return redacted page metadata.",
-			Flags: append([]string{"selector", "ref"}, pageFlags...), Required: []string{"selector|ref"}, Risk: "write", Example: "browser page click --ref axref-0-abcdef123456 --json"},
+			Flags: append([]string{"selector", "ref", "yes"}, pageFlags...), Required: []string{"selector|ref"}, Risk: "write", Example: "browser page click --ref axref-0-abcdef123456 --json"},
 		"page.type": {Description: "Type text into a visible input or editable element without echoing the typed text in output.",
 			Flags: append([]string{"selector", "ref", "text", "clear"}, pageFlags...), Required: []string{"selector|ref", "text"}, Risk: "write", Example: "browser page type --selector input[name=q] --text search --clear --json"},
 		"page.select": {Description: "Select an option by value, label, or index without echoing the selected value or label.",
@@ -757,8 +764,16 @@ func browserExplicit(name string) (explicitMeta, bool) {
 			Flags: append([]string{"limit", "include-hidden", "pierce"}, pageFlags...), Risk: "read", Example: "browser page outline --limit 100 --json"},
 		"page.table": {Description: "Extract structured table captions, headers, rows, cells, spans, and counts from the selected page.",
 			Flags: append([]string{"selector", "limit-rows", "limit-cells", "include-html"}, pageFlags...), Risk: "read", Example: "browser page table --selector table.results --json"},
+		"page.table-export": {Description: "Export structured page table data to a JSON or CSV artifact.",
+			Flags: append([]string{"selector", "out", "format", "limit-rows", "limit-cells"}, pageFlags...), Required: []string{"out"}, Risk: "read", Example: "browser page table-export --selector table.results --out result/table.csv --format csv --json"},
 		"page.list": {Description: "Extract structured ordered, unordered, and role=list data with item text, hrefs, and nesting levels.",
 			Flags: append([]string{"selector", "limit-items"}, pageFlags...), Risk: "read", Example: "browser page list --selector nav --json"},
+		"page.list-export": {Description: "Export structured page list data to a JSON or CSV artifact.",
+			Flags: append([]string{"selector", "out", "format", "limit-items"}, pageFlags...), Required: []string{"out"}, Risk: "read", Example: "browser page list-export --selector nav --out result/list.json --json"},
+		"page.scroll-collect": {Description: "Scroll a page or container, collect repeated item text and links, deduplicate results, and optionally write JSON or CSV.",
+			Flags: append([]string{"selector", "item-selector", "out", "format", "limit", "max-scrolls", "scroll-step", "interval-ms"}, pageFlags...), Risk: "read", Example: "browser page scroll-collect --item-selector .row --out result/items.csv --format csv --json"},
+		"page.diff": {Description: "Diff two browser JSON page-state files or JSON envelopes and return redacted changed paths.",
+			Flags: append([]string{"before", "after", "out", "limit"}, common...), Required: []string{"before", "after"}, Risk: "read", Example: "browser page diff --before before.json --after after.json --json"},
 		"assert.visible": {Description: "Assert that a selector or accessibility ref resolves to a visible page element.",
 			Flags: append([]string{"selector", "ref", "not"}, pageFlags...), Required: []string{"selector|ref"}, Risk: "read", Example: "browser assert visible --selector .ready --json"},
 		"assert.text": {Description: "Assert that the page body or selected element text contains a substring without returning raw page text snippets.",
@@ -770,7 +785,7 @@ func browserExplicit(name string) (explicitMeta, bool) {
 		"assert.screenshot": {Description: "Assert that a page or element screenshot matches a baseline PNG and write a PNG diff artifact.",
 			Flags: append([]string{"baseline", "out", "diff-out", "selector", "ref", "threshold", "full-page"}, pageFlags...), Required: []string{"baseline", "diff-out"}, Risk: "read", Example: "browser assert screenshot --baseline baseline.png --out actual.png --diff-out diff.png --json"},
 		"workflow.run": {Description: "Parse, dry-run, or execute a YAML workflow made only of whitelisted browser actions and assertions.",
-			Flags: append([]string{"file", "dry-run", "session", "target-id", "timeout", "continue-on-error", "var", "report-out", "allow-human", "yes"}, common...), Required: []string{"file"}, Risk: "write", Example: "browser workflow run --file flow.yaml --dry-run --json"},
+			Flags: append([]string{"file", "dry-run", "session", "target-id", "timeout", "continue-on-error", "var", "report-out", "evidence-dir", "allow-human", "yes"}, common...), Required: []string{"file"}, Risk: "write", Example: "browser workflow run --file flow.yaml --dry-run --json"},
 		"workflow.record": {Description: "Record bounded manual browser actions into a sanitized workflow YAML skeleton with typed text replaced by variables.",
 			Flags: append([]string{"out", "duration-ms", "limit"}, pageFlags...), Required: []string{"out"}, Risk: "write", Example: "browser workflow record --out flow.yaml --duration-ms 10000 --json"},
 		"form.inspect": {Description: "Inspect form field metadata such as labels, names, types, selectors, and options without returning current values.",
@@ -781,15 +796,15 @@ func browserExplicit(name string) (explicitMeta, bool) {
 			Flags: pageFlags, Risk: "read", Example: "browser frame list --session default --json"},
 		"frame.snapshot": {Description: "Snapshot a selected frame with redacted URL, title, text, and optional HTML preview.",
 			Flags: append([]string{"frame-id", "include-html", "max-text-bytes", "max-html-bytes"}, pageFlags...), Required: []string{"frame-id"}, Risk: "read", Example: "browser frame snapshot --frame-id FRAME_ID --json"},
-		"network.start": {Description: "Start a bounded page-side network recorder for sanitized HAR-lite metadata without headers or bodies.",
-			Flags: append([]string{"limit", "filter"}, pageFlags...), Risk: "write", Example: "browser network start --session default --limit 500 --json"},
+		"network.start": {Description: "Start a bounded page-side network recorder for metadata and redacted fetch/XHR response body previews by default.",
+			Flags: append([]string{"limit", "filter", "body", "max-body-bytes"}, pageFlags...), Risk: "write", Example: "browser network start --session default --limit 500 --json"},
 		"network.stop": {Description: "Stop the page-side network recorder and persist its final sanitized metadata artifact.",
 			Flags: pageFlags, Risk: "write", Example: "browser network stop --session default --json"},
-		"network.list": {Description: "List sanitized HAR-lite network metadata without headers, cookies, storage, or bodies.",
-			Flags: append([]string{"filter", "limit", "method", "status"}, pageFlags...), Risk: "read", Example: "browser network list --session default --filter /api/ --json"},
+		"network.list": {Description: "List sanitized HAR-lite network metadata and redacted fetch/XHR response body previews without headers, cookies, storage, or request bodies.",
+			Flags: append([]string{"filter", "limit", "method", "status", "body", "max-body-bytes"}, pageFlags...), Risk: "read", Example: "browser network list --session default --filter /api/ --json"},
 		"network.wait": {Description: "Wait for a recorded network event matching a URL substring and optional status or method.",
-			Flags: append([]string{"url-contains", "method", "status", "limit"}, pageFlags...), Required: []string{"url-contains"}, Risk: "read", Example: "browser network wait --session default --url-contains /api/ --status 200 --json"},
-		"network.export": {Description: "Write sanitized recorded network metadata to a JSON or HAR-lite artifact and return path/count/size metadata only.",
+			Flags: append([]string{"url-contains", "method", "status", "limit", "body", "max-body-bytes"}, pageFlags...), Required: []string{"url-contains"}, Risk: "read", Example: "browser network wait --session default --url-contains /api/ --status 200 --json"},
+		"network.export": {Description: "Write sanitized recorded network metadata and redacted fetch/XHR response body previews to a JSON or HAR-lite artifact and return path/count/size metadata.",
 			Flags: append([]string{"out", "format", "filter", "limit"}, pageFlags...), Required: []string{"out"}, Risk: "read", Example: "browser network export --out result/network.har-lite.json --format har-lite --json"},
 		"network.clear": {Description: "Clear page-side network recorder entries and persist an empty sanitized artifact.",
 			Flags: pageFlags, Risk: "write", Example: "browser network clear --session default --json"},
@@ -1319,9 +1334,9 @@ func flagTypeFor(command, name string) string {
 
 func flagType(name string) string {
 	switch name {
-	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error", "allow-human":
+	case "json", "verbose", "dry-run", "yes", "body-stdin", "body", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error", "allow-human":
 		return "bool"
-	case "sample-rows", "max-create", "wait", "timeout", "max-network-events", "limit", "limit-resources", "duration-ms", "network-idle-ms", "dom-stable-ms", "equals", "min", "max", "index", "status", "limit-rows", "limit-cells", "limit-items", "debug-port":
+	case "sample-rows", "max-create", "wait", "timeout", "max-network-events", "limit", "limit-resources", "duration-ms", "network-idle-ms", "dom-stable-ms", "equals", "min", "max", "index", "status", "limit-rows", "limit-cells", "limit-items", "debug-port", "nth", "max-scrolls", "scroll-step", "interval-ms", "max-body-bytes":
 		return "int"
 	case "min-confidence", "threshold":
 		return "float"
@@ -1362,6 +1377,9 @@ func flagDescription(command, name string) string {
 		if command == "network.export" {
 			return "Network export artifact format: json or har-lite. Use --json for the command envelope."
 		}
+		if command == "page.table-export" || command == "page.list-export" || command == "page.scroll-collect" {
+			return "Data export artifact format: json or csv."
+		}
 		return "Output format: table, json, or yaml."
 	case "verbose":
 		return "Print additional diagnostic details when available; secrets must remain redacted."
@@ -1373,6 +1391,9 @@ func flagDescription(command, name string) string {
 	case "yes":
 		if command == "workflow.run" {
 			return "Allow human.confirm steps only after explicit user confirmation."
+		}
+		if command == "page.click" {
+			return "Confirm a click that appears to be a risky action such as submit, delete, pay, save, approve, or publish."
 		}
 		return "Confirm destructive operations."
 	case "base-url":
@@ -1474,6 +1495,9 @@ func flagDescription(command, name string) string {
 	case "description":
 		return "Description text."
 	case "name":
+		if command == "page.find" {
+			return "Accessible name substring to match."
+		}
 		return "Resource name for the command target, such as an instance, cycle, folder, component, version, filter, or webhook name."
 	case "key":
 		return "Property key or user key, depending on the command."
@@ -1498,6 +1522,9 @@ func flagDescription(command, name string) string {
 	case "title":
 		return "Page title."
 	case "body":
+		if strings.HasPrefix(command, "network.") {
+			return "Capture and return redacted fetch/XHR response body previews; enabled by default for network recorder commands."
+		}
 		return "Inline request body text or JSON, depending on the command."
 	case "body-file":
 		return "Path to a file containing the request body."
@@ -1603,6 +1630,9 @@ func flagDescription(command, name string) string {
 	case "version":
 		return "Confluence content version number."
 	case "label":
+		if command == "page.find" {
+			return "Associated form label substring to match."
+		}
 		return "Confluence label name. Repeat when the flag accepts multiple values."
 	case "prefix":
 		return "Confluence label prefix."
@@ -1611,6 +1641,9 @@ func flagDescription(command, name string) string {
 	case "attachment-id":
 		return "Confluence attachment id."
 	case "text":
+		if command == "page.find" {
+			return "Visible text substring to match."
+		}
 		if command == "page.type" {
 			return "Text to type; the value is not included in command output."
 		}
@@ -1619,6 +1652,9 @@ func flagDescription(command, name string) string {
 		}
 		return "Text term used to build a Confluence content search query."
 	case "selector":
+		if command == "page.diff" {
+			return "Unused."
+		}
 		if strings.HasPrefix(command, "assert.") {
 			return "CSS selector for the assertion target."
 		}
@@ -1654,6 +1690,9 @@ func flagDescription(command, name string) string {
 	case "max-string-bytes":
 		return "Maximum bytes per redacted string value in page eval output."
 	case "max-body-bytes":
+		if strings.HasPrefix(command, "network.") {
+			return "Maximum bytes of redacted fetch/XHR response body preview per recorded event."
+		}
 		return "Maximum bytes of redacted page fetch body preview to return."
 	case "duration-ms":
 		if command == "workflow.record" {
@@ -1693,6 +1732,22 @@ func flagDescription(command, name string) string {
 		return "Maximum number of cells to return per extracted table row."
 	case "limit-items":
 		return "Maximum number of items to return per extracted page list."
+	case "nth":
+		return "One-based match index within the semantic locator; 0 returns all matches up to the limit."
+	case "role":
+		return "ARIA-style role to match, such as button, link, textbox, checkbox, combobox, or heading."
+	case "placeholder":
+		return "Input placeholder substring to match."
+	case "near-text":
+		return "Text near the candidate element to match."
+	case "item-selector":
+		return "Selector for repeated items to collect during scrolling."
+	case "max-scrolls":
+		return "Maximum number of scroll steps for scroll collection."
+	case "scroll-step":
+		return "Pixels to scroll per step during scroll collection."
+	case "interval-ms":
+		return "Milliseconds to wait after each scroll step."
 	case "limit-resources":
 		return "Maximum number of largest matching resource timing entries to return."
 	case "filename-contains":
@@ -1707,6 +1762,8 @@ func flagDescription(command, name string) string {
 		return "Workflow variable override in name=value form; repeatable and not echoed in plans."
 	case "report-out":
 		return "Path to write a sanitized workflow run audit report."
+	case "evidence-dir":
+		return "Optional directory for a workflow evidence bundle; disabled by default."
 	case "debug-addr":
 		return "Explicit local DevTools address; only 127.0.0.1 is allowed."
 	case "debug-port":
@@ -1755,6 +1812,12 @@ func flagDescription(command, name string) string {
 		if command == "network.export" {
 			return "Output file path for the sanitized network export."
 		}
+		if command == "page.table-export" || command == "page.list-export" || command == "page.scroll-collect" {
+			return "Output artifact path for exported page data."
+		}
+		if command == "page.diff" {
+			return "Optional JSON output path for the page diff result."
+		}
 		if command == "workflow.record" {
 			return "Output workflow YAML path; typed text is replaced by variables."
 		}
@@ -1768,6 +1831,10 @@ func flagDescription(command, name string) string {
 			return "Directory for screenshot, HTML, network, and summary artifacts."
 		}
 		return "Path to write a JSON envelope copy."
+	case "before":
+		return "Before JSON file for page state diff."
+	case "after":
+		return "After JSON file for page state diff."
 	case "profile":
 		if strings.HasPrefix(command, "session.") {
 			return "Dedicated browser profile directory for this automation session."

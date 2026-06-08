@@ -1,6 +1,8 @@
 package automation
 
 import (
+	"context"
+	"encoding/json"
 	"image"
 	"image/color"
 	"image/png"
@@ -79,6 +81,72 @@ func TestLoadExtractSchemaAndFormValues(t *testing.T) {
 	}
 }
 
+func TestWorkflowLocatorsAllowSelectorFreeActions(t *testing.T) {
+	def, err := ParseWorkflowYAML([]byte(`
+steps:
+  - action: page.click
+    locators:
+      - role: button
+        name: Save
+`))
+	if err != nil {
+		t.Fatalf("ParseWorkflowYAML failed: %v", err)
+	}
+	if len(def.Steps) != 1 || len(def.Steps[0].Locators) != 1 {
+		t.Fatalf("locators not parsed: %#v", def)
+	}
+	result, err := RunWorkflow(contextWithoutBrowser(t), nil, WorkflowRunOptions{Definition: def, DryRun: true})
+	if err != nil {
+		t.Fatalf("dry-run failed: %v", err)
+	}
+	if result.Steps[0].Plan.LocatorCount != 1 {
+		t.Fatalf("locator count missing from plan: %#v", result.Steps[0].Plan)
+	}
+}
+
+func TestTableAndListCSVExports(t *testing.T) {
+	tableBytes, err := tableCSV(TableResult{Tables: []PageTable{{
+		Index: 1,
+		Rows:  []TableRow{{Index: 2, Cells: []TableCell{{Index: 3, Text: "Ada"}}}},
+	}}})
+	if err != nil {
+		t.Fatalf("tableCSV failed: %v", err)
+	}
+	if !strings.Contains(string(tableBytes), "table_index,row_index,cell_index") || !strings.Contains(string(tableBytes), "Ada") {
+		t.Fatalf("unexpected table csv: %s", tableBytes)
+	}
+	listBytes, err := listCSV(PageListResult{Lists: []PageList{{
+		Index: 1,
+		Items: []PageListItem{{Index: 2, Level: 3, Text: "Item", Href: "https://example.test"}},
+	}}})
+	if err != nil {
+		t.Fatalf("listCSV failed: %v", err)
+	}
+	if !strings.Contains(string(listBytes), "list_index,item_index,level") || !strings.Contains(string(listBytes), "Item") {
+		t.Fatalf("unexpected list csv: %s", listBytes)
+	}
+}
+
+func TestPageDiffEnvelopeData(t *testing.T) {
+	dir := t.TempDir()
+	before := filepath.Join(dir, "before.json")
+	after := filepath.Join(dir, "after.json")
+	writeJSON(t, before, map[string]any{"ok": true, "data": map[string]any{"title": "Before", "url": "https://example.test/?token=secret"}})
+	writeJSON(t, after, map[string]any{"ok": true, "data": map[string]any{"title": "After", "url": "https://example.test/?token=secret"}})
+	result, err := PageDiff(PageDiffOptions{BeforeFile: before, AfterFile: after, Limit: 10})
+	if err != nil {
+		t.Fatalf("PageDiff failed: %v", err)
+	}
+	if result.ChangeCount == 0 || result.Changes[0].Path == "" {
+		t.Fatalf("diff missing changes: %#v", result)
+	}
+	for _, change := range result.Changes {
+		if strings.Contains(change.BeforePreview, "secret") || strings.Contains(change.AfterPreview, "secret") {
+			t.Fatalf("diff leaked secret: %#v", change)
+		}
+	}
+}
+
 func writeTinyPNG(t *testing.T, path string, c color.Color) {
 	t.Helper()
 	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
@@ -91,4 +159,20 @@ func writeTinyPNG(t *testing.T, path string, c color.Color) {
 	if err := png.Encode(f, img); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func writeJSON(t *testing.T, path string, value any) {
+	t.Helper()
+	b, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func contextWithoutBrowser(t *testing.T) context.Context {
+	t.Helper()
+	return context.Background()
 }

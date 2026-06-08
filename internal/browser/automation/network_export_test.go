@@ -27,7 +27,7 @@ func TestNetworkExportEntriesRedactsFiltersAndLimits(t *testing.T) {
 	}
 }
 
-func TestNetworkExportWritesHARLiteMetadataOnly(t *testing.T) {
+func TestNetworkExportWritesHARLiteResponsePreview(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/json/version":
@@ -74,6 +74,9 @@ func TestNetworkExportWritesHARLiteMetadataOnly(t *testing.T) {
 			DurationMilliseconds: 25,
 			TransferSizeBytes:    100,
 			Source:               "fetch",
+			BodyPreview:          `{"token":"[REDACTED]","name":"Ada"}`,
+			BodyLength:           31,
+			BodyCaptured:         true,
 		}},
 		UpdatedAt:  time.Now().UTC(),
 		Limitation: networkRecorderLimitation,
@@ -106,10 +109,13 @@ func TestNetworkExportWritesHARLiteMetadataOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(written)
-	for _, leaked := range []string{"access_token=secret", `"headers"`, `"cookies"`, `"body"`, `"authorization"`} {
+	for _, leaked := range []string{"access_token=secret", `"headers"`, `"cookies"`, `"authorization"`, "secret"} {
 		if strings.Contains(strings.ToLower(text), leaked) {
 			t.Fatalf("network export leaked %q in %s", leaked, text)
 		}
+	}
+	if !strings.Contains(text, `"content"`) || !strings.Contains(text, "Ada") {
+		t.Fatalf("har-lite body preview missing: %s", text)
 	}
 	if !strings.Contains(text, `"request"`) || !strings.Contains(text, `"response"`) || !strings.Contains(text, `"sizes"`) {
 		t.Fatalf("har-lite metadata missing: %s", text)

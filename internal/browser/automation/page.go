@@ -73,8 +73,9 @@ type ExtractResult struct {
 
 type ClickOptions struct {
 	PageOptions
-	Selector string
-	Ref      string
+	Selector   string
+	Ref        string
+	AllowRisky bool
 }
 
 type TypeOptions struct {
@@ -109,6 +110,8 @@ type PageActionResult struct {
 	SelectedCount        int    `json:"selected_count,omitempty"`
 	Checked              *bool  `json:"checked,omitempty"`
 	DurationMilliseconds int    `json:"duration_ms,omitempty"`
+	Risky                bool   `json:"risky,omitempty"`
+	RiskReason           string `json:"risk_reason,omitempty"`
 }
 
 type WaitConditionResult struct {
@@ -286,15 +289,27 @@ func (m *Manager) Click(ctx context.Context, opts ClickOptions) (PageActionResul
 	}
 
 	var finalURL, title string
+	var risk pageActionRisk
 	if err := chromedp.Run(pageCtx,
 		chromedp.WaitVisible(selector, chromedp.ByQuery),
+		chromedp.Evaluate(pageActionRiskExpression(selector), &risk, chromedp.EvalAsValue),
+	); err != nil {
+		return PageActionResult{}, mapPageError(err, "automation_failed")
+	}
+	if risk.Risky && !opts.AllowRisky {
+		return PageActionResult{}, NewError("risky_action_requires_confirmation", "Click target appears to be a risky action.", "Rerun with --yes only after the user explicitly confirms this click.", 409)
+	}
+	if err := chromedp.Run(pageCtx,
 		chromedp.Click(selector, chromedp.ByQuery),
 		chromedp.Location(&finalURL),
 		chromedp.Title(&title),
 	); err != nil {
 		return PageActionResult{}, mapPageError(err, "automation_failed")
 	}
-	return pageActionResult(session, target, "click", selector, ref, finalURL, title), nil
+	result := pageActionResult(session, target, "click", selector, ref, finalURL, title)
+	result.Risky = risk.Risky
+	result.RiskReason = RedactString(risk.Reason)
+	return result, nil
 }
 
 func (m *Manager) Type(ctx context.Context, opts TypeOptions) (PageActionResult, error) {
@@ -581,6 +596,28 @@ func pageActionResult(session Session, target Target, action, selector, ref, fin
 		URL:      RedactURL(finalURL),
 		Title:    RedactString(title),
 	}
+}
+
+type pageActionRisk struct {
+	Risky  bool   `json:"risky"`
+	Reason string `json:"reason"`
+}
+
+func pageActionRiskExpression(selector string) string {
+	return `(function () {
+  const selector = ` + strconv.Quote(selector) + `;
+  const el = document.querySelector(selector);
+  if (!el) return {risky: false, reason: ""};
+  const attr = (node, name) => String((node && node.getAttribute(name)) || "").trim();
+  const text = String((el.innerText || el.textContent || "") + " " + attr(el, "aria-label") + " " + attr(el, "title") + " " + attr(el, "value") + " " + attr(el, "name") + " " + attr(el, "id")).replace(/\s+/g, " ").trim().toLowerCase();
+  const tag = String(el.tagName || "").toLowerCase();
+  const type = attr(el, "type").toLowerCase();
+  const riskPattern = /\b(delete|remove|destroy|drop|purge|pay|purchase|buy|checkout|transfer|refund|submit|save|approve|reject|confirm|publish|deploy|send|invite|disable|enable)\b/i;
+  if ((tag === "button" || tag === "input") && type === "submit") return {risky: true, reason: "submit control"};
+  const match = text.match(riskPattern);
+  if (match) return {risky: true, reason: "matched action keyword: " + match[1]};
+  return {risky: false, reason: ""};
+})()`
 }
 
 func extractExpression(selector string, limit int, includeHTML, pierce bool) string {

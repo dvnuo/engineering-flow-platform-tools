@@ -30,6 +30,9 @@ func TestSanitizeNetworkRecordEntriesRedactsAndFilters(t *testing.T) {
 			DurationMilliseconds: 200,
 			TransferSizeBytes:    123,
 			Source:               "fetch",
+			BodyPreview:          `{"token":"secret","name":"Ada"}`,
+			BodyLength:           len(`{"token":"secret","name":"Ada"}`),
+			BodyCaptured:         true,
 		},
 		{
 			ID:            "res-1",
@@ -41,7 +44,7 @@ func TestSanitizeNetworkRecordEntriesRedactsAndFilters(t *testing.T) {
 			Source:        "resource_timing",
 		},
 	}
-	got, count := sanitizeNetworkRecordEntries(raw, NetworkRecorderOptions{Filter: "/api/", Method: "POST", Status: 200, Limit: 10})
+	got, count := sanitizeNetworkRecordEntries(raw, NetworkRecorderOptions{Filter: "/api/", Method: "POST", Status: 200, Limit: 10, Body: true, MaxBodyBytes: 20000})
 	if count != 1 || len(got) != 1 {
 		t.Fatalf("count=%d entries=%#v", count, got)
 	}
@@ -51,6 +54,9 @@ func TestSanitizeNetworkRecordEntriesRedactsAndFilters(t *testing.T) {
 	}
 	if strings.Contains(entry.URL, "access_token=secret") {
 		t.Fatalf("network URL leaked token: %#v", entry)
+	}
+	if !entry.BodyCaptured || strings.Contains(entry.BodyPreview, "secret") || !strings.Contains(entry.BodyPreview, "Ada") {
+		t.Fatalf("network body preview was not redacted: %#v", entry)
 	}
 }
 
@@ -101,7 +107,7 @@ func TestNormalizeNetworkRecorderOptionsCapsLimitAndMethod(t *testing.T) {
 		t.Fatalf("unexpected normalized opts: %#v", opts)
 	}
 	opts = normalizeNetworkRecorderOptions(NetworkRecorderOptions{})
-	if opts.Limit != 500 || opts.Status != -1 {
+	if opts.Limit != 500 || opts.Status != -1 || opts.MaxBodyBytes != 20000 {
 		t.Fatalf("unexpected defaults: %#v", opts)
 	}
 }

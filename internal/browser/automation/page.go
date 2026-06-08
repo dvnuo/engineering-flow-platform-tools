@@ -72,11 +72,13 @@ type ExtractResult struct {
 type ClickOptions struct {
 	PageOptions
 	Selector string
+	Ref      string
 }
 
 type TypeOptions struct {
 	PageOptions
 	Selector string
+	Ref      string
 	Text     string
 	Clear    bool
 }
@@ -96,9 +98,14 @@ type PageActionResult struct {
 	TargetID             string `json:"target_id"`
 	Action               string `json:"action"`
 	Selector             string `json:"selector,omitempty"`
+	Ref                  string `json:"ref,omitempty"`
 	URL                  string `json:"url"`
 	Title                string `json:"title"`
 	TextBytes            int    `json:"text_bytes,omitempty"`
+	Key                  string `json:"key,omitempty"`
+	SelectionMode        string `json:"selection_mode,omitempty"`
+	SelectedCount        int    `json:"selected_count,omitempty"`
+	Checked              *bool  `json:"checked,omitempty"`
 	DurationMilliseconds int    `json:"duration_ms,omitempty"`
 }
 
@@ -256,53 +263,64 @@ func (m *Manager) Extract(ctx context.Context, opts ExtractOptions) (ExtractResu
 }
 
 func (m *Manager) Click(ctx context.Context, opts ClickOptions) (PageActionResult, error) {
-	if strings.TrimSpace(opts.Selector) == "" {
-		return PageActionResult{}, invalidArgs("--selector is required", "Run browser schema page.click --json.")
+	if err := validateActionTarget(opts.Selector, opts.Ref, "page.click"); err != nil {
+		return PageActionResult{}, err
 	}
 	pageCtx, cancel, session, target, err := m.attachPage(ctx, opts.PageOptions)
 	if err != nil {
 		return PageActionResult{}, err
 	}
 	defer cancel()
+	selector, ref, err := m.resolveActionSelector(session, target, opts.Selector, opts.Ref)
+	if err != nil {
+		return PageActionResult{}, err
+	}
 
 	var finalURL, title string
 	if err := chromedp.Run(pageCtx,
-		chromedp.WaitVisible(opts.Selector, chromedp.ByQuery),
-		chromedp.Click(opts.Selector, chromedp.ByQuery),
+		chromedp.WaitVisible(selector, chromedp.ByQuery),
+		chromedp.Click(selector, chromedp.ByQuery),
 		chromedp.Location(&finalURL),
 		chromedp.Title(&title),
 	); err != nil {
 		return PageActionResult{}, mapPageError(err, "automation_failed")
 	}
-	return pageActionResult(session, target, "click", opts.Selector, finalURL, title), nil
+	return pageActionResult(session, target, "click", selector, ref, finalURL, title), nil
 }
 
 func (m *Manager) Type(ctx context.Context, opts TypeOptions) (PageActionResult, error) {
-	if strings.TrimSpace(opts.Selector) == "" {
-		return PageActionResult{}, invalidArgs("--selector is required", "Run browser schema page.type --json.")
+	if err := validateActionTarget(opts.Selector, opts.Ref, "page.type"); err != nil {
+		return PageActionResult{}, err
+	}
+	if strings.TrimSpace(opts.Text) == "" {
+		return PageActionResult{}, invalidArgs("--text is required", "Pass text to type; command output will report only byte count.")
 	}
 	pageCtx, cancel, session, target, err := m.attachPage(ctx, opts.PageOptions)
 	if err != nil {
 		return PageActionResult{}, err
 	}
 	defer cancel()
+	selector, ref, err := m.resolveActionSelector(session, target, opts.Selector, opts.Ref)
+	if err != nil {
+		return PageActionResult{}, err
+	}
 
 	actions := []chromedp.Action{
-		chromedp.WaitVisible(opts.Selector, chromedp.ByQuery),
+		chromedp.WaitVisible(selector, chromedp.ByQuery),
 	}
 	if opts.Clear {
-		actions = append(actions, chromedp.Clear(opts.Selector, chromedp.ByQuery))
+		actions = append(actions, chromedp.Clear(selector, chromedp.ByQuery))
 	}
 	var finalURL, title string
 	actions = append(actions,
-		chromedp.SendKeys(opts.Selector, opts.Text, chromedp.ByQuery),
+		chromedp.SendKeys(selector, opts.Text, chromedp.ByQuery),
 		chromedp.Location(&finalURL),
 		chromedp.Title(&title),
 	)
 	if err := chromedp.Run(pageCtx, actions...); err != nil {
 		return PageActionResult{}, mapPageError(err, "automation_failed")
 	}
-	result := pageActionResult(session, target, "type", opts.Selector, finalURL, title)
+	result := pageActionResult(session, target, "type", selector, ref, finalURL, title)
 	result.TextBytes = len(opts.Text)
 	return result, nil
 }
@@ -508,12 +526,13 @@ func DefaultPageScreenshotPath(now time.Time) (string, error) {
 	return filepath.Join(root, "artifacts", name), nil
 }
 
-func pageActionResult(session Session, target Target, action, selector, finalURL, title string) PageActionResult {
+func pageActionResult(session Session, target Target, action, selector, ref, finalURL, title string) PageActionResult {
 	return PageActionResult{
 		Session:  session.Name,
 		TargetID: target.ID,
 		Action:   action,
-		Selector: RedactString(selector),
+		Selector: normalizeSelectorHint(selector),
+		Ref:      RedactString(ref),
 		URL:      RedactURL(finalURL),
 		Title:    RedactString(title),
 	}

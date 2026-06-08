@@ -53,6 +53,13 @@ func TestSchemaProbeRequiresURL(t *testing.T) {
 func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
 	cases := map[string][]string{
 		"session.start": {"download-dir"},
+		"page.ax":       {"limit", "include-hidden", "session", "target-id", "timeout"},
+		"page.click":    {"selector", "ref", "session", "target-id", "timeout"},
+		"page.type":     {"selector", "ref", "text", "clear", "session", "target-id", "timeout"},
+		"page.select":   {"selector", "ref", "value", "label", "index", "session", "target-id", "timeout"},
+		"page.check":    {"selector", "ref", "session", "target-id", "timeout"},
+		"page.uncheck":  {"selector", "ref", "session", "target-id", "timeout"},
+		"page.press":    {"selector", "ref", "key", "session", "target-id", "timeout"},
 		"page.upload":   {"selector", "file", "clear", "session", "target-id", "timeout"},
 		"download.list": {"session"},
 		"download.wait": {"session", "filename-contains", "timeout"},

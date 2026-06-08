@@ -21,6 +21,10 @@ func pageCmd(o *Opts) *cobra.Command {
 		pageAXCmd(o),
 		pageClickCmd(o),
 		pageTypeCmd(o),
+		pageSelectCmd(o),
+		pageCheckCmd(o),
+		pageUncheckCmd(o),
+		pagePressCmd(o),
 		pageUploadCmd(o),
 		pageWaitCmd(o),
 		pageScreenshotCmd(o),
@@ -137,6 +141,7 @@ func pageClickCmd(o *Opts) *cobra.Command {
 	}
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().StringVar(&opts.Selector, "selector", "", "CSS selector for the visible element to click.")
+	c.Flags().StringVar(&opts.Ref, "ref", "", "Accessibility ref from browser page ax for the visible element to click.")
 	return c
 }
 
@@ -162,8 +167,107 @@ func pageTypeCmd(o *Opts) *cobra.Command {
 	}
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().StringVar(&opts.Selector, "selector", "", "CSS selector for the visible input or editable element.")
+	c.Flags().StringVar(&opts.Ref, "ref", "", "Accessibility ref from browser page ax for the visible input or editable element.")
 	c.Flags().StringVar(&opts.Text, "text", "", "Text to type; the value is not included in command output.")
 	c.Flags().BoolVar(&opts.Clear, "clear", false, "Clear the selected element before typing.")
+	return c
+}
+
+func pageSelectCmd(o *Opts) *cobra.Command {
+	opts := automation.SelectOptions{PageOptions: defaultPageOptions(), Index: -1}
+	c := &cobra.Command{
+		Use:   "select",
+		Short: "Select an option in a page select element",
+		Long:  "Select an option by value, label, or index on a select element addressed by CSS selector or accessibility ref, returning only non-secret action metadata.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Select(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "CSS selector for the visible select element.")
+	c.Flags().StringVar(&opts.Ref, "ref", "", "Accessibility ref from browser page ax for the visible select element.")
+	c.Flags().StringVar(&opts.Value, "value", "", "Option value to select; the value is not included in command output.")
+	c.Flags().StringVar(&opts.Label, "label", "", "Option label to select; the label is not included in command output.")
+	c.Flags().IntVar(&opts.Index, "index", -1, "Zero-based option index to select.")
+	return c
+}
+
+func pageCheckCmd(o *Opts) *cobra.Command {
+	return pageCheckStateCmd(o, true)
+}
+
+func pageUncheckCmd(o *Opts) *cobra.Command {
+	return pageCheckStateCmd(o, false)
+}
+
+func pageCheckStateCmd(o *Opts, checked bool) *cobra.Command {
+	opts := automation.CheckOptions{PageOptions: defaultPageOptions(), Checked: checked}
+	use := "check"
+	short := "Check a checkbox-like page element"
+	long := "Set a checkbox, radio, switch, or ARIA checkbox addressed by CSS selector or accessibility ref to checked and return non-secret action metadata."
+	if !checked {
+		use = "uncheck"
+		short = "Uncheck a checkbox-like page element"
+		long = "Set a checkbox, switch, or ARIA checkbox addressed by CSS selector or accessibility ref to unchecked and return non-secret action metadata."
+	}
+	c := &cobra.Command{
+		Use:   use,
+		Short: short,
+		Long:  long,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Check(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "CSS selector for the visible checkable element.")
+	c.Flags().StringVar(&opts.Ref, "ref", "", "Accessibility ref from browser page ax for the visible checkable element.")
+	return c
+}
+
+func pagePressCmd(o *Opts) *cobra.Command {
+	opts := automation.PressOptions{PageOptions: defaultPageOptions()}
+	c := &cobra.Command{
+		Use:   "press",
+		Short: "Press a keyboard key in the page",
+		Long:  "Press a key in the selected page, optionally focusing an element by CSS selector or accessibility ref first, and return non-secret action metadata.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Press(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "Optional CSS selector to focus before pressing the key.")
+	c.Flags().StringVar(&opts.Ref, "ref", "", "Optional accessibility ref from browser page ax to focus before pressing the key.")
+	c.Flags().StringVar(&opts.Key, "key", "", "Key to press, such as Enter, Tab, Escape, ArrowDown, or a printable character.")
 	return c
 }
 

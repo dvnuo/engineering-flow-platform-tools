@@ -11,7 +11,7 @@
 - A provided CSS selector appears after navigation.
 - Page title, final URL, screenshot, HTML, and network event summaries are available for diagnosis.
 - Optional page-context `fetch` can call an API with browser credentials included.
-- A persistent session can list/open/activate tabs, snapshot/extract redacted page content, inspect page structure, read sanitized network timing summaries, extract tables/lists, click/type/upload/wait, write screenshot artifacts, evaluate sanitized page expressions, run sanitized GET fetches with credentials omitted, and inspect download metadata.
+- A persistent session can list/open/activate tabs, snapshot/extract redacted page content, inspect page structure, produce accessibility-style refs, read sanitized network timing summaries, record sanitized HAR-lite metadata, inspect console/runtime errors, inspect frames, extract tables/lists, click/type/select/check/press/upload/wait, write screenshot artifacts, evaluate sanitized page expressions, run sanitized GET fetches with credentials omitted, and inspect download metadata.
 
 ## What It Does Not Do
 
@@ -22,6 +22,7 @@
 - It does not return response headers, request bodies, response bodies from network observation, browser storage, or binary download bytes.
 - It does not return screenshot bytes; `browser page screenshot` writes a local PNG and returns path/size metadata.
 - It does not allow `browser page eval` to access cookies, browser storage, credentials, headers, or network APIs.
+- It does not expose typed text, selected option values, console object previews, raw console stacks without redaction, frame URLs/titles without redaction, or closed shadow roots.
 - It does not treat `negotiate_401_seen` as proof of Kerberos or Windows Integrated Authentication success. It is only an indicator.
 
 ## Windows Manual Test
@@ -72,8 +73,13 @@ Read redacted page state:
 ```bash
 browser page snapshot --session default --json
 browser page extract --session default --selector ".user-avatar" --json
+browser page ax --session default --json
 browser page outline --session default --json
+browser page outline --session default --pierce --json
 browser page network --session default --filter "/api/" --json
+browser page console --session default --level error --json
+browser page errors --session default --json
+browser frame list --session default --json
 browser page table --session default --selector "table.results" --json
 browser page list --session default --selector "nav" --json
 ```
@@ -82,17 +88,24 @@ Run bounded page actions:
 
 ```bash
 browser page click --session default --selector "button.sign-in" --json
+browser page click --session default --ref "axref-0-abcdef123456" --json
 browser page type --session default --selector "input[name=q]" --text "search" --clear --json
+browser page select --session default --ref "axref-1-abcdef123456" --label "Ready" --json
+browser page check --session default --ref "axref-2-abcdef123456" --json
+browser page press --session default --key Enter --json
 browser page upload --session default --selector "input[type=file]" --file "./report.pdf" --json
 browser page wait --session default --selector ".ready" --network-idle-ms 500 --dom-stable-ms 500 --json
 browser page screenshot --session default --out "result/page-screenshot.png" --json
 browser page eval --session default --expr "document.title" --json
 browser page fetch --session default --url "/api/me" --json
+browser network start --session default --limit 500 --json
+browser network wait --session default --url-contains "/api/" --status 200 --json
+browser network list --session default --filter "/api/" --json
 browser download wait --session default --filename-contains "report" --json
 browser download list --session default --json
 ```
 
-`page snapshot`, `page extract`, `page outline`, `page table`, `page list`, `page eval`, and `page fetch` redact URLs, sensitive assignments, sensitive JSON fields, and known secret-bearing text patterns. `page network` reads browser resource timing entries and returns redacted URLs, initiator/resource type, timing, size counters, and an API-like marker only. `page fetch` rejects unsafe schemes such as `file:`, `data:`, `javascript:`, `chrome:`, and `about:`, runs as GET only, omits credentials, and returns no headers.
+`page snapshot`, `page extract`, `page ax`, `page outline`, `page table`, `page list`, `page console`, `page errors`, `frame snapshot`, `page eval`, and `page fetch` redact URLs, sensitive assignments, sensitive JSON fields, and known secret-bearing text patterns. `page ax` is a DOM/ARIA accessibility-style fallback with stable short-session refs stored under `~/.efp/browser/refs`; rerun it after navigation or DOM changes. `page extract`, `page outline`, and `page ax` support `--pierce` for open shadow roots only. `frame snapshot` reads a selected DevTools frame by `--frame-id` and redacts frame URL/title/text. `page network` reads browser resource timing entries and returns redacted URLs, initiator/resource type, timing, size counters, and an API-like marker only. `browser network start/list/wait/stop/clear` records sanitized HAR-lite metadata after `start` via page-side fetch/XHR/resource collectors and never captures headers, cookies, storage, or bodies. `page console` and `page errors` capture events only after recorder injection and redact/truncate messages and stacks. `page fetch` rejects unsafe schemes such as `file:`, `data:`, `javascript:`, `chrome:`, and `about:`, runs as GET only, omits credentials, and returns no headers.
 
 `page wait` accepts `--selector`, `--duration-ms`, `--url-contains`, `--text`, `--network-idle-ms`, and `--dom-stable-ms`; all provided conditions must be satisfied within `--timeout`. Network-idle and DOM-stable waits use resource timing counts and DOM/text shape metadata only.
 
@@ -153,9 +166,9 @@ The one-shot `browser probe` default profile is a dedicated probe profile:
 
 Use `--profile` to choose another dedicated profile. Use `--clean-profile` to delete the probe profile before launch. Do not point `--profile` at a real user default Edge/Chrome profile.
 
-Persistent sessions default to `~/.efp/browser/profiles/<session-name>`, downloads default to `~/.efp/browser/downloads/<session-name>`, and session metadata is stored under `~/.efp/browser/sessions`. DevTools for launched sessions is bound to `127.0.0.1`.
+Persistent sessions default to `~/.efp/browser/profiles/<session-name>`, downloads default to `~/.efp/browser/downloads/<session-name>`, session metadata is stored under `~/.efp/browser/sessions`, accessibility refs under `~/.efp/browser/refs`, and network recorder artifacts under `~/.efp/browser/network`. DevTools for launched sessions is bound to `127.0.0.1`.
 
-The tool does not read browser cookie databases, decrypt cookies, export tokens, print request/response headers, or read downloaded file contents. Probe `--fetch-api` records `ok`, `status`, redacted `url`, `contentType`, and a capped `bodyPreview`. Persistent `page fetch` records `ok`, `status`, redacted final URL, and a capped redacted `body_preview` with credentials omitted and no headers. Persistent `page upload` validates local regular files and returns path/name/size metadata only.
+The tool does not read browser cookie databases, decrypt cookies, export tokens, print request/response headers, print request/response bodies, echo typed text, or read downloaded file contents. Probe `--fetch-api` records `ok`, `status`, redacted `url`, `contentType`, and a capped `bodyPreview`. Persistent `page fetch` records `ok`, `status`, redacted final URL, and a capped redacted `body_preview` with credentials omitted and no headers. Persistent `page upload` validates local regular files and returns path/name/size metadata only.
 
 ## OpenCode Runtime Handoff
 

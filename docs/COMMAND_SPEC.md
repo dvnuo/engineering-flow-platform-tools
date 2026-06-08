@@ -481,17 +481,32 @@ confluence page get --url <page-url>
 - browser tab open
 - browser page snapshot
 - browser page extract
+- browser page ax
 - browser page click
 - browser page type
+- browser page select
+- browser page check
+- browser page uncheck
+- browser page press
 - browser page upload
 - browser page wait
 - browser page screenshot
 - browser page eval
 - browser page fetch
+- browser page console
+- browser page errors
+- browser page console-clear
 - browser page network
 - browser page outline
 - browser page table
 - browser page list
+- browser frame list
+- browser frame snapshot
+- browser network start
+- browser network stop
+- browser network list
+- browser network wait
+- browser network clear
 - browser download list
 - browser download wait
 - browser commands
@@ -509,20 +524,32 @@ browser tab list --session default --json
 browser tab activate --session default --target-id <target-id> --json
 browser page snapshot --session default --json
 browser page extract --session default --selector .user-avatar --json
+browser page ax --session default --json
 browser page outline --session default --json
 browser page network --session default --filter /api/ --json
+browser network start --session default --limit 500 --json
+browser network list --session default --filter /api/ --json
 ```
 
 ### Page Actions
 
-- `browser page click --selector <css>` clicks a visible element.
-- `browser page type --selector <css> --text <text> [--clear]` types text without echoing the text in output.
+- `browser page ax` returns a bounded DOM/ARIA accessibility-style tree with stable short-session refs. It redacts names, descriptions, titles, frame URLs/titles, and selector hints, and stores a sanitized ref artifact for later `--ref` actions.
+- `browser page click --selector <css>|--ref <ref>` clicks a visible element.
+- `browser page type --selector <css>|--ref <ref> --text <text> [--clear]` types text without echoing the text in output.
+- `browser page select --selector <css>|--ref <ref> (--value <value>|--label <label>|--index <n>)` selects an option and returns only selection mode/count metadata.
+- `browser page check|uncheck --selector <css>|--ref <ref>` sets checkbox-like elements to checked or unchecked.
+- `browser page press --key <key> [--selector <css>|--ref <ref>]` presses a key, optionally focusing a target first.
 - `browser page upload --selector <css> --file <path>` attaches local regular files to an input[type=file] and returns file metadata only.
 - `browser page wait --selector <css>`, `--duration-ms <n>`, `--url-contains <text>`, `--text <text>`, `--network-idle-ms <n>`, or `--dom-stable-ms <n>` waits within the command timeout.
 - `browser page screenshot --out <file>` writes a PNG artifact and returns path/size metadata.
 - `browser page eval --expr <js>` rejects cookie, storage, header, credential, and network APIs, then redacts returned values.
 - `browser page fetch --url <url-or-path>` runs a GET fetch with credentials omitted, rejects unsafe URL schemes, returns no headers, and redacts the body preview.
+- `browser page console`, `browser page errors`, and `browser page console-clear` use a bounded page-side recorder for console API calls and runtime errors; messages, URLs, and stacks are redacted/truncated and object previews are not returned.
 - `browser page network [--filter <text>] [--all]` returns resource timing summaries with redacted URLs and no headers or bodies.
+- `browser network start|stop|list|wait|clear` records sanitized HAR-lite metadata after `start` via a bounded page-side fetch/XHR/resource recorder. It stores metadata under `EFP_BROWSER_HOME` and never returns headers, cookies, storage, or bodies.
+- `browser page extract`, `browser page outline`, and `browser page ax` accept `--pierce` to traverse open shadow roots. Closed shadow roots are not accessible.
+- `browser frame list` returns the DevTools frame tree with redacted frame URLs and names.
+- `browser frame snapshot --frame-id <id>` snapshots one frame through DevTools with redacted URL, title, text, and optional HTML preview.
 - `browser page outline` returns a DOM-derived page outline with redacted names, labels, text, hrefs, roles, and selector hints.
 - `browser page table` and `browser page list` return structured table/list data that is easier to consume than generic extraction.
 - `browser download list` and `browser download wait` inspect completed files in the session download directory and return file metadata only.

@@ -39,7 +39,7 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 ### Browser
 
-`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. Persistent sessions can also inspect redacted page structure, sanitized resource timing summaries, tables/lists, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
+`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. Persistent sessions can also inspect redacted page structure, accessibility-style refs, frames, console/runtime errors, sanitized resource timing summaries, HAR-lite recorder metadata, tables/lists, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
 
@@ -284,18 +284,27 @@ browser session start --name default --url "https://intranet.example.test/app" -
 browser tab current --session default --json
 browser page snapshot --session default --json
 browser page extract --session default --selector ".user-avatar" --json
+browser page ax --session default --json
 browser page outline --session default --json
 browser page network --session default --filter "/api/" --json
+browser page console --session default --level error --json
+browser frame list --session default --json
 browser page table --session default --selector "table.results" --json
 browser page list --session default --selector "nav" --json
 browser page screenshot --session default --out result/page-screenshot.png --json
+browser network start --session default --limit 500 --json
+browser network list --session default --filter "/api/" --json
 ```
 
 Bounded page actions:
 
 ```bash
 browser page click --session default --selector "button.sign-in" --json
+browser page click --session default --ref "axref-0-abcdef123456" --json
 browser page type --session default --selector "input[name=q]" --text "search" --clear --json
+browser page select --session default --ref "axref-1-abcdef123456" --label "Ready" --json
+browser page check --session default --ref "axref-2-abcdef123456" --json
+browser page press --session default --key Enter --json
 browser page upload --session default --selector "input[type=file]" --file "./report.pdf" --json
 browser page wait --session default --selector ".ready" --network-idle-ms 500 --json
 browser page eval --session default --expr "document.title" --json

@@ -67,10 +67,16 @@ Recommended template categories:
 - Always use `--json`.
 - `browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd, not an OpenCode built-in browser tool, MCP tool, or Web UI component.
 - Use `browser session start` for multi-step workflows that need a dedicated browser to stay open, then use `browser tab list/current/activate/open` to select a page target.
-- Use `browser page snapshot` and `browser page extract` for redacted page reads.
+- Use `browser page snapshot`, `browser page extract`, and `browser frame snapshot` for redacted page/frame reads.
+- Use `browser page ax` to get accessibility-style refs before ref-based actions; rerun it after navigation or DOM changes.
 - Use `browser page outline`, `table`, and `list` when an agent needs navigable page structure or structured data instead of raw text.
+- Use `--pierce` on `page extract`, `page outline`, or `page ax` only when open shadow-root traversal is needed; closed shadow roots are not accessible.
 - Use `browser page network` for sanitized resource timing/API observation; it returns no headers, cookies, or bodies.
-- Use `browser page click`, `type`, `upload`, `wait`, `screenshot`, `eval`, and `fetch` only as bounded actions against the active or selected tab.
+- Use `browser network start/list/wait/stop/clear` when the user will manually interact and the agent later needs sanitized HAR-lite metadata. It records only after `start` and never returns headers, cookies, storage, or bodies.
+- Use `browser page console` and `browser page errors` for redacted console/runtime diagnostics. They capture events only after recorder injection and do not return object previews.
+- Use `browser frame list` before `browser frame snapshot --frame-id <id>` when frame-specific reads are needed. Frame URLs and titles are redacted.
+- Use `browser page click`, `type`, `select`, `check`, `uncheck`, `press`, `upload`, `wait`, `screenshot`, `eval`, and `fetch` only as bounded actions against the active or selected tab.
+- Prefer `--ref` from `browser page ax` when selectors are unstable. Selector/ref actions return metadata only and do not echo typed text or selected values.
 - `browser page wait` can wait for selectors, current URL substrings, visible text, resource timing idle windows, DOM stability windows, or a bounded duration.
 - `browser page screenshot` writes a PNG artifact and returns metadata rather than binary image data.
 - `browser page eval` rejects cookie, storage, header, credential, and network APIs; returned values are recursively redacted.

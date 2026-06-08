@@ -30,6 +30,9 @@ func pageCmd(o *Opts) *cobra.Command {
 		pageScreenshotCmd(o),
 		pageEvalCmd(o),
 		pageFetchCmd(o),
+		pageConsoleCmd(o),
+		pageErrorsCmd(o),
+		pageConsoleClearCmd(o),
 		pageNetworkCmd(o),
 		pageOutlineCmd(o),
 		pageTableCmd(o),
@@ -403,6 +406,81 @@ func pageFetchCmd(o *Opts) *cobra.Command {
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().StringVar(&opts.URL, "url", "", "HTTP, HTTPS, or relative URL to fetch with unsafe schemes rejected.")
 	c.Flags().IntVar(&opts.MaxBodyBytes, "max-body-bytes", 20000, "Maximum bytes of redacted response body preview to return.")
+	return c
+}
+
+func pageConsoleCmd(o *Opts) *cobra.Command {
+	opts := automation.ConsoleOptions{PageOptions: defaultPageOptions(), Limit: 50}
+	c := &cobra.Command{
+		Use:   "console",
+		Short: "List recorded page console messages",
+		Long:  "Install or read a bounded page-side console recorder and return redacted, truncated console messages without object previews.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Console(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Level, "level", "", "Optional console level filter: error, warning, info, log, or debug.")
+	c.Flags().IntVar(&opts.Limit, "limit", 50, "Maximum number of recorded console messages to return.")
+	return c
+}
+
+func pageErrorsCmd(o *Opts) *cobra.Command {
+	opts := automation.ConsoleOptions{PageOptions: defaultPageOptions(), Limit: 50}
+	c := &cobra.Command{
+		Use:   "errors",
+		Short: "List recorded page runtime errors",
+		Long:  "Install or read a bounded page-side console recorder and return redacted console errors, runtime exceptions, and unhandled rejections.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.RuntimeErrors(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().IntVar(&opts.Limit, "limit", 50, "Maximum number of recorded runtime errors to return.")
+	return c
+}
+
+func pageConsoleClearCmd(o *Opts) *cobra.Command {
+	opts := automation.ConsoleOptions{PageOptions: defaultPageOptions(), Limit: 50}
+	c := &cobra.Command{
+		Use:   "console-clear",
+		Short: "Clear recorded page console messages",
+		Long:  "Install the page-side console recorder if needed, clear its bounded entries, and return page metadata.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.ConsoleClear(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
 	return c
 }
 

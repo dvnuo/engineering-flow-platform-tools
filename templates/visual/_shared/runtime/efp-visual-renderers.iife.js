@@ -4056,6 +4056,44 @@
     return button;
   }
 
+  function svgEl(name) {
+    return document.createElementNS("http:" + "/" + "/www.w3.org/2000/svg", name);
+  }
+
+  function createRelationMarker(defs, id, size, refX, color) {
+    var marker = svgEl("marker");
+    marker.setAttribute("id", id);
+    marker.setAttribute("viewBox", "0 -6 12 12");
+    marker.setAttribute("markerWidth", String(size));
+    marker.setAttribute("markerHeight", String(size));
+    marker.setAttribute("refX", String(refX || 11));
+    marker.setAttribute("refY", "0");
+    marker.setAttribute("orient", "auto");
+    marker.setAttribute("markerUnits", "userSpaceOnUse");
+    var shape = svgEl("path");
+    shape.setAttribute("d", "M 0 -5.5 L 12 0 L 0 5.5 z");
+    shape.setAttribute("fill", color || "#111827");
+    shape.setAttribute("stroke", color || "#111827");
+    shape.setAttribute("stroke-width", "0");
+    marker.appendChild(shape);
+    defs.appendChild(marker);
+  }
+
+  function createIsometricRelationLayer() {
+    var layer = el("div", "visual-isometric-relation-layer");
+    var svg = svgEl("svg");
+    svg.setAttribute("class", "visual-isometric-relation-svg");
+    svg.setAttribute("data-relation-layer", "true");
+    svg.setAttribute("aria-hidden", "true");
+    var defs = svgEl("defs");
+    createRelationMarker(defs, "visual-isometric-arrow-primary", 18, 11.5, "#111827");
+    createRelationMarker(defs, "visual-isometric-arrow-secondary", 11.5, 11, "#334155");
+    createRelationMarker(defs, "visual-isometric-arrow-auxiliary", 9, 10.5, "#64748b");
+    svg.appendChild(defs);
+    layer.appendChild(svg);
+    return { layer: layer, svg: svg };
+  }
+
   function createIsometricInspector(container, data) {
     data = data || {};
     var entities = Array.isArray(data.entities) ? data.entities : [];
@@ -4231,9 +4269,11 @@
     var stage = el("section", "visual-isometric-stage");
     stage.setAttribute("role", "application");
     stage.setAttribute("aria-label", "Interactive isometric architecture scene");
+    var relation = createIsometricRelationLayer();
     var labelLayer = el("div", "visual-isometric-label-layer");
     var inspector = el("aside", "visual-isometric-inspector visual-inspector");
     inspector.setAttribute("aria-label", "Architecture inspector");
+    stage.appendChild(relation.layer);
     stage.appendChild(labelLayer);
     body.appendChild(stage);
     body.appendChild(inspector);
@@ -4241,7 +4281,7 @@
     app.appendChild(controls);
     app.appendChild(body);
     container.appendChild(app);
-    return { app: app, controls: controls, stage: stage, labelLayer: labelLayer, inspector: createIsometricInspector(inspector, data) };
+    return { app: app, controls: controls, stage: stage, relationLayer: relation.layer, relationSvg: relation.svg, labelLayer: labelLayer, inspector: createIsometricInspector(inspector, data) };
   }
 
   function isometricEntityGeometry(THREE, item, spec, size) {
@@ -4675,6 +4715,7 @@
     var markContext = createMarkContext(manifest, data);
     var visualHints = readVisualHints(data);
     var viewMode = normalizeMarkKey(visualHints.labelMode || "overview") || "overview";
+    var isAssetGallery = String(data.title || "").toLowerCase().indexOf("logo badge gallery") >= 0;
     function isOverviewMode() {
       return viewMode !== "detail";
     }
@@ -4742,6 +4783,7 @@
     });
 
     var laneCounters = {};
+    var relationLinks = [];
     var linkLabelsCreated = 0;
     function linkRole(link) {
       var presentation = link && link.presentation && typeof link.presentation === "object" ? link.presentation : {};
@@ -4835,6 +4877,97 @@
       return q.importance >= 0.82;
     }
 
+    function relationRoleClass(role) {
+      return role === "primary" || role === "secondary" || role === "auxiliary" ? role : "secondary";
+    }
+
+    function relationMarkerID(role) {
+      if (role === "primary") return "visual-isometric-arrow-primary";
+      if (role === "auxiliary") return "visual-isometric-arrow-auxiliary";
+      return "visual-isometric-arrow-secondary";
+    }
+
+    function relationStrokeWidth(role) {
+      if (role === "primary") return 7.4;
+      if (role === "auxiliary") return 1.9;
+      return 3.1;
+    }
+
+    function relationOpacity(role, edgeSpec) {
+      if (role === "primary") return 0.96;
+      if (role === "auxiliary") return Math.min(0.34, edgeSpec.opacity || 0.3);
+      return Math.min(0.62, edgeSpec.opacity || 0.56);
+    }
+
+    function createRelationPath(link, edgeSpec, edgeStyle, pathPoints, initiallyVisibleLabel) {
+      if (!shell.relationSvg) return;
+      var role = relationRoleClass(edgeStyle.role || linkRole(link));
+      var pathGroup = linkPathGroup(link) || routeClass(link);
+      var group = svgEl("g");
+      group.setAttribute("class", "visual-isometric-link-route visual-isometric-link-route-" + role);
+      group.setAttribute("data-link-id", link.id || "");
+      group.setAttribute("data-path-group", pathGroup);
+      group.setAttribute("data-role", role);
+      var path = svgEl("path");
+      path.setAttribute("class", "visual-isometric-link-path visual-isometric-link-" + role);
+      path.setAttribute("data-link-id", link.id || "");
+      path.setAttribute("data-path-group", pathGroup);
+      path.setAttribute("data-role", role);
+      path.setAttribute("data-link-kind", link.kind || "");
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke-linecap", "butt");
+      path.setAttribute("stroke-linejoin", "round");
+      path.style.setProperty("--relation-stroke", edgeSpec.color || "#111827");
+      path.style.setProperty("--relation-width", relationStrokeWidth(role) + "px");
+      path.style.setProperty("--relation-opacity", String(relationOpacity(role, edgeSpec)));
+      if (edgeSpec.directed !== false) {
+        path.setAttribute("marker-end", "url(#" + relationMarkerID(role) + ")");
+      }
+      if (edgeSpec.lineStyle === "dashed" || edgeSpec.lineStyle === "dash" || routeClass(link) === "health" || routeClass(link) === "observability") {
+        path.classList.add("visual-isometric-link-dashed");
+      }
+      var arrow = svgEl("polygon");
+      arrow.setAttribute("class", "visual-isometric-link-arrow visual-isometric-link-arrow-" + role);
+      arrow.setAttribute("data-link-arrow", link.id || "");
+      arrow.style.setProperty("--relation-stroke", edgeSpec.color || "#111827");
+      arrow.style.setProperty("--relation-opacity", String(Math.min(1, relationOpacity(role, edgeSpec) + 0.06)));
+      group.appendChild(path);
+      group.appendChild(arrow);
+      shell.relationSvg.appendChild(group);
+
+      var label = labelHTML("visual-isometric-link-label visual-isometric-link-label-" + role, compactLabelText(link.label || link.kind || "", 22));
+      label.setAttribute("data-link-label", link.id || "");
+      label.setAttribute("data-link-id", link.id || "");
+      label.setAttribute("data-link-kind", link.kind || "");
+      label.setAttribute("data-link-role", role);
+      label.setAttribute("data-path-group", pathGroup);
+      if (role !== "primary" || importanceValue(link, 0.35) < 0.74) {
+        label.setAttribute("data-low-priority", "true");
+      }
+      shell.labelLayer.appendChild(label);
+
+      var relation = { link: link, edgeSpec: edgeSpec, edgeStyle: edgeStyle, pathPoints: pathPoints, group: group, path: path, arrow: arrow, label: label, labelVisible: !!initiallyVisibleLabel, hovered: false, selected: false };
+      path.addEventListener("mouseenter", function () {
+        relation.hovered = true;
+        path.classList.add("is-hovered");
+        if (shell.inspector) shell.inspector.show(link.label || link.id || "Relationship", link);
+        updateRelationLayer();
+      });
+      path.addEventListener("mouseleave", function () {
+        relation.hovered = false;
+        path.classList.remove("is-hovered");
+        updateRelationLayer();
+      });
+      path.addEventListener("pointerdown", function (event) {
+        event.stopPropagation();
+      });
+      path.addEventListener("click", function (event) {
+        event.stopPropagation();
+        showSelectedLink(link);
+      });
+      relationLinks.push(relation);
+    }
+
     links.forEach(function (link, index) {
       var from = entityByID[link.from];
       var to = entityByID[link.to];
@@ -4849,38 +4982,43 @@
       var tube = routeMesh.mesh;
       tube.userData.isDirectedArrow = !!edgeSpec.directed;
       tube.userData.isOverviewSecondary = !!edgeStyle.secondary;
+      if (tube.material) {
+        tube.material.opacity = edgeStyle.role === "primary" ? 0.035 : 0.018;
+      }
+      tube.userData.baseOpacity = edgeStyle.role === "primary" ? 0.035 : 0.018;
+      tube.userData.targetOpacity = tube.userData.baseOpacity;
       linkRoot.add(tube);
       var arrow = createRouteArrowhead(pathPoints, edgeSpec);
       if (arrow) {
         arrow.userData.isDirectedArrow = true;
         arrow.userData.isOverviewSecondary = !!edgeStyle.secondary;
+        if (arrow.material) {
+          arrow.material.opacity = 0.02;
+        }
+        arrow.userData.baseOpacity = 0.02;
+        arrow.userData.targetOpacity = 0.02;
         linkRoot.add(arrow);
       }
       createFlowParticles(THREE, curve, edgeSpec, edgeSpec.flow && !edgeStyle.secondary ? 2 : 0).forEach(function (marker) { linkRoot.add(marker); });
-      if (shouldShowIsometricLinkLabel(link) && linkLabelsCreated < 10) {
+      var showRelationLabel = !isAssetGallery && shouldShowIsometricLinkLabel(link) && linkLabelsCreated < 8;
+      if (showRelationLabel) {
         linkLabelsCreated += 1;
-        var mid = placeRouteLabel(pathPoints);
-        var label = labelHTML("visual-isometric-link-label", compactLabelText(link.label, 18));
-        label.setAttribute("data-link-label", link.id || "");
-        label.setAttribute("data-link-id", link.id || "");
-        label.setAttribute("data-link-kind", link.kind || "");
-        label.setAttribute("data-link-role", linkRole(link) || "");
-        label.setAttribute("data-path-group", linkPathGroup(link) || routeClass(link));
-        if (importanceValue(link, 0.35) < 0.74) {
-          label.setAttribute("data-low-priority", "true");
-        }
-        shell.labelLayer.appendChild(label);
-        var linkPriority = 0.38 + importanceValue(link, 0.35) * 0.5;
-        if (linkRole(link) === "primary") {
-          linkPriority += 0.82;
-        } else if (normalizeLabelPriorityValue(link.labelPriority !== undefined ? link.labelPriority : link.label_priority) === "important") {
-          linkPriority += 0.28;
-        }
-        labels.push({ element: label, point: mid, visible: true, type: "link", priority: linkPriority, id: link.id });
+      }
+      createRelationPath(link, edgeSpec, edgeStyle, pathPoints, showRelationLabel);
+    });
+    relationLinks.slice().sort(function (a, b) {
+      var order = { auxiliary: 0, secondary: 1, primary: 2 };
+      var aRole = relationRoleClass(a.edgeStyle.role || linkRole(a.link));
+      var bRole = relationRoleClass(b.edgeStyle.role || linkRole(b.link));
+      return (order[aRole] || 0) - (order[bRole] || 0);
+    }).forEach(function (relation) {
+      if (relation.group && relation.group.parentNode === shell.relationSvg) {
+        shell.relationSvg.appendChild(relation.group);
       }
     });
 
     var selected = "";
+    var selectedLink = "";
     var labelsVisible = true;
     var boundariesVisible = true;
     var arrowsVisible = true;
@@ -4906,7 +5044,20 @@
       camera.updateProjectionMatrix();
     }
 
+    function projectWorldToScreen(world, cameraObject, activeRenderer, container) {
+      var projected = world.clone().project(cameraObject);
+      var renderRect = activeRenderer.domElement.getBoundingClientRect();
+      var containerRect = container.getBoundingClientRect();
+      var x = (projected.x * 0.5 + 0.5) * renderRect.width + renderRect.left - containerRect.left;
+      var y = (-projected.y * 0.5 + 0.5) * renderRect.height + renderRect.top - containerRect.top;
+      return { x: x, y: y, visible: projected.z >= -1 && projected.z <= 1 };
+    }
+
     function project(point) {
+      return projectWorldToScreen(point, camera, renderer, shell.stage);
+    }
+
+    function projectLegacy(point) {
       var projected = point.clone().project(camera);
       return { x: (projected.x * 0.5 + 0.5) * width, y: (-projected.y * 0.5 + 0.5) * height };
     }
@@ -5059,6 +5210,78 @@
       return best.start.clone().lerp(best.end, 0.5).add(new THREE.Vector3(0, 0.18, 0));
     }
 
+    function simplifyScreenRoute(points) {
+      var cleaned = [];
+      points.forEach(function (point) {
+        if (!cleaned.length || Math.abs(cleaned[cleaned.length - 1].x - point.x) > 0.4 || Math.abs(cleaned[cleaned.length - 1].y - point.y) > 0.4) {
+          cleaned.push(point);
+        }
+      });
+      if (cleaned.length < 3) return cleaned;
+      var simplified = [cleaned[0]];
+      for (var i = 1; i < cleaned.length - 1; i += 1) {
+        var prev = simplified[simplified.length - 1];
+        var current = cleaned[i];
+        var next = cleaned[i + 1];
+        var abx = current.x - prev.x;
+        var aby = current.y - prev.y;
+        var bcx = next.x - current.x;
+        var bcy = next.y - current.y;
+        var cross = Math.abs(abx * bcy - aby * bcx);
+        if (cross > 8) {
+          simplified.push(current);
+        }
+      }
+      simplified.push(cleaned[cleaned.length - 1]);
+      return simplified;
+    }
+
+    function relationPathData(points) {
+      if (!points.length) return "";
+      return points.map(function (point, index) {
+        return (index === 0 ? "M " : "L ") + point.x.toFixed(1) + " " + point.y.toFixed(1);
+      }).join(" ");
+    }
+
+    function relationLabelScreenPoint(points) {
+      var best = { start: points[0], end: points[points.length - 1], length: 0 };
+      for (var i = 0; i < points.length - 1; i += 1) {
+        var dx = points[i + 1].x - points[i].x;
+        var dy = points[i + 1].y - points[i].y;
+        var length = Math.sqrt(dx * dx + dy * dy);
+        if (length > best.length) best = { start: points[i], end: points[i + 1], length: length, dx: dx, dy: dy };
+      }
+      var mid = { x: (best.start.x + best.end.x) / 2, y: (best.start.y + best.end.y) / 2 };
+      if (!best.length) return mid;
+      var nx = -best.dy / best.length;
+      var ny = best.dx / best.length;
+      return { x: mid.x + nx * 10, y: mid.y + ny * 10 };
+    }
+
+    function relationArrowPolygon(points, role) {
+      if (!points || points.length < 2) return "";
+      var rawTip = points[points.length - 1];
+      var tail = points[points.length - 2];
+      var dx = rawTip.x - tail.x;
+      var dy = rawTip.y - tail.y;
+      var length = Math.sqrt(dx * dx + dy * dy);
+      if (length < 0.5) return "";
+      var ux = dx / length;
+      var uy = dy / length;
+      var px = -uy;
+      var py = ux;
+      var arrowLength = role === "primary" ? 30 : role === "auxiliary" ? 11 : 15;
+      var arrowHalf = role === "primary" ? 11 : role === "auxiliary" ? 4.4 : 6;
+      var backoff = role === "primary" ? 12 : role === "auxiliary" ? 5 : 7;
+      var tip = { x: rawTip.x - ux * backoff, y: rawTip.y - uy * backoff };
+      var back = { x: tip.x - ux * arrowLength, y: tip.y - uy * arrowLength };
+      return [
+        tip.x.toFixed(1) + "," + tip.y.toFixed(1),
+        (back.x + px * arrowHalf).toFixed(1) + "," + (back.y + py * arrowHalf).toFixed(1),
+        (back.x - px * arrowHalf).toFixed(1) + "," + (back.y - py * arrowHalf).toFixed(1)
+      ].join(" ");
+    }
+
     function isometricLinkPathPoints(link, from, to) {
       return computeOrthogonalRoute(link, from, to, scene);
     }
@@ -5088,9 +5311,37 @@
       return rect.x > 6 && rect.y > 6 && rect.x + rect.w < width - 6 && rect.y + rect.h < height - 6;
     }
 
+    function updateRelationLayer() {
+      if (!shell.relationSvg) return;
+      shell.relationSvg.setAttribute("width", String(width));
+      shell.relationSvg.setAttribute("height", String(height));
+      shell.relationSvg.setAttribute("viewBox", "0 0 " + width + " " + height);
+      shell.relationLayer.style.display = arrowsVisible ? "" : "none";
+      relationLinks.forEach(function (relation) {
+        var screen = simplifyScreenRoute(relation.pathPoints.map(function (point) {
+          return projectWorldToScreen(point, camera, renderer, shell.stage);
+        }).filter(function (point) { return point.visible; }));
+        var hasPath = screen.length >= 2;
+        relation.path.style.display = arrowsVisible && hasPath ? "" : "none";
+        relation.path.setAttribute("d", hasPath ? relationPathData(screen) : "");
+        relation.arrow.style.display = arrowsVisible && hasPath ? "" : "none";
+        relation.arrow.setAttribute("points", hasPath ? relationArrowPolygon(screen, relationRoleClass(relation.edgeStyle.role || linkRole(relation.link))) : "");
+        relation.path.classList.toggle("is-selected", selectedLink === relation.link.id);
+        relation.arrow.classList.toggle("is-selected", selectedLink === relation.link.id);
+        var labelVisible = labelsVisible && arrowsVisible && hasPath && (relation.labelVisible || relation.hovered || selectedLink === relation.link.id);
+        relation.label.style.display = labelVisible ? "" : "none";
+        relation.label.style.visibility = labelVisible ? "visible" : "hidden";
+        relation.label.style.opacity = labelVisible ? "1" : "0";
+        if (labelVisible) {
+          var labelPoint = relationLabelScreenPoint(screen);
+          relation.label.style.transform = "translate(" + labelPoint.x.toFixed(1) + "px, " + labelPoint.y.toFixed(1) + "px) translate(-50%, -50%)";
+        }
+      });
+    }
+
     function updateLabels() {
       shell.labelLayer.dataset.layoutPass = String((numberValue(shell.labelLayer.dataset.layoutPass, 0) || 0) + 1);
-      var keepGalleryEntityLabels = String(data.title || "").toLowerCase().indexOf("logo badge gallery") >= 0;
+      var keepGalleryEntityLabels = isAssetGallery;
       var projected = labels.map(function (label, index) {
         var p = project(label.point);
         label.element.style.display = labelsVisible && label.visible ? "" : "none";
@@ -5126,6 +5377,7 @@
 
     function showSelected(item) {
       selected = item && item.id ? item.id : "";
+      selectedLink = "";
       if (shell.inspector) {
         shell.inspector.show(itemLabel(item) || selected || "Architecture", item || { title: data.title, entities: entities.length, links: links.length });
       }
@@ -5136,11 +5388,31 @@
           }
         });
       });
+      updateRelationLayer();
+    }
+
+    function showSelectedLink(link) {
+      selected = "";
+      selectedLink = link && link.id ? link.id : "";
+      if (shell.inspector) {
+        shell.inspector.show(link && (link.label || link.id) || "Relationship", link || {});
+      }
+      var fromID = link && link.from;
+      var toID = link && link.to;
+      meshes.forEach(function (mesh) {
+        var active = mesh.userData.id === fromID || mesh.userData.id === toID;
+        mesh.traverse(function (child) {
+          if (child.material && child.material.emissiveIntensity !== undefined) {
+            child.material.emissiveIntensity = active ? 0.18 : 0.02;
+          }
+        });
+      });
+      updateRelationLayer();
     }
 
     shell.controls.appendChild(createIsometricButton("Overview", "overview", function () {
       meshes.forEach(function (mesh) { mesh.visible = true; });
-      linkRoot.visible = true;
+      linkRoot.visible = false;
       showSelected(null);
     }));
     shell.controls.appendChild(createIsometricButton("Reset", "reset_camera", function () {
@@ -5177,7 +5449,8 @@
     }));
     shell.controls.appendChild(createIsometricButton("Arrows", "toggle_arrows", function () {
       arrowsVisible = !arrowsVisible;
-      linkRoot.visible = arrowsVisible;
+      linkRoot.visible = false;
+      updateRelationLayer();
     }));
     shell.controls.appendChild(createIsometricButton("Export", "export_json", function () {
       runtime.exportJSON(data, "isometric-architecture-data.json");
@@ -5230,6 +5503,7 @@
       height = Math.max(540, shell.stage.clientHeight || height);
       renderer.setSize(width, height, false);
       updateCamera();
+      updateRelationLayer();
       updateLabels();
     }
     var observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(resize) : null;
@@ -5241,6 +5515,7 @@
         return;
       }
       updateCamera();
+      updateRelationLayer();
       linkRoot.children.forEach(function (child) {
         if (child.userData && child.userData.curve) {
           var t = ((Date.now() / 1000) * child.userData.speed + child.userData.phase) % 1;
@@ -5264,6 +5539,7 @@
       window.requestAnimationFrame(animate);
     }
     updateCamera();
+    linkRoot.visible = false;
     showSelected(null);
     shell.stage.classList.add("visual-isometric-ready");
     animate();

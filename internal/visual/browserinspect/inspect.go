@@ -93,6 +93,14 @@ type DOMSummary struct {
 	ZoneCountVisible       int      `json:"zone_count_visible"`
 	RouteGroups            []string `json:"route_groups,omitempty"`
 	InspectorRawDefault    bool     `json:"inspector_raw_json_default"`
+	SVGRelationLayer       bool     `json:"svg_relation_layer_present"`
+	SVGLinkPathCount       int      `json:"svg_link_path_count"`
+	SVGPrimaryPathCount    int      `json:"svg_primary_link_path_count"`
+	SVGSecondaryPathCount  int      `json:"svg_secondary_link_path_count"`
+	SVGAuxiliaryPathCount  int      `json:"svg_auxiliary_link_path_count"`
+	VisibleSVGPathCount    int      `json:"visible_svg_link_path_count"`
+	LinkPathsWithMarker    int      `json:"link_paths_with_marker_count"`
+	LinkPathsWithoutMarker int      `json:"link_paths_without_marker_count"`
 	EntityLabelOverlap     int      `json:"entity_label_overlap_count"`
 	LinkLabelOverlap       int      `json:"link_label_overlap_count"`
 	ZoneLabelOverlap       int      `json:"zone_label_overlap_count"`
@@ -135,6 +143,15 @@ type VisualSummary struct {
 	PrimaryPathGroupsVisible       []string       `json:"primary_path_groups_visible,omitempty"`
 	RouteGroups                    []string       `json:"route_groups,omitempty"`
 	InspectorRawJSONDefault        bool           `json:"inspector_raw_json_default"`
+	SVGRelationLayerPresent        bool           `json:"svg_relation_layer_present"`
+	SVGLinkPathCount               int            `json:"svg_link_path_count"`
+	SVGPrimaryLinkPathCount        int            `json:"svg_primary_link_path_count"`
+	SVGSecondaryLinkPathCount      int            `json:"svg_secondary_link_path_count"`
+	SVGAuxiliaryLinkPathCount      int            `json:"svg_auxiliary_link_path_count"`
+	VisibleSVGLinkPathCount        int            `json:"visible_svg_link_path_count"`
+	RelationLayerBounds            *Rect          `json:"relation_layer_bbox,omitempty"`
+	LinkPathsWithMarkerCount       int            `json:"link_paths_with_marker_count"`
+	LinkPathsWithoutMarkerCount    int            `json:"link_paths_without_marker_count"`
 	ModelBadgeCount                int            `json:"model_badge_count"`
 	SvgBillboardCount              int            `json:"svg_billboard_count"`
 	FallbackBadgeCount             int            `json:"fallback_badge_count"`
@@ -230,6 +247,14 @@ func Inspect(opts Options) (Result, error) {
 		ZoneCountVisible:       nodeResult.Data.Summary.ZoneCountVisible,
 		RouteGroups:            nodeResult.Data.Summary.RouteGroups,
 		InspectorRawDefault:    nodeResult.Data.Summary.InspectorRawJSONDefault,
+		SVGRelationLayer:       nodeResult.Data.Summary.SVGRelationLayerPresent,
+		SVGLinkPathCount:       nodeResult.Data.Summary.SVGLinkPathCount,
+		SVGPrimaryPathCount:    nodeResult.Data.Summary.SVGPrimaryLinkPathCount,
+		SVGSecondaryPathCount:  nodeResult.Data.Summary.SVGSecondaryLinkPathCount,
+		SVGAuxiliaryPathCount:  nodeResult.Data.Summary.SVGAuxiliaryLinkPathCount,
+		VisibleSVGPathCount:    nodeResult.Data.Summary.VisibleSVGLinkPathCount,
+		LinkPathsWithMarker:    nodeResult.Data.Summary.LinkPathsWithMarkerCount,
+		LinkPathsWithoutMarker: nodeResult.Data.Summary.LinkPathsWithoutMarkerCount,
 		EntityLabelOverlap:     nodeResult.Data.Summary.EntityLabelOverlapCount,
 		LinkLabelOverlap:       nodeResult.Data.Summary.LinkLabelOverlapCount,
 		ZoneLabelOverlap:       nodeResult.Data.Summary.ZoneLabelOverlapCount,
@@ -309,6 +334,15 @@ type browserDOMSummary struct {
 	PrimaryPathGroupsVisible       []string       `json:"primaryPathGroupsVisible"`
 	RouteGroups                    []string       `json:"routeGroups"`
 	InspectorRawJSONDefault        bool           `json:"inspectorRawJSONDefault"`
+	SVGRelationLayerPresent        bool           `json:"svgRelationLayerPresent"`
+	SVGLinkPathCount               int            `json:"svgLinkPathCount"`
+	SVGPrimaryLinkPathCount        int            `json:"svgPrimaryLinkPathCount"`
+	SVGSecondaryLinkPathCount      int            `json:"svgSecondaryLinkPathCount"`
+	SVGAuxiliaryLinkPathCount      int            `json:"svgAuxiliaryLinkPathCount"`
+	VisibleSVGLinkPathCount        int            `json:"visibleSvgLinkPathCount"`
+	RelationLayerBounds            *Rect          `json:"relationLayerBounds"`
+	LinkPathsWithMarkerCount       int            `json:"linkPathsWithMarkerCount"`
+	LinkPathsWithoutMarkerCount    int            `json:"linkPathsWithoutMarkerCount"`
 	ModelBadges                    int            `json:"modelBadges"`
 	SvgBillboards                  int            `json:"svgBillboards"`
 	FallbackBadges                 int            `json:"fallbackBadges"`
@@ -625,6 +659,15 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		PrimaryPathGroupsVisible:       nodeResult.Data.Summary.PrimaryPathGroupsVisible,
 		RouteGroups:                    nodeResult.Data.Summary.RouteGroups,
 		InspectorRawJSONDefault:        summary.InspectorRawDefault,
+		SVGRelationLayerPresent:        summary.SVGRelationLayer,
+		SVGLinkPathCount:               summary.SVGLinkPathCount,
+		SVGPrimaryLinkPathCount:        summary.SVGPrimaryPathCount,
+		SVGSecondaryLinkPathCount:      summary.SVGSecondaryPathCount,
+		SVGAuxiliaryLinkPathCount:      summary.SVGAuxiliaryPathCount,
+		VisibleSVGLinkPathCount:        summary.VisibleSVGPathCount,
+		RelationLayerBounds:            nodeResult.Data.Summary.RelationLayerBounds,
+		LinkPathsWithMarkerCount:       summary.LinkPathsWithMarker,
+		LinkPathsWithoutMarkerCount:    summary.LinkPathsWithoutMarker,
 		ModelBadgeCount:                summary.ModelBadges,
 		SvgBillboardCount:              summary.SvgBillboards,
 		FallbackBadgeCount:             summary.FallbackBadges,
@@ -708,6 +751,19 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	if summary.PrimaryLinkCount > 0 && summary.VisiblePrimaryLabels == 0 {
 		add("browser_primary_link_labels_missing", "warning", "Primary architecture path links have no visible overview labels.", "Give at least one primary path link labelPriority=important or always.", "show_primary_path_labels")
 	}
+	totalDeclaredLinks := summary.PrimaryLinkCount + summary.SecondaryLinkCount + summary.AuxiliaryLinkCount
+	if totalDeclaredLinks > 0 && !summary.SVGRelationLayer {
+		add("browser_svg_relation_layer_missing", "error", "The SVG relation overlay layer is missing.", "Render relation routes through .visual-isometric-relation-svg above the canvas.", "restore_svg_relation_layer")
+	}
+	if totalDeclaredLinks > 0 && summary.SVGLinkPathCount == 0 {
+		add("browser_svg_link_paths_missing", "error", "The SVG relation overlay has no link paths.", "Project link routes into SVG path elements with data-link-id hooks.", "render_svg_link_paths")
+	}
+	if summary.PrimaryLinkCount > 0 && summary.SVGPrimaryPathCount < summary.PrimaryLinkCount {
+		add("browser_primary_arrows_missing", "warning", "Some primary relation paths are missing from the SVG overlay.", "Ensure primary role links create SVG paths with marker-end arrows.", "render_primary_relation_paths")
+	}
+	if summary.LinkPathsWithoutMarker > 0 {
+		add("browser_link_paths_without_marker", "warning", fmt.Sprintf("Some SVG link paths have no marker-end arrow: %d.", summary.LinkPathsWithoutMarker), "Directed architecture links should set marker-end on their SVG path.", "add_svg_arrow_markers")
+	}
 	if summary.VisibleAuxiliaryLabels > 2 {
 		add("browser_auxiliary_links_too_prominent", "warning", fmt.Sprintf("Too many auxiliary link labels are visible: %d.", summary.VisibleAuxiliaryLabels), "Hide auxiliary labels in overview unless they explain an important exception.", "hide_auxiliary_labels")
 	}
@@ -718,6 +774,7 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 		add("browser_inspector_raw_json_default", "warning", "The default architecture inspector is still dominated by raw JSON.", "Render a summary-first inspector and collapse raw JSON details.", "use_summary_inspector")
 	}
 	if summary.VisibleLinkLabels > 8 {
+		add("browser_link_labels_too_many", "warning", fmt.Sprintf("Too many relation labels are visible in overview: %d.", summary.VisibleLinkLabels), "Keep overview relation labels to primary and critical secondary paths.", "reduce_svg_relation_labels")
 		add("browser_route_density_high", "warning", fmt.Sprintf("Too many relationship labels are visible in overview: %d.", summary.VisibleLinkLabels), "Keep overview labels to primary and critical data paths.", "reduce_route_label_density")
 	}
 	return out

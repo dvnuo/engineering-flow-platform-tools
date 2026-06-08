@@ -170,6 +170,8 @@ const expression = `(() => {
   const entityLabelNodes = qa(".visual-isometric-entity-label");
   const linkLabelNodes = qa(".visual-isometric-link-label");
   const zoneLabelNodes = qa(".visual-isometric-zone-label");
+  const relationLayer = q(".visual-isometric-relation-svg[data-relation-layer='true']");
+  const svgLinkPathNodes = qa(".visual-isometric-link-path");
   const imageLoaded = (node) => !(node instanceof HTMLImageElement) || (node.complete && node.naturalWidth > 0 && node.naturalHeight > 0);
   const imageBroken = (node) => node instanceof HTMLImageElement && (!node.complete || node.naturalWidth === 0 || node.naturalHeight === 0);
   const labelRect = (node) => {
@@ -219,6 +221,22 @@ const expression = `(() => {
   const primaryPathGroupsVisible = Array.from(new Set(linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").map((node) => node.getAttribute("data-path-group") || ""))).filter(Boolean).sort();
   const inspector = q(".visual-isometric-inspector");
   const inspectorRawJSONDefault = !!inspector?.querySelector(":scope > pre");
+  const isVisibleSvgPath = (node) => {
+    if (!node) return false;
+    const style = getComputedStyle(node);
+    if (style.visibility === "hidden" || style.display === "none" || Number(style.opacity || 1) <= 0.01) return false;
+    if (!node.getAttribute("d")) return false;
+    try {
+      return node.getTotalLength() > 1;
+    } catch (err) {
+      return false;
+    }
+  };
+  const svgPrimaryLinkPathCount = svgLinkPathNodes.filter((node) => node.getAttribute("data-role") === "primary").length;
+  const svgSecondaryLinkPathCount = svgLinkPathNodes.filter((node) => node.getAttribute("data-role") === "secondary").length;
+  const svgAuxiliaryLinkPathCount = svgLinkPathNodes.filter((node) => node.getAttribute("data-role") === "auxiliary").length;
+  const linkPathsWithMarkerCount = svgLinkPathNodes.filter((node) => !!node.getAttribute("marker-end")).length;
+  const linkPathsWithoutMarkerCount = svgLinkPathNodes.filter((node) => !node.getAttribute("marker-end")).length;
   const summary = {
     title: document.title || "",
     template: q("[data-visual-template]")?.getAttribute("data-visual-template") || "",
@@ -228,7 +246,7 @@ const expression = `(() => {
     labelLayer: !!q(".visual-isometric-label-layer"),
     labelLayoutPass,
     entityLabels: qa("[data-entity-id]").length,
-    linkLabels: qa("[data-link-id]").length,
+    linkLabels: linkLabelNodes.length,
     zoneLabels: qa("[data-zone-id]").length,
     labelIcons: qa('[data-has-label-icon="true"]').length,
     labelIconsLoaded: labelIconNodes.filter(imageLoaded).length,
@@ -248,6 +266,15 @@ const expression = `(() => {
     primaryPathGroupsVisible,
     routeGroups,
     inspectorRawJSONDefault,
+    svgRelationLayerPresent: !!relationLayer,
+    svgLinkPathCount: svgLinkPathNodes.length,
+    svgPrimaryLinkPathCount,
+    svgSecondaryLinkPathCount,
+    svgAuxiliaryLinkPathCount,
+    visibleSvgLinkPathCount: svgLinkPathNodes.filter(isVisibleSvgPath).length,
+    relationLayerBounds: rect(relationLayer),
+    linkPathsWithMarkerCount,
+    linkPathsWithoutMarkerCount,
     modelBadges: qa('[data-has-model-badge="true"]').length,
     svgBillboards: qa('[data-has-svg-billboard="true"]').length,
     fallbackBadges: qa('[data-icon-id=""], [data-model-id=""]').length,
@@ -266,6 +293,7 @@ const expression = `(() => {
     ready: !!q("[data-visual-template='architecture.isometric_overview'][data-visual-renderer='offline.architecture.isometric.v1']") &&
       !!q(".visual-isometric-ready") &&
       !!q(".visual-isometric-label-layer") &&
+      (linkData.length === 0 || !!relationLayer) &&
       labelLayoutPass >= 2 &&
       qa("[data-entity-id]").length > 0
   };

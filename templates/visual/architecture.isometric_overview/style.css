@@ -94,6 +94,66 @@ body {
   pointer-events: none;
 }
 
+.visual-isometric-relation-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.visual-isometric-relation-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.visual-isometric-link-path {
+  stroke: var(--relation-stroke, #111827);
+  stroke-width: var(--relation-width, 3px);
+  opacity: var(--relation-opacity, 0.72);
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+  cursor: pointer;
+  transition: opacity 140ms ease, stroke-width 140ms ease;
+}
+
+.visual-isometric-link-path.is-hovered,
+.visual-isometric-link-path.is-selected {
+  opacity: 1;
+  stroke-width: calc(var(--relation-width, 3px) + 1.2px);
+}
+
+.visual-isometric-link-arrow {
+  fill: var(--relation-stroke, #111827);
+  opacity: var(--relation-opacity, 0.82);
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+.visual-isometric-link-arrow.is-selected,
+.visual-isometric-link-path.is-hovered + .visual-isometric-link-arrow {
+  opacity: 1;
+}
+
+.visual-isometric-link-primary {
+  stroke-linecap: square;
+}
+
+.visual-isometric-link-secondary {
+  stroke-linecap: round;
+}
+
+.visual-isometric-link-auxiliary {
+  stroke-linecap: round;
+}
+
+.visual-isometric-link-dashed {
+  stroke-dasharray: 10 8;
+}
+
 .visual-isometric-label,
 .visual-isometric-link-label,
 .visual-isometric-zone-label {
@@ -138,14 +198,30 @@ body {
 
 .visual-isometric-link-label {
   transform: translate(-50%, -50%);
-  max-width: 148px;
-  padding: 4px 7px;
+  max-width: 164px;
+  padding: 4px 8px;
   border-color: rgb(31 41 55 / 0.18);
   background: rgb(255 255 255 / 0.95);
   color: #111827;
   font-size: 12px;
   font-weight: 800;
   box-shadow: 0 8px 18px rgb(31 41 55 / 0.16);
+  user-select: none;
+}
+
+.visual-isometric-link-label-primary {
+  border-color: rgb(17 24 39 / 0.24);
+  color: #111827;
+  font-weight: 850;
+}
+
+.visual-isometric-link-label-secondary {
+  color: #334155;
+}
+
+.visual-isometric-link-label-auxiliary {
+  color: #64748b;
+  font-size: 11px;
 }
 
 .visual-isometric-link-label[data-low-priority="true"] {

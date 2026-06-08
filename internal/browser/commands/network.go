@@ -20,6 +20,7 @@ func networkCmd(o *Opts) *cobra.Command {
 		networkStopCmd(o),
 		networkListCmd(o),
 		networkWaitCmd(o),
+		networkExportCmd(o),
 		networkClearCmd(o),
 	)
 	return c
@@ -128,6 +129,34 @@ func networkWaitCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&opts.Method, "method", "", "Optional HTTP method filter such as GET or POST when method is available.")
 	c.Flags().IntVar(&opts.Status, "status", -1, "Optional HTTP status filter when status is available.")
 	c.Flags().IntVar(&opts.Limit, "limit", 500, "Maximum number of recorded events to scan per poll.")
+	return c
+}
+
+func networkExportCmd(o *Opts) *cobra.Command {
+	opts := automation.NetworkExportOptions{PageOptions: defaultPageOptions(), Format: "har-lite", Limit: 500}
+	c := &cobra.Command{
+		Use:   "export",
+		Short: "Export sanitized recorded network metadata",
+		Long:  "Write sanitized HAR-lite or JSON network recorder metadata for the selected page target. The export contains URL, method, status, type, timing, and size metadata only; it never includes headers, cookies, storage, or bodies.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.NetworkExport(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.OutPath, "out", "", "Output file path for the sanitized network export.")
+	c.Flags().StringVar(&opts.Format, "format", "har-lite", "Network export artifact format: json or har-lite. Use --json for the command envelope.")
+	c.Flags().StringVar(&opts.Filter, "filter", "", "Case-insensitive filter matched against sanitized URL, method, resource type, initiator type, or source.")
+	c.Flags().IntVar(&opts.Limit, "limit", 500, "Maximum number of matching sanitized network entries to write.")
 	return c
 }
 

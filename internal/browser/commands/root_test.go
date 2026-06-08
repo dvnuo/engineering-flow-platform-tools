@@ -77,6 +77,7 @@ func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
 		"network.stop":       {"session", "target-id", "timeout"},
 		"network.list":       {"session", "target-id", "timeout", "filter", "limit", "method", "status"},
 		"network.wait":       {"session", "target-id", "timeout", "url-contains", "method", "status", "limit"},
+		"network.export":     {"session", "target-id", "timeout", "out", "format", "filter", "limit"},
 		"network.clear":      {"session", "target-id", "timeout"},
 		"download.list":      {"session"},
 		"download.wait":      {"session", "filename-contains", "timeout"},

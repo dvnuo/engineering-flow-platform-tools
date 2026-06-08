@@ -340,6 +340,7 @@ func pageScreenshotCmd(o *Opts) *cobra.Command {
 		Short: "Write a page screenshot artifact",
 		Long:  "Capture the selected browser tab to a PNG file and return file metadata instead of binary image data.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			opts.FullPageSet = cmd.Flags().Changed("full-page")
 			mgr, err := automation.DefaultManager()
 			if err != nil {
 				return printAutomationError(cmd, o, err)
@@ -356,6 +357,8 @@ func pageScreenshotCmd(o *Opts) *cobra.Command {
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().StringVar(&opts.OutPath, "out", "", "Screenshot output PNG path; defaults to ~/.efp/browser/artifacts/page-screenshot-<timestamp>.png.")
 	c.Flags().BoolVar(&opts.FullPage, "full-page", true, "Capture the full page instead of only the current viewport.")
+	c.Flags().StringVar(&opts.Selector, "selector", "", "Optional CSS selector for a visible element screenshot.")
+	c.Flags().StringVar(&opts.Ref, "ref", "", "Optional accessibility ref from browser page ax for a visible element screenshot.")
 	return c
 }
 

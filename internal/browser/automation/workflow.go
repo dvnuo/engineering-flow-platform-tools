@@ -322,7 +322,7 @@ func executeWorkflowStep(ctx context.Context, mgr *Manager, config WorkflowConfi
 	case "page.uncheck":
 		return mgr.Check(ctx, CheckOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref, Checked: false})
 	case "page.screenshot":
-		return mgr.Screenshot(ctx, ScreenshotOptions{PageOptions: page, OutPath: step.Out, FullPage: workflowFullPage(step)})
+		return mgr.Screenshot(ctx, ScreenshotOptions{PageOptions: page, OutPath: step.Out, FullPage: workflowFullPage(step), FullPageSet: step.FullPageSet})
 	case "assert.visible":
 		return mgr.AssertVisible(ctx, AssertionOptions{PageOptions: page, Selector: step.Selector, Ref: step.Ref, Not: step.Not, Equals: -1, Min: -1, Max: -1})
 	case "assert.text":

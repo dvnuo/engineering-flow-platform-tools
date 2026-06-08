@@ -135,8 +135,11 @@ type WaitResult struct {
 
 type ScreenshotOptions struct {
 	PageOptions
-	OutPath  string
-	FullPage bool
+	OutPath     string
+	FullPage    bool
+	FullPageSet bool
+	Selector    string
+	Ref         string
 }
 
 type ScreenshotResult struct {
@@ -146,7 +149,10 @@ type ScreenshotResult struct {
 	Title    string `json:"title"`
 	Path     string `json:"path"`
 	Bytes    int64  `json:"bytes"`
+	Mode     string `json:"mode"`
 	FullPage bool   `json:"full_page"`
+	Selector string `json:"selector,omitempty"`
+	Ref      string `json:"ref,omitempty"`
 	MIMEType string `json:"mime_type"`
 }
 
@@ -386,11 +392,19 @@ func (m *Manager) Wait(ctx context.Context, opts WaitOptions) (WaitResult, error
 }
 
 func (m *Manager) Screenshot(ctx context.Context, opts ScreenshotOptions) (ScreenshotResult, error) {
+	opts, err := normalizeScreenshotOptions(opts)
+	if err != nil {
+		return ScreenshotResult{}, err
+	}
 	pageCtx, cancel, session, target, err := m.attachPage(ctx, opts.PageOptions)
 	if err != nil {
 		return ScreenshotResult{}, err
 	}
 	defer cancel()
+	selector, ref, err := m.resolveOptionalActionSelector(session, target, opts.Selector, opts.Ref)
+	if err != nil {
+		return ScreenshotResult{}, err
+	}
 
 	outPath := strings.TrimSpace(opts.OutPath)
 	if outPath == "" {
@@ -407,7 +421,12 @@ func (m *Manager) Screenshot(ctx context.Context, opts ScreenshotOptions) (Scree
 	var finalURL, title string
 	var screenshot []byte
 	actions := []chromedp.Action{chromedp.Location(&finalURL), chromedp.Title(&title)}
-	if opts.FullPage {
+	if selector != "" {
+		actions = append(actions,
+			chromedp.WaitVisible(selector, chromedp.ByQuery),
+			chromedp.Screenshot(selector, &screenshot, chromedp.ByQuery),
+		)
+	} else if opts.FullPage {
 		actions = append(actions, chromedp.FullScreenshot(&screenshot, 100))
 	} else {
 		actions = append(actions, chromedp.CaptureScreenshot(&screenshot))
@@ -425,6 +444,10 @@ func (m *Manager) Screenshot(ctx context.Context, opts ScreenshotOptions) (Scree
 	if err != nil {
 		return ScreenshotResult{}, NewError("artifact_write_failed", err.Error(), "Screenshot was written but metadata could not be read.", 500)
 	}
+	mode := "page"
+	if selector != "" {
+		mode = "element"
+	}
 	return ScreenshotResult{
 		Session:  session.Name,
 		TargetID: target.ID,
@@ -432,9 +455,28 @@ func (m *Manager) Screenshot(ctx context.Context, opts ScreenshotOptions) (Scree
 		Title:    RedactString(title),
 		Path:     outPath,
 		Bytes:    stat.Size(),
-		FullPage: opts.FullPage,
+		Mode:     mode,
+		FullPage: opts.FullPage && selector == "",
+		Selector: normalizeSelectorHint(selector),
+		Ref:      RedactString(ref),
 		MIMEType: "image/png",
 	}, nil
+}
+
+func normalizeScreenshotOptions(opts ScreenshotOptions) (ScreenshotOptions, error) {
+	if err := validateOptionalActionTarget(opts.Selector, opts.Ref, "page.screenshot"); err != nil {
+		return opts, err
+	}
+	targeted := strings.TrimSpace(opts.Selector) != "" || strings.TrimSpace(opts.Ref) != ""
+	if targeted {
+		if opts.FullPageSet && opts.FullPage {
+			return opts, invalidArgs("--full-page cannot be combined with --selector or --ref", "Element screenshots capture only the selected visible element; remove --full-page.")
+		}
+		opts.FullPage = false
+	} else if !opts.FullPageSet {
+		opts.FullPage = true
+	}
+	return opts, nil
 }
 
 func (m *Manager) Eval(ctx context.Context, opts EvalOptions) (EvalResult, error) {

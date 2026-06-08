@@ -31,7 +31,7 @@ func NewRootWithRunner(r probe.Runner) *cobra.Command {
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
 	c.PersistentFlags().StringVar(&o.Format, "format", "table", "")
 	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "")
-	c.AddCommand(probeCmd(o, r), sessionCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	c.AddCommand(probeCmd(o, r), sessionCmd(o), tabCmd(o), pageCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
 	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
 		Product: "browser",
 		Binary:  "browser",
@@ -43,6 +43,8 @@ It writes non-secret diagnostics such as summary.json, network.json, page.html, 
 			`browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json`,
 			`browser session start --name default --url https://intranet.example.test --json`,
 			`browser session status default --json`,
+			`browser tab current --session default --json`,
+			`browser page snapshot --session default --json`,
 			`browser schema probe --json`,
 			`browser help llm --json`,
 		},

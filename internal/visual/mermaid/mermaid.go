@@ -258,7 +258,7 @@ func compileIsometric(d Diagram) map[string]any {
 	for i, group := range groups {
 		col := i % 3
 		row := i / 3
-		bounds := map[string]any{"x": float64(col)*10.5 + 0.5, "y": float64(row)*8.0 + 0.8, "w": 8.4, "h": 6.2}
+		bounds := map[string]any{"x": float64(col)*14.2 + 0.5, "y": float64(row)*9.6 + 0.8, "w": 11.4, "h": 7.8}
 		zoneBounds[group.ID] = bounds
 		zones = append(zones, map[string]any{
 			"id":         group.ID,
@@ -292,8 +292,8 @@ func compileIsometric(d Diagram) map[string]any {
 		b := zoneBounds[groupID]
 		col := count % 3
 		row := count / 3
-		x := number(b["x"]) + 1.35 + float64(col)*2.55
-		y := number(b["y"]) + 1.35 + float64(row)*2.05
+		x := number(b["x"]) + 1.7 + float64(col)*4.05
+		y := number(b["y"]) + 1.65 + float64(row)*2.85
 		nodePos[node.ID] = map[string]float64{"x": x, "y": y}
 		kind := inferEntityKind(node)
 		entities = append(entities, map[string]any{

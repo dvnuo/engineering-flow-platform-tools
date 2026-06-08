@@ -1732,6 +1732,13 @@
       return null;
     }
     var arrowScale = Math.max(0.58, Math.min(2.25, edgeSpec.arrowScale || 1));
+    var sampled = curvePoints(curve, 14);
+    var routeLength = 0;
+    for (var i = 0; i < sampled.length - 1; i += 1) {
+      routeLength += sampled[i].distanceTo(sampled[i + 1]);
+    }
+    var arrowLength = Math.max(0.08, Math.min(0.24 * arrowScale, routeLength * 0.22));
+    var arrowHalf = arrowLength * 0.42;
     var t = edgeSpec.arrow === "reverse" ? 0.06 : 0.94;
     var tail = curve.getPoint(edgeSpec.arrow === "reverse" ? 0.14 : 0.86);
     var tip = curve.getPoint(t);
@@ -1744,12 +1751,12 @@
       if (side.length() < 0.001) {
         side.set(1, 0, 0);
       }
-      var back = tip.clone().sub(direction.clone().multiplyScalar(0.34 * arrowScale));
-      var yLift = new THREE.Vector3(0, 0.018, 0);
+      var back = tip.clone().sub(direction.clone().multiplyScalar(arrowLength));
+      var yLift = new THREE.Vector3(0, 0.012, 0);
       var geometryFlat = new THREE.BufferGeometry().setFromPoints([
         tip.clone().add(yLift),
-        back.clone().add(side.clone().multiplyScalar(0.155 * arrowScale)).add(yLift),
-        back.clone().add(side.clone().multiplyScalar(-0.155 * arrowScale)).add(yLift)
+        back.clone().add(side.clone().multiplyScalar(arrowHalf)).add(yLift),
+        back.clone().add(side.clone().multiplyScalar(-arrowHalf)).add(yLift)
       ]);
       if (geometryFlat.computeVertexNormals) {
         geometryFlat.computeVertexNormals();
@@ -1757,7 +1764,7 @@
       var materialFlat = new THREE.MeshBasicMaterial({
         color: colorValue(edgeSpec.color, 0x111827),
         transparent: true,
-        opacity: Math.min(1, edgeSpec.opacity + 0.1),
+        opacity: Math.min(1, edgeSpec.opacity),
         blending: THREE.NormalBlending,
         side: THREE.DoubleSide || 2
       });
@@ -1765,11 +1772,11 @@
       materialFlat.depthWrite = false;
       var flatArrow = new THREE.Mesh(geometryFlat, materialFlat);
       flatArrow.renderOrder = 4;
-      flatArrow.userData.baseOpacity = Math.min(1, edgeSpec.opacity + 0.1);
+      flatArrow.userData.baseOpacity = Math.min(1, edgeSpec.opacity);
       flatArrow.userData.targetOpacity = flatArrow.userData.baseOpacity;
       return flatArrow;
     }
-    var geometry = THREE.ConeGeometry ? new THREE.ConeGeometry(0.075 * arrowScale, 0.24 * arrowScale, 18) : new THREE.IcosahedronGeometry(0.1 * arrowScale, 1);
+    var geometry = THREE.ConeGeometry ? new THREE.ConeGeometry(arrowHalf * 0.62, arrowLength, 18) : new THREE.IcosahedronGeometry(arrowHalf, 1);
     var material = new THREE.MeshBasicMaterial({
       color: colorValue(edgeSpec.color, 0x63a9ff),
       transparent: true,
@@ -4865,7 +4872,7 @@
       if (role === "primary") {
         edgeSpec.opacity = 0.96;
         edgeSpec.flow = false;
-        edgeSpec.arrowScale = 1.38;
+        edgeSpec.arrowScale = 0.92;
         return { radius: 0.028, secondary: false, role: role };
       }
       if (role === "secondary" && !secondary) {
@@ -5505,7 +5512,7 @@
         relation.label.style.opacity = labelVisible ? "1" : "0";
         if (labelVisible) {
           var labelPoint = relationLabelScreenPoint(screen);
-          relation.label.style.transform = "translate(" + labelPoint.x.toFixed(1) + "px, " + labelPoint.y.toFixed(1) + "px) translate(-50%, -50%)";
+          relation.label.style.transform = "translate3d(" + Math.round(labelPoint.x) + "px, " + Math.round(labelPoint.y) + "px, 0) translate(-50%, -50%)";
         }
       });
     }
@@ -5518,12 +5525,13 @@
         label.element.style.display = labelsVisible && label.visible ? "" : "none";
         label.element.style.visibility = "hidden";
         var transformMode = label.type === "link" || label.type === "zone" ? "translate(-50%, -50%)" : "translate(-50%, -100%)";
-        label.element.style.transform = "translate(" + p.x.toFixed(1) + "px, " + p.y.toFixed(1) + "px) " + transformMode;
+        label.element.style.transform = "translate3d(" + Math.round(p.x) + "px, " + Math.round(p.y) + "px, 0) " + transformMode;
         return { label: label, index: index, projected: p, rect: labelRect(label, p), priority: label.priority || 0.5 };
       });
       var selectedID = selected || "";
       var counts = { entity: 0, link: 0, zone: 0 };
       var occupied = [];
+      var suppressCollision = typeof drag !== "undefined" && drag && drag.active;
       projected.sort(function (a, b) {
         var aSelected = a.label.id && a.label.id === selectedID ? 1 : 0;
         var bSelected = b.label.id && b.label.id === selectedID ? 1 : 0;
@@ -5533,7 +5541,7 @@
         var label = item.label;
         var type = label.type || "entity";
         var allowed = labelsVisible && label.visible && insideViewport(item.rect) && counts[type] < labelBudget(label);
-        if (allowed && !(keepGalleryEntityLabels && type === "entity")) {
+        if (allowed && !suppressCollision && !(keepGalleryEntityLabels && type === "entity")) {
           var padding = type === "link" ? 6 : type === "zone" ? 5 : 3;
           allowed = !occupied.some(function (rect) { return rectOverlaps(item.rect, rect, padding); });
         }
@@ -5704,8 +5712,8 @@
       drag.y = event.clientY;
       if (Math.abs(dx) + Math.abs(dy) > 1.5) drag.moved = true;
       if (drag.mode === "rotate") {
-        cameraState.theta += dx * 0.006;
-        cameraState.phi = Math.max(0.22, Math.min(1.48, cameraState.phi + dy * 0.003));
+        cameraState.theta -= dx * 0.006;
+        cameraState.phi = Math.max(0.22, Math.min(1.48, cameraState.phi - dy * 0.003));
       } else if (drag.mode === "entity" && drag.entity) {
         var planePoint = new THREE.Vector3();
         if (pointerWorldOnPlane(event, drag.entity.object.position.y, planePoint)) {

@@ -239,12 +239,12 @@ body {
   user-select: none;
 }
 
-.visual-isometric-world-ground-relations .visual-isometric-link-label {
-  display: none;
-}
-
 .visual-isometric-svg-debug-relations .visual-isometric-link-label {
   display: block;
+}
+
+.visual-isometric-world-ground-relations .visual-isometric-link-label[data-label-mode="ground_texture_debug"] {
+  display: none;
 }
 
 .visual-isometric-link-label-primary {

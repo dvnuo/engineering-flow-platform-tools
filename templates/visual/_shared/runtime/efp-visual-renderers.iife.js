@@ -1706,9 +1706,10 @@
   function createGroundRibbonMesh(THREE, points, edgeSpec, radius) {
     if (!THREE.BufferGeometry || !THREE.Float32BufferAttribute || !THREE.Mesh || !THREE.MeshBasicMaterial) return null;
     var color = colorValue(edgeSpec.color, 0x63a9ff);
-    var width = Math.max(0.026, (radius || 0.016) * 1.9);
+    var width = Math.max(0.045, numberValue(edgeSpec.groundWidth, (radius || 0.016) * 4.2));
     var half = width * 0.5;
     var positions = [];
+    var segmentCount = 0;
     var dashed = edgeSpec.lineStyle === "dashed" || edgeSpec.lineStyle === "dash";
     var dashLength = edgeSpec.dashLength || 0.34;
     var gapLength = edgeSpec.gapLength || 0.2;
@@ -1725,10 +1726,11 @@
       [a1, a2, b1, a2, b2, b1].forEach(function (p) {
         positions.push(p.x, p.y, p.z);
       });
+      segmentCount += 1;
     }
 
     (points || []).forEach(function (point) {
-      point.y = Math.max(point.y || 0, 0.058);
+      point.y = Math.max(point.y || 0, numberValue(edgeSpec.groundY, 0.064));
     });
     for (var i = 0; i < points.length - 1; i += 1) {
       var start = points[i];
@@ -1767,6 +1769,7 @@
     mesh.renderOrder = 3;
     mesh.userData.isEdgeTube = true;
     mesh.userData.isGroundRibbon = true;
+    mesh.userData.groundSegmentCount = segmentCount;
     mesh.userData.baseOpacity = edgeSpec.opacity;
     mesh.userData.targetOpacity = edgeSpec.opacity;
     return mesh;
@@ -4739,7 +4742,7 @@
     return node;
   }
 
-  function setLabelAnchorMetadata(node, point, offset) {
+  function setLabelAnchorMetadata(node, point, offset, entityTop) {
     if (!node || !point) return;
     node.setAttribute("data-anchor-x", String(Math.round(point.x * 1000) / 1000));
     node.setAttribute("data-anchor-y", String(Math.round(point.y * 1000) / 1000));
@@ -4748,6 +4751,11 @@
       node.setAttribute("data-label-offset-x", String(Math.round(numberValue(offset.x, 0) * 1000) / 1000));
       node.setAttribute("data-label-offset-y", String(Math.round(numberValue(offset.y, 0) * 1000) / 1000));
       node.setAttribute("data-label-offset-z", String(Math.round(numberValue(offset.z, 0) * 1000) / 1000));
+    }
+    if (entityTop) {
+      node.setAttribute("data-entity-top-x", String(Math.round(entityTop.x * 1000) / 1000));
+      node.setAttribute("data-entity-top-y", String(Math.round(entityTop.y * 1000) / 1000));
+      node.setAttribute("data-entity-top-z", String(Math.round(entityTop.z * 1000) / 1000));
     }
   }
 
@@ -4885,7 +4893,7 @@
     var inputRenderHints = data && data.renderHints && typeof data.renderHints === "object" ? data.renderHints : {};
     var relationLayerMode = normalizeMarkKey(inputRenderHints.relationLayer || inputRenderHints.relation_layer || "world_ground") || "world_ground";
     var svgRelationEnabled = relationLayerMode === "svg_debug";
-    var linkLabelMode = normalizeMarkKey(inputRenderHints.linkLabelMode || inputRenderHints.link_label_mode || "ground_aligned") || "ground_aligned";
+    var linkLabelMode = normalizeMarkKey(inputRenderHints.linkLabelMode || inputRenderHints.link_label_mode || "html_billboard") || "html_billboard";
     var linkLabelReadabilityFlip = normalizeMarkKey(inputRenderHints.linkLabelReadabilityFlip || inputRenderHints.link_label_readability_flip || "camera_idle") || "camera_idle";
     var linkLabelMaxVisible = Math.max(0, Math.min(20, numberValue(inputRenderHints.linkLabelMaxVisible || inputRenderHints.link_label_max_visible, 7)));
     var layoutScale = Math.max(0.85, Math.min(1.55, numberValue(inputRenderHints.layoutScale || inputRenderHints.layout_scale, 1)));
@@ -4955,6 +4963,35 @@
       if (q.visibility === "detail" || q.labelPriority === "hover") return false;
       return q.importance >= 0.58 || q.labelPriority === "always" || q.labelPriority === "important";
     }
+    function computeEntityVisualBounds(record) {
+      var object = record && record.object;
+      var size = record && record.size ? record.size : { w: 0.9, h: 0.9, d: 0.9 };
+      var scaleY = object && object.scale ? numberValue(object.scale.y, 1) : 1;
+      var topY = object ? object.position.y + Math.max(0.36, size.h * 0.54 * scaleY) : Math.max(0.36, size.h * 0.54);
+      var halfW = Math.max(0.22, size.w * 0.42 * (object && object.scale ? numberValue(object.scale.x, 1) : 1));
+      var halfD = Math.max(0.22, size.d * 0.42 * (object && object.scale ? numberValue(object.scale.z, 1) : 1));
+      var center = object ? object.position.clone() : new THREE.Vector3();
+      return {
+        center: center.clone(),
+        topCenter: new THREE.Vector3(center.x, topY, center.z),
+        minX: center.x - halfW,
+        maxX: center.x + halfW,
+        minZ: center.z - halfD,
+        maxZ: center.z + halfD,
+        topY: topY
+      };
+    }
+    function entityLabelGap(record) {
+      var size = record && record.size ? record.size : { h: 0.9 };
+      return Math.max(0.62, Math.min(0.92, 0.58 + size.h * 0.18));
+    }
+    function entityLabelAnchor(record) {
+      var bounds = computeEntityVisualBounds(record);
+      return {
+        top: bounds.topCenter,
+        anchor: bounds.topCenter.clone().add(new THREE.Vector3(0, entityLabelGap(record), 0))
+      };
+    }
     zones.forEach(function (zone) {
       var info = addIsometricZone(THREE, zoneRoot, zone, scale, center);
       var pos = isometricWorld(info.labelPoint, scale, center);
@@ -4962,7 +4999,9 @@
       label.setAttribute("data-zone-label", zone.id || "");
       label.setAttribute("data-zone-id", zone.id || "");
       shell.labelLayer.appendChild(label);
-      labels.push({ element: label, point: new THREE.Vector3(pos.x, 0.2, pos.z), visible: true, type: "zone", priority: 1.45 });
+      var zoneAnchor = new THREE.Vector3(pos.x, 0.2, pos.z);
+      setLabelAnchorMetadata(label, zoneAnchor);
+      labels.push({ element: label, point: zoneAnchor, visible: true, type: "zone", priority: 1.45 });
     });
 
     entities.forEach(function (item, index) {
@@ -4975,7 +5014,7 @@
       object.position.set(world.x, size.h * 0.22, world.z);
       object.scale.setScalar(1 + Math.min(0.35, importanceValue(item, 0.45) * 0.18));
       entityRoot.add(object);
-      entityByID[item.id] = {
+      var entityRecord = {
         object: object,
         item: item,
         pos: pos,
@@ -4987,6 +5026,7 @@
         leader: null,
         leaderOffset: null
       };
+      entityByID[item.id] = entityRecord;
       var settings = badgeSettings(markContext);
       var label = labelHTML("visual-isometric-label visual-isometric-entity-label", itemLabel(item) || item.id);
       label.setAttribute("data-entity-label", item.id || "");
@@ -5007,8 +5047,9 @@
         label.appendChild(el("span", "", compactLabelText(itemLabel(item) || item.id, 28)));
       }
       shell.labelLayer.appendChild(label);
-      var offset = isMermaidArchitecture ? { x: 0, z: 0, y: 0.16 } : (explicitIsometricLabelOffset(item) || isometricEntityLabelOffset(index, size));
-      var anchor = new THREE.Vector3(world.x + offset.x, size.h * 0.76 + 0.34 + offset.y, world.z + offset.z);
+      var offset = { x: 0, z: 0, y: 0 };
+      var anchorInfo = entityLabelAnchor(entityRecord);
+      var anchor = anchorInfo.anchor;
       var entityQuality = normalizeVisualQualityFields(item);
       var entityPriority = 0.84 + importanceValue(item, 0.45) * 0.32;
       if (entityQuality.labelPriority === "always") {
@@ -5017,15 +5058,16 @@
         entityPriority += 0.28;
       }
       var labelRecord = { element: label, point: anchor, visible: shouldShowIsometricEntityLabel(item), type: "entity", priority: entityPriority, id: item.id, entityID: item.id, offset: offset };
-      setLabelAnchorMetadata(label, anchor, offset);
+      setLabelAnchorMetadata(label, anchor, offset, anchorInfo.top);
       labels.push(labelRecord);
-      var leaderFrom = isMermaidArchitecture ? new THREE.Vector3(world.x, size.h * 0.78, world.z) : new THREE.Vector3(world.x, size.h * 0.38, world.z);
-      var leader = createDashedLeader(THREE, leaderFrom, anchor.clone().add(new THREE.Vector3(0, -0.06, 0)));
+      var leader = createDashedLeader(THREE, anchorInfo.top, anchor.clone().add(new THREE.Vector3(0, -0.08, 0)));
       leader.visible = shouldShowIsometricEntityLabel(item);
       leaderRoot.add(leader);
-      entityByID[item.id].labelRecord = labelRecord;
-      entityByID[item.id].leader = leader;
-      entityByID[item.id].leaderOffset = offset;
+      entityRecord.labelRecord = labelRecord;
+      entityRecord.leader = leader;
+      entityRecord.leaderOffset = offset;
+      entityRecord.entityTopWorld = anchorInfo.top;
+      entityRecord.labelAnchorWorld = anchor;
     });
 
     var laneCounters = {};
@@ -5058,6 +5100,7 @@
       var presentation = edgePresentation(link);
       var secondary = isSecondaryLink(link);
       var role = linkRole(link) || (secondary ? "auxiliary" : "secondary");
+      edgeSpec.role = role;
       edgeSpec.directed = edgeSpec.directed !== false;
       edgeSpec.arrow = edgeSpec.arrow && edgeSpec.arrow !== "none" ? edgeSpec.arrow : "forward";
       edgeSpec.lightBackground = true;
@@ -5087,18 +5130,24 @@
         edgeSpec.opacity = 0.98;
         edgeSpec.flow = false;
         edgeSpec.arrowScale = isMermaidArchitecture ? 0.86 : 0.92;
+        edgeSpec.groundWidth = isMermaidArchitecture ? 0.11 : 0.13;
+        edgeSpec.groundY = 0.072;
         return { radius: isMermaidArchitecture ? 0.018 : 0.028, secondary: false, role: role };
       }
       if (role === "secondary" && !secondary) {
         edgeSpec.opacity = Math.max(0.48, Math.min(0.62, edgeSpec.opacity || 0.54));
         edgeSpec.flow = false;
         edgeSpec.arrowScale = 1.05;
+        edgeSpec.groundWidth = isMermaidArchitecture ? 0.08 : 0.085;
+        edgeSpec.groundY = 0.068;
         return { radius: isMermaidArchitecture ? 0.011 : 0.017, secondary: false, role: role };
       }
       if (isOverviewMode() && secondary) {
         edgeSpec.opacity = Math.max(0.2, Math.min(0.34, edgeSpec.opacity || 0.28));
         edgeSpec.flow = false;
         edgeSpec.arrowScale = 0.68;
+        edgeSpec.groundWidth = isMermaidArchitecture ? 0.052 : 0.056;
+        edgeSpec.groundY = 0.066;
         if (role === "auxiliary") {
           edgeSpec.lineStyle = edgeSpec.lineStyle || "dashed";
         }
@@ -5107,6 +5156,8 @@
       edgeSpec.opacity = Math.max(edgeSpec.opacity || 0.74, cls === "main" ? 0.9 : 0.74);
       edgeSpec.flow = edgeSpec.flow && (cls === "main" || cls === "cache" || cls === "storage" || cls === "service");
       edgeSpec.arrowScale = Math.max(0.9, Math.min(1.35, 0.9 + q.importance * 0.35));
+      edgeSpec.groundWidth = cls === "main" ? 0.1 : 0.074;
+      edgeSpec.groundY = 0.068;
       if (cls === "main") return { radius: 0.02 + Math.min(0.008, q.importance * 0.008), secondary: false, role: role };
       return { radius: 0.014 + Math.min(0.006, q.importance * 0.006), secondary: false, role: role };
     }
@@ -5151,6 +5202,17 @@
       return Math.min(0.22, edgeSpec.opacity || 0.22);
     }
 
+    function computeLinkLabelAnchor(route) {
+      var segment = computeRouteLabelSegment(route);
+      if (!segment) {
+        return new THREE.Vector3(0, 0.34, 0);
+      }
+      var anchor = segment.anchor.clone();
+      anchor.add(segment.side.clone().multiplyScalar(0.06));
+      anchor.y = 0.36;
+      return anchor;
+    }
+
     function createRelationPath(link, edgeSpec, edgeStyle, pathPoints, initiallyVisibleLabel) {
       if (!shell.relationSvg) return;
       var role = relationRoleClass(edgeStyle.role || linkRole(link));
@@ -5193,12 +5255,28 @@
       label.setAttribute("data-link-kind", link.kind || "");
       label.setAttribute("data-link-role", role);
       label.setAttribute("data-path-group", pathGroup);
+      label.setAttribute("data-role", role);
+      label.setAttribute("data-label-mode", "html_billboard");
       if (role !== "primary" || importanceValue(link, 0.35) < 0.74) {
         label.setAttribute("data-low-priority", "true");
       }
       shell.labelLayer.appendChild(label);
+      var labelAnchor = computeLinkLabelAnchor(pathPoints);
+      setLabelAnchorMetadata(label, labelAnchor);
+      var labelRecord = {
+        element: label,
+        point: labelAnchor,
+        visible: !!initiallyVisibleLabel,
+        type: "link",
+        priority: role === "primary" ? 1.28 : role === "secondary" ? 0.92 : 0.54,
+        id: link.id,
+        linkID: link.id,
+        role: role,
+        pathGroup: pathGroup
+      };
+      labels.push(labelRecord);
 
-      var relation = { link: link, edgeSpec: edgeSpec, edgeStyle: edgeStyle, pathPoints: pathPoints, group: group, path: path, arrow: arrow, label: label, labelVisible: !!initiallyVisibleLabel, hovered: false, selected: false };
+      var relation = { link: link, edgeSpec: edgeSpec, edgeStyle: edgeStyle, pathPoints: pathPoints, group: group, path: path, arrow: arrow, label: label, labelRecord: labelRecord, labelVisible: !!initiallyVisibleLabel, hovered: false, selected: false };
       path.addEventListener("mouseenter", function () {
         relation.hovered = true;
         path.classList.add("is-hovered");
@@ -5600,7 +5678,7 @@
     }
 
     function createGroundLinkLabel(link, route, edgeStyle, edgeSpec) {
-      if (linkLabelMode !== "ground_aligned" || !link || !link.label) return null;
+      if (linkLabelMode !== "ground_texture_debug" || !link || !link.label) return null;
       var segment = computeRouteLabelSegment(route);
       if (!segment) return null;
       var role = relationRoleClass(edgeStyle.role || linkRole(link));
@@ -5777,17 +5855,14 @@
         disposeGeometry(child.geometry);
         if (child.material && child.material.dispose) child.material.dispose();
       }
-      var offset = record.leaderOffset || { x: 0, y: 0, z: 0 };
-      var from = record.object.position.clone();
-      from.y = record.object.position.y + (isMermaidArchitecture ? record.size.h * 0.56 : record.size.h * 0.16);
-      var to = new THREE.Vector3(
-        record.object.position.x + offset.x,
-        record.object.position.y + record.size.h * 0.54 + 0.28 + offset.y,
-        record.object.position.z + offset.z
-      );
+      var anchorInfo = entityLabelAnchor(record);
+      var from = anchorInfo.top;
+      var to = anchorInfo.anchor;
+      record.entityTopWorld = from.clone();
+      record.labelAnchorWorld = to.clone();
       record.labelRecord.point.copy(to);
-      setLabelAnchorMetadata(record.labelRecord.element, to, offset);
-      var fresh = createDashedLeader(THREE, from, to.clone().add(new THREE.Vector3(0, -0.06, 0)));
+      setLabelAnchorMetadata(record.labelRecord.element, to, record.leaderOffset || { x: 0, y: 0, z: 0 }, from);
+      var fresh = createDashedLeader(THREE, from, to.clone().add(new THREE.Vector3(0, -0.08, 0)));
       while (fresh.children.length) {
         record.leader.add(fresh.children.shift());
       }
@@ -5810,6 +5885,8 @@
       if (relation.tube && routeMesh.mesh && routeMesh.mesh.geometry) {
         disposeGeometry(relation.tube.geometry);
         relation.tube.geometry = routeMesh.mesh.geometry;
+        relation.tube.userData.isGroundRibbon = !!(routeMesh.mesh.userData && routeMesh.mesh.userData.isGroundRibbon);
+        relation.tube.userData.groundSegmentCount = routeMesh.mesh.userData ? numberValue(routeMesh.mesh.userData.groundSegmentCount, 0) : 0;
         relation.tube.userData.curve = routeMesh.curve;
         if (routeMesh.mesh.material && routeMesh.mesh.material.dispose) routeMesh.mesh.material.dispose();
       }
@@ -5834,6 +5911,11 @@
       }
       if (relation.groundLabel) {
         updateGroundLinkLabel(relation.groundLabel, relation.pathPoints);
+      }
+      if (relation.labelRecord) {
+        var labelAnchor = computeLinkLabelAnchor(relation.pathPoints);
+        relation.labelRecord.point.copy(labelAnchor);
+        setLabelAnchorMetadata(relation.labelRecord.element, labelAnchor);
       }
     }
 
@@ -5948,13 +6030,15 @@
         relationLinks.forEach(function (relation) {
           if (relation.path) relation.path.style.display = "none";
           if (relation.arrow) relation.arrow.style.display = "none";
+          var htmlLabelVisible = labelsVisible && arrowsVisible && (relation.labelVisible || relation.hovered || selectedLink === relation.link.id);
+          if (relation.labelRecord) {
+            relation.labelRecord.visible = htmlLabelVisible;
+          }
           if (relation.label) {
-            relation.label.style.display = "none";
-            relation.label.style.visibility = "hidden";
-            relation.label.style.opacity = "0";
+            relation.label.setAttribute("data-label-mode", "html_billboard");
           }
           if (relation.groundLabel && relation.groundLabel.plane) {
-            relation.groundLabel.visible = labelsVisible && arrowsVisible && (relation.labelVisible || relation.hovered || selectedLink === relation.link.id);
+            relation.groundLabel.visible = linkLabelMode === "ground_texture_debug" && htmlLabelVisible;
             relation.groundLabel.plane.visible = relation.groundLabel.visible;
           }
         });
@@ -5973,6 +6057,9 @@
         relation.path.classList.toggle("is-selected", selectedLink === relation.link.id);
         relation.arrow.classList.toggle("is-selected", selectedLink === relation.link.id);
         var labelVisible = labelsVisible && arrowsVisible && hasPath && (relation.labelVisible || relation.hovered || selectedLink === relation.link.id);
+        if (relation.labelRecord) {
+          relation.labelRecord.visible = labelVisible;
+        }
         relation.label.style.display = labelVisible ? "" : "none";
         relation.label.style.visibility = labelVisible ? "visible" : "hidden";
         relation.label.style.opacity = labelVisible ? "1" : "0";
@@ -6111,7 +6198,7 @@
       relationLabelRoot.visible = labelsVisible;
       relationLinks.forEach(function (relation) {
         if (relation.groundLabel && relation.groundLabel.plane) {
-          relation.groundLabel.visible = labelsVisible && arrowsVisible && relation.labelVisible;
+          relation.groundLabel.visible = linkLabelMode === "ground_texture_debug" && labelsVisible && arrowsVisible && relation.labelVisible;
           relation.groundLabel.plane.visible = relation.groundLabel.visible;
         }
       });
@@ -6247,8 +6334,17 @@
       var groundLinkMeshCount = relationLinks.filter(function (relation) {
         return relation.tube && relation.tube.userData && relation.tube.userData.isGroundLinkMesh;
       }).length;
+      var groundLinkSegmentCount = relationLinks.reduce(function (sum, relation) {
+        return sum + (relation.tube && relation.tube.userData ? numberValue(relation.tube.userData.groundSegmentCount, 0) : 0);
+      }, 0);
+      var visibleGroundLinkCount = relationLinks.filter(function (relation) {
+        return relation.tube && relation.tube.visible !== false && relation.tube.userData && relation.tube.userData.isGroundLinkMesh;
+      }).length;
       var groundArrowheadCount = relationLinks.filter(function (relation) {
         return relation.arrow3D && relation.arrow3D.userData && relation.arrow3D.userData.isGroundArrowhead;
+      }).length;
+      var visibleGroundArrowheadCount = relationLinks.filter(function (relation) {
+        return relation.arrow3D && relation.arrow3D.visible !== false && relation.arrow3D.userData && relation.arrow3D.userData.isGroundArrowhead;
       }).length;
       var groundLinkHitAreaCount = relationLinks.filter(function (relation) {
         return relation.hitArea && relation.hitArea.userData && relation.hitArea.userData.isGroundLinkHitArea;
@@ -6256,20 +6352,28 @@
       var groundLinkLabelMeshCount = groundLinkLabels.length;
       var groundLinkLabelTextureReadyCount = groundLinkLabels.filter(function (item) { return item.textureReady; }).length;
       var groundLinkLabelVisibleCount = groundLinkLabels.filter(function (item) { return item.plane && item.plane.visible; }).length;
+      var htmlLinkLabels = labels.filter(function (label) { return label.type === "link"; });
       return {
         relationLayerMode: relationLayerMode,
         worldRelationLayerPresent: relationLayerMode === "world_ground",
         groundLinkMeshCount: groundLinkMeshCount,
+        groundLinkRibbonCount: groundLinkMeshCount,
+        groundLinkSegmentCount: groundLinkSegmentCount,
+        visibleGroundLinkCount: visibleGroundLinkCount,
         groundArrowheadCount: groundArrowheadCount,
+        visibleGroundArrowheadCount: visibleGroundArrowheadCount,
         groundLinkHitAreaCount: groundLinkHitAreaCount,
+        linkLabelMode: linkLabelMode,
+        htmlLinkLabelCount: htmlLinkLabels.length,
         groundLinkLabelMeshCount: groundLinkLabelMeshCount,
         groundLinkLabelTextureReadyCount: groundLinkLabelTextureReadyCount,
         groundLinkLabelVisibleCount: groundLinkLabelVisibleCount,
+        groundTextureLinkLabelCount: groundLinkLabelMeshCount,
         groundLinkLabelFlippedCount: groundLinkLabels.filter(function (item) { return item.flipped; }).length,
         screenSvgRelationLayerVisible: svgRelationEnabled && shell.relationLayer.style.display !== "none",
         svgDebugRelationLayerPresent: !!shell.relationSvg,
         entityLabelAnchorCount: labels.filter(function (label) { return label.type === "entity"; }).length,
-        linkLabelAnchorCount: groundLinkLabels.length,
+        linkLabelAnchorCount: htmlLinkLabels.length,
         zoneLabelAnchorCount: labels.filter(function (label) { return label.type === "zone"; }).length,
         worldLeaderLineCount: leaderRoot.children.filter(function (child) { return child && child.userData && child.userData.isLeaderLine; }).length
       };
@@ -6325,16 +6429,16 @@
     }
 
     function getLinkLabelAnchors() {
-      return groundLinkLabels.map(function (label) {
+      return labels.filter(function (label) { return label.type === "link"; }).map(function (label) {
         return {
-          id: label.linkId,
-          role: label.role,
-          pathGroup: label.pathGroup,
-          x: Math.round(label.anchor.x * 1000) / 1000,
-          y: Math.round(label.anchor.y * 1000) / 1000,
-          z: Math.round(label.anchor.z * 1000) / 1000,
-          flipped: !!label.flipped,
-          visible: !!(label.plane && label.plane.visible)
+          id: label.linkID || label.id || "",
+          role: label.role || "",
+          pathGroup: label.pathGroup || "",
+          x: Math.round(label.point.x * 1000) / 1000,
+          y: Math.round(label.point.y * 1000) / 1000,
+          z: Math.round(label.point.z * 1000) / 1000,
+          flipped: false,
+          visible: !!label.visible
         };
       });
     }
@@ -6355,13 +6459,13 @@
       updateLabels();
       updateGroundLabelReadability(true);
       var entityBefore = projectedAnchorMap(labels.filter(function (label) { return label.type === "entity"; }), "entityID", "point");
-      var linkBefore = projectedAnchorMap(groundLinkLabels, "linkId", "anchor");
+      var linkBefore = projectedAnchorMap(labels.filter(function (label) { return label.type === "link"; }), "linkID", "point");
       cameraState.theta += yawDelta;
       updateCamera();
       updateLabels();
       updateGroundLabelReadability(false);
       var entityAfter = projectedAnchorMap(labels.filter(function (label) { return label.type === "entity"; }), "entityID", "point");
-      var linkAfter = projectedAnchorMap(groundLinkLabels, "linkId", "anchor");
+      var linkAfter = projectedAnchorMap(labels.filter(function (label) { return label.type === "link"; }), "linkID", "point");
       cameraState.theta = original.theta;
       cameraState.phi = original.phi;
       cameraState.zoom = original.zoom;
@@ -6371,7 +6475,7 @@
       updateLabels();
       updateGroundLabelReadability(true);
       var entityReturn = projectedAnchorMap(labels.filter(function (label) { return label.type === "entity"; }), "entityID", "point");
-      var linkReturn = projectedAnchorMap(groundLinkLabels, "linkId", "anchor");
+      var linkReturn = projectedAnchorMap(labels.filter(function (label) { return label.type === "link"; }), "linkID", "point");
       var entityStats = pointDeltaStats(entityBefore, entityReturn);
       var linkStats = pointDeltaStats(linkBefore, linkReturn);
       return {

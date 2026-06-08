@@ -184,6 +184,7 @@ const expression = `(() => {
   const debugSummary = debugApi?.getSummary ? (debugApi.getSummary() || {}) : {};
   const relationLayerMode = String(debugSummary.relationLayerMode || q("[data-relation-layer-mode]")?.getAttribute("data-relation-layer-mode") || "");
   const worldGroundMode = relationLayerMode === "world_ground";
+  const linkLabelMode = String(debugSummary.linkLabelMode || "html_billboard");
   const groundLinkLabelVisibleCount = Number(debugSummary.groundLinkLabelVisibleCount || 0);
   const groundLinkLabelMeshCount = Number(debugSummary.groundLinkLabelMeshCount || 0);
   const imageLoaded = (node) => !(node instanceof HTMLImageElement) || (node.complete && node.naturalWidth > 0 && node.naturalHeight > 0);
@@ -229,13 +230,11 @@ const expression = `(() => {
   const secondaryLinkCount = linkData.filter((link) => roleOf(link) === "secondary").length;
   const auxiliaryLinkCount = linkData.filter((link) => roleOf(link) === "auxiliary").length;
   const domVisibleLinkLabels = linkLabelNodes.filter(isVisible).length;
-  const visiblePrimaryLinkLabelCount = worldGroundMode ? Math.min(primaryLinkCount, groundLinkLabelVisibleCount) : linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").length;
-  const visibleSecondaryLinkLabelCount = worldGroundMode ? Math.max(0, Math.min(secondaryLinkCount, groundLinkLabelVisibleCount - visiblePrimaryLinkLabelCount)) : linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "secondary").length;
-  const visibleAuxiliaryLinkLabelCount = worldGroundMode ? Math.max(0, groundLinkLabelVisibleCount - visiblePrimaryLinkLabelCount - visibleSecondaryLinkLabelCount) : linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "auxiliary").length;
+  const visiblePrimaryLinkLabelCount = linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").length;
+  const visibleSecondaryLinkLabelCount = linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "secondary").length;
+  const visibleAuxiliaryLinkLabelCount = linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "auxiliary").length;
   const routeGroups = Array.from(new Set(linkData.map(pathGroupOf))).filter(Boolean).sort();
-  const primaryPathGroupsVisible = worldGroundMode
-    ? Array.from(new Set(linkData.filter((link) => roleOf(link) === "primary").slice(0, groundLinkLabelVisibleCount).map(pathGroupOf))).filter(Boolean).sort()
-    : Array.from(new Set(linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").map((node) => node.getAttribute("data-path-group") || ""))).filter(Boolean).sort();
+  const primaryPathGroupsVisible = Array.from(new Set(linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").map((node) => node.getAttribute("data-path-group") || ""))).filter(Boolean).sort();
   const hasExplicitRoute = (link) => Array.isArray(link?.route) && link.route.length >= 2;
   const explicitRouteLinkCount = linkData.filter(hasExplicitRoute).length;
   const heuristicRouteLinkCount = Math.max(0, linkData.length - explicitRouteLinkCount);
@@ -284,7 +283,7 @@ const expression = `(() => {
     labelIconsLoaded: labelIconNodes.filter(imageLoaded).length,
     brokenLabelIcons: labelIconNodes.filter(imageBroken).length,
     visibleEntityLabels: entityLabelNodes.filter(isVisible).length,
-    visibleLinkLabels: Math.max(domVisibleLinkLabels, groundLinkLabelVisibleCount),
+    visibleLinkLabels: linkLabelMode === "ground_texture_debug" ? Math.max(domVisibleLinkLabels, groundLinkLabelVisibleCount) : domVisibleLinkLabels,
     visibleZoneLabels: zoneLabelNodes.filter(isVisible).length,
     visibleLabelIcons: labelIconNodes.filter((node) => isVisible(node.closest(".visual-isometric-entity-label") || node) && imageLoaded(node)).length,
     primaryLinkCount,
@@ -294,7 +293,7 @@ const expression = `(() => {
     primaryVisibleLabelCount: visiblePrimaryLinkLabelCount,
     visibleSecondaryLinkLabelCount,
     visibleAuxiliaryLinkLabelCount,
-    overviewLinkLabelCount: Math.max(domVisibleLinkLabels, groundLinkLabelVisibleCount),
+    overviewLinkLabelCount: linkLabelMode === "ground_texture_debug" ? Math.max(domVisibleLinkLabels, groundLinkLabelVisibleCount) : domVisibleLinkLabels,
     linkOpacityBuckets: { strong: primaryLinkCount, medium: secondaryLinkCount, low: auxiliaryLinkCount },
     zoneCountVisible: zoneLabelNodes.filter(isVisible).length,
     primaryPathGroupsVisible,

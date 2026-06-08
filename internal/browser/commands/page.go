@@ -12,10 +12,19 @@ import (
 func pageCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "page",
-		Short: "Inspect browser page content",
-		Long:  "Attach briefly to the current browser tab or a selected page target to snapshot or extract redacted page content.",
+		Short: "Inspect and automate browser page content",
+		Long:  "Attach briefly to the current browser tab or a selected page target to snapshot, extract, and run bounded page actions without exporting browser secrets.",
 	}
-	c.AddCommand(pageSnapshotCmd(o), pageExtractCmd(o))
+	c.AddCommand(
+		pageSnapshotCmd(o),
+		pageExtractCmd(o),
+		pageClickCmd(o),
+		pageTypeCmd(o),
+		pageWaitCmd(o),
+		pageScreenshotCmd(o),
+		pageEvalCmd(o),
+		pageFetchCmd(o),
+	)
 	return c
 }
 
@@ -71,6 +80,162 @@ func pageExtractCmd(o *Opts) *cobra.Command {
 	c.Flags().IntVar(&opts.Limit, "limit", 20, "Maximum number of matching elements to return.")
 	c.Flags().BoolVar(&opts.IncludeHTML, "include-html", false, "Include redacted and truncated outer HTML for each matching element.")
 	c.Flags().IntVar(&opts.MaxHTMLBytes, "max-html-bytes", 20000, "Maximum bytes of redacted outer HTML per element when --include-html is set.")
+	return c
+}
+
+func pageClickCmd(o *Opts) *cobra.Command {
+	opts := automation.ClickOptions{PageOptions: defaultPageOptions()}
+	c := &cobra.Command{
+		Use:   "click",
+		Short: "Click a visible page element",
+		Long:  "Wait for a CSS selector to become visible, click it in the selected browser tab, and return redacted page metadata.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Click(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "CSS selector for the visible element to click.")
+	return c
+}
+
+func pageTypeCmd(o *Opts) *cobra.Command {
+	opts := automation.TypeOptions{PageOptions: defaultPageOptions()}
+	c := &cobra.Command{
+		Use:   "type",
+		Short: "Type text into a page element",
+		Long:  "Wait for a CSS selector to become visible, optionally clear it, type the provided text, and return only non-secret metadata.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Type(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "CSS selector for the visible input or editable element.")
+	c.Flags().StringVar(&opts.Text, "text", "", "Text to type; the value is not included in command output.")
+	c.Flags().BoolVar(&opts.Clear, "clear", false, "Clear the selected element before typing.")
+	return c
+}
+
+func pageWaitCmd(o *Opts) *cobra.Command {
+	opts := automation.WaitOptions{PageOptions: defaultPageOptions()}
+	c := &cobra.Command{
+		Use:   "wait",
+		Short: "Wait for a page condition",
+		Long:  "Wait for a visible CSS selector, a bounded duration, or both, then return redacted page metadata.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Wait(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Selector, "selector", "", "Optional CSS selector to wait for until it is visible.")
+	c.Flags().IntVar(&opts.DurationMilliseconds, "duration-ms", 0, "Optional bounded sleep duration in milliseconds.")
+	return c
+}
+
+func pageScreenshotCmd(o *Opts) *cobra.Command {
+	opts := automation.ScreenshotOptions{PageOptions: defaultPageOptions(), FullPage: true}
+	c := &cobra.Command{
+		Use:   "screenshot",
+		Short: "Write a page screenshot artifact",
+		Long:  "Capture the selected browser tab to a PNG file and return file metadata instead of binary image data.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Screenshot(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.OutPath, "out", "", "Screenshot output PNG path; defaults to ~/.efp/browser/artifacts/page-screenshot-<timestamp>.png.")
+	c.Flags().BoolVar(&opts.FullPage, "full-page", true, "Capture the full page instead of only the current viewport.")
+	return c
+}
+
+func pageEvalCmd(o *Opts) *cobra.Command {
+	opts := automation.EvalOptions{PageOptions: defaultPageOptions(), MaxStringBytes: 20000}
+	c := &cobra.Command{
+		Use:   "eval",
+		Short: "Evaluate a safe page expression",
+		Long:  "Evaluate a bounded JavaScript expression in the selected page and return recursively redacted serializable values.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Eval(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Expression, "expr", "", "JavaScript expression to evaluate; storage, cookie, header, credential, and network APIs are rejected.")
+	c.Flags().IntVar(&opts.MaxStringBytes, "max-string-bytes", 20000, "Maximum bytes per redacted string value in the returned result.")
+	return c
+}
+
+func pageFetchCmd(o *Opts) *cobra.Command {
+	opts := automation.FetchOptions{PageOptions: defaultPageOptions(), MaxBodyBytes: 20000}
+	c := &cobra.Command{
+		Use:   "fetch",
+		Short: "Fetch a URL from the page context",
+		Long:  "Run a sanitized GET fetch from the selected page context with credentials omitted, returning status and a redacted body preview without headers.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Fetch(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.URL, "url", "", "HTTP, HTTPS, or relative URL to fetch with unsafe schemes rejected.")
+	c.Flags().IntVar(&opts.MaxBodyBytes, "max-body-bytes", 20000, "Maximum bytes of redacted response body preview to return.")
 	return c
 }
 

@@ -10,7 +10,34 @@ import (
 	"engineering-flow-platform-tools/internal/browser/probe"
 )
 
-var embeddedURLPattern = regexp.MustCompile(`https?://[^\s"'<>]+`)
+var (
+	embeddedURLPattern        = regexp.MustCompile(`https?://[^\s"'<>]+`)
+	sensitiveJSONFieldPattern = regexp.MustCompile(`(?i)(["']?[A-Za-z0-9_.~-]*(?:access_token|id_token|refresh_token|token|code|auth|ticket|session|sig|signature|key|password|jwt|saml|secret|credential|cookie|authorization|header|localstorage|sessionstorage)[A-Za-z0-9_.~-]*["']?\s*:\s*)(["'][^"']*["']|[^,}\]\s]+)`)
+)
+
+var sensitiveFieldWords = []string{
+	"token",
+	"access_token",
+	"id_token",
+	"refresh_token",
+	"code",
+	"auth",
+	"ticket",
+	"session",
+	"sig",
+	"signature",
+	"key",
+	"password",
+	"jwt",
+	"saml",
+	"secret",
+	"credential",
+	"cookie",
+	"authorization",
+	"header",
+	"localstorage",
+	"sessionstorage",
+}
 
 func RedactString(s string) string {
 	if s == "" {
@@ -22,6 +49,7 @@ func RedactString(s string) string {
 	if looksLikeURL(s) {
 		s = probe.RedactURL(s)
 	}
+	s = sensitiveJSONFieldPattern.ReplaceAllString(s, `${1}"REDACTED"`)
 	return probe.RedactText(s)
 }
 
@@ -62,7 +90,12 @@ func SanitizeValue(value any, maxStringBytes int) any {
 	case map[string]any:
 		out := make(map[string]any, len(v))
 		for key, item := range v {
-			out[key] = SanitizeValue(item, maxStringBytes)
+			cleanKey := RedactString(key)
+			if sensitiveFieldName(key) {
+				out[cleanKey] = "REDACTED"
+				continue
+			}
+			out[cleanKey] = SanitizeValue(item, maxStringBytes)
 		}
 		return out
 	case bool, float64, float32, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
@@ -70,6 +103,16 @@ func SanitizeValue(value any, maxStringBytes int) any {
 	default:
 		return TruncateBytes(RedactString(fmt.Sprint(v)), maxStringBytes)
 	}
+}
+
+func sensitiveFieldName(key string) bool {
+	key = strings.ToLower(strings.TrimSpace(key))
+	for _, word := range sensitiveFieldWords {
+		if strings.Contains(key, word) {
+			return true
+		}
+	}
+	return false
 }
 
 func looksLikeURL(s string) bool {

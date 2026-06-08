@@ -140,7 +140,7 @@ func pageWaitCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "wait",
 		Short: "Wait for a page condition",
-		Long:  "Wait for a visible CSS selector, a bounded duration, or both, then return redacted page metadata.",
+		Long:  "Wait for one or more bounded page conditions, then return redacted page metadata and condition summaries.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			mgr, err := automation.DefaultManager()
 			if err != nil {
@@ -158,6 +158,10 @@ func pageWaitCmd(o *Opts) *cobra.Command {
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().StringVar(&opts.Selector, "selector", "", "Optional CSS selector to wait for until it is visible.")
 	c.Flags().IntVar(&opts.DurationMilliseconds, "duration-ms", 0, "Optional bounded sleep duration in milliseconds.")
+	c.Flags().StringVar(&opts.URLContains, "url-contains", "", "Wait until the current page URL contains this text.")
+	c.Flags().StringVar(&opts.Text, "text", "", "Wait until visible body text contains this text.")
+	c.Flags().IntVar(&opts.NetworkIdleMilliseconds, "network-idle-ms", 0, "Wait until resource timing entries stop changing for this many milliseconds.")
+	c.Flags().IntVar(&opts.DOMStableMilliseconds, "dom-stable-ms", 0, "Wait until body text and DOM shape remain stable for this many milliseconds.")
 	return c
 }
 

@@ -1,6 +1,7 @@
 package automation
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -120,6 +121,64 @@ func TestDefaultPageScreenshotPathUsesBrowserHome(t *testing.T) {
 	}
 	if !strings.Contains(got, "artifacts") || !strings.HasSuffix(got, "page-screenshot-20260608-010203-000000004.png") {
 		t.Fatalf("unexpected screenshot path: %s", got)
+	}
+}
+
+func TestValidateWaitOptionsAcceptsAdvancedConditions(t *testing.T) {
+	valid := []WaitOptions{
+		{Selector: ".ready"},
+		{DurationMilliseconds: 1},
+		{URLContains: "/dashboard"},
+		{Text: "Welcome"},
+		{NetworkIdleMilliseconds: 250},
+		{DOMStableMilliseconds: 250},
+		{Selector: ".ready", Text: "Done", NetworkIdleMilliseconds: 100},
+	}
+	for _, opts := range valid {
+		if err := validateWaitOptions(opts); err != nil {
+			t.Fatalf("validateWaitOptions(%#v) unexpected error: %v", opts, err)
+		}
+	}
+}
+
+func TestValidateWaitOptionsRejectsMissingAndNegativeConditions(t *testing.T) {
+	invalid := []WaitOptions{
+		{},
+		{DurationMilliseconds: -1},
+		{NetworkIdleMilliseconds: -1},
+		{DOMStableMilliseconds: -1},
+	}
+	for _, opts := range invalid {
+		if err := validateWaitOptions(opts); err == nil {
+			t.Fatalf("validateWaitOptions(%#v) succeeded unexpectedly", opts)
+		}
+	}
+}
+
+func TestStableTrackerRequiresUnchangedKeyForDuration(t *testing.T) {
+	tracker := newStableTracker(500 * time.Millisecond)
+	start := time.Date(2026, 6, 8, 1, 2, 3, 0, time.UTC)
+	if ok, stableFor := tracker.Observe(start, "a"); ok || stableFor != 0 {
+		t.Fatalf("first sample should not be stable: ok=%v stableFor=%v", ok, stableFor)
+	}
+	if ok, stableFor := tracker.Observe(start.Add(400*time.Millisecond), "a"); ok || stableFor != 400*time.Millisecond {
+		t.Fatalf("early unchanged sample = ok=%v stableFor=%v", ok, stableFor)
+	}
+	if ok, stableFor := tracker.Observe(start.Add(450*time.Millisecond), "b"); ok || stableFor != 0 {
+		t.Fatalf("changed sample should reset: ok=%v stableFor=%v", ok, stableFor)
+	}
+	if ok, stableFor := tracker.Observe(start.Add(950*time.Millisecond), "b"); !ok || stableFor != 500*time.Millisecond {
+		t.Fatalf("stable sample = ok=%v stableFor=%v", ok, stableFor)
+	}
+}
+
+func TestWaitSnapshotExpressionDoesNotExposeNeedlesAsBareCode(t *testing.T) {
+	expr := waitSnapshotExpression(`"; document.cookie; "`, `</script><script>`)
+	if !strings.Contains(expr, strconv.Quote(`"; document.cookie; "`)) {
+		t.Fatalf("url needle was not quoted safely: %s", expr)
+	}
+	if !strings.Contains(expr, strconv.Quote(`</script><script>`)) {
+		t.Fatalf("text needle was not quoted safely: %s", expr)
 	}
 }
 

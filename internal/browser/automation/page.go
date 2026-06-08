@@ -83,8 +83,12 @@ type TypeOptions struct {
 
 type WaitOptions struct {
 	PageOptions
-	Selector             string
-	DurationMilliseconds int
+	Selector                string
+	DurationMilliseconds    int
+	URLContains             string
+	Text                    string
+	NetworkIdleMilliseconds int
+	DOMStableMilliseconds   int
 }
 
 type PageActionResult struct {
@@ -96,6 +100,28 @@ type PageActionResult struct {
 	Title                string `json:"title"`
 	TextBytes            int    `json:"text_bytes,omitempty"`
 	DurationMilliseconds int    `json:"duration_ms,omitempty"`
+}
+
+type WaitConditionResult struct {
+	Condition            string `json:"condition"`
+	Satisfied            bool   `json:"satisfied"`
+	WaitMilliseconds     int    `json:"wait_ms,omitempty"`
+	DurationMilliseconds int    `json:"duration_ms,omitempty"`
+	ResourceCount        int    `json:"resource_count,omitempty"`
+	TextBytes            int    `json:"text_bytes,omitempty"`
+	HTMLBytes            int    `json:"html_bytes,omitempty"`
+	NodeCount            int    `json:"node_count,omitempty"`
+}
+
+type WaitResult struct {
+	Session              string                `json:"session"`
+	TargetID             string                `json:"target_id"`
+	Action               string                `json:"action"`
+	Selector             string                `json:"selector,omitempty"`
+	URL                  string                `json:"url"`
+	Title                string                `json:"title"`
+	DurationMilliseconds int                   `json:"duration_ms,omitempty"`
+	Conditions           []WaitConditionResult `json:"conditions"`
 }
 
 type ScreenshotOptions struct {
@@ -281,34 +307,61 @@ func (m *Manager) Type(ctx context.Context, opts TypeOptions) (PageActionResult,
 	return result, nil
 }
 
-func (m *Manager) Wait(ctx context.Context, opts WaitOptions) (PageActionResult, error) {
-	if strings.TrimSpace(opts.Selector) == "" && opts.DurationMilliseconds <= 0 {
-		return PageActionResult{}, invalidArgs("--selector or --duration-ms is required", "Pass --selector <css> to wait for an element or --duration-ms <n> for a bounded sleep.")
-	}
-	if opts.DurationMilliseconds < 0 {
-		return PageActionResult{}, invalidArgs("--duration-ms must be zero or greater", "Pass a non-negative duration in milliseconds.")
+func (m *Manager) Wait(ctx context.Context, opts WaitOptions) (WaitResult, error) {
+	if err := validateWaitOptions(opts); err != nil {
+		return WaitResult{}, err
 	}
 	pageCtx, cancel, session, target, err := m.attachPage(ctx, opts.PageOptions)
 	if err != nil {
-		return PageActionResult{}, err
+		return WaitResult{}, err
 	}
 	defer cancel()
 
-	actions := []chromedp.Action{}
+	conditions := make([]WaitConditionResult, 0, waitConditionCount(opts))
 	if strings.TrimSpace(opts.Selector) != "" {
-		actions = append(actions, chromedp.WaitVisible(opts.Selector, chromedp.ByQuery))
+		start := time.Now()
+		if err := chromedp.Run(pageCtx, chromedp.WaitVisible(opts.Selector, chromedp.ByQuery)); err != nil {
+			return WaitResult{}, mapPageError(err, "automation_failed")
+		}
+		conditions = append(conditions, WaitConditionResult{
+			Condition:        "selector_visible",
+			Satisfied:        true,
+			WaitMilliseconds: elapsedMilliseconds(start),
+		})
 	}
 	if opts.DurationMilliseconds > 0 {
-		actions = append(actions, chromedp.Sleep(time.Duration(opts.DurationMilliseconds)*time.Millisecond))
+		start := time.Now()
+		if err := chromedp.Run(pageCtx, chromedp.Sleep(time.Duration(opts.DurationMilliseconds)*time.Millisecond)); err != nil {
+			return WaitResult{}, mapPageError(err, "automation_failed")
+		}
+		conditions = append(conditions, WaitConditionResult{
+			Condition:            "duration",
+			Satisfied:            true,
+			WaitMilliseconds:     elapsedMilliseconds(start),
+			DurationMilliseconds: opts.DurationMilliseconds,
+		})
+	}
+	if hasAdvancedWaitConditions(opts) {
+		results, err := waitForAdvancedPageConditions(pageCtx, opts)
+		if err != nil {
+			return WaitResult{}, mapPageError(err, "automation_failed")
+		}
+		conditions = append(conditions, results...)
 	}
 	var finalURL, title string
-	actions = append(actions, chromedp.Location(&finalURL), chromedp.Title(&title))
-	if err := chromedp.Run(pageCtx, actions...); err != nil {
-		return PageActionResult{}, mapPageError(err, "automation_failed")
+	if err := chromedp.Run(pageCtx, chromedp.Location(&finalURL), chromedp.Title(&title)); err != nil {
+		return WaitResult{}, mapPageError(err, "automation_failed")
 	}
-	result := pageActionResult(session, target, "wait", opts.Selector, finalURL, title)
-	result.DurationMilliseconds = opts.DurationMilliseconds
-	return result, nil
+	return WaitResult{
+		Session:              session.Name,
+		TargetID:             target.ID,
+		Action:               "wait",
+		Selector:             RedactString(opts.Selector),
+		URL:                  RedactURL(finalURL),
+		Title:                RedactString(title),
+		DurationMilliseconds: opts.DurationMilliseconds,
+		Conditions:           conditions,
+	}, nil
 }
 
 func (m *Manager) Screenshot(ctx context.Context, opts ScreenshotOptions) (ScreenshotResult, error) {
@@ -484,6 +537,217 @@ func extractExpression(selector string, limit int, includeHTML bool) string {
       tag_name: String(el.tagName || "").toLowerCase(),
       html: includeHTML ? String(el.outerHTML || "") : ""
     }))
+  };
+})()`
+}
+
+func validateWaitOptions(opts WaitOptions) error {
+	if opts.DurationMilliseconds < 0 {
+		return invalidArgs("--duration-ms must be zero or greater", "Pass a non-negative duration in milliseconds.")
+	}
+	if opts.NetworkIdleMilliseconds < 0 {
+		return invalidArgs("--network-idle-ms must be zero or greater", "Pass a non-negative idle duration in milliseconds.")
+	}
+	if opts.DOMStableMilliseconds < 0 {
+		return invalidArgs("--dom-stable-ms must be zero or greater", "Pass a non-negative stable duration in milliseconds.")
+	}
+	if waitConditionCount(opts) == 0 {
+		return invalidArgs(
+			"--selector, --duration-ms, --url-contains, --text, --network-idle-ms, or --dom-stable-ms is required",
+			"Pass one or more bounded page wait conditions.",
+		)
+	}
+	return nil
+}
+
+func waitConditionCount(opts WaitOptions) int {
+	count := 0
+	if strings.TrimSpace(opts.Selector) != "" {
+		count++
+	}
+	if opts.DurationMilliseconds > 0 {
+		count++
+	}
+	if strings.TrimSpace(opts.URLContains) != "" {
+		count++
+	}
+	if strings.TrimSpace(opts.Text) != "" {
+		count++
+	}
+	if opts.NetworkIdleMilliseconds > 0 {
+		count++
+	}
+	if opts.DOMStableMilliseconds > 0 {
+		count++
+	}
+	return count
+}
+
+func hasAdvancedWaitConditions(opts WaitOptions) bool {
+	return strings.TrimSpace(opts.URLContains) != "" ||
+		strings.TrimSpace(opts.Text) != "" ||
+		opts.NetworkIdleMilliseconds > 0 ||
+		opts.DOMStableMilliseconds > 0
+}
+
+type waitPollSnapshot struct {
+	URLContains         bool    `json:"url_contains"`
+	TextContains        bool    `json:"text_contains"`
+	ResourceCount       int     `json:"resource_count"`
+	ResourceFingerprint string  `json:"resource_fingerprint"`
+	ResourceLatest      float64 `json:"resource_latest"`
+	DOMFingerprint      string  `json:"dom_fingerprint"`
+	TextBytes           int     `json:"text_bytes"`
+	HTMLBytes           int     `json:"html_bytes"`
+	NodeCount           int     `json:"node_count"`
+}
+
+func waitForAdvancedPageConditions(ctx context.Context, opts WaitOptions) ([]WaitConditionResult, error) {
+	start := time.Now()
+	needURL := strings.TrimSpace(opts.URLContains) != ""
+	needText := strings.TrimSpace(opts.Text) != ""
+	needNetwork := opts.NetworkIdleMilliseconds > 0
+	needDOM := opts.DOMStableMilliseconds > 0
+	networkTracker := newStableTracker(time.Duration(opts.NetworkIdleMilliseconds) * time.Millisecond)
+	domTracker := newStableTracker(time.Duration(opts.DOMStableMilliseconds) * time.Millisecond)
+	var networkOK, domOK bool
+
+	for {
+		var snap waitPollSnapshot
+		if err := chromedp.Evaluate(waitSnapshotExpression(opts.URLContains, opts.Text), &snap, chromedp.EvalAsValue).Do(ctx); err != nil {
+			return nil, err
+		}
+		now := time.Now()
+		if needNetwork {
+			networkKey := fmt.Sprintf("%d:%s:%.3f", snap.ResourceCount, snap.ResourceFingerprint, snap.ResourceLatest)
+			networkOK, _ = networkTracker.Observe(now, networkKey)
+		}
+		if needDOM {
+			domKey := fmt.Sprintf("%s:%d:%d:%d", snap.DOMFingerprint, snap.TextBytes, snap.HTMLBytes, snap.NodeCount)
+			domOK, _ = domTracker.Observe(now, domKey)
+		}
+		if (!needURL || snap.URLContains) &&
+			(!needText || snap.TextContains) &&
+			(!needNetwork || networkOK) &&
+			(!needDOM || domOK) {
+			waitMS := elapsedMilliseconds(start)
+			results := make([]WaitConditionResult, 0, 4)
+			if needURL {
+				results = append(results, WaitConditionResult{Condition: "url_contains", Satisfied: true, WaitMilliseconds: waitMS})
+			}
+			if needText {
+				results = append(results, WaitConditionResult{Condition: "text_contains", Satisfied: true, WaitMilliseconds: waitMS, TextBytes: snap.TextBytes})
+			}
+			if needNetwork {
+				results = append(results, WaitConditionResult{
+					Condition:            "network_idle",
+					Satisfied:            true,
+					WaitMilliseconds:     waitMS,
+					DurationMilliseconds: opts.NetworkIdleMilliseconds,
+					ResourceCount:        snap.ResourceCount,
+				})
+			}
+			if needDOM {
+				results = append(results, WaitConditionResult{
+					Condition:            "dom_stable",
+					Satisfied:            true,
+					WaitMilliseconds:     waitMS,
+					DurationMilliseconds: opts.DOMStableMilliseconds,
+					TextBytes:            snap.TextBytes,
+					HTMLBytes:            snap.HTMLBytes,
+					NodeCount:            snap.NodeCount,
+				})
+			}
+			return results, nil
+		}
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("wait conditions were not satisfied before timeout: %w", ctx.Err())
+		case <-time.After(150 * time.Millisecond):
+		}
+	}
+}
+
+type stableTracker struct {
+	duration time.Duration
+	key      string
+	since    time.Time
+	seen     bool
+	samples  int
+}
+
+func newStableTracker(duration time.Duration) *stableTracker {
+	return &stableTracker{duration: duration}
+}
+
+func (t *stableTracker) Observe(now time.Time, key string) (bool, time.Duration) {
+	if t == nil || t.duration <= 0 {
+		return true, 0
+	}
+	if !t.seen || key != t.key {
+		t.key = key
+		t.since = now
+		t.seen = true
+		t.samples = 1
+		return false, 0
+	}
+	t.samples++
+	stableFor := now.Sub(t.since)
+	return stableFor >= t.duration, stableFor
+}
+
+func elapsedMilliseconds(start time.Time) int {
+	if start.IsZero() {
+		return 0
+	}
+	ms := int(time.Since(start) / time.Millisecond)
+	if ms < 0 {
+		return 0
+	}
+	return ms
+}
+
+func waitSnapshotExpression(urlContains, textContains string) string {
+	return `(function () {
+  const urlNeedle = ` + strconv.Quote(strings.TrimSpace(urlContains)) + `;
+  const textNeedle = ` + strconv.Quote(strings.TrimSpace(textContains)) + `;
+  const hashString = function (value) {
+    value = String(value || "");
+    let hash = 2166136261;
+    for (let i = 0; i < value.length; i++) {
+      hash ^= value.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return String(hash >>> 0);
+  };
+  const body = document.body || document.documentElement || null;
+  const text = body ? String(body.innerText || body.textContent || "") : "";
+  const html = body ? String(body.outerHTML || "") : "";
+  const resources = performance && performance.getEntriesByType ? performance.getEntriesByType("resource") : [];
+  let resourceLatest = 0;
+  let resourceShape = "";
+  for (const entry of resources) {
+    const end = Number(entry.responseEnd || (entry.startTime + entry.duration) || entry.startTime || 0);
+    resourceLatest = Math.max(resourceLatest, end);
+    resourceShape += [
+      Math.round(Number(entry.startTime || 0)),
+      Math.round(Number(entry.duration || 0)),
+      Math.round(Number(entry.transferSize || 0)),
+      Math.round(Number(entry.encodedBodySize || 0)),
+      Math.round(Number(entry.decodedBodySize || 0))
+    ].join(":") + "|";
+  }
+  const nodeCount = document.getElementsByTagName ? document.getElementsByTagName("*").length : 0;
+  return {
+    url_contains: urlNeedle === "" ? true : String(location.href || "").includes(urlNeedle),
+    text_contains: textNeedle === "" ? true : text.includes(textNeedle),
+    resource_count: resources.length,
+    resource_fingerprint: hashString(resourceShape),
+    resource_latest: resourceLatest,
+    dom_fingerprint: hashString(String(text.length) + "|" + String(html.length) + "|" + String(nodeCount) + "|" + hashString(text) + "|" + hashString(html)),
+    text_bytes: new TextEncoder().encode(text).length,
+    html_bytes: new TextEncoder().encode(html).length,
+    node_count: nodeCount
   };
 })()`
 }

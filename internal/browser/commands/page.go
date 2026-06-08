@@ -24,6 +24,8 @@ func pageCmd(o *Opts) *cobra.Command {
 		pageScreenshotCmd(o),
 		pageEvalCmd(o),
 		pageFetchCmd(o),
+		pageNetworkCmd(o),
+		pageOutlineCmd(o),
 	)
 	return c
 }
@@ -240,6 +242,59 @@ func pageFetchCmd(o *Opts) *cobra.Command {
 	addPageCommonFlags(c, &opts.PageOptions)
 	c.Flags().StringVar(&opts.URL, "url", "", "HTTP, HTTPS, or relative URL to fetch with unsafe schemes rejected.")
 	c.Flags().IntVar(&opts.MaxBodyBytes, "max-body-bytes", 20000, "Maximum bytes of redacted response body preview to return.")
+	return c
+}
+
+func pageNetworkCmd(o *Opts) *cobra.Command {
+	opts := automation.NetworkOptions{PageOptions: defaultPageOptions(), Limit: 50}
+	c := &cobra.Command{
+		Use:   "network",
+		Short: "Snapshot page network resource timings",
+		Long:  "Return sanitized resource timing entries from the selected page, favoring API-like fetch/XHR entries by default and never returning headers or bodies.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Network(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().StringVar(&opts.Filter, "filter", "", "Case-insensitive filter matched against resource URL, initiator type, resource type, or API-like marker.")
+	c.Flags().IntVar(&opts.Limit, "limit", 50, "Maximum number of matching resource timing entries to return.")
+	c.Flags().BoolVar(&opts.All, "all", false, "Include all resource timing entries instead of only API-like fetch/XHR entries.")
+	return c
+}
+
+func pageOutlineCmd(o *Opts) *cobra.Command {
+	opts := automation.OutlineOptions{PageOptions: defaultPageOptions(), Limit: 100}
+	c := &cobra.Command{
+		Use:   "outline",
+		Short: "Snapshot page structure for agents",
+		Long:  "Return a redacted DOM-derived outline of headings, links, buttons, fields, forms, tables, and lists with roles, names, labels, and selector hints.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mgr, err := automation.DefaultManager()
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(automation.PageTimeoutSeconds(opts.TimeoutSeconds))*time.Second)
+			defer cancel()
+			result, err := mgr.Outline(ctx, opts)
+			if err != nil {
+				return printAutomationError(cmd, o, err)
+			}
+			return print(cmd, o, output.Success("", result))
+		},
+	}
+	addPageCommonFlags(c, &opts.PageOptions)
+	c.Flags().IntVar(&opts.Limit, "limit", 100, "Maximum number of outline elements to return.")
+	c.Flags().BoolVar(&opts.IncludeHidden, "include-hidden", false, "Include hidden elements when deriving the page outline.")
 	return c
 }
 

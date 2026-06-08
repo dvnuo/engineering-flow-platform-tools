@@ -11,13 +11,16 @@
   2. `visual template get <template-id> --json`
   3. `visual template schema <template-id> --json`
   4. `visual template guide <template-id> --json`
-- Do not write input JSON until you have read the selected template's guide.
+- Prefer Mermaid `.mmd` input for user-authored diagrams. Pure official Mermaid can be passed directly to `visual inspect-input`, `visual inspect-plan`, `visual validate`, and `visual render` without `--template`; the CLI infers the closest visual template.
+- Mermaid with EFP frontmatter may add `efp.template`, `efp.camera`, `efp.canvas`, `efp.renderHints`, `efp.visual`, or `efp.view` when a higher-quality layout is needed. Keep the diagram body valid Mermaid.
+- JSON input is still supported for compatibility and internal semantic IR, but do not choose it unless Mermaid cannot express the required data or an existing workflow already produces JSON.
+- Do not write JSON until you have read the selected template's guide.
 - The template guide is authoritative for semantic construction rules, recommended fields, visual encoding, common mistakes, and the quality checklist.
 - Do not invent template paths or input shapes.
 - Do not convert semantic templates into generic graph nodes unless the selected template is actually graph-based.
-- For `architecture.isometric_overview`, generate `zones[]`, `entities[]`, and `links[]`; do not generate generic `nodes[]` / `edges[]`.
+- For `architecture.isometric_overview` JSON compatibility input, generate `zones[]`, `entities[]`, and `links[]`; do not generate generic `nodes[]` / `edges[]`.
 - For isometric architecture inputs, define `canvas.grid.enabled=true`, bounded zones, positioned/sized entities with `kind`, and directed links with visible arrows.
-- Generate semantic input JSON only. Do not generate JavaScript, CSS, remote assets, CDN URLs, Node/npm runtime, or network APIs.
+- Generate Mermaid or semantic JSON only. Do not generate JavaScript, CSS, remote assets, CDN URLs, Node/npm runtime, or network APIs.
 - Use shared authoring fields from the selected template schema and guide: `importance`, `visibility`, `labelPriority`, `summary`, `details`, `presentation`, `visual`, `view`, and `renderHints` when they improve readability.
 - For graph templates, use `nodes[]` / `edges[]` and the Visual Mark System. Give nodes `kind`, `provider`, `service`, `platform`, or `presentation.shape` / `presentation.mesh` / `presentation.icon` so the renderer can choose boxes, cylinders, capsules, cloud plates, actor cards, diamonds, warnings, and icons instead of fallback spheres.
 - For `architecture.isometric_overview`, use the same mark concepts on `entities[]` / `links[]`, not `nodes[]` / `edges[]`. Give entities `kind`, `provider`, `service`, `platform`, `presentation.icon`, or `presentation.model`; give links `directed=true`, concise `label`, `route[]` bend points, and `presentation.arrow=forward`.
@@ -27,13 +30,13 @@
 - For `architecture.isometric_overview`, keep badge readability explicit: use `renderHints.badgeMode="icon_and_model"`, `renderHints.badgeSize="medium"`, `renderHints.badgePlacement="front"`, and `renderHints.labelIcon=true` for normal diagrams.
 - If a required logo is missing, do not invent a URL. Ask for it to be added through `scripts/assets/logo_catalog.json`, `fetch_logo_assets.mjs`, and `convert_svg_to_3d.mjs`, or use a generic fallback icon.
 - Fill `visual.goal`, `visual.initial_focus_ids`, `visual.hidden_detail_ids`, `visual.narrative_steps`, and `visual.annotations` with valid semantic ids when the input has more than a few objects.
-- Before render, run `visual inspect-input --template <template-id> --input <input.json> --json`.
-- If `inspect-input` returns warnings, revise input JSON according to each warning's `suggestion` and `auto_fix_hint` before rendering.
-- Then run `visual inspect-plan --template <template-id> --input <input.json> --out <workspace-output-dir> --json` and use `visual_plan.ir`, `visual_plan.view`, `visual_plan.marks`, `visual_plan.edges`, `visual_plan.colors`, `visual_plan.assets`, `visual_plan.disclosure`, and `visual_plan.quality_loop` to confirm the first view is explainable.
-- If `inspect-plan` returns `ready=false`, revise input JSON before rendering.
-- Render with `visual render --template <template-id> --input <input.json> --out <workspace-output-dir> --json`.
+- Before render, run `visual inspect-input --input <input.mmd> --json`; include `--template <template-id>` only when you intentionally override the inferred Mermaid template or validate JSON compatibility input.
+- If `inspect-input` returns warnings, revise the Mermaid or JSON according to each warning's `suggestion` and `auto_fix_hint` before rendering.
+- Then run `visual inspect-plan --input <input.mmd> --out <workspace-output-dir> --json` and use `visual_plan.ir`, `visual_plan.view`, `visual_plan.marks`, `visual_plan.edges`, `visual_plan.colors`, `visual_plan.assets`, `visual_plan.disclosure`, and `visual_plan.quality_loop` to confirm the first view is explainable.
+- If `inspect-plan` returns `ready=false`, revise the Mermaid or JSON before rendering.
+- Render with `visual render --input <input.mmd> --out <workspace-output-dir> --json`; include `--template` only for JSON input or an intentional Mermaid override.
 - Then run `visual inspect-render --out <workspace-output-dir> --json`; if a screenshot is available, add `--screenshot <png|jpg|gif>`. For browser-level visual evidence, run `visual inspect-browser --out <workspace-output-dir> --json`; it serves the artifact through local HTTP, captures a screenshot, and reuses `inspect-render --screenshot`.
 - Do not use `file://` for automated visual smoke. `inspect-browser` must use `http://127.0.0.1:<port>/index.html` and should report `browser_runtime_missing` if Chrome/Chromium or Node.js is unavailable.
-- If `inspect-render` or `inspect-browser` returns `ready=false`, revise input JSON or renderer assets using the warnings and render again.
+- If `inspect-render` or `inspect-browser` returns `ready=false`, revise Mermaid/JSON or renderer assets using the warnings and render again.
 - Return the generated `index.html` path from `data.artifact.entrypoint`.
 - Outputs are offline static artifacts and Portal proxy safe through relative paths.

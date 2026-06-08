@@ -1,8 +1,37 @@
 # Visual Offline Artifacts
 
-`visual` is a terminal-invoked Go CLI for generating complete offline static visualization artifacts. It reads local templates from `~/.efp/template/visual` by default, validates input JSON, copies local assets, and writes a self-contained site to `--out`.
+`visual` is a terminal-invoked Go CLI for generating complete offline static visualization artifacts. It reads local templates from `~/.efp/template/visual` by default, accepts Mermaid or JSON input, copies local assets, and writes a self-contained site to `--out`.
 
 The built-in catalog is now a semantic catalog: 34 canonical templates across 9 categories. It intentionally does not keep legacy aliases or duplicate legacy directories. Discover templates through the CLI, not by guessing file paths.
+
+## Mermaid Input
+
+Mermaid is the preferred public input format for authored diagrams. `visual inspect-input`, `visual inspect-plan`, `visual validate`, and `visual render` can read `.mmd` files directly. When `--template` is omitted, the CLI infers the closest visual template from the Mermaid diagram type.
+
+Pure official Mermaid is accepted for compatibility. Diagram types with a dedicated semantic target use that target when possible: architecture and C4 diagrams map to `architecture.isometric_overview`, sequence and ZenUML map to `uml.sequence_3d`, class and ER map to `uml.class_structure_2_5d`, state maps to `uml.state_machine_3d`, timeline/gantt/journey/gitGraph map to temporal views, mindmap/treeView map to hierarchy, chart-like diagrams map to matrix or data-flow views, and remaining official diagram kinds fall back to `relationship.dependency_graph`. Pure Mermaid may render with lower quality because it usually lacks explicit camera, route, label, and mark guidance.
+
+Use optional EFP frontmatter only when better layout is needed:
+
+```mermaid
+---
+title: Microservice Architecture
+efp:
+  template: architecture.isometric_overview
+  camera:
+    zoom: 1.18
+  renderHints:
+    presentationMode: true
+    preferExplicitRoutes: true
+---
+architecture-beta
+  group edge(server)[Edge Zone]
+  group app(server)[App Zone]
+  service nginx(server)[Nginx] in edge
+  service api(server)[API Gateway] in app
+  nginx:R --> L:api
+```
+
+JSON input remains supported for compatibility and for internal semantic IR workflows. If JSON is used, pass `--template <template-id>` so the CLI knows which schema to validate.
 
 ## Template Directory
 
@@ -75,14 +104,14 @@ visual template list --template-dir ./templates/visual --category uml --json
 visual template get uml.sequence_3d --template-dir ./templates/visual --json
 visual template schema uml.sequence_3d --template-dir ./templates/visual --json
 visual template guide uml.sequence_3d --template-dir ./templates/visual --json
-visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json
-visual inspect-plan --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --json
-visual render --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --title "Checkout Sequence" --json
-visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json
-visual inspect-browser --template-dir ./templates/visual --out ./out/sequence --json
+visual inspect-input --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --json
+visual inspect-plan --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --out ./out/mermaid-architecture --json
+visual render --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --out ./out/mermaid-architecture --json
+visual inspect-render --template-dir ./templates/visual --out ./out/mermaid-architecture --json
+visual inspect-browser --template-dir ./templates/visual --out ./out/mermaid-architecture --json
 ```
 
-Agents must read `visual template schema <id> --json` before writing input JSON. Do not invent JSON shape. Do not infer templates from directories.
+Agents should prefer Mermaid input and may omit `--template` for Mermaid so the CLI can infer the closest template. Agents must read `visual template schema <id> --json` before writing JSON compatibility input. Do not invent JSON shape. Do not infer templates from directories.
 
 Every semantic input schema includes a shared `visual` object. Use it to tell the renderer how to make the first view readable instead of asking the agent to generate JavaScript:
 
@@ -213,13 +242,13 @@ Artifacts must be fully offline:
 ## Validation And Inspection
 
 ```bash
-visual validate --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json
-visual inspect-input --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/basic.input.json --json
-visual inspect-plan --template uml.sequence_3d --template-dir ./templates/visual --input ./templates/visual/uml.sequence_3d/examples/game-session-flow.input.json --out ./out/sequence --json
-visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json
-visual inspect-browser --template-dir ./templates/visual --out ./out/sequence --json
+visual validate --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --json
+visual inspect-input --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --json
+visual inspect-plan --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --out ./out/mermaid-architecture --json
+visual inspect-render --template-dir ./templates/visual --out ./out/mermaid-architecture --json
+visual inspect-browser --template-dir ./templates/visual --out ./out/mermaid-architecture --json
 visual template doctor --template-dir ./templates/visual --json
-visual inspect-output --out ./out/sequence --json
+visual inspect-output --out ./out/mermaid-architecture --json
 ```
 
 `visual template doctor` reads `registry.json`, validates registry expected counts, checks for unregistered direct directories, validates every manifest/schema/example, renders every example into a temporary output directory, checks required output files, scans rendered output for offline violations, and deletes the temporary directory.
@@ -237,10 +266,10 @@ Use `--dry-run` on `visual render` to preview `planned_files` without creating `
 
 ## Template Agent Guides
 
-Visual templates carry their own authoring contract in `templates/visual/<template-id>/agent-guide.md` and `quality.rules.json`. The global CLI instructions intentionally stay short: agents discover a template, read its schema, then read `visual template guide <template-id> --json` before writing semantic input JSON.
+Visual templates carry their own authoring contract in `templates/visual/<template-id>/agent-guide.md` and `quality.rules.json`. The global CLI instructions intentionally stay short: agents should prefer Mermaid, and read `visual template guide <template-id> --json` before writing JSON compatibility input or high-control EFP frontmatter.
 
 `visual template guide` returns the guide path, raw markdown, parsed sections, and a compact summary. `visual template get` and `visual template schema` also expose whether the guide and quality rules are available.
 
-`inspect-input` reads the selected template schema, agent guide, and quality rules. Warnings are machine-readable and include `code`, `severity`, `path`, `suggestion`, and usually `auto_fix_hint`. Agents should revise input JSON until bad-density warnings are resolved or intentionally accepted.
+`inspect-input` reads the selected template schema, agent guide, and quality rules. Warnings are machine-readable and include `code`, `severity`, `path`, `suggestion`, and usually `auto_fix_hint`. Agents should revise Mermaid/frontmatter or JSON until bad-density warnings are resolved or intentionally accepted.
 
 The current deep mark consumption is strongest for graph-based relationship/spatial/flow/hierarchy templates, matrix templates, UML component/activity/state templates, and `uml.sequence_3d` message arrows. Evidence and timeline templates use shared guidance, color policy, and inspection first; more renderer-specific shape/icon consumption can be added without changing the agent workflow.

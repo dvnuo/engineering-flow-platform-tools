@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"engineering-flow-platform-tools/internal/visual/manifest"
+	"engineering-flow-platform-tools/internal/visual/mermaid"
 	"engineering-flow-platform-tools/internal/visual/metadata"
 	visualschema "engineering-flow-platform-tools/internal/visual/schema"
 )
@@ -97,12 +98,24 @@ func Render(opts Options) (Result, error) {
 	if normalizeDataMode(opts.DataMode) != "js-file" {
 		return Result{}, metadata.NewError("unsupported_data_mode", "visual render only supports --data-mode js-file.", "Use --data-mode js-file or omit the flag.", 400)
 	}
-	registry, entry, tpl, err := loadTemplate(opts.TemplateDir, opts.TemplateID)
+	raw, err := readInput(opts.InputPath, opts.Stdin)
+	if err != nil {
+		return Result{}, err
+	}
+	templateID := strings.TrimSpace(opts.TemplateID)
+	if templateID == "" {
+		inferred, ok := mermaid.InferTemplateID(raw)
+		if !ok {
+			return Result{}, metadata.NewError("template_required", "visual render requires --template for JSON input.", "Pass --template <template-id>, or pass a Mermaid .mmd input so the template can be inferred.", 400)
+		}
+		templateID = inferred
+	}
+	registry, entry, tpl, err := loadTemplate(opts.TemplateDir, templateID)
 	if err != nil {
 		_ = registry
 		return Result{}, err
 	}
-	raw, err := readInput(opts.InputPath, opts.Stdin)
+	raw, err = mermaid.CompileIfNeeded(tpl.InputSchemaKind, raw)
 	if err != nil {
 		return Result{}, err
 	}
@@ -293,13 +306,13 @@ func readInput(path string, stdin io.Reader) ([]byte, error) {
 		}
 		b, err := io.ReadAll(stdin)
 		if err != nil {
-			return nil, metadata.NewError("input_read_failed", "failed to read input JSON from stdin: "+err.Error(), "Pipe valid JSON to visual render --input -.", 400)
+			return nil, metadata.NewError("input_read_failed", "failed to read visual input from stdin: "+err.Error(), "Pipe valid JSON or Mermaid to visual render --input -.", 400)
 		}
 		return b, nil
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, metadata.NewError("input_read_failed", "failed to read input JSON: "+err.Error(), "Pass a readable JSON file path to --input.", 400)
+		return nil, metadata.NewError("input_read_failed", "failed to read visual input: "+err.Error(), "Pass a readable JSON or Mermaid file path to --input.", 400)
 	}
 	return b, nil
 }

@@ -556,7 +556,7 @@ func TestVisualInspectPlanContract(t *testing.T) {
 		t.Fatalf("inspect-plan command schema missing: %#v", cmdData)
 	}
 	required := stringSetFromAny(cmdData["required"].([]any))
-	for _, name := range []string{"template", "input"} {
+	for _, name := range []string{"input"} {
 		if !required[name] {
 			t.Fatalf("inspect-plan schema missing required %s: %#v", name, cmdData)
 		}
@@ -571,7 +571,7 @@ func TestVisualInspectPlanContract(t *testing.T) {
 			t.Fatalf("inspect-plan schema missing flag %s: %#v", name, flags)
 		}
 	}
-	if flags["template"]["required"] != true || flags["input"]["required"] != true || flags["out"]["required"] == true {
+	if flags["template"]["required"] == true || flags["input"]["required"] != true || flags["out"]["required"] == true {
 		t.Fatalf("inspect-plan required flag metadata invalid: %#v", flags)
 	}
 
@@ -656,6 +656,42 @@ func TestVisualInspectPlanContract(t *testing.T) {
 		if !codes[code] {
 			t.Fatalf("bad inspect-plan missing quality loop code %s in %#v", code, codes)
 		}
+	}
+}
+
+func TestVisualMermaidInputContract(t *testing.T) {
+	root := repoRoot(t)
+	templateDir := filepath.Join(root, "templates", "visual")
+	input := filepath.Join(templateDir, "architecture.isometric_overview", "examples", "microservice-architecture.mmd")
+
+	inspect := runVisualOK(t, "inspect-input", "--template-dir", templateDir, "--input", input, "--json")
+	inspectData := objectMap(t, inspect["data"])
+	if inspectData["template_id"] != "architecture.isometric_overview" {
+		t.Fatalf("mermaid inspect-input did not infer architecture template: %#v", inspectData)
+	}
+	summary := objectMap(t, inspectData["input_summary"])
+	if summary["kind"] != "isometric_architecture_v1" || int(summary["entities"].(float64)) < 5 || int(summary["links"].(float64)) < 5 {
+		t.Fatalf("mermaid inspect-input summary invalid: %#v", summary)
+	}
+
+	out := filepath.Join(t.TempDir(), "mermaid-architecture")
+	rendered := runVisualOK(t, "render", "--template-dir", templateDir, "--input", input, "--out", out, "--json")
+	renderData := objectMap(t, rendered["data"])
+	if renderData["template_id"] != "architecture.isometric_overview" {
+		t.Fatalf("mermaid render did not infer architecture template: %#v", renderData)
+	}
+	if _, err := os.Stat(filepath.Join(out, "index.html")); err != nil {
+		t.Fatalf("mermaid render did not write index.html: %v", err)
+	}
+
+	flow := filepath.Join(t.TempDir(), "flow.mmd")
+	if err := os.WriteFile(flow, []byte("flowchart LR\n  A[Browser] -->|API| B[API]\n  B --> C[(DB)]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	flowInspect := runVisualOK(t, "inspect-input", "--template-dir", templateDir, "--input", flow, "--json")
+	flowData := objectMap(t, flowInspect["data"])
+	if flowData["template_id"] != "relationship.dependency_graph" {
+		t.Fatalf("flowchart mermaid did not infer relationship template: %#v", flowData)
 	}
 }
 

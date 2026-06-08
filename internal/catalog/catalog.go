@@ -87,6 +87,22 @@ var jenkinsCommands = []string{
 
 var browserCommands = []string{
 	"browser probe",
+	"browser session start",
+	"browser session list",
+	"browser session status [name]",
+	"browser session stop [name]",
+	"browser tab list",
+	"browser tab current",
+	"browser tab activate",
+	"browser tab open",
+	"browser page snapshot",
+	"browser page extract",
+	"browser page click",
+	"browser page type",
+	"browser page wait",
+	"browser page screenshot",
+	"browser page eval",
+	"browser page fetch",
 	"browser commands",
 	"browser schema <command>",
 	"browser help llm",
@@ -529,6 +545,12 @@ func meta(product, usage string) llm.CommandMeta {
 			explicitFound = true
 		}
 	}
+	if product == "browser" {
+		if local, ok := browserExplicit(name); ok {
+			ex = local
+			explicitFound = true
+		}
+	}
 	r := risk(usage)
 	if ex.Risk != "" {
 		r = ex.Risk
@@ -537,7 +559,7 @@ func meta(product, usage string) llm.CommandMeta {
 	if len(flags) == 0 {
 		flags = defaultFlags(product, r)
 	}
-	if product == "browser" && name != "probe" {
+	if product == "browser" && name != "probe" && !explicitFound {
 		flags = []string{"json", "format", "verbose"}
 	}
 	if product == "inspect-image" && name != "inspect" && len(ex.Flags) == 0 {
@@ -625,6 +647,56 @@ func visualExplicit(name string) (explicitMeta, bool) {
 			Flags: common, Risk: "read", Example: "visual help llm --json"},
 		"version": {Description: "Print visual CLI version, commit, and build date.",
 			Flags: common, Risk: "read", Example: "visual version --json"},
+	}
+	item, ok := items[name]
+	return item, ok
+}
+
+func browserExplicit(name string) (explicitMeta, bool) {
+	common := []string{"json", "format", "verbose"}
+	sessionFlag := append([]string{"session"}, common...)
+	pageFlags := append([]string{"session", "target-id", "timeout"}, common...)
+	items := map[string]explicitMeta{
+		"session.start": {Description: "Start a persistent Edge/Chrome/Chromium automation session with DevTools bound to 127.0.0.1.",
+			Flags: []string{"name", "browser", "browser-exe", "headless", "profile", "clean-profile", "port", "url", "json", "format", "verbose"}, Risk: "write", Example: "browser session start --name default --url https://intranet.example.test --json"},
+		"session.list": {Description: "List stored browser automation sessions and refresh their local DevTools status.",
+			Flags: common, Risk: "read", Example: "browser session list --json"},
+		"session.status": {Description: "Show one browser automation session and refresh whether its local DevTools endpoint is alive.",
+			Flags: common, Risk: "read", Example: "browser session status default --json"},
+		"session.stop": {Description: "Stop a browser automation session started by this CLI.",
+			Flags: append([]string{"keep-metadata"}, common...), Risk: "write", Example: "browser session stop default --json"},
+		"tab.list": {Description: "List page tabs in a running browser automation session.",
+			Flags: sessionFlag, Risk: "read", Example: "browser tab list --session default --json"},
+		"tab.current": {Description: "Show the active page tab for a browser automation session.",
+			Flags: sessionFlag, Risk: "read", Example: "browser tab current --session default --json"},
+		"tab.activate": {Description: "Activate a page tab and persist it as the session's active target.",
+			Flags: append([]string{"session", "target-id"}, common...), Required: []string{"target-id"}, Risk: "write", Example: "browser tab activate --session default --target-id page-1 --json"},
+		"tab.open": {Description: "Open an HTTP or HTTPS URL in a new tab for a running browser automation session.",
+			Flags: append([]string{"session", "url"}, common...), Required: []string{"url"}, Risk: "write", Example: "browser tab open --session default --url https://intranet.example.test --json"},
+		"page.snapshot": {Description: "Return redacted URL, title, body text preview, and optional HTML preview from the selected page target.",
+			Flags: append([]string{"include-html", "max-text-bytes", "max-html-bytes"}, pageFlags...), Risk: "read", Example: "browser page snapshot --session default --json"},
+		"page.extract": {Description: "Extract redacted text, values, links, labels, and optional HTML from elements matching a CSS selector.",
+			Flags: append([]string{"selector", "limit", "include-html", "max-html-bytes"}, pageFlags...), Required: []string{"selector"}, Risk: "read", Example: "browser page extract --selector .user-avatar --json"},
+		"page.click": {Description: "Click a visible element in the selected page target and return redacted page metadata.",
+			Flags: append([]string{"selector"}, pageFlags...), Required: []string{"selector"}, Risk: "write", Example: "browser page click --selector button.sign-in --json"},
+		"page.type": {Description: "Type text into a visible input or editable element without echoing the typed text in output.",
+			Flags: append([]string{"selector", "text", "clear"}, pageFlags...), Required: []string{"selector"}, Risk: "write", Example: "browser page type --selector input[name=q] --text search --clear --json"},
+		"page.wait": {Description: "Wait for a visible selector, a bounded duration, or both in the selected page target.",
+			Flags: append([]string{"selector", "duration-ms"}, pageFlags...), Required: []string{"selector|duration-ms"}, Risk: "read", Example: "browser page wait --selector .ready --json"},
+		"page.screenshot": {Description: "Capture the selected page target to a PNG artifact and return file metadata instead of image bytes.",
+			Flags: append([]string{"out", "full-page"}, pageFlags...), Risk: "read", Example: "browser page screenshot --out result/page-screenshot.png --json"},
+		"page.eval": {Description: "Evaluate a bounded JavaScript expression and recursively redact returned serializable values.",
+			Flags: append([]string{"expr", "max-string-bytes"}, pageFlags...), Required: []string{"expr"}, Risk: "write", Example: "browser page eval --expr 'document.title' --json"},
+		"page.fetch": {Description: "Fetch an HTTP, HTTPS, or relative URL from the page context with credentials omitted and no headers returned.",
+			Flags: append([]string{"url", "max-body-bytes"}, pageFlags...), Required: []string{"url"}, Risk: "read", Example: "browser page fetch --url /api/me --json"},
+		"commands": {Description: "List available Browser commands with metadata.",
+			Flags: common, Risk: "read", Example: "browser commands --json"},
+		"schema": {Description: "Show argument and flag schema for a Browser command.",
+			Flags: common, Required: []string{"command"}, Risk: "read", Example: "browser schema page.fetch --json"},
+		"help.llm": {Description: "Show Browser CLI usage guidance for LLM agents.",
+			Flags: common, Risk: "read", Example: "browser help llm --json"},
+		"version": {Description: "Print Browser CLI version, commit, and build date.",
+			Flags: common, Risk: "read", Example: "browser version --json"},
 	}
 	item, ok := items[name]
 	return item, ok
@@ -1381,6 +1453,12 @@ func flagDescription(command, name string) string {
 		if command == "probe" {
 			return "HTTP or HTTPS URL to open in Edge, Chrome, or Chromium."
 		}
+		if command == "tab.open" {
+			return "HTTP or HTTPS URL to open in a new browser tab."
+		}
+		if command == "page.fetch" {
+			return "HTTP, HTTPS, or relative URL to fetch from the page context."
+		}
 		if strings.HasPrefix(command, "page.") {
 			return "Confluence page URL. Use exactly one of --id or --url where both are available."
 		}
@@ -1404,23 +1482,65 @@ func flagDescription(command, name string) string {
 	case "attachment-id":
 		return "Confluence attachment id."
 	case "text":
+		if command == "page.type" {
+			return "Text to type; the value is not included in command output."
+		}
 		return "Text term used to build a Confluence content search query."
 	case "selector":
+		if strings.HasPrefix(command, "page.") {
+			return "CSS selector for the page element to read or automate."
+		}
 		return "CSS selector used as a deterministic login-success signal."
+	case "session":
+		return "Browser automation session name."
+	case "target-id":
+		return "Optional DevTools page target id; defaults to the session's active tab."
+	case "include-html":
+		return "Include redacted and truncated HTML in page read output."
+	case "max-text-bytes":
+		return "Maximum bytes of redacted page text preview to return."
+	case "max-html-bytes":
+		return "Maximum bytes of redacted page HTML preview to return."
+	case "max-string-bytes":
+		return "Maximum bytes per redacted string value in page eval output."
+	case "max-body-bytes":
+		return "Maximum bytes of redacted page fetch body preview to return."
+	case "duration-ms":
+		return "Bounded page wait duration in milliseconds."
+	case "full-page":
+		return "Capture the full page instead of only the current viewport."
+	case "expr":
+		return "JavaScript expression to evaluate; storage, cookie, header, credential, and network APIs are rejected."
+	case "clear":
+		return "Clear the selected page element before typing."
+	case "keep-metadata":
+		return "Keep browser session metadata after stopping or finding a stale browser."
 	case "require-selector":
 		return "Fail with selector_not_found when --selector is not visible."
 	case "wait":
 		return "Seconds to wait after the page body is ready."
 	case "timeout":
+		if strings.HasPrefix(command, "page.") {
+			return "Maximum seconds to wait for this page command."
+		}
 		return "Overall probe timeout in seconds."
 	case "out":
+		if command == "page.screenshot" {
+			return "Screenshot output PNG path; defaults under ~/.efp/browser/artifacts."
+		}
 		if command == "probe" {
 			return "Directory for screenshot, HTML, network, and summary artifacts."
 		}
 		return "Path to write a JSON envelope copy."
 	case "profile":
+		if strings.HasPrefix(command, "session.") {
+			return "Dedicated browser profile directory for this automation session."
+		}
 		return "Dedicated browser user-data-dir for this probe."
 	case "clean-profile":
+		if strings.HasPrefix(command, "session.") {
+			return "Delete the dedicated session profile before launching the browser."
+		}
 		return "Delete the dedicated probe profile before launching the browser."
 	case "browser-exe":
 		return "Explicit Edge/Chrome/Chromium executable path."

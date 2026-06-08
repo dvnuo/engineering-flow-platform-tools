@@ -467,6 +467,59 @@ confluence page get --url <page-url>
 - jenkins api put <path>
 - jenkins api delete <path>
 
+## Browser
+
+### Basic
+- browser probe
+- browser session start
+- browser session list
+- browser session status [name]
+- browser session stop [name]
+- browser tab list
+- browser tab current
+- browser tab activate
+- browser tab open
+- browser page snapshot
+- browser page extract
+- browser page click
+- browser page type
+- browser page wait
+- browser page screenshot
+- browser page eval
+- browser page fetch
+- browser commands
+- browser schema <command>
+- browser help llm
+- browser version
+
+### Persistent Workflow
+
+Start a dedicated browser session with DevTools bound to `127.0.0.1`, then select a tab and run page commands against the active target:
+
+```bash
+browser session start --name default --url https://intranet.example.test --json
+browser tab list --session default --json
+browser tab activate --session default --target-id <target-id> --json
+browser page snapshot --session default --json
+browser page extract --session default --selector .user-avatar --json
+```
+
+### Page Actions
+
+- `browser page click --selector <css>` clicks a visible element.
+- `browser page type --selector <css> --text <text> [--clear]` types text without echoing the text in output.
+- `browser page wait --selector <css>` or `--duration-ms <n>` waits within the command timeout.
+- `browser page screenshot --out <file>` writes a PNG artifact and returns path/size metadata.
+- `browser page eval --expr <js>` rejects cookie, storage, header, credential, and network APIs, then redacts returned values.
+- `browser page fetch --url <url-or-path>` runs a GET fetch with credentials omitted, rejects unsafe URL schemes, returns no headers, and redacts the body preview.
+
+### Common Browser Flags
+
+- `--session <name>`: browser automation session name.
+- `--target-id <id>`: optional DevTools page target id; defaults to the active tab.
+- `--timeout <seconds>`: maximum seconds for page commands.
+- `--json`: return the stable JSON envelope.
+
 ## Inspect Image
 
 ### Basic

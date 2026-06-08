@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It opens an internal URL in Edge/Chrome/Chromium through DevTools and writes diagnostics that help determine whether browser-based enterprise SSO appears to complete.
+`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It can run one-shot probes, or keep a dedicated Edge/Chrome/Chromium automation session open for tab selection, redacted page reads, bounded page actions, and screenshots through DevTools.
 
 ## What It Verifies
 
@@ -11,6 +11,7 @@
 - A provided CSS selector appears after navigation.
 - Page title, final URL, screenshot, HTML, and network event summaries are available for diagnosis.
 - Optional page-context `fetch` can call an API with browser credentials included.
+- A persistent session can list/open/activate tabs, snapshot/extract redacted page content, click/type/wait, write screenshot artifacts, evaluate sanitized page expressions, and run sanitized GET fetches with credentials omitted.
 
 ## What It Does Not Do
 
@@ -18,6 +19,8 @@
 - It does not reuse the default Edge/Chrome profile.
 - It does not bypass MFA, Conditional Access, or enterprise browser policy.
 - It does not print `Authorization`, `Cookie`, or `Set-Cookie` headers.
+- It does not return screenshot bytes; `browser page screenshot` writes a local PNG and returns path/size metadata.
+- It does not allow `browser page eval` to access cookies, browser storage, credentials, headers, or network APIs.
 - It does not treat `negotiate_401_seen` as proof of Kerberos or Windows Integrated Authentication success. It is only an indicator.
 
 ## Windows Manual Test
@@ -44,6 +47,44 @@ To distinguish true OS/enterprise SSO from a cached browser session:
 ```
 
 If a clean profile still reaches the business page, OS/enterprise SSO is more likely working. If the non-clean profile works but the clean profile does not, access is more likely dependent on cached browser session state.
+
+## Persistent Session Workflow
+
+Start or reuse a dedicated browser session:
+
+```bash
+browser session start --name default --url "https://intranet.example.test/app" --json
+browser session status default --json
+```
+
+Select a page target:
+
+```bash
+browser tab list --session default --json
+browser tab current --session default --json
+browser tab activate --session default --target-id <target-id> --json
+browser tab open --session default --url "https://intranet.example.test/app" --json
+```
+
+Read redacted page state:
+
+```bash
+browser page snapshot --session default --json
+browser page extract --session default --selector ".user-avatar" --json
+```
+
+Run bounded page actions:
+
+```bash
+browser page click --session default --selector "button.sign-in" --json
+browser page type --session default --selector "input[name=q]" --text "search" --clear --json
+browser page wait --session default --selector ".ready" --json
+browser page screenshot --session default --out "result/page-screenshot.png" --json
+browser page eval --session default --expr "document.title" --json
+browser page fetch --session default --url "/api/me" --json
+```
+
+`page snapshot`, `page extract`, `page eval`, and `page fetch` redact URLs, sensitive assignments, sensitive JSON fields, and known secret-bearing text patterns. `page fetch` rejects unsafe schemes such as `file:`, `data:`, `javascript:`, `chrome:`, and `about:`, runs as GET only, omits credentials, and returns no headers.
 
 ## Output Files
 
@@ -93,7 +134,7 @@ To disable artifact types, pass `--save-html=false` or `--save-screenshot=false`
 
 ## Security Model
 
-The default profile is a dedicated probe profile:
+The one-shot `browser probe` default profile is a dedicated probe profile:
 
 - Windows: `%LOCALAPPDATA%\browser-probe-profile`
 - macOS: `~/Library/Caches/browser-probe-profile`
@@ -102,7 +143,9 @@ The default profile is a dedicated probe profile:
 
 Use `--profile` to choose another dedicated profile. Use `--clean-profile` to delete the probe profile before launch. Do not point `--profile` at a real user default Edge/Chrome profile.
 
-The tool does not read browser cookie databases, decrypt cookies, export tokens, or print request/response bodies. `--fetch-api` only records `ok`, `status`, redacted `url`, `contentType`, and a capped `bodyPreview`.
+Persistent sessions default to `~/.efp/browser/profiles/<session-name>` and store session metadata under `~/.efp/browser/sessions`. DevTools for launched sessions is bound to `127.0.0.1`.
+
+The tool does not read browser cookie databases, decrypt cookies, export tokens, or print request/response headers. Probe `--fetch-api` records `ok`, `status`, redacted `url`, `contentType`, and a capped `bodyPreview`. Persistent `page fetch` records `ok`, `status`, redacted final URL, and a capped redacted `body_preview` with credentials omitted and no headers.
 
 ## OpenCode Runtime Handoff
 

@@ -8,9 +8,9 @@ Copy this file into `~/.copilot/instructions/browser-cli.instructions.md` so VS 
 
 ## What This Tool Is
 
-`browser` is a terminal-invoked CLI for agents that need to open an internal URL in Edge, Chrome, or Chromium through DevTools and collect page diagnostics.
+`browser` is a terminal-invoked CLI for agents that need to open an internal URL in Edge, Chrome, or Chromium through DevTools and collect page diagnostics or run bounded actions in a persistent dedicated browser session.
 
-Use it for browser SSO checks, login-success probes, screenshots, HTML snapshots, network summaries, and page-state inspection. It is not a Portal tool, runtime built-in browser tool, MCP server, or cookie export tool.
+Use it for browser SSO checks, login-success probes, screenshots, HTML snapshots, network summaries, page-state inspection, tab selection, and bounded page actions. It is not a Portal tool, runtime built-in browser tool, MCP server, or cookie export tool.
 
 ## Always Use JSON
 
@@ -42,6 +42,8 @@ Discover the command shape:
 ```bash
 browser commands --json
 browser schema probe --json
+browser schema session.start --json
+browser schema page.fetch --json
 browser help llm --json
 ```
 
@@ -69,6 +71,26 @@ Fetch an API from the loaded page context:
 browser probe --url https://intranet.example.test --fetch-api /api/me --network-filter /api/ --json
 ```
 
+Use a persistent session for multi-step page automation:
+
+```bash
+browser session start --name default --url https://intranet.example.test --json
+browser tab current --session default --json
+browser page snapshot --session default --json
+browser page extract --session default --selector .user-avatar --json
+browser page screenshot --session default --out result/page-screenshot.png --json
+```
+
+Bounded page actions:
+
+```bash
+browser page click --session default --selector "button.sign-in" --json
+browser page type --session default --selector "input[name=q]" --text "search" --clear --json
+browser page wait --session default --selector ".ready" --json
+browser page eval --session default --expr "document.title" --json
+browser page fetch --session default --url /api/me --json
+```
+
 ## Windows cmd Workflow
 
 When Copilot is operating in Windows `cmd`, use cmd-native commands and double quotes. Do not use Bash-only commands such as `pwd`, `command -v`, `ls`, `cat`, `cd "$PWD"`, `$PWD`, or single-quote quoting.
@@ -82,6 +104,7 @@ dir
 browser version --json
 browser commands --json
 browser schema probe --json
+browser schema page.screenshot --json
 ```
 
 Normal probe command:
@@ -110,11 +133,15 @@ Common errors:
 - `page_timeout`: increase `--timeout`, increase `--wait`, or verify the URL is reachable.
 - `selector_not_found`: inspect `data.files.screenshot`, `data.files.html`, and `data.files.summary`, then adjust `--selector`.
 - `network_error`: check proxy, DNS, certificates, and whether the browser can reach the URL.
+- `session_not_running`: run `browser session start --json` or restart the stored session.
+- `target_not_found`: run `browser tab list --json`, then pass a current `--target-id`.
 - `server_error`: read `error.message` for the sanitized detail.
 
 ## Security Rules
 
 `browser` does not export cookies or tokens. Do not ask it to print cookies, browser storage, or Authorization headers.
+
+`browser page screenshot` writes a PNG artifact and returns file metadata, not image bytes. `browser page eval` rejects cookie, storage, header, credential, and network APIs before returning recursively redacted values. `browser page fetch` uses GET with credentials omitted, rejects unsafe schemes such as `file:`, `data:`, `javascript:`, `chrome:`, and `about:`, returns no headers, and redacts the body preview.
 
 Artifacts may contain page content, visible user names, or internal URLs. Treat `page.html`, `screenshot.png`, `network.json`, and `summary.json` as potentially sensitive diagnostics.
 

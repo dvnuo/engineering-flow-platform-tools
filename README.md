@@ -277,6 +277,26 @@ Optional page-context API fetch:
 browser probe --url "https://intranet.example.test/app" --fetch-api "/api/me" --json
 ```
 
+Persistent browser automation session:
+
+```bash
+browser session start --name default --url "https://intranet.example.test/app" --json
+browser tab current --session default --json
+browser page snapshot --session default --json
+browser page extract --session default --selector ".user-avatar" --json
+browser page screenshot --session default --out result/page-screenshot.png --json
+```
+
+Bounded page actions:
+
+```bash
+browser page click --session default --selector "button.sign-in" --json
+browser page type --session default --selector "input[name=q]" --text "search" --clear --json
+browser page wait --session default --selector ".ready" --json
+browser page eval --session default --expr "document.title" --json
+browser page fetch --session default --url "/api/me" --json
+```
+
 The current OpenCode runtime image consumes prebuilt binaries copied into `runtime-tools/` by an external pipeline. A future runtime change must place `browser` on `PATH`, and probe execution inside a runtime container also requires Edge/Chrome/Chromium in that image.
 
 ## Visual Examples
@@ -312,7 +332,7 @@ Then inspect the exact schema before calling a command:
 jira schema issue.create --json
 confluence schema page.create --json
 jenkins schema job.build-with-params --json
-browser schema probe --json
+browser schema page.fetch --json
 inspect-image schema inspect --json
 visual schema render --json
 ```

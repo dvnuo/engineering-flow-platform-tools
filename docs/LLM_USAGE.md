@@ -63,8 +63,15 @@ Recommended template categories:
 ## Browser SSO Diagnostics
 
 - Always call `browser schema probe --json` before constructing a probe command.
+- For persistent browser workflows, inspect `browser schema session.start --json`, `browser schema tab.open --json`, and the exact `browser schema page.<command> --json` before acting.
 - Always use `--json`.
 - `browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd, not an OpenCode built-in browser tool, MCP tool, or Web UI component.
+- Use `browser session start` for multi-step workflows that need a dedicated browser to stay open, then use `browser tab list/current/activate/open` to select a page target.
+- Use `browser page snapshot` and `browser page extract` for redacted page reads.
+- Use `browser page click`, `type`, `wait`, `screenshot`, `eval`, and `fetch` only as bounded actions against the active or selected tab.
+- `browser page screenshot` writes a PNG artifact and returns metadata rather than binary image data.
+- `browser page eval` rejects cookie, storage, header, credential, and network APIs; returned values are recursively redacted.
+- `browser page fetch` performs GET with credentials omitted, rejects unsafe URL schemes, returns no headers, and redacts the body preview.
 - Use `--selector` for a deterministic login-success signal.
 - Use `--clean-profile` when the user wants to distinguish true OS/enterprise SSO from cached browser session.
 - Read `data.files.summary`, `data.files.screenshot`, `data.files.html`, and `data.files.network`.

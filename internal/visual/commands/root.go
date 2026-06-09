@@ -60,7 +60,7 @@ func NewRoot() *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "Plan the operation without writing files")
 	cmd.PersistentFlags().BoolVar(&o.OfflineStrict, "offline-strict", true, "Reject remote URLs, network APIs, and absolute asset references")
 
-	cmd.AddCommand(renderCmd(o), inspectInputCmd(o), inspectPlanCmd(o), inspectRenderCmd(o), inspectBrowserCmd(o), validateCmd(o), templateCmd(o), inspectOutputCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	cmd.AddCommand(renderCmd(o), routePlanCmd(o), inspectInputCmd(o), inspectPlanCmd(o), inspectRenderCmd(o), inspectBrowserCmd(o), validateCmd(o), templateCmd(o), inspectOutputCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
 	clihelp.ApplyCatalogHelp(cmd, clihelp.ProductHelp{
 		Product: "visual",
 		Binary:  "visual",
@@ -79,6 +79,7 @@ It reads local templates from ~/.efp/template/visual by default, with checkout a
 			`visual inspect-plan --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --out ./out/mermaid-architecture --json`,
 			`visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json`,
 			`visual inspect-browser --template-dir ./templates/visual --out ./out/isometric-asset-gallery --json`,
+			`visual route-plan --input ./templates/visual/mermaid.architecture/examples/microservice-golden.mmd --out ./out/routeplan.json --json`,
 			`visual render --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --out ./out/mermaid-architecture --json`,
 		},
 		Instructions: "copy cmd/visual/visual-cli.instructions.md to ~/.copilot/instructions/visual-cli.instructions.md.",

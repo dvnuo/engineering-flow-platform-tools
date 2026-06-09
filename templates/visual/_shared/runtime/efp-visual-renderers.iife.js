@@ -1576,7 +1576,18 @@
 
   function addThreeGrid(THREE, root, size, divisions, y, color) {
     if (THREE.GridHelper) {
-      var helper = new THREE.GridHelper(size, divisions, color || 0x2d4254, 0x172434);
+      var helper = new THREE.GridHelper(size, divisions, color || 0xcbd5e1, 0xe2e8f0);
+      if (Array.isArray(helper.material)) {
+        helper.material.forEach(function (material) {
+          material.transparent = true;
+          material.opacity = 0.46;
+          material.depthWrite = false;
+        });
+      } else if (helper.material) {
+        helper.material.transparent = true;
+        helper.material.opacity = 0.46;
+        helper.material.depthWrite = false;
+      }
       helper.position.y = y || 0;
       root.add(helper);
       return helper;
@@ -1707,8 +1718,8 @@
     if (!THREE.BufferGeometry || !THREE.Float32BufferAttribute || !THREE.Mesh || !THREE.MeshBasicMaterial) return null;
     var color = colorValue(edgeSpec.color, 0x63a9ff);
     points = edgeSpec.routePoints && edgeSpec.routePoints.length >= 2 ? edgeSpec.routePoints.map(function (p) { return p.clone(); }) : (points || []);
-    var width = Math.max(0.035, numberValue(edgeSpec.groundWidth, (radius || 0.016) * 4.6));
-    var height = Math.max(0.004, numberValue(edgeSpec.groundHeight, 0.008));
+    var width = Math.max(0.004, numberValue(edgeSpec.groundWidth, (radius || 0.016) * 4.6));
+    var height = Math.max(0.001, numberValue(edgeSpec.groundHeight, 0.008));
     var y0 = numberValue(edgeSpec.groundY, 0.032);
     var y1 = y0 + height;
     var half = width * 0.5;
@@ -1719,7 +1730,7 @@
     var dashLength = edgeSpec.dashLength || 0.55;
     var gapLength = edgeSpec.gapLength || 0.3;
 
-    if (THREE.Group && THREE.BoxGeometry && points.length >= 2) {
+    if (THREE.Group && points.length >= 2) {
       var railMaterial = new THREE.MeshBasicMaterial({
         color: color,
         transparent: true,
@@ -1751,10 +1762,23 @@
         delta.y = 0;
         var length = delta.length();
         if (length < 0.05) return;
-        var segmentGeometry = new THREE.BoxGeometry(length, height, width);
+        var side = new THREE.Vector3(0, 1, 0).cross(delta.clone().normalize()).normalize().multiplyScalar(width * 0.5);
+        if (side.length() < 0.001) side.set(width * 0.5, 0, 0);
+        var aL = new THREE.Vector3(start.x + side.x, y0, start.z + side.z);
+        var aR = new THREE.Vector3(start.x - side.x, y0, start.z - side.z);
+        var bL = new THREE.Vector3(end.x + side.x, y0, end.z + side.z);
+        var bR = new THREE.Vector3(end.x - side.x, y0, end.z - side.z);
+        var segmentGeometry = new THREE.BufferGeometry();
+        segmentGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
+          aL.x, aL.y, aL.z,
+          bL.x, bL.y, bL.z,
+          bR.x, bR.y, bR.z,
+          aL.x, aL.y, aL.z,
+          bR.x, bR.y, bR.z,
+          aR.x, aR.y, aR.z
+        ], 3));
+        if (segmentGeometry.computeBoundingSphere) segmentGeometry.computeBoundingSphere();
         var segment = new THREE.Mesh(segmentGeometry, railMaterial);
-        segment.position.set((start.x + end.x) / 2, y0 + height * 0.5, (start.z + end.z) / 2);
-        segment.rotation.y = -Math.atan2(delta.z, delta.x);
         segment.renderOrder = 5;
         segment.frustumCulled = false;
         segment.userData.type = "link-segment";
@@ -1788,9 +1812,19 @@
         }
       });
       if (!dashed) for (var railJointIndex = 1; railJointIndex < points.length - 1; railJointIndex += 1) {
-        var jointGeometry = new THREE.BoxGeometry(width * 1.02, height, width * 1.02);
+        var halfJoint = width * 0.56;
+        var p = points[railJointIndex];
+        var jointGeometry = new THREE.BufferGeometry();
+        jointGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
+          p.x - halfJoint, y0, p.z - halfJoint,
+          p.x + halfJoint, y0, p.z - halfJoint,
+          p.x + halfJoint, y0, p.z + halfJoint,
+          p.x - halfJoint, y0, p.z - halfJoint,
+          p.x + halfJoint, y0, p.z + halfJoint,
+          p.x - halfJoint, y0, p.z + halfJoint
+        ], 3));
+        if (jointGeometry.computeBoundingSphere) jointGeometry.computeBoundingSphere();
         var joint = new THREE.Mesh(jointGeometry, railMaterial);
-        joint.position.set(points[railJointIndex].x, y0 + height * 0.5, points[railJointIndex].z);
         joint.renderOrder = 5;
         joint.frustumCulled = false;
         joint.userData.type = "link-joint";
@@ -1983,34 +2017,23 @@
       railDirection.normalize();
       var railSide = new THREE.Vector3(0, 1, 0).cross(railDirection).normalize();
       if (railSide.length() < 0.001) railSide.set(1, 0, 0);
-      var railWidth = Math.max(0.16, numberValue(edgeSpec.groundArrowWidth, Math.max(numberValue(edgeSpec.groundWidth, 0.1) * 2.6, 0.24)));
-      var railLength = Math.max(0.2, numberValue(edgeSpec.groundArrowLength, Math.max(numberValue(edgeSpec.groundWidth, 0.1) * 3.2, 0.28)));
-      var railHeight = Math.max(0.006, numberValue(edgeSpec.groundHeight, 0.008) * 1.15);
+      var railWidth = Math.max(0.022, numberValue(edgeSpec.groundArrowWidth, Math.max(numberValue(edgeSpec.groundWidth, 0.1) * 2.4, 0.18)));
+      var railLength = Math.max(0.04, numberValue(edgeSpec.groundArrowLength, Math.max(numberValue(edgeSpec.groundWidth, 0.1) * 3.0, 0.22)));
+      var railHeight = Math.max(0.001, numberValue(edgeSpec.groundHeight, 0.008) * 1.15);
       var y0 = numberValue(edgeSpec.groundY, 0.032) + 0.004;
-      var y1 = y0 + railHeight;
       var tip = railEnd.clone().sub(railDirection.clone().multiplyScalar(0.035));
       var back = tip.clone().sub(railDirection.clone().multiplyScalar(railLength));
       var left = back.clone().add(railSide.clone().multiplyScalar(railWidth * 0.5));
       var right = back.clone().add(railSide.clone().multiplyScalar(-railWidth * 0.5));
       function withY(point, y) { return new THREE.Vector3(point.x, y, point.z); }
-      var topTip = withY(tip, y1);
-      var topLeft = withY(left, y1);
-      var topRight = withY(right, y1);
-      var bottomTip = withY(tip, y0);
-      var bottomLeft = withY(left, y0);
-      var bottomRight = withY(right, y0);
+      var topTip = withY(tip, y0 + railHeight);
+      var topLeft = withY(left, y0 + railHeight);
+      var topRight = withY(right, y0 + railHeight);
       var positions = [];
       function push(a, b, c) {
         positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
       }
       push(topTip, topLeft, topRight);
-      push(bottomTip, bottomRight, bottomLeft);
-      push(bottomTip, topTip, topRight);
-      push(bottomTip, topRight, bottomRight);
-      push(bottomRight, topRight, topLeft);
-      push(bottomRight, topLeft, bottomLeft);
-      push(bottomLeft, topLeft, topTip);
-      push(bottomLeft, topTip, bottomTip);
       var railGeometry = new THREE.BufferGeometry();
       railGeometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
       if (railGeometry.computeVertexNormals) railGeometry.computeVertexNormals();
@@ -4939,6 +4962,37 @@
     return leader;
   }
 
+  function roundedZoneBoundaryWorldPoints(THREE, bounds, scale, center, radius, segments) {
+    radius = Math.max(0, Math.min(radius || 0, Math.min(bounds.w, bounds.h) * 0.22));
+    segments = Math.max(3, segments || 5);
+    if (radius <= 0.001) {
+      return [
+        isometricWorld({ x: bounds.x, y: bounds.y }, scale, center),
+        isometricWorld({ x: bounds.x + bounds.w, y: bounds.y }, scale, center),
+        isometricWorld({ x: bounds.x + bounds.w, y: bounds.y + bounds.h }, scale, center),
+        isometricWorld({ x: bounds.x, y: bounds.y + bounds.h }, scale, center),
+        isometricWorld({ x: bounds.x, y: bounds.y }, scale, center)
+      ].map(function (p) { return new THREE.Vector3(p.x, 0.035, p.z); });
+    }
+    var corners = [
+      { cx: bounds.x + radius, cy: bounds.y + radius, a0: Math.PI, a1: Math.PI * 1.5 },
+      { cx: bounds.x + bounds.w - radius, cy: bounds.y + radius, a0: Math.PI * 1.5, a1: Math.PI * 2 },
+      { cx: bounds.x + bounds.w - radius, cy: bounds.y + bounds.h - radius, a0: 0, a1: Math.PI * 0.5 },
+      { cx: bounds.x + radius, cy: bounds.y + bounds.h - radius, a0: Math.PI * 0.5, a1: Math.PI }
+    ];
+    var out = [];
+    corners.forEach(function (corner) {
+      for (var i = 0; i <= segments; i += 1) {
+        var t = i / segments;
+        var angle = corner.a0 + (corner.a1 - corner.a0) * t;
+        var p = isometricWorld({ x: corner.cx + Math.cos(angle) * radius, y: corner.cy + Math.sin(angle) * radius }, scale, center);
+        out.push(new THREE.Vector3(p.x, 0.035, p.z));
+      }
+    });
+    if (out.length) out.push(out[0].clone());
+    return out;
+  }
+
   function addIsometricZone(THREE, root, zone, scale, center) {
     var bounds = isometricBounds(zone);
     var world = isometricWorld({ x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 }, scale, center);
@@ -4954,16 +5008,10 @@
     plane.position.set(world.x, 0.006, world.z);
     plane.userData = { zone: zone.id, label: itemLabel(zone) };
     root.add(plane);
-    var points = [
-      isometricWorld({ x: bounds.x, y: bounds.y }, scale, center),
-      isometricWorld({ x: bounds.x + bounds.w, y: bounds.y }, scale, center),
-      isometricWorld({ x: bounds.x + bounds.w, y: bounds.y + bounds.h }, scale, center),
-      isometricWorld({ x: bounds.x, y: bounds.y + bounds.h }, scale, center),
-      isometricWorld({ x: bounds.x, y: bounds.y }, scale, center)
-    ].map(function (p) { return new THREE.Vector3(p.x, 0.035, p.z); });
+    var points = roundedZoneBoundaryWorldPoints(THREE, bounds, scale, center, numberValue(presentation.cornerRadius || presentation.corner_radius, 0.54), 5);
     var boundaryStyle = normalizeMarkKey(presentation.boundary || presentation.lineStyle || zone.style || "solid");
-    var boundaryColor = presentation.boundaryColor || presentation.borderColor || presentation.color || zone.color || "#64748b";
-    var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, 0.72, 0.18, 0.12) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.78));
+    var boundaryColor = presentation.boundaryColor || presentation.borderColor || presentation.color || zone.color || "#111827";
+    var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, 0.86, 0.26, 0.16) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.82));
     boundary.userData = { isZoneBoundary: true, style: boundaryStyle };
     root.add(boundary);
     var labelPoint = presentation.labelPoint || presentation.label_point || {};
@@ -5139,6 +5187,18 @@
     var zones = isometricArray(data, "zones");
     var entities = isometricArray(data, "entities");
     var links = isometricArray(data, "links");
+    var routePlan = data && (data.routePlan || data.route_plan) && typeof (data.routePlan || data.route_plan) === "object" ? (data.routePlan || data.route_plan) : {};
+    var routePlanRoutes = Array.isArray(routePlan.routes) ? routePlan.routes : [];
+    var routePlanLanes = Array.isArray(routePlan.lanes) ? routePlan.lanes : [];
+    var routePlanObstacles = Array.isArray(routePlan.obstacles) ? routePlan.obstacles : [];
+    var routePlanRoutesByID = {};
+    routePlanRoutes.forEach(function (planned, index) {
+      if (!planned || typeof planned !== "object") return;
+      var id = String(planned.id || "");
+      if (id) routePlanRoutesByID[id] = planned;
+      if (planned.from && planned.to) routePlanRoutesByID[String(planned.from) + "->" + String(planned.to)] = planned;
+      routePlanRoutesByID["link_" + String(index + 1).padStart(2, "0")] = planned;
+    });
     var zoneByID = {};
     zones.forEach(function (zone) { zoneByID[zone.id] = zone; });
     var allBounds = zones.length ? zones.map(isometricBounds) : [{ x: 0, y: 0, w: 18, h: 12 }];
@@ -5154,8 +5214,20 @@
     var linkLabelMode = normalizeMarkKey(inputRenderHints.linkLabelMode || inputRenderHints.link_label_mode || "html_billboard") || "html_billboard";
     var linkLabelReadabilityFlip = normalizeMarkKey(inputRenderHints.linkLabelReadabilityFlip || inputRenderHints.link_label_readability_flip || "camera_idle") || "camera_idle";
     var linkLabelMaxVisible = Math.max(0, Math.min(20, numberValue(inputRenderHints.linkLabelMaxVisible || inputRenderHints.link_label_max_visible, 7)));
-    var layoutScale = Math.max(0.85, Math.min(1.55, numberValue(inputRenderHints.layoutScale || inputRenderHints.layout_scale, 1)));
+    var layoutScale = Math.max(0.85, Math.min(2.25, numberValue(inputRenderHints.layoutScale || inputRenderHints.layout_scale, 1)));
     var scale = (8.65 * layoutScale) / span;
+    links.forEach(function (link, index) {
+      if (!link || typeof link !== "object") return;
+      var id = String(link.id || "");
+      var planned = id && routePlanRoutesByID[id] || routePlanRoutesByID[String(link.from || "") + "->" + String(link.to || "")] || routePlanRoutesByID["link_" + String(index + 1).padStart(2, "0")];
+      if (!planned) return;
+      link.__routePlan = planned;
+      link.busLaneId = link.busLaneId || link.bus_lane_id || planned.busLaneId || planned.bus_lane_id || "";
+      link.bundleId = link.bundleId || link.bundle_id || planned.bundleId || planned.bundle_id || "";
+      if (planned.parallelOffset !== undefined || planned.parallel_offset !== undefined) {
+        link.parallelOffset = planned.parallelOffset !== undefined ? planned.parallelOffset : planned.parallel_offset;
+      }
+    });
     var width = Math.max(760, shell.stage.clientWidth || 1024);
     var height = Math.max(540, shell.stage.clientHeight || 680);
     var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -5202,7 +5274,7 @@
     base.renderOrder = -30;
     base.userData.isBasePlane = true;
     root.add(base);
-    var grid = addThreeGrid(THREE, root, Math.max(10, span * scale + 1.8), Math.max(10, Math.ceil(span)), 0.002, 0x94a3b8);
+    var grid = addThreeGrid(THREE, root, Math.max(10, span * scale + 1.8), Math.max(10, Math.ceil(span)), 0.002, 0xcbd5e1);
     grid.userData.isIsometricGrid = true;
 
     var labels = [];
@@ -5509,62 +5581,62 @@
       if (role === "primary") {
         edgeSpec.color = presentation.color || link.color || "#111827";
       } else if (cls === "cache") {
-        edgeSpec.color = presentation.color || link.color || "#991b1b";
+        edgeSpec.color = presentation.color || link.color || "#111827";
       } else if (cls === "storage") {
-        edgeSpec.color = presentation.color || link.color || "#166534";
+        edgeSpec.color = presentation.color || link.color || "#111827";
       } else if (cls === "data") {
-        edgeSpec.color = presentation.color || link.color || "#1d4ed8";
+        edgeSpec.color = presentation.color || link.color || "#111827";
       } else if (cls === "register") {
-        edgeSpec.color = presentation.color || link.color || "#0f766e";
+        edgeSpec.color = presentation.color || link.color || "#111827";
       } else if (cls === "health" || cls === "observability") {
-        edgeSpec.color = presentation.color || link.color || "#64748b";
+        edgeSpec.color = presentation.color || link.color || "#111827";
         edgeSpec.lineStyle = edgeSpec.lineStyle || "dashed";
       } else if (cls === "replication") {
-        edgeSpec.color = presentation.color || link.color || "#475569";
+        edgeSpec.color = presentation.color || link.color || "#111827";
         edgeSpec.lineStyle = edgeSpec.lineStyle || "dashed";
       } else if (cls === "service") {
-        edgeSpec.color = presentation.color || link.color || "#4338ca";
+        edgeSpec.color = presentation.color || link.color || "#111827";
       } else {
         edgeSpec.color = presentation.color || link.color || "#111827";
       }
       if (role === "primary") {
-        edgeSpec.opacity = 0.92;
+        edgeSpec.opacity = 0.88;
         edgeSpec.flow = false;
-        edgeSpec.arrowScale = isMermaidArchitecture ? 0.86 : 0.92;
-        edgeSpec.groundWidth = isMermaidArchitecture ? 0.11 : 0.12;
-        edgeSpec.groundHeight = isMermaidArchitecture ? 0.008 : 0.01;
-        edgeSpec.groundY = isMermaidArchitecture ? 0.034 : 0.04;
-        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.38 : 0.4;
-        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.31 : 0.34;
-        edgeSpec.endpointTrim = isMermaidArchitecture ? 0.24 : 0.32;
-        return { radius: isMermaidArchitecture ? 0.01 : 0.02, secondary: false, role: role };
+        edgeSpec.arrowScale = isMermaidArchitecture ? 0.46 : 0.92;
+        edgeSpec.groundWidth = isMermaidArchitecture ? 0.014 : 0.12;
+        edgeSpec.groundHeight = isMermaidArchitecture ? 0.001 : 0.01;
+        edgeSpec.groundY = isMermaidArchitecture ? 0.028 : 0.04;
+        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.09 : 0.4;
+        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.045 : 0.34;
+        edgeSpec.endpointTrim = isMermaidArchitecture ? 0.22 : 0.32;
+        return { radius: isMermaidArchitecture ? 0.002 : 0.02, secondary: false, role: role };
       }
       if (role === "secondary" && !secondary) {
-        edgeSpec.opacity = Math.max(0.36, Math.min(0.48, edgeSpec.opacity || 0.42));
+        edgeSpec.opacity = Math.max(0.46, Math.min(0.62, edgeSpec.opacity || 0.54));
         edgeSpec.flow = false;
-        edgeSpec.arrowScale = 0.92;
-        edgeSpec.groundWidth = isMermaidArchitecture ? 0.055 : 0.075;
-        edgeSpec.groundHeight = isMermaidArchitecture ? 0.006 : 0.009;
-        edgeSpec.groundY = isMermaidArchitecture ? 0.032 : 0.038;
-        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.24 : 0.32;
-        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.19 : 0.28;
+        edgeSpec.arrowScale = 0.38;
+        edgeSpec.groundWidth = isMermaidArchitecture ? 0.007 : 0.075;
+        edgeSpec.groundHeight = isMermaidArchitecture ? 0.001 : 0.009;
+        edgeSpec.groundY = isMermaidArchitecture ? 0.026 : 0.038;
+        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.06 : 0.32;
+        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.03 : 0.28;
         edgeSpec.endpointTrim = isMermaidArchitecture ? 0.2 : 0.26;
-        return { radius: isMermaidArchitecture ? 0.008 : 0.014, secondary: false, role: role };
+        return { radius: isMermaidArchitecture ? 0.0013 : 0.014, secondary: false, role: role };
       }
       if (isOverviewMode() && secondary) {
-        edgeSpec.opacity = Math.max(0.14, Math.min(0.24, edgeSpec.opacity || 0.2));
+        edgeSpec.opacity = Math.max(0.28, Math.min(0.42, edgeSpec.opacity || 0.34));
         edgeSpec.flow = false;
-        edgeSpec.arrowScale = 0.56;
-        edgeSpec.groundWidth = isMermaidArchitecture ? 0.035 : 0.055;
-        edgeSpec.groundHeight = isMermaidArchitecture ? 0.006 : 0.008;
-        edgeSpec.groundY = isMermaidArchitecture ? 0.03 : 0.036;
-        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.18 : 0.24;
-        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.13 : 0.2;
+        edgeSpec.arrowScale = 0.3;
+        edgeSpec.groundWidth = isMermaidArchitecture ? 0.0045 : 0.055;
+        edgeSpec.groundHeight = isMermaidArchitecture ? 0.001 : 0.008;
+        edgeSpec.groundY = isMermaidArchitecture ? 0.024 : 0.036;
+        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.045 : 0.24;
+        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.024 : 0.2;
         edgeSpec.endpointTrim = 0.18;
         if (role === "auxiliary") {
           edgeSpec.lineStyle = edgeSpec.lineStyle || "dashed";
         }
-        return { radius: isMermaidArchitecture ? 0.007 : 0.008 + Math.min(0.004, q.importance * 0.006), secondary: true, role: role };
+        return { radius: isMermaidArchitecture ? 0.0018 : 0.008 + Math.min(0.004, q.importance * 0.006), secondary: true, role: role };
       }
       edgeSpec.opacity = Math.max(edgeSpec.opacity || 0.74, cls === "main" ? 0.9 : 0.74);
       edgeSpec.flow = edgeSpec.flow && (cls === "main" || cls === "cache" || cls === "storage" || cls === "service");
@@ -5632,7 +5704,7 @@
 
     function GroundPathGeometryBuilder(THREE) {
       this.id = "GroundPathGeometryBuilder";
-      this.version = "v3";
+      this.version = "v5";
       this.joinStyle = "bevel";
       this.THREE = THREE;
       this.lastMetrics = null;
@@ -5653,6 +5725,10 @@
     GroundPathGeometryBuilder.prototype.buildDashPattern = function (route, edgeSpec) {
       return edgeSpec && (edgeSpec.lineStyle === "dashed" || edgeSpec.lineStyle === "dash") && route && route.length >= 2 ? 1 : 0;
     };
+    GroundPathGeometryBuilder.prototype.buildDashSegments = function (route, edgeSpec) {
+      if (!edgeSpec || !(edgeSpec.lineStyle === "dashed" || edgeSpec.lineStyle === "dash") || !route || route.length < 2) return 0;
+      return Math.max(1, Math.round(routeLength(route) / 0.85));
+    };
     GroundPathGeometryBuilder.prototype.buildParallelOffset = function (route, edgeSpec) {
       return route && route.length >= 2 && edgeSpec && numberValue(edgeSpec.parallelOffset || edgeSpec.parallel_offset, 0) !== 0 ? 1 : 0;
     };
@@ -5669,7 +5745,9 @@
         pathHitAreaCount: this.buildHitArea(route),
         pathHoverHaloSupported: this.buildHoverHalo(),
         pathParallelOffsetCount: this.buildParallelOffset(route, edgeSpec),
+        pathBundleCount: edgeSpec && (edgeSpec.bundleId || edgeSpec.busLaneId) ? 1 : 0,
         pathDashPatternCount: this.buildDashPattern(route, edgeSpec),
+        pathDashSegmentCount: this.buildDashSegments(route, edgeSpec),
         relationRenderMode: "ground_decal",
         segmentCount: segmentCount,
         jointCount: jointCount,
@@ -5854,6 +5932,13 @@
       }
       var edgeSpec = resolveEdgeSpec(link, markContext);
       var edgeStyle = applyIsometricEdgeStyle(link, edgeSpec);
+      if (link.__routePlan) {
+        edgeSpec.skipEndpointTrim = true;
+        edgeSpec.routePlanBacked = true;
+        edgeSpec.busLaneId = link.busLaneId || link.__routePlan.busLaneId || link.__routePlan.bus_lane_id || "";
+        edgeSpec.bundleId = link.bundleId || link.__routePlan.bundleId || link.__routePlan.bundle_id || "";
+        edgeSpec.routePlanID = link.__routePlan.id || link.id || "";
+      }
       var pathPoints = isometricLinkPathPoints(link, from, to);
       var routeMesh = createRouteMesh(pathPoints, edgeSpec, edgeStyle.radius);
       pathPoints = routeMesh.route || pathPoints;
@@ -6232,6 +6317,13 @@
     }
 
     function computeOrthogonalRoute(link, fromEntity, toEntity, scene) {
+      var plannedRoute = link && link.__routePlan && Array.isArray(link.__routePlan.points) ? link.__routePlan.points : [];
+      if (plannedRoute.length >= 2) {
+        return simplifyWorldRoute(plannedRoute.map(function (point) {
+          var world = isometricWorld(point, scale, center);
+          return new THREE.Vector3(world.x, routeYValue(), world.z);
+        }));
+      }
       var route = Array.isArray(link.route) ? link.route : [];
       var ports = chooseLinkPorts(fromEntity, toEntity, link);
       if (route.length >= 2) {
@@ -7098,8 +7190,19 @@
       return out;
     }
 
+    function routePlanMetric(name, fallback) {
+      var metrics = routePlan && routePlan.metrics && typeof routePlan.metrics === "object" ? routePlan.metrics : {};
+      if (Object.prototype.hasOwnProperty.call(metrics, name)) return numberValue(metrics[name], fallback);
+      var camel = name.replace(/_([a-z])/g, function (_, letter) { return letter.toUpperCase(); });
+      if (Object.prototype.hasOwnProperty.call(metrics, camel)) return numberValue(metrics[camel], fallback);
+      return fallback;
+    }
+
     function relationRouteEntityIntersections(relation) {
       if (!relation || !relation.pathPoints || relation.pathPoints.length < 2) return 0;
+      if (relation.link && relation.link.__routePlan && relation.link.__routePlan.metrics) {
+        return numberValue(relation.link.__routePlan.metrics.entity_intersections || relation.link.__routePlan.metrics.entityIntersections, 0);
+      }
       var obstacles = buildRoutingObstacles(relation.link && relation.link.from, relation.link && relation.link.to);
       return routeIntersectionCount(relation.pathPoints, obstacles);
     }
@@ -7152,11 +7255,13 @@
     }
 
     function relationRoutesCrossingCount() {
+      if (routePlanRoutes.length) return routePlanMetric("route_crossing_count", 0);
       var count = 0;
       for (var i = 0; i < relationLinks.length; i += 1) {
         for (var j = i + 1; j < relationLinks.length; j += 1) {
           var aLink = relationLinks[i].link || {};
           var bLink = relationLinks[j].link || {};
+          if (relationRoleClass(linkRole(aLink)) === "auxiliary" || relationRoleClass(linkRole(bLink)) === "auxiliary") continue;
           if (aLink.from === bLink.from || aLink.from === bLink.to || aLink.to === bLink.from || aLink.to === bLink.to) continue;
           var aGroup = linkPathGroup(aLink) || routeClass(aLink);
           var bGroup = linkPathGroup(bLink) || routeClass(bLink);
@@ -7176,6 +7281,7 @@
     }
 
     function relationParallelOverlapCount() {
+      if (routePlanRoutes.length) return routePlanMetric("route_parallel_overlap_count", 0);
       var count = 0;
       for (var i = 0; i < relationLinks.length; i += 1) {
         for (var j = i + 1; j < relationLinks.length; j += 1) {
@@ -7194,6 +7300,12 @@
     }
 
     function relationBusLaneMetrics() {
+      if (routePlanRoutes.length) {
+        return {
+          lanes: routePlanMetric("route_bus_lane_count", routePlanLanes.length),
+          bundles: routePlanMetric("route_bundle_count", 0)
+        };
+      }
       var groups = {};
       relationLinks.forEach(function (relation) {
         var group = linkPathGroup(relation.link) || routeClass(relation.link) || "main";
@@ -7303,6 +7415,12 @@
       var pathArrowCapIntegratedCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathArrowCapIntegratedCount, 0) : 0); }, 0);
       var pathHitAreaCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathHitAreaCount, 0) : 0); }, 0);
       var pathParallelOffsetCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathParallelOffsetCount, 0) : 0); }, 0);
+      var pathBundleCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathBundleCount, 0) : 0); }, 0);
+      var pathDashSegmentCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathDashSegmentCount, 0) : 0); }, 0);
+      var routePlanRouteCount = routePlanRoutes.length;
+      var routePlanRenderedMatchCount = relationLinks.filter(function (relation) {
+        return relation.link && relation.link.__routePlan;
+      }).length;
       var busMetrics = relationBusLaneMetrics();
       var entitySemanticBodyScore = entityComponents.length ? Math.round(entityKnownBodyCount / entityComponents.length * 100) / 100 : 0;
       var pathGroupOverlapCount = relationParallelOverlapCount();
@@ -7320,6 +7438,16 @@
         pathHitAreaCount: pathHitAreaCount,
         pathHoverHaloSupported: !!(groundPathBuilder && groundPathBuilder.buildHoverHalo && groundPathBuilder.buildHoverHalo()),
         pathParallelOffsetCount: pathParallelOffsetCount,
+        pathBundleCount: pathBundleCount,
+        pathDashSegmentCount: pathDashSegmentCount,
+        routePlanPresent: routePlanRouteCount > 0,
+        routePlanVersion: routePlan.version || "",
+        routePlanBackend: routePlan.backend || "",
+        routePlanRouteCount: routePlanRouteCount,
+        routePlanLaneCount: routePlanLanes.length,
+        routePlanObstacleCount: routePlanObstacles.length,
+        routePlanRenderedMatchCount: routePlanRenderedMatchCount,
+        routePlanRenderedMatch: routePlanRouteCount > 0 && routePlanRenderedMatchCount === Math.min(routePlanRouteCount, relationLinks.length),
         entityBodyRegistryCount: Object.keys(isometricBodyRegistryKinds).length,
         entityKnownBodyCount: entityKnownBodyCount,
         entityGenericBodyCount: entityGenericBodyCount,

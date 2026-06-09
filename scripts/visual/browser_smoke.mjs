@@ -344,6 +344,7 @@ const expression = `(() => {
     modelBadges: qa('[data-has-model-badge="true"]').length,
     svgBillboards: qa('[data-has-svg-billboard="true"]').length,
     fallbackBadges: qa('[data-icon-id=""], [data-model-id=""]').length,
+    presentationMode: !!q('[data-presentation-mode="true"]'),
     controls: qa(".visual-isometric-control").length,
     controlBar: !!q(".visual-isometric-control-bar"),
     canvas: qa("canvas").length,
@@ -388,11 +389,11 @@ function scenarioExpression() {
     if (!api) return { ok: false, reason: "isometric_api_missing" };
     const applyCamera = (camera) => api.setCamera && api.setCamera(camera);
     if (input.scenario === "angle-left") {
-      applyCamera({ theta: -0.78, phi: 0.98, zoom: input.cameraZoom || 1.06 });
+      applyCamera({ theta: -0.78, phi: 0.98, zoom: input.cameraZoom || 0.9 });
     } else if (input.scenario === "angle-right") {
-      applyCamera({ theta: 1.28, phi: 0.94, zoom: input.cameraZoom || 1.04 });
+      applyCamera({ theta: 1.28, phi: 0.94, zoom: input.cameraZoom || 0.9 });
     } else if (input.scenario === "top") {
-      applyCamera({ theta: 0.78, phi: 0.36, zoom: input.cameraZoom || 1.05 });
+      applyCamera({ theta: 0.78, phi: 0.36, zoom: input.cameraZoom || 0.94 });
     } else if (input.scenario === "drag") {
       if (input.cameraTheta || input.cameraPhi || input.cameraZoom) {
         applyCamera({ theta: input.cameraTheta || undefined, phi: input.cameraPhi || undefined, zoom: input.cameraZoom || undefined });
@@ -414,7 +415,7 @@ try {
     "--use-angle=swiftshader",
     "--no-sandbox",
     "--hide-scrollbars",
-    "--window-size=1440,1000",
+    "--window-size=1886,1536",
     "--remote-debugging-port=0",
     `--user-data-dir=${userDataDir}`,
     "about:blank"

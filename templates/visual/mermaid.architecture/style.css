@@ -189,20 +189,20 @@ body {
   transform: translate(-50%, -100%);
   will-change: transform, opacity;
   backface-visibility: hidden;
-  max-width: 190px;
-  padding: 7px 10px;
-  border: 1px solid rgb(100 116 139 / 0.2);
-  border-radius: 6px;
+  max-width: 176px;
+  padding: 5px 8px;
+  border: 1px solid rgb(17 24 39 / 0.16);
+  border-radius: 5px;
   background: rgb(255 255 255 / 0.96);
-  color: #182033;
-  font-size: 13px;
+  color: #111827;
+  font-size: 12.5px;
   line-height: 1.25;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  box-shadow: 0 10px 26px rgb(31 41 55 / 0.14);
+  box-shadow: 0 5px 14px rgb(31 41 55 / 0.12);
   transition: none;
 }
 
@@ -215,12 +215,12 @@ body {
 .visual-isometric-label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .visual-isometric-label-icon {
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
   flex: 0 0 auto;
   object-fit: contain;
   display: block;
@@ -228,14 +228,14 @@ body {
 
 .visual-isometric-link-label {
   transform: translate(-50%, -50%);
-  max-width: 164px;
-  padding: 4px 8px;
-  border-color: rgb(31 41 55 / 0.18);
+  max-width: 150px;
+  padding: 3px 7px;
+  border-color: rgb(17 24 39 / 0.18);
   background: rgb(255 255 255 / 0.95);
   color: #111827;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 800;
-  box-shadow: 0 8px 18px rgb(31 41 55 / 0.16);
+  box-shadow: 0 4px 12px rgb(31 41 55 / 0.13);
   user-select: none;
 }
 
@@ -270,12 +270,16 @@ body {
 
 .visual-isometric-zone-label {
   transform: translate(-50%, -50%);
-  max-width: 220px;
-  background: rgb(255 255 255 / 0.78);
-  color: #334155;
-  border-style: dashed;
-  font-size: 11.5px;
+  max-width: 210px;
+  padding: 4px 8px;
+  background: rgb(255 255 255 / 0.82);
+  color: #111827;
+  border-color: rgb(17 24 39 / 0.14);
+  border-style: solid;
+  font-size: 10.8px;
+  font-weight: 850;
   text-transform: uppercase;
+  box-shadow: 0 4px 10px rgb(15 23 42 / 0.08);
 }
 
 .visual-isometric-inspector {

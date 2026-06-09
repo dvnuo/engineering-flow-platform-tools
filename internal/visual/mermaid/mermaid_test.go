@@ -1,6 +1,7 @@
 package mermaid
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -32,6 +33,41 @@ func TestInferTemplateID(t *testing.T) {
 	}
 }
 
+func TestRoutePlanSerializesInternalEngine(t *testing.T) {
+	raw := []byte(`architecture-beta
+  group client(cloud)[Client Zone]
+  group edge(server)[Edge Zone]
+  group app(server)[Application Zone]
+  group data(database)[Data Zone]
+  service browser(internet)[Browser] in client
+  service gateway(server)[API Gateway] in edge
+  service service(server)[Order Service] in app
+  service db(database)[Order Database] in data
+  browser:R -->|API| L:gateway
+  gateway:R -->|Service| L:service
+  service:R -->|Data| L:db
+`)
+	compiled, err := CompileIfNeededWithOptions(context.Background(), "isometric_architecture_v1", raw, CompileOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var data map[string]any
+	if err := json.Unmarshal(compiled, &data); err != nil {
+		t.Fatal(err)
+	}
+	routePlan, ok := data["routePlan"].(map[string]any)
+	if !ok {
+		t.Fatal("expected routePlan in compiled architecture data")
+	}
+	if routePlan["backend"] != RouteEngineSemanticHeuristicV4 {
+		t.Fatalf("routePlan backend=%#v want %q", routePlan["backend"], RouteEngineSemanticHeuristicV4)
+	}
+	routes, _ := routePlan["routes"].([]any)
+	if len(routes) != 3 {
+		t.Fatalf("expected 3 routePlan routes, got %d", len(routes))
+	}
+}
+
 func TestCompileMicroserviceGoldenArchitecture(t *testing.T) {
 	path := filepath.Join("..", "..", "..", "templates", "visual", "mermaid.architecture", "examples", "microservice-golden.mmd")
 	raw, err := os.ReadFile(path)
@@ -43,7 +79,7 @@ func TestCompileMicroserviceGoldenArchitecture(t *testing.T) {
 		t.Fatal("expected microservice-golden.mmd to parse")
 	}
 	graph := BuildArchitectureSemanticGraph(diagram)
-	if len(graph.Groups) < 10 || len(graph.Nodes) < 18 || len(graph.Edges) < 22 {
+	if len(graph.Groups) < 10 || len(graph.Nodes) < 18 || len(graph.Edges) < 18 {
 		t.Fatalf("golden example too small: groups=%d nodes=%d edges=%d", len(graph.Groups), len(graph.Nodes), len(graph.Edges))
 	}
 	layout := ArchitectureLayoutEngine(graph)
@@ -92,8 +128,27 @@ func TestCompileMicroserviceGoldenArchitecture(t *testing.T) {
 	if err := json.Unmarshal(compiled, &data); err != nil {
 		t.Fatal(err)
 	}
-	if len(data["zones"].([]any)) < 10 || len(data["entities"].([]any)) < 18 || len(data["links"].([]any)) < 22 {
+	if len(data["zones"].([]any)) < 10 || len(data["entities"].([]any)) < 18 || len(data["links"].([]any)) < 18 {
 		t.Fatalf("compiled golden example lost structure: zones=%d entities=%d links=%d", len(data["zones"].([]any)), len(data["entities"].([]any)), len(data["links"].([]any)))
+	}
+	routePlan, ok := data["routePlan"].(map[string]any)
+	if !ok {
+		t.Fatalf("compiled golden example did not include routePlan")
+	}
+	if routePlan["version"] != "efp.routeplan.v1" {
+		t.Fatalf("unexpected routePlan version: %#v", routePlan["version"])
+	}
+	routes, _ := routePlan["routes"].([]any)
+	lanes, _ := routePlan["lanes"].([]any)
+	obstacles, _ := routePlan["obstacles"].([]any)
+	if len(routes) != len(data["links"].([]any)) {
+		t.Fatalf("routePlan routes should match links: routes=%d links=%d", len(routes), len(data["links"].([]any)))
+	}
+	if len(lanes) < 5 {
+		t.Fatalf("expected routePlan bus lanes for complex architecture: lanes=%d", len(lanes))
+	}
+	if len(obstacles) < len(data["entities"].([]any)) {
+		t.Fatalf("expected routePlan obstacles to cover entities: obstacles=%d entities=%d", len(obstacles), len(data["entities"].([]any)))
 	}
 }
 

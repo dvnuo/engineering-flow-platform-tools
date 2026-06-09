@@ -1,6 +1,7 @@
 package mermaid
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -144,11 +145,18 @@ func InferTemplateID(raw []byte) (string, bool) {
 }
 
 func CompileIfNeeded(kind string, raw []byte) ([]byte, error) {
+	return CompileIfNeededWithOptions(context.Background(), kind, raw, CompileOptions{})
+}
+
+func CompileIfNeededWithOptions(ctx context.Context, kind string, raw []byte, opts CompileOptions) ([]byte, error) {
 	d, ok := parse(raw)
 	if !ok {
 		return raw, nil
 	}
-	data := compile(kind, d)
+	data, err := compileWithOptions(ctx, kind, d, opts)
+	if err != nil {
+		return nil, err
+	}
 	out, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return nil, metadata.NewError("mermaid_compile_failed", "failed to compile Mermaid input: "+err.Error(), "Check the Mermaid source and EFP frontmatter.", 400)
@@ -214,41 +222,64 @@ func parse(raw []byte) (Diagram, bool) {
 }
 
 func compile(kind string, d Diagram) map[string]any {
+	data, err := compileWithOptions(context.Background(), kind, d, CompileOptions{})
+	if err != nil {
+		return map[string]any{"schema": "efp.visual.input.graph.v1", "title": firstNonEmpty(d.Title, "Mermaid Visual"), "nodes": []any{}, "edges": []any{}}
+	}
+	return data
+}
+
+func compileWithOptions(ctx context.Context, kind string, d Diagram, opts CompileOptions) (map[string]any, error) {
 	if d.Title == "" {
 		d.Title = "Mermaid Visual"
 	}
 	switch kind {
 	case "isometric_architecture_v1":
-		return mergeEFP(compileIsometric(d), d.EFP)
+		data, err := compileIsometric(ctx, d, opts)
+		if err != nil {
+			return nil, err
+		}
+		return mergeEFP(data, d.EFP), nil
 	case "graph_v1":
-		return mergeEFP(compileGraph(d, false), d.EFP)
+		return mergeEFP(compileGraph(d, false), d.EFP), nil
 	case "graph_events_v1":
-		return mergeEFP(compileGraph(d, true), d.EFP)
+		return mergeEFP(compileGraph(d, true), d.EFP), nil
 	case "uml_sequence_v1":
-		return mergeEFP(compileSequence(d), d.EFP)
+		return mergeEFP(compileSequence(d), d.EFP), nil
 	case "uml_class_v1":
-		return mergeEFP(compileClass(d), d.EFP)
+		return mergeEFP(compileClass(d), d.EFP), nil
 	case "uml_state_machine_v1":
-		return mergeEFP(compileState(d), d.EFP)
+		return mergeEFP(compileState(d), d.EFP), nil
 	case "uml_activity_v1":
-		return mergeEFP(compileActivity(d), d.EFP)
+		return mergeEFP(compileActivity(d), d.EFP), nil
 	case "uml_component_deployment_v1":
-		return mergeEFP(compileComponent(d), d.EFP)
+		return mergeEFP(compileComponent(d), d.EFP), nil
 	case "timeline_v1":
-		return mergeEFP(compileTimeline(d), d.EFP)
+		return mergeEFP(compileTimeline(d), d.EFP), nil
 	case "evidence_v1":
-		return mergeEFP(compileEvidence(d), d.EFP)
+		return mergeEFP(compileEvidence(d), d.EFP), nil
 	case "matrix_v1":
-		return mergeEFP(compileMatrix(d), d.EFP)
+		return mergeEFP(compileMatrix(d), d.EFP), nil
 	default:
-		return mergeEFP(compileGraph(d, false), d.EFP)
+		return mergeEFP(compileGraph(d, false), d.EFP), nil
 	}
 }
 
-func compileIsometric(d Diagram) map[string]any {
+func compileIsometric(ctx context.Context, d Diagram, opts CompileOptions) (map[string]any, error) {
+	_ = opts
 	graph := BuildArchitectureSemanticGraph(d)
 	layout := ArchitectureLayoutEngine(graph)
-	routing := ArchitectureRoutingEngine(graph, layout)
+	routePlan, err := BuildArchitectureRoutePlan(ctx, RouteInput{Graph: graph, Layout: layout})
+	if err != nil {
+		return nil, err
+	}
+	routing := ArchitectureRoutingResult{
+		Backend:   routePlan.Backend,
+		Links:     routePlan.Routes,
+		Lanes:     routePlan.Lanes,
+		Obstacles: routePlan.Obstacles,
+		Metrics:   routePlan.Metrics,
+	}
 	focusIDs := []any{}
 	for i, node := range graph.Nodes {
 		if i >= 3 {
@@ -270,9 +301,10 @@ func compileIsometric(d Diagram) map[string]any {
 			"grid":    map[string]any{"enabled": true, "step": 1, "subdivisions": 4},
 			"padding": 2,
 		},
-		"camera": map[string]any{"mode": "orthographic_isometric", "zoom": 0.92, "theta": 0.78, "phi": 1.02, "radius": 11},
+		"camera": map[string]any{"mode": "orthographic_isometric", "zoom": 1.0, "theta": 0.78, "phi": 1.02, "radius": 11},
 		"zones":  layout.ToVisualZones(), "entities": layout.ToVisualEntities(), "links": routing.ToVisualLinks(),
-		"view": map[string]any{"colorBy": "kind", "mode": "overview"},
+		"routePlan": routePlan.ToVisualRoutePlan(),
+		"view":      map[string]any{"colorBy": "kind", "mode": "overview"},
 		"visual": map[string]any{
 			"goal":              "Explain the Mermaid architecture structure and the first visible request path.",
 			"initial_focus_ids": focusIDs,
@@ -283,21 +315,25 @@ func compileIsometric(d Diagram) map[string]any {
 		},
 		"renderHints": map[string]any{
 			"badgeMode":            "icon_and_model",
-			"badgeSize":            "medium",
+			"badgeSize":            "small",
 			"badgePlacement":       "front",
 			"labelIcon":            true,
-			"layoutScale":          1.55,
+			"layoutScale":          1.7,
 			"preferExplicitRoutes": true,
 			"relationLayer":        "world_ground",
 			"relationRenderMode":   "ground_decal",
 			"linkLabelMode":        "html_billboard",
+			"presentationMode":     true,
+			"chrome":               "presentation",
 			"showLegend":           true,
 		},
 		"metadata": mergeMetadata(sourceMetadata(d), map[string]any{
 			"architecture_pipeline": map[string]any{
 				"semantic_graph":         "BuildArchitectureSemanticGraph",
 				"layout_engine":          "ArchitectureMapLayoutEngine",
-				"routing_engine":         "ArchitectureRoutingEngine v2 / BusLaneRouter",
+				"routing_engine":         "ArchitectureRoutingEngine " + routePlan.Backend,
+				"route_plan":             "efp.routeplan.v1",
+				"route_engine":           routePlan.Backend,
 				"route_validator":        "ValidateArchitectureRoutes",
 				"port_hint_violations":   routing.Metrics.PortHintViolations,
 				"direction_violations":   routing.Metrics.DirectionViolations,
@@ -312,7 +348,7 @@ func compileIsometric(d Diagram) map[string]any {
 				"auxiliary_route_count":  routing.Metrics.AuxiliaryRouteCount,
 			},
 		}),
-	}
+	}, nil
 }
 
 func nodeMapByID(nodes []Node) map[string]Node {
@@ -463,9 +499,6 @@ func architectureNaturalServiceOrder(leftID, rightID string) int {
 }
 
 func inferArchitectureRole(edge Edge, nodes map[string]Node) string {
-	if edge.Role != "" {
-		return edge.Role
-	}
 	if edge.Dashed {
 		return "auxiliary"
 	}
@@ -478,11 +511,14 @@ func inferArchitectureRole(edge Edge, nodes map[string]Node) string {
 	if group == "data" || group == "cache" || group == "storage" {
 		return "secondary"
 	}
-	if group == "gateway" || ((from == "client" || from == "browser" || from == "mobile" || from == "cdn") && (to == "api_gateway" || to == "nginx")) || to == "api_gateway" {
+	if group == "gateway" && (from == "client" || from == "browser" || from == "mobile" || from == "cdn" || from == "nginx" || from == "gateway" || to == "nginx" || to == "api_gateway") {
 		return "primary"
 	}
-	if group == "service" && (from == "api_gateway" || strings.Contains(strings.ToLower(edge.Label), "service")) {
+	if group == "service" && (from == "api_gateway" || from == "gateway") {
 		return "primary"
+	}
+	if edge.Role != "" {
+		return edge.Role
 	}
 	return "secondary"
 }
@@ -1103,9 +1139,9 @@ func sourceMetadata(d Diagram) map[string]any {
 }
 
 func inferEntityKind(node Node) string {
-	value := strings.ToLower(nonEmpty(node.Kind, node.Label, node.ID))
+	value := strings.ToLower(strings.TrimSpace(node.Label + " " + node.Kind + " " + node.ID))
 	switch {
-	case strings.Contains(value, "browser"), strings.Contains(value, "internet"), strings.Contains(value, "pc"):
+	case strings.Contains(value, "browser"), strings.Contains(value, "internet"), strings.Contains(value, "pc"), strings.Contains(value, "laptop"):
 		return "browser"
 	case strings.Contains(value, "mobile"):
 		return "mobile"
@@ -1123,7 +1159,7 @@ func inferEntityKind(node Node) string {
 		return "nginx"
 	case strings.Contains(value, "nacos"), strings.Contains(value, "registry"), strings.Contains(value, "discovery"):
 		return "registry"
-	case strings.Contains(value, "elastic"), strings.Contains(value, "log"), strings.Contains(value, "prometheus"), strings.Contains(value, "grafana"), strings.Contains(value, "observ"):
+	case strings.Contains(value, "elastic"), strings.Contains(value, "log"), strings.Contains(value, "kibana"), strings.Contains(value, "prometheus"), strings.Contains(value, "grafana"), strings.Contains(value, "observ"):
 		return "observability"
 	case strings.Contains(value, "admin"), strings.Contains(value, "springboot"):
 		return "admin"
@@ -1195,18 +1231,12 @@ func lineStyle(edge Edge, role string) string {
 }
 
 func colorForRole(role string) string {
-	if role == "primary" {
-		return "#111827"
-	}
-	if role == "auxiliary" {
-		return "#475569"
-	}
-	return "#334155"
+	return "#111827"
 }
 
 func roleFromLabel(label string) string {
 	value := strings.ToLower(label)
-	if strings.Contains(value, "api") || strings.Contains(value, "primary") || strings.Contains(value, "entry") {
+	if strings.Contains(value, "primary") || strings.Contains(value, "entry") {
 		return "primary"
 	}
 	if strings.Contains(value, "health") || strings.Contains(value, "log") || strings.Contains(value, "observe") {
@@ -1217,7 +1247,7 @@ func roleFromLabel(label string) string {
 
 func pathGroupFromLabel(label string) string {
 	value := strings.ToLower(label)
-	for _, key := range []string{"entry", "gateway", "registry", "cache", "data", "storage", "health", "observability"} {
+	for _, key := range []string{"entry", "gateway", "service", "registry", "cache", "data", "storage", "health", "observability"} {
 		if strings.Contains(value, key) {
 			return key
 		}

@@ -1,6 +1,7 @@
 package render
 
 import (
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -118,7 +119,7 @@ func Render(opts Options) (Result, error) {
 	if !mermaid.IsMermaid(raw) {
 		return Result{}, metadata.NewError("mermaid_input_required", "visual render accepts Mermaid input for public templates.", "Pass a valid Mermaid .mmd file or omit --template so the CLI can infer the Mermaid template.", 400)
 	}
-	raw, err = mermaid.CompileIfNeeded(tpl.InputSchemaKind, raw)
+	raw, err = mermaid.CompileIfNeededWithOptions(context.Background(), tpl.InputSchemaKind, raw, mermaid.CompileOptions{})
 	if err != nil {
 		return Result{}, err
 	}

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It can run one-shot probes, or keep a dedicated Edge/Chrome/Chromium automation session open for tab selection, semantic element finding, redacted page reads, structured extraction/export, form automation, bounded page actions, assertions, workflows, screenshots, network exports, and performance metadata through DevTools.
+`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It can run one-shot probes, or keep a dedicated Chrome automation session open by default for tab selection, semantic element finding, redacted page reads, structured extraction/export, form automation, bounded page actions, assertions, workflows, screenshots, network exports, and performance metadata through DevTools. Edge/Chromium remain available with `--browser`.
 
 ## What It Verifies
 

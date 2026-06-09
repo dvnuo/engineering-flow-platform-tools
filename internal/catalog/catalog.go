@@ -1889,7 +1889,7 @@ func flagDescription(command, name string) string {
 	case "browser-exe":
 		return "Explicit Edge/Chrome/Chromium executable path."
 	case "browser":
-		return "Browser family: edge, chrome, chromium, or auto."
+		return "Browser family: chrome, edge, chromium, or auto; defaults to chrome."
 	case "headless":
 		return "Run the browser without a visible UI."
 	case "ignore-cert-errors":

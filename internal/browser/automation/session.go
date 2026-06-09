@@ -378,7 +378,7 @@ func defaultSessionName(name string) string {
 func defaultBrowserName(browser string) string {
 	browser = strings.ToLower(strings.TrimSpace(browser))
 	if browser == "" {
-		return "auto"
+		return "chrome"
 	}
 	return browser
 }

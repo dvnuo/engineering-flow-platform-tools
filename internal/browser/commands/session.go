@@ -24,7 +24,7 @@ func sessionCmd(o *Opts) *cobra.Command {
 }
 
 func sessionStartCmd(o *Opts) *cobra.Command {
-	opts := automation.StartOptions{Name: "default", Browser: "auto"}
+	opts := automation.StartOptions{Name: "default", Browser: "chrome"}
 	c := &cobra.Command{
 		Use:   "start",
 		Short: "Start a persistent browser automation session",
@@ -45,7 +45,7 @@ func sessionStartCmd(o *Opts) *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&opts.Name, "name", "default", "Session name used for metadata and the default profile directory.")
-	c.Flags().StringVar(&opts.Browser, "browser", "auto", "Browser family to launch: edge, chrome, chromium, or auto.")
+	c.Flags().StringVar(&opts.Browser, "browser", "chrome", "Browser family to launch: chrome, edge, chromium, or auto.")
 	c.Flags().StringVar(&opts.BrowserExe, "browser-exe", "", "Explicit Edge/Chrome/Chromium executable path to launch.")
 	c.Flags().BoolVar(&opts.Headless, "headless", false, "Run the persistent browser without a visible UI.")
 	c.Flags().StringVar(&opts.ProfileDir, "profile", "", "Dedicated browser profile directory; defaults to ~/.efp/browser/profiles/<session-name>.")

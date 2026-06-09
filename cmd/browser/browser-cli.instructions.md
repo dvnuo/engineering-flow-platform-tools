@@ -8,7 +8,7 @@ Copy this file into `~/.copilot/instructions/browser-cli.instructions.md` so VS 
 
 ## What This Tool Is
 
-`browser` is a terminal-invoked CLI for agents that need to open an internal URL in Edge, Chrome, or Chromium through DevTools and collect page diagnostics or run bounded actions in a persistent dedicated browser session.
+`browser` is a terminal-invoked CLI for agents that need to open an internal URL in Chrome by default through DevTools and collect page diagnostics or run bounded actions in a persistent dedicated browser session. Edge/Chromium remain available with `--browser`.
 
 Use it for browser SSO checks, login-success probes, screenshots, HTML snapshots, network summaries, page-state inspection, semantic element finding, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, performance timing metadata, frame reads, console/runtime diagnostics, structured page outlines, table/list extraction and export, scroll collection, page-state diffs, tab selection, upload/download metadata, and bounded page actions. It is not a Portal tool, runtime built-in browser tool, MCP server, or cookie export tool.
 

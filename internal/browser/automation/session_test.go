@@ -211,6 +211,15 @@ func TestValidateProfileDirRejectsRootsAndDefaultProfiles(t *testing.T) {
 	}
 }
 
+func TestDefaultBrowserNameUsesChrome(t *testing.T) {
+	if got := defaultBrowserName(""); got != "chrome" {
+		t.Fatalf("default browser = %q want chrome", got)
+	}
+	if got := defaultBrowserName("auto"); got != "auto" {
+		t.Fatalf("explicit auto browser = %q want auto", got)
+	}
+}
+
 func splitHostPort(t *testing.T, raw string) (string, int) {
 	t.Helper()
 	host, portText, err := net.SplitHostPort(raw)

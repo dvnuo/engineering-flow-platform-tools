@@ -35,8 +35,8 @@ func NewRootWithRunner(r probe.Runner) *cobra.Command {
 	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
 		Product: "browser",
 		Binary:  "browser",
-		Short:   "Probe browser SSO and page state through Edge/Chrome/Chromium",
-		Long: strings.TrimSpace(`browser is a terminal-invoked CLI for agents that need to open an internal URL, capture page artifacts, and inspect browser SSO indicators through Edge, Chrome, or Chromium DevTools.
+		Short:   "Probe browser SSO and page state through Chrome/Edge/Chromium",
+		Long: strings.TrimSpace(`browser is a terminal-invoked CLI for agents that need to open an internal URL, capture page artifacts, and inspect browser SSO indicators through Chrome DevTools by default, with Edge/Chromium available via --browser.
 
 It writes non-secret diagnostics such as summary.json, network.json, page.html, and screenshot.png. It does not export cookies or tokens. For agent workflows, default every command and subcommand to --json so callers can read ok, data.files, error.code, and error.hint.`),
 		Examples: []string{
@@ -88,7 +88,7 @@ It writes non-secret diagnostics such as summary.json, network.json, page.html, 
 }
 
 func probeCmd(o *Opts, r probe.Runner) *cobra.Command {
-	opts := probe.ProbeOptions{WaitSeconds: 8, TimeoutSeconds: 90, OutDir: "result", Browser: "auto", MaxNetworkEvents: 1000, SaveHTML: true, SaveScreenshot: true}
+	opts := probe.ProbeOptions{WaitSeconds: 8, TimeoutSeconds: 90, OutDir: "result", Browser: "chrome", MaxNetworkEvents: 1000, SaveHTML: true, SaveScreenshot: true}
 	c := &cobra.Command{Use: "probe", RunE: func(cmd *cobra.Command, args []string) error {
 		opts.Verbose = o.Verbose
 		if strings.TrimSpace(opts.URL) == "" {
@@ -138,7 +138,7 @@ func probeCmd(o *Opts, r probe.Runner) *cobra.Command {
 	c.Flags().StringVar(&opts.ProfileDir, "profile", "", "")
 	c.Flags().BoolVar(&opts.CleanProfile, "clean-profile", false, "")
 	c.Flags().StringVar(&opts.BrowserExe, "browser-exe", "", "")
-	c.Flags().StringVar(&opts.Browser, "browser", "auto", "")
+	c.Flags().StringVar(&opts.Browser, "browser", "chrome", "")
 	c.Flags().BoolVar(&opts.Headless, "headless", false, "")
 	c.Flags().BoolVar(&opts.IgnoreCertErrors, "ignore-cert-errors", false, "")
 	c.Flags().StringVar(&opts.FetchAPI, "fetch-api", "", "")
@@ -187,7 +187,7 @@ func browserLLMTips() []string {
 		"For agents, --json is the default way to use every browser command and subcommand.",
 		"Always add --json so results and failures use the stable ok/data/error envelope; omit it only when intentionally reading human-oriented --help text.",
 		"browser is a terminal-invoked CLI binary.",
-		"It opens Edge/Chrome/Chromium through DevTools.",
+		"It opens Chrome through DevTools by default; pass --browser edge, --browser chromium, or --browser auto when needed.",
 		"It uses a dedicated browser profile by default.",
 		"It does not export cookies or tokens.",
 		"Use browser session start to keep a dedicated browser open for multi-step agent workflows.",

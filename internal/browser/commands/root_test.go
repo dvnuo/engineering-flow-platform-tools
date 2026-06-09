@@ -50,6 +50,27 @@ func TestSchemaProbeRequiresURL(t *testing.T) {
 	t.Fatalf("schema did not require url: %#v", data)
 }
 
+func TestSchemaBrowserDefaultsToChrome(t *testing.T) {
+	for _, command := range []string{"probe", "session.start"} {
+		out := run(t, &fakeRunner{}, "schema", command, "--json")
+		data := out["data"].(map[string]any)
+		flags := data["flags"].([]any)
+		found := false
+		for _, raw := range flags {
+			flag := raw.(map[string]any)
+			if flag["name"] == "browser" {
+				found = true
+				if flag["default"] != "chrome" {
+					t.Fatalf("%s --browser default = %v want chrome", command, flag["default"])
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("%s missing --browser flag in %#v", command, data)
+		}
+	}
+}
+
 func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
 	cases := map[string][]string{
 		"session.start":       {"download-dir"},

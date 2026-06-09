@@ -282,6 +282,9 @@ func TestVisualMermaidArchitectureBrowserContract(t *testing.T) {
 		"ground_route_rail_visible_count":   3,
 		"explicit_route_link_count":         3,
 		"explicit_link_label_count":         3,
+		"relation_depth_test_enabled_count": 1,
+		"primary_route_count":               2,
+		"secondary_route_count":             1,
 	} {
 		if summary[field].(float64) < min {
 			t.Fatalf("browser visual summary expected %s >= %.0f, got %#v", field, min, summary)
@@ -291,6 +294,11 @@ func TestVisualMermaidArchitectureBrowserContract(t *testing.T) {
 		summary["screen_svg_relation_layer_visible"] != false ||
 		summary["generic_link_label_count"].(float64) != 0 ||
 		summary["isolated_arrowhead_count"].(float64) != 0 ||
+		summary["relation_render_mode"] != "ground_decal" ||
+		summary["relation_depth_test_disabled_count"].(float64) != 0 ||
+		summary["route_entity_intersection_count"].(float64) != 0 ||
+		summary["route_port_hint_violation_count"].(float64) != 0 ||
+		summary["route_direction_violation_count"].(float64) != 0 ||
 		summary["relation_layer_mode"] != "world_ground" ||
 		summary["link_label_mode"] != "html_billboard" ||
 		summary["inspector_raw_json_default"] != false {

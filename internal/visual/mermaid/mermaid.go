@@ -25,6 +25,8 @@ type Edge struct {
 	ID        string
 	From      string
 	To        string
+	FromPort  string
+	ToPort    string
 	Label     string
 	Kind      string
 	Directed  bool
@@ -246,20 +248,19 @@ func compile(kind string, d Diagram) map[string]any {
 
 func compileIsometric(d Diagram) map[string]any {
 	nodes := sortedNodes(d)
-	groups := sortedGroups(d)
+	nodeMap := nodeMapByID(nodes)
+	ranks := architectureRanks(nodes, d.Edges)
+	groups := architectureSortedGroups(d, nodes, ranks)
 	if len(groups) == 0 {
 		groups = []Group{{ID: "main-zone", Label: "MAIN ZONE", Kind: "zone"}}
 	}
-	groupIndex := map[string]int{}
-	for i := range groups {
-		groupIndex[groups[i].ID] = i
-	}
 	zoneBounds := map[string]map[string]any{}
 	zones := make([]any, 0, len(groups))
+	zoneW := 7.4
+	zoneH := 6.3
+	zoneGap := 2.8
 	for i, group := range groups {
-		col := i % 3
-		row := i / 3
-		bounds := map[string]any{"x": float64(col)*14.2 + 0.5, "y": float64(row)*9.6 + 0.8, "w": 11.4, "h": 7.8}
+		bounds := map[string]any{"x": 0.5 + float64(i)*(zoneW+zoneGap), "y": 0.8, "w": zoneW, "h": zoneH}
 		zoneBounds[group.ID] = bounds
 		zones = append(zones, map[string]any{
 			"id":         group.ID,
@@ -277,100 +278,77 @@ func compileIsometric(d Diagram) map[string]any {
 		})
 	}
 	entities := make([]any, 0, len(nodes))
-	groupCounts := map[string]int{}
 	nodePos := map[string]map[string]float64{}
-	for i, node := range nodes {
-		groupID := node.Group
-		if groupID == "" || zoneBounds[groupID] == nil {
-			if len(groups) > 0 {
-				groupID = groups[i%len(groups)].ID
-			} else {
-				groupID = "main-zone"
+	groupNodes := architectureNodesByGroup(nodes, groups, ranks)
+	for _, group := range groups {
+		members := groupNodes[group.ID]
+		for i, node := range members {
+			groupID := node.Group
+			if groupID == "" || zoneBounds[groupID] == nil {
+				if len(groups) > 0 {
+					groupID = group.ID
+				} else {
+					groupID = "main-zone"
+				}
 			}
+			b := zoneBounds[groupID]
+			colCount := int(math.Ceil(math.Sqrt(float64(len(members)))))
+			if colCount < 1 {
+				colCount = 1
+			}
+			col := i % colCount
+			row := i / colCount
+			cellW := number(b["w"]) / float64(colCount+1)
+			cellH := number(b["h"]) / float64(maxInt(2, int(math.Ceil(float64(len(members))/float64(colCount)))+1))
+			x := number(b["x"]) + cellW*float64(col+1)
+			y := number(b["y"]) + number(b["h"])*0.58 - cellH*float64(row)
+			if len(members) == 1 {
+				x = number(b["x"]) + number(b["w"])*0.5
+				y = number(b["y"]) + number(b["h"])*0.54
+			}
+			nodePos[node.ID] = map[string]float64{"x": x, "y": y}
+			kind := inferEntityKind(node)
+			entities = append(entities, map[string]any{
+				"id":         node.ID,
+				"label":      nonEmpty(node.Label, node.ID),
+				"kind":       kind,
+				"zone":       groupID,
+				"position":   map[string]any{"x": x, "y": y},
+				"size":       map[string]any{"w": 2.0, "d": 2.0, "h": 1.6},
+				"importance": 0.62,
+				"presentation": map[string]any{
+					"icon": iconForKind(kind),
+				},
+			})
 		}
-		count := groupCounts[groupID]
-		groupCounts[groupID]++
-		b := zoneBounds[groupID]
-		col := count % 3
-		row := count / 3
-		x := number(b["x"]) + 1.7 + float64(col)*4.05
-		y := number(b["y"]) + 1.65 + float64(row)*2.85
-		nodePos[node.ID] = map[string]float64{"x": x, "y": y}
-		kind := inferEntityKind(node)
-		entities = append(entities, map[string]any{
-			"id":         node.ID,
-			"label":      nonEmpty(node.Label, node.ID),
-			"kind":       kind,
-			"zone":       groupID,
-			"position":   map[string]any{"x": x, "y": y},
-			"size":       map[string]any{"w": 2.0, "d": 2.0, "h": 1.6},
-			"importance": 0.62,
-			"presentation": map[string]any{
-				"icon": iconForKind(kind),
-			},
-		})
 	}
 	links := make([]any, 0, len(d.Edges))
 	for i, edge := range d.Edges {
-		role := edge.Role
-		if role == "" {
-			switch {
-			case i < 3:
-				role = "primary"
-			case edge.Dashed:
-				role = "auxiliary"
-			default:
-				role = "secondary"
-			}
-		}
+		role := inferArchitectureRole(edge, nodeMap)
+		pathGroup := inferArchitecturePathGroup(edge, nodeMap)
 		from := nodePos[edge.From]
 		to := nodePos[edge.To]
 		route := []any{}
 		if from != nil && to != nil {
 			fromX, fromY := from["x"], from["y"]
 			toX, toY := to["x"], to["y"]
-			dx, dy := toX-fromX, toY-fromY
-			laneOffset := 0.65 + float64(i%3)*0.22
-			if math.Abs(dx) >= math.Abs(dy) {
-				laneY := math.Min(fromY, toY) - laneOffset
-				if fromY > toY {
-					laneY = math.Max(fromY, toY) + laneOffset
-				}
-				exitX := fromX + signFloat(dx)*0.9
-				entryX := toX - signFloat(dx)*0.9
-				route = []any{
-					map[string]any{"x": fromX, "y": fromY},
-					map[string]any{"x": exitX, "y": fromY},
-					map[string]any{"x": exitX, "y": laneY},
-					map[string]any{"x": entryX, "y": laneY},
-					map[string]any{"x": entryX, "y": toY},
-					map[string]any{"x": toX, "y": toY},
-				}
-			} else {
-				laneX := math.Min(fromX, toX) - laneOffset
-				if fromX > toX {
-					laneX = math.Max(fromX, toX) + laneOffset
-				}
-				exitY := fromY + signFloat(dy)*0.9
-				entryY := toY - signFloat(dy)*0.9
-				route = []any{
-					map[string]any{"x": fromX, "y": fromY},
-					map[string]any{"x": fromX, "y": exitY},
-					map[string]any{"x": laneX, "y": exitY},
-					map[string]any{"x": laneX, "y": entryY},
-					map[string]any{"x": toX, "y": entryY},
-					map[string]any{"x": toX, "y": toY},
-				}
+			route = []any{map[string]any{"x": fromX, "y": fromY}}
+			if math.Abs(fromY-toY) > 0.4 && math.Abs(fromX-toX) > 0.4 {
+				bendX := (fromX + toX) / 2
+				route = append(route, map[string]any{"x": bendX, "y": fromY}, map[string]any{"x": bendX, "y": toY})
 			}
+			route = append(route, map[string]any{"x": toX, "y": toY})
 		}
 		linkItem := map[string]any{
 			"id":            nonEmpty(edge.ID, fmt.Sprintf("link_%02d", i+1)),
 			"from":          edge.From,
 			"to":            edge.To,
+			"from_port":     edge.FromPort,
+			"to_port":       edge.ToPort,
 			"kind":          nonEmpty(edge.Kind, "depends_on"),
 			"directed":      edge.Directed,
 			"role":          role,
-			"pathGroup":     nonEmpty(edge.PathGroup, "main"),
+			"pathGroup":     pathGroup,
 			"routeStyle":    "orthogonal",
 			"route":         route,
 			"importance":    importanceForRole(role),
@@ -379,6 +357,12 @@ func compileIsometric(d Diagram) map[string]any {
 				"arrow":     "forward",
 				"lineStyle": lineStyle(edge, role),
 				"color":     colorForRole(role),
+				"fromPort":  edge.FromPort,
+				"toPort":    edge.ToPort,
+			},
+			"metadata": map[string]any{
+				"mermaid_from_port": edge.FromPort,
+				"mermaid_to_port":   edge.ToPort,
 			},
 		}
 		if label := compact(edge.Label, 22); label != "" {
@@ -425,17 +409,205 @@ func compileIsometric(d Diagram) map[string]any {
 			"labelIcon":            true,
 			"layoutScale":          1.55,
 			"preferExplicitRoutes": true,
+			"relationLayer":        "world_ground",
+			"relationRenderMode":   "ground_decal",
+			"linkLabelMode":        "html_billboard",
 			"showLegend":           true,
 		},
 		"metadata": sourceMetadata(d),
 	}
 }
 
-func signFloat(value float64) float64 {
-	if value < 0 {
-		return -1
+func nodeMapByID(nodes []Node) map[string]Node {
+	out := map[string]Node{}
+	for _, node := range nodes {
+		out[node.ID] = node
 	}
-	return 1
+	return out
+}
+
+func architectureRanks(nodes []Node, edges []Edge) map[string]int {
+	ranks := map[string]int{}
+	for _, node := range nodes {
+		ranks[node.ID] = 0
+	}
+	for pass := 0; pass < len(nodes)+len(edges)+2; pass++ {
+		changed := false
+		for _, edge := range edges {
+			if _, ok := ranks[edge.From]; !ok {
+				continue
+			}
+			if _, ok := ranks[edge.To]; !ok {
+				continue
+			}
+			forward := edgeWantsForwardRank(edge)
+			if forward {
+				next := ranks[edge.From] + 1
+				if ranks[edge.To] < next {
+					ranks[edge.To] = next
+					changed = true
+				}
+				continue
+			}
+			next := ranks[edge.To] + 1
+			if ranks[edge.From] < next {
+				ranks[edge.From] = next
+				changed = true
+			}
+		}
+		if !changed {
+			break
+		}
+	}
+	minRank := 0
+	for _, rank := range ranks {
+		if rank < minRank {
+			minRank = rank
+		}
+	}
+	if minRank != 0 {
+		for id, rank := range ranks {
+			ranks[id] = rank - minRank
+		}
+	}
+	return ranks
+}
+
+func edgeWantsForwardRank(edge Edge) bool {
+	from := strings.ToUpper(strings.TrimSpace(edge.FromPort))
+	to := strings.ToUpper(strings.TrimSpace(edge.ToPort))
+	if from == "L" && to == "R" {
+		return false
+	}
+	return true
+}
+
+func architectureSortedGroups(d Diagram, nodes []Node, ranks map[string]int) []Group {
+	groups := sortedGroups(d)
+	if len(groups) == 0 {
+		return groups
+	}
+	groupRank := map[string]int{}
+	groupCount := map[string]int{}
+	for _, group := range groups {
+		groupRank[group.ID] = 9999
+	}
+	for _, node := range nodes {
+		if node.Group == "" {
+			continue
+		}
+		rank := ranks[node.ID]
+		if rank < groupRank[node.Group] {
+			groupRank[node.Group] = rank
+		}
+		groupCount[node.Group]++
+	}
+	for _, group := range groups {
+		if groupCount[group.ID] == 0 {
+			groupRank[group.ID] = 9999
+		}
+	}
+	sort.SliceStable(groups, func(i, j int) bool {
+		if groupRank[groups[i].ID] != groupRank[groups[j].ID] {
+			return groupRank[groups[i].ID] < groupRank[groups[j].ID]
+		}
+		return groups[i].ID < groups[j].ID
+	})
+	return groups
+}
+
+func architectureNodesByGroup(nodes []Node, groups []Group, ranks map[string]int) map[string][]Node {
+	out := map[string][]Node{}
+	defaultGroup := "main-zone"
+	if len(groups) > 0 {
+		defaultGroup = groups[0].ID
+	}
+	groupExists := map[string]bool{}
+	for _, group := range groups {
+		groupExists[group.ID] = true
+	}
+	for _, node := range nodes {
+		groupID := node.Group
+		if groupID == "" || !groupExists[groupID] {
+			groupID = defaultGroup
+		}
+		node.Group = groupID
+		out[groupID] = append(out[groupID], node)
+	}
+	for groupID := range out {
+		sort.SliceStable(out[groupID], func(i, j int) bool {
+			left := out[groupID][i]
+			right := out[groupID][j]
+			if ranks[left.ID] != ranks[right.ID] {
+				return ranks[left.ID] < ranks[right.ID]
+			}
+			return left.ID < right.ID
+		})
+	}
+	return out
+}
+
+func inferArchitectureRole(edge Edge, nodes map[string]Node) string {
+	if edge.Role != "" {
+		return edge.Role
+	}
+	if edge.Dashed {
+		return "auxiliary"
+	}
+	group := inferArchitecturePathGroup(edge, nodes)
+	from := inferEntityKind(nodes[edge.From])
+	to := inferEntityKind(nodes[edge.To])
+	if group == "health" || group == "observability" {
+		return "auxiliary"
+	}
+	if group == "data" || group == "cache" || group == "storage" {
+		return "secondary"
+	}
+	if group == "gateway" || (from == "client" && (to == "api_gateway" || to == "nginx")) || to == "api_gateway" {
+		return "primary"
+	}
+	if group == "service" && (from == "api_gateway" || strings.Contains(strings.ToLower(edge.Label), "service")) {
+		return "primary"
+	}
+	return "secondary"
+}
+
+func inferArchitecturePathGroup(edge Edge, nodes map[string]Node) string {
+	if edge.PathGroup != "" {
+		return edge.PathGroup
+	}
+	if inferred := pathGroupFromLabel(edge.Label); inferred != "" {
+		if inferred == "data" {
+			return "data"
+		}
+		return inferred
+	}
+	label := strings.ToLower(edge.Label)
+	from := inferEntityKind(nodes[edge.From])
+	to := inferEntityKind(nodes[edge.To])
+	switch {
+	case strings.Contains(label, "service"):
+		return "service"
+	case to == "database":
+		return "data"
+	case to == "redis":
+		return "cache"
+	case to == "storage":
+		return "storage"
+	case to == "registry":
+		return "registry"
+	case from == "client" || to == "api_gateway":
+		return "gateway"
+	default:
+		return "main"
+	}
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func compileGraph(d Diagram, withEvents bool) map[string]any {
@@ -682,12 +854,12 @@ func parseArchitectureEdge(line string, index int) (Edge, bool) {
 			return Edge{}, false
 		}
 	}
-	from := archEndpointID(parts[0])
-	to := archEndpointID(parts[len(parts)-1])
+	from, fromPort := parseArchEndpoint(parts[0])
+	to, toPort := parseArchEndpoint(parts[len(parts)-1])
 	if from == "" || to == "" {
 		return Edge{}, false
 	}
-	return Edge{ID: fmt.Sprintf("edge_%02d", index), From: from, To: to, Label: cleanText(label), Kind: kindFromLabel(label), Directed: strings.Contains(line, ">") || strings.Contains(line, "<"), Role: roleFromLabel(label), PathGroup: pathGroupFromLabel(label)}, true
+	return Edge{ID: fmt.Sprintf("edge_%02d", index), From: from, To: to, FromPort: fromPort, ToPort: toPort, Label: cleanText(label), Kind: kindFromLabel(label), Directed: strings.Contains(line, ">") || strings.Contains(line, "<"), Role: roleFromLabel(label), PathGroup: pathGroupFromLabel(label)}, true
 }
 
 func parseFlowEdge(line string, index int) (Edge, bool) {
@@ -1171,20 +1343,34 @@ func stripBarLabels(line string) string {
 }
 
 func archEndpointID(raw string) string {
+	id, _ := parseArchEndpoint(raw)
+	return id
+}
+
+func parseArchEndpoint(raw string) (string, string) {
 	s := strings.TrimSpace(raw)
 	s = strings.Trim(s, "\"` ")
 	parts := strings.Split(s, ":")
 	if len(parts) == 2 {
-		if len(parts[0]) == 1 {
-			return sanitizeID(parts[1])
+		left := strings.TrimSpace(parts[0])
+		right := strings.TrimSpace(parts[1])
+		if isMermaidPort(left) {
+			return sanitizeID(right), strings.ToUpper(left)
 		}
-		return sanitizeID(parts[0])
+		if isMermaidPort(right) {
+			return sanitizeID(left), strings.ToUpper(right)
+		}
 	}
 	fields := strings.Fields(s)
 	if len(fields) == 0 {
-		return ""
+		return "", ""
 	}
-	return sanitizeID(fields[0])
+	return sanitizeID(fields[0]), ""
+}
+
+func isMermaidPort(value string) bool {
+	value = strings.ToUpper(strings.TrimSpace(value))
+	return len(value) == 1 && strings.Contains("LRTB", value)
 }
 
 func cleanText(value string) string {

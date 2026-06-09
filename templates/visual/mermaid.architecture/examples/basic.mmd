@@ -2,12 +2,14 @@
 title: Mermaid Architecture Example
 ---
 architecture-beta
+  group client(cloud)[Client Zone]
   group edge(cloud)[Edge Zone]
   group app(server)[Application Zone]
-  service browser(internet)[Browser] in edge
+  group data(database)[Data Zone]
+  service browser(internet)[Browser] in client
   service gateway(server)[API Gateway] in edge
   service service(server)[Order Service] in app
-  service db(database)[Order Database] in app
+  service db(database)[Order Database] in data
   browser:R -->|API| L:gateway
   gateway:R -->|Service| L:service
   service:R -->|Data| L:db

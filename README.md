@@ -236,12 +236,15 @@ jira issue get PROJ-123 --instance local --json
 jira issue search --jql 'project = PROJ' --limit 10 --json
 jira zephyr doctor --project PROJ --json
 jira zephyr summary --project PROJ --version-id -1 --json
+jira zephyr version resolve --project PROJ --name "1.0" --json
 jira zephyr cycle list --project PROJ --version-id -1 --json
 jira zephyr cycle resolve --project PROJ --name "Sprint 42 Regression" --version-id -1 --json
 jira zephyr execution list --cycle-id 20000 --project-id 10000 --version-id -1 --status FAIL --json
 jira zephyr execution resolve --cycle-id 20000 --issue PROJ-123 --project PROJ --version-id -1 --json
 jira zephyr execution update-status --cycle-id 20000 --issue PROJ-123 --status PASSED --dry-run --json
 jira zephyr execution bulk-update-status --execution-ids 30000,30001 --status PASS --dry-run --json
+jira zephyr archive list --project-id 10000 --version-id -1 --json
+jira zephyr customfield list --entity-type EXECUTION --project-id 10000 --json
 jira zephyr status list --json
 jira zephyr api catalog --json
 jira zephyr cycle delete 20000 --yes --dry-run --json

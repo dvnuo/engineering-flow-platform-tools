@@ -120,6 +120,8 @@ Agents must not discover templates by listing `templates/visual` directories or 
 - jira zephyr test list
 - jira zephyr test get <issue-or-url>
 - jira zephyr test create
+- jira zephyr version list
+- jira zephyr version resolve
 - jira zephyr cycle list
 - jira zephyr cycle resolve
 - jira zephyr cycle get <cycle-id>
@@ -136,6 +138,10 @@ Agents must not discover templates by listing `templates/visual` directories or 
 - jira zephyr execution delete <execution-id>
 - jira zephyr execution bulk-update-status
 - jira zephyr execution export
+- jira zephyr archive list
+- jira zephyr archive executions
+- jira zephyr archive restore
+- jira zephyr archive export
 - jira zephyr zql search
 - jira zephyr zql clauses
 - jira zephyr zql autocomplete-json
@@ -157,6 +163,13 @@ Agents must not discover templates by listing `templates/visual` directories or 
 - jira zephyr teststep delete
 - jira zephyr defect list
 - jira zephyr defect add
+- jira zephyr customfield list
+- jira zephyr customfield get <customfield-id>
+- jira zephyr customfield create
+- jira zephyr customfield update <customfield-id>
+- jira zephyr customfield delete <customfield-id>
+- jira zephyr customfield delete-bulk
+- jira zephyr customfield enable <customfield-id>
 - jira zephyr report coverage
 - jira zephyr api catalog
 - jira zephyr api describe <endpoint-id>

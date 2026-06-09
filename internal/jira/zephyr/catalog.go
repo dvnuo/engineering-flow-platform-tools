@@ -180,7 +180,7 @@ var officialEndpoints = []Endpoint{
 	{ID: "test.summary-by-component", Group: "TestcaseResource", Method: "GET", PathTemplate: "/test/summary/testsbycomponent{?projectId,componentName,offset,maxRecords}", Summary: "Fetch Tests By Component"},
 	{ID: "test.summary-by-version", Group: "TestcaseResource", Method: "GET", PathTemplate: "/test/summary/testsbyversion{?projectId,versionName,offset,maxRecords}", Summary: "Fetch Tests By Version"},
 
-	{ID: "util.version-board-list", Group: "UtilResource", Method: "GET", PathTemplate: "/util/versionBoard-list{?projectId,versionId}", Summary: "Get All Versions"},
+	{ID: "util.version-board-list", Group: "UtilResource", Method: "GET", PathTemplate: "/util/versionBoard-list{?projectId,versionId}", Summary: "Get All Versions", Command: "jira zephyr version list"},
 	{ID: "util.zephyr-test-issue-type", Group: "UtilResource", Method: "GET", PathTemplate: "/util/zephyrTestIssueType", Summary: "Get Zephyr IssueType", Command: "jira zephyr util test-issue-type"},
 	{ID: "util.project-list", Group: "UtilResource", Method: "GET", PathTemplate: "/util/project-list", Summary: "Get All Projects"},
 	{ID: "util.all-versions-text", Group: "UtilResource", Method: "GET", PathTemplate: "/util/allversionstext", Summary: "Get All Versions Text"},
@@ -226,6 +226,10 @@ var officialEndpoints = []Endpoint{
 	{ID: "execution.refresh-remote-links", Group: "ExecutionResource", Method: "POST", PathTemplate: "/execution/refreshRemoteLinks{?issueLinkTypeId}", Summary: "Refresh Issue/Remote Link"},
 	{ID: "execution.bulk-assign", Group: "ExecutionResource", Method: "PUT", PathTemplate: "/execution/bulkAssign", Summary: "Assign Bulk Executions"},
 	{ID: "execution.update-bulk-status", Group: "ExecutionResource", Method: "PUT", PathTemplate: "/execution/updateBulkStatus", Summary: "Update Bulk Execution Status", Command: "jira zephyr execution bulk-update-status"},
+	{ID: "execution.archive", Group: "ExecutionArchiveResource", Method: "POST", PathTemplate: "/execution/archive", Summary: "Archive Executions", Command: "jira zephyr archive executions"},
+	{ID: "execution.restore", Group: "ExecutionArchiveResource", Method: "POST", PathTemplate: "/execution/restore", Summary: "Restore Archived Executions", Command: "jira zephyr archive restore"},
+	{ID: "execution.archive-list", Group: "ExecutionArchiveResource", Method: "GET", PathTemplate: "/execution/archive{?projectId,versionId,cycleId,folderId,offset,maxRecords}", Summary: "Get Archived Executions", Command: "jira zephyr archive list"},
+	{ID: "execution.archive-export", Group: "ExecutionArchiveResource", Method: "POST", PathTemplate: "/execution/archive/export", Summary: "Export Archived Executions", Command: "jira zephyr archive export"},
 
 	{ID: "issue-picker.issues", Group: "IssuePickerResource", Method: "GET", PathTemplate: "/issues{?query,currentJQL,currentIssueKey,currentProjectId,showSubTasks,showSubTaskParent}", Summary: "Get Issues for Test"},
 	{ID: "issue-picker.default", Group: "IssuePickerResource", Method: "GET", PathTemplate: "/issues/default{?project}", Summary: "Get Default Issue Type"},
@@ -246,6 +250,15 @@ var officialEndpoints = []Endpoint{
 	{ID: "attachment.get", Group: "AttachmentResource", Method: "GET", PathTemplate: "/attachment/{id}", Summary: "Get Single Attachment", Command: "jira zephyr attachment get <attachment-id>"},
 	{ID: "attachment.list", Group: "AttachmentResource", Method: "GET", PathTemplate: "/attachment/attachmentsByEntity{?entityId,entityType}", Summary: "Get Attachment By Entity", Command: "jira zephyr attachment list"},
 	{ID: "attachment.file", Group: "AttachmentResource", Method: "GET", PathTemplate: "/attachment/{fileid}/file", Summary: "Get Attachment File"},
+
+	{ID: "customfield.create", Group: "CustomFieldResource", Method: "POST", PathTemplate: "/customfield/create", Summary: "Create Custom Field", Command: "jira zephyr customfield create"},
+	{ID: "customfield.update", Group: "CustomFieldResource", Method: "PUT", PathTemplate: "/customfield/{id}", Summary: "Update Custom Field", Command: "jira zephyr customfield update <customfield-id>"},
+	{ID: "customfield.get", Group: "CustomFieldResource", Method: "GET", PathTemplate: "/customfield/{id}", Summary: "Get Custom Field", Command: "jira zephyr customfield get <customfield-id>"},
+	{ID: "customfield.list-by-entity", Group: "CustomFieldResource", Method: "GET", PathTemplate: "/customfield/entity{?entityType}", Summary: "Get Custom Fields by Entity Type", Command: "jira zephyr customfield list"},
+	{ID: "customfield.list-by-entity-and-project", Group: "CustomFieldResource", Method: "GET", PathTemplate: "/customfield/byEntityTypeAndProject{?entityType,projectId}", Summary: "Get Custom Fields by Entity Type and Project", Command: "jira zephyr customfield list"},
+	{ID: "customfield.delete", Group: "CustomFieldResource", Method: "DELETE", PathTemplate: "/customfield/{id}", Summary: "Delete Custom Field", Command: "jira zephyr customfield delete <customfield-id>"},
+	{ID: "customfield.delete-bulk", Group: "CustomFieldResource", Method: "DELETE", PathTemplate: "/customfield/delete-customfields", Summary: "Delete Custom Fields", Command: "jira zephyr customfield delete-bulk"},
+	{ID: "customfield.enable", Group: "CustomFieldResource", Method: "DELETE", PathTemplate: "/customfield/{id}/{projectId}{?enable}", Summary: "Enable or Disable Custom Field for Project", Command: "jira zephyr customfield enable <customfield-id>"},
 
 	{ID: "zapi.module-info", Group: "ZAPIResource", Method: "GET", PathTemplate: "/moduleInfo", Summary: "Get ZAPI Module Status", Command: "jira zephyr doctor"},
 	{ID: "zql.autocomplete", Group: "ZQLAutoCompleteResource", Method: "GET", PathTemplate: "/zql/autocomplete{?fieldName,fieldValue}", Summary: "Get ZQL Auto Complete Result", Command: "jira zephyr zql autocomplete"},

@@ -74,7 +74,7 @@ func TestDocsAndScriptsExist(t *testing.T) {
 		"../docs/TROUBLESHOOTING.md",
 		"../docs/VISUAL.md",
 		"../scripts/smoke.sh",
-		"../scripts/smoke.ps1",
+		"../scripts/smoke.bat",
 		"../.github/workflows/release.yml",
 	} {
 		if _, err := os.Stat(path); err != nil {
@@ -84,7 +84,7 @@ func TestDocsAndScriptsExist(t *testing.T) {
 }
 
 func TestBuildScriptsListRequiredTargets(t *testing.T) {
-	for _, path := range []string{"../scripts/build.sh", "../scripts/build.ps1"} {
+	for _, path := range []string{"../scripts/build.sh", "../scripts/build.bat"} {
 		b, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)

@@ -1181,6 +1181,8 @@ func argumentDescription(name string) string {
 		return "Zephyr folder id."
 	case "endpoint-id":
 		return "Zephyr API endpoint id from jira zephyr api catalog."
+	case "customfield-id":
+		return "Zephyr custom field id."
 	case "component-id":
 		return "Jira component id."
 	case "version-id":
@@ -1334,7 +1336,7 @@ func flagTypeFor(command, name string) string {
 
 func flagType(name string) string {
 	switch name {
-	case "json", "verbose", "dry-run", "yes", "body-stdin", "body", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error", "allow-human":
+	case "json", "verbose", "dry-run", "yes", "body-stdin", "body", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error", "allow-human", "max-allowed-result", "ui", "active", "enabled":
 		return "bool"
 	case "sample-rows", "max-create", "wait", "timeout", "max-network-events", "limit", "limit-resources", "duration-ms", "network-idle-ms", "dom-stable-ms", "equals", "min", "max", "index", "status", "limit-rows", "limit-cells", "limit-items", "debug-port", "nth", "max-scrolls", "scroll-step", "interval-ms", "max-body-bytes":
 		return "int"
@@ -1365,6 +1367,20 @@ func flagDescription(command, name string) string {
 		return "Raw query parameter in key=value form; repeat for multiple parameters."
 	case strings.HasPrefix(command, "zephyr.api.") && name == "query":
 		return "Raw Zephyr ZAPI query parameter in key=value form; repeat for multiple parameters."
+	case command == "zephyr.execution.export" && name == "type":
+		return "Export format for Zephyr execution results: xls, xlsx, or csv."
+	case command == "zephyr.archive.export" && name == "type":
+		return "Archived execution export format: xls, csv, html, or xml."
+	case command == "zephyr.archive.export" && name == "expand":
+		return "Archive export expand selector, usually teststeps."
+	case command == "zephyr.archive.export" && name == "field":
+		return "Additional archive export JSON field in key=value form; repeat for multiple fields."
+	case strings.HasPrefix(command, "zephyr.customfield.") && name == "entity-type":
+		return "Zephyr custom field entity type: EXECUTION or TESTSTEP."
+	case strings.HasPrefix(command, "zephyr.customfield.") && name == "project-id":
+		return "Jira project id used to scope the Zephyr custom field."
+	case strings.HasPrefix(command, "zephyr.customfield.") && name == "field":
+		return "Custom field request JSON field in key=value form; repeat for multiple fields."
 	}
 	switch name {
 	case "instance":
@@ -1430,6 +1446,8 @@ func flagDescription(command, name string) string {
 		return "Zephyr test execution id."
 	case "execution-ids":
 		return "Comma-separated Zephyr test execution ids."
+	case "customfield-ids":
+		return "Comma-separated Zephyr custom field ids."
 	case "issue-id":
 		return "Jira issue id."
 	case "issue":
@@ -1488,6 +1506,24 @@ func flagDescription(command, name string) string {
 		return "Zephyr ZQL field name."
 	case "field-value":
 		return "Zephyr ZQL field value prefix."
+	case "max-allowed-result":
+		return "Ask Zephyr to export up to its configured maximum result count."
+	case "ui":
+		return "Mark the Zephyr archive export request as UI-originated."
+	case "field-type":
+		return "Zephyr custom field type, such as TEXT, CHECKBOX, DATE, NUMERIC, or USER."
+	case "default-value":
+		return "Default value for a Zephyr custom field."
+	case "alias-name":
+		return "Alias name for a Zephyr custom field."
+	case "display-name":
+		return "Display name for a Zephyr custom field."
+	case "display-field-type":
+		return "Display field type for a Zephyr custom field."
+	case "active":
+		return "Create the Zephyr custom field as active."
+	case "enabled":
+		return "Enable or disable the Zephyr custom field for the project."
 	case "endpoint-id":
 		return "Official Zephyr API endpoint id from jira zephyr api catalog."
 	case "group":
@@ -1909,6 +1945,10 @@ var explicit = map[string]explicitMeta{
 		Flags: []string{"fields", "expand", "instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira zephyr test get EFP-T123 --json"},
 	"zephyr.test.create": {Description: "Create a Jira issue with issue type Test.",
 		Flags: []string{"project", "summary", "description", "field", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"project", "summary"}, Risk: "write", Example: "jira zephyr test create --project EFP --summary 'Login rejects expired token' --dry-run --json"},
+	"zephyr.version.list": {Description: "List Jira versions as Zephyr version board entries for a project.",
+		Flags: []string{"project", "project-id", "version-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"project|project-id"}, Risk: "read", Example: "jira zephyr version list --project EFP --json"},
+	"zephyr.version.resolve": {Description: "Resolve a Jira version name to the Zephyr/Jira version id used by cycles and executions.",
+		Flags: []string{"name", "project", "project-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"name", "project|project-id"}, Risk: "read", Example: "jira zephyr version resolve --project EFP --name '1.0' --json"},
 	"zephyr.cycle.list": {Description: "List Zephyr test cycles for a Jira project and version.",
 		Flags: []string{"project", "project-id", "version-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"project|project-id"}, Risk: "read", Example: "jira zephyr cycle list --project EFP --version-id -1 --json"},
 	"zephyr.cycle.resolve": {Description: "Resolve a Zephyr test cycle name to a deterministic cycle id.",
@@ -1941,6 +1981,14 @@ var explicit = map[string]explicitMeta{
 		Flags: []string{"execution-ids", "status", "comment", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-ids", "status"}, Risk: "write", Example: "jira zephyr execution bulk-update-status --execution-ids 1,2,3 --status PASS --dry-run --json"},
 	"zephyr.execution.export": {Description: "Return exportable Zephyr execution query results as JSON.",
 		Flags: []string{"zql", "type", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"zql"}, Risk: "read", Example: "jira zephyr execution export --zql 'executionStatus != UNEXECUTED' --type xls --json"},
+	"zephyr.archive.list": {Description: "List archived Zephyr executions with optional project, version, cycle, and folder filters.",
+		Flags: []string{"project-id", "version-id", "cycle-id", "folder-id", "offset", "limit", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira zephyr archive list --project-id 10000 --version-id -1 --json"},
+	"zephyr.archive.executions": {Description: "Archive Zephyr executions after explicit confirmation.",
+		Flags: []string{"execution-ids", "yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-ids", "yes"}, Risk: "write_requires_confirmation", Example: "jira zephyr archive executions --execution-ids 30000,30001 --yes --dry-run --json"},
+	"zephyr.archive.restore": {Description: "Restore archived Zephyr executions.",
+		Flags: []string{"execution-ids", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-ids"}, Risk: "write", Example: "jira zephyr archive restore --execution-ids 30000,30001 --dry-run --json"},
+	"zephyr.archive.export": {Description: "Export archived Zephyr execution data in a Zephyr-supported format.",
+		Flags: []string{"type", "max-allowed-result", "expand", "start", "ui", "field", "instance", "config", "json", "format", "verbose", "dry-run"}, Risk: "read", Example: "jira zephyr archive export --type csv --dry-run --json"},
 	"zephyr.zql.search": {Description: "Search Zephyr executions with ZQL through legacy ZAPI.",
 		Flags: []string{"query", "limit", "start", "instance", "config", "json", "format", "verbose"}, Required: []string{"query"}, Risk: "read", Example: "jira zephyr zql search --query 'executionStatus = FAIL' --limit 100 --json"},
 	"zephyr.zql.clauses": {Description: "Fetch official Zephyr ZQL clause metadata.",
@@ -1983,6 +2031,20 @@ var explicit = map[string]explicitMeta{
 		Flags: []string{"execution-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"execution-id"}, Risk: "read", Example: "jira zephyr defect list --execution-id 30000 --json"},
 	"zephyr.defect.add": {Description: "Link a Jira defect issue to a Zephyr execution.",
 		Flags: []string{"execution-id", "issue", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-id", "issue"}, Risk: "write", Example: "jira zephyr defect add --execution-id 30000 --issue EFP-999 --dry-run --json"},
+	"zephyr.customfield.list": {Description: "List Zephyr custom fields by entity type, optionally scoped to a project.",
+		Flags: []string{"entity-type", "project-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"entity-type"}, Risk: "read", Example: "jira zephyr customfield list --entity-type EXECUTION --project-id 10000 --json"},
+	"zephyr.customfield.get": {Description: "Fetch a Zephyr custom field by id.",
+		Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"customfield-id"}, Risk: "read", Example: "jira zephyr customfield get 3 --json"},
+	"zephyr.customfield.create": {Description: "Create a Zephyr custom field.",
+		Flags: []string{"name", "description", "default-value", "alias-name", "project-id", "display-name", "display-field-type", "entity-type", "field-type", "active", "body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"name|body|body-file|body-stdin"}, Risk: "write", Example: "jira zephyr customfield create --name 'Actual Result' --entity-type EXECUTION --field-type TEXT --dry-run --json"},
+	"zephyr.customfield.update": {Description: "Update a Zephyr custom field.",
+		Flags: []string{"name", "description", "default-value", "alias-name", "project-id", "display-name", "display-field-type", "entity-type", "field", "body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"customfield-id", "name|description|default-value|alias-name|project-id|display-name|display-field-type|entity-type|field|body|body-file|body-stdin"}, Risk: "write", Example: "jira zephyr customfield update 3 --name 'Actual Result RC2' --dry-run --json"},
+	"zephyr.customfield.delete": {Description: "Delete a Zephyr custom field after explicit confirmation.",
+		Flags: []string{"yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"customfield-id", "yes"}, Risk: "delete", Example: "jira zephyr customfield delete 3 --yes --dry-run --json"},
+	"zephyr.customfield.delete-bulk": {Description: "Delete multiple Zephyr custom fields after explicit confirmation.",
+		Flags: []string{"customfield-ids", "yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"customfield-ids", "yes"}, Risk: "delete", Example: "jira zephyr customfield delete-bulk --customfield-ids 3,14 --yes --dry-run --json"},
+	"zephyr.customfield.enable": {Description: "Enable or disable a Zephyr custom field for a project.",
+		Flags: []string{"project-id", "enabled", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"customfield-id", "project-id"}, Risk: "write", Example: "jira zephyr customfield enable 3 --project-id 10000 --enabled=false --dry-run --json"},
 	"zephyr.report.coverage": {Description: "Build a conservative Zephyr coverage summary from cycle data.",
 		Flags: []string{"project", "project-id", "version-id", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira zephyr report coverage --project EFP --version-id -1 --json"},
 	"zephyr.api.get": {Description: "Call a raw Zephyr legacy ZAPI GET path on the selected Jira instance.",

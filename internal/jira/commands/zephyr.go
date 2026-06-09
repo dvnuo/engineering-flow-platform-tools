@@ -81,7 +81,7 @@ func zephyrCmd(o *Opts) *cobra.Command {
 	}})
 	c.AddCommand(util)
 
-	c.AddCommand(zephyrTestCmd(o), zephyrCycleCmd(o), zephyrExecutionCmd(o), zephyrSummaryCmd(o), zephyrZQLCmd(o), zephyrStepResultCmd(o), zephyrAttachmentCmd(o), zephyrFolderCmd(o), zephyrTeststepCmd(o), zephyrDefectCmd(o), zephyrReportCmd(o), zephyrAPICmd(o))
+	c.AddCommand(zephyrTestCmd(o), zephyrVersionCmd(o), zephyrCycleCmd(o), zephyrExecutionCmd(o), zephyrArchiveCmd(o), zephyrSummaryCmd(o), zephyrZQLCmd(o), zephyrStepResultCmd(o), zephyrAttachmentCmd(o), zephyrFolderCmd(o), zephyrTeststepCmd(o), zephyrDefectCmd(o), zephyrCustomFieldCmd(o), zephyrReportCmd(o), zephyrAPICmd(o))
 	return c
 }
 
@@ -326,6 +326,52 @@ func zephyrCycleCmd(o *Opts) *cobra.Command {
 		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"deleted": true}))
 	}}
 	c.AddCommand(del)
+	return c
+}
+
+func zephyrVersionCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "version"}
+	list := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		projectID, err := zephyrProjectID(rt, mustS(cmd, "project"), mustS(cmd, "project-id"), o.DryRun)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_project_unresolved"))
+		}
+		q := map[string]string{"projectId": projectID}
+		if versionID := mustS(cmd, "version-id"); versionID != "" {
+			q["versionId"] = versionID
+		}
+		path := rt.client.ZAPI("util/versionBoard-list")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.Get("util/versionBoard-list", q)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, zephyrVersionListData(projectID, raw)))
+	}}
+	addProjectVersionFlags(list)
+	c.AddCommand(list)
+
+	resolve := &cobra.Command{Use: "resolve", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		data, err := zephyrResolveVersion(rt, mustS(cmd, "name"), mustS(cmd, "project"), mustS(cmd, "project-id"))
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_version_not_found"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, data))
+	}}
+	resolve.Flags().String("name", "", "")
+	resolve.Flags().String("project", "", "")
+	resolve.Flags().String("project-id", "", "")
+	c.AddCommand(resolve)
 	return c
 }
 
@@ -634,6 +680,121 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 	}}
 	exportCmd.Flags().String("zql", "", "")
 	exportCmd.Flags().String("type", "xls", "")
+	c.AddCommand(exportCmd)
+	return c
+}
+
+func zephyrArchiveCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "archive"}
+	list := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		q := map[string]string{}
+		for _, key := range []string{"project-id", "version-id", "cycle-id", "folder-id", "offset"} {
+			if value := mustS(cmd, key); value != "" {
+				q[zephyrCamelQueryKey(key)] = value
+			}
+		}
+		if limit := mustS(cmd, "limit"); limit != "" {
+			q["maxRecords"] = limit
+		}
+		path := rt.client.ZAPI("execution/archive")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.Get("execution/archive", q)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	addArchiveScopeFlags(list)
+	c.AddCommand(list)
+
+	executions := &cobra.Command{Use: "executions", RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return invalidArgs(cmd, o, "--yes required", "Add --yes after confirming the Zephyr executions should be archived.")
+		}
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		body, err := zephyrArchiveBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "Use jira zephyr archive executions --execution-ids 30000,30001 --yes --json.")
+		}
+		path := rt.client.ZAPI("execution/archive")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("POST", path, nil, body)))
+		}
+		raw, err := rt.client.Post("execution/archive", body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	executions.Flags().String("execution-ids", "", "")
+	c.AddCommand(executions)
+
+	restore := &cobra.Command{Use: "restore", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		body, err := zephyrArchiveBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "Use jira zephyr archive restore --execution-ids 30000,30001 --json.")
+		}
+		path := rt.client.ZAPI("execution/restore")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("POST", path, nil, body)))
+		}
+		raw, err := rt.client.Post("execution/restore", body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	restore.Flags().String("execution-ids", "", "")
+	c.AddCommand(restore)
+
+	exportCmd := &cobra.Command{Use: "export", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		exportType := firstNonEmpty(mustS(cmd, "type"), "xls")
+		if !isAllowedZephyrArchiveExportType(exportType) {
+			return invalidArgs(cmd, o, "--type must be xls, csv, html, or xml", "")
+		}
+		body := map[string]interface{}{
+			"exportType":       exportType,
+			"maxAllowedResult": mustB(cmd, "max-allowed-result"),
+			"expand":           mustS(cmd, "expand"),
+			"startIndex":       mustS(cmd, "start"),
+			"isUI":             mustB(cmd, "ui"),
+		}
+		for k, v := range parseKeyValueFields(mustStringArray(cmd, "field")) {
+			body[k] = v
+		}
+		path := rt.client.ZAPI("execution/archive/export")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("POST", path, nil, body)))
+		}
+		raw, err := rt.client.Post("execution/archive/export", body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	exportCmd.Flags().String("type", "xls", "")
+	exportCmd.Flags().Bool("max-allowed-result", true, "")
+	exportCmd.Flags().String("expand", "teststeps", "")
+	exportCmd.Flags().String("start", "0", "")
+	exportCmd.Flags().Bool("ui", false, "")
+	exportCmd.Flags().StringArray("field", nil, "")
 	c.AddCommand(exportCmd)
 	return c
 }
@@ -1238,6 +1399,174 @@ func zephyrDefectCmd(o *Opts) *cobra.Command {
 	return c
 }
 
+func zephyrCustomFieldCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "customfield"}
+	list := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		entityType := zephyrCustomFieldEntityType(mustS(cmd, "entity-type"))
+		if entityType == "" {
+			return invalidArgs(cmd, o, "--entity-type required", "Use jira zephyr customfield list --entity-type EXECUTION --json.")
+		}
+		q := map[string]string{"entityType": entityType}
+		pathPart := "customfield/entity"
+		if projectID := mustS(cmd, "project-id"); projectID != "" {
+			q["projectId"] = projectID
+			pathPart = "customfield/byEntityTypeAndProject"
+		}
+		path := rt.client.ZAPI(pathPart)
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, q, nil)))
+		}
+		raw, err := rt.client.Get(pathPart, q)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	list.Flags().String("entity-type", "", "")
+	list.Flags().String("project-id", "", "")
+	c.AddCommand(list)
+
+	get := &cobra.Command{Use: "get <customfield-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		path := rt.client.ZAPI("customfield/" + zapi.PathEscape(args[0]))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("GET", path, nil, nil)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodGet, path, nil, nil)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	c.AddCommand(get)
+
+	create := &cobra.Command{Use: "create", RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		body, err := zephyrCustomFieldCreateBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "Use jira zephyr customfield create --name 'Actual Result' --entity-type EXECUTION --field-type TEXT --json.")
+		}
+		path := rt.client.ZAPI("customfield/create")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("POST", path, nil, body)))
+		}
+		raw, err := rt.client.Post("customfield/create", body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	addCustomFieldBodyFlags(create)
+	create.Flags().String("field-type", "TEXT", "")
+	create.Flags().Bool("active", true, "")
+	addJSONBodyFlags(create)
+	c.AddCommand(create)
+
+	update := &cobra.Command{Use: "update <customfield-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		body, err := zephyrCustomFieldUpdateBody(cmd)
+		if err != nil {
+			return invalidArgs(cmd, o, err.Error(), "Use jira zephyr customfield update <ID> --name 'Actual Result' --json.")
+		}
+		path := rt.client.ZAPI("customfield/" + zapi.PathEscape(args[0]))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("PUT", path, nil, body)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodPut, path, nil, body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	addCustomFieldBodyFlags(update)
+	update.Flags().StringArray("field", nil, "")
+	addJSONBodyFlags(update)
+	c.AddCommand(update)
+
+	del := &cobra.Command{Use: "delete <customfield-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return invalidArgs(cmd, o, "--yes required", "Add --yes after confirming the Zephyr custom field deletion.")
+		}
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		path := rt.client.ZAPI("customfield/" + zapi.PathEscape(args[0]))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("DELETE", path, nil, nil)))
+		}
+		if err := zephyrDelete(rt, path, nil); err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"deleted": true}))
+	}}
+	c.AddCommand(del)
+
+	deleteBulk := &cobra.Command{Use: "delete-bulk", RunE: func(cmd *cobra.Command, args []string) error {
+		if !o.Yes {
+			return invalidArgs(cmd, o, "--yes required", "Add --yes after confirming the Zephyr custom fields deletion.")
+		}
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		ids := splitCSV(mustS(cmd, "customfield-ids"))
+		if len(ids) == 0 {
+			return invalidArgs(cmd, o, "--customfield-ids required", "Use jira zephyr customfield delete-bulk --customfield-ids 3,14 --yes --json.")
+		}
+		body := map[string]interface{}{"customfields": ids}
+		path := rt.client.ZAPI("customfield/delete-customfields")
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("DELETE", path, nil, body)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodDelete, path, nil, body)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	deleteBulk.Flags().String("customfield-ids", "", "")
+	c.AddCommand(deleteBulk)
+
+	enable := &cobra.Command{Use: "enable <customfield-id>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		rt, err := newZephyrRuntime(o, "", false)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		projectID := mustS(cmd, "project-id")
+		if projectID == "" {
+			return invalidArgs(cmd, o, "--project-id required", "Use jira zephyr customfield enable <ID> --project-id 10000 --json.")
+		}
+		q := map[string]string{"enable": strconv.FormatBool(mustB(cmd, "enabled"))}
+		path := rt.client.ZAPI("customfield/" + zapi.PathEscape(args[0]) + "/" + zapi.PathEscape(projectID))
+		if o.DryRun {
+			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("DELETE", path, q, nil)))
+		}
+		raw, err := rt.client.DoJSON(http.MethodDelete, path, q, nil)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+	}}
+	enable.Flags().String("project-id", "", "")
+	enable.Flags().Bool("enabled", true, "")
+	c.AddCommand(enable)
+	return c
+}
+
 func zephyrReportCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "report"}
 	coverage := &cobra.Command{Use: "coverage", RunE: func(cmd *cobra.Command, args []string) error {
@@ -1476,6 +1805,15 @@ func addProjectVersionFlags(cmd *cobra.Command) {
 	cmd.Flags().String("version-id", "", "")
 }
 
+func addArchiveScopeFlags(cmd *cobra.Command) {
+	cmd.Flags().String("project-id", "", "")
+	cmd.Flags().String("version-id", "", "")
+	cmd.Flags().String("cycle-id", "", "")
+	cmd.Flags().String("folder-id", "", "")
+	cmd.Flags().String("offset", "", "")
+	cmd.Flags().String("limit", "", "")
+}
+
 func addExecutionResolverFlags(cmd *cobra.Command) {
 	cmd.Flags().String("cycle-id", "", "")
 	cmd.Flags().String("issue", "", "")
@@ -1512,6 +1850,23 @@ func addCycleBodyFlags(cmd *cobra.Command) {
 	cmd.Flags().String("environment", "", "")
 }
 
+func addJSONBodyFlags(cmd *cobra.Command) {
+	cmd.Flags().String("body", "", "")
+	cmd.Flags().String("body-file", "", "")
+	cmd.Flags().Bool("body-stdin", false, "")
+}
+
+func addCustomFieldBodyFlags(cmd *cobra.Command) {
+	cmd.Flags().String("name", "", "")
+	cmd.Flags().String("description", "", "")
+	cmd.Flags().String("default-value", "", "")
+	cmd.Flags().String("alias-name", "", "")
+	cmd.Flags().String("project-id", "", "")
+	cmd.Flags().String("display-name", "", "")
+	cmd.Flags().String("display-field-type", "", "")
+	cmd.Flags().String("entity-type", "", "")
+}
+
 func addTeststepIssueFlags(cmd *cobra.Command) {
 	cmd.Flags().String("issue", "", "")
 }
@@ -1545,6 +1900,99 @@ func zephyrCycleBody(cmd *cobra.Command, projectID, versionID string) map[string
 	return body
 }
 
+func zephyrArchiveBody(cmd *cobra.Command) (map[string]interface{}, error) {
+	ids := splitCSV(mustS(cmd, "execution-ids"))
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("--execution-ids required")
+	}
+	return map[string]interface{}{"executions": ids}, nil
+}
+
+func zephyrCustomFieldCreateBody(cmd *cobra.Command) (interface{}, error) {
+	if body, ok, err := optionalJSONBody(cmd); err != nil || ok {
+		return body, err
+	}
+	name := mustS(cmd, "name")
+	entityType := zephyrCustomFieldEntityType(mustS(cmd, "entity-type"))
+	fieldType := strings.ToUpper(strings.TrimSpace(mustS(cmd, "field-type")))
+	if name == "" || entityType == "" || fieldType == "" {
+		return nil, fmt.Errorf("--name, --entity-type, and --field-type required")
+	}
+	body := map[string]interface{}{
+		"name":             name,
+		"description":      mustS(cmd, "description"),
+		"defaultValue":     mustS(cmd, "default-value"),
+		"isActive":         mustB(cmd, "active"),
+		"fieldType":        fieldType,
+		"aliasName":        mustS(cmd, "alias-name"),
+		"projectId":        mustS(cmd, "project-id"),
+		"displayName":      mustS(cmd, "display-name"),
+		"displayFieldType": mustS(cmd, "display-field-type"),
+		"entityType":       entityType,
+	}
+	return body, nil
+}
+
+func zephyrCustomFieldUpdateBody(cmd *cobra.Command) (interface{}, error) {
+	if body, ok, err := optionalJSONBody(cmd); err != nil || ok {
+		return body, err
+	}
+	body := map[string]interface{}{}
+	addOptionalString(body, "name", mustS(cmd, "name"))
+	addOptionalString(body, "description", mustS(cmd, "description"))
+	addOptionalString(body, "defaultValue", mustS(cmd, "default-value"))
+	addOptionalString(body, "aliasName", mustS(cmd, "alias-name"))
+	addOptionalString(body, "projectId", mustS(cmd, "project-id"))
+	addOptionalString(body, "displayName", mustS(cmd, "display-name"))
+	addOptionalString(body, "displayFieldType", mustS(cmd, "display-field-type"))
+	if entityType := zephyrCustomFieldEntityType(mustS(cmd, "entity-type")); entityType != "" {
+		body["entityType"] = entityType
+	}
+	for k, v := range parseKeyValueFields(mustStringArray(cmd, "field")) {
+		body[k] = v
+	}
+	if len(body) == 0 {
+		return nil, fmt.Errorf("--name, --description, --field, or --body required")
+	}
+	return body, nil
+}
+
+func optionalJSONBody(cmd *cobra.Command) (interface{}, bool, error) {
+	if mustS(cmd, "body") == "" && mustS(cmd, "body-file") == "" && !mustB(cmd, "body-stdin") {
+		return nil, false, nil
+	}
+	body, err := readOptionalJiraJSONBody(cmd)
+	if err != nil {
+		return nil, true, err
+	}
+	return body, true, nil
+}
+
+func zephyrCustomFieldEntityType(value string) string {
+	value = strings.ToUpper(strings.TrimSpace(value))
+	switch value {
+	case "EXECUTION", "TESTSTEP":
+		return value
+	default:
+		return ""
+	}
+}
+
+func zephyrCamelQueryKey(key string) string {
+	switch key {
+	case "project-id":
+		return "projectId"
+	case "version-id":
+		return "versionId"
+	case "cycle-id":
+		return "cycleId"
+	case "folder-id":
+		return "folderId"
+	default:
+		return key
+	}
+}
+
 func addOptionalString(m map[string]interface{}, key, value string) {
 	if value != "" {
 		m[key] = value
@@ -1564,6 +2012,199 @@ func zephyrCycleSummaryData(project, projectID, versionID string, raw interface{
 		out["raw"] = raw
 	}
 	return out
+}
+
+func zephyrVersionListData(projectID string, raw interface{}) map[string]interface{} {
+	versions := zephyrExtractVersions(raw)
+	return map[string]interface{}{
+		"project_id":    projectID,
+		"version_count": len(versions),
+		"versions":      versions,
+		"raw":           raw,
+	}
+}
+
+func zephyrResolveVersion(rt *zephyrRuntime, name, project, projectID string) (map[string]interface{}, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, zapi.NewError("invalid_args", "--name required", "Use jira zephyr version resolve --project EFP --name '1.0' --json.", 400)
+	}
+	resolvedProjectID, err := zephyrProjectID(rt, project, projectID, false)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := rt.client.Get("util/versionBoard-list", map[string]string{"projectId": resolvedProjectID})
+	if err != nil {
+		return nil, err
+	}
+	versions := zephyrExtractVersions(raw)
+	matches := zephyrMatchingVersions(versions, name, true)
+	if len(matches) == 0 {
+		matches = zephyrMatchingVersions(versions, name, false)
+	}
+	if len(matches) == 0 {
+		return nil, zapi.NewError("zephyr_version_not_found", "Zephyr version was not found: "+name, "Run jira zephyr version list --project <PROJECT> --json to inspect version names.", 404)
+	}
+	if len(matches) > 1 {
+		return nil, zapi.NewError("ambiguous_zephyr_version", "Multiple Zephyr versions matched: "+name, "Candidates: "+zephyrVersionCandidateHint(matches), 409)
+	}
+	version := matches[0]
+	out := map[string]interface{}{"raw": version}
+	addStringField(out, "version_id", zephyrStringField(version, "version_id"))
+	addStringField(out, "name", zephyrStringField(version, "name"))
+	addStringField(out, "label", zephyrStringField(version, "label"))
+	addStringField(out, "project_id", resolvedProjectID)
+	if archived, ok := version["archived"]; ok {
+		out["archived"] = archived
+	}
+	if released, ok := version["released"]; ok {
+		out["released"] = released
+	}
+	return out, nil
+}
+
+func zephyrExtractVersions(raw interface{}) []map[string]interface{} {
+	switch v := raw.(type) {
+	case []interface{}:
+		return zephyrVersionMapsFromList(v, "")
+	case []map[string]interface{}:
+		out := make([]map[string]interface{}, 0, len(v))
+		for _, item := range v {
+			out = append(out, zephyrNormalizeVersion(item, ""))
+		}
+		return out
+	case map[string]interface{}:
+		out := []map[string]interface{}{}
+		for _, group := range []struct {
+			key      string
+			released *bool
+		}{
+			{"unreleasedVersions", boolPtr(false)},
+			{"releasedVersions", boolPtr(true)},
+			{"archivedVersions", nil},
+			{"versions", nil},
+			{"options", nil},
+			{"allVersions", nil},
+		} {
+			if child, ok := v[group.key]; ok {
+				for _, version := range zephyrVersionMapsFromList(interfaceList(child), group.key) {
+					if group.released != nil {
+						version["released"] = *group.released
+					}
+					out = append(out, version)
+				}
+			}
+		}
+		if len(out) > 0 {
+			return dedupeVersions(out)
+		}
+		if zephyrLooksLikeVersion(v) {
+			return []map[string]interface{}{zephyrNormalizeVersion(v, "")}
+		}
+	}
+	return nil
+}
+
+func interfaceList(v interface{}) []interface{} {
+	switch x := v.(type) {
+	case []interface{}:
+		return x
+	case []map[string]interface{}:
+		out := make([]interface{}, 0, len(x))
+		for _, item := range x {
+			out = append(out, item)
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func zephyrVersionMapsFromList(items []interface{}, group string) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(items))
+	for _, item := range items {
+		m, ok := item.(map[string]interface{})
+		if !ok || !zephyrLooksLikeVersion(m) {
+			continue
+		}
+		out = append(out, zephyrNormalizeVersion(m, group))
+	}
+	return out
+}
+
+func zephyrLooksLikeVersion(m map[string]interface{}) bool {
+	for _, key := range []string{"value", "label", "id", "name", "versionId", "versionName"} {
+		if _, ok := m[key]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func zephyrNormalizeVersion(m map[string]interface{}, group string) map[string]interface{} {
+	out := map[string]interface{}{}
+	for k, v := range m {
+		out[k] = v
+	}
+	id := firstNonEmpty(zephyrStringField(m, "version_id"), zephyrStringField(m, "value"), zephyrStringField(m, "id"), zephyrStringField(m, "versionId"))
+	name := firstNonEmpty(zephyrStringField(m, "name"), zephyrStringField(m, "label"), zephyrStringField(m, "versionName"))
+	out["version_id"] = id
+	out["name"] = name
+	if label := zephyrStringField(m, "label"); label != "" {
+		out["label"] = label
+	}
+	if group != "" {
+		out["group"] = group
+	}
+	return out
+}
+
+func zephyrMatchingVersions(versions []map[string]interface{}, name string, caseSensitive bool) []map[string]interface{} {
+	name = strings.TrimSpace(name)
+	var out []map[string]interface{}
+	for _, version := range versions {
+		for _, field := range []string{"name", "label"} {
+			candidate := strings.TrimSpace(zephyrStringField(version, field))
+			if caseSensitive && candidate == name {
+				out = append(out, version)
+				break
+			}
+			if !caseSensitive && strings.EqualFold(candidate, name) {
+				out = append(out, version)
+				break
+			}
+		}
+	}
+	return dedupeVersions(out)
+}
+
+func dedupeVersions(versions []map[string]interface{}) []map[string]interface{} {
+	out := []map[string]interface{}{}
+	seen := map[string]bool{}
+	for _, version := range versions {
+		key := firstNonEmpty(zephyrStringField(version, "version_id"), zephyrStringField(version, "name"), zephyrStringField(version, "label"))
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, version)
+	}
+	return out
+}
+
+func zephyrVersionCandidateHint(versions []map[string]interface{}) string {
+	parts := make([]string, 0, len(versions))
+	for _, version := range versions {
+		fields := []string{}
+		if id := zephyrStringField(version, "version_id"); id != "" {
+			fields = append(fields, "version_id="+id)
+		}
+		if name := zephyrStringField(version, "name"); name != "" {
+			fields = append(fields, "name="+name)
+		}
+		parts = append(parts, "{"+strings.Join(fields, ", ")+"}")
+	}
+	return strings.Join(parts, ", ")
 }
 
 func zephyrExecutionCountData(projectID, versionID, group string, raw interface{}) map[string]interface{} {
@@ -1802,6 +2443,19 @@ func isAllowedZephyrExportType(v string) bool {
 	default:
 		return false
 	}
+}
+
+func isAllowedZephyrArchiveExportType(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "xls", "csv", "html", "xml":
+		return true
+	default:
+		return false
+	}
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }
 
 func queryFromFlags(cmd *cobra.Command) map[string]string {

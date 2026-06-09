@@ -306,7 +306,7 @@ func TestVisualMermaidArchitectureBrowserContract(t *testing.T) {
 	if summary["broken_label_icon_count"].(float64) != 0 ||
 		summary["scene_component_tree_present"] != true ||
 		summary["ground_path_builder_present"] != true ||
-		summary["ground_path_builder_version"] != "v2" ||
+		summary["ground_path_builder_version"] != "v3" ||
 		summary["path_join_style"] != "bevel" ||
 		summary["path_hover_halo_supported"] != true ||
 		summary["camera_fit_includes_labels"] != true ||

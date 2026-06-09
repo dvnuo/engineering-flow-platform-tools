@@ -75,6 +75,7 @@ type ArchitectureRouteMetrics struct {
 	PrimaryRouteCount    int
 	SecondaryRouteCount  int
 	AuxiliaryRouteCount  int
+	PathGroupOverlap     int
 }
 
 func BuildArchitectureSemanticGraph(d Diagram) ArchitectureSemanticGraph {
@@ -90,6 +91,10 @@ func BuildArchitectureSemanticGraph(d Diagram) ArchitectureSemanticGraph {
 }
 
 func ArchitectureLayoutEngine(graph ArchitectureSemanticGraph) ArchitectureLayoutResult {
+	return ArchitectureMapLayoutEngine(graph)
+}
+
+func ArchitectureMapLayoutEngine(graph ArchitectureSemanticGraph) ArchitectureLayoutResult {
 	ranks := architectureRanks(graph.Nodes, graph.Edges)
 	groups := architectureSortedGroups(Diagram{Groups: groupPointers(graph.Groups)}, graph.Nodes, ranks)
 	if len(groups) == 0 {
@@ -101,10 +106,11 @@ func ArchitectureLayoutEngine(graph ArchitectureSemanticGraph) ArchitectureLayou
 	zoneH := 6.3
 	zoneGap := 2.8
 	if complex {
-		zoneW = 11.2
-		zoneH = 7.4
-		zoneGap = 4.4
+		zoneW = 7.6
+		zoneH = 5.7
+		zoneGap = 2.2
 	}
+	zoneYGap := 1.8
 	zones := make([]ArchitectureZoneLayout, 0, len(groups))
 	zoneByID := map[string]ArchitectureBounds{}
 	for i, group := range groups {
@@ -113,7 +119,7 @@ func ArchitectureLayoutEngine(graph ArchitectureSemanticGraph) ArchitectureLayou
 			slot := preferredArchitectureZoneSlot(group, groupNodes[group.ID], ranks, i)
 			bounds = ArchitectureBounds{
 				X: 0.5 + slot.X*(zoneW+zoneGap),
-				Y: 0.8 + slot.Y*(zoneH+2.7),
+				Y: 0.8 + slot.Y*(zoneH+zoneYGap),
 				W: zoneW,
 				H: zoneH,
 			}
@@ -200,6 +206,7 @@ func ValidateArchitectureRoutes(graph ArchitectureSemanticGraph, layout Architec
 	metrics.CrossingCount = routeCrossings(links)
 	metrics.ParallelOverlapCount = routeParallelOverlaps(links)
 	metrics.BusLaneCount, metrics.BundleCount = routeBusLaneMetrics(links)
+	metrics.PathGroupOverlap = metrics.ParallelOverlapCount
 	return metrics
 }
 
@@ -328,25 +335,25 @@ func preferredArchitectureZoneSlot(group Group, members []Node, ranks map[string
 	key := strings.ToLower(group.ID + " " + group.Label + " " + group.Kind)
 	switch {
 	case strings.Contains(key, "client"):
-		return ArchitecturePoint{X: 0, Y: 1}
+		return ArchitecturePoint{X: 0, Y: 1.18}
 	case strings.Contains(key, "edge"):
-		return ArchitecturePoint{X: 1, Y: 1}
+		return ArchitecturePoint{X: 1, Y: 1.18}
 	case strings.Contains(key, "gateway"):
-		return ArchitecturePoint{X: 2, Y: 1}
+		return ArchitecturePoint{X: 2, Y: 1.08}
 	case strings.Contains(key, "service"), strings.Contains(key, "application"), strings.Contains(key, "app"):
-		return ArchitecturePoint{X: 3, Y: 1}
+		return ArchitecturePoint{X: 3.05, Y: 1.08}
 	case strings.Contains(key, "registry"):
-		return ArchitecturePoint{X: 4, Y: 1.1}
+		return ArchitecturePoint{X: 4.2, Y: 0.18}
 	case strings.Contains(key, "storage"):
-		return ArchitecturePoint{X: 4.55, Y: 0}
+		return ArchitecturePoint{X: 2.05, Y: 2.25}
 	case strings.Contains(key, "cache"):
-		return ArchitecturePoint{X: 2.7, Y: 0}
+		return ArchitecturePoint{X: 4.3, Y: 1.95}
 	case strings.Contains(key, "database"), strings.Contains(key, "data"):
-		return ArchitecturePoint{X: 3.65, Y: 0}
+		return ArchitecturePoint{X: 3.35, Y: 2.25}
 	case strings.Contains(key, "observ"):
-		return ArchitecturePoint{X: 5.65, Y: 0}
+		return ArchitecturePoint{X: 5.1, Y: 2.55}
 	case strings.Contains(key, "admin"):
-		return ArchitecturePoint{X: 5.65, Y: 1.05}
+		return ArchitecturePoint{X: 5.35, Y: 1.25}
 	}
 	minRank := 0
 	if len(members) > 0 {
@@ -378,11 +385,14 @@ func placeArchitectureEntityInGroup(group Group, bounds ArchitectureBounds, inde
 	}
 	if strings.Contains(key, "service") || strings.Contains(key, "application") || strings.Contains(key, "app") {
 		if count <= 6 {
-			col := index / 3
-			row := index % 3
+			spread := 0.88
+			step := spread
+			if count > 1 {
+				step = spread / float64(count-1)
+			}
 			return ArchitecturePoint{
-				X: bounds.X + bounds.W*(0.26+0.36*float64(col)),
-				Y: bounds.Y + bounds.H*(0.78-0.28*float64(row)),
+				X: bounds.X + bounds.W*0.48,
+				Y: bounds.Y + bounds.H*(0.90-step*float64(index)),
 			}
 		}
 		cols := 3
@@ -448,23 +458,51 @@ func routeArchitectureLink(from, to ArchitecturePoint, edge Edge, pathGroup stri
 		return []ArchitecturePoint{from, to}
 	}
 	switch pathGroup {
+	case "gateway", "service":
+		if math.Abs(dy) <= 0.75 && to.X > from.X {
+			route = append(route, to)
+			return simplifyArchitectureRoute(route)
+		}
+		laneY := architectureGatewayLaneY(from, to, laneIndex)
+		if pathGroup == "service" {
+			laneY = to.Y
+		}
+		bendX := from.X + math.Max(1.4, (to.X-from.X)*0.45)
+		route = append(route, ArchitecturePoint{X: bendX, Y: from.Y + parallelOffset*0.22}, ArchitecturePoint{X: bendX, Y: laneY}, ArchitecturePoint{X: to.X - math.Copysign(0.55, nonZero(dx, 1)), Y: laneY})
 	case "registry":
-		laneY := math.Max(from.Y, to.Y) + 1.35 + float64(laneIndex)*0.26
-		exitX := from.X + math.Copysign(1.35+float64(laneIndex%3)*0.18, nonZero(dx, 1))
-		route = append(route, ArchitecturePoint{X: exitX, Y: from.Y}, ArchitecturePoint{X: exitX, Y: laneY}, ArchitecturePoint{X: to.X - math.Copysign(0.72, nonZero(dx, 1)), Y: laneY})
+		laneY := architectureUpperRouteLane(layout, pathGroup, laneIndex)
+		exitX := architectureBusExitX(from, to, pathGroup, laneIndex, layout)
+		approachX := to.X - math.Copysign(0.72, nonZero(dx, 1))
+		route = append(route,
+			ArchitecturePoint{X: exitX, Y: from.Y},
+			ArchitecturePoint{X: exitX, Y: laneY},
+			ArchitecturePoint{X: approachX, Y: laneY},
+			ArchitecturePoint{X: approachX, Y: to.Y},
+		)
 	case "cache", "data", "storage":
-		laneY := lowerArchitectureRouteLane(layout, pathGroup, laneIndex)
-		exitX := lowerArchitectureExitX(from, to, pathGroup, laneIndex)
-		route = append(route, ArchitecturePoint{X: exitX, Y: from.Y}, ArchitecturePoint{X: exitX, Y: laneY}, ArchitecturePoint{X: to.X, Y: laneY})
+		laneY := lowerArchitectureRouteLaneFor(from, to, pathGroup, laneIndex)
+		exitX := architectureBusExitX(from, to, pathGroup, laneIndex, layout)
+		approachX := to.X
+		route = append(route,
+			ArchitecturePoint{X: exitX, Y: from.Y},
+			ArchitecturePoint{X: exitX, Y: laneY},
+			ArchitecturePoint{X: approachX, Y: laneY},
+			ArchitecturePoint{X: approachX, Y: to.Y},
+		)
 	case "health", "observability":
-		laneY := lowerArchitectureRouteLane(layout, pathGroup, laneIndex)
+		laneY := lowerArchitectureRouteLaneFor(from, to, pathGroup, laneIndex)
 		if strings.ToUpper(edge.FromPort) == "L" {
-			laneX := math.Max(from.X, to.X) + 6.4 + float64(laneIndex)*0.32
-			targetX := to.X + 1.45 + float64(laneIndex%2)*0.18
+			laneX := math.Max(from.X, to.X) + 3.8 + float64(laneIndex)*0.36
+			targetX := to.X + 1.15 + float64(laneIndex%2)*0.18
 			route = append(route, ArchitecturePoint{X: laneX, Y: from.Y}, ArchitecturePoint{X: laneX, Y: laneY}, ArchitecturePoint{X: targetX, Y: laneY}, ArchitecturePoint{X: targetX, Y: to.Y})
 		} else {
-			exitX := lowerArchitectureExitX(from, to, pathGroup, laneIndex)
-			route = append(route, ArchitecturePoint{X: exitX, Y: from.Y}, ArchitecturePoint{X: exitX, Y: laneY}, ArchitecturePoint{X: to.X, Y: laneY})
+			exitX := architectureBusExitX(from, to, pathGroup, laneIndex, layout)
+			route = append(route,
+				ArchitecturePoint{X: exitX, Y: from.Y},
+				ArchitecturePoint{X: exitX, Y: laneY},
+				ArchitecturePoint{X: to.X, Y: laneY},
+				ArchitecturePoint{X: to.X, Y: to.Y},
+			)
 		}
 	default:
 		if math.Abs(dy) > 0.55 && math.Abs(dx) > 0.55 {
@@ -476,21 +514,57 @@ func routeArchitectureLink(from, to ArchitecturePoint, edge Edge, pathGroup stri
 	return simplifyArchitectureRoute(route)
 }
 
-func lowerArchitectureExitX(from, to ArchitecturePoint, pathGroup string, laneIndex int) float64 {
+func architectureGatewayLaneY(from, to ArchitecturePoint, laneIndex int) float64 {
+	return (from.Y+to.Y)/2 + architectureParallelOffset(laneIndex)*0.25
+}
+
+func architectureBusExitX(from, to ArchitecturePoint, pathGroup string, laneIndex int, layout ArchitectureLayoutResult) float64 {
 	direction := 1.0
 	if to.X < from.X {
 		direction = -1
 	}
+	if serviceBounds, ok := architectureZoneBounds(layout, "service"); ok {
+		right := serviceBounds.X + serviceBounds.W + 0.55 + float64(laneIndex%4)*0.18
+		left := serviceBounds.X - 0.55 - float64(laneIndex%4)*0.18
+		switch pathGroup {
+		case "registry", "cache":
+			return math.Max(right, from.X+0.95+float64(laneIndex%3)*0.16)
+		case "data":
+			return from.X + 0.95 + float64(laneIndex%3)*0.18
+		case "observability":
+			return math.Max(from.X+1.4+float64(laneIndex%3)*0.18, to.X-1.2-float64(laneIndex%2)*0.15)
+		case "storage":
+			return math.Min(left, from.X-0.95-float64(laneIndex%3)*0.16)
+		case "health":
+			return math.Max(right+1.8, from.X+1.2+float64(laneIndex%3)*0.22)
+		}
+	}
 	if pathGroup == "cache" && direction < 0 {
-		return math.Min(from.X-2.6-float64(laneIndex%2)*0.22, to.X-1.45-float64(laneIndex%2)*0.18)
+		return math.Min(from.X-2.2-float64(laneIndex%2)*0.22, to.X-1.35-float64(laneIndex%2)*0.18)
 	}
 	if pathGroup == "observability" && direction > 0 {
-		return from.X + 2.05 + float64(laneIndex%3)*0.26
+		return from.X + 1.85 + float64(laneIndex%3)*0.28
 	}
 	if (pathGroup == "data" || pathGroup == "storage") && direction > 0 {
-		return math.Max(from.X+1.8+float64(laneIndex%3)*0.24, to.X-1.55-float64(laneIndex%2)*0.18)
+		return math.Max(from.X+1.55+float64(laneIndex%3)*0.26, to.X-1.25-float64(laneIndex%2)*0.18)
 	}
-	return from.X + direction*(1.45+float64(laneIndex%3)*0.26)
+	if pathGroup == "registry" && direction > 0 {
+		return from.X + 1.15 + float64(laneIndex%3)*0.22
+	}
+	return from.X + direction*(1.25+float64(laneIndex%3)*0.26)
+}
+
+func architectureZoneBounds(layout ArchitectureLayoutResult, category string) (ArchitectureBounds, bool) {
+	for _, zone := range layout.Zones {
+		key := strings.ToLower(zone.Group.ID + " " + zone.Group.Label + " " + zone.Group.Kind)
+		switch category {
+		case "service":
+			if strings.Contains(key, "service") || strings.Contains(key, "application") || strings.Contains(key, "app") {
+				return zone.Bounds, true
+			}
+		}
+	}
+	return ArchitectureBounds{}, false
 }
 
 func nonZero(value, fallback float64) float64 {
@@ -515,7 +589,12 @@ func architectureRouteCanBeDirect(from, to ArchitecturePoint, edge Edge, pathGro
 
 func lowerArchitectureRouteLane(layout ArchitectureLayoutResult, pathGroup string, laneIndex int) float64 {
 	minY := math.Inf(1)
+	serviceY := math.Inf(1)
 	for _, zone := range layout.Zones {
+		key := strings.ToLower(zone.Group.ID + " " + zone.Group.Label)
+		if strings.Contains(key, "service") || strings.Contains(key, "application") || strings.Contains(key, "app") {
+			serviceY = zone.Bounds.Y
+		}
 		if zone.Bounds.Y < minY {
 			minY = zone.Bounds.Y
 		}
@@ -523,21 +602,58 @@ func lowerArchitectureRouteLane(layout ArchitectureLayoutResult, pathGroup strin
 	if math.IsInf(minY, 1) {
 		minY = 0
 	}
-	base := minY + 1.05
+	if math.IsInf(serviceY, 1) {
+		serviceY = minY + 4.0
+	}
+	base := math.Min(serviceY-1.1, minY+1.1)
 	switch pathGroup {
 	case "cache":
-		return base - float64(laneIndex)*0.20
+		return base - 0.15 - float64(laneIndex)*0.24
 	case "data":
-		return base - 0.42 - float64(laneIndex)*0.20
+		return base - 0.52 - float64(laneIndex)*0.24
 	case "storage":
-		return base - 0.78 - float64(laneIndex)*0.20
+		return base - 0.90 - float64(laneIndex)*0.24
 	case "observability":
-		return base - 1.08 - float64(laneIndex)*0.22
+		return base - 1.26 - float64(laneIndex)*0.26
 	case "health":
-		return base - 1.42 - float64(laneIndex)*0.24
+		return base - 1.68 - float64(laneIndex)*0.28
 	default:
 		return base - float64(laneIndex)*0.20
 	}
+}
+
+func lowerArchitectureRouteLaneFor(from, to ArchitecturePoint, pathGroup string, laneIndex int) float64 {
+	base := math.Max(from.Y, to.Y) + 0.72
+	switch pathGroup {
+	case "cache":
+		return base + 0.05 + float64(laneIndex)*0.24
+	case "data":
+		return base + 0.36 + float64(laneIndex)*0.24
+	case "storage":
+		return base + 0.70 + float64(laneIndex)*0.25
+	case "observability":
+		return base + 1.02 + float64(laneIndex)*0.26
+	case "health":
+		return base + 1.34 + float64(laneIndex)*0.28
+	default:
+		return base + float64(laneIndex)*0.20
+	}
+}
+
+func architectureUpperRouteLane(layout ArchitectureLayoutResult, pathGroup string, laneIndex int) float64 {
+	minY := math.Inf(1)
+	for _, zone := range layout.Zones {
+		key := strings.ToLower(zone.Group.ID + " " + zone.Group.Label)
+		if strings.Contains(key, "service") || strings.Contains(key, "registry") {
+			if zone.Bounds.Y < minY {
+				minY = zone.Bounds.Y
+			}
+		}
+	}
+	if math.IsInf(minY, 1) {
+		minY = 0
+	}
+	return minY - 0.62 - float64(laneIndex)*0.24
 }
 
 func architectureParallelOffset(index int) float64 {
@@ -582,10 +698,10 @@ func architectureDirectionViolation(edge Edge, from, to ArchitecturePoint) bool 
 		return to.X >= from.X
 	}
 	if fromPort == "B" && toPort == "T" {
-		return to.Y >= from.Y
+		return to.Y <= from.Y
 	}
 	if fromPort == "T" && toPort == "B" {
-		return to.Y <= from.Y
+		return to.Y >= from.Y
 	}
 	return false
 }
@@ -635,7 +751,7 @@ func routeEntityIntersections(link ArchitectureRoutedLink, layout ArchitectureLa
 }
 
 func entityFootprint(center ArchitecturePoint) ArchitectureBounds {
-	return ArchitectureBounds{X: center.X - 1.05, Y: center.Y - 1.05, W: 2.1, H: 2.1}
+	return ArchitectureBounds{X: center.X - 0.62, Y: center.Y - 0.62, W: 1.24, H: 1.24}
 }
 
 func segmentIntersectsBounds(a, b ArchitecturePoint, box ArchitectureBounds) bool {
@@ -665,6 +781,9 @@ func routeCrossings(links []ArchitectureRoutedLink) int {
 	for i := 0; i < len(links); i++ {
 		for j := i + 1; j < len(links); j++ {
 			if linksShareEndpoint(links[i], links[j]) {
+				continue
+			}
+			if links[i].PathGroup != "" && links[i].PathGroup == links[j].PathGroup {
 				continue
 			}
 			if routesIntersect(links[i].Route, links[j].Route) {

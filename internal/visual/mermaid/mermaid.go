@@ -296,8 +296,8 @@ func compileIsometric(d Diagram) map[string]any {
 		"metadata": mergeMetadata(sourceMetadata(d), map[string]any{
 			"architecture_pipeline": map[string]any{
 				"semantic_graph":         "BuildArchitectureSemanticGraph",
-				"layout_engine":          "ArchitectureLayoutEngine",
-				"routing_engine":         "ArchitectureRoutingEngine",
+				"layout_engine":          "ArchitectureMapLayoutEngine",
+				"routing_engine":         "ArchitectureRoutingEngine v2 / BusLaneRouter",
 				"route_validator":        "ValidateArchitectureRoutes",
 				"port_hint_violations":   routing.Metrics.PortHintViolations,
 				"direction_violations":   routing.Metrics.DirectionViolations,
@@ -306,6 +306,7 @@ func compileIsometric(d Diagram) map[string]any {
 				"parallel_overlap_count": routing.Metrics.ParallelOverlapCount,
 				"route_bus_lane_count":   routing.Metrics.BusLaneCount,
 				"route_bundle_count":     routing.Metrics.BundleCount,
+				"path_group_overlap":     routing.Metrics.PathGroupOverlap,
 				"primary_route_count":    routing.Metrics.PrimaryRouteCount,
 				"secondary_route_count":  routing.Metrics.SecondaryRouteCount,
 				"auxiliary_route_count":  routing.Metrics.AuxiliaryRouteCount,

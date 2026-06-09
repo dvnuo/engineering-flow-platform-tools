@@ -5540,26 +5540,26 @@
         return { radius: isMermaidArchitecture ? 0.01 : 0.02, secondary: false, role: role };
       }
       if (role === "secondary" && !secondary) {
-        edgeSpec.opacity = Math.max(0.48, Math.min(0.62, edgeSpec.opacity || 0.54));
+        edgeSpec.opacity = Math.max(0.36, Math.min(0.48, edgeSpec.opacity || 0.42));
         edgeSpec.flow = false;
-        edgeSpec.arrowScale = 1.05;
-        edgeSpec.groundWidth = isMermaidArchitecture ? 0.07 : 0.08;
-        edgeSpec.groundHeight = isMermaidArchitecture ? 0.007 : 0.009;
+        edgeSpec.arrowScale = 0.92;
+        edgeSpec.groundWidth = isMermaidArchitecture ? 0.055 : 0.075;
+        edgeSpec.groundHeight = isMermaidArchitecture ? 0.006 : 0.009;
         edgeSpec.groundY = isMermaidArchitecture ? 0.032 : 0.038;
-        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.28 : 0.32;
-        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.23 : 0.28;
+        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.24 : 0.32;
+        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.19 : 0.28;
         edgeSpec.endpointTrim = isMermaidArchitecture ? 0.2 : 0.26;
         return { radius: isMermaidArchitecture ? 0.008 : 0.014, secondary: false, role: role };
       }
       if (isOverviewMode() && secondary) {
-        edgeSpec.opacity = Math.max(0.2, Math.min(0.34, edgeSpec.opacity || 0.28));
+        edgeSpec.opacity = Math.max(0.14, Math.min(0.24, edgeSpec.opacity || 0.2));
         edgeSpec.flow = false;
-        edgeSpec.arrowScale = 0.68;
-        edgeSpec.groundWidth = isMermaidArchitecture ? 0.045 : 0.055;
+        edgeSpec.arrowScale = 0.56;
+        edgeSpec.groundWidth = isMermaidArchitecture ? 0.035 : 0.055;
         edgeSpec.groundHeight = isMermaidArchitecture ? 0.006 : 0.008;
         edgeSpec.groundY = isMermaidArchitecture ? 0.03 : 0.036;
-        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.22 : 0.24;
-        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.17 : 0.2;
+        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.18 : 0.24;
+        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.13 : 0.2;
         edgeSpec.endpointTrim = 0.18;
         if (role === "auxiliary") {
           edgeSpec.lineStyle = edgeSpec.lineStyle || "dashed";
@@ -5632,7 +5632,7 @@
 
     function GroundPathGeometryBuilder(THREE) {
       this.id = "GroundPathGeometryBuilder";
-      this.version = "v2";
+      this.version = "v3";
       this.joinStyle = "bevel";
       this.THREE = THREE;
       this.lastMetrics = null;
@@ -5650,17 +5650,26 @@
     GroundPathGeometryBuilder.prototype.buildHoverHalo = function () {
       return true;
     };
+    GroundPathGeometryBuilder.prototype.buildDashPattern = function (route, edgeSpec) {
+      return edgeSpec && (edgeSpec.lineStyle === "dashed" || edgeSpec.lineStyle === "dash") && route && route.length >= 2 ? 1 : 0;
+    };
+    GroundPathGeometryBuilder.prototype.buildParallelOffset = function (route, edgeSpec) {
+      return route && route.length >= 2 && edgeSpec && numberValue(edgeSpec.parallelOffset || edgeSpec.parallel_offset, 0) !== 0 ? 1 : 0;
+    };
     GroundPathGeometryBuilder.prototype.build = function (route, curve, edgeSpec, radius) {
       var pathMesh = this.buildPath(route, curve, edgeSpec, radius);
       var segmentCount = pathMesh && pathMesh.userData ? numberValue(pathMesh.userData.groundSegmentCount, 0) : 0;
       var jointCount = pathMesh && pathMesh.userData ? numberValue(pathMesh.userData.groundJointCount, 0) : 0;
+      var arrowCapCount = this.buildArrowCap(route, edgeSpec);
       var metrics = {
         groundPathBuilderVersion: this.version,
         pathJoinStyle: this.joinStyle,
-        pathArrowCapCount: this.buildArrowCap(route, edgeSpec),
+        pathArrowCapCount: arrowCapCount,
+        pathArrowCapIntegratedCount: arrowCapCount,
         pathHitAreaCount: this.buildHitArea(route),
         pathHoverHaloSupported: this.buildHoverHalo(),
-        pathParallelOffsetCount: edgeSpec && numberValue(edgeSpec.parallelOffset || edgeSpec.parallel_offset, 0) !== 0 ? 1 : 0,
+        pathParallelOffsetCount: this.buildParallelOffset(route, edgeSpec),
+        pathDashPatternCount: this.buildDashPattern(route, edgeSpec),
         relationRenderMode: "ground_decal",
         segmentCount: segmentCount,
         jointCount: jointCount,
@@ -5852,7 +5861,7 @@
       var tube = routeMesh.mesh;
       tube.userData.isDirectedArrow = !!edgeSpec.directed;
       tube.userData.isOverviewSecondary = !!edgeStyle.secondary;
-      var worldTubeOpacity = relationLayerMode === "world_ground" ? (edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.5 : 0.22) : (isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.82 : edgeStyle.role === "secondary" ? 0.48 : 0.18);
+      var worldTubeOpacity = relationLayerMode === "world_ground" ? Math.min(1, edgeSpec.opacity === undefined ? (edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.42 : 0.2) : edgeSpec.opacity) : (isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.82 : edgeStyle.role === "secondary" ? 0.48 : 0.18);
       if (tube.material) {
         tube.material.opacity = worldTubeOpacity;
         tube.material.depthTest = relationLayerMode === "world_ground" ? true : false;
@@ -5873,7 +5882,7 @@
       if (arrow) {
         arrow.userData.isDirectedArrow = true;
         arrow.userData.isOverviewSecondary = !!edgeStyle.secondary;
-        var worldArrowOpacity = relationLayerMode === "world_ground" ? (edgeStyle.role === "primary" ? 0.96 : edgeStyle.role === "secondary" ? 0.58 : 0.26) : (isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.55 : 0.24);
+        var worldArrowOpacity = relationLayerMode === "world_ground" ? Math.min(1, (edgeSpec.opacity === undefined ? worldTubeOpacity : edgeSpec.opacity) + (edgeStyle.role === "primary" ? 0.04 : 0.02)) : (isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.55 : 0.24);
         if (arrow.material) {
           arrow.material.opacity = worldArrowOpacity;
           arrow.material.depthTest = relationLayerMode === "world_ground" ? true : false;
@@ -5908,7 +5917,7 @@
         }, edgeStyle).mount(linkRoot);
         currentRelation.component = relationComponent;
         relationComponents.push(relationComponent);
-        if (relationLayerMode === "world_ground" && showRelationLabel) {
+        if (relationLayerMode === "world_ground" && linkLabelMode === "ground_texture_debug" && showRelationLabel) {
           currentRelation.groundLabel = createGroundLinkLabel(link, pathPoints, edgeStyle, edgeSpec);
         }
       }
@@ -5980,6 +5989,18 @@
     }
 
     function computeEntityBounds(entity) {
+      if (isMermaidArchitecture && entity && entity.object && entity.size) {
+        var bodyCenter = isometricLinkGroundPoint(entity);
+        var bodyHalfX = Math.max(0.07, Math.min(0.28, entity.size.w * scale * 0.44));
+        var bodyHalfZ = Math.max(0.065, Math.min(0.26, entity.size.d * scale * 0.42));
+        return {
+          minX: bodyCenter.x - bodyHalfX,
+          maxX: bodyCenter.x + bodyHalfX,
+          minZ: bodyCenter.z - bodyHalfZ,
+          maxZ: bodyCenter.z + bodyHalfZ,
+          center: bodyCenter
+        };
+      }
       var visual = computeEntityVisualBounds(entity);
       var padding = isMermaidArchitecture ? 0.055 : 0.11;
       if (visual && Number.isFinite(visual.minX) && Number.isFinite(visual.maxX) && Number.isFinite(visual.minZ) && Number.isFinite(visual.maxZ)) {
@@ -6132,7 +6153,7 @@
 
     function buildRoutingObstacles(fromID, toID) {
       return Object.keys(entityByID).filter(function (id) { return id !== fromID && id !== toID; }).map(function (id) {
-        return inflateBounds(computeEntityBounds(entityByID[id]), 0.18);
+        return inflateBounds(computeEntityBounds(entityByID[id]), isMermaidArchitecture ? 0.02 : 0.18);
       });
     }
 
@@ -7094,8 +7115,8 @@
       var dz = to.object.position.z - from.object.position.z;
       if (fromHint === "east" && toHint === "west") return dx <= 0;
       if (fromHint === "west" && toHint === "east") return dx >= 0;
-      if (fromHint === "south" && toHint === "north") return dz >= 0;
-      if (fromHint === "north" && toHint === "south") return dz <= 0;
+      if (fromHint === "south" && toHint === "north") return dz <= 0;
+      if (fromHint === "north" && toHint === "south") return dz >= 0;
       return false;
     }
 
@@ -7137,6 +7158,9 @@
           var aLink = relationLinks[i].link || {};
           var bLink = relationLinks[j].link || {};
           if (aLink.from === bLink.from || aLink.from === bLink.to || aLink.to === bLink.from || aLink.to === bLink.to) continue;
+          var aGroup = linkPathGroup(aLink) || routeClass(aLink);
+          var bGroup = linkPathGroup(bLink) || routeClass(bLink);
+          if (aGroup && aGroup === bGroup) continue;
           var aSegments = relationSegments(relationLinks[i]);
           var bSegments = relationSegments(relationLinks[j]);
           var crossed = false;
@@ -7276,9 +7300,12 @@
       }).length;
       var entityGenericBodyCount = Math.max(0, entityComponents.length - entityKnownBodyCount);
       var pathArrowCapCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathArrowCapCount, 0) : 0); }, 0);
+      var pathArrowCapIntegratedCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathArrowCapIntegratedCount, 0) : 0); }, 0);
       var pathHitAreaCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathHitAreaCount, 0) : 0); }, 0);
       var pathParallelOffsetCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathParallelOffsetCount, 0) : 0); }, 0);
       var busMetrics = relationBusLaneMetrics();
+      var entitySemanticBodyScore = entityComponents.length ? Math.round(entityKnownBodyCount / entityComponents.length * 100) / 100 : 0;
+      var pathGroupOverlapCount = relationParallelOverlapCount();
       return {
         sceneComponentTreePresent: true,
         entityComponentCount: entityComponents.length,
@@ -7289,6 +7316,7 @@
         groundPathBuilderVersion: groundPathBuilder && groundPathBuilder.version || "",
         pathJoinStyle: groundPathBuilder && groundPathBuilder.joinStyle || "",
         pathArrowCapCount: pathArrowCapCount,
+        pathArrowCapIntegratedCount: pathArrowCapIntegratedCount,
         pathHitAreaCount: pathHitAreaCount,
         pathHoverHaloSupported: !!(groundPathBuilder && groundPathBuilder.buildHoverHalo && groundPathBuilder.buildHoverHalo()),
         pathParallelOffsetCount: pathParallelOffsetCount,
@@ -7296,6 +7324,7 @@
         entityKnownBodyCount: entityKnownBodyCount,
         entityGenericBodyCount: entityGenericBodyCount,
         entityGenericBodyRatio: entityComponents.length ? Math.round(entityGenericBodyCount / entityComponents.length * 100) / 100 : 0,
+        entitySemanticBodyScore: entitySemanticBodyScore,
         relationComponentsOwnPathCount: relationComponentsOwnPathCount,
         relationComponentsOwnArrowCount: relationComponentsOwnArrowCount,
         relationComponentsOwnHitCount: relationComponentsOwnHitCount,
@@ -7311,7 +7340,8 @@
         routeMaxLengthWorld: Math.round(routeMaxLengthWorld * 100) / 100,
         routeCrossSceneCount: routeCrossSceneCount,
         routeCrossingCount: relationRoutesCrossingCount(),
-        routeParallelOverlapCount: relationParallelOverlapCount(),
+        routeParallelOverlapCount: pathGroupOverlapCount,
+        routePathGroupOverlapCount: pathGroupOverlapCount,
         routeBusLaneCount: busMetrics.lanes,
         routeBundleCount: busMetrics.bundles,
         primaryRouteCount: primaryRouteCount,
@@ -7349,7 +7379,9 @@
         entityLabelAnchorCount: labels.filter(function (label) { return label.type === "entity"; }).length,
         linkLabelAnchorCount: htmlLinkLabels.length,
         zoneLabelAnchorCount: labels.filter(function (label) { return label.type === "zone"; }).length,
-        worldLeaderLineCount: leaderRoot.children.filter(function (child) { return child && child.userData && child.userData.isLeaderLine; }).length
+        worldLeaderLineCount: leaderRoot.children.filter(function (child) { return child && child.userData && child.userData.isLeaderLine; }).length,
+        cameraFitReservedToolbarMargin: true,
+        cameraFitIncludesHtmlLabels: true
       };
     }
 

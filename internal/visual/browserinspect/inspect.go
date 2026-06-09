@@ -126,6 +126,8 @@ type DOMSummary struct {
 	LabelsUnderInspector       int      `json:"labels_under_inspector_count"`
 	CameraFitIncludesLabels    bool     `json:"camera_fit_includes_labels"`
 	CameraFitReservedInspector bool     `json:"camera_fit_reserved_inspector_margin"`
+	CameraFitReservedToolbar   bool     `json:"camera_fit_reserved_toolbar_margin"`
+	CameraFitIncludesHTML      bool     `json:"camera_fit_includes_html_labels"`
 	ModelBadges                int      `json:"model_badges"`
 	SvgBillboards              int      `json:"svg_billboards"`
 	FallbackBadges             int      `json:"fallback_badges"`
@@ -141,6 +143,7 @@ type DOMSummary struct {
 	GroundPathBuilderVersion   string   `json:"ground_path_builder_version,omitempty"`
 	PathJoinStyle              string   `json:"path_join_style,omitempty"`
 	PathArrowCapCount          int      `json:"path_arrow_cap_count"`
+	PathArrowCapIntegrated     int      `json:"path_arrow_cap_integrated_count"`
 	PathHitAreaCount           int      `json:"path_hit_area_count"`
 	PathHoverHaloSupported     bool     `json:"path_hover_halo_supported"`
 	PathParallelOffsetCount    int      `json:"path_parallel_offset_count"`
@@ -148,6 +151,7 @@ type DOMSummary struct {
 	EntityKnownBodyCount       int      `json:"entity_known_body_count"`
 	EntityGenericBodyCount     int      `json:"entity_generic_body_count"`
 	EntityGenericBodyRatio     float64  `json:"entity_generic_body_ratio"`
+	EntitySemanticBodyScore    float64  `json:"entity_semantic_body_score"`
 	RelationOwnsPath           int      `json:"relation_components_own_path_count"`
 	RelationOwnsArrow          int      `json:"relation_components_own_arrow_count"`
 	RelationOwnsHit            int      `json:"relation_components_own_hit_count"`
@@ -164,6 +168,7 @@ type DOMSummary struct {
 	RouteCrossSceneCount       int      `json:"route_cross_scene_count"`
 	RouteCrossingCount         int      `json:"route_crossing_count"`
 	RouteParallelOverlapCount  int      `json:"route_parallel_overlap_count"`
+	RoutePathGroupOverlapCount int      `json:"route_path_group_overlap_count"`
 	RouteBusLaneCount          int      `json:"route_bus_lane_count"`
 	RouteBundleCount           int      `json:"route_bundle_count"`
 	PrimaryRouteCount          int      `json:"primary_route_count"`
@@ -272,6 +277,8 @@ type VisualSummary struct {
 	LabelsUnderInspectorCount       int            `json:"labels_under_inspector_count"`
 	CameraFitIncludesLabels         bool           `json:"camera_fit_includes_labels"`
 	CameraFitReservedInspector      bool           `json:"camera_fit_reserved_inspector_margin"`
+	CameraFitReservedToolbar        bool           `json:"camera_fit_reserved_toolbar_margin"`
+	CameraFitIncludesHTMLLabels     bool           `json:"camera_fit_includes_html_labels"`
 	LabelLayerBounds                *Rect          `json:"label_layer_bounds,omitempty"`
 	CanvasBounds                    *Rect          `json:"canvas_bounds,omitempty"`
 	ScreenshotSize                  *Rect          `json:"screenshot_size,omitempty"`
@@ -284,6 +291,7 @@ type VisualSummary struct {
 	GroundPathBuilderVersion        string         `json:"ground_path_builder_version,omitempty"`
 	PathJoinStyle                   string         `json:"path_join_style,omitempty"`
 	PathArrowCapCount               int            `json:"path_arrow_cap_count"`
+	PathArrowCapIntegratedCount     int            `json:"path_arrow_cap_integrated_count"`
 	PathHitAreaCount                int            `json:"path_hit_area_count"`
 	PathHoverHaloSupported          bool           `json:"path_hover_halo_supported"`
 	PathParallelOffsetCount         int            `json:"path_parallel_offset_count"`
@@ -291,6 +299,7 @@ type VisualSummary struct {
 	EntityKnownBodyCount            int            `json:"entity_known_body_count"`
 	EntityGenericBodyCount          int            `json:"entity_generic_body_count"`
 	EntityGenericBodyRatio          float64        `json:"entity_generic_body_ratio"`
+	EntitySemanticBodyScore         float64        `json:"entity_semantic_body_score"`
 	RelationComponentsOwnPathCount  int            `json:"relation_components_own_path_count"`
 	RelationComponentsOwnArrowCount int            `json:"relation_components_own_arrow_count"`
 	RelationComponentsOwnHitCount   int            `json:"relation_components_own_hit_count"`
@@ -307,6 +316,7 @@ type VisualSummary struct {
 	RouteCrossSceneCount            int            `json:"route_cross_scene_count"`
 	RouteCrossingCount              int            `json:"route_crossing_count"`
 	RouteParallelOverlapCount       int            `json:"route_parallel_overlap_count"`
+	RoutePathGroupOverlapCount      int            `json:"route_path_group_overlap_count"`
 	RouteBusLaneCount               int            `json:"route_bus_lane_count"`
 	RouteBundleCount                int            `json:"route_bundle_count"`
 	PrimaryRouteCount               int            `json:"primary_route_count"`
@@ -458,6 +468,8 @@ func Inspect(opts Options) (Result, error) {
 		LabelsUnderInspector:       nodeResult.Data.Summary.LabelsUnderInspectorCount,
 		CameraFitIncludesLabels:    nodeResult.Data.Summary.CameraFitIncludesLabels,
 		CameraFitReservedInspector: nodeResult.Data.Summary.CameraFitReservedInspector,
+		CameraFitReservedToolbar:   nodeResult.Data.Summary.CameraFitReservedToolbar,
+		CameraFitIncludesHTML:      nodeResult.Data.Summary.CameraFitIncludesHTMLLabels,
 		ModelBadges:                nodeResult.Data.Summary.ModelBadges,
 		SvgBillboards:              nodeResult.Data.Summary.SvgBillboards,
 		FallbackBadges:             nodeResult.Data.Summary.FallbackBadges,
@@ -473,6 +485,7 @@ func Inspect(opts Options) (Result, error) {
 		GroundPathBuilderVersion:   nodeResult.Data.Summary.GroundPathBuilderVersion,
 		PathJoinStyle:              nodeResult.Data.Summary.PathJoinStyle,
 		PathArrowCapCount:          nodeResult.Data.Summary.PathArrowCapCount,
+		PathArrowCapIntegrated:     nodeResult.Data.Summary.PathArrowCapIntegratedCount,
 		PathHitAreaCount:           nodeResult.Data.Summary.PathHitAreaCount,
 		PathHoverHaloSupported:     nodeResult.Data.Summary.PathHoverHaloSupported,
 		PathParallelOffsetCount:    nodeResult.Data.Summary.PathParallelOffsetCount,
@@ -480,6 +493,7 @@ func Inspect(opts Options) (Result, error) {
 		EntityKnownBodyCount:       nodeResult.Data.Summary.EntityKnownBodyCount,
 		EntityGenericBodyCount:     nodeResult.Data.Summary.EntityGenericBodyCount,
 		EntityGenericBodyRatio:     nodeResult.Data.Summary.EntityGenericBodyRatio,
+		EntitySemanticBodyScore:    nodeResult.Data.Summary.EntitySemanticBodyScore,
 		RelationOwnsPath:           nodeResult.Data.Summary.RelationComponentsOwnPathCount,
 		RelationOwnsArrow:          nodeResult.Data.Summary.RelationComponentsOwnArrowCount,
 		RelationOwnsHit:            nodeResult.Data.Summary.RelationComponentsOwnHitCount,
@@ -496,6 +510,7 @@ func Inspect(opts Options) (Result, error) {
 		RouteCrossSceneCount:       nodeResult.Data.Summary.RouteCrossSceneCount,
 		RouteCrossingCount:         nodeResult.Data.Summary.RouteCrossingCount,
 		RouteParallelOverlapCount:  nodeResult.Data.Summary.RouteParallelOverlapCount,
+		RoutePathGroupOverlapCount: nodeResult.Data.Summary.RoutePathGroupOverlapCount,
 		RouteBusLaneCount:          nodeResult.Data.Summary.RouteBusLaneCount,
 		RouteBundleCount:           nodeResult.Data.Summary.RouteBundleCount,
 		PrimaryRouteCount:          nodeResult.Data.Summary.PrimaryRouteCount,
@@ -642,6 +657,8 @@ type browserDOMSummary struct {
 	LabelsUnderInspectorCount       int            `json:"labelsUnderInspectorCount"`
 	CameraFitIncludesLabels         bool           `json:"cameraFitIncludesLabels"`
 	CameraFitReservedInspector      bool           `json:"cameraFitReservedInspectorMargin"`
+	CameraFitReservedToolbar        bool           `json:"cameraFitReservedToolbarMargin"`
+	CameraFitIncludesHTMLLabels     bool           `json:"cameraFitIncludesHtmlLabels"`
 	LabelLayerBounds                *Rect          `json:"labelLayerBounds"`
 	CanvasBounds                    *Rect          `json:"canvasBounds"`
 	ScreenshotSize                  *Rect          `json:"screenshotSize"`
@@ -654,6 +671,7 @@ type browserDOMSummary struct {
 	GroundPathBuilderVersion        string         `json:"groundPathBuilderVersion"`
 	PathJoinStyle                   string         `json:"pathJoinStyle"`
 	PathArrowCapCount               int            `json:"pathArrowCapCount"`
+	PathArrowCapIntegratedCount     int            `json:"pathArrowCapIntegratedCount"`
 	PathHitAreaCount                int            `json:"pathHitAreaCount"`
 	PathHoverHaloSupported          bool           `json:"pathHoverHaloSupported"`
 	PathParallelOffsetCount         int            `json:"pathParallelOffsetCount"`
@@ -661,6 +679,7 @@ type browserDOMSummary struct {
 	EntityKnownBodyCount            int            `json:"entityKnownBodyCount"`
 	EntityGenericBodyCount          int            `json:"entityGenericBodyCount"`
 	EntityGenericBodyRatio          float64        `json:"entityGenericBodyRatio"`
+	EntitySemanticBodyScore         float64        `json:"entitySemanticBodyScore"`
 	RelationComponentsOwnPathCount  int            `json:"relationComponentsOwnPathCount"`
 	RelationComponentsOwnArrowCount int            `json:"relationComponentsOwnArrowCount"`
 	RelationComponentsOwnHitCount   int            `json:"relationComponentsOwnHitCount"`
@@ -677,6 +696,7 @@ type browserDOMSummary struct {
 	RouteCrossSceneCount            int            `json:"routeCrossSceneCount"`
 	RouteCrossingCount              int            `json:"routeCrossingCount"`
 	RouteParallelOverlapCount       int            `json:"routeParallelOverlapCount"`
+	RoutePathGroupOverlapCount      int            `json:"routePathGroupOverlapCount"`
 	RouteBusLaneCount               int            `json:"routeBusLaneCount"`
 	RouteBundleCount                int            `json:"routeBundleCount"`
 	PrimaryRouteCount               int            `json:"primaryRouteCount"`
@@ -1081,6 +1101,8 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		LabelsUnderInspectorCount:       nodeResult.Data.Summary.LabelsUnderInspectorCount,
 		CameraFitIncludesLabels:         nodeResult.Data.Summary.CameraFitIncludesLabels,
 		CameraFitReservedInspector:      nodeResult.Data.Summary.CameraFitReservedInspector,
+		CameraFitReservedToolbar:        nodeResult.Data.Summary.CameraFitReservedToolbar,
+		CameraFitIncludesHTMLLabels:     nodeResult.Data.Summary.CameraFitIncludesHTMLLabels,
 		LabelLayerBounds:                nodeResult.Data.Summary.LabelLayerBounds,
 		CanvasBounds:                    nodeResult.Data.Summary.CanvasBounds,
 		ScreenshotSize:                  screenshotSize,
@@ -1093,6 +1115,7 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		GroundPathBuilderVersion:        summary.GroundPathBuilderVersion,
 		PathJoinStyle:                   summary.PathJoinStyle,
 		PathArrowCapCount:               summary.PathArrowCapCount,
+		PathArrowCapIntegratedCount:     summary.PathArrowCapIntegrated,
 		PathHitAreaCount:                summary.PathHitAreaCount,
 		PathHoverHaloSupported:          summary.PathHoverHaloSupported,
 		PathParallelOffsetCount:         summary.PathParallelOffsetCount,
@@ -1100,6 +1123,7 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		EntityKnownBodyCount:            summary.EntityKnownBodyCount,
 		EntityGenericBodyCount:          summary.EntityGenericBodyCount,
 		EntityGenericBodyRatio:          summary.EntityGenericBodyRatio,
+		EntitySemanticBodyScore:         summary.EntitySemanticBodyScore,
 		RelationComponentsOwnPathCount:  summary.RelationOwnsPath,
 		RelationComponentsOwnArrowCount: summary.RelationOwnsArrow,
 		RelationComponentsOwnHitCount:   summary.RelationOwnsHit,
@@ -1116,6 +1140,7 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		RouteCrossSceneCount:            summary.RouteCrossSceneCount,
 		RouteCrossingCount:              summary.RouteCrossingCount,
 		RouteParallelOverlapCount:       summary.RouteParallelOverlapCount,
+		RoutePathGroupOverlapCount:      summary.RoutePathGroupOverlapCount,
 		RouteBusLaneCount:               summary.RouteBusLaneCount,
 		RouteBundleCount:                summary.RouteBundleCount,
 		PrimaryRouteCount:               summary.PrimaryRouteCount,
@@ -1261,8 +1286,8 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	if totalDeclaredLinks > 0 && summary.GroundPathBuilder == false {
 		add("browser_ground_path_builder_missing", "error", "The runtime did not report GroundPathGeometryBuilder.", "Build ground relation path, arrow, hit area, and metrics through a single builder abstraction.", "create_ground_path_geometry_builder")
 	}
-	if totalDeclaredLinks > 0 && summary.GroundPathBuilder && summary.GroundPathBuilderVersion != "v2" {
-		add("browser_ground_path_builder_not_v2", "warning", "GroundPathGeometryBuilder did not report v2 path-builder metrics.", "Expose buildPath, buildArrowCap, buildHitArea, buildHoverHalo, joins, and parallel offsets through the builder.", "upgrade_ground_path_builder")
+	if totalDeclaredLinks > 0 && summary.GroundPathBuilder && summary.GroundPathBuilderVersion != "v3" {
+		add("browser_ground_path_builder_not_v3", "warning", "GroundPathGeometryBuilder did not report v3 path-builder metrics.", "Expose buildPath, buildArrowCap, buildHitArea, buildHoverHalo, joins, dashes, and parallel offsets through the builder.", "upgrade_ground_path_builder")
 	}
 	if totalDeclaredLinks > 0 && summary.PathArrowCapCount == 0 {
 		add("browser_path_arrow_cap_missing", "warning", "GroundPathGeometryBuilder did not report terminal arrow caps.", "Build arrowheads as route terminal caps owned by RelationComponent.", "build_path_arrow_caps")
@@ -1275,6 +1300,9 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	}
 	if summary.EntityComponents > 0 && summary.EntityGenericBodyRatio > 0.35 {
 		add("browser_entity_generic_body_ratio_high", "warning", fmt.Sprintf("Too many entities use generic bodies: %.2f (%d/%d).", summary.EntityGenericBodyRatio, summary.EntityGenericBodyCount, summary.EntityComponents), "Extend EntityBodyRegistry for common architecture kinds so entities remain recognizable without labels.", "extend_entity_body_registry")
+	}
+	if summary.EntityComponents >= 12 && summary.EntitySemanticBodyScore > 0 && summary.EntitySemanticBodyScore < 0.7 {
+		add("browser_entity_semantic_body_score_low", "warning", fmt.Sprintf("Entity semantic body score is low: %.2f.", summary.EntitySemanticBodyScore), "Use semantic body renderers for gateway, service, registry, cache, database, storage, observability, and admin entities.", "extend_entity_body_registry_v2")
 	}
 	if hasArchitectureFlowGroup && summary.PrimaryLinkCount > 0 && summary.PrimaryExplicitRoutes < summary.PrimaryLinkCount {
 		add("browser_primary_links_without_explicit_route", "warning", fmt.Sprintf("Some primary architecture path links do not use explicit route points: %d/%d explicit.", summary.PrimaryExplicitRoutes, summary.PrimaryLinkCount), "Give every primary path a route with at least two grid points so the golden example remains hand laid out.", "add_primary_explicit_routes")
@@ -1323,6 +1351,9 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	}
 	if totalDeclaredLinks > 0 && summary.RouteParallelOverlapCount > 0 {
 		add("browser_route_parallel_overlap", "warning", fmt.Sprintf("Some same-group routes overlap instead of using separate lanes: %d.", summary.RouteParallelOverlapCount), "Offset same pathGroup links in parallel lanes to keep bundled routes legible.", "separate_parallel_routes")
+	}
+	if totalDeclaredLinks >= 12 && summary.RoutePathGroupOverlapCount > 0 {
+		add("browser_route_path_group_overlap", "warning", fmt.Sprintf("PathGroup route overlap remains visible: %d.", summary.RoutePathGroupOverlapCount), "Route registry/data/cache/storage/health through distinct bus lanes with parallel offsets.", "improve_pathgroup_bus_lanes")
 	}
 	if totalDeclaredLinks >= 12 && summary.RouteBusLaneCount == 0 {
 		add("browser_route_bus_lanes_missing", "warning", "Complex architecture routes did not report bus lanes.", "Route registry/data/cache/storage/health pathGroups through stable bus lanes.", "add_pathgroup_bus_lanes")

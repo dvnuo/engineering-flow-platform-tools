@@ -47,6 +47,24 @@ func TestCompileMicroserviceGoldenArchitecture(t *testing.T) {
 		t.Fatalf("golden example too small: groups=%d nodes=%d edges=%d", len(graph.Groups), len(graph.Nodes), len(graph.Edges))
 	}
 	layout := ArchitectureLayoutEngine(graph)
+	zones := map[string]ArchitectureZoneLayout{}
+	for _, zone := range layout.Zones {
+		zones[zone.Group.ID] = zone
+	}
+	for _, id := range []string{"client", "edge", "gateway", "services", "registry", "cache", "data", "storage", "observability", "admin"} {
+		if _, ok := zones[id]; !ok {
+			t.Fatalf("expected zone %s in golden layout", id)
+		}
+	}
+	if !(zones["client"].Bounds.X < zones["edge"].Bounds.X && zones["edge"].Bounds.X < zones["gateway"].Bounds.X && zones["gateway"].Bounds.X < zones["services"].Bounds.X) {
+		t.Fatalf("expected ingress/gateway/service zones to flow left-to-right: %#v", zones)
+	}
+	if zones["registry"].Bounds.Y >= zones["services"].Bounds.Y {
+		t.Fatalf("expected registry in the upper/right service orbit: services=%#v registry=%#v", zones["services"].Bounds, zones["registry"].Bounds)
+	}
+	if zones["cache"].Bounds.Y <= zones["services"].Bounds.Y || zones["data"].Bounds.Y <= zones["services"].Bounds.Y || zones["storage"].Bounds.Y <= zones["services"].Bounds.Y {
+		t.Fatalf("expected cache/data/storage below service zone: services=%#v cache=%#v data=%#v storage=%#v", zones["services"].Bounds, zones["cache"].Bounds, zones["data"].Bounds, zones["storage"].Bounds)
+	}
 	routing := ArchitectureRoutingEngine(graph, layout)
 	if len(routing.Links) != len(graph.Edges) {
 		t.Fatalf("expected every edge to route: routed=%d edges=%d", len(routing.Links), len(graph.Edges))
@@ -59,6 +77,9 @@ func TestCompileMicroserviceGoldenArchitecture(t *testing.T) {
 	}
 	if routing.Metrics.BusLaneCount == 0 || routing.Metrics.BundleCount == 0 {
 		t.Fatalf("expected bus lane/bundle metrics: %#v", routing.Metrics)
+	}
+	if routing.Metrics.BusLaneCount < 4 || routing.Metrics.BundleCount < 2 {
+		t.Fatalf("expected complex pathGroup bus lane metrics: %#v", routing.Metrics)
 	}
 	if routing.Metrics.PortHintViolations != 0 || routing.Metrics.DirectionViolations != 0 {
 		t.Fatalf("golden routes should respect port hints: %#v", routing.Metrics)

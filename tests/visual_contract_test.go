@@ -294,6 +294,10 @@ func TestVisualMermaidArchitectureBrowserContract(t *testing.T) {
 		"relation_components_own_hit_count":   3,
 		"relation_components_own_label_count": 3,
 		"entity_components_with_ports_count":  4,
+		"path_arrow_cap_count":                3,
+		"path_hit_area_count":                 3,
+		"entity_body_registry_count":          12,
+		"entity_known_body_count":             4,
 	} {
 		if summary[field].(float64) < min {
 			t.Fatalf("browser visual summary expected %s >= %.0f, got %#v", field, min, summary)
@@ -302,6 +306,11 @@ func TestVisualMermaidArchitectureBrowserContract(t *testing.T) {
 	if summary["broken_label_icon_count"].(float64) != 0 ||
 		summary["scene_component_tree_present"] != true ||
 		summary["ground_path_builder_present"] != true ||
+		summary["ground_path_builder_version"] != "v2" ||
+		summary["path_join_style"] != "bevel" ||
+		summary["path_hover_halo_supported"] != true ||
+		summary["camera_fit_includes_labels"] != true ||
+		summary["camera_fit_reserved_inspector_margin"] != true ||
 		summary["screen_svg_relation_layer_visible"] != false ||
 		summary["generic_link_label_count"].(float64) != 0 ||
 		summary["isolated_arrowhead_count"].(float64) != 0 ||

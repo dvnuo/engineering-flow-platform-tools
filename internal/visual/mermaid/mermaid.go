@@ -295,12 +295,20 @@ func compileIsometric(d Diagram) map[string]any {
 		},
 		"metadata": mergeMetadata(sourceMetadata(d), map[string]any{
 			"architecture_pipeline": map[string]any{
-				"semantic_graph":       "BuildArchitectureSemanticGraph",
-				"layout_engine":        "ArchitectureLayoutEngine",
-				"routing_engine":       "ArchitectureRoutingEngine",
-				"route_validator":      "ValidateArchitectureRoutes",
-				"port_hint_violations": routing.Metrics.PortHintViolations,
-				"direction_violations": routing.Metrics.DirectionViolations,
+				"semantic_graph":         "BuildArchitectureSemanticGraph",
+				"layout_engine":          "ArchitectureLayoutEngine",
+				"routing_engine":         "ArchitectureRoutingEngine",
+				"route_validator":        "ValidateArchitectureRoutes",
+				"port_hint_violations":   routing.Metrics.PortHintViolations,
+				"direction_violations":   routing.Metrics.DirectionViolations,
+				"entity_intersections":   routing.Metrics.EntityIntersections,
+				"route_crossing_count":   routing.Metrics.CrossingCount,
+				"parallel_overlap_count": routing.Metrics.ParallelOverlapCount,
+				"route_bus_lane_count":   routing.Metrics.BusLaneCount,
+				"route_bundle_count":     routing.Metrics.BundleCount,
+				"primary_route_count":    routing.Metrics.PrimaryRouteCount,
+				"secondary_route_count":  routing.Metrics.SecondaryRouteCount,
+				"auxiliary_route_count":  routing.Metrics.AuxiliaryRouteCount,
 			},
 		}),
 	}
@@ -426,6 +434,9 @@ func architectureNodesByGroup(nodes []Node, groups []Group, ranks map[string]int
 		sort.SliceStable(out[groupID], func(i, j int) bool {
 			left := out[groupID][i]
 			right := out[groupID][j]
+			if architectureNaturalServiceOrder(left.ID, right.ID) != 0 {
+				return architectureNaturalServiceOrder(left.ID, right.ID) < 0
+			}
 			if ranks[left.ID] != ranks[right.ID] {
 				return ranks[left.ID] < ranks[right.ID]
 			}
@@ -433,6 +444,21 @@ func architectureNodesByGroup(nodes []Node, groups []Group, ranks map[string]int
 		})
 	}
 	return out
+}
+
+func architectureNaturalServiceOrder(leftID, rightID string) int {
+	left := strings.ToLower(strings.TrimSpace(leftID))
+	right := strings.ToLower(strings.TrimSpace(rightID))
+	if !strings.HasPrefix(left, "service") || !strings.HasPrefix(right, "service") {
+		return 0
+	}
+	if left == right {
+		return 0
+	}
+	if left < right {
+		return -1
+	}
+	return 1
 }
 
 func inferArchitectureRole(edge Edge, nodes map[string]Node) string {
@@ -451,7 +477,7 @@ func inferArchitectureRole(edge Edge, nodes map[string]Node) string {
 	if group == "data" || group == "cache" || group == "storage" {
 		return "secondary"
 	}
-	if group == "gateway" || (from == "client" && (to == "api_gateway" || to == "nginx")) || to == "api_gateway" {
+	if group == "gateway" || ((from == "client" || from == "browser" || from == "mobile" || from == "cdn") && (to == "api_gateway" || to == "nginx")) || to == "api_gateway" {
 		return "primary"
 	}
 	if group == "service" && (from == "api_gateway" || strings.Contains(strings.ToLower(edge.Label), "service")) {
@@ -476,6 +502,16 @@ func inferArchitecturePathGroup(edge Edge, nodes map[string]Node) string {
 	switch {
 	case strings.Contains(label, "service"):
 		return "service"
+	case strings.Contains(label, "register") || strings.Contains(label, "nacos") || strings.Contains(label, "discovery"):
+		return "registry"
+	case strings.Contains(label, "cache") || strings.Contains(label, "redis"):
+		return "cache"
+	case strings.Contains(label, "storage") || strings.Contains(label, "oss") || strings.Contains(label, "file"):
+		return "storage"
+	case strings.Contains(label, "health") || strings.Contains(label, "admin"):
+		return "health"
+	case strings.Contains(label, "log") || strings.Contains(label, "metric") || strings.Contains(label, "dashboard") || strings.Contains(label, "observ"):
+		return "observability"
 	case to == "database":
 		return "data"
 	case to == "redis":
@@ -484,7 +520,7 @@ func inferArchitecturePathGroup(edge Edge, nodes map[string]Node) string {
 		return "storage"
 	case to == "registry":
 		return "registry"
-	case from == "client" || to == "api_gateway":
+	case from == "client" || from == "browser" || from == "mobile" || from == "cdn" || to == "api_gateway" || to == "nginx":
 		return "gateway"
 	default:
 		return "main"
@@ -1068,6 +1104,12 @@ func sourceMetadata(d Diagram) map[string]any {
 func inferEntityKind(node Node) string {
 	value := strings.ToLower(nonEmpty(node.Kind, node.Label, node.ID))
 	switch {
+	case strings.Contains(value, "browser"), strings.Contains(value, "internet"), strings.Contains(value, "pc"):
+		return "browser"
+	case strings.Contains(value, "mobile"):
+		return "mobile"
+	case strings.Contains(value, "cdn"), strings.Contains(value, "cloudfront"):
+		return "cdn"
 	case strings.Contains(value, "database"), strings.Contains(value, "mysql"), strings.Contains(value, "postgres"), strings.Contains(value, "db"):
 		return "database"
 	case strings.Contains(value, "redis"), strings.Contains(value, "cache"):
@@ -1078,12 +1120,18 @@ func inferEntityKind(node Node) string {
 		return "api_gateway"
 	case strings.Contains(value, "nginx"), strings.Contains(value, "proxy"):
 		return "nginx"
+	case strings.Contains(value, "nacos"), strings.Contains(value, "registry"), strings.Contains(value, "discovery"):
+		return "registry"
+	case strings.Contains(value, "elastic"), strings.Contains(value, "log"), strings.Contains(value, "prometheus"), strings.Contains(value, "grafana"), strings.Contains(value, "observ"):
+		return "observability"
+	case strings.Contains(value, "admin"), strings.Contains(value, "springboot"):
+		return "admin"
+	case strings.Contains(value, "microservice"), strings.Contains(value, "service"), strings.Contains(value, "server"):
+		return "service"
 	case strings.Contains(value, "client"), strings.Contains(value, "user"), strings.Contains(value, "actor"), strings.Contains(value, "pc"), strings.Contains(value, "mobile"):
 		return "client"
 	case strings.Contains(value, "storage"), strings.Contains(value, "bucket"), strings.Contains(value, "oss"), strings.Contains(value, "s3"):
 		return "storage"
-	case strings.Contains(value, "registry"), strings.Contains(value, "nacos"), strings.Contains(value, "discovery"):
-		return "registry"
 	default:
 		return nonEmpty(node.Kind, "service")
 	}
@@ -1091,6 +1139,10 @@ func inferEntityKind(node Node) string {
 
 func iconForKind(kind string) string {
 	switch kind {
+	case "browser", "mobile", "client":
+		return "generic.user"
+	case "cdn":
+		return "generic.external"
 	case "database":
 		return "generic.database"
 	case "redis":
@@ -1101,12 +1153,14 @@ func iconForKind(kind string) string {
 		return "generic.api"
 	case "nginx":
 		return "nginx"
-	case "client":
-		return "generic.user"
 	case "storage":
 		return "generic.storage"
 	case "registry":
 		return "generic.service"
+	case "observability":
+		return "generic.job"
+	case "admin":
+		return "generic.warning"
 	default:
 		return "generic.service"
 	}

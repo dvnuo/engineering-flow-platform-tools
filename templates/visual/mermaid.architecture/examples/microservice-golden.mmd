@@ -1,0 +1,63 @@
+---
+title: Microservice Golden Architecture
+---
+architecture-beta
+  group client(cloud)[Client Zone]
+  group edge(cloud)[Edge Zone]
+  group gateway(server)[Gateway Zone]
+  group services(server)[Service Zone]
+  group registry(server)[Registry Zone]
+  group cache(database)[Cache Zone]
+  group data(database)[Database Zone]
+  group storage(database)[Storage Zone]
+  group observability(server)[Observability Zone]
+  group admin(server)[Admin Zone]
+
+  service browser(internet)[Browser] in client
+  service mobile(mobile)[Mobile] in client
+  service cdn(cdn)[CDN] in client
+  service nginx(nginx)[Nginx] in edge
+  service apiGateway(api_gateway)[API Gateway] in gateway
+  service serviceA(microservice)[Service A] in services
+  service serviceB(microservice)[Service B] in services
+  service serviceC(microservice)[Service C] in services
+  service serviceD(microservice)[Service D] in services
+  service serviceE(microservice)[Service E] in services
+  service nacos1(nacos)[Nacos 1] in registry
+  service nacos2(nacos)[Nacos 2] in registry
+  service redis1(redis)[Redis 1] in cache
+  service redis2(redis)[Redis 2] in cache
+  service mysqlMaster(mysql)[MySQL Master] in data
+  service mysqlSlave(mysql)[MySQL Slave] in data
+  service oss(oss)[OSS] in storage
+  service fileStorage(storage)[File Storage] in storage
+  service elasticsearch(elasticsearch)[Elasticsearch] in observability
+  service logs(logs)[Logs] in observability
+  service prometheus(prometheus)[Prometheus] in observability
+  service grafana(grafana)[Grafana] in observability
+  service adminConsole(admin)[Spring Boot Admin] in admin
+
+  browser:R -->|API| L:nginx
+  mobile:R -->|API| L:nginx
+  cdn:R -->|Static| L:nginx
+  nginx:R -->|API| L:apiGateway
+  apiGateway:R -->|Service| L:serviceA
+  apiGateway:R -->|Service| L:serviceB
+  apiGateway:R -->|Service| L:serviceC
+  serviceA:R -->|Register| L:nacos1
+  serviceB:R -->|Register| L:nacos1
+  serviceC:R -->|Register| L:nacos2
+  serviceD:R -->|Register| L:nacos2
+  serviceA:B -->|Cache| T:redis1
+  serviceB:B -->|Cache| T:redis2
+  serviceC:B -->|Data| T:mysqlMaster
+  serviceD:B -->|Data| T:mysqlMaster
+  serviceE:B -->|Storage| T:oss
+  serviceE:B -->|Storage| T:fileStorage
+  mysqlMaster:R -->|Replication| L:mysqlSlave
+  serviceA:B -->|Logs| T:logs
+  serviceB:B -->|Logs| T:elasticsearch
+  serviceC:B -->|Metrics| T:prometheus
+  prometheus:R -->|Dashboard| L:grafana
+  adminConsole:L -->|Health| R:serviceA
+  adminConsole:L -->|Health| R:serviceD

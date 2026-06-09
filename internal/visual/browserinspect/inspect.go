@@ -79,118 +79,136 @@ type Checks struct {
 }
 
 type DOMSummary struct {
-	Title                     string   `json:"title,omitempty"`
-	Template                  string   `json:"template,omitempty"`
-	Renderer                  string   `json:"renderer,omitempty"`
-	EntityLabels              int      `json:"entity_labels"`
-	LinkLabels                int      `json:"link_labels"`
-	ZoneLabels                int      `json:"zone_labels"`
-	LabelIcons                int      `json:"label_icons"`
-	LabelIconsLoaded          int      `json:"label_icons_loaded"`
-	BrokenLabelIcons          int      `json:"broken_label_icons"`
-	VisibleEntityLabels       int      `json:"visible_entity_labels"`
-	VisibleLinkLabels         int      `json:"visible_link_labels"`
-	VisibleZoneLabels         int      `json:"visible_zone_labels"`
-	VisibleLabelIcons         int      `json:"visible_label_icons"`
-	PrimaryLinkCount          int      `json:"primary_link_count"`
-	SecondaryLinkCount        int      `json:"secondary_link_count"`
-	AuxiliaryLinkCount        int      `json:"auxiliary_link_count"`
-	VisiblePrimaryLabels      int      `json:"visible_primary_link_label_count"`
-	VisibleSecondaryLabels    int      `json:"visible_secondary_link_label_count"`
-	VisibleAuxiliaryLabels    int      `json:"visible_auxiliary_link_label_count"`
-	ExplicitRouteLinks        int      `json:"explicit_route_link_count"`
-	HeuristicRouteLinks       int      `json:"heuristic_route_link_count"`
-	PrimaryExplicitRoutes     int      `json:"primary_explicit_route_count"`
-	PrimaryVisibleLabels      int      `json:"primary_visible_label_count"`
-	OverviewLinkLabels        int      `json:"overview_link_label_count"`
-	RelationPaletteSize       int      `json:"relation_color_palette_size"`
-	RelationPalette           []string `json:"relation_color_palette,omitempty"`
-	VisibleAuxOpacityAvg      float64  `json:"visible_auxiliary_opacity_average,omitempty"`
-	ZoneCountVisible          int      `json:"zone_count_visible"`
-	RouteGroups               []string `json:"route_groups,omitempty"`
-	InspectorRawDefault       bool     `json:"inspector_raw_json_default"`
-	SVGRelationLayer          bool     `json:"svg_relation_layer_present"`
-	SVGLinkPathCount          int      `json:"svg_link_path_count"`
-	SVGPrimaryPathCount       int      `json:"svg_primary_link_path_count"`
-	SVGSecondaryPathCount     int      `json:"svg_secondary_link_path_count"`
-	SVGAuxiliaryPathCount     int      `json:"svg_auxiliary_link_path_count"`
-	VisibleSVGPathCount       int      `json:"visible_svg_link_path_count"`
-	LinkPathsWithMarker       int      `json:"link_paths_with_marker_count"`
-	LinkPathsWithoutMarker    int      `json:"link_paths_without_marker_count"`
-	EntityLabelOverlap        int      `json:"entity_label_overlap_count"`
-	LinkLabelOverlap          int      `json:"link_label_overlap_count"`
-	ZoneLabelOverlap          int      `json:"zone_label_overlap_count"`
-	TotalLabelOverlap         int      `json:"total_label_overlap_count"`
-	LabelsOutsideStage        int      `json:"labels_outside_stage_count"`
-	ModelBadges               int      `json:"model_badges"`
-	SvgBillboards             int      `json:"svg_billboards"`
-	FallbackBadges            int      `json:"fallback_badges"`
-	Controls                  int      `json:"controls"`
-	Canvas                    int      `json:"canvas"`
-	RuntimeDataRequested      bool     `json:"runtime_data_requested"`
-	SceneComponentTree        bool     `json:"scene_component_tree_present"`
-	EntityComponents          int      `json:"entity_component_count"`
-	RelationComponents        int      `json:"relation_component_count"`
-	HTMLLabelComponents       int      `json:"html_label_component_count"`
-	LeaderLineComponents      int      `json:"leader_line_component_count"`
-	GroundPathBuilder         bool     `json:"ground_path_builder_present"`
-	RelationOwnsPath          int      `json:"relation_components_own_path_count"`
-	RelationOwnsArrow         int      `json:"relation_components_own_arrow_count"`
-	RelationOwnsHit           int      `json:"relation_components_own_hit_count"`
-	RelationOwnsLabel         int      `json:"relation_components_own_label_count"`
-	EntityComponentsWithPorts int      `json:"entity_components_with_ports_count"`
-	RelationLayerMode         string   `json:"relation_layer_mode,omitempty"`
-	RelationRenderMode        string   `json:"relation_render_mode,omitempty"`
-	RelationDepthEnabled      int      `json:"relation_depth_test_enabled_count"`
-	RelationDepthDisabled     int      `json:"relation_depth_test_disabled_count"`
-	RouteEntityIntersections  int      `json:"route_entity_intersection_count"`
-	RoutePortViolations       int      `json:"route_port_hint_violation_count"`
-	RouteDirectionViolations  int      `json:"route_direction_violation_count"`
-	RouteMaxLengthWorld       float64  `json:"route_max_length_world,omitempty"`
-	RouteCrossSceneCount      int      `json:"route_cross_scene_count"`
-	PrimaryRouteCount         int      `json:"primary_route_count"`
-	SecondaryRouteCount       int      `json:"secondary_route_count"`
-	AuxiliaryRouteCount       int      `json:"auxiliary_route_count"`
-	RaisedBeamLooks           int      `json:"relation_looks_like_raised_beam_count"`
-	WorldRelationLayer        bool     `json:"world_relation_layer_present"`
-	GroundLinkMeshes          int      `json:"ground_link_mesh_count"`
-	GroundLinkRibbons         int      `json:"ground_link_ribbon_count"`
-	GroundLinkSegments        int      `json:"ground_link_segment_count"`
-	GroundRouteRailSegments   int      `json:"ground_route_rail_segment_count"`
-	GroundRouteRailJoints     int      `json:"ground_route_rail_joint_count"`
-	GroundRouteRailArrows     int      `json:"ground_route_rail_arrowhead_count"`
-	GroundRouteRailVisible    int      `json:"ground_route_rail_visible_count"`
-	IsolatedArrowheads        int      `json:"isolated_arrowhead_count"`
-	RoutesWithSegments        int      `json:"routes_with_segments_count"`
-	RoutesWithoutSegments     int      `json:"routes_without_segments_count"`
-	VisibleGroundLinks        int      `json:"visible_ground_link_count"`
-	GroundArrowheads          int      `json:"ground_arrowhead_count"`
-	VisibleGroundArrowheads   int      `json:"visible_ground_arrowhead_count"`
-	GroundLinkHitAreas        int      `json:"ground_link_hit_area_count"`
-	GenericLinkLabels         int      `json:"generic_link_label_count"`
-	InferredLinkLabels        int      `json:"inferred_link_label_count"`
-	ExplicitLinkLabels        int      `json:"explicit_link_label_count"`
-	LinkLabelMode             string   `json:"link_label_mode,omitempty"`
-	HTMLLinkLabels            int      `json:"html_link_label_count"`
-	GroundLinkLabels          int      `json:"ground_link_label_mesh_count"`
-	GroundTextureLinkLabels   int      `json:"ground_texture_link_label_count"`
-	GroundLinkTextures        int      `json:"ground_link_label_texture_ready_count"`
-	GroundLabelsVisible       int      `json:"ground_link_label_visible_count"`
-	GroundLabelsFlipped       int      `json:"ground_link_label_flipped_count"`
-	ScreenSVGVisible          bool     `json:"screen_svg_relation_layer_visible"`
-	SVGDebugLayer             bool     `json:"svg_debug_relation_layer_present"`
-	EntityLabelAnchors        int      `json:"entity_label_anchor_count"`
-	LinkLabelAnchors          int      `json:"link_label_anchor_count"`
-	ZoneLabelAnchors          int      `json:"zone_label_anchor_count"`
-	WorldLeaderLines          int      `json:"world_leader_line_count"`
-	OrbitSmokeEnabled         bool     `json:"orbit_smoke_enabled"`
-	OrbitEntityMaxDelta       float64  `json:"orbit_entity_label_return_max_delta_px,omitempty"`
-	OrbitEntityAvgDelta       float64  `json:"orbit_entity_label_return_avg_delta_px,omitempty"`
-	OrbitLinkMaxDelta         float64  `json:"orbit_link_label_return_max_delta_px,omitempty"`
-	OrbitLinkAvgDelta         float64  `json:"orbit_link_label_return_avg_delta_px,omitempty"`
-	OrbitMissingEntities      int      `json:"orbit_missing_entity_labels_after_rotate,omitempty"`
-	OrbitMissingLinks         int      `json:"orbit_missing_link_labels_after_rotate,omitempty"`
-	OrbitLayerStable          bool     `json:"orbit_relation_layer_mode_stable"`
+	Title                      string   `json:"title,omitempty"`
+	Template                   string   `json:"template,omitempty"`
+	Renderer                   string   `json:"renderer,omitempty"`
+	EntityLabels               int      `json:"entity_labels"`
+	LinkLabels                 int      `json:"link_labels"`
+	ZoneLabels                 int      `json:"zone_labels"`
+	LabelIcons                 int      `json:"label_icons"`
+	LabelIconsLoaded           int      `json:"label_icons_loaded"`
+	BrokenLabelIcons           int      `json:"broken_label_icons"`
+	VisibleEntityLabels        int      `json:"visible_entity_labels"`
+	VisibleLinkLabels          int      `json:"visible_link_labels"`
+	VisibleZoneLabels          int      `json:"visible_zone_labels"`
+	VisibleLabelIcons          int      `json:"visible_label_icons"`
+	PrimaryLinkCount           int      `json:"primary_link_count"`
+	SecondaryLinkCount         int      `json:"secondary_link_count"`
+	AuxiliaryLinkCount         int      `json:"auxiliary_link_count"`
+	VisiblePrimaryLabels       int      `json:"visible_primary_link_label_count"`
+	VisibleSecondaryLabels     int      `json:"visible_secondary_link_label_count"`
+	VisibleAuxiliaryLabels     int      `json:"visible_auxiliary_link_label_count"`
+	ExplicitRouteLinks         int      `json:"explicit_route_link_count"`
+	HeuristicRouteLinks        int      `json:"heuristic_route_link_count"`
+	PrimaryExplicitRoutes      int      `json:"primary_explicit_route_count"`
+	PrimaryVisibleLabels       int      `json:"primary_visible_label_count"`
+	OverviewLinkLabels         int      `json:"overview_link_label_count"`
+	RelationPaletteSize        int      `json:"relation_color_palette_size"`
+	RelationPalette            []string `json:"relation_color_palette,omitempty"`
+	VisibleAuxOpacityAvg       float64  `json:"visible_auxiliary_opacity_average,omitempty"`
+	ZoneCountVisible           int      `json:"zone_count_visible"`
+	RouteGroups                []string `json:"route_groups,omitempty"`
+	InspectorRawDefault        bool     `json:"inspector_raw_json_default"`
+	SVGRelationLayer           bool     `json:"svg_relation_layer_present"`
+	SVGLinkPathCount           int      `json:"svg_link_path_count"`
+	SVGPrimaryPathCount        int      `json:"svg_primary_link_path_count"`
+	SVGSecondaryPathCount      int      `json:"svg_secondary_link_path_count"`
+	SVGAuxiliaryPathCount      int      `json:"svg_auxiliary_link_path_count"`
+	VisibleSVGPathCount        int      `json:"visible_svg_link_path_count"`
+	LinkPathsWithMarker        int      `json:"link_paths_with_marker_count"`
+	LinkPathsWithoutMarker     int      `json:"link_paths_without_marker_count"`
+	EntityLabelOverlap         int      `json:"entity_label_overlap_count"`
+	LinkLabelOverlap           int      `json:"link_label_overlap_count"`
+	ZoneLabelOverlap           int      `json:"zone_label_overlap_count"`
+	TotalLabelOverlap          int      `json:"total_label_overlap_count"`
+	LabelsOutsideStage         int      `json:"labels_outside_stage_count"`
+	LabelsUnderToolbar         int      `json:"labels_under_toolbar_count"`
+	LabelsUnderInspector       int      `json:"labels_under_inspector_count"`
+	CameraFitIncludesLabels    bool     `json:"camera_fit_includes_labels"`
+	CameraFitReservedInspector bool     `json:"camera_fit_reserved_inspector_margin"`
+	ModelBadges                int      `json:"model_badges"`
+	SvgBillboards              int      `json:"svg_billboards"`
+	FallbackBadges             int      `json:"fallback_badges"`
+	Controls                   int      `json:"controls"`
+	Canvas                     int      `json:"canvas"`
+	RuntimeDataRequested       bool     `json:"runtime_data_requested"`
+	SceneComponentTree         bool     `json:"scene_component_tree_present"`
+	EntityComponents           int      `json:"entity_component_count"`
+	RelationComponents         int      `json:"relation_component_count"`
+	HTMLLabelComponents        int      `json:"html_label_component_count"`
+	LeaderLineComponents       int      `json:"leader_line_component_count"`
+	GroundPathBuilder          bool     `json:"ground_path_builder_present"`
+	GroundPathBuilderVersion   string   `json:"ground_path_builder_version,omitempty"`
+	PathJoinStyle              string   `json:"path_join_style,omitempty"`
+	PathArrowCapCount          int      `json:"path_arrow_cap_count"`
+	PathHitAreaCount           int      `json:"path_hit_area_count"`
+	PathHoverHaloSupported     bool     `json:"path_hover_halo_supported"`
+	PathParallelOffsetCount    int      `json:"path_parallel_offset_count"`
+	EntityBodyRegistryCount    int      `json:"entity_body_registry_count"`
+	EntityKnownBodyCount       int      `json:"entity_known_body_count"`
+	EntityGenericBodyCount     int      `json:"entity_generic_body_count"`
+	EntityGenericBodyRatio     float64  `json:"entity_generic_body_ratio"`
+	RelationOwnsPath           int      `json:"relation_components_own_path_count"`
+	RelationOwnsArrow          int      `json:"relation_components_own_arrow_count"`
+	RelationOwnsHit            int      `json:"relation_components_own_hit_count"`
+	RelationOwnsLabel          int      `json:"relation_components_own_label_count"`
+	EntityComponentsWithPorts  int      `json:"entity_components_with_ports_count"`
+	RelationLayerMode          string   `json:"relation_layer_mode,omitempty"`
+	RelationRenderMode         string   `json:"relation_render_mode,omitempty"`
+	RelationDepthEnabled       int      `json:"relation_depth_test_enabled_count"`
+	RelationDepthDisabled      int      `json:"relation_depth_test_disabled_count"`
+	RouteEntityIntersections   int      `json:"route_entity_intersection_count"`
+	RoutePortViolations        int      `json:"route_port_hint_violation_count"`
+	RouteDirectionViolations   int      `json:"route_direction_violation_count"`
+	RouteMaxLengthWorld        float64  `json:"route_max_length_world,omitempty"`
+	RouteCrossSceneCount       int      `json:"route_cross_scene_count"`
+	RouteCrossingCount         int      `json:"route_crossing_count"`
+	RouteParallelOverlapCount  int      `json:"route_parallel_overlap_count"`
+	RouteBusLaneCount          int      `json:"route_bus_lane_count"`
+	RouteBundleCount           int      `json:"route_bundle_count"`
+	PrimaryRouteCount          int      `json:"primary_route_count"`
+	SecondaryRouteCount        int      `json:"secondary_route_count"`
+	AuxiliaryRouteCount        int      `json:"auxiliary_route_count"`
+	RaisedBeamLooks            int      `json:"relation_looks_like_raised_beam_count"`
+	WorldRelationLayer         bool     `json:"world_relation_layer_present"`
+	GroundLinkMeshes           int      `json:"ground_link_mesh_count"`
+	GroundLinkRibbons          int      `json:"ground_link_ribbon_count"`
+	GroundLinkSegments         int      `json:"ground_link_segment_count"`
+	GroundRouteRailSegments    int      `json:"ground_route_rail_segment_count"`
+	GroundRouteRailJoints      int      `json:"ground_route_rail_joint_count"`
+	GroundRouteRailArrows      int      `json:"ground_route_rail_arrowhead_count"`
+	GroundRouteRailVisible     int      `json:"ground_route_rail_visible_count"`
+	IsolatedArrowheads         int      `json:"isolated_arrowhead_count"`
+	RoutesWithSegments         int      `json:"routes_with_segments_count"`
+	RoutesWithoutSegments      int      `json:"routes_without_segments_count"`
+	VisibleGroundLinks         int      `json:"visible_ground_link_count"`
+	GroundArrowheads           int      `json:"ground_arrowhead_count"`
+	VisibleGroundArrowheads    int      `json:"visible_ground_arrowhead_count"`
+	GroundLinkHitAreas         int      `json:"ground_link_hit_area_count"`
+	GenericLinkLabels          int      `json:"generic_link_label_count"`
+	InferredLinkLabels         int      `json:"inferred_link_label_count"`
+	ExplicitLinkLabels         int      `json:"explicit_link_label_count"`
+	LinkLabelMode              string   `json:"link_label_mode,omitempty"`
+	HTMLLinkLabels             int      `json:"html_link_label_count"`
+	GroundLinkLabels           int      `json:"ground_link_label_mesh_count"`
+	GroundTextureLinkLabels    int      `json:"ground_texture_link_label_count"`
+	GroundLinkTextures         int      `json:"ground_link_label_texture_ready_count"`
+	GroundLabelsVisible        int      `json:"ground_link_label_visible_count"`
+	GroundLabelsFlipped        int      `json:"ground_link_label_flipped_count"`
+	ScreenSVGVisible           bool     `json:"screen_svg_relation_layer_visible"`
+	SVGDebugLayer              bool     `json:"svg_debug_relation_layer_present"`
+	EntityLabelAnchors         int      `json:"entity_label_anchor_count"`
+	LinkLabelAnchors           int      `json:"link_label_anchor_count"`
+	ZoneLabelAnchors           int      `json:"zone_label_anchor_count"`
+	WorldLeaderLines           int      `json:"world_leader_line_count"`
+	OrbitSmokeEnabled          bool     `json:"orbit_smoke_enabled"`
+	OrbitEntityMaxDelta        float64  `json:"orbit_entity_label_return_max_delta_px,omitempty"`
+	OrbitEntityAvgDelta        float64  `json:"orbit_entity_label_return_avg_delta_px,omitempty"`
+	OrbitLinkMaxDelta          float64  `json:"orbit_link_label_return_max_delta_px,omitempty"`
+	OrbitLinkAvgDelta          float64  `json:"orbit_link_label_return_avg_delta_px,omitempty"`
+	OrbitMissingEntities       int      `json:"orbit_missing_entity_labels_after_rotate,omitempty"`
+	OrbitMissingLinks          int      `json:"orbit_missing_link_labels_after_rotate,omitempty"`
+	OrbitLayerStable           bool     `json:"orbit_relation_layer_mode_stable"`
 }
 
 type Rect struct {
@@ -250,6 +268,10 @@ type VisualSummary struct {
 	ZoneLabelOverlapCount           int            `json:"zone_label_overlap_count"`
 	TotalLabelOverlapCount          int            `json:"total_label_overlap_count"`
 	LabelsOutsideStageCount         int            `json:"labels_outside_stage_count"`
+	LabelsUnderToolbarCount         int            `json:"labels_under_toolbar_count"`
+	LabelsUnderInspectorCount       int            `json:"labels_under_inspector_count"`
+	CameraFitIncludesLabels         bool           `json:"camera_fit_includes_labels"`
+	CameraFitReservedInspector      bool           `json:"camera_fit_reserved_inspector_margin"`
 	LabelLayerBounds                *Rect          `json:"label_layer_bounds,omitempty"`
 	CanvasBounds                    *Rect          `json:"canvas_bounds,omitempty"`
 	ScreenshotSize                  *Rect          `json:"screenshot_size,omitempty"`
@@ -259,6 +281,16 @@ type VisualSummary struct {
 	HTMLLabelComponentCount         int            `json:"html_label_component_count"`
 	LeaderLineComponentCount        int            `json:"leader_line_component_count"`
 	GroundPathBuilderPresent        bool           `json:"ground_path_builder_present"`
+	GroundPathBuilderVersion        string         `json:"ground_path_builder_version,omitempty"`
+	PathJoinStyle                   string         `json:"path_join_style,omitempty"`
+	PathArrowCapCount               int            `json:"path_arrow_cap_count"`
+	PathHitAreaCount                int            `json:"path_hit_area_count"`
+	PathHoverHaloSupported          bool           `json:"path_hover_halo_supported"`
+	PathParallelOffsetCount         int            `json:"path_parallel_offset_count"`
+	EntityBodyRegistryCount         int            `json:"entity_body_registry_count"`
+	EntityKnownBodyCount            int            `json:"entity_known_body_count"`
+	EntityGenericBodyCount          int            `json:"entity_generic_body_count"`
+	EntityGenericBodyRatio          float64        `json:"entity_generic_body_ratio"`
 	RelationComponentsOwnPathCount  int            `json:"relation_components_own_path_count"`
 	RelationComponentsOwnArrowCount int            `json:"relation_components_own_arrow_count"`
 	RelationComponentsOwnHitCount   int            `json:"relation_components_own_hit_count"`
@@ -273,6 +305,10 @@ type VisualSummary struct {
 	RouteDirectionViolationCount    int            `json:"route_direction_violation_count"`
 	RouteMaxLengthWorld             float64        `json:"route_max_length_world,omitempty"`
 	RouteCrossSceneCount            int            `json:"route_cross_scene_count"`
+	RouteCrossingCount              int            `json:"route_crossing_count"`
+	RouteParallelOverlapCount       int            `json:"route_parallel_overlap_count"`
+	RouteBusLaneCount               int            `json:"route_bus_lane_count"`
+	RouteBundleCount                int            `json:"route_bundle_count"`
 	PrimaryRouteCount               int            `json:"primary_route_count"`
 	SecondaryRouteCount             int            `json:"secondary_route_count"`
 	AuxiliaryRouteCount             int            `json:"auxiliary_route_count"`
@@ -375,118 +411,136 @@ func Inspect(opts Options) (Result, error) {
 	}
 	requests = mergeRequests(requests, nodeResult.Data.Requests)
 	domSummary := DOMSummary{
-		Title:                     nodeResult.Data.Summary.Title,
-		Template:                  nodeResult.Data.Summary.Template,
-		Renderer:                  nodeResult.Data.Summary.Renderer,
-		EntityLabels:              nodeResult.Data.Summary.EntityLabels,
-		LinkLabels:                nodeResult.Data.Summary.LinkLabels,
-		ZoneLabels:                nodeResult.Data.Summary.ZoneLabels,
-		LabelIcons:                nodeResult.Data.Summary.LabelIcons,
-		LabelIconsLoaded:          nodeResult.Data.Summary.LabelIconsLoaded,
-		BrokenLabelIcons:          nodeResult.Data.Summary.BrokenLabelIcons,
-		VisibleEntityLabels:       nodeResult.Data.Summary.VisibleEntityLabels,
-		VisibleLinkLabels:         nodeResult.Data.Summary.VisibleLinkLabels,
-		VisibleZoneLabels:         nodeResult.Data.Summary.VisibleZoneLabels,
-		VisibleLabelIcons:         nodeResult.Data.Summary.VisibleLabelIcons,
-		PrimaryLinkCount:          nodeResult.Data.Summary.PrimaryLinkCount,
-		SecondaryLinkCount:        nodeResult.Data.Summary.SecondaryLinkCount,
-		AuxiliaryLinkCount:        nodeResult.Data.Summary.AuxiliaryLinkCount,
-		VisiblePrimaryLabels:      nodeResult.Data.Summary.VisiblePrimaryLinkLabelCount,
-		VisibleSecondaryLabels:    nodeResult.Data.Summary.VisibleSecondaryLinkLabelCount,
-		VisibleAuxiliaryLabels:    nodeResult.Data.Summary.VisibleAuxiliaryLinkLabelCount,
-		ExplicitRouteLinks:        nodeResult.Data.Summary.ExplicitRouteLinkCount,
-		HeuristicRouteLinks:       nodeResult.Data.Summary.HeuristicRouteLinkCount,
-		PrimaryExplicitRoutes:     nodeResult.Data.Summary.PrimaryExplicitRouteCount,
-		PrimaryVisibleLabels:      nodeResult.Data.Summary.PrimaryVisibleLabelCount,
-		OverviewLinkLabels:        nodeResult.Data.Summary.OverviewLinkLabelCount,
-		RelationPaletteSize:       nodeResult.Data.Summary.RelationColorPaletteSize,
-		RelationPalette:           nodeResult.Data.Summary.RelationColorPalette,
-		VisibleAuxOpacityAvg:      nodeResult.Data.Summary.VisibleAuxiliaryOpacityAverage,
-		ZoneCountVisible:          nodeResult.Data.Summary.ZoneCountVisible,
-		RouteGroups:               nodeResult.Data.Summary.RouteGroups,
-		InspectorRawDefault:       nodeResult.Data.Summary.InspectorRawJSONDefault,
-		SVGRelationLayer:          nodeResult.Data.Summary.SVGRelationLayerPresent,
-		SVGLinkPathCount:          nodeResult.Data.Summary.SVGLinkPathCount,
-		SVGPrimaryPathCount:       nodeResult.Data.Summary.SVGPrimaryLinkPathCount,
-		SVGSecondaryPathCount:     nodeResult.Data.Summary.SVGSecondaryLinkPathCount,
-		SVGAuxiliaryPathCount:     nodeResult.Data.Summary.SVGAuxiliaryLinkPathCount,
-		VisibleSVGPathCount:       nodeResult.Data.Summary.VisibleSVGLinkPathCount,
-		LinkPathsWithMarker:       nodeResult.Data.Summary.LinkPathsWithMarkerCount,
-		LinkPathsWithoutMarker:    nodeResult.Data.Summary.LinkPathsWithoutMarkerCount,
-		EntityLabelOverlap:        nodeResult.Data.Summary.EntityLabelOverlapCount,
-		LinkLabelOverlap:          nodeResult.Data.Summary.LinkLabelOverlapCount,
-		ZoneLabelOverlap:          nodeResult.Data.Summary.ZoneLabelOverlapCount,
-		TotalLabelOverlap:         nodeResult.Data.Summary.TotalLabelOverlapCount,
-		LabelsOutsideStage:        nodeResult.Data.Summary.LabelsOutsideStageCount,
-		ModelBadges:               nodeResult.Data.Summary.ModelBadges,
-		SvgBillboards:             nodeResult.Data.Summary.SvgBillboards,
-		FallbackBadges:            nodeResult.Data.Summary.FallbackBadges,
-		Controls:                  nodeResult.Data.Summary.Controls,
-		Canvas:                    nodeResult.Data.Summary.Canvas,
-		RuntimeDataRequested:      hasRequest(requests, "/data.js") && hasRequest(requests, "/manifest.js"),
-		SceneComponentTree:        nodeResult.Data.Summary.SceneComponentTreePresent,
-		EntityComponents:          nodeResult.Data.Summary.EntityComponentCount,
-		RelationComponents:        nodeResult.Data.Summary.RelationComponentCount,
-		HTMLLabelComponents:       nodeResult.Data.Summary.HTMLLabelComponentCount,
-		LeaderLineComponents:      nodeResult.Data.Summary.LeaderLineComponentCount,
-		GroundPathBuilder:         nodeResult.Data.Summary.GroundPathBuilderPresent,
-		RelationOwnsPath:          nodeResult.Data.Summary.RelationComponentsOwnPathCount,
-		RelationOwnsArrow:         nodeResult.Data.Summary.RelationComponentsOwnArrowCount,
-		RelationOwnsHit:           nodeResult.Data.Summary.RelationComponentsOwnHitCount,
-		RelationOwnsLabel:         nodeResult.Data.Summary.RelationComponentsOwnLabelCount,
-		EntityComponentsWithPorts: nodeResult.Data.Summary.EntityComponentsWithPortsCount,
-		RelationLayerMode:         nodeResult.Data.Summary.RelationLayerMode,
-		RelationRenderMode:        nodeResult.Data.Summary.RelationRenderMode,
-		RelationDepthEnabled:      nodeResult.Data.Summary.RelationDepthTestEnabledCount,
-		RelationDepthDisabled:     nodeResult.Data.Summary.RelationDepthTestDisabledCount,
-		RouteEntityIntersections:  nodeResult.Data.Summary.RouteEntityIntersectionCount,
-		RoutePortViolations:       nodeResult.Data.Summary.RoutePortHintViolationCount,
-		RouteDirectionViolations:  nodeResult.Data.Summary.RouteDirectionViolationCount,
-		RouteMaxLengthWorld:       nodeResult.Data.Summary.RouteMaxLengthWorld,
-		RouteCrossSceneCount:      nodeResult.Data.Summary.RouteCrossSceneCount,
-		PrimaryRouteCount:         nodeResult.Data.Summary.PrimaryRouteCount,
-		SecondaryRouteCount:       nodeResult.Data.Summary.SecondaryRouteCount,
-		AuxiliaryRouteCount:       nodeResult.Data.Summary.AuxiliaryRouteCount,
-		RaisedBeamLooks:           nodeResult.Data.Summary.RelationLooksLikeRaisedBeam,
-		WorldRelationLayer:        nodeResult.Data.Summary.WorldRelationLayerPresent,
-		GroundLinkMeshes:          nodeResult.Data.Summary.GroundLinkMeshCount,
-		GroundLinkRibbons:         nodeResult.Data.Summary.GroundLinkRibbonCount,
-		GroundLinkSegments:        nodeResult.Data.Summary.GroundLinkSegmentCount,
-		GroundRouteRailSegments:   nodeResult.Data.Summary.GroundRouteRailSegmentCount,
-		GroundRouteRailJoints:     nodeResult.Data.Summary.GroundRouteRailJointCount,
-		GroundRouteRailArrows:     nodeResult.Data.Summary.GroundRouteRailArrowheadCount,
-		GroundRouteRailVisible:    nodeResult.Data.Summary.GroundRouteRailVisibleCount,
-		IsolatedArrowheads:        nodeResult.Data.Summary.IsolatedArrowheadCount,
-		RoutesWithSegments:        nodeResult.Data.Summary.RoutesWithSegmentsCount,
-		RoutesWithoutSegments:     nodeResult.Data.Summary.RoutesWithoutSegmentsCount,
-		VisibleGroundLinks:        nodeResult.Data.Summary.VisibleGroundLinkCount,
-		GroundArrowheads:          nodeResult.Data.Summary.GroundArrowheadCount,
-		VisibleGroundArrowheads:   nodeResult.Data.Summary.VisibleGroundArrowheadCount,
-		GroundLinkHitAreas:        nodeResult.Data.Summary.GroundLinkHitAreaCount,
-		GenericLinkLabels:         nodeResult.Data.Summary.GenericLinkLabelCount,
-		InferredLinkLabels:        nodeResult.Data.Summary.InferredLinkLabelCount,
-		ExplicitLinkLabels:        nodeResult.Data.Summary.ExplicitLinkLabelCount,
-		LinkLabelMode:             nodeResult.Data.Summary.LinkLabelMode,
-		HTMLLinkLabels:            nodeResult.Data.Summary.HTMLLinkLabelCount,
-		GroundLinkLabels:          nodeResult.Data.Summary.GroundLinkLabelMeshCount,
-		GroundTextureLinkLabels:   nodeResult.Data.Summary.GroundTextureLinkLabelCount,
-		GroundLinkTextures:        nodeResult.Data.Summary.GroundLinkLabelTextureReady,
-		GroundLabelsVisible:       nodeResult.Data.Summary.GroundLinkLabelVisibleCount,
-		GroundLabelsFlipped:       nodeResult.Data.Summary.GroundLinkLabelFlippedCount,
-		ScreenSVGVisible:          nodeResult.Data.Summary.ScreenSVGRelationLayerVisible,
-		SVGDebugLayer:             nodeResult.Data.Summary.SVGDebugRelationLayerPresent,
-		EntityLabelAnchors:        nodeResult.Data.Summary.EntityLabelAnchorCount,
-		LinkLabelAnchors:          nodeResult.Data.Summary.LinkLabelAnchorCount,
-		ZoneLabelAnchors:          nodeResult.Data.Summary.ZoneLabelAnchorCount,
-		WorldLeaderLines:          nodeResult.Data.Summary.WorldLeaderLineCount,
-		OrbitSmokeEnabled:         nodeResult.Data.Summary.OrbitSmokeEnabled,
-		OrbitEntityMaxDelta:       nodeResult.Data.Summary.OrbitEntityLabelReturnMaxDelta,
-		OrbitEntityAvgDelta:       nodeResult.Data.Summary.OrbitEntityLabelReturnAvgDelta,
-		OrbitLinkMaxDelta:         nodeResult.Data.Summary.OrbitLinkLabelReturnMaxDelta,
-		OrbitLinkAvgDelta:         nodeResult.Data.Summary.OrbitLinkLabelReturnAvgDelta,
-		OrbitMissingEntities:      nodeResult.Data.Summary.OrbitMissingEntityLabels,
-		OrbitMissingLinks:         nodeResult.Data.Summary.OrbitMissingLinkLabels,
-		OrbitLayerStable:          nodeResult.Data.Summary.OrbitRelationLayerModeStable,
+		Title:                      nodeResult.Data.Summary.Title,
+		Template:                   nodeResult.Data.Summary.Template,
+		Renderer:                   nodeResult.Data.Summary.Renderer,
+		EntityLabels:               nodeResult.Data.Summary.EntityLabels,
+		LinkLabels:                 nodeResult.Data.Summary.LinkLabels,
+		ZoneLabels:                 nodeResult.Data.Summary.ZoneLabels,
+		LabelIcons:                 nodeResult.Data.Summary.LabelIcons,
+		LabelIconsLoaded:           nodeResult.Data.Summary.LabelIconsLoaded,
+		BrokenLabelIcons:           nodeResult.Data.Summary.BrokenLabelIcons,
+		VisibleEntityLabels:        nodeResult.Data.Summary.VisibleEntityLabels,
+		VisibleLinkLabels:          nodeResult.Data.Summary.VisibleLinkLabels,
+		VisibleZoneLabels:          nodeResult.Data.Summary.VisibleZoneLabels,
+		VisibleLabelIcons:          nodeResult.Data.Summary.VisibleLabelIcons,
+		PrimaryLinkCount:           nodeResult.Data.Summary.PrimaryLinkCount,
+		SecondaryLinkCount:         nodeResult.Data.Summary.SecondaryLinkCount,
+		AuxiliaryLinkCount:         nodeResult.Data.Summary.AuxiliaryLinkCount,
+		VisiblePrimaryLabels:       nodeResult.Data.Summary.VisiblePrimaryLinkLabelCount,
+		VisibleSecondaryLabels:     nodeResult.Data.Summary.VisibleSecondaryLinkLabelCount,
+		VisibleAuxiliaryLabels:     nodeResult.Data.Summary.VisibleAuxiliaryLinkLabelCount,
+		ExplicitRouteLinks:         nodeResult.Data.Summary.ExplicitRouteLinkCount,
+		HeuristicRouteLinks:        nodeResult.Data.Summary.HeuristicRouteLinkCount,
+		PrimaryExplicitRoutes:      nodeResult.Data.Summary.PrimaryExplicitRouteCount,
+		PrimaryVisibleLabels:       nodeResult.Data.Summary.PrimaryVisibleLabelCount,
+		OverviewLinkLabels:         nodeResult.Data.Summary.OverviewLinkLabelCount,
+		RelationPaletteSize:        nodeResult.Data.Summary.RelationColorPaletteSize,
+		RelationPalette:            nodeResult.Data.Summary.RelationColorPalette,
+		VisibleAuxOpacityAvg:       nodeResult.Data.Summary.VisibleAuxiliaryOpacityAverage,
+		ZoneCountVisible:           nodeResult.Data.Summary.ZoneCountVisible,
+		RouteGroups:                nodeResult.Data.Summary.RouteGroups,
+		InspectorRawDefault:        nodeResult.Data.Summary.InspectorRawJSONDefault,
+		SVGRelationLayer:           nodeResult.Data.Summary.SVGRelationLayerPresent,
+		SVGLinkPathCount:           nodeResult.Data.Summary.SVGLinkPathCount,
+		SVGPrimaryPathCount:        nodeResult.Data.Summary.SVGPrimaryLinkPathCount,
+		SVGSecondaryPathCount:      nodeResult.Data.Summary.SVGSecondaryLinkPathCount,
+		SVGAuxiliaryPathCount:      nodeResult.Data.Summary.SVGAuxiliaryLinkPathCount,
+		VisibleSVGPathCount:        nodeResult.Data.Summary.VisibleSVGLinkPathCount,
+		LinkPathsWithMarker:        nodeResult.Data.Summary.LinkPathsWithMarkerCount,
+		LinkPathsWithoutMarker:     nodeResult.Data.Summary.LinkPathsWithoutMarkerCount,
+		EntityLabelOverlap:         nodeResult.Data.Summary.EntityLabelOverlapCount,
+		LinkLabelOverlap:           nodeResult.Data.Summary.LinkLabelOverlapCount,
+		ZoneLabelOverlap:           nodeResult.Data.Summary.ZoneLabelOverlapCount,
+		TotalLabelOverlap:          nodeResult.Data.Summary.TotalLabelOverlapCount,
+		LabelsOutsideStage:         nodeResult.Data.Summary.LabelsOutsideStageCount,
+		LabelsUnderToolbar:         nodeResult.Data.Summary.LabelsUnderToolbarCount,
+		LabelsUnderInspector:       nodeResult.Data.Summary.LabelsUnderInspectorCount,
+		CameraFitIncludesLabels:    nodeResult.Data.Summary.CameraFitIncludesLabels,
+		CameraFitReservedInspector: nodeResult.Data.Summary.CameraFitReservedInspector,
+		ModelBadges:                nodeResult.Data.Summary.ModelBadges,
+		SvgBillboards:              nodeResult.Data.Summary.SvgBillboards,
+		FallbackBadges:             nodeResult.Data.Summary.FallbackBadges,
+		Controls:                   nodeResult.Data.Summary.Controls,
+		Canvas:                     nodeResult.Data.Summary.Canvas,
+		RuntimeDataRequested:       hasRequest(requests, "/data.js") && hasRequest(requests, "/manifest.js"),
+		SceneComponentTree:         nodeResult.Data.Summary.SceneComponentTreePresent,
+		EntityComponents:           nodeResult.Data.Summary.EntityComponentCount,
+		RelationComponents:         nodeResult.Data.Summary.RelationComponentCount,
+		HTMLLabelComponents:        nodeResult.Data.Summary.HTMLLabelComponentCount,
+		LeaderLineComponents:       nodeResult.Data.Summary.LeaderLineComponentCount,
+		GroundPathBuilder:          nodeResult.Data.Summary.GroundPathBuilderPresent,
+		GroundPathBuilderVersion:   nodeResult.Data.Summary.GroundPathBuilderVersion,
+		PathJoinStyle:              nodeResult.Data.Summary.PathJoinStyle,
+		PathArrowCapCount:          nodeResult.Data.Summary.PathArrowCapCount,
+		PathHitAreaCount:           nodeResult.Data.Summary.PathHitAreaCount,
+		PathHoverHaloSupported:     nodeResult.Data.Summary.PathHoverHaloSupported,
+		PathParallelOffsetCount:    nodeResult.Data.Summary.PathParallelOffsetCount,
+		EntityBodyRegistryCount:    nodeResult.Data.Summary.EntityBodyRegistryCount,
+		EntityKnownBodyCount:       nodeResult.Data.Summary.EntityKnownBodyCount,
+		EntityGenericBodyCount:     nodeResult.Data.Summary.EntityGenericBodyCount,
+		EntityGenericBodyRatio:     nodeResult.Data.Summary.EntityGenericBodyRatio,
+		RelationOwnsPath:           nodeResult.Data.Summary.RelationComponentsOwnPathCount,
+		RelationOwnsArrow:          nodeResult.Data.Summary.RelationComponentsOwnArrowCount,
+		RelationOwnsHit:            nodeResult.Data.Summary.RelationComponentsOwnHitCount,
+		RelationOwnsLabel:          nodeResult.Data.Summary.RelationComponentsOwnLabelCount,
+		EntityComponentsWithPorts:  nodeResult.Data.Summary.EntityComponentsWithPortsCount,
+		RelationLayerMode:          nodeResult.Data.Summary.RelationLayerMode,
+		RelationRenderMode:         nodeResult.Data.Summary.RelationRenderMode,
+		RelationDepthEnabled:       nodeResult.Data.Summary.RelationDepthTestEnabledCount,
+		RelationDepthDisabled:      nodeResult.Data.Summary.RelationDepthTestDisabledCount,
+		RouteEntityIntersections:   nodeResult.Data.Summary.RouteEntityIntersectionCount,
+		RoutePortViolations:        nodeResult.Data.Summary.RoutePortHintViolationCount,
+		RouteDirectionViolations:   nodeResult.Data.Summary.RouteDirectionViolationCount,
+		RouteMaxLengthWorld:        nodeResult.Data.Summary.RouteMaxLengthWorld,
+		RouteCrossSceneCount:       nodeResult.Data.Summary.RouteCrossSceneCount,
+		RouteCrossingCount:         nodeResult.Data.Summary.RouteCrossingCount,
+		RouteParallelOverlapCount:  nodeResult.Data.Summary.RouteParallelOverlapCount,
+		RouteBusLaneCount:          nodeResult.Data.Summary.RouteBusLaneCount,
+		RouteBundleCount:           nodeResult.Data.Summary.RouteBundleCount,
+		PrimaryRouteCount:          nodeResult.Data.Summary.PrimaryRouteCount,
+		SecondaryRouteCount:        nodeResult.Data.Summary.SecondaryRouteCount,
+		AuxiliaryRouteCount:        nodeResult.Data.Summary.AuxiliaryRouteCount,
+		RaisedBeamLooks:            nodeResult.Data.Summary.RelationLooksLikeRaisedBeam,
+		WorldRelationLayer:         nodeResult.Data.Summary.WorldRelationLayerPresent,
+		GroundLinkMeshes:           nodeResult.Data.Summary.GroundLinkMeshCount,
+		GroundLinkRibbons:          nodeResult.Data.Summary.GroundLinkRibbonCount,
+		GroundLinkSegments:         nodeResult.Data.Summary.GroundLinkSegmentCount,
+		GroundRouteRailSegments:    nodeResult.Data.Summary.GroundRouteRailSegmentCount,
+		GroundRouteRailJoints:      nodeResult.Data.Summary.GroundRouteRailJointCount,
+		GroundRouteRailArrows:      nodeResult.Data.Summary.GroundRouteRailArrowheadCount,
+		GroundRouteRailVisible:     nodeResult.Data.Summary.GroundRouteRailVisibleCount,
+		IsolatedArrowheads:         nodeResult.Data.Summary.IsolatedArrowheadCount,
+		RoutesWithSegments:         nodeResult.Data.Summary.RoutesWithSegmentsCount,
+		RoutesWithoutSegments:      nodeResult.Data.Summary.RoutesWithoutSegmentsCount,
+		VisibleGroundLinks:         nodeResult.Data.Summary.VisibleGroundLinkCount,
+		GroundArrowheads:           nodeResult.Data.Summary.GroundArrowheadCount,
+		VisibleGroundArrowheads:    nodeResult.Data.Summary.VisibleGroundArrowheadCount,
+		GroundLinkHitAreas:         nodeResult.Data.Summary.GroundLinkHitAreaCount,
+		GenericLinkLabels:          nodeResult.Data.Summary.GenericLinkLabelCount,
+		InferredLinkLabels:         nodeResult.Data.Summary.InferredLinkLabelCount,
+		ExplicitLinkLabels:         nodeResult.Data.Summary.ExplicitLinkLabelCount,
+		LinkLabelMode:              nodeResult.Data.Summary.LinkLabelMode,
+		HTMLLinkLabels:             nodeResult.Data.Summary.HTMLLinkLabelCount,
+		GroundLinkLabels:           nodeResult.Data.Summary.GroundLinkLabelMeshCount,
+		GroundTextureLinkLabels:    nodeResult.Data.Summary.GroundTextureLinkLabelCount,
+		GroundLinkTextures:         nodeResult.Data.Summary.GroundLinkLabelTextureReady,
+		GroundLabelsVisible:        nodeResult.Data.Summary.GroundLinkLabelVisibleCount,
+		GroundLabelsFlipped:        nodeResult.Data.Summary.GroundLinkLabelFlippedCount,
+		ScreenSVGVisible:           nodeResult.Data.Summary.ScreenSVGRelationLayerVisible,
+		SVGDebugLayer:              nodeResult.Data.Summary.SVGDebugRelationLayerPresent,
+		EntityLabelAnchors:         nodeResult.Data.Summary.EntityLabelAnchorCount,
+		LinkLabelAnchors:           nodeResult.Data.Summary.LinkLabelAnchorCount,
+		ZoneLabelAnchors:           nodeResult.Data.Summary.ZoneLabelAnchorCount,
+		WorldLeaderLines:           nodeResult.Data.Summary.WorldLeaderLineCount,
+		OrbitSmokeEnabled:          nodeResult.Data.Summary.OrbitSmokeEnabled,
+		OrbitEntityMaxDelta:        nodeResult.Data.Summary.OrbitEntityLabelReturnMaxDelta,
+		OrbitEntityAvgDelta:        nodeResult.Data.Summary.OrbitEntityLabelReturnAvgDelta,
+		OrbitLinkMaxDelta:          nodeResult.Data.Summary.OrbitLinkLabelReturnMaxDelta,
+		OrbitLinkAvgDelta:          nodeResult.Data.Summary.OrbitLinkLabelReturnAvgDelta,
+		OrbitMissingEntities:       nodeResult.Data.Summary.OrbitMissingEntityLabels,
+		OrbitMissingLinks:          nodeResult.Data.Summary.OrbitMissingLinkLabels,
+		OrbitLayerStable:           nodeResult.Data.Summary.OrbitRelationLayerModeStable,
 	}
 	renderResult, renderWarnings := inspectRenderedScreenshot(opts, outDir, screenshot)
 	checks := buildChecks(domSummary, requests, screenshot, nodeResult, renderResult)
@@ -584,6 +638,10 @@ type browserDOMSummary struct {
 	ZoneLabelOverlapCount           int            `json:"zoneLabelOverlapCount"`
 	TotalLabelOverlapCount          int            `json:"totalLabelOverlapCount"`
 	LabelsOutsideStageCount         int            `json:"labelsOutsideStageCount"`
+	LabelsUnderToolbarCount         int            `json:"labelsUnderToolbarCount"`
+	LabelsUnderInspectorCount       int            `json:"labelsUnderInspectorCount"`
+	CameraFitIncludesLabels         bool           `json:"cameraFitIncludesLabels"`
+	CameraFitReservedInspector      bool           `json:"cameraFitReservedInspectorMargin"`
 	LabelLayerBounds                *Rect          `json:"labelLayerBounds"`
 	CanvasBounds                    *Rect          `json:"canvasBounds"`
 	ScreenshotSize                  *Rect          `json:"screenshotSize"`
@@ -593,6 +651,16 @@ type browserDOMSummary struct {
 	HTMLLabelComponentCount         int            `json:"htmlLabelComponentCount"`
 	LeaderLineComponentCount        int            `json:"leaderLineComponentCount"`
 	GroundPathBuilderPresent        bool           `json:"groundPathBuilderPresent"`
+	GroundPathBuilderVersion        string         `json:"groundPathBuilderVersion"`
+	PathJoinStyle                   string         `json:"pathJoinStyle"`
+	PathArrowCapCount               int            `json:"pathArrowCapCount"`
+	PathHitAreaCount                int            `json:"pathHitAreaCount"`
+	PathHoverHaloSupported          bool           `json:"pathHoverHaloSupported"`
+	PathParallelOffsetCount         int            `json:"pathParallelOffsetCount"`
+	EntityBodyRegistryCount         int            `json:"entityBodyRegistryCount"`
+	EntityKnownBodyCount            int            `json:"entityKnownBodyCount"`
+	EntityGenericBodyCount          int            `json:"entityGenericBodyCount"`
+	EntityGenericBodyRatio          float64        `json:"entityGenericBodyRatio"`
 	RelationComponentsOwnPathCount  int            `json:"relationComponentsOwnPathCount"`
 	RelationComponentsOwnArrowCount int            `json:"relationComponentsOwnArrowCount"`
 	RelationComponentsOwnHitCount   int            `json:"relationComponentsOwnHitCount"`
@@ -607,6 +675,10 @@ type browserDOMSummary struct {
 	RouteDirectionViolationCount    int            `json:"routeDirectionViolationCount"`
 	RouteMaxLengthWorld             float64        `json:"routeMaxLengthWorld"`
 	RouteCrossSceneCount            int            `json:"routeCrossSceneCount"`
+	RouteCrossingCount              int            `json:"routeCrossingCount"`
+	RouteParallelOverlapCount       int            `json:"routeParallelOverlapCount"`
+	RouteBusLaneCount               int            `json:"routeBusLaneCount"`
+	RouteBundleCount                int            `json:"routeBundleCount"`
 	PrimaryRouteCount               int            `json:"primaryRouteCount"`
 	SecondaryRouteCount             int            `json:"secondaryRouteCount"`
 	AuxiliaryRouteCount             int            `json:"auxiliaryRouteCount"`
@@ -1005,6 +1077,10 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		ZoneLabelOverlapCount:           nodeResult.Data.Summary.ZoneLabelOverlapCount,
 		TotalLabelOverlapCount:          nodeResult.Data.Summary.TotalLabelOverlapCount,
 		LabelsOutsideStageCount:         nodeResult.Data.Summary.LabelsOutsideStageCount,
+		LabelsUnderToolbarCount:         nodeResult.Data.Summary.LabelsUnderToolbarCount,
+		LabelsUnderInspectorCount:       nodeResult.Data.Summary.LabelsUnderInspectorCount,
+		CameraFitIncludesLabels:         nodeResult.Data.Summary.CameraFitIncludesLabels,
+		CameraFitReservedInspector:      nodeResult.Data.Summary.CameraFitReservedInspector,
 		LabelLayerBounds:                nodeResult.Data.Summary.LabelLayerBounds,
 		CanvasBounds:                    nodeResult.Data.Summary.CanvasBounds,
 		ScreenshotSize:                  screenshotSize,
@@ -1014,6 +1090,16 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		HTMLLabelComponentCount:         summary.HTMLLabelComponents,
 		LeaderLineComponentCount:        summary.LeaderLineComponents,
 		GroundPathBuilderPresent:        summary.GroundPathBuilder,
+		GroundPathBuilderVersion:        summary.GroundPathBuilderVersion,
+		PathJoinStyle:                   summary.PathJoinStyle,
+		PathArrowCapCount:               summary.PathArrowCapCount,
+		PathHitAreaCount:                summary.PathHitAreaCount,
+		PathHoverHaloSupported:          summary.PathHoverHaloSupported,
+		PathParallelOffsetCount:         summary.PathParallelOffsetCount,
+		EntityBodyRegistryCount:         summary.EntityBodyRegistryCount,
+		EntityKnownBodyCount:            summary.EntityKnownBodyCount,
+		EntityGenericBodyCount:          summary.EntityGenericBodyCount,
+		EntityGenericBodyRatio:          summary.EntityGenericBodyRatio,
 		RelationComponentsOwnPathCount:  summary.RelationOwnsPath,
 		RelationComponentsOwnArrowCount: summary.RelationOwnsArrow,
 		RelationComponentsOwnHitCount:   summary.RelationOwnsHit,
@@ -1028,6 +1114,10 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		RouteDirectionViolationCount:    summary.RouteDirectionViolations,
 		RouteMaxLengthWorld:             summary.RouteMaxLengthWorld,
 		RouteCrossSceneCount:            summary.RouteCrossSceneCount,
+		RouteCrossingCount:              summary.RouteCrossingCount,
+		RouteParallelOverlapCount:       summary.RouteParallelOverlapCount,
+		RouteBusLaneCount:               summary.RouteBusLaneCount,
+		RouteBundleCount:                summary.RouteBundleCount,
 		PrimaryRouteCount:               summary.PrimaryRouteCount,
 		SecondaryRouteCount:             summary.SecondaryRouteCount,
 		AuxiliaryRouteCount:             summary.AuxiliaryRouteCount,
@@ -1133,6 +1223,15 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	if summary.LabelsOutsideStage > 0 {
 		add("browser_labels_outside_stage", "warning", fmt.Sprintf("Some labels are outside the screenshot viewport: %d.", summary.LabelsOutsideStage), "Adjust camera zoom, label offsets, or zone bounds so labels stay inside the first screenshot.", "fit_labels_inside_stage")
 	}
+	if summary.LabelsUnderToolbar > 0 {
+		add("browser_labels_under_toolbar", "warning", fmt.Sprintf("Some labels overlap the toolbar/header: %d.", summary.LabelsUnderToolbar), "Reserve top margin during camera fit and avoid label anchors under controls.", "reserve_toolbar_margin")
+	}
+	if summary.LabelsUnderInspector > 0 {
+		add("browser_labels_under_inspector", "warning", fmt.Sprintf("Some labels overlap the inspector panel: %d.", summary.LabelsUnderInspector), "Reserve right-side inspector margin during camera fit.", "reserve_inspector_margin")
+	}
+	if !summary.CameraFitIncludesLabels && summary.EntityLabels > 0 {
+		add("browser_camera_fit_ignores_labels", "warning", "The browser summary did not confirm that camera fit includes labels.", "Fit the default camera using entity, link, and zone label bounds, not only meshes.", "fit_camera_with_labels")
+	}
 	hasArchitectureFlowGroup := containsString(summary.RouteGroups, "entry") || containsString(summary.RouteGroups, "gateway")
 	if summary.PrimaryLinkCount == 0 && hasArchitectureFlowGroup {
 		add("browser_primary_path_missing", "warning", "No primary architecture path links were declared.", "Mark entry/gateway request path links as role=primary.", "declare_primary_links")
@@ -1162,8 +1261,20 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	if totalDeclaredLinks > 0 && summary.GroundPathBuilder == false {
 		add("browser_ground_path_builder_missing", "error", "The runtime did not report GroundPathGeometryBuilder.", "Build ground relation path, arrow, hit area, and metrics through a single builder abstraction.", "create_ground_path_geometry_builder")
 	}
+	if totalDeclaredLinks > 0 && summary.GroundPathBuilder && summary.GroundPathBuilderVersion != "v2" {
+		add("browser_ground_path_builder_not_v2", "warning", "GroundPathGeometryBuilder did not report v2 path-builder metrics.", "Expose buildPath, buildArrowCap, buildHitArea, buildHoverHalo, joins, and parallel offsets through the builder.", "upgrade_ground_path_builder")
+	}
+	if totalDeclaredLinks > 0 && summary.PathArrowCapCount == 0 {
+		add("browser_path_arrow_cap_missing", "warning", "GroundPathGeometryBuilder did not report terminal arrow caps.", "Build arrowheads as route terminal caps owned by RelationComponent.", "build_path_arrow_caps")
+	}
+	if totalDeclaredLinks > 0 && summary.PathHitAreaCount == 0 {
+		add("browser_path_hit_area_missing", "warning", "GroundPathGeometryBuilder did not report hit areas.", "Build a transparent route hit geometry for link hover and selection.", "build_path_hit_areas")
+	}
 	if summary.EntityComponents > 0 && summary.EntityComponentsWithPorts < summary.EntityComponents {
 		add("browser_entity_ports_missing", "error", fmt.Sprintf("Some EntityComponent instances do not expose ports: %d/%d.", summary.EntityComponentsWithPorts, summary.EntityComponents), "Compute north/east/south/west ports from each entity footprint.", "compute_entity_ports")
+	}
+	if summary.EntityComponents > 0 && summary.EntityGenericBodyRatio > 0.35 {
+		add("browser_entity_generic_body_ratio_high", "warning", fmt.Sprintf("Too many entities use generic bodies: %.2f (%d/%d).", summary.EntityGenericBodyRatio, summary.EntityGenericBodyCount, summary.EntityComponents), "Extend EntityBodyRegistry for common architecture kinds so entities remain recognizable without labels.", "extend_entity_body_registry")
 	}
 	if hasArchitectureFlowGroup && summary.PrimaryLinkCount > 0 && summary.PrimaryExplicitRoutes < summary.PrimaryLinkCount {
 		add("browser_primary_links_without_explicit_route", "warning", fmt.Sprintf("Some primary architecture path links do not use explicit route points: %d/%d explicit.", summary.PrimaryExplicitRoutes, summary.PrimaryLinkCount), "Give every primary path a route with at least two grid points so the golden example remains hand laid out.", "add_primary_explicit_routes")
@@ -1206,6 +1317,15 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	}
 	if totalDeclaredLinks > 0 && summary.RouteEntityIntersections > 0 {
 		add("browser_route_intersects_entity", "warning", fmt.Sprintf("Some relation routes cross entity footprints: %d.", summary.RouteEntityIntersections), "Route from bbox ports and insert orthogonal bends around entity footprints.", "avoid_entity_footprints")
+	}
+	if totalDeclaredLinks > 0 && summary.RouteCrossingCount > 8 {
+		add("browser_route_crossing_high", "warning", fmt.Sprintf("Relation route crossings are high: %d.", summary.RouteCrossingCount), "Group links into pathGroup bus lanes and apply parallel offsets before rendering complex architecture maps.", "reduce_route_crossings")
+	}
+	if totalDeclaredLinks > 0 && summary.RouteParallelOverlapCount > 0 {
+		add("browser_route_parallel_overlap", "warning", fmt.Sprintf("Some same-group routes overlap instead of using separate lanes: %d.", summary.RouteParallelOverlapCount), "Offset same pathGroup links in parallel lanes to keep bundled routes legible.", "separate_parallel_routes")
+	}
+	if totalDeclaredLinks >= 12 && summary.RouteBusLaneCount == 0 {
+		add("browser_route_bus_lanes_missing", "warning", "Complex architecture routes did not report bus lanes.", "Route registry/data/cache/storage/health pathGroups through stable bus lanes.", "add_pathgroup_bus_lanes")
 	}
 	if totalDeclaredLinks > 0 && summary.RoutePortViolations > 0 {
 		add("browser_route_port_hint_violation", "warning", fmt.Sprintf("Some relation routes violate Mermaid port hints: %d.", summary.RoutePortViolations), "Respect endpoint hints such as from:R --> L:to when ranking and routing architecture diagrams.", "respect_mermaid_port_hints")

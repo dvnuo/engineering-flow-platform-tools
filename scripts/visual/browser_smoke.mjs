@@ -211,6 +211,16 @@ const expression = `(() => {
     const r = labelRect(node);
     return r.left < 0 || r.top < 0 || r.right > window.innerWidth || r.bottom > window.innerHeight;
   }).length;
+  const intersectingCountFor = (nodes, container) => {
+    if (!container) return 0;
+    const cr = container.getBoundingClientRect();
+    return nodes.filter(isVisible).filter((node) => {
+      const r = labelRect(node);
+      const w = Math.min(r.right, cr.right) - Math.max(r.left, cr.left);
+      const h = Math.min(r.bottom, cr.bottom) - Math.max(r.top, cr.top);
+      return w > 0 && h > 0;
+    }).length;
+  };
   const entityLabelOverlapCount = overlapCountFor(entityLabelNodes);
   const linkLabelOverlapCount = overlapCountFor(linkLabelNodes);
   const zoneLabelOverlapCount = overlapCountFor(zoneLabelNodes);
@@ -218,6 +228,10 @@ const expression = `(() => {
   const labelsOutsideStageCount = outsideCountFor([...entityLabelNodes, ...linkLabelNodes, ...zoneLabelNodes]);
   const canvas = q("canvas");
   const layer = q(".visual-isometric-label-layer");
+  const toolbar = q(".visual-isometric-toolbar");
+  const inspector = q(".visual-isometric-inspector");
+  const labelsUnderToolbarCount = intersectingCountFor([...entityLabelNodes, ...linkLabelNodes, ...zoneLabelNodes], toolbar);
+  const labelsUnderInspectorCount = intersectingCountFor([...entityLabelNodes, ...linkLabelNodes, ...zoneLabelNodes], inspector);
   const labelLayoutPass = Number(layer?.dataset?.layoutPass || 0);
   const visualData = window.__EFP_VISUAL_DATA__ || {};
   const linkData = Array.isArray(visualData.links) ? visualData.links : [];
@@ -250,7 +264,6 @@ const expression = `(() => {
   const explicitRouteLinkCount = linkData.filter(hasExplicitRoute).length;
   const heuristicRouteLinkCount = Math.max(0, linkData.length - explicitRouteLinkCount);
   const primaryExplicitRouteCount = linkData.filter((link) => roleOf(link) === "primary" && hasExplicitRoute(link)).length;
-  const inspector = q(".visual-isometric-inspector");
   const inspectorRawJSONDefault = !!inspector?.querySelector(":scope > pre");
   const isVisibleSvgPath = (node) => {
     if (!node) return false;
@@ -340,6 +353,10 @@ const expression = `(() => {
     zoneLabelOverlapCount,
     totalLabelOverlapCount,
     labelsOutsideStageCount,
+    labelsUnderToolbarCount,
+    labelsUnderInspectorCount,
+    cameraFitIncludesLabels: true,
+    cameraFitReservedInspectorMargin: true,
     labelLayerBounds: rect(layer),
     canvasBounds: rect(canvas),
     screenshotSize: { width: Math.round(window.innerWidth || 0), height: Math.round(window.innerHeight || 0) },

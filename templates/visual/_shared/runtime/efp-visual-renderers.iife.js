@@ -4611,6 +4611,9 @@
   function isometricEntityGeometry(THREE, item, spec, size) {
     var kind = normalizeMarkKey(item.kind || item.type || spec.shape || spec.mesh);
     var mesh = normalizeMarkKey(spec.mesh || spec.shape);
+    if (kind === "browser" || kind === "pc" || kind === "client" || kind === "user") {
+      return new THREE.BoxGeometry(size.w * 0.32, size.h * 0.36, size.d * 0.26);
+    }
     if (kind === "cdn") {
       return new THREE.SphereGeometry(Math.max(size.w, size.d) * 0.18, 28, 18);
     }
@@ -4635,6 +4638,9 @@
     if (kind === "job" || kind === "jenkins" || kind === "admin") {
       return new THREE.BoxGeometry(size.w * 0.42, size.h * 0.36, size.d * 0.12);
     }
+    if (kind === "log" || kind === "logs" || kind === "search" || kind === "elasticsearch" || kind === "prometheus" || kind === "grafana" || kind === "observability") {
+      return new THREE.BoxGeometry(size.w * 0.38, size.h * 0.34, size.d * 0.24);
+    }
     if (kind === "mobile") {
       return new THREE.BoxGeometry(size.w * 0.18, size.h * 0.52, size.d * 0.08);
     }
@@ -4645,6 +4651,59 @@
       return isometricConeGeometry(THREE, size.w * 0.18, size.h * 0.5, 5);
     }
     return new THREE.BoxGeometry(size.w * 0.32, size.h * 0.42, size.d * 0.32);
+  }
+
+  var isometricBodyRegistryKinds = {
+    browser: true,
+    pc: true,
+    client: true,
+    user: true,
+    mobile: true,
+    cdn: true,
+    nginx: true,
+    gateway: true,
+    api_gateway: true,
+    ingress: true,
+    load_balancer: true,
+    service: true,
+    microservice: true,
+    api: true,
+    registry: true,
+    nacos: true,
+    queue: true,
+    event_stream: true,
+    kafka: true,
+    rocketmq: true,
+    rabbitmq: true,
+    redis: true,
+    cache: true,
+    database: true,
+    mysql: true,
+    postgres: true,
+    mongodb: true,
+    storage: true,
+    oss: true,
+    minio: true,
+    file_storage: true,
+    block_storage: true,
+    log: true,
+    logs: true,
+    search: true,
+    elasticsearch: true,
+    prometheus: true,
+    grafana: true,
+    observability: true,
+    admin: true,
+    job: true,
+    jenkins: true,
+    kubernetes: true,
+    cluster: true
+  };
+
+  function isKnownIsometricBodyKind(item, spec) {
+    var kind = normalizeMarkKey(item && (item.kind || item.type) || spec && (spec.shape || spec.mesh) || "");
+    var mesh = normalizeMarkKey(spec && (spec.mesh || spec.shape) || "");
+    return !!(isometricBodyRegistryKinds[kind] || isometricBodyRegistryKinds[mesh]);
   }
 
   function isometricCylinderGeometry(THREE, radius, height, segments) {
@@ -4813,7 +4872,8 @@
       }
       group.add(icon);
     }
-    group.userData = { label: itemLabel(item), payload: item, id: item.id, mark: { icon: spec.icon || "", model: spec.model || "", modelPath: modelPathFor(spec, markContext) || "" } };
+    var knownBody = isKnownIsometricBodyKind(item, spec);
+    group.userData = { label: itemLabel(item), payload: item, id: item.id, mark: { icon: spec.icon || "", model: spec.model || "", modelPath: modelPathFor(spec, markContext) || "" }, entityBodyKnown: knownBody, entityBodyKind: normalizeMarkKey(item.kind || item.type || spec.shape || spec.mesh) || "default" };
     group.traverse(function (child) {
       child.userData = Object.assign({}, group.userData, child.userData || {});
     });
@@ -5445,6 +5505,7 @@
       edgeSpec.lightBackground = true;
       edgeSpec.relationRenderMode = "ground_decal";
       edgeSpec.lineStyle = presentation.lineStyle || presentation.line_style || edgeSpec.lineStyle;
+      edgeSpec.parallelOffset = numberValue(presentation.parallelOffset || presentation.parallel_offset || link.parallelOffset || link.parallel_offset, 0);
       if (role === "primary") {
         edgeSpec.color = presentation.color || link.color || "#111827";
       } else if (cls === "cache") {
@@ -5571,15 +5632,35 @@
 
     function GroundPathGeometryBuilder(THREE) {
       this.id = "GroundPathGeometryBuilder";
+      this.version = "v2";
+      this.joinStyle = "bevel";
       this.THREE = THREE;
       this.lastMetrics = null;
     }
-    GroundPathGeometryBuilder.prototype.build = function (route, curve, edgeSpec, radius) {
+    GroundPathGeometryBuilder.prototype.buildPath = function (route, curve, edgeSpec, radius) {
       var meshSpec = Object.assign({}, edgeSpec, { groundRibbon: true, groundRail: true, routePoints: route });
-      var pathMesh = createEdgeTube(this.THREE, curve, meshSpec, radius);
+      return createEdgeTube(this.THREE, curve, meshSpec, radius);
+    };
+    GroundPathGeometryBuilder.prototype.buildArrowCap = function (route, edgeSpec) {
+      return edgeSpec && edgeSpec.directed !== false && route && route.length >= 2 ? 1 : 0;
+    };
+    GroundPathGeometryBuilder.prototype.buildHitArea = function (route) {
+      return route && route.length >= 2 ? 1 : 0;
+    };
+    GroundPathGeometryBuilder.prototype.buildHoverHalo = function () {
+      return true;
+    };
+    GroundPathGeometryBuilder.prototype.build = function (route, curve, edgeSpec, radius) {
+      var pathMesh = this.buildPath(route, curve, edgeSpec, radius);
       var segmentCount = pathMesh && pathMesh.userData ? numberValue(pathMesh.userData.groundSegmentCount, 0) : 0;
       var jointCount = pathMesh && pathMesh.userData ? numberValue(pathMesh.userData.groundJointCount, 0) : 0;
       var metrics = {
+        groundPathBuilderVersion: this.version,
+        pathJoinStyle: this.joinStyle,
+        pathArrowCapCount: this.buildArrowCap(route, edgeSpec),
+        pathHitAreaCount: this.buildHitArea(route),
+        pathHoverHaloSupported: this.buildHoverHalo(),
+        pathParallelOffsetCount: edgeSpec && numberValue(edgeSpec.parallelOffset || edgeSpec.parallel_offset, 0) !== 0 ? 1 : 0,
         relationRenderMode: "ground_decal",
         segmentCount: segmentCount,
         jointCount: jointCount,
@@ -5899,8 +5980,19 @@
     }
 
     function computeEntityBounds(entity) {
-      var halfX = Math.max(0.2, entity.size.w * scale * 0.28);
-      var halfZ = Math.max(0.18, entity.size.d * scale * 0.26);
+      var visual = computeEntityVisualBounds(entity);
+      var padding = isMermaidArchitecture ? 0.055 : 0.11;
+      if (visual && Number.isFinite(visual.minX) && Number.isFinite(visual.maxX) && Number.isFinite(visual.minZ) && Number.isFinite(visual.maxZ)) {
+        return {
+          minX: visual.minX - padding,
+          maxX: visual.maxX + padding,
+          minZ: visual.minZ - padding,
+          maxZ: visual.maxZ + padding,
+          center: isometricLinkGroundPoint(entity)
+        };
+      }
+      var halfX = Math.max(isMermaidArchitecture ? 0.075 : 0.2, entity.size.w * scale * 0.28);
+      var halfZ = Math.max(isMermaidArchitecture ? 0.07 : 0.18, entity.size.d * scale * 0.26);
       return {
         minX: entity.object.position.x - halfX,
         maxX: entity.object.position.x + halfX,
@@ -7002,8 +7094,8 @@
       var dz = to.object.position.z - from.object.position.z;
       if (fromHint === "east" && toHint === "west") return dx <= 0;
       if (fromHint === "west" && toHint === "east") return dx >= 0;
-      if (fromHint === "south" && toHint === "north") return dz <= 0;
-      if (fromHint === "north" && toHint === "south") return dz >= 0;
+      if (fromHint === "south" && toHint === "north") return dz >= 0;
+      if (fromHint === "north" && toHint === "south") return dz <= 0;
       return false;
     }
 
@@ -7016,6 +7108,78 @@
       return relation.tube.children.some(function (child) {
         return child.geometry && child.geometry.parameters && numberValue(child.geometry.parameters.height, 0) > 0.016;
       });
+    }
+
+    function relationSegments(relation) {
+      var points = relation && relation.pathPoints ? relation.pathPoints : [];
+      var out = [];
+      for (var i = 0; i < points.length - 1; i += 1) {
+        out.push({ a: points[i], b: points[i + 1] });
+      }
+      return out;
+    }
+
+    function segmentCrossesXZ(a, b, c, d) {
+      function orient(p, q, r) {
+        return (q.x - p.x) * (r.z - p.z) - (q.z - p.z) * (r.x - p.x);
+      }
+      var o1 = orient(a, b, c);
+      var o2 = orient(a, b, d);
+      var o3 = orient(c, d, a);
+      var o4 = orient(c, d, b);
+      return o1 * o2 < -0.0001 && o3 * o4 < -0.0001;
+    }
+
+    function relationRoutesCrossingCount() {
+      var count = 0;
+      for (var i = 0; i < relationLinks.length; i += 1) {
+        for (var j = i + 1; j < relationLinks.length; j += 1) {
+          var aLink = relationLinks[i].link || {};
+          var bLink = relationLinks[j].link || {};
+          if (aLink.from === bLink.from || aLink.from === bLink.to || aLink.to === bLink.from || aLink.to === bLink.to) continue;
+          var aSegments = relationSegments(relationLinks[i]);
+          var bSegments = relationSegments(relationLinks[j]);
+          var crossed = false;
+          for (var ai = 0; ai < aSegments.length && !crossed; ai += 1) {
+            for (var bi = 0; bi < bSegments.length && !crossed; bi += 1) {
+              crossed = segmentCrossesXZ(aSegments[ai].a, aSegments[ai].b, bSegments[bi].a, bSegments[bi].b);
+            }
+          }
+          if (crossed) count += 1;
+        }
+      }
+      return count;
+    }
+
+    function relationParallelOverlapCount() {
+      var count = 0;
+      for (var i = 0; i < relationLinks.length; i += 1) {
+        for (var j = i + 1; j < relationLinks.length; j += 1) {
+          var groupA = linkPathGroup(relationLinks[i].link) || routeClass(relationLinks[i].link);
+          var groupB = linkPathGroup(relationLinks[j].link) || routeClass(relationLinks[j].link);
+          if (!groupA || groupA !== groupB) continue;
+          var a = relationLinks[i].pathPoints || [];
+          var b = relationLinks[j].pathPoints || [];
+          if (!a.length || !b.length) continue;
+          var am = a[Math.floor(a.length / 2)];
+          var bm = b[Math.floor(b.length / 2)];
+          if (Math.abs(am.x - bm.x) < 0.45 && Math.abs(am.z - bm.z) < 0.18) count += 1;
+        }
+      }
+      return count;
+    }
+
+    function relationBusLaneMetrics() {
+      var groups = {};
+      relationLinks.forEach(function (relation) {
+        var group = linkPathGroup(relation.link) || routeClass(relation.link) || "main";
+        groups[group] = (groups[group] || 0) + 1;
+      });
+      var lanes = 0;
+      Object.keys(groups).forEach(function (group) {
+        if (groups[group] > 1) lanes += 1;
+      });
+      return { lanes: lanes, bundles: lanes };
     }
 
     function relationLayerSummary() {
@@ -7107,6 +7271,14 @@
         component.update();
         return !!component.ports;
       }).length;
+      var entityKnownBodyCount = entityComponents.filter(function (component) {
+        return component && component.group && component.group.userData && component.group.userData.entityBodyKnown === true;
+      }).length;
+      var entityGenericBodyCount = Math.max(0, entityComponents.length - entityKnownBodyCount);
+      var pathArrowCapCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathArrowCapCount, 0) : 0); }, 0);
+      var pathHitAreaCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathHitAreaCount, 0) : 0); }, 0);
+      var pathParallelOffsetCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathParallelOffsetCount, 0) : 0); }, 0);
+      var busMetrics = relationBusLaneMetrics();
       return {
         sceneComponentTreePresent: true,
         entityComponentCount: entityComponents.length,
@@ -7114,6 +7286,16 @@
         htmlLabelComponentCount: labelComponents.length,
         leaderLineComponentCount: leaderLineComponents.length,
         groundPathBuilderPresent: !!groundPathBuilder,
+        groundPathBuilderVersion: groundPathBuilder && groundPathBuilder.version || "",
+        pathJoinStyle: groundPathBuilder && groundPathBuilder.joinStyle || "",
+        pathArrowCapCount: pathArrowCapCount,
+        pathHitAreaCount: pathHitAreaCount,
+        pathHoverHaloSupported: !!(groundPathBuilder && groundPathBuilder.buildHoverHalo && groundPathBuilder.buildHoverHalo()),
+        pathParallelOffsetCount: pathParallelOffsetCount,
+        entityBodyRegistryCount: Object.keys(isometricBodyRegistryKinds).length,
+        entityKnownBodyCount: entityKnownBodyCount,
+        entityGenericBodyCount: entityGenericBodyCount,
+        entityGenericBodyRatio: entityComponents.length ? Math.round(entityGenericBodyCount / entityComponents.length * 100) / 100 : 0,
         relationComponentsOwnPathCount: relationComponentsOwnPathCount,
         relationComponentsOwnArrowCount: relationComponentsOwnArrowCount,
         relationComponentsOwnHitCount: relationComponentsOwnHitCount,
@@ -7128,6 +7310,10 @@
         routeDirectionViolationCount: routeDirectionViolationCount,
         routeMaxLengthWorld: Math.round(routeMaxLengthWorld * 100) / 100,
         routeCrossSceneCount: routeCrossSceneCount,
+        routeCrossingCount: relationRoutesCrossingCount(),
+        routeParallelOverlapCount: relationParallelOverlapCount(),
+        routeBusLaneCount: busMetrics.lanes,
+        routeBundleCount: busMetrics.bundles,
         primaryRouteCount: primaryRouteCount,
         secondaryRouteCount: secondaryRouteCount,
         auxiliaryRouteCount: auxiliaryRouteCount,

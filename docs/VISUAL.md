@@ -125,6 +125,8 @@ The isometric architecture layer is a scene contract over the semantic Diagram/M
 
 Use `mermaid.architecture` or `mermaid.c4` when the user asks for architecture, topology, deployment, service map, system map, infrastructure map, microservice, cloud, iCraft-like, or isometric architecture.
 
+For the Three.js isometric architecture renderer internals, see [VISUAL_ISOMETRIC_ARCHITECTURE.md](VISUAL_ISOMETRIC_ARCHITECTURE.md). It documents the Mermaid semantic graph, layout/routing engines, scene component tree, ground path builder, entity body registry, and browser evidence metrics.
+
 ## Visual Design Guidance
 
 Each template declares `visual_design` in `template.yaml`. The schema command returns this guidance so agents can create readable inputs:

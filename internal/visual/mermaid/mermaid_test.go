@@ -2,6 +2,8 @@ package mermaid
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"engineering-flow-platform-tools/internal/visual/manifest"
@@ -27,6 +29,50 @@ func TestInferTemplateID(t *testing.T) {
 				t.Fatalf("InferTemplateID()=%q,%v want %q,true", got, ok, tc.want)
 			}
 		})
+	}
+}
+
+func TestCompileMicroserviceGoldenArchitecture(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "templates", "visual", "mermaid.architecture", "examples", "microservice-golden.mmd")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	diagram, ok := parse(raw)
+	if !ok {
+		t.Fatal("expected microservice-golden.mmd to parse")
+	}
+	graph := BuildArchitectureSemanticGraph(diagram)
+	if len(graph.Groups) < 10 || len(graph.Nodes) < 18 || len(graph.Edges) < 22 {
+		t.Fatalf("golden example too small: groups=%d nodes=%d edges=%d", len(graph.Groups), len(graph.Nodes), len(graph.Edges))
+	}
+	layout := ArchitectureLayoutEngine(graph)
+	routing := ArchitectureRoutingEngine(graph, layout)
+	if len(routing.Links) != len(graph.Edges) {
+		t.Fatalf("expected every edge to route: routed=%d edges=%d", len(routing.Links), len(graph.Edges))
+	}
+	if routing.Metrics.PrimaryRouteCount > 8 {
+		t.Fatalf("too many primary routes: %#v", routing.Metrics)
+	}
+	if routing.Metrics.SecondaryRouteCount < 8 {
+		t.Fatalf("expected secondary route layer: %#v", routing.Metrics)
+	}
+	if routing.Metrics.BusLaneCount == 0 || routing.Metrics.BundleCount == 0 {
+		t.Fatalf("expected bus lane/bundle metrics: %#v", routing.Metrics)
+	}
+	if routing.Metrics.PortHintViolations != 0 || routing.Metrics.DirectionViolations != 0 {
+		t.Fatalf("golden routes should respect port hints: %#v", routing.Metrics)
+	}
+	compiled, err := CompileIfNeeded("isometric_architecture_v1", raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var data map[string]any
+	if err := json.Unmarshal(compiled, &data); err != nil {
+		t.Fatal(err)
+	}
+	if len(data["zones"].([]any)) < 10 || len(data["entities"].([]any)) < 18 || len(data["links"].([]any)) < 22 {
+		t.Fatalf("compiled golden example lost structure: zones=%d entities=%d links=%d", len(data["zones"].([]any)), len(data["entities"].([]any)), len(data["links"].([]any)))
 	}
 }
 

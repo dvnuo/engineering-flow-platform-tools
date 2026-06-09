@@ -39,7 +39,7 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 ### Browser
 
-`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. It uses a dedicated browser profile by default and does not export cookies or tokens.
+`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. Persistent sessions can also inspect redacted page structure, semantic locators, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, redacted fetch/XHR body previews, performance metadata, HAR-lite recorder/export metadata, tables/lists, data exports, scroll collection, page-state diffs, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
 
@@ -277,6 +277,59 @@ Optional page-context API fetch:
 browser probe --url "https://intranet.example.test/app" --fetch-api "/api/me" --json
 ```
 
+Persistent browser automation session:
+
+```bash
+browser session start --name default --url "https://intranet.example.test/app" --json
+browser session discover --ports 9222,9223 --json
+browser session attach --name user-demo --debug-port 9222 --json
+browser tab current --session default --json
+browser page snapshot --session default --json
+browser page extract --session default --selector ".user-avatar" --json
+browser page extract-schema --session default --file schema.yaml --json
+browser page find --session default --role button --name Save --json
+browser page ax --session default --json
+browser page outline --session default --json
+browser page network --session default --filter "/api/" --json
+browser page metrics --session default --limit-resources 10 --json
+browser page console --session default --level error --json
+browser frame list --session default --json
+browser page table --session default --selector "table.results" --json
+browser page list --session default --selector "nav" --json
+browser page screenshot --session default --out result/page-screenshot.png --json
+browser page screenshot --session default --selector ".avatar" --out result/avatar.png --json
+browser page table-export --session default --selector "table.results" --out result/table.csv --format csv --json
+browser page scroll-collect --session default --item-selector ".row" --out result/items.json --json
+browser page diff --before before.json --after after.json --json
+browser assert visible --session default --selector ".ready" --json
+browser assert count --session default --selector ".result" --min 1 --json
+browser assert screenshot --session default --baseline baseline.png --out actual.png --diff-out diff.png --json
+browser workflow record --session default --out flow.yaml --duration-ms 10000 --json
+browser workflow run --file flow.yaml --dry-run --var query=demo --report-out result/workflow-run.json --evidence-dir result/evidence --json
+browser form inspect --session default --json
+browser form fill --session default --file values.yaml --json
+browser network start --session default --limit 500 --json
+browser network list --session default --filter "/api/" --json
+browser network export --session default --out result/network.har-lite.json --format har-lite --json
+```
+
+Bounded page actions:
+
+```bash
+browser page click --session default --selector "button.sign-in" --json
+browser page click --session default --ref "axref-0-abcdef123456" --json
+browser page type --session default --selector "input[name=q]" --text "search" --clear --json
+browser page select --session default --ref "axref-1-abcdef123456" --label "Ready" --json
+browser page check --session default --ref "axref-2-abcdef123456" --json
+browser page press --session default --key Enter --json
+browser page upload --session default --selector "input[type=file]" --file "./report.pdf" --json
+browser page wait --session default --selector ".ready" --network-idle-ms 500 --json
+browser page eval --session default --expr "document.title" --json
+browser page fetch --session default --url "/api/me" --json
+browser download wait --session default --filename-contains "report" --json
+browser download list --session default --json
+```
+
 The current OpenCode runtime image consumes prebuilt binaries copied into `runtime-tools/` by an external pipeline. A future runtime change must place `browser` on `PATH`, and probe execution inside a runtime container also requires Edge/Chrome/Chromium in that image.
 
 ## Visual Examples
@@ -312,7 +365,7 @@ Then inspect the exact schema before calling a command:
 jira schema issue.create --json
 confluence schema page.create --json
 jenkins schema job.build-with-params --json
-browser schema probe --json
+browser schema page.fetch --json
 inspect-image schema inspect --json
 visual schema render --json
 ```

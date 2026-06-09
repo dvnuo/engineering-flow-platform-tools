@@ -3,7 +3,6 @@ package mermaid
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"regexp"
 	"sort"
 	"strconv"
@@ -247,131 +246,11 @@ func compile(kind string, d Diagram) map[string]any {
 }
 
 func compileIsometric(d Diagram) map[string]any {
-	nodes := sortedNodes(d)
-	nodeMap := nodeMapByID(nodes)
-	ranks := architectureRanks(nodes, d.Edges)
-	groups := architectureSortedGroups(d, nodes, ranks)
-	if len(groups) == 0 {
-		groups = []Group{{ID: "main-zone", Label: "MAIN ZONE", Kind: "zone"}}
-	}
-	zoneBounds := map[string]map[string]any{}
-	zones := make([]any, 0, len(groups))
-	zoneW := 7.4
-	zoneH := 6.3
-	zoneGap := 2.8
-	for i, group := range groups {
-		bounds := map[string]any{"x": 0.5 + float64(i)*(zoneW+zoneGap), "y": 0.8, "w": zoneW, "h": zoneH}
-		zoneBounds[group.ID] = bounds
-		zones = append(zones, map[string]any{
-			"id":         group.ID,
-			"label":      strings.ToUpper(nonEmpty(group.Label, group.ID)),
-			"bounds":     bounds,
-			"style":      "dashed",
-			"importance": 0.7,
-			"presentation": map[string]any{
-				"boundary":    "dashed",
-				"fill":        "#f8fafc",
-				"fillOpacity": 0.045,
-				"color":       "#475569",
-				"labelPoint":  map[string]any{"x": bounds["x"].(float64) + 0.45, "y": bounds["y"].(float64) + bounds["h"].(float64) - 0.45},
-			},
-		})
-	}
-	entities := make([]any, 0, len(nodes))
-	nodePos := map[string]map[string]float64{}
-	groupNodes := architectureNodesByGroup(nodes, groups, ranks)
-	for _, group := range groups {
-		members := groupNodes[group.ID]
-		for i, node := range members {
-			groupID := node.Group
-			if groupID == "" || zoneBounds[groupID] == nil {
-				if len(groups) > 0 {
-					groupID = group.ID
-				} else {
-					groupID = "main-zone"
-				}
-			}
-			b := zoneBounds[groupID]
-			colCount := int(math.Ceil(math.Sqrt(float64(len(members)))))
-			if colCount < 1 {
-				colCount = 1
-			}
-			col := i % colCount
-			row := i / colCount
-			cellW := number(b["w"]) / float64(colCount+1)
-			cellH := number(b["h"]) / float64(maxInt(2, int(math.Ceil(float64(len(members))/float64(colCount)))+1))
-			x := number(b["x"]) + cellW*float64(col+1)
-			y := number(b["y"]) + number(b["h"])*0.58 - cellH*float64(row)
-			if len(members) == 1 {
-				x = number(b["x"]) + number(b["w"])*0.5
-				y = number(b["y"]) + number(b["h"])*0.54
-			}
-			nodePos[node.ID] = map[string]float64{"x": x, "y": y}
-			kind := inferEntityKind(node)
-			entities = append(entities, map[string]any{
-				"id":         node.ID,
-				"label":      nonEmpty(node.Label, node.ID),
-				"kind":       kind,
-				"zone":       groupID,
-				"position":   map[string]any{"x": x, "y": y},
-				"size":       map[string]any{"w": 2.0, "d": 2.0, "h": 1.6},
-				"importance": 0.62,
-				"presentation": map[string]any{
-					"icon": iconForKind(kind),
-				},
-			})
-		}
-	}
-	links := make([]any, 0, len(d.Edges))
-	for i, edge := range d.Edges {
-		role := inferArchitectureRole(edge, nodeMap)
-		pathGroup := inferArchitecturePathGroup(edge, nodeMap)
-		from := nodePos[edge.From]
-		to := nodePos[edge.To]
-		route := []any{}
-		if from != nil && to != nil {
-			fromX, fromY := from["x"], from["y"]
-			toX, toY := to["x"], to["y"]
-			route = []any{map[string]any{"x": fromX, "y": fromY}}
-			if math.Abs(fromY-toY) > 0.4 && math.Abs(fromX-toX) > 0.4 {
-				bendX := (fromX + toX) / 2
-				route = append(route, map[string]any{"x": bendX, "y": fromY}, map[string]any{"x": bendX, "y": toY})
-			}
-			route = append(route, map[string]any{"x": toX, "y": toY})
-		}
-		linkItem := map[string]any{
-			"id":            nonEmpty(edge.ID, fmt.Sprintf("link_%02d", i+1)),
-			"from":          edge.From,
-			"to":            edge.To,
-			"from_port":     edge.FromPort,
-			"to_port":       edge.ToPort,
-			"kind":          nonEmpty(edge.Kind, "depends_on"),
-			"directed":      edge.Directed,
-			"role":          role,
-			"pathGroup":     pathGroup,
-			"routeStyle":    "orthogonal",
-			"route":         route,
-			"importance":    importanceForRole(role),
-			"labelPriority": labelPriorityForRole(role),
-			"presentation": map[string]any{
-				"arrow":     "forward",
-				"lineStyle": lineStyle(edge, role),
-				"color":     colorForRole(role),
-				"fromPort":  edge.FromPort,
-				"toPort":    edge.ToPort,
-			},
-			"metadata": map[string]any{
-				"mermaid_from_port": edge.FromPort,
-				"mermaid_to_port":   edge.ToPort,
-			},
-		}
-		if label := compact(edge.Label, 22); label != "" {
-			linkItem["label"] = label
-		}
-		links = append(links, linkItem)
-	}
+	graph := BuildArchitectureSemanticGraph(d)
+	layout := ArchitectureLayoutEngine(graph)
+	routing := ArchitectureRoutingEngine(graph, layout)
 	focusIDs := []any{}
-	for i, node := range nodes {
+	for i, node := range graph.Nodes {
 		if i >= 3 {
 			break
 		}
@@ -392,7 +271,7 @@ func compileIsometric(d Diagram) map[string]any {
 			"padding": 2,
 		},
 		"camera": map[string]any{"mode": "orthographic_isometric", "zoom": 0.92, "theta": 0.78, "phi": 1.02, "radius": 11},
-		"zones":  zones, "entities": entities, "links": links,
+		"zones":  layout.ToVisualZones(), "entities": layout.ToVisualEntities(), "links": routing.ToVisualLinks(),
 		"view": map[string]any{"colorBy": "kind", "mode": "overview"},
 		"visual": map[string]any{
 			"goal":              "Explain the Mermaid architecture structure and the first visible request path.",
@@ -414,7 +293,16 @@ func compileIsometric(d Diagram) map[string]any {
 			"linkLabelMode":        "html_billboard",
 			"showLegend":           true,
 		},
-		"metadata": sourceMetadata(d),
+		"metadata": mergeMetadata(sourceMetadata(d), map[string]any{
+			"architecture_pipeline": map[string]any{
+				"semantic_graph":       "BuildArchitectureSemanticGraph",
+				"layout_engine":        "ArchitectureLayoutEngine",
+				"routing_engine":       "ArchitectureRoutingEngine",
+				"route_validator":      "ValidateArchitectureRoutes",
+				"port_hint_violations": routing.Metrics.PortHintViolations,
+				"direction_violations": routing.Metrics.DirectionViolations,
+			},
+		}),
 	}
 }
 
@@ -1130,6 +1018,10 @@ func mergeMap(dst, src map[string]any) map[string]any {
 		out[k] = v
 	}
 	return out
+}
+
+func mergeMetadata(dst, src map[string]any) map[string]any {
+	return mergeMap(dst, src)
 }
 
 func sortedNodes(d Diagram) []Node {

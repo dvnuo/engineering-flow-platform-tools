@@ -158,3 +158,53 @@ architecture-beta
 		t.Fatalf("frontmatter did not merge: camera=%#v renderHints=%#v", camera, renderHints)
 	}
 }
+
+func TestArchitectureSemanticLayoutRoutingPipeline(t *testing.T) {
+	raw := []byte(`architecture-beta
+  group client(cloud)[Client Zone]
+  group edge(cloud)[Edge Zone]
+  group app(server)[Application Zone]
+  group data(database)[Data Zone]
+  service browser(internet)[Browser] in client
+  service gateway(server)[API Gateway] in edge
+  service service(server)[Order Service] in app
+  service db(database)[Order Database] in data
+  browser:R -->|API| L:gateway
+  gateway:R -->|Service| L:service
+  service:R -->|Data| L:db
+`)
+	diagram, ok := parse(raw)
+	if !ok {
+		t.Fatal("expected Mermaid architecture to parse")
+	}
+	graph := BuildArchitectureSemanticGraph(diagram)
+	if len(graph.Nodes) != 4 || len(graph.Groups) != 4 || len(graph.Edges) != 3 {
+		t.Fatalf("unexpected semantic graph: nodes=%d groups=%d edges=%d", len(graph.Nodes), len(graph.Groups), len(graph.Edges))
+	}
+	layout := ArchitectureLayoutEngine(graph)
+	for _, pair := range [][2]string{{"browser", "gateway"}, {"gateway", "service"}, {"service", "db"}} {
+		if layout.Ranks[pair[0]] >= layout.Ranks[pair[1]] {
+			t.Fatalf("expected rank %s < %s, got %#v", pair[0], pair[1], layout.Ranks)
+		}
+		if layout.Entities[pair[0]].Position.X >= layout.Entities[pair[1]].Position.X {
+			t.Fatalf("expected layout x %s < %s, got %#v -> %#v", pair[0], pair[1], layout.Entities[pair[0]].Position, layout.Entities[pair[1]].Position)
+		}
+	}
+	routing := ArchitectureRoutingEngine(graph, layout)
+	if len(routing.Links) != 3 {
+		t.Fatalf("unexpected routing link count: %d", len(routing.Links))
+	}
+	if routing.Metrics.PortHintViolations != 0 || routing.Metrics.DirectionViolations != 0 {
+		t.Fatalf("route validation should pass: %#v", routing.Metrics)
+	}
+	roles := map[string]string{}
+	for _, link := range routing.Links {
+		roles[link.Edge.Label] = link.Role
+		if len(link.Route) < 2 {
+			t.Fatalf("expected routed link to include route points: %#v", link)
+		}
+	}
+	if roles["API"] != "primary" || roles["Service"] != "primary" || roles["Data"] != "secondary" {
+		t.Fatalf("unexpected role inference: %#v", roles)
+	}
+}

@@ -5147,6 +5147,10 @@
 
     var labels = [];
     var entityByID = {};
+    var entityComponents = [];
+    var relationComponents = [];
+    var labelComponents = [];
+    var leaderLineComponents = [];
     var markContext = createMarkContext(manifest, data);
     var visualHints = readVisualHints(data);
     var viewMode = normalizeMarkKey(visualHints.labelMode || "overview") || "overview";
@@ -5162,6 +5166,114 @@
       if (q.visibility === "detail" || q.labelPriority === "hover") return false;
       return q.importance >= 0.58 || q.labelPriority === "always" || q.labelPriority === "important";
     }
+    function HtmlLabelComponent(options) {
+      options = options || {};
+      this.id = options.id || "";
+      this.type = options.type || "label";
+      this.model = options.model || {};
+      this.dom = options.element || null;
+      this.anchorWorld = options.anchorWorld || new THREE.Vector3();
+      this.visible = options.visible !== false;
+      this.group = null;
+    }
+    HtmlLabelComponent.prototype.mount = function (parent) {
+      if (parent && this.dom && this.dom.parentNode !== parent) parent.appendChild(this.dom);
+      this.group = parent || null;
+      return this;
+    };
+    HtmlLabelComponent.prototype.update = function (anchorWorld) {
+      if (anchorWorld) this.anchorWorld.copy(anchorWorld);
+      return this;
+    };
+    HtmlLabelComponent.prototype.updateProjection = function (cameraObject, activeRenderer, container) {
+      if (!this.dom) return;
+      var point = projectWorldToScreen(this.anchorWorld, cameraObject, activeRenderer, container);
+      var mode = this.type === "entity" ? "translate(-50%, -100%)" : "translate(-50%, -50%)";
+      this.dom.style.transform = "translate3d(" + point.x.toFixed(2) + "px, " + point.y.toFixed(2) + "px, 0) " + mode;
+    };
+    HtmlLabelComponent.prototype.setVisible = function (visible) {
+      this.visible = !!visible;
+      if (this.dom) {
+        this.dom.style.display = this.visible ? "" : "none";
+        this.dom.style.visibility = this.visible ? "visible" : "hidden";
+        this.dom.style.opacity = this.visible ? "1" : "0";
+      }
+      return this;
+    };
+    HtmlLabelComponent.prototype.setContent = function (text) {
+      if (this.dom) this.dom.textContent = text || "";
+      return this;
+    };
+    HtmlLabelComponent.prototype.dispose = function () {
+      if (this.dom && this.dom.parentNode) this.dom.parentNode.removeChild(this.dom);
+      this.dom = null;
+    };
+    function LeaderLineComponent(id, group, model) {
+      this.id = id || "";
+      this.model = model || {};
+      this.group = group || null;
+    }
+    LeaderLineComponent.prototype.mount = function (parent) {
+      if (parent && this.group && this.group.parent !== parent) parent.add(this.group);
+      return this;
+    };
+    LeaderLineComponent.prototype.update = function (nextGroup) {
+      if (nextGroup) this.group = nextGroup;
+      return this;
+    };
+    LeaderLineComponent.prototype.setState = function (state) {
+      if (this.group && state && state.visible !== undefined) this.group.visible = !!state.visible;
+      return this;
+    };
+    LeaderLineComponent.prototype.dispose = function () {
+      if (this.group && this.group.parent) this.group.parent.remove(this.group);
+      this.group = null;
+    };
+    function EntityComponent(context, model, group, record, labelComponent, leaderComponent) {
+      this.id = model && model.id || "";
+      this.model = model || {};
+      this.group = group || null;
+      this.body = group || null;
+      this.record = record || null;
+      this.labelComponent = labelComponent || null;
+      this.leaderLineComponent = leaderComponent || null;
+      this.badgeComponent = null;
+      this.bbox = record ? computeEntityVisualBounds(record) : null;
+      this.ports = null;
+      this.anchors = {
+        topLabel: record && record.labelAnchorWorld ? record.labelAnchorWorld.clone() : null,
+        top: record && record.entityTopWorld ? record.entityTopWorld.clone() : null
+      };
+      this.context = context || {};
+    }
+    EntityComponent.prototype.mount = function (parent) {
+      if (parent && this.group && this.group.parent !== parent) parent.add(this.group);
+      if (this.labelComponent) this.labelComponent.mount(shell.labelLayer);
+      if (this.leaderLineComponent) this.leaderLineComponent.mount(leaderRoot);
+      return this;
+    };
+    EntityComponent.prototype.update = function () {
+      if (!this.record) return this;
+      this.bbox = computeEntityVisualBounds(this.record);
+      this.ports = computeEntityPorts(this.record);
+      this.anchors.top = this.record.entityTopWorld ? this.record.entityTopWorld.clone() : this.bbox.topCenter.clone();
+      this.anchors.topLabel = this.record.labelAnchorWorld ? this.record.labelAnchorWorld.clone() : this.bbox.topCenter.clone();
+      if (this.labelComponent) this.labelComponent.update(this.anchors.topLabel);
+      return this;
+    };
+    EntityComponent.prototype.setState = function (state) {
+      state = state || {};
+      if (this.group && state.visible !== undefined) this.group.visible = !!state.visible;
+      if (this.labelComponent && state.labelVisible !== undefined) this.labelComponent.setVisible(!!state.labelVisible);
+      if (this.leaderLineComponent && state.labelVisible !== undefined) this.leaderLineComponent.setState({ visible: !!state.labelVisible });
+      return this;
+    };
+    EntityComponent.prototype.dispose = function () {
+      if (this.group && this.group.parent) this.group.parent.remove(this.group);
+      if (this.labelComponent) this.labelComponent.dispose();
+      if (this.leaderLineComponent) this.leaderLineComponent.dispose();
+      this.group = null;
+    };
     function computeEntityVisualBounds(record) {
       var object = record && record.object;
       var size = record && record.size ? record.size : { w: 0.9, h: 0.9, d: 0.9 };
@@ -5270,17 +5382,31 @@
       } else if (entityQuality.labelPriority === "important") {
         entityPriority += 0.28;
       }
+      var entityLabelComponent = new HtmlLabelComponent({
+        id: item.id || "",
+        type: "entity",
+        model: item,
+        element: label,
+        anchorWorld: anchor.clone(),
+        visible: shouldShowIsometricEntityLabel(item)
+      }).mount(shell.labelLayer);
+      labelComponents.push(entityLabelComponent);
       var labelRecord = { element: label, point: anchor, visible: shouldShowIsometricEntityLabel(item), type: "entity", priority: entityPriority, id: item.id, entityID: item.id, offset: offset };
+      labelRecord.component = entityLabelComponent;
       setLabelAnchorMetadata(label, anchor, offset, anchorInfo.top);
       labels.push(labelRecord);
       var leader = createDashedLeader(THREE, anchorInfo.top, anchor.clone().add(new THREE.Vector3(0, -0.08, 0)));
       leader.visible = shouldShowIsometricEntityLabel(item);
       leaderRoot.add(leader);
+      var leaderComponent = new LeaderLineComponent(item.id || "", leader, { entityID: item.id || "" });
+      leaderLineComponents.push(leaderComponent);
       entityRecord.labelRecord = labelRecord;
       entityRecord.leader = leader;
       entityRecord.leaderOffset = offset;
       entityRecord.entityTopWorld = anchorInfo.top;
       entityRecord.labelAnchorWorld = anchor;
+      entityRecord.component = new EntityComponent({ THREE: THREE }, item, object, entityRecord, entityLabelComponent, leaderComponent);
+      entityComponents.push(entityRecord.component);
     });
 
     var laneCounters = {};
@@ -5443,6 +5569,98 @@
       return anchor;
     }
 
+    function GroundPathGeometryBuilder(THREE) {
+      this.id = "GroundPathGeometryBuilder";
+      this.THREE = THREE;
+      this.lastMetrics = null;
+    }
+    GroundPathGeometryBuilder.prototype.build = function (route, curve, edgeSpec, radius) {
+      var meshSpec = Object.assign({}, edgeSpec, { groundRibbon: true, groundRail: true, routePoints: route });
+      var pathMesh = createEdgeTube(this.THREE, curve, meshSpec, radius);
+      var segmentCount = pathMesh && pathMesh.userData ? numberValue(pathMesh.userData.groundSegmentCount, 0) : 0;
+      var jointCount = pathMesh && pathMesh.userData ? numberValue(pathMesh.userData.groundJointCount, 0) : 0;
+      var metrics = {
+        relationRenderMode: "ground_decal",
+        segmentCount: segmentCount,
+        jointCount: jointCount,
+        routeLength: routeLength(route || []),
+        implementation: pathMesh && pathMesh.userData ? pathMesh.userData.groundRailImplementation || "" : ""
+      };
+      this.lastMetrics = metrics;
+      return {
+        pathGeometry: pathMesh && pathMesh.geometry ? pathMesh.geometry : null,
+        pathMesh: pathMesh,
+        arrowGeometry: null,
+        hitGeometry: null,
+        metrics: metrics
+      };
+    };
+    var groundPathBuilder = new GroundPathGeometryBuilder(THREE);
+
+    function RelationComponent(context, linkModel, routedLink, style) {
+      this.id = linkModel && linkModel.id || "";
+      this.model = linkModel || {};
+      this.group = null;
+      this.pathMesh = routedLink && routedLink.pathMesh || null;
+      this.arrowMesh = routedLink && routedLink.arrowMesh || null;
+      this.hitMesh = routedLink && routedLink.hitMesh || null;
+      this.labelComponent = routedLink && routedLink.labelComponent || null;
+      this.route = routedLink && routedLink.route ? routedLink.route : [];
+      this.metrics = routedLink && routedLink.metrics ? routedLink.metrics : {};
+      this.style = style || {};
+      this.context = context || {};
+      this.hovered = false;
+      this.selected = false;
+      this.dimmed = false;
+    }
+    RelationComponent.prototype.mount = function (parent) {
+      this.group = parent || null;
+      if (parent) {
+        if (this.pathMesh && this.pathMesh.parent !== parent) parent.add(this.pathMesh);
+        if (this.hitMesh && this.hitMesh.parent !== parent) parent.add(this.hitMesh);
+        if (this.arrowMesh && this.arrowMesh.parent !== parent) parent.add(this.arrowMesh);
+      }
+      if (this.labelComponent) this.labelComponent.mount(shell.labelLayer);
+      return this;
+    };
+    RelationComponent.prototype.updateRoute = function (routedLink) {
+      routedLink = routedLink || {};
+      if (routedLink.route) this.route = routedLink.route;
+      if (routedLink.pathMesh) this.pathMesh = routedLink.pathMesh;
+      if (routedLink.arrowMesh) this.arrowMesh = routedLink.arrowMesh;
+      if (routedLink.hitMesh) this.hitMesh = routedLink.hitMesh;
+      if (routedLink.metrics) this.metrics = routedLink.metrics;
+      return this;
+    };
+    RelationComponent.prototype.updateStyle = function (style) {
+      this.style = Object.assign({}, this.style, style || {});
+      return this;
+    };
+    RelationComponent.prototype.setState = function (state) {
+      state = state || {};
+      if (state.hovered !== undefined) this.hovered = !!state.hovered;
+      if (state.selected !== undefined) this.selected = !!state.selected;
+      if (state.dimmed !== undefined) this.dimmed = !!state.dimmed;
+      var multiplier = this.selected ? 1.16 : this.hovered ? 1.08 : this.dimmed ? 0.5 : 1;
+      [this.pathMesh, this.arrowMesh].forEach(function (mesh) {
+        if (!mesh) return;
+        mesh.traverse ? mesh.traverse(function (child) {
+          if (child.material && child.userData && child.userData.baseOpacity !== undefined) child.material.opacity = Math.min(1, child.userData.baseOpacity * multiplier);
+        }) : null;
+        if (mesh.material && mesh.userData && mesh.userData.baseOpacity !== undefined) mesh.material.opacity = Math.min(1, mesh.userData.baseOpacity * multiplier);
+      });
+      if (this.labelComponent && state.labelVisible !== undefined) this.labelComponent.setVisible(!!state.labelVisible);
+      return this;
+    };
+    RelationComponent.prototype.dispose = function () {
+      [this.pathMesh, this.arrowMesh, this.hitMesh].forEach(function (mesh) {
+        if (!mesh) return;
+        if (mesh.parent) mesh.parent.remove(mesh);
+        if (mesh.geometry && mesh.geometry.dispose) mesh.geometry.dispose();
+      });
+      if (this.labelComponent) this.labelComponent.dispose();
+    };
+
     function createRelationPath(link, edgeSpec, edgeStyle, pathPoints, initiallyVisibleLabel) {
       if (!shell.relationSvg) return;
       var role = relationRoleClass(edgeStyle.role || linkRole(link));
@@ -5493,6 +5711,15 @@
       shell.labelLayer.appendChild(label);
       var labelAnchor = computeLinkLabelAnchor(pathPoints);
       setLabelAnchorMetadata(label, labelAnchor);
+      var linkLabelComponent = new HtmlLabelComponent({
+        id: link.id || "",
+        type: "link",
+        model: link,
+        element: label,
+        anchorWorld: labelAnchor.clone(),
+        visible: !!initiallyVisibleLabel
+      }).mount(shell.labelLayer);
+      labelComponents.push(linkLabelComponent);
       var labelRecord = {
         element: label,
         point: labelAnchor,
@@ -5504,6 +5731,7 @@
         role: role,
         pathGroup: pathGroup
       };
+      labelRecord.component = linkLabelComponent;
       labels.push(labelRecord);
 
       var relation = { link: link, edgeSpec: edgeSpec, edgeStyle: edgeStyle, pathPoints: pathPoints, group: group, path: path, arrow: arrow, label: label, labelRecord: labelRecord, labelVisible: !!initiallyVisibleLabel, hovered: false, selected: false };
@@ -5587,7 +5815,18 @@
         currentRelation.hitArea = hitArea;
         currentRelation.arrow3D = arrow;
         currentRelation.curve = curve;
+        currentRelation.routeMetrics = routeMesh.metrics || {};
         currentRelation.restLength = pathPoints[0].distanceTo(pathPoints[pathPoints.length - 1]);
+        var relationComponent = new RelationComponent({ THREE: THREE, builder: groundPathBuilder.id }, link, {
+          route: pathPoints,
+          pathMesh: tube,
+          arrowMesh: arrow,
+          hitMesh: hitArea,
+          labelComponent: currentRelation.labelRecord && currentRelation.labelRecord.component,
+          metrics: routeMesh.metrics || {}
+        }, edgeStyle).mount(linkRoot);
+        currentRelation.component = relationComponent;
+        relationComponents.push(relationComponent);
         if (relationLayerMode === "world_ground" && showRelationLabel) {
           currentRelation.groundLabel = createGroundLinkLabel(link, pathPoints, edgeStyle, edgeSpec);
         }
@@ -5965,11 +6204,13 @@
       points[points.length - 1] = trimRouteEndpointPair(points[points.length - 1], points[points.length - 2], amount, false);
       return points;
     }
-
     function createRouteMesh(route, edgeSpec, radius) {
       var routed = routeCurve(route, edgeSpec);
-      var meshSpec = relationLayerMode === "world_ground" ? Object.assign({}, edgeSpec, { groundRibbon: true, groundRail: true, routePoints: routed.route }) : edgeSpec;
-      return { route: routed.route, curve: routed.curve, mesh: createEdgeTube(THREE, routed.curve, meshSpec, radius) };
+      if (relationLayerMode === "world_ground") {
+        var built = groundPathBuilder.build(routed.route, routed.curve, edgeSpec, radius);
+        return { route: routed.route, curve: routed.curve, mesh: built.pathMesh, metrics: built.metrics, builder: groundPathBuilder.id };
+      }
+      return { route: routed.route, curve: routed.curve, mesh: createEdgeTube(THREE, routed.curve, edgeSpec, radius), metrics: {}, builder: "legacy_edge_tube" };
     }
 
     function createRouteArrowhead(route, edgeSpec) {
@@ -6235,12 +6476,14 @@
       record.entityTopWorld = from.clone();
       record.labelAnchorWorld = to.clone();
       record.labelRecord.point.copy(to);
+      if (record.labelRecord.component) record.labelRecord.component.update(to);
       setLabelAnchorMetadata(record.labelRecord.element, to, record.leaderOffset || { x: 0, y: 0, z: 0 }, from);
       var fresh = createDashedLeader(THREE, from, to.clone().add(new THREE.Vector3(0, -0.08, 0)));
       while (fresh.children.length) {
         record.leader.add(fresh.children.shift());
       }
       record.leader.visible = record.labelRecord.visible && labelsVisible;
+      if (record.component) record.component.update();
     }
 
     function refreshEntityAnchors() {
@@ -6306,7 +6549,18 @@
       if (relation.labelRecord) {
         var labelAnchor = computeLinkLabelAnchor(relation.pathPoints);
         relation.labelRecord.point.copy(labelAnchor);
+        if (relation.labelRecord.component) relation.labelRecord.component.update(labelAnchor);
         setLabelAnchorMetadata(relation.labelRecord.element, labelAnchor);
+      }
+      if (relation.component) {
+        relation.component.updateRoute({
+          route: relation.pathPoints,
+          pathMesh: relation.tube,
+          arrowMesh: relation.arrow3D,
+          hitMesh: relation.hitArea,
+          labelComponent: relation.labelRecord && relation.labelRecord.component,
+          metrics: routeMesh.metrics || {}
+        });
       }
     }
 
@@ -6844,7 +7098,27 @@
       var groundLinkLabelTextureReadyCount = groundLinkLabels.filter(function (item) { return item.textureReady; }).length;
       var groundLinkLabelVisibleCount = groundLinkLabels.filter(function (item) { return item.plane && item.plane.visible; }).length;
       var htmlLinkLabels = labels.filter(function (label) { return label.type === "link"; });
+      var relationComponentsOwnPathCount = relationComponents.filter(function (component) { return component && component.pathMesh; }).length;
+      var relationComponentsOwnArrowCount = relationComponents.filter(function (component) { return component && component.arrowMesh; }).length;
+      var relationComponentsOwnHitCount = relationComponents.filter(function (component) { return component && component.hitMesh; }).length;
+      var relationComponentsOwnLabelCount = relationComponents.filter(function (component) { return component && component.labelComponent; }).length;
+      var entityComponentsWithPortsCount = entityComponents.filter(function (component) {
+        if (!component) return false;
+        component.update();
+        return !!component.ports;
+      }).length;
       return {
+        sceneComponentTreePresent: true,
+        entityComponentCount: entityComponents.length,
+        relationComponentCount: relationComponents.length,
+        htmlLabelComponentCount: labelComponents.length,
+        leaderLineComponentCount: leaderLineComponents.length,
+        groundPathBuilderPresent: !!groundPathBuilder,
+        relationComponentsOwnPathCount: relationComponentsOwnPathCount,
+        relationComponentsOwnArrowCount: relationComponentsOwnArrowCount,
+        relationComponentsOwnHitCount: relationComponentsOwnHitCount,
+        relationComponentsOwnLabelCount: relationComponentsOwnLabelCount,
+        entityComponentsWithPortsCount: entityComponentsWithPortsCount,
         relationLayerMode: relationLayerMode,
         relationRenderMode: relationLayerMode === "world_ground" ? "ground_decal" : relationLayerMode,
         relationDepthTestEnabledCount: relationDepthTestEnabledCount,

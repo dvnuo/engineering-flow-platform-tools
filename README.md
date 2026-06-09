@@ -280,7 +280,7 @@ Optional page-context API fetch:
 browser probe --url "https://intranet.example.test/app" --fetch-api "/api/me" --json
 ```
 
-Persistent browser automation session:
+Persistent browser automation session. Managed sessions attempt to detach the browser process from the short-lived CLI or agent command process, so later agent turns can reuse the same DevTools endpoint:
 
 ```bash
 browser session start --name default --url "https://intranet.example.test/app" --json

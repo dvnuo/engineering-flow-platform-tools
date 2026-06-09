@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
@@ -110,14 +109,10 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (Session, error)
 		}
 	}
 
-	cmd := exec.Command(browserPath, browserArgs(profileDir, port, opts.Headless, opts.URL)...)
 	devNull, closeNull := openDevNull()
 	defer closeNull()
-	if devNull != nil {
-		cmd.Stdout = devNull
-		cmd.Stderr = devNull
-	}
-	if err := cmd.Start(); err != nil {
+	cmd, err := startBrowserProcess(browserPath, browserArgs(profileDir, port, opts.Headless, opts.URL), devNull)
+	if err != nil {
 		return Session{}, NewError("browser_launch_failed", err.Error(), "Check --browser-exe and whether the browser can be launched.", 500)
 	}
 	client := NewDevToolsClient(LocalDebugAddr, port)

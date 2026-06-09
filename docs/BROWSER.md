@@ -66,6 +66,8 @@ browser session discover --ports 9222,9223 --json
 browser session attach --name user-demo --debug-port 9222 --json
 ```
 
+`session start` launches the managed browser with a dedicated profile and attempts to detach the browser process from the short-lived CLI or agent command process. This is meant for VS Code/Copilot-style workflows where the agent runs one CLI command, returns to chat, and later runs another command against the same DevTools endpoint.
+
 Select a page target:
 
 ```bash

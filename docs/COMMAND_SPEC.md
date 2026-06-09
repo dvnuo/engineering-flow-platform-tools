@@ -548,7 +548,7 @@ confluence page get --url <page-url>
 
 ### Persistent Workflow
 
-Start a dedicated browser session with DevTools bound to `127.0.0.1`, then select a tab and run page commands against the active target:
+Start a dedicated browser session with DevTools bound to `127.0.0.1`, then select a tab and run page commands against the active target. Managed sessions attempt to detach the browser process from the short-lived CLI or agent command process so later agent turns can reuse the same endpoint:
 
 ```bash
 browser session start --name default --url https://intranet.example.test --json

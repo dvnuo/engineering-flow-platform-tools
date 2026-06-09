@@ -17,7 +17,7 @@ func sessionCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "session",
 		Short: "Manage persistent browser automation sessions",
-		Long:  "Manage visible Edge/Chrome/Chromium browser sessions launched with a dedicated profile and local DevTools endpoint.",
+		Long:  "Manage visible Edge/Chrome/Chromium browser sessions launched with a dedicated profile, local DevTools endpoint, and detached process lifetime for multi-step agent workflows.",
 	}
 	c.AddCommand(sessionStartCmd(o), sessionListCmd(o), sessionStatusCmd(o), sessionAttachCmd(o), sessionDiscoverCmd(o), sessionStopCmd(o))
 	return c
@@ -28,7 +28,7 @@ func sessionStartCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "start",
 		Short: "Start a persistent browser automation session",
-		Long:  "Start a visible Edge/Chrome/Chromium process with a dedicated profile and a DevTools endpoint bound to 127.0.0.1.",
+		Long:  "Start a visible Edge/Chrome/Chromium process with a dedicated profile and a DevTools endpoint bound to 127.0.0.1. The browser process is detached from the short-lived CLI caller when the platform allows it.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Verbose = o.Verbose
 			mgr, err := automation.DefaultManager()

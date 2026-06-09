@@ -93,7 +93,7 @@ Fetch an API from the loaded page context:
 browser probe --url https://intranet.example.test --fetch-api /api/me --network-filter /api/ --json
 ```
 
-Use a persistent session for multi-step page automation:
+Use a persistent session for multi-step page automation. `session start` attempts to detach the managed browser from the short-lived CLI or agent command process so later chat turns can keep using the same DevTools endpoint:
 
 ```bash
 browser session start --name default --url https://intranet.example.test --json

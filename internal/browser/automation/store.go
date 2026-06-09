@@ -33,12 +33,24 @@ func (s *Store) ProfilesDir() string {
 	return filepath.Join(s.RootDir, "profiles")
 }
 
+func (s *Store) LocksDir() string {
+	return filepath.Join(s.RootDir, "locks")
+}
+
 func (s *Store) MetadataPath(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if err := ValidateSessionName(name); err != nil {
 		return "", err
 	}
 	return filepath.Join(s.SessionsDir(), name+".json"), nil
+}
+
+func (s *Store) SessionLockPath(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if err := ValidateSessionName(name); err != nil {
+		return "", err
+	}
+	return filepath.Join(s.LocksDir(), name+".lock"), nil
 }
 
 func (s *Store) SessionPath(name string) (string, error) {

@@ -299,7 +299,7 @@ func (m *Manager) Discover(ctx context.Context, opts DiscoverOptions) ([]Discove
 
 func (m *Manager) Refresh(ctx context.Context, session Session) Session {
 	client := NewDevToolsClient(session.DebugAddr, session.DebugPort)
-	version, err := client.Version(ctx)
+	version, err := refreshDevToolsVersion(ctx, client)
 	if err != nil {
 		session.Alive = false
 		session.BrowserWebSocketURL = ""
@@ -311,6 +311,30 @@ func (m *Manager) Refresh(ctx context.Context, session Session) Session {
 	session.LastSeenAt = m.now()
 	_ = m.Store.Save(session)
 	return session
+}
+
+func refreshDevToolsVersion(ctx context.Context, client *DevToolsClient) (VersionInfo, error) {
+	var lastErr error
+	for attempt := 0; attempt < 4; attempt++ {
+		version, err := client.Version(ctx)
+		if err == nil && strings.TrimSpace(version.WebSocketDebuggerURL) != "" {
+			return version, nil
+		}
+		if err != nil {
+			lastErr = err
+		} else {
+			lastErr = NewError("devtools_unavailable", "DevTools endpoint did not return a browser WebSocket URL.", "Check whether the browser session is still running.", 503)
+		}
+		if attempt == 3 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return VersionInfo{}, ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+	return VersionInfo{}, lastErr
 }
 
 func (m *Manager) RunningSession(ctx context.Context, name string) (Session, error) {

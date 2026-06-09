@@ -409,11 +409,11 @@ bash scripts/build.sh --os linux --arch amd64
 bash scripts/build.sh --snapshot --os linux --arch amd64
 ```
 
-```powershell
-./scripts/build.ps1
-./scripts/build.ps1 -Snapshot
-./scripts/build.ps1 -OS linux -Arch amd64
-./scripts/build.ps1 -Snapshot -OS linux -Arch amd64
+```bat
+scripts\build.bat
+scripts\build.bat --snapshot
+scripts\build.bat --os linux --arch amd64
+scripts\build.bat --snapshot --os linux --arch amd64
 ```
 
 Build outputs are placed under `dist/<goos>-<goarch>/` for linux, darwin, and windows on amd64 and arm64.
@@ -429,10 +429,10 @@ bash scripts/smoke.sh
 
 On Windows:
 
-```powershell
+```bat
 go test ./...
 go vet ./...
-./scripts/smoke.ps1
+scripts\smoke.bat
 ```
 
 ## Release

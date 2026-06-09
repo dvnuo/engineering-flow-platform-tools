@@ -1133,30 +1133,31 @@ func TestShellScriptsHaveValidShebangAndNewlines(t *testing.T) {
 	}
 }
 
-func TestPowerShellScriptsHaveReadableNewlines(t *testing.T) {
-	for _, path := range []string{"../scripts/smoke.ps1", "../scripts/build.ps1"} {
+func TestBatchScriptsHaveReadableNewlines(t *testing.T) {
+	for _, path := range []string{"../scripts/smoke.bat", "../scripts/build.bat"} {
 		content := mustRead(t, path)
 		if lineCount(content) <= 20 {
 			t.Fatalf("%s appears collapsed: only %d lines", path, lineCount(content))
 		}
 		if len(splitLines(content)) <= 1 {
-			t.Fatalf("%s appears to be a single-line PowerShell script", path)
+			t.Fatalf("%s appears to be a single-line batch script", path)
 		}
 		if !strings.Contains(content, "./cmd/visual") {
 			t.Fatalf("%s missing visual command coverage", path)
 		}
 	}
 
-	smoke := mustRead(t, "../scripts/smoke.ps1")
+	smoke := mustRead(t, "../scripts/smoke.bat")
 	for _, token := range []string{"go run ./cmd/visual", "template doctor", "render --template"} {
 		if !strings.Contains(smoke, token) {
-			t.Fatalf("scripts/smoke.ps1 missing visual smoke token %q", token)
+			t.Fatalf("scripts/smoke.bat missing visual smoke token %q", token)
 		}
 	}
-	build := mustRead(t, "../scripts/build.ps1")
-	for _, token := range []string{"-Snapshot", "-OS", "-Arch", "go build", "./cmd/visual"} {
+
+	build := mustRead(t, "../scripts/build.bat")
+	for _, token := range []string{"--snapshot", "--os", "--arch", "TARGET_OS", "TARGET_ARCH", "go build", "./cmd/visual"} {
 		if !strings.Contains(build, token) {
-			t.Fatalf("scripts/build.ps1 missing build token %q", token)
+			t.Fatalf("scripts/build.bat missing build token %q", token)
 		}
 	}
 }
@@ -1167,7 +1168,7 @@ func TestWorkflowYAMLHasExpectedStructure(t *testing.T) {
 	if lineCount(content) <= 20 {
 		t.Fatalf("%s appears collapsed: only %d lines", path, lineCount(content))
 	}
-	for _, token := range []string{"windows-latest", "scripts/smoke.ps1", "go build ./cmd/visual", "shell: pwsh"} {
+	for _, token := range []string{"windows-latest", "scripts\\smoke.bat", "go build ./cmd/visual", "shell: cmd"} {
 		if !strings.Contains(content, token) {
 			t.Fatalf("%s missing expected workflow token %q", path, token)
 		}
@@ -1282,22 +1283,22 @@ func TestVisualBuildAndSmokeScriptsContract(t *testing.T) {
 		}
 	}
 
-	buildPS := mustRead(t, "../scripts/build.ps1")
-	for _, token := range []string{"-Snapshot", "-OS", "-Arch", "$TargetOS", "$TargetArch", "./cmd/visual"} {
-		if !strings.Contains(buildPS, token) {
-			t.Fatalf("scripts/build.ps1 missing %s support", token)
+	buildBAT := mustRead(t, "../scripts/build.bat")
+	for _, token := range []string{"--snapshot", "--os", "--arch", "TARGET_OS", "TARGET_ARCH", "./cmd/visual"} {
+		if !strings.Contains(buildBAT, token) {
+			t.Fatalf("scripts/build.bat missing %s support", token)
 		}
 	}
 
-	smokePS := mustRead(t, "../scripts/smoke.ps1")
+	smokeBAT := mustRead(t, "../scripts/smoke.bat")
 	for _, token := range []string{"visual commands --json", "visual schema render --json", "visual template categories", "visual template schema", "visual template doctor", "render --template"} {
-		if !strings.Contains(smokePS, token) {
-			t.Fatalf("scripts/smoke.ps1 missing visual smoke token %s", token)
+		if !strings.Contains(smokeBAT, token) {
+			t.Fatalf("scripts/smoke.bat missing visual smoke token %s", token)
 		}
 	}
 
 	testWorkflow := mustRead(t, "../.github/workflows/test.yml")
-	for _, token := range []string{"windows-latest", "shell: pwsh", "scripts/smoke.ps1"} {
+	for _, token := range []string{"windows-latest", "shell: cmd", "scripts\\smoke.bat"} {
 		if !strings.Contains(testWorkflow, token) {
 			t.Fatalf(".github/workflows/test.yml missing Windows smoke token %s", token)
 		}

@@ -29,5 +29,5 @@ jobs:
         run: bash scripts/smoke.sh
       - name: smoke windows
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: ./scripts/smoke.ps1
+        shell: cmd
+        run: scripts\smoke.bat

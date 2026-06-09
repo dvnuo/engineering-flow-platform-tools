@@ -702,7 +702,6 @@
           "id",
           "from",
           "to",
-          "label",
           "directed"
         ],
         "properties": {

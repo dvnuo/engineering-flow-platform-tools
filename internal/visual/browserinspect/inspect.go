@@ -133,10 +133,20 @@ type DOMSummary struct {
 	GroundLinkMeshes        int      `json:"ground_link_mesh_count"`
 	GroundLinkRibbons       int      `json:"ground_link_ribbon_count"`
 	GroundLinkSegments      int      `json:"ground_link_segment_count"`
+	GroundRouteRailSegments int      `json:"ground_route_rail_segment_count"`
+	GroundRouteRailJoints   int      `json:"ground_route_rail_joint_count"`
+	GroundRouteRailArrows   int      `json:"ground_route_rail_arrowhead_count"`
+	GroundRouteRailVisible  int      `json:"ground_route_rail_visible_count"`
+	IsolatedArrowheads      int      `json:"isolated_arrowhead_count"`
+	RoutesWithSegments      int      `json:"routes_with_segments_count"`
+	RoutesWithoutSegments   int      `json:"routes_without_segments_count"`
 	VisibleGroundLinks      int      `json:"visible_ground_link_count"`
 	GroundArrowheads        int      `json:"ground_arrowhead_count"`
 	VisibleGroundArrowheads int      `json:"visible_ground_arrowhead_count"`
 	GroundLinkHitAreas      int      `json:"ground_link_hit_area_count"`
+	GenericLinkLabels       int      `json:"generic_link_label_count"`
+	InferredLinkLabels      int      `json:"inferred_link_label_count"`
+	ExplicitLinkLabels      int      `json:"explicit_link_label_count"`
 	LinkLabelMode           string   `json:"link_label_mode,omitempty"`
 	HTMLLinkLabels          int      `json:"html_link_label_count"`
 	GroundLinkLabels        int      `json:"ground_link_label_mesh_count"`
@@ -225,10 +235,20 @@ type VisualSummary struct {
 	GroundLinkMeshCount            int            `json:"ground_link_mesh_count"`
 	GroundLinkRibbonCount          int            `json:"ground_link_ribbon_count"`
 	GroundLinkSegmentCount         int            `json:"ground_link_segment_count"`
+	GroundRouteRailSegmentCount    int            `json:"ground_route_rail_segment_count"`
+	GroundRouteRailJointCount      int            `json:"ground_route_rail_joint_count"`
+	GroundRouteRailArrowheadCount  int            `json:"ground_route_rail_arrowhead_count"`
+	GroundRouteRailVisibleCount    int            `json:"ground_route_rail_visible_count"`
+	IsolatedArrowheadCount         int            `json:"isolated_arrowhead_count"`
+	RoutesWithSegmentsCount        int            `json:"routes_with_segments_count"`
+	RoutesWithoutSegmentsCount     int            `json:"routes_without_segments_count"`
 	VisibleGroundLinkCount         int            `json:"visible_ground_link_count"`
 	GroundArrowheadCount           int            `json:"ground_arrowhead_count"`
 	VisibleGroundArrowheadCount    int            `json:"visible_ground_arrowhead_count"`
 	GroundLinkHitAreaCount         int            `json:"ground_link_hit_area_count"`
+	GenericLinkLabelCount          int            `json:"generic_link_label_count"`
+	InferredLinkLabelCount         int            `json:"inferred_link_label_count"`
+	ExplicitLinkLabelCount         int            `json:"explicit_link_label_count"`
 	LinkLabelMode                  string         `json:"link_label_mode,omitempty"`
 	HTMLLinkLabelCount             int            `json:"html_link_label_count"`
 	GroundLinkLabelMeshCount       int            `json:"ground_link_label_mesh_count"`
@@ -363,10 +383,20 @@ func Inspect(opts Options) (Result, error) {
 		GroundLinkMeshes:        nodeResult.Data.Summary.GroundLinkMeshCount,
 		GroundLinkRibbons:       nodeResult.Data.Summary.GroundLinkRibbonCount,
 		GroundLinkSegments:      nodeResult.Data.Summary.GroundLinkSegmentCount,
+		GroundRouteRailSegments: nodeResult.Data.Summary.GroundRouteRailSegmentCount,
+		GroundRouteRailJoints:   nodeResult.Data.Summary.GroundRouteRailJointCount,
+		GroundRouteRailArrows:   nodeResult.Data.Summary.GroundRouteRailArrowheadCount,
+		GroundRouteRailVisible:  nodeResult.Data.Summary.GroundRouteRailVisibleCount,
+		IsolatedArrowheads:      nodeResult.Data.Summary.IsolatedArrowheadCount,
+		RoutesWithSegments:      nodeResult.Data.Summary.RoutesWithSegmentsCount,
+		RoutesWithoutSegments:   nodeResult.Data.Summary.RoutesWithoutSegmentsCount,
 		VisibleGroundLinks:      nodeResult.Data.Summary.VisibleGroundLinkCount,
 		GroundArrowheads:        nodeResult.Data.Summary.GroundArrowheadCount,
 		VisibleGroundArrowheads: nodeResult.Data.Summary.VisibleGroundArrowheadCount,
 		GroundLinkHitAreas:      nodeResult.Data.Summary.GroundLinkHitAreaCount,
+		GenericLinkLabels:       nodeResult.Data.Summary.GenericLinkLabelCount,
+		InferredLinkLabels:      nodeResult.Data.Summary.InferredLinkLabelCount,
+		ExplicitLinkLabels:      nodeResult.Data.Summary.ExplicitLinkLabelCount,
 		LinkLabelMode:           nodeResult.Data.Summary.LinkLabelMode,
 		HTMLLinkLabels:          nodeResult.Data.Summary.HTMLLinkLabelCount,
 		GroundLinkLabels:        nodeResult.Data.Summary.GroundLinkLabelMeshCount,
@@ -493,10 +523,20 @@ type browserDOMSummary struct {
 	GroundLinkMeshCount            int            `json:"groundLinkMeshCount"`
 	GroundLinkRibbonCount          int            `json:"groundLinkRibbonCount"`
 	GroundLinkSegmentCount         int            `json:"groundLinkSegmentCount"`
+	GroundRouteRailSegmentCount    int            `json:"groundRouteRailSegmentCount"`
+	GroundRouteRailJointCount      int            `json:"groundRouteRailJointCount"`
+	GroundRouteRailArrowheadCount  int            `json:"groundRouteRailArrowheadCount"`
+	GroundRouteRailVisibleCount    int            `json:"groundRouteRailVisibleCount"`
+	IsolatedArrowheadCount         int            `json:"isolatedArrowheadCount"`
+	RoutesWithSegmentsCount        int            `json:"routesWithSegmentsCount"`
+	RoutesWithoutSegmentsCount     int            `json:"routesWithoutSegmentsCount"`
 	VisibleGroundLinkCount         int            `json:"visibleGroundLinkCount"`
 	GroundArrowheadCount           int            `json:"groundArrowheadCount"`
 	VisibleGroundArrowheadCount    int            `json:"visibleGroundArrowheadCount"`
 	GroundLinkHitAreaCount         int            `json:"groundLinkHitAreaCount"`
+	GenericLinkLabelCount          int            `json:"genericLinkLabelCount"`
+	InferredLinkLabelCount         int            `json:"inferredLinkLabelCount"`
+	ExplicitLinkLabelCount         int            `json:"explicitLinkLabelCount"`
 	LinkLabelMode                  string         `json:"linkLabelMode"`
 	HTMLLinkLabelCount             int            `json:"htmlLinkLabelCount"`
 	GroundLinkLabelMeshCount       int            `json:"groundLinkLabelMeshCount"`
@@ -881,10 +921,20 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		GroundLinkMeshCount:            summary.GroundLinkMeshes,
 		GroundLinkRibbonCount:          summary.GroundLinkRibbons,
 		GroundLinkSegmentCount:         summary.GroundLinkSegments,
+		GroundRouteRailSegmentCount:    summary.GroundRouteRailSegments,
+		GroundRouteRailJointCount:      summary.GroundRouteRailJoints,
+		GroundRouteRailArrowheadCount:  summary.GroundRouteRailArrows,
+		GroundRouteRailVisibleCount:    summary.GroundRouteRailVisible,
+		IsolatedArrowheadCount:         summary.IsolatedArrowheads,
+		RoutesWithSegmentsCount:        summary.RoutesWithSegments,
+		RoutesWithoutSegmentsCount:     summary.RoutesWithoutSegments,
 		VisibleGroundLinkCount:         summary.VisibleGroundLinks,
 		GroundArrowheadCount:           summary.GroundArrowheads,
 		VisibleGroundArrowheadCount:    summary.VisibleGroundArrowheads,
 		GroundLinkHitAreaCount:         summary.GroundLinkHitAreas,
+		GenericLinkLabelCount:          summary.GenericLinkLabels,
+		InferredLinkLabelCount:         summary.InferredLinkLabels,
+		ExplicitLinkLabelCount:         summary.ExplicitLinkLabels,
 		LinkLabelMode:                  summary.LinkLabelMode,
 		HTMLLinkLabelCount:             summary.HTMLLinkLabels,
 		GroundLinkLabelMeshCount:       summary.GroundLinkLabels,
@@ -1006,11 +1056,32 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	if totalDeclaredLinks > 0 && summary.RelationLayerMode == "world_ground" && summary.GroundLinkSegments == 0 {
 		add("browser_ground_route_segments_missing", "error", "No world-space ground route segments were reported.", "Render each relation path segment as a ground ribbon mesh instead of relying on screen-space SVG.", "render_ground_route_segments")
 	}
+	if totalDeclaredLinks > 0 && summary.RelationLayerMode == "world_ground" && summary.GroundRouteRailSegments == 0 {
+		add("browser_route_segments_missing", "error", "No raised route rail segments were reported.", "Render each relation as raised world-space route rail geometry, not just arrowheads.", "render_raised_route_rails")
+	}
 	if totalDeclaredLinks > 0 && summary.RelationLayerMode == "world_ground" && summary.GroundArrowheads == 0 {
 		add("browser_ground_arrowheads_missing", "error", "No world-space ground arrowheads were reported.", "Render directed relation arrows as Three.js world-space meshes attached to the route end.", "render_ground_arrowheads")
 	}
 	if totalDeclaredLinks > 0 && summary.RelationLayerMode == "world_ground" && summary.GroundArrowheads > 0 && summary.GroundLinkRibbons == 0 {
 		add("browser_link_lines_missing_but_arrows_present", "error", "World-space arrowheads were reported but no ground relation ribbons were found.", "Render continuous ground route ribbons so arrows are attached to visible link lines.", "render_ground_link_ribbons")
+	}
+	if totalDeclaredLinks > 0 && summary.RelationLayerMode == "world_ground" && summary.GroundRouteRailArrows > 0 && summary.GroundRouteRailSegments == 0 {
+		add("browser_link_lines_missing_but_arrows_present", "error", "Raised route arrowheads were reported but raised rail segments are missing.", "Create rectangular prism rail segments and joint caps for every visible route before adding arrowheads.", "render_route_rail_segments_before_arrows")
+	}
+	if totalDeclaredLinks > 1 && summary.RelationLayerMode == "world_ground" && summary.GroundRouteRailSegments > summary.RoutesWithSegments && summary.GroundRouteRailJoints == 0 {
+		add("browser_route_joints_missing", "warning", "Raised route rails have no reported joint caps.", "Add small joint caps at route bends so orthogonal paths read as continuous engineering arrows.", "render_route_rail_joints")
+	}
+	if summary.RoutesWithoutSegments > 0 {
+		add("browser_route_segments_missing", "warning", fmt.Sprintf("Some relation routes have no raised rail segments: %d.", summary.RoutesWithoutSegments), "Skip only zero-length routes; otherwise generate at least one rail segment per relation.", "fix_routes_without_segments")
+	}
+	if summary.GenericLinkLabels > 0 {
+		add("browser_generic_link_labels_visible", "warning", fmt.Sprintf("Generic visible link labels were found: %d.", summary.GenericLinkLabels), "Do not default relation labels to 'link'; use explicit Mermaid edge labels or hide unlabeled relations.", "remove_generic_link_labels")
+	}
+	if totalDeclaredLinks > 0 && summary.VisibleLinkLabels == 0 && summary.ExplicitLinkLabels == 0 {
+		add("browser_link_label_semantics_missing", "warning", "No meaningful explicit relation labels were found.", "Use Mermaid edge labels such as -->|API| or @link directives for important relationships.", "add_meaningful_mermaid_edge_labels")
+	}
+	if summary.IsolatedArrowheads > 0 {
+		add("browser_link_lines_missing_but_arrows_present", "error", fmt.Sprintf("Some arrowheads are isolated from route rails: %d.", summary.IsolatedArrowheads), "Ensure every visible arrowhead belongs to a relation with generated rail segments.", "connect_arrowheads_to_rails")
 	}
 	if totalDeclaredLinks > 0 && summary.RelationLayerMode == "world_ground" && summary.LinkLabelMode != "" && summary.LinkLabelMode != "html_billboard" {
 		add("browser_link_label_mode_not_html_billboard", "error", "The default link label mode is not html_billboard.", "Use world-anchored HTML billboards for readable link labels; reserve ground texture labels for debug only.", "set_html_billboard_link_labels")

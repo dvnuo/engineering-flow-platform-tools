@@ -3,6 +3,7 @@ package mermaid
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"regexp"
 	"sort"
 	"strconv"
@@ -326,19 +327,46 @@ func compileIsometric(d Diagram) map[string]any {
 		to := nodePos[edge.To]
 		route := []any{}
 		if from != nil && to != nil {
-			midX := (from["x"] + to["x"]) / 2
-			route = []any{
-				map[string]any{"x": from["x"], "y": from["y"]},
-				map[string]any{"x": midX, "y": from["y"]},
-				map[string]any{"x": midX, "y": to["y"]},
-				map[string]any{"x": to["x"], "y": to["y"]},
+			fromX, fromY := from["x"], from["y"]
+			toX, toY := to["x"], to["y"]
+			dx, dy := toX-fromX, toY-fromY
+			laneOffset := 0.65 + float64(i%3)*0.22
+			if math.Abs(dx) >= math.Abs(dy) {
+				laneY := math.Min(fromY, toY) - laneOffset
+				if fromY > toY {
+					laneY = math.Max(fromY, toY) + laneOffset
+				}
+				exitX := fromX + signFloat(dx)*0.9
+				entryX := toX - signFloat(dx)*0.9
+				route = []any{
+					map[string]any{"x": fromX, "y": fromY},
+					map[string]any{"x": exitX, "y": fromY},
+					map[string]any{"x": exitX, "y": laneY},
+					map[string]any{"x": entryX, "y": laneY},
+					map[string]any{"x": entryX, "y": toY},
+					map[string]any{"x": toX, "y": toY},
+				}
+			} else {
+				laneX := math.Min(fromX, toX) - laneOffset
+				if fromX > toX {
+					laneX = math.Max(fromX, toX) + laneOffset
+				}
+				exitY := fromY + signFloat(dy)*0.9
+				entryY := toY - signFloat(dy)*0.9
+				route = []any{
+					map[string]any{"x": fromX, "y": fromY},
+					map[string]any{"x": fromX, "y": exitY},
+					map[string]any{"x": laneX, "y": exitY},
+					map[string]any{"x": laneX, "y": entryY},
+					map[string]any{"x": toX, "y": entryY},
+					map[string]any{"x": toX, "y": toY},
+				}
 			}
 		}
-		links = append(links, map[string]any{
+		linkItem := map[string]any{
 			"id":            nonEmpty(edge.ID, fmt.Sprintf("link_%02d", i+1)),
 			"from":          edge.From,
 			"to":            edge.To,
-			"label":         compact(nonEmpty(edge.Label, edge.Kind, "link"), 22),
 			"kind":          nonEmpty(edge.Kind, "depends_on"),
 			"directed":      edge.Directed,
 			"role":          role,
@@ -352,7 +380,11 @@ func compileIsometric(d Diagram) map[string]any {
 				"lineStyle": lineStyle(edge, role),
 				"color":     colorForRole(role),
 			},
-		})
+		}
+		if label := compact(edge.Label, 22); label != "" {
+			linkItem["label"] = label
+		}
+		links = append(links, linkItem)
 	}
 	focusIDs := []any{}
 	for i, node := range nodes {
@@ -375,7 +407,7 @@ func compileIsometric(d Diagram) map[string]any {
 			"grid":    map[string]any{"enabled": true, "step": 1, "subdivisions": 4},
 			"padding": 2,
 		},
-		"camera": map[string]any{"mode": "orthographic_isometric", "zoom": 1.08, "theta": 0.78, "phi": 1.02, "radius": 11},
+		"camera": map[string]any{"mode": "orthographic_isometric", "zoom": 0.92, "theta": 0.78, "phi": 1.02, "radius": 11},
 		"zones":  zones, "entities": entities, "links": links,
 		"view": map[string]any{"colorBy": "kind", "mode": "overview"},
 		"visual": map[string]any{
@@ -391,11 +423,19 @@ func compileIsometric(d Diagram) map[string]any {
 			"badgeSize":            "medium",
 			"badgePlacement":       "front",
 			"labelIcon":            true,
+			"layoutScale":          1.55,
 			"preferExplicitRoutes": true,
 			"showLegend":           true,
 		},
 		"metadata": sourceMetadata(d),
 	}
+}
+
+func signFloat(value float64) float64 {
+	if value < 0 {
+		return -1
+	}
+	return 1
 }
 
 func compileGraph(d Diagram, withEvents bool) map[string]any {
@@ -647,7 +687,7 @@ func parseArchitectureEdge(line string, index int) (Edge, bool) {
 	if from == "" || to == "" {
 		return Edge{}, false
 	}
-	return Edge{ID: fmt.Sprintf("edge_%02d", index), From: from, To: to, Label: nonEmpty(label, "link"), Kind: kindFromLabel(label), Directed: strings.Contains(line, ">") || strings.Contains(line, "<"), Role: roleFromLabel(label), PathGroup: pathGroupFromLabel(label)}, true
+	return Edge{ID: fmt.Sprintf("edge_%02d", index), From: from, To: to, Label: cleanText(label), Kind: kindFromLabel(label), Directed: strings.Contains(line, ">") || strings.Contains(line, "<"), Role: roleFromLabel(label), PathGroup: pathGroupFromLabel(label)}, true
 }
 
 func parseFlowEdge(line string, index int) (Edge, bool) {

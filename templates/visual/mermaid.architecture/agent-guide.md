@@ -56,7 +56,7 @@ architecture-beta
   service gateway(server)[API Gateway] in edge
   service service(server)[Order Service] in app
   service db(database)[Order Database] in app
-  browser:R --> L:gateway
-  gateway:R --> L:service
-  service:R --> L:db
+  browser:R -->|API| L:gateway
+  gateway:R -->|Service| L:service
+  service:R -->|Data| L:db
 ```

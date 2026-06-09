@@ -311,7 +311,7 @@ func validateIsometricArchitecture(data map[string]any, limits manifest.LimitsSp
 	for i, item := range links {
 		link, ok := item.(map[string]any)
 		if !ok {
-			return isometricCounts{}, invalid(fmt.Sprintf("isometric link at index %d must be an object.", i), "Each link must contain id, from, to, label, and directed.")
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric link at index %d must be an object.", i), "Each link must contain id, from, to, and directed. Add label only when the Mermaid edge has meaningful text.")
 		}
 		id := stringField(link, "id")
 		if id == "" {
@@ -321,10 +321,13 @@ func validateIsometricArchitecture(data map[string]any, limits manifest.LimitsSp
 			return isometricCounts{}, invalid("isometric link ids must be unique.", "Rename duplicate link id "+id+".")
 		}
 		linkIDs[id] = true
-		for _, name := range []string{"from", "to", "label"} {
+		for _, name := range []string{"from", "to"} {
 			if _, err := requiredStringPresent(link, name, "isometric link", i); err != nil {
 				return isometricCounts{}, err
 			}
+		}
+		if value, ok := link["label"]; ok && strings.TrimSpace(fmt.Sprint(value)) == "" {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric link %s has an empty label.", id), "Omit link.label when there is no meaningful relation label.")
 		}
 		if value, ok := link["directed"]; !ok || !isBool(value) {
 			return isometricCounts{}, invalid(fmt.Sprintf("isometric link %s is missing boolean directed.", id), "Set link.directed to true or false.")

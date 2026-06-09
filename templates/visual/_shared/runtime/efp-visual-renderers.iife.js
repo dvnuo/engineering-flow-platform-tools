@@ -1706,32 +1706,131 @@
   function createGroundRibbonMesh(THREE, points, edgeSpec, radius) {
     if (!THREE.BufferGeometry || !THREE.Float32BufferAttribute || !THREE.Mesh || !THREE.MeshBasicMaterial) return null;
     var color = colorValue(edgeSpec.color, 0x63a9ff);
-    var width = Math.max(0.045, numberValue(edgeSpec.groundWidth, (radius || 0.016) * 4.2));
+    points = edgeSpec.routePoints && edgeSpec.routePoints.length >= 2 ? edgeSpec.routePoints.map(function (p) { return p.clone(); }) : (points || []);
+    var width = Math.max(0.08, numberValue(edgeSpec.groundWidth, (radius || 0.016) * 5.2));
+    var height = Math.max(0.022, numberValue(edgeSpec.groundHeight, 0.026));
+    var y0 = numberValue(edgeSpec.groundY, 0.09);
+    var y1 = y0 + height;
     var half = width * 0.5;
     var positions = [];
     var segmentCount = 0;
+    var jointCount = 0;
     var dashed = edgeSpec.lineStyle === "dashed" || edgeSpec.lineStyle === "dash";
-    var dashLength = edgeSpec.dashLength || 0.34;
-    var gapLength = edgeSpec.gapLength || 0.2;
+    var dashLength = edgeSpec.dashLength || 0.55;
+    var gapLength = edgeSpec.gapLength || 0.3;
 
-    function pushQuad(a, b) {
+    if (!dashed && THREE.Group && THREE.BoxGeometry && points.length >= 2) {
+      var railMaterial = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: edgeSpec.opacity === undefined ? 0.92 : edgeSpec.opacity,
+        depthTest: false,
+        depthWrite: false,
+        side: THREE.DoubleSide || 2
+      });
+      var railGroup = new THREE.Group();
+      railGroup.material = railMaterial;
+      railGroup.renderOrder = 12;
+      railGroup.frustumCulled = false;
+      railGroup.userData.isEdgeTube = true;
+      railGroup.userData.isGroundRibbon = true;
+      railGroup.userData.isGroundRouteRail = true;
+      railGroup.userData.isGroundRailGroup = true;
+      railGroup.userData.groundRailImplementation = "box_segments";
+      railGroup.userData.groundSegmentCount = 0;
+      railGroup.userData.groundJointCount = Math.max(0, points.length - 2);
+      railGroup.userData.baseOpacity = edgeSpec.opacity;
+      railGroup.userData.targetOpacity = edgeSpec.opacity;
+      points.forEach(function (point, pointIndex) {
+        if (pointIndex >= points.length - 1) return;
+        var start = point;
+        var end = points[pointIndex + 1];
+        var delta = end.clone().sub(start);
+        delta.y = 0;
+        var length = delta.length();
+        if (length < 0.05) return;
+        var segmentGeometry = new THREE.BoxGeometry(length, height, width);
+        var segment = new THREE.Mesh(segmentGeometry, railMaterial);
+        segment.position.set((start.x + end.x) / 2, y0 + height * 0.5, (start.z + end.z) / 2);
+        segment.rotation.y = -Math.atan2(delta.z, delta.x);
+        segment.renderOrder = 12;
+        segment.frustumCulled = false;
+        segment.userData.type = "link-segment";
+        segment.userData.isGroundRouteRailSegment = true;
+        segment.userData.linkId = edgeSpec.id || "";
+        railGroup.add(segment);
+        railGroup.userData.groundSegmentCount += 1;
+      });
+      for (var railJointIndex = 1; railJointIndex < points.length - 1; railJointIndex += 1) {
+        var jointGeometry = new THREE.BoxGeometry(width * 1.05, height, width * 1.05);
+        var joint = new THREE.Mesh(jointGeometry, railMaterial);
+        joint.position.set(points[railJointIndex].x, y0 + height * 0.5, points[railJointIndex].z);
+        joint.renderOrder = 12;
+        joint.frustumCulled = false;
+        joint.userData.type = "link-joint";
+        joint.userData.isGroundRouteRailJoint = true;
+        joint.userData.linkId = edgeSpec.id || "";
+        railGroup.add(joint);
+      }
+      if (railGroup.userData.groundSegmentCount > 0) {
+        return railGroup;
+      }
+    }
+
+    function pushTriangle(a, b, c) {
+      positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+    }
+
+    function pushQuad(a, b, c, d) {
+      pushTriangle(a, b, c);
+      pushTriangle(a, c, d);
+    }
+
+    function pushRailSegment(a, b) {
       var delta = b.clone().sub(a);
       delta.y = 0;
       if (delta.length() < 0.001) return;
       var side = new THREE.Vector3(0, 1, 0).cross(delta.normalize()).normalize().multiplyScalar(half);
-      var a1 = a.clone().add(side);
-      var a2 = a.clone().sub(side);
-      var b1 = b.clone().add(side);
-      var b2 = b.clone().sub(side);
-      [a1, a2, b1, a2, b2, b1].forEach(function (p) {
-        positions.push(p.x, p.y, p.z);
-      });
+      var aL0 = new THREE.Vector3(a.x + side.x, y0, a.z + side.z);
+      var aR0 = new THREE.Vector3(a.x - side.x, y0, a.z - side.z);
+      var bL0 = new THREE.Vector3(b.x + side.x, y0, b.z + side.z);
+      var bR0 = new THREE.Vector3(b.x - side.x, y0, b.z - side.z);
+      var aL1 = new THREE.Vector3(aL0.x, y1, aL0.z);
+      var aR1 = new THREE.Vector3(aR0.x, y1, aR0.z);
+      var bL1 = new THREE.Vector3(bL0.x, y1, bL0.z);
+      var bR1 = new THREE.Vector3(bR0.x, y1, bR0.z);
+      pushQuad(aL1, bL1, bR1, aR1);
+      pushQuad(aL0, aR0, bR0, bL0);
+      pushQuad(aL0, bL0, bL1, aL1);
+      pushQuad(aR0, aR1, bR1, bR0);
+      pushQuad(aL0, aL1, aR1, aR0);
+      pushQuad(bL0, bR0, bR1, bL1);
       segmentCount += 1;
     }
 
-    (points || []).forEach(function (point) {
-      point.y = Math.max(point.y || 0, numberValue(edgeSpec.groundY, 0.064));
-    });
+    function pushJoint(point) {
+      var halfJoint = half * 0.92;
+      var x0 = point.x - halfJoint;
+      var x1 = point.x + halfJoint;
+      var z0 = point.z - halfJoint;
+      var z1 = point.z + halfJoint;
+      var p000 = new THREE.Vector3(x0, y0, z0);
+      var p100 = new THREE.Vector3(x1, y0, z0);
+      var p110 = new THREE.Vector3(x1, y0, z1);
+      var p010 = new THREE.Vector3(x0, y0, z1);
+      var p001 = new THREE.Vector3(x0, y1, z0);
+      var p101 = new THREE.Vector3(x1, y1, z0);
+      var p111 = new THREE.Vector3(x1, y1, z1);
+      var p011 = new THREE.Vector3(x0, y1, z1);
+      pushQuad(p001, p101, p111, p011);
+      pushQuad(p000, p010, p110, p100);
+      pushQuad(p000, p100, p101, p001);
+      pushQuad(p100, p110, p111, p101);
+      pushQuad(p110, p010, p011, p111);
+      pushQuad(p010, p000, p001, p011);
+      jointCount += 1;
+    }
+
     for (var i = 0; i < points.length - 1; i += 1) {
       var start = points[i];
       var end = points[i + 1];
@@ -1739,7 +1838,7 @@
       var length = segment.length();
       if (length < 0.001) continue;
       if (!dashed) {
-        pushQuad(start, end);
+        pushRailSegment(start, end);
         continue;
       }
       var dir = segment.clone().normalize();
@@ -1748,9 +1847,14 @@
         var from = cursor;
         var to = Math.min(length, cursor + dashLength);
         if (to > from + 0.02) {
-          pushQuad(start.clone().add(dir.clone().multiplyScalar(from)), start.clone().add(dir.clone().multiplyScalar(to)));
+          pushRailSegment(start.clone().add(dir.clone().multiplyScalar(from)), start.clone().add(dir.clone().multiplyScalar(to)));
         }
         cursor += dashLength + gapLength;
+      }
+    }
+    if (!dashed) {
+      for (var j = 1; j < points.length - 1; j += 1) {
+        pushJoint(points[j]);
       }
     }
     if (positions.length < 18) return null;
@@ -1761,15 +1865,21 @@
       color: color,
       transparent: true,
       opacity: edgeSpec.opacity === undefined ? 0.82 : edgeSpec.opacity,
-      depthTest: true,
+      depthTest: false,
       depthWrite: false,
-      side: THREE.DoubleSide || 2
+      side: THREE.DoubleSide || 2,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
     });
     var mesh = new THREE.Mesh(geometry, material);
-    mesh.renderOrder = 3;
+    mesh.renderOrder = 12;
     mesh.userData.isEdgeTube = true;
     mesh.userData.isGroundRibbon = true;
+    mesh.userData.isGroundRouteRail = true;
+    mesh.userData.groundRailImplementation = "buffer_prism";
     mesh.userData.groundSegmentCount = segmentCount;
+    mesh.userData.groundJointCount = jointCount;
     mesh.userData.baseOpacity = edgeSpec.opacity;
     mesh.userData.targetOpacity = edgeSpec.opacity;
     return mesh;
@@ -1778,7 +1888,7 @@
   function createEdgeTube(THREE, curve, edgeSpec, radius) {
     var color = colorValue(edgeSpec.color, 0x63a9ff);
     if (edgeSpec.groundRibbon) {
-      var ribbon = createGroundRibbonMesh(THREE, curvePoints(curve, 18), edgeSpec, radius);
+      var ribbon = createGroundRibbonMesh(THREE, edgeSpec.routePoints || curvePoints(curve, 18), edgeSpec, radius);
       if (ribbon) return ribbon;
     }
     var geometry = THREE.TubeGeometry ? new THREE.TubeGeometry(curve, 18, radius || 0.012, 8, false) : new THREE.BufferGeometry().setFromPoints(curvePoints(curve, 18));
@@ -1836,6 +1946,65 @@
   function createArrowHead(THREE, curve, edgeSpec) {
     if (!edgeSpec.directed || edgeSpec.arrow === "none") {
       return null;
+    }
+    if (edgeSpec.groundRail && THREE.BufferGeometry && THREE.Float32BufferAttribute) {
+      var railRoute = edgeSpec.routePoints && edgeSpec.routePoints.length >= 2 ? edgeSpec.routePoints : curvePoints(curve, 14);
+      var railEnd = railRoute[railRoute.length - 1].clone();
+      var railPrev = railRoute[railRoute.length - 2].clone();
+      var railDirection = railEnd.clone().sub(railPrev);
+      railDirection.y = 0;
+      if (railDirection.length() < 0.001) return null;
+      railDirection.normalize();
+      var railSide = new THREE.Vector3(0, 1, 0).cross(railDirection).normalize();
+      if (railSide.length() < 0.001) railSide.set(1, 0, 0);
+      var railWidth = Math.max(0.22, numberValue(edgeSpec.groundArrowWidth, Math.max(numberValue(edgeSpec.groundWidth, 0.14) * 2.25, 0.34)));
+      var railLength = Math.max(0.26, numberValue(edgeSpec.groundArrowLength, Math.max(numberValue(edgeSpec.groundWidth, 0.14) * 2.8, 0.42)));
+      var railHeight = Math.max(0.026, numberValue(edgeSpec.groundHeight, 0.03) * 1.25);
+      var y0 = numberValue(edgeSpec.groundY, 0.09);
+      var y1 = y0 + railHeight;
+      var tip = railEnd.clone().sub(railDirection.clone().multiplyScalar(0.035));
+      var back = tip.clone().sub(railDirection.clone().multiplyScalar(railLength));
+      var left = back.clone().add(railSide.clone().multiplyScalar(railWidth * 0.5));
+      var right = back.clone().add(railSide.clone().multiplyScalar(-railWidth * 0.5));
+      function withY(point, y) { return new THREE.Vector3(point.x, y, point.z); }
+      var topTip = withY(tip, y1);
+      var topLeft = withY(left, y1);
+      var topRight = withY(right, y1);
+      var bottomTip = withY(tip, y0);
+      var bottomLeft = withY(left, y0);
+      var bottomRight = withY(right, y0);
+      var positions = [];
+      function push(a, b, c) {
+        positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+      }
+      push(topTip, topLeft, topRight);
+      push(bottomTip, bottomRight, bottomLeft);
+      push(bottomTip, topTip, topRight);
+      push(bottomTip, topRight, bottomRight);
+      push(bottomRight, topRight, topLeft);
+      push(bottomRight, topLeft, bottomLeft);
+      push(bottomLeft, topLeft, topTip);
+      push(bottomLeft, topTip, bottomTip);
+      var railGeometry = new THREE.BufferGeometry();
+      railGeometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      if (railGeometry.computeVertexNormals) railGeometry.computeVertexNormals();
+      var railMaterial = new THREE.MeshBasicMaterial({
+        color: colorValue(edgeSpec.color, 0x111827),
+        transparent: true,
+        opacity: Math.min(1, edgeSpec.opacity === undefined ? 0.96 : edgeSpec.opacity),
+        depthTest: false,
+        depthWrite: false,
+        side: THREE.DoubleSide || 2,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -2
+      });
+      var railArrow = new THREE.Mesh(railGeometry, railMaterial);
+      railArrow.renderOrder = 13;
+      railArrow.userData.baseOpacity = railMaterial.opacity;
+      railArrow.userData.targetOpacity = railMaterial.opacity;
+      railArrow.userData.isGroundRouteRailArrowhead = true;
+      return railArrow;
     }
     var arrowScale = Math.max(0.58, Math.min(2.25, edgeSpec.arrowScale || 1));
     var sampled = curvePoints(curve, 14);
@@ -1922,6 +2091,7 @@
         curve: curve,
         phase: i / Math.max(1, count || 1),
         speed: edgeSpec.flow ? 0.18 + i * 0.025 : 0.08,
+        isFlowParticle: true,
         baseOpacity: edgeSpec.lineStyle === "dashed" ? 0.58 : 0.82,
         targetOpacity: edgeSpec.lineStyle === "dashed" ? 0.58 : 0.82,
         baseScale: 1,
@@ -4938,9 +5108,10 @@
     var sun = new THREE.DirectionalLight(0xffffff, 1.08);
     sun.position.set(6, 8, 5);
     scene.add(sun);
-    var base = new THREE.Mesh(new THREE.PlaneGeometry((maxX - minX + 3.4) * scale, (maxY - minY + 3.4) * scale), new THREE.MeshBasicMaterial({ color: 0xf8fafc, transparent: true, opacity: 0.96 }));
+    var base = new THREE.Mesh(new THREE.PlaneGeometry((maxX - minX + 3.4) * scale, (maxY - minY + 3.4) * scale), new THREE.MeshBasicMaterial({ color: 0xf8fafc }));
     base.rotation.x = -Math.PI / 2;
     base.position.y = -0.018;
+    base.renderOrder = -30;
     base.userData.isBasePlane = true;
     root.add(base);
     var grid = addThreeGrid(THREE, root, Math.max(10, span * scale + 1.8), Math.max(10, Math.ceil(span)), 0.002, 0x94a3b8);
@@ -4966,6 +5137,20 @@
     function computeEntityVisualBounds(record) {
       var object = record && record.object;
       var size = record && record.size ? record.size : { w: 0.9, h: 0.9, d: 0.9 };
+      if (object && THREE.Box3) {
+        var box = new THREE.Box3().setFromObject(object);
+        if (box && box.min && box.max && Number.isFinite(box.min.x) && Number.isFinite(box.max.y)) {
+          return {
+            center: new THREE.Vector3((box.min.x + box.max.x) / 2, (box.min.y + box.max.y) / 2, (box.min.z + box.max.z) / 2),
+            topCenter: new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2),
+            minX: box.min.x,
+            maxX: box.max.x,
+            minZ: box.min.z,
+            maxZ: box.max.z,
+            topY: box.max.y
+          };
+        }
+      }
       var scaleY = object && object.scale ? numberValue(object.scale.y, 1) : 1;
       var topY = object ? object.position.y + Math.max(0.36, size.h * 0.54 * scaleY) : Math.max(0.36, size.h * 0.54);
       var halfW = Math.max(0.22, size.w * 0.42 * (object && object.scale ? numberValue(object.scale.x, 1) : 1));
@@ -4983,7 +5168,7 @@
     }
     function entityLabelGap(record) {
       var size = record && record.size ? record.size : { h: 0.9 };
-      return Math.max(0.62, Math.min(0.92, 0.58 + size.h * 0.18));
+      return Math.max(0.42, Math.min(0.68, 0.38 + size.h * 0.14));
     }
     function entityLabelAnchor(record) {
       var bounds = computeEntityVisualBounds(record);
@@ -5130,24 +5315,36 @@
         edgeSpec.opacity = 0.98;
         edgeSpec.flow = false;
         edgeSpec.arrowScale = isMermaidArchitecture ? 0.86 : 0.92;
-        edgeSpec.groundWidth = isMermaidArchitecture ? 0.11 : 0.13;
-        edgeSpec.groundY = 0.072;
-        return { radius: isMermaidArchitecture ? 0.018 : 0.028, secondary: false, role: role };
+        edgeSpec.groundWidth = isMermaidArchitecture ? 0.18 : 0.18;
+        edgeSpec.groundHeight = isMermaidArchitecture ? 0.032 : 0.028;
+        edgeSpec.groundY = isMermaidArchitecture ? 0.096 : 0.086;
+        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.44 : 0.42;
+        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.38 : 0.38;
+        edgeSpec.endpointTrim = isMermaidArchitecture ? 0.32 : 0.36;
+        return { radius: isMermaidArchitecture ? 0.014 : 0.028, secondary: false, role: role };
       }
       if (role === "secondary" && !secondary) {
         edgeSpec.opacity = Math.max(0.48, Math.min(0.62, edgeSpec.opacity || 0.54));
         edgeSpec.flow = false;
         edgeSpec.arrowScale = 1.05;
-        edgeSpec.groundWidth = isMermaidArchitecture ? 0.08 : 0.085;
-        edgeSpec.groundY = 0.068;
+        edgeSpec.groundWidth = isMermaidArchitecture ? 0.15 : 0.1;
+        edgeSpec.groundHeight = isMermaidArchitecture ? 0.028 : 0.02;
+        edgeSpec.groundY = isMermaidArchitecture ? 0.1 : 0.068;
+        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.42 : 0.32;
+        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.36 : 0.28;
+        edgeSpec.endpointTrim = isMermaidArchitecture ? 0.24 : 0.28;
         return { radius: isMermaidArchitecture ? 0.011 : 0.017, secondary: false, role: role };
       }
       if (isOverviewMode() && secondary) {
         edgeSpec.opacity = Math.max(0.2, Math.min(0.34, edgeSpec.opacity || 0.28));
         edgeSpec.flow = false;
         edgeSpec.arrowScale = 0.68;
-        edgeSpec.groundWidth = isMermaidArchitecture ? 0.052 : 0.056;
-        edgeSpec.groundY = 0.066;
+        edgeSpec.groundWidth = isMermaidArchitecture ? 0.1 : 0.07;
+        edgeSpec.groundHeight = isMermaidArchitecture ? 0.024 : 0.018;
+        edgeSpec.groundY = isMermaidArchitecture ? 0.088 : 0.066;
+        edgeSpec.groundArrowLength = isMermaidArchitecture ? 0.31 : 0.24;
+        edgeSpec.groundArrowWidth = isMermaidArchitecture ? 0.25 : 0.2;
+        edgeSpec.endpointTrim = 0.22;
         if (role === "auxiliary") {
           edgeSpec.lineStyle = edgeSpec.lineStyle || "dashed";
         }
@@ -5156,8 +5353,12 @@
       edgeSpec.opacity = Math.max(edgeSpec.opacity || 0.74, cls === "main" ? 0.9 : 0.74);
       edgeSpec.flow = edgeSpec.flow && (cls === "main" || cls === "cache" || cls === "storage" || cls === "service");
       edgeSpec.arrowScale = Math.max(0.9, Math.min(1.35, 0.9 + q.importance * 0.35));
-      edgeSpec.groundWidth = cls === "main" ? 0.1 : 0.074;
+      edgeSpec.groundWidth = cls === "main" ? 0.11 : 0.08;
+      edgeSpec.groundHeight = cls === "main" ? 0.023 : 0.02;
       edgeSpec.groundY = 0.068;
+      edgeSpec.groundArrowLength = cls === "main" ? 0.34 : 0.28;
+      edgeSpec.groundArrowWidth = cls === "main" ? 0.3 : 0.24;
+      edgeSpec.endpointTrim = cls === "main" ? 0.32 : 0.26;
       if (cls === "main") return { radius: 0.02 + Math.min(0.008, q.importance * 0.008), secondary: false, role: role };
       return { radius: 0.014 + Math.min(0.006, q.importance * 0.006), secondary: false, role: role };
     }
@@ -5208,8 +5409,8 @@
         return new THREE.Vector3(0, 0.34, 0);
       }
       var anchor = segment.anchor.clone();
-      anchor.add(segment.side.clone().multiplyScalar(0.06));
-      anchor.y = 0.36;
+      anchor.add(segment.side.clone().multiplyScalar(0.28));
+      anchor.y = 0.52;
       return anchor;
     }
 
@@ -5316,7 +5517,7 @@
       var worldTubeOpacity = relationLayerMode === "world_ground" ? (edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.5 : 0.22) : (isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.82 : edgeStyle.role === "secondary" ? 0.48 : 0.18);
       if (tube.material) {
         tube.material.opacity = worldTubeOpacity;
-        tube.material.depthTest = relationLayerMode !== "world_ground" ? false : true;
+        tube.material.depthTest = false;
       }
       tube.userData.baseOpacity = worldTubeOpacity;
       tube.userData.targetOpacity = tube.userData.baseOpacity;
@@ -5330,14 +5531,14 @@
         hitArea.userData.payload = link;
         linkRoot.add(hitArea);
       }
-      var arrow = createRouteArrowhead(pathPoints, edgeSpec);
+      var arrow = createRouteArrowhead(pathPoints, Object.assign({}, edgeSpec, { skipEndpointTrim: true }));
       if (arrow) {
         arrow.userData.isDirectedArrow = true;
         arrow.userData.isOverviewSecondary = !!edgeStyle.secondary;
         var worldArrowOpacity = relationLayerMode === "world_ground" ? (edgeStyle.role === "primary" ? 0.96 : edgeStyle.role === "secondary" ? 0.58 : 0.26) : (isMermaidArchitecture ? 0 : edgeStyle.role === "primary" ? 0.9 : edgeStyle.role === "secondary" ? 0.55 : 0.24);
         if (arrow.material) {
           arrow.material.opacity = worldArrowOpacity;
-          arrow.material.depthTest = relationLayerMode !== "world_ground" ? false : true;
+          arrow.material.depthTest = false;
         }
         arrow.userData.baseOpacity = worldArrowOpacity;
         arrow.userData.targetOpacity = arrow.userData.baseOpacity;
@@ -5582,7 +5783,7 @@
     }
 
     function routeCurve(route, edgeSpec) {
-      var simplified = simplifyWorldRoute(route);
+      var simplified = simplifyWorldRoute(trimRouteEndpoints(route, edgeSpec));
       if (simplified.length > 2 && THREE.CurvePath && THREE.LineCurve3) {
         var path = new THREE.CurvePath();
         for (var i = 0; i < simplified.length - 1; i += 1) {
@@ -5594,14 +5795,37 @@
       return { route: simplified, curve: curve };
     }
 
+    function trimRouteEndpointPair(start, next, amount, fromStart) {
+      if (!start || !next || amount <= 0) return start;
+      var direction = next.clone().sub(start);
+      direction.y = 0;
+      var length = direction.length();
+      if (length < amount + 0.08) return start;
+      direction.normalize();
+      return start.clone().add(direction.multiplyScalar(amount));
+    }
+
+    function trimRouteEndpoints(route, edgeSpec) {
+      var points = (route || []).map(function (point) { return point.clone(); });
+      if (points.length < 2) return points;
+      if (edgeSpec && edgeSpec.skipEndpointTrim) return points;
+      var role = relationRoleClass(edgeSpec.role || "");
+      var amount = numberValue(edgeSpec.endpointTrim, role === "primary" ? 0.36 : role === "auxiliary" ? 0.22 : 0.28);
+      points[0] = trimRouteEndpointPair(points[0], points[1], amount, true);
+      points[points.length - 1] = trimRouteEndpointPair(points[points.length - 1], points[points.length - 2], amount, false);
+      return points;
+    }
+
     function createRouteMesh(route, edgeSpec, radius) {
       var routed = routeCurve(route, edgeSpec);
-      var meshSpec = relationLayerMode === "world_ground" ? Object.assign({}, edgeSpec, { groundRibbon: true }) : edgeSpec;
+      var meshSpec = relationLayerMode === "world_ground" ? Object.assign({}, edgeSpec, { groundRibbon: true, groundRail: true, routePoints: routed.route }) : edgeSpec;
       return { route: routed.route, curve: routed.curve, mesh: createEdgeTube(THREE, routed.curve, meshSpec, radius) };
     }
 
     function createRouteArrowhead(route, edgeSpec) {
-      return createArrowHead(THREE, routeCurve(route, edgeSpec).curve, edgeSpec);
+      var routed = routeCurve(route, edgeSpec);
+      var arrowSpec = relationLayerMode === "world_ground" ? Object.assign({}, edgeSpec, { groundRail: true, routePoints: routed.route }) : edgeSpec;
+      return createArrowHead(THREE, routed.curve, arrowSpec);
     }
 
     function placeRouteLabel(route) {
@@ -5882,12 +6106,28 @@
       var routeMesh = createRouteMesh(route, relation.edgeSpec, relation.edgeStyle.radius);
       relation.curve = routeMesh.curve;
       relation.pathPoints = routeMesh.route || route;
-      if (relation.tube && routeMesh.mesh && routeMesh.mesh.geometry) {
+      if (relation.tube && routeMesh.mesh && routeMesh.mesh.userData && routeMesh.mesh.userData.isGroundRailGroup) {
+        while (relation.tube.children && relation.tube.children.length) {
+          var oldChild = relation.tube.children.pop();
+          disposeGeometry(oldChild.geometry);
+          if (oldChild.material && oldChild.material.dispose && oldChild.material !== relation.tube.material) oldChild.material.dispose();
+        }
+        while (routeMesh.mesh.children && routeMesh.mesh.children.length) {
+          relation.tube.add(routeMesh.mesh.children.shift());
+        }
+        relation.tube.material = routeMesh.mesh.material;
+        relation.tube.userData.isGroundRibbon = !!routeMesh.mesh.userData.isGroundRibbon;
+        relation.tube.userData.isGroundRouteRail = !!routeMesh.mesh.userData.isGroundRouteRail;
+        relation.tube.userData.isGroundRailGroup = true;
+        relation.tube.userData.groundSegmentCount = routeMesh.mesh.userData ? numberValue(routeMesh.mesh.userData.groundSegmentCount, 0) : 0;
+        relation.tube.userData.groundJointCount = routeMesh.mesh.userData ? numberValue(routeMesh.mesh.userData.groundJointCount, 0) : 0;
+      } else if (relation.tube && routeMesh.mesh && routeMesh.mesh.geometry) {
         disposeGeometry(relation.tube.geometry);
         relation.tube.geometry = routeMesh.mesh.geometry;
         relation.tube.userData.isGroundRibbon = !!(routeMesh.mesh.userData && routeMesh.mesh.userData.isGroundRibbon);
+        relation.tube.userData.isGroundRouteRail = !!(routeMesh.mesh.userData && routeMesh.mesh.userData.isGroundRouteRail);
         relation.tube.userData.groundSegmentCount = routeMesh.mesh.userData ? numberValue(routeMesh.mesh.userData.groundSegmentCount, 0) : 0;
-        relation.tube.userData.curve = routeMesh.curve;
+        relation.tube.userData.groundJointCount = routeMesh.mesh.userData ? numberValue(routeMesh.mesh.userData.groundJointCount, 0) : 0;
         if (routeMesh.mesh.material && routeMesh.mesh.material.dispose) routeMesh.mesh.material.dispose();
       }
       if (relation.hitArea && relation.curve) {
@@ -5899,9 +6139,8 @@
         } else {
           relation.hitArea.geometry = new THREE.BufferGeometry().setFromPoints(curvePoints(relation.curve, 18));
         }
-        relation.hitArea.userData.curve = relation.curve;
       }
-      var nextArrow = createRouteArrowhead(route, relation.edgeSpec);
+      var nextArrow = createRouteArrowhead(relation.pathPoints, Object.assign({}, relation.edgeSpec, { skipEndpointTrim: true }));
       if (relation.arrow3D && nextArrow) {
         disposeGeometry(relation.arrow3D.geometry);
         relation.arrow3D.geometry = nextArrow.geometry;
@@ -6337,11 +6576,47 @@
       var groundLinkSegmentCount = relationLinks.reduce(function (sum, relation) {
         return sum + (relation.tube && relation.tube.userData ? numberValue(relation.tube.userData.groundSegmentCount, 0) : 0);
       }, 0);
+      var groundLinkJointCount = relationLinks.reduce(function (sum, relation) {
+        return sum + (relation.tube && relation.tube.userData ? numberValue(relation.tube.userData.groundJointCount, 0) : 0);
+      }, 0);
       var visibleGroundLinkCount = relationLinks.filter(function (relation) {
         return relation.tube && relation.tube.visible !== false && relation.tube.userData && relation.tube.userData.isGroundLinkMesh;
       }).length;
+      var groundRouteRailBoxGroupCount = relationLinks.filter(function (relation) {
+        return relation.tube && relation.tube.userData && relation.tube.userData.groundRailImplementation === "box_segments";
+      }).length;
+      var groundRouteRailBufferCount = relationLinks.filter(function (relation) {
+        return relation.tube && relation.tube.userData && relation.tube.userData.groundRailImplementation === "buffer_prism";
+      }).length;
+      var groundRouteRailChildMeshCount = relationLinks.reduce(function (sum, relation) {
+        return sum + (relation.tube && relation.tube.children ? relation.tube.children.length : 0);
+      }, 0);
+      var firstRailChild = null;
+      relationLinks.some(function (relation) {
+        if (relation.tube && relation.tube.children && relation.tube.children.length) {
+          firstRailChild = relation.tube.children[0];
+          return true;
+        }
+        return false;
+      });
+      var firstRailChildPosition = firstRailChild ? {
+        x: Number(firstRailChild.position.x.toFixed(3)),
+        y: Number(firstRailChild.position.y.toFixed(3)),
+        z: Number(firstRailChild.position.z.toFixed(3)),
+        visible: firstRailChild.visible !== false,
+        renderOrder: firstRailChild.renderOrder || 0,
+        opacity: firstRailChild.material ? firstRailChild.material.opacity : null,
+        transparent: firstRailChild.material ? !!firstRailChild.material.transparent : null,
+        depthTest: firstRailChild.material ? !!firstRailChild.material.depthTest : null
+      } : null;
       var groundArrowheadCount = relationLinks.filter(function (relation) {
         return relation.arrow3D && relation.arrow3D.userData && relation.arrow3D.userData.isGroundArrowhead;
+      }).length;
+      var groundRouteRailArrowheadCount = relationLinks.filter(function (relation) {
+        return relation.arrow3D && relation.arrow3D.userData && relation.arrow3D.userData.isGroundRouteRailArrowhead;
+      }).length;
+      var isolatedArrowheadCount = relationLinks.filter(function (relation) {
+        return relation.arrow3D && relation.arrow3D.userData && relation.arrow3D.userData.isGroundArrowhead && !(relation.tube && relation.tube.userData && numberValue(relation.tube.userData.groundSegmentCount, 0) > 0);
       }).length;
       var visibleGroundArrowheadCount = relationLinks.filter(function (relation) {
         return relation.arrow3D && relation.arrow3D.visible !== false && relation.arrow3D.userData && relation.arrow3D.userData.isGroundArrowhead;
@@ -6359,9 +6634,20 @@
         groundLinkMeshCount: groundLinkMeshCount,
         groundLinkRibbonCount: groundLinkMeshCount,
         groundLinkSegmentCount: groundLinkSegmentCount,
+        groundRouteRailSegmentCount: groundLinkSegmentCount,
+        groundRouteRailJointCount: groundLinkJointCount,
+        groundRouteRailBoxGroupCount: groundRouteRailBoxGroupCount,
+        groundRouteRailBufferCount: groundRouteRailBufferCount,
+        groundRouteRailChildMeshCount: groundRouteRailChildMeshCount,
+        firstRailChildPosition: firstRailChildPosition,
         visibleGroundLinkCount: visibleGroundLinkCount,
         groundArrowheadCount: groundArrowheadCount,
+        groundRouteRailArrowheadCount: groundRouteRailArrowheadCount,
+        isolatedArrowheadCount: isolatedArrowheadCount,
         visibleGroundArrowheadCount: visibleGroundArrowheadCount,
+        groundRouteRailVisibleCount: visibleGroundLinkCount,
+        routesWithSegmentsCount: relationLinks.filter(function (relation) { return relation.tube && relation.tube.userData && numberValue(relation.tube.userData.groundSegmentCount, 0) > 0; }).length,
+        routesWithoutSegmentsCount: relationLinks.filter(function (relation) { return !(relation.tube && relation.tube.userData && numberValue(relation.tube.userData.groundSegmentCount, 0) > 0); }).length,
         groundLinkHitAreaCount: groundLinkHitAreaCount,
         linkLabelMode: linkLabelMode,
         htmlLinkLabelCount: htmlLinkLabels.length,
@@ -6561,7 +6847,7 @@
       updateCamera();
       updateRelationLayer();
       linkRoot.children.forEach(function (child) {
-        if (child.userData && child.userData.curve) {
+        if (child.userData && child.userData.isFlowParticle && child.userData.curve) {
           var t = ((Date.now() / 1000) * child.userData.speed + child.userData.phase) % 1;
           child.position.copy(child.userData.curve.getPoint(t));
           if (child.material) child.material.opacity = child.userData.baseOpacity || 0.6;

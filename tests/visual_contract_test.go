@@ -275,17 +275,25 @@ func TestVisualMermaidArchitectureBrowserContract(t *testing.T) {
 	}
 	summary := objectMap(t, data["visual_summary"])
 	for field, min := range map[string]float64{
-		"entity_label_count":           4,
-		"label_icon_loaded_count":      1,
-		"svg_link_path_count":          3,
-		"link_paths_with_marker_count": 3,
-		"explicit_route_link_count":    3,
+		"entity_label_count":                4,
+		"label_icon_loaded_count":           1,
+		"ground_route_rail_segment_count":   3,
+		"ground_route_rail_arrowhead_count": 3,
+		"ground_route_rail_visible_count":   3,
+		"explicit_route_link_count":         3,
+		"explicit_link_label_count":         3,
 	} {
 		if summary[field].(float64) < min {
 			t.Fatalf("browser visual summary expected %s >= %.0f, got %#v", field, min, summary)
 		}
 	}
-	if summary["broken_label_icon_count"].(float64) != 0 || summary["svg_relation_layer_present"] != true || summary["inspector_raw_json_default"] != false {
+	if summary["broken_label_icon_count"].(float64) != 0 ||
+		summary["screen_svg_relation_layer_visible"] != false ||
+		summary["generic_link_label_count"].(float64) != 0 ||
+		summary["isolated_arrowhead_count"].(float64) != 0 ||
+		summary["relation_layer_mode"] != "world_ground" ||
+		summary["link_label_mode"] != "html_billboard" ||
+		summary["inspector_raw_json_default"] != false {
 		t.Fatalf("browser visual summary failed quality checks: %#v", summary)
 	}
 	if _, err := os.Stat(screenshot); err != nil {

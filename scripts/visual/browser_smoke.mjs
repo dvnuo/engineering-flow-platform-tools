@@ -236,6 +236,17 @@ const expression = `(() => {
   const routeGroups = Array.from(new Set(linkData.map(pathGroupOf))).filter(Boolean).sort();
   const primaryPathGroupsVisible = Array.from(new Set(linkLabelNodes.filter((node) => isVisible(node) && node.getAttribute("data-link-role") === "primary").map((node) => node.getAttribute("data-path-group") || ""))).filter(Boolean).sort();
   const hasExplicitRoute = (link) => Array.isArray(link?.route) && link.route.length >= 2;
+  const meaningfulLinkLabel = (value) => {
+    const text = String(value || "").trim().toLowerCase();
+    return !!text && text !== "link" && text !== "relationship" && text !== "depends_on";
+  };
+  const visibleGenericLinkLabelCount = linkLabelNodes.filter((node) => isVisible(node) && String(node.textContent || "").trim().toLowerCase() === "link").length;
+  const explicitLinkLabelCount = linkData.filter((link) => meaningfulLinkLabel(link?.label)).length;
+  const inferredLinkLabelCount = linkLabelNodes.filter((node) => {
+    if (!isVisible(node) || !meaningfulLinkLabel(node.textContent)) return false;
+    const id = String(node.getAttribute("data-link-id") || "");
+    return !linkData.some((link) => String(link?.id || "") === id && meaningfulLinkLabel(link?.label));
+  }).length;
   const explicitRouteLinkCount = linkData.filter(hasExplicitRoute).length;
   const heuristicRouteLinkCount = Math.max(0, linkData.length - explicitRouteLinkCount);
   const primaryExplicitRouteCount = linkData.filter((link) => roleOf(link) === "primary" && hasExplicitRoute(link)).length;
@@ -314,6 +325,9 @@ const expression = `(() => {
     relationLayerBounds: rect(relationLayer),
     linkPathsWithMarkerCount,
     linkPathsWithoutMarkerCount,
+    genericLinkLabelCount: visibleGenericLinkLabelCount,
+    inferredLinkLabelCount,
+    explicitLinkLabelCount,
     modelBadges: qa('[data-has-model-badge="true"]').length,
     svgBillboards: qa('[data-has-svg-billboard="true"]').length,
     fallbackBadges: qa('[data-icon-id=""], [data-model-id=""]').length,

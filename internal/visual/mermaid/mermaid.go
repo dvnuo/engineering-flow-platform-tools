@@ -332,7 +332,7 @@ func compileIsometric(ctx context.Context, d Diagram, opts CompileOptions) (map[
 				"semantic_graph":         "BuildArchitectureSemanticGraph",
 				"layout_engine":          "ArchitectureMapLayoutEngine",
 				"routing_engine":         "ArchitectureRoutingEngine " + routePlan.Backend,
-				"route_plan":             "efp.routeplan.v1",
+				"route_plan":             "efp.routeplan.v2",
 				"route_engine":           routePlan.Backend,
 				"route_validator":        "ValidateArchitectureRoutes",
 				"port_hint_violations":   routing.Metrics.PortHintViolations,

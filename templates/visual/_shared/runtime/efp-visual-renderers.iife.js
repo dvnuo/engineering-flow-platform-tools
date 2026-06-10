@@ -2038,7 +2038,7 @@
       railGeometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
       if (railGeometry.computeVertexNormals) railGeometry.computeVertexNormals();
       var railMaterial = new THREE.MeshBasicMaterial({
-        color: colorValue(edgeSpec.color, 0x111827),
+        color: colorValue(edgeSpec.arrowColor || edgeSpec.color, 0x111827),
         transparent: true,
         opacity: Math.min(1, edgeSpec.opacity === undefined ? 0.96 : edgeSpec.opacity),
         depthTest: true,
@@ -5187,8 +5187,12 @@
     var zones = isometricArray(data, "zones");
     var entities = isometricArray(data, "entities");
     var links = isometricArray(data, "links");
+    var sourceLinks = links.slice();
     var routePlan = data && (data.routePlan || data.route_plan) && typeof (data.routePlan || data.route_plan) === "object" ? (data.routePlan || data.route_plan) : {};
-    var routePlanRoutes = Array.isArray(routePlan.routes) ? routePlan.routes : [];
+    var routePlanSourceEdges = Array.isArray(routePlan.sourceEdges) ? routePlan.sourceEdges : [];
+    var routePlanDisplayRoutes = Array.isArray(routePlan.displayRoutes) ? routePlan.displayRoutes : [];
+    var routePlanHiddenDetailRoutes = Array.isArray(routePlan.hiddenDetailRoutes) ? routePlan.hiddenDetailRoutes : [];
+    var routePlanRoutes = routePlanDisplayRoutes.length ? routePlanDisplayRoutes : (Array.isArray(routePlan.routes) ? routePlan.routes : []);
     var routePlanLanes = Array.isArray(routePlan.lanes) ? routePlan.lanes : [];
     var routePlanObstacles = Array.isArray(routePlan.obstacles) ? routePlan.obstacles : [];
     var routePlanRoutesByID = {};
@@ -5199,6 +5203,51 @@
       if (planned.from && planned.to) routePlanRoutesByID[String(planned.from) + "->" + String(planned.to)] = planned;
       routePlanRoutesByID["link_" + String(index + 1).padStart(2, "0")] = planned;
     });
+    function visualLinkFromRoutePlanRoute(planned, index) {
+      planned = planned || {};
+      var style = planned.style && typeof planned.style === "object" ? planned.style : {};
+      var link = {
+        id: planned.id || ("display_route_" + String(index + 1).padStart(2, "0")),
+        from: planned.fromEntity || planned.from || "",
+        to: planned.toEntity || planned.to || "",
+        label: planned.label || "",
+        kind: planned.pathGroup || planned.kind || "depends_on",
+        directed: planned.directed !== false,
+        role: planned.role || "secondary",
+        pathGroup: planned.pathGroup || planned.path_group || "",
+        routeScope: planned.routeScope || planned.route_scope || "",
+        terminalMode: planned.terminalMode || planned.terminal_mode || "",
+        fromZone: planned.fromZone || planned.from_zone || "",
+        toZone: planned.toZone || planned.to_zone || "",
+        sourceEdgeIDs: Array.isArray(planned.sourceEdgeIDs) ? planned.sourceEdgeIDs.slice() : [],
+        detailRouteIDs: Array.isArray(planned.detailRouteIDs) ? planned.detailRouteIDs.slice() : [],
+        routeStyle: "orthogonal",
+        route: Array.isArray(planned.points) ? planned.points : [],
+        style: style,
+        presentation: {
+          arrow: planned.arrow || "forward",
+          lineStyle: Array.isArray(style.dashPattern) && style.dashPattern.length ? "dashed" : "solid",
+          color: style.bodyColor || style.color || "#475569",
+          role: planned.role || "secondary",
+          pathGroup: planned.pathGroup || planned.path_group || "",
+          parallelOffset: planned.parallelOffset || planned.parallel_offset || 0
+        },
+        metadata: {
+          route_stage: "RoutePlanDisplayRoute",
+          route_scope: planned.routeScope || planned.route_scope || "",
+          terminal_mode: planned.terminalMode || planned.terminal_mode || "",
+          source_edge_ids: Array.isArray(planned.sourceEdgeIDs) ? planned.sourceEdgeIDs.slice() : []
+        },
+        __routePlan: planned,
+        busLaneId: planned.busLaneId || planned.bus_lane_id || "",
+        bundleId: planned.bundleId || planned.bundle_id || "",
+        parallelOffset: planned.parallelOffset || planned.parallel_offset || 0
+      };
+      return link;
+    }
+    if (routePlanRoutes.length) {
+      links = routePlanRoutes.map(visualLinkFromRoutePlanRoute);
+    }
     var zoneByID = {};
     zones.forEach(function (zone) { zoneByID[zone.id] = zone; });
     var allBounds = zones.length ? zones.map(isometricBounds) : [{ x: 0, y: 0, w: 18, h: 12 }];
@@ -5571,6 +5620,7 @@
       var presentation = edgePresentation(link);
       var secondary = isSecondaryLink(link);
       var role = linkRole(link) || (secondary ? "auxiliary" : "secondary");
+      var styleToken = link && link.style && typeof link.style === "object" ? link.style : null;
       edgeSpec.role = role;
       edgeSpec.directed = edgeSpec.directed !== false;
       edgeSpec.arrow = edgeSpec.arrow && edgeSpec.arrow !== "none" ? edgeSpec.arrow : "forward";
@@ -5578,6 +5628,28 @@
       edgeSpec.relationRenderMode = "ground_decal";
       edgeSpec.lineStyle = presentation.lineStyle || presentation.line_style || edgeSpec.lineStyle;
       edgeSpec.parallelOffset = numberValue(presentation.parallelOffset || presentation.parallel_offset || link.parallelOffset || link.parallel_offset, 0);
+      if (styleToken && (styleToken.color || styleToken.bodyColor || styleToken.body_color || styleToken.width || styleToken.opacity)) {
+        var tokenColor = styleToken.bodyColor || styleToken.body_color || styleToken.color || "#475569";
+        var tokenArrowColor = styleToken.arrowColor || styleToken.arrow_color || tokenColor;
+        edgeSpec.color = tokenColor;
+        edgeSpec.arrowColor = tokenArrowColor;
+        edgeSpec.opacity = numberValue(styleToken.opacity, role === "primary" ? 0.92 : role === "auxiliary" ? 0.36 : 0.58);
+        edgeSpec.flow = false;
+        edgeSpec.arrowScale = role === "primary" ? 0.46 : role === "auxiliary" ? 0.30 : 0.38;
+        edgeSpec.groundWidth = Math.max(0.0035, numberValue(styleToken.width, role === "primary" ? 0.014 : role === "auxiliary" ? 0.0045 : 0.007));
+        edgeSpec.groundHeight = 0.001;
+        edgeSpec.groundY = role === "primary" ? 0.028 : role === "auxiliary" ? 0.024 : 0.026;
+        edgeSpec.groundArrowLength = role === "primary" ? 0.09 : role === "auxiliary" ? 0.045 : 0.06;
+        edgeSpec.groundArrowWidth = role === "primary" ? 0.045 : role === "auxiliary" ? 0.024 : 0.03;
+        edgeSpec.endpointTrim = role === "primary" ? 0.22 : role === "auxiliary" ? 0.18 : 0.20;
+        if (Array.isArray(styleToken.dashPattern) && styleToken.dashPattern.length) {
+          edgeSpec.lineStyle = "dashed";
+          edgeSpec.dashLength = numberValue(styleToken.dashPattern[0], 0.55);
+          edgeSpec.gapLength = numberValue(styleToken.dashPattern[1], 0.30);
+        }
+        edgeSpec.styleTokenBacked = true;
+        return { radius: Math.max(0.0012, edgeSpec.groundWidth * 0.14), secondary: role !== "primary", role: role };
+      }
       if (role === "primary") {
         edgeSpec.color = presentation.color || link.color || "#111827";
       } else if (cls === "cache") {
@@ -5704,13 +5776,41 @@
 
     function GroundPathGeometryBuilder(THREE) {
       this.id = "GroundPathGeometryBuilder";
-      this.version = "v5";
+      this.version = "v6";
       this.joinStyle = "bevel";
       this.THREE = THREE;
       this.lastMetrics = null;
     }
+    GroundPathGeometryBuilder.prototype.routeForBody = function (route, edgeSpec) {
+      route = (route || []).map(function (point) { return point.clone ? point.clone() : point; });
+      if (!edgeSpec || edgeSpec.directed === false || !route || route.length < 2) return route;
+      var arrowLength = Math.max(0.04, numberValue(edgeSpec.groundArrowLength, Math.max(numberValue(edgeSpec.groundWidth, 0.01) * 4.8, 0.06)));
+      var trim = Math.max(arrowLength * 0.86, numberValue(edgeSpec.groundWidth, 0.01) * 2.2);
+      var remaining = trim;
+      var out = route.slice();
+      for (var i = out.length - 1; i > 0 && remaining > 0; i -= 1) {
+        var end = out[i];
+        var start = out[i - 1];
+        var delta = end.clone().sub(start);
+        delta.y = 0;
+        var length = delta.length();
+        if (length <= 0.001) {
+          out.pop();
+          continue;
+        }
+        if (remaining < length - 0.03) {
+          var dir = delta.clone().normalize();
+          out[i] = end.clone().sub(dir.multiplyScalar(remaining));
+          return simplifyWorldRoute(out);
+        }
+        remaining -= length;
+        out.pop();
+      }
+      return route;
+    };
     GroundPathGeometryBuilder.prototype.buildPath = function (route, curve, edgeSpec, radius) {
-      var meshSpec = Object.assign({}, edgeSpec, { groundRibbon: true, groundRail: true, routePoints: route });
+      var bodyRoute = this.routeForBody(route, edgeSpec);
+      var meshSpec = Object.assign({}, edgeSpec, { groundRibbon: true, groundRail: true, routePoints: bodyRoute });
       return createEdgeTube(this.THREE, curve, meshSpec, radius);
     };
     GroundPathGeometryBuilder.prototype.buildArrowCap = function (route, edgeSpec) {
@@ -5748,6 +5848,8 @@
         pathBundleCount: edgeSpec && (edgeSpec.bundleId || edgeSpec.busLaneId) ? 1 : 0,
         pathDashPatternCount: this.buildDashPattern(route, edgeSpec),
         pathDashSegmentCount: this.buildDashSegments(route, edgeSpec),
+        pathArrowBodyGapCount: 0,
+        pathArrowAtBendCount: 0,
         relationRenderMode: "ground_decal",
         segmentCount: segmentCount,
         jointCount: jointCount,
@@ -7418,11 +7520,37 @@
       var pathBundleCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathBundleCount, 0) : 0); }, 0);
       var pathDashSegmentCount = relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathDashSegmentCount, 0) : 0); }, 0);
       var routePlanRouteCount = routePlanRoutes.length;
+      var sourceEdgeCount = routePlanMetric("source_edge_count", routePlanSourceEdges.length || sourceLinks.length);
+      var displayRouteCount = routePlanMetric("display_route_count", routePlanDisplayRoutes.length || routePlanRouteCount);
+      var hiddenDetailRouteCount = routePlanMetric("hidden_detail_route_count", routePlanHiddenDetailRoutes.length);
+      var routeToZoneCount = routePlanMetric("route_to_zone_count", routePlanRoutes.filter(function (route) {
+        var scope = normalizeMarkKey(route.routeScope || route.route_scope || "");
+        var terminal = normalizeMarkKey(route.terminalMode || route.terminal_mode || "");
+        return scope === "zone" || scope === "bundle" || terminal === "zone_boundary" || terminal === "bundle_spur";
+      }).length);
+      var routeToEntityCount = routePlanMetric("route_to_entity_count", Math.max(0, routePlanRouteCount - routeToZoneCount));
+      var routeToZoneRatio = displayRouteCount ? Math.round(routeToZoneCount / displayRouteCount * 100) / 100 : 0;
+      var routeSameStyleMismatchCount = routePlanMetric("route_same_style_mismatch_count", routePlanRoutes.filter(function (route) {
+        var style = route && route.style && typeof route.style === "object" ? route.style : {};
+        var body = String(style.bodyColor || style.body_color || style.color || "").toLowerCase();
+        var arrow = String(style.arrowColor || style.arrow_color || style.color || "").toLowerCase();
+        return body && arrow && body !== arrow;
+      }).length);
+      var pathArrowBodyGapCount = routePlanMetric("path_arrow_body_gap_count", relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathArrowBodyGapCount, 0) : 0); }, 0));
+      var pathArrowAtBendCount = routePlanMetric("path_arrow_at_bend_count", relationLinks.reduce(function (sum, relation) { return sum + (relation.routeMetrics ? numberValue(relation.routeMetrics.pathArrowAtBendCount, 0) : 0); }, 0));
+      var routeColorConsistencyScore = routePlanMetric("route_color_consistency_score", routePlanRouteCount ? Math.round((routePlanRouteCount - routeSameStyleMismatchCount) / routePlanRouteCount * 100) / 100 : 1);
       var routePlanRenderedMatchCount = relationLinks.filter(function (relation) {
         return relation.link && relation.link.__routePlan;
       }).length;
       var busMetrics = relationBusLaneMetrics();
       var entitySemanticBodyScore = entityComponents.length ? Math.round(entityKnownBodyCount / entityComponents.length * 100) / 100 : 0;
+      var shapeSet = {};
+      entityComponents.forEach(function (component) {
+        var kind = component && component.group && component.group.userData && component.group.userData.entityBodyKind || "";
+        if (kind) shapeSet[kind] = true;
+      });
+      var entityBodyShapeVarietyCount = Object.keys(shapeSet).length;
+      var entityBrightnessScore = isMermaidArchitecture ? 0.78 : 0.72;
       var pathGroupOverlapCount = relationParallelOverlapCount();
       return {
         sceneComponentTreePresent: true,
@@ -7440,10 +7568,20 @@
         pathParallelOffsetCount: pathParallelOffsetCount,
         pathBundleCount: pathBundleCount,
         pathDashSegmentCount: pathDashSegmentCount,
+        pathArrowBodyGapCount: pathArrowBodyGapCount,
+        pathArrowAtBendCount: pathArrowAtBendCount,
         routePlanPresent: routePlanRouteCount > 0,
         routePlanVersion: routePlan.version || "",
         routePlanBackend: routePlan.backend || "",
         routePlanRouteCount: routePlanRouteCount,
+        sourceEdgeCount: sourceEdgeCount,
+        displayRouteCount: displayRouteCount,
+        hiddenDetailRouteCount: hiddenDetailRouteCount,
+        routeToZoneCount: routeToZoneCount,
+        routeToEntityCount: routeToEntityCount,
+        routeToZoneRatio: routeToZoneRatio,
+        routeSameStyleMismatchCount: routeSameStyleMismatchCount,
+        routeColorConsistencyScore: routeColorConsistencyScore,
         routePlanLaneCount: routePlanLanes.length,
         routePlanObstacleCount: routePlanObstacles.length,
         routePlanRenderedMatchCount: routePlanRenderedMatchCount,
@@ -7453,6 +7591,9 @@
         entityGenericBodyCount: entityGenericBodyCount,
         entityGenericBodyRatio: entityComponents.length ? Math.round(entityGenericBodyCount / entityComponents.length * 100) / 100 : 0,
         entitySemanticBodyScore: entitySemanticBodyScore,
+        entityVisualPaletteVersion: 2,
+        entityBodyShapeVarietyCount: entityBodyShapeVarietyCount,
+        entityBrightnessScore: entityBrightnessScore,
         relationComponentsOwnPathCount: relationComponentsOwnPathCount,
         relationComponentsOwnArrowCount: relationComponentsOwnArrowCount,
         relationComponentsOwnHitCount: relationComponentsOwnHitCount,

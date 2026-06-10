@@ -52,6 +52,16 @@ type ArchitectureLayoutResult struct {
 
 type ArchitectureRoutedLink struct {
 	Edge           Edge
+	SourceEdgeIDs  []string
+	RouteScope     string
+	FromZone       string
+	ToZone         string
+	FromEntity     string
+	ToEntity       string
+	TerminalMode   string
+	Arrow          string
+	Style          visualrouting.RouteStyle
+	DetailRouteIDs []string
 	Role           string
 	PathGroup      string
 	Route          []ArchitecturePoint
@@ -67,20 +77,25 @@ type ArchitectureRoutedLink struct {
 }
 
 type ArchitectureRoutingResult struct {
-	Backend   string
-	Links     []ArchitectureRoutedLink
-	Lanes     []ArchitectureBusLane
-	Obstacles []ArchitectureRouteObstacle
-	Metrics   ArchitectureRouteMetrics
+	Backend           string
+	SourceEdges       []Edge
+	Links             []ArchitectureRoutedLink
+	HiddenDetailLinks []ArchitectureRoutedLink
+	Lanes             []ArchitectureBusLane
+	Obstacles         []ArchitectureRouteObstacle
+	Metrics           ArchitectureRouteMetrics
 }
 
 type ArchitectureRoutePlan struct {
-	Version   string
-	Backend   string
-	Routes    []ArchitectureRoutedLink
-	Lanes     []ArchitectureBusLane
-	Obstacles []ArchitectureRouteObstacle
-	Metrics   ArchitectureRouteMetrics
+	Version            string
+	Backend            string
+	SourceEdges        []Edge
+	DisplayRoutes      []ArchitectureRoutedLink
+	HiddenDetailRoutes []ArchitectureRoutedLink
+	Routes             []ArchitectureRoutedLink
+	Lanes              []ArchitectureBusLane
+	Obstacles          []ArchitectureRouteObstacle
+	Metrics            ArchitectureRouteMetrics
 }
 
 type ArchitectureBusLane struct {
@@ -131,6 +146,16 @@ type ArchitectureRouteMetrics struct {
 	ParallelOffsetCount     int
 	RipUpRerouteRounds      int
 	RipUpRerouteImprovement int
+	SourceEdgeCount         int
+	DisplayRouteCount       int
+	HiddenDetailRouteCount  int
+	RouteToZoneCount        int
+	RouteToEntityCount      int
+	RouteSameStyleMismatch  int
+	PathArrowBodyGapCount   int
+	PathArrowAtBendCount    int
+	VisibleLinkLabelCount   int
+	RouteColorConsistency   float64
 }
 
 func BuildArchitectureSemanticGraph(d Diagram) ArchitectureSemanticGraph {
@@ -386,16 +411,51 @@ func architectureRoutingResultFromRoutePlan(graph ArchitectureSemanticGraph, pla
 	for i, edge := range graph.Edges {
 		edgeByRouteID[nonEmpty(edge.ID, fmt.Sprintf("link_%02d", i+1))] = edge
 	}
-	links := make([]ArchitectureRoutedLink, 0, len(plan.Routes))
-	for _, route := range plan.Routes {
+	routes := plan.DisplayRoutes
+	if len(routes) == 0 {
+		routes = plan.Routes
+	}
+	links := architectureLinksFromRoutingRoutes(edgeByRouteID, routes)
+	hidden := architectureLinksFromRoutingRoutes(edgeByRouteID, plan.HiddenDetailRoutes)
+	return ArchitectureRoutingResult{
+		Backend:           plan.Backend,
+		SourceEdges:       append([]Edge(nil), graph.Edges...),
+		Links:             links,
+		HiddenDetailLinks: hidden,
+		Lanes:             architectureLanesFromRouting(plan.Lanes),
+		Obstacles:         architectureObstaclesFromRouting(plan.Obstacles),
+		Metrics:           architectureMetricsFromRouting(plan.Metrics),
+	}
+}
+
+func architectureLinksFromRoutingRoutes(edgeByRouteID map[string]Edge, routes []visualrouting.Route) []ArchitectureRoutedLink {
+	links := make([]ArchitectureRoutedLink, 0, len(routes))
+	for _, route := range routes {
 		edge, ok := edgeByRouteID[route.ID]
-		if !ok {
-			edge = Edge{ID: route.ID, From: route.From, To: route.To, Directed: true}
+		if !ok && len(route.SourceEdgeIDs) > 0 {
+			edge, ok = edgeByRouteID[route.SourceEdgeIDs[0]]
 		}
+		if !ok {
+			edge = Edge{ID: route.ID, From: nonEmpty(route.FromEntity, route.From), To: nonEmpty(route.ToEntity, route.To), Directed: true}
+		}
+		edge.ID = nonEmpty(route.ID, edge.ID)
+		edge.From = nonEmpty(route.FromEntity, nonEmpty(edge.From, route.From))
+		edge.To = nonEmpty(route.ToEntity, nonEmpty(edge.To, route.To))
+		edge.Label = nonEmpty(route.Label, edge.Label)
 		edge.FromPort = route.FromPort
 		edge.ToPort = route.ToPort
 		links = append(links, ArchitectureRoutedLink{
 			Edge:           edge,
+			SourceEdgeIDs:  append([]string(nil), route.SourceEdgeIDs...),
+			RouteScope:     route.RouteScope,
+			FromZone:       route.FromZone,
+			ToZone:         route.ToZone,
+			FromEntity:     route.FromEntity,
+			ToEntity:       route.ToEntity,
+			TerminalMode:   route.TerminalMode,
+			Arrow:          route.Arrow,
+			Style:          route.Style,
+			DetailRouteIDs: append([]string(nil), route.DetailRouteIDs...),
 			Role:           route.Role,
 			PathGroup:      route.PathGroup,
 			Route:          architecturePointsFromRouting(route.Points),
@@ -415,13 +475,7 @@ func architectureRoutingResultFromRoutePlan(graph ArchitectureSemanticGraph, pla
 			},
 		})
 	}
-	return ArchitectureRoutingResult{
-		Backend:   plan.Backend,
-		Links:     links,
-		Lanes:     architectureLanesFromRouting(plan.Lanes),
-		Obstacles: architectureObstaclesFromRouting(plan.Obstacles),
-		Metrics:   architectureMetricsFromRouting(plan.Metrics),
-	}
+	return links
 }
 
 func architecturePointFromRouting(point visualrouting.Vec2) ArchitecturePoint {
@@ -496,6 +550,16 @@ func architectureMetricsFromRouting(metrics visualrouting.RouteMetrics) Architec
 		ParallelOffsetCount:     metrics.ParallelOffsetCount,
 		RipUpRerouteRounds:      metrics.RipUpRerouteRounds,
 		RipUpRerouteImprovement: metrics.RipUpRerouteImprovement,
+		SourceEdgeCount:         metrics.SourceEdgeCount,
+		DisplayRouteCount:       metrics.DisplayRouteCount,
+		HiddenDetailRouteCount:  metrics.HiddenDetailRouteCount,
+		RouteToZoneCount:        metrics.RouteToZoneCount,
+		RouteToEntityCount:      metrics.RouteToEntityCount,
+		RouteSameStyleMismatch:  metrics.RouteSameStyleMismatch,
+		PathArrowBodyGapCount:   metrics.PathArrowBodyGapCount,
+		PathArrowAtBendCount:    metrics.PathArrowAtBendCount,
+		VisibleLinkLabelCount:   metrics.VisibleLinkLabelCount,
+		RouteColorConsistency:   metrics.RouteColorConsistency,
 	}
 }
 
@@ -635,11 +699,42 @@ func (layout ArchitectureLayoutResult) ToVisualEntities() []any {
 			"importance":    0.74,
 			"labelPriority": "important",
 			"presentation": map[string]any{
-				"icon": iconForKind(kind),
+				"icon":           iconForKind(kind),
+				"color":          architectureVisualPaletteColor(kind),
+				"paletteVersion": 2,
 			},
 		})
 	}
 	return entities
+}
+
+func architectureVisualPaletteColor(kind string) string {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "browser", "client", "user", "pc", "laptop", "mobile":
+		return "#5B8DEF"
+	case "cdn":
+		return "#7CB7FF"
+	case "nginx", "edge", "gateway", "load_balancer", "ingress":
+		return "#16A34A"
+	case "api_gateway":
+		return "#2563EB"
+	case "service", "microservice", "api":
+		return "#2F80ED"
+	case "registry", "nacos":
+		return "#7C3AED"
+	case "redis", "cache":
+		return "#EF4444"
+	case "database", "mysql", "postgres", "mongodb":
+		return "#2563EB"
+	case "storage", "oss", "file_storage", "block_storage", "minio":
+		return "#16A34A"
+	case "observability", "logs", "log", "elasticsearch", "prometheus", "grafana":
+		return "#0EA5E9"
+	case "admin", "jenkins", "job":
+		return "#F59E0B"
+	default:
+		return "#2F80ED"
+	}
 }
 
 type architectureEntitySize struct {
@@ -696,6 +791,15 @@ func (routing ArchitectureRoutingResult) ToVisualLinks() []any {
 			"directed":      edge.Directed,
 			"role":          routed.Role,
 			"pathGroup":     routed.PathGroup,
+			"sourceEdgeIDs": routed.SourceEdgeIDs,
+			"routeScope":    routed.RouteScope,
+			"fromZone":      routed.FromZone,
+			"toZone":        routed.ToZone,
+			"fromEntity":    routed.FromEntity,
+			"toEntity":      routed.ToEntity,
+			"terminalMode":  routed.TerminalMode,
+			"arrow":         nonEmpty(routed.Arrow, "forward"),
+			"style":         routeStyleMap(routed.Style),
 			"routeStyle":    "orthogonal",
 			"route":         route,
 			"importance":    importanceForRole(routed.Role),
@@ -716,6 +820,8 @@ func (routing ArchitectureRoutingResult) ToVisualLinks() []any {
 				"lane_index":        routed.LaneIndex,
 				"parallel_offset":   routed.ParallelOffset,
 				"bundle_id":         routed.BundleID,
+				"route_scope":       routed.RouteScope,
+				"terminal_mode":     routed.TerminalMode,
 			},
 		}
 		if label := compact(edge.Label, 22); label != "" {
@@ -732,12 +838,15 @@ func (routing ArchitectureRoutingResult) ToRoutePlan() ArchitectureRoutePlan {
 		engine = RouteEngineSemanticHeuristicV4
 	}
 	return ArchitectureRoutePlan{
-		Version:   "efp.routeplan.v1",
-		Backend:   engine,
-		Routes:    append([]ArchitectureRoutedLink(nil), routing.Links...),
-		Lanes:     append([]ArchitectureBusLane(nil), routing.Lanes...),
-		Obstacles: append([]ArchitectureRouteObstacle(nil), routing.Obstacles...),
-		Metrics:   routing.Metrics,
+		Version:            "efp.routeplan.v2",
+		Backend:            engine,
+		SourceEdges:        append([]Edge(nil), routing.SourceEdges...),
+		DisplayRoutes:      append([]ArchitectureRoutedLink(nil), routing.Links...),
+		HiddenDetailRoutes: append([]ArchitectureRoutedLink(nil), routing.HiddenDetailLinks...),
+		Routes:             append([]ArchitectureRoutedLink(nil), routing.Links...),
+		Lanes:              append([]ArchitectureBusLane(nil), routing.Lanes...),
+		Obstacles:          append([]ArchitectureRouteObstacle(nil), routing.Obstacles...),
+		Metrics:            routing.Metrics,
 	}
 }
 
@@ -746,41 +855,23 @@ func (routing ArchitectureRoutingResult) ToVisualRoutePlan() map[string]any {
 }
 
 func (plan ArchitectureRoutePlan) ToVisualRoutePlan() map[string]any {
-	routes := make([]any, 0, len(plan.Routes))
-	for i, routed := range plan.Routes {
-		edge := routed.Edge
-		routeID := nonEmpty(edge.ID, fmt.Sprintf("link_%02d", i+1))
-		segments := make([]any, 0, len(routed.Segments))
-		for _, segment := range routed.Segments {
-			segments = append(segments, map[string]any{
-				"from": pointMap(segment.From),
-				"to":   pointMap(segment.To),
-				"kind": segment.Kind,
-			})
-		}
-		routes = append(routes, map[string]any{
-			"id":             routeID,
-			"from":           edge.From,
-			"to":             edge.To,
-			"role":           routed.Role,
-			"pathGroup":      routed.PathGroup,
-			"fromPort":       edge.FromPort,
-			"toPort":         edge.ToPort,
-			"points":         pointsMap(routed.Route),
-			"segments":       segments,
-			"busLaneId":      routed.BusLaneID,
-			"bundleId":       routed.BundleID,
-			"spurStart":      pointsMap(routed.SpurStart),
-			"spurEnd":        pointsMap(routed.SpurEnd),
-			"labelAnchor":    pointMap(routed.LabelAnchor),
-			"laneIndex":      routed.LaneIndex,
-			"parallelOffset": routed.ParallelOffset,
-			"metrics": map[string]any{
-				"length":               rounded(routed.Metrics.Length),
-				"bend_count":           routed.Metrics.BendCount,
-				"entity_intersections": routed.Metrics.EntityIntersections,
-				"score":                rounded(routed.Metrics.Score),
-			},
+	routes := visualRoutePlanRoutes(plan.Routes)
+	displayRoutes := visualRoutePlanRoutes(plan.DisplayRoutes)
+	if len(displayRoutes) == 0 {
+		displayRoutes = routes
+	}
+	hiddenDetailRoutes := visualRoutePlanRoutes(plan.HiddenDetailRoutes)
+	sourceEdges := make([]any, 0, len(plan.SourceEdges))
+	for i, edge := range plan.SourceEdges {
+		sourceEdges = append(sourceEdges, map[string]any{
+			"id":       nonEmpty(edge.ID, fmt.Sprintf("link_%02d", i+1)),
+			"from":     edge.From,
+			"to":       edge.To,
+			"fromPort": edge.FromPort,
+			"toPort":   edge.ToPort,
+			"label":    edge.Label,
+			"kind":     edge.Kind,
+			"directed": edge.Directed,
 		})
 	}
 	lanes := make([]any, 0, len(plan.Lanes))
@@ -831,12 +922,15 @@ func (plan ArchitectureRoutePlan) ToVisualRoutePlan() map[string]any {
 		backend = RouteEngineSemanticHeuristicV4
 	}
 	return map[string]any{
-		"version":   "efp.routeplan.v1",
-		"backend":   backend,
-		"routes":    routes,
-		"lanes":     lanes,
-		"bundles":   bundles,
-		"obstacles": obstacles,
+		"version":            "efp.routeplan.v2",
+		"backend":            backend,
+		"sourceEdges":        sourceEdges,
+		"displayRoutes":      displayRoutes,
+		"hiddenDetailRoutes": hiddenDetailRoutes,
+		"routes":             routes,
+		"lanes":              lanes,
+		"bundles":            bundles,
+		"obstacles":          obstacles,
 		"metrics": map[string]any{
 			"route_port_hint_violation_count":    plan.Metrics.PortHintViolations,
 			"route_direction_violation_count":    plan.Metrics.DirectionViolations,
@@ -854,8 +948,105 @@ func (plan ArchitectureRoutePlan) ToVisualRoutePlan() map[string]any {
 			"primary_route_count":                plan.Metrics.PrimaryRouteCount,
 			"secondary_route_count":              plan.Metrics.SecondaryRouteCount,
 			"auxiliary_route_count":              plan.Metrics.AuxiliaryRouteCount,
+			"source_edge_count":                  plan.Metrics.SourceEdgeCount,
+			"display_route_count":                plan.Metrics.DisplayRouteCount,
+			"hidden_detail_route_count":          plan.Metrics.HiddenDetailRouteCount,
+			"route_to_zone_count":                plan.Metrics.RouteToZoneCount,
+			"route_to_entity_count":              plan.Metrics.RouteToEntityCount,
+			"route_same_style_mismatch_count":    plan.Metrics.RouteSameStyleMismatch,
+			"path_arrow_body_gap_count":          plan.Metrics.PathArrowBodyGapCount,
+			"path_arrow_at_bend_count":           plan.Metrics.PathArrowAtBendCount,
+			"visible_link_label_count":           plan.Metrics.VisibleLinkLabelCount,
+			"route_color_consistency_score":      rounded(plan.Metrics.RouteColorConsistency),
 		},
 	}
+}
+
+func visualRoutePlanRoutes(input []ArchitectureRoutedLink) []any {
+	routes := make([]any, 0, len(input))
+	for i, routed := range input {
+		edge := routed.Edge
+		routeID := nonEmpty(edge.ID, fmt.Sprintf("link_%02d", i+1))
+		segments := make([]any, 0, len(routed.Segments))
+		for _, segment := range routed.Segments {
+			segments = append(segments, map[string]any{
+				"from": pointMap(segment.From),
+				"to":   pointMap(segment.To),
+				"kind": segment.Kind,
+			})
+		}
+		routes = append(routes, map[string]any{
+			"id":             routeID,
+			"from":           edge.From,
+			"to":             edge.To,
+			"label":          compact(edge.Label, 22),
+			"role":           routed.Role,
+			"pathGroup":      routed.PathGroup,
+			"fromPort":       edge.FromPort,
+			"toPort":         edge.ToPort,
+			"sourceEdgeIDs":  routed.SourceEdgeIDs,
+			"routeScope":     routed.RouteScope,
+			"fromZone":       routed.FromZone,
+			"toZone":         routed.ToZone,
+			"fromEntity":     routed.FromEntity,
+			"toEntity":       routed.ToEntity,
+			"terminalMode":   routed.TerminalMode,
+			"arrow":          nonEmpty(routed.Arrow, "forward"),
+			"style":          routeStyleMap(routed.Style),
+			"detailRouteIDs": routed.DetailRouteIDs,
+			"points":         pointsMap(routed.Route),
+			"segments":       segments,
+			"busLaneId":      routed.BusLaneID,
+			"bundleId":       routed.BundleID,
+			"spurStart":      pointsMap(routed.SpurStart),
+			"spurEnd":        pointsMap(routed.SpurEnd),
+			"labelAnchor":    pointMap(routed.LabelAnchor),
+			"laneIndex":      routed.LaneIndex,
+			"parallelOffset": routed.ParallelOffset,
+			"metrics": map[string]any{
+				"length":               rounded(routed.Metrics.Length),
+				"bend_count":           routed.Metrics.BendCount,
+				"entity_intersections": routed.Metrics.EntityIntersections,
+				"score":                rounded(routed.Metrics.Score),
+			},
+		})
+	}
+	return routes
+}
+
+func routeStyleMap(style visualrouting.RouteStyle) map[string]any {
+	out := map[string]any{}
+	if style.Color != "" {
+		out["color"] = style.Color
+	}
+	if style.BodyColor != "" {
+		out["bodyColor"] = style.BodyColor
+	}
+	if style.ArrowColor != "" {
+		out["arrowColor"] = style.ArrowColor
+	}
+	if style.LabelColor != "" {
+		out["labelColor"] = style.LabelColor
+	}
+	if style.Width > 0 {
+		out["width"] = style.Width
+	}
+	if style.Opacity > 0 {
+		out["opacity"] = style.Opacity
+	}
+	if len(style.DashPattern) > 0 {
+		out["dashPattern"] = style.DashPattern
+	}
+	if style.CapStyle != "" {
+		out["capStyle"] = style.CapStyle
+	}
+	if style.JoinStyle != "" {
+		out["joinStyle"] = style.JoinStyle
+	}
+	if style.AccentColor != "" {
+		out["accentColor"] = style.AccentColor
+	}
+	return out
 }
 
 func pointsMap(points []ArchitecturePoint) []any {

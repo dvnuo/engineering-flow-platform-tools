@@ -1,6 +1,6 @@
 package routing
 
-const RoutePlanVersion = "efp.routeplan.v1"
+const RoutePlanVersion = "efp.routeplan.v2"
 
 type Vec2 struct {
 	X float64 `json:"x"`
@@ -68,6 +68,19 @@ type RouteObstacle struct {
 	Padding  float64 `json:"padding"`
 }
 
+type RouteStyle struct {
+	Color       string    `json:"color,omitempty"`
+	BodyColor   string    `json:"bodyColor,omitempty"`
+	ArrowColor  string    `json:"arrowColor,omitempty"`
+	LabelColor  string    `json:"labelColor,omitempty"`
+	Width       float64   `json:"width,omitempty"`
+	Opacity     float64   `json:"opacity,omitempty"`
+	DashPattern []float64 `json:"dashPattern,omitempty"`
+	CapStyle    string    `json:"capStyle,omitempty"`
+	JoinStyle   string    `json:"joinStyle,omitempty"`
+	AccentColor string    `json:"accentColor,omitempty"`
+}
+
 type Segment struct {
 	From Vec2   `json:"from"`
 	To   Vec2   `json:"to"`
@@ -86,10 +99,21 @@ type Route struct {
 	ID             string             `json:"id"`
 	From           string             `json:"from"`
 	To             string             `json:"to"`
+	Label          string             `json:"label,omitempty"`
 	Role           string             `json:"role"`
 	PathGroup      string             `json:"pathGroup"`
 	FromPort       string             `json:"fromPort,omitempty"`
 	ToPort         string             `json:"toPort,omitempty"`
+	SourceEdgeIDs  []string           `json:"sourceEdgeIDs,omitempty"`
+	RouteScope     string             `json:"routeScope,omitempty"`
+	FromZone       string             `json:"fromZone,omitempty"`
+	ToZone         string             `json:"toZone,omitempty"`
+	FromEntity     string             `json:"fromEntity,omitempty"`
+	ToEntity       string             `json:"toEntity,omitempty"`
+	TerminalMode   string             `json:"terminalMode,omitempty"`
+	Arrow          string             `json:"arrow,omitempty"`
+	Style          RouteStyle         `json:"style,omitempty"`
+	DetailRouteIDs []string           `json:"detailRouteIDs,omitempty"`
 	Points         []Vec2             `json:"points"`
 	Segments       []Segment          `json:"segments"`
 	BusLaneID      string             `json:"busLaneId,omitempty"`
@@ -103,32 +127,45 @@ type Route struct {
 }
 
 type RouteMetrics struct {
-	PortHintViolations      int `json:"route_port_hint_violation_count"`
-	DirectionViolations     int `json:"route_direction_violation_count"`
-	EntityIntersections     int `json:"route_entity_intersection_count"`
-	EndpointInsideEntities  int `json:"route_endpoint_inside_entity_count"`
-	CrossingCount           int `json:"route_crossing_count"`
-	ParallelOverlapCount    int `json:"route_parallel_overlap_count"`
-	BusLaneCount            int `json:"route_bus_lane_count"`
-	BundleCount             int `json:"route_bundle_count"`
-	LongDetourCount         int `json:"route_long_detour_count"`
-	PrimaryRouteCount       int `json:"primary_route_count"`
-	SecondaryRouteCount     int `json:"secondary_route_count"`
-	AuxiliaryRouteCount     int `json:"auxiliary_route_count"`
-	PathGroupOverlap        int `json:"route_path_group_overlap_count"`
-	ParallelOffsetCount     int `json:"route_parallel_offset_count"`
-	RipUpRerouteRounds      int `json:"route_ripup_reroute_rounds,omitempty"`
-	RipUpRerouteImprovement int `json:"route_ripup_reroute_improvement,omitempty"`
+	PortHintViolations      int     `json:"route_port_hint_violation_count"`
+	DirectionViolations     int     `json:"route_direction_violation_count"`
+	EntityIntersections     int     `json:"route_entity_intersection_count"`
+	EndpointInsideEntities  int     `json:"route_endpoint_inside_entity_count"`
+	CrossingCount           int     `json:"route_crossing_count"`
+	ParallelOverlapCount    int     `json:"route_parallel_overlap_count"`
+	BusLaneCount            int     `json:"route_bus_lane_count"`
+	BundleCount             int     `json:"route_bundle_count"`
+	LongDetourCount         int     `json:"route_long_detour_count"`
+	PrimaryRouteCount       int     `json:"primary_route_count"`
+	SecondaryRouteCount     int     `json:"secondary_route_count"`
+	AuxiliaryRouteCount     int     `json:"auxiliary_route_count"`
+	PathGroupOverlap        int     `json:"route_path_group_overlap_count"`
+	ParallelOffsetCount     int     `json:"route_parallel_offset_count"`
+	RipUpRerouteRounds      int     `json:"route_ripup_reroute_rounds,omitempty"`
+	RipUpRerouteImprovement int     `json:"route_ripup_reroute_improvement,omitempty"`
+	SourceEdgeCount         int     `json:"source_edge_count,omitempty"`
+	DisplayRouteCount       int     `json:"display_route_count,omitempty"`
+	HiddenDetailRouteCount  int     `json:"hidden_detail_route_count,omitempty"`
+	RouteToZoneCount        int     `json:"route_to_zone_count,omitempty"`
+	RouteToEntityCount      int     `json:"route_to_entity_count,omitempty"`
+	RouteSameStyleMismatch  int     `json:"route_same_style_mismatch_count,omitempty"`
+	PathArrowBodyGapCount   int     `json:"path_arrow_body_gap_count,omitempty"`
+	PathArrowAtBendCount    int     `json:"path_arrow_at_bend_count,omitempty"`
+	VisibleLinkLabelCount   int     `json:"visible_link_label_count,omitempty"`
+	RouteColorConsistency   float64 `json:"route_color_consistency_score,omitempty"`
 }
 
 type RoutePlan struct {
-	Version   string          `json:"version"`
-	Backend   string          `json:"backend"`
-	Routes    []Route         `json:"routes"`
-	Lanes     []BusLane       `json:"lanes"`
-	Bundles   []RouteBundle   `json:"bundles,omitempty"`
-	Obstacles []RouteObstacle `json:"obstacles"`
-	Metrics   RouteMetrics    `json:"metrics"`
+	Version            string          `json:"version"`
+	Backend            string          `json:"backend"`
+	SourceEdges        []LinkModel     `json:"sourceEdges,omitempty"`
+	DisplayRoutes      []Route         `json:"displayRoutes,omitempty"`
+	HiddenDetailRoutes []Route         `json:"hiddenDetailRoutes,omitempty"`
+	Routes             []Route         `json:"routes"`
+	Lanes              []BusLane       `json:"lanes"`
+	Bundles            []RouteBundle   `json:"bundles,omitempty"`
+	Obstacles          []RouteObstacle `json:"obstacles"`
+	Metrics            RouteMetrics    `json:"metrics"`
 }
 
 type RouteBundle struct {

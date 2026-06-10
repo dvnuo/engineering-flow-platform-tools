@@ -158,11 +158,24 @@ type DOMSummary struct {
 	RoutePlanObstacleCount     int      `json:"route_plan_obstacle_count"`
 	RoutePlanRenderedMatch     bool     `json:"route_plan_rendered_match"`
 	RoutePlanRenderedMatchCnt  int      `json:"route_plan_rendered_match_count"`
+	SourceEdgeCount            int      `json:"source_edge_count"`
+	DisplayRouteCount          int      `json:"display_route_count"`
+	HiddenDetailRouteCount     int      `json:"hidden_detail_route_count"`
+	RouteToZoneCount           int      `json:"route_to_zone_count"`
+	RouteToEntityCount         int      `json:"route_to_entity_count"`
+	RouteToZoneRatio           float64  `json:"route_to_zone_ratio"`
+	RouteSameStyleMismatch     int      `json:"route_same_style_mismatch_count"`
+	PathArrowBodyGapCount      int      `json:"path_arrow_body_gap_count"`
+	PathArrowAtBendCount       int      `json:"path_arrow_at_bend_count"`
+	RouteColorConsistencyScore float64  `json:"route_color_consistency_score"`
 	EntityBodyRegistryCount    int      `json:"entity_body_registry_count"`
 	EntityKnownBodyCount       int      `json:"entity_known_body_count"`
 	EntityGenericBodyCount     int      `json:"entity_generic_body_count"`
 	EntityGenericBodyRatio     float64  `json:"entity_generic_body_ratio"`
 	EntitySemanticBodyScore    float64  `json:"entity_semantic_body_score"`
+	EntityVisualPaletteVersion int      `json:"entity_visual_palette_version"`
+	EntityBodyShapeVariety     int      `json:"entity_body_shape_variety_count"`
+	EntityBrightnessScore      float64  `json:"entity_brightness_score"`
 	RelationOwnsPath           int      `json:"relation_components_own_path_count"`
 	RelationOwnsArrow          int      `json:"relation_components_own_arrow_count"`
 	RelationOwnsHit            int      `json:"relation_components_own_hit_count"`
@@ -316,11 +329,24 @@ type VisualSummary struct {
 	RoutePlanObstacleCount          int            `json:"route_plan_obstacle_count"`
 	RoutePlanRenderedMatch          bool           `json:"route_plan_rendered_match"`
 	RoutePlanRenderedMatchCount     int            `json:"route_plan_rendered_match_count"`
+	SourceEdgeCount                 int            `json:"source_edge_count"`
+	DisplayRouteCount               int            `json:"display_route_count"`
+	HiddenDetailRouteCount          int            `json:"hidden_detail_route_count"`
+	RouteToZoneCount                int            `json:"route_to_zone_count"`
+	RouteToEntityCount              int            `json:"route_to_entity_count"`
+	RouteToZoneRatio                float64        `json:"route_to_zone_ratio"`
+	RouteSameStyleMismatchCount     int            `json:"route_same_style_mismatch_count"`
+	PathArrowBodyGapCount           int            `json:"path_arrow_body_gap_count"`
+	PathArrowAtBendCount            int            `json:"path_arrow_at_bend_count"`
+	RouteColorConsistencyScore      float64        `json:"route_color_consistency_score"`
 	EntityBodyRegistryCount         int            `json:"entity_body_registry_count"`
 	EntityKnownBodyCount            int            `json:"entity_known_body_count"`
 	EntityGenericBodyCount          int            `json:"entity_generic_body_count"`
 	EntityGenericBodyRatio          float64        `json:"entity_generic_body_ratio"`
 	EntitySemanticBodyScore         float64        `json:"entity_semantic_body_score"`
+	EntityVisualPaletteVersion      int            `json:"entity_visual_palette_version"`
+	EntityBodyShapeVarietyCount     int            `json:"entity_body_shape_variety_count"`
+	EntityBrightnessScore           float64        `json:"entity_brightness_score"`
 	RelationComponentsOwnPathCount  int            `json:"relation_components_own_path_count"`
 	RelationComponentsOwnArrowCount int            `json:"relation_components_own_arrow_count"`
 	RelationComponentsOwnHitCount   int            `json:"relation_components_own_hit_count"`
@@ -520,11 +546,24 @@ func Inspect(opts Options) (Result, error) {
 		RoutePlanObstacleCount:     nodeResult.Data.Summary.RoutePlanObstacleCount,
 		RoutePlanRenderedMatch:     nodeResult.Data.Summary.RoutePlanRenderedMatch,
 		RoutePlanRenderedMatchCnt:  nodeResult.Data.Summary.RoutePlanRenderedMatchCount,
+		SourceEdgeCount:            nodeResult.Data.Summary.SourceEdgeCount,
+		DisplayRouteCount:          nodeResult.Data.Summary.DisplayRouteCount,
+		HiddenDetailRouteCount:     nodeResult.Data.Summary.HiddenDetailRouteCount,
+		RouteToZoneCount:           nodeResult.Data.Summary.RouteToZoneCount,
+		RouteToEntityCount:         nodeResult.Data.Summary.RouteToEntityCount,
+		RouteToZoneRatio:           nodeResult.Data.Summary.RouteToZoneRatio,
+		RouteSameStyleMismatch:     nodeResult.Data.Summary.RouteSameStyleMismatchCount,
+		PathArrowBodyGapCount:      nodeResult.Data.Summary.PathArrowBodyGapCount,
+		PathArrowAtBendCount:       nodeResult.Data.Summary.PathArrowAtBendCount,
+		RouteColorConsistencyScore: nodeResult.Data.Summary.RouteColorConsistencyScore,
 		EntityBodyRegistryCount:    nodeResult.Data.Summary.EntityBodyRegistryCount,
 		EntityKnownBodyCount:       nodeResult.Data.Summary.EntityKnownBodyCount,
 		EntityGenericBodyCount:     nodeResult.Data.Summary.EntityGenericBodyCount,
 		EntityGenericBodyRatio:     nodeResult.Data.Summary.EntityGenericBodyRatio,
 		EntitySemanticBodyScore:    nodeResult.Data.Summary.EntitySemanticBodyScore,
+		EntityVisualPaletteVersion: nodeResult.Data.Summary.EntityVisualPaletteVersion,
+		EntityBodyShapeVariety:     nodeResult.Data.Summary.EntityBodyShapeVarietyCount,
+		EntityBrightnessScore:      nodeResult.Data.Summary.EntityBrightnessScore,
 		RelationOwnsPath:           nodeResult.Data.Summary.RelationComponentsOwnPathCount,
 		RelationOwnsArrow:          nodeResult.Data.Summary.RelationComponentsOwnArrowCount,
 		RelationOwnsHit:            nodeResult.Data.Summary.RelationComponentsOwnHitCount,
@@ -717,11 +756,24 @@ type browserDOMSummary struct {
 	RoutePlanObstacleCount          int            `json:"routePlanObstacleCount"`
 	RoutePlanRenderedMatch          bool           `json:"routePlanRenderedMatch"`
 	RoutePlanRenderedMatchCount     int            `json:"routePlanRenderedMatchCount"`
+	SourceEdgeCount                 int            `json:"sourceEdgeCount"`
+	DisplayRouteCount               int            `json:"displayRouteCount"`
+	HiddenDetailRouteCount          int            `json:"hiddenDetailRouteCount"`
+	RouteToZoneCount                int            `json:"routeToZoneCount"`
+	RouteToEntityCount              int            `json:"routeToEntityCount"`
+	RouteToZoneRatio                float64        `json:"routeToZoneRatio"`
+	RouteSameStyleMismatchCount     int            `json:"routeSameStyleMismatchCount"`
+	PathArrowBodyGapCount           int            `json:"pathArrowBodyGapCount"`
+	PathArrowAtBendCount            int            `json:"pathArrowAtBendCount"`
+	RouteColorConsistencyScore      float64        `json:"routeColorConsistencyScore"`
 	EntityBodyRegistryCount         int            `json:"entityBodyRegistryCount"`
 	EntityKnownBodyCount            int            `json:"entityKnownBodyCount"`
 	EntityGenericBodyCount          int            `json:"entityGenericBodyCount"`
 	EntityGenericBodyRatio          float64        `json:"entityGenericBodyRatio"`
 	EntitySemanticBodyScore         float64        `json:"entitySemanticBodyScore"`
+	EntityVisualPaletteVersion      int            `json:"entityVisualPaletteVersion"`
+	EntityBodyShapeVarietyCount     int            `json:"entityBodyShapeVarietyCount"`
+	EntityBrightnessScore           float64        `json:"entityBrightnessScore"`
 	RelationComponentsOwnPathCount  int            `json:"relationComponentsOwnPathCount"`
 	RelationComponentsOwnArrowCount int            `json:"relationComponentsOwnArrowCount"`
 	RelationComponentsOwnHitCount   int            `json:"relationComponentsOwnHitCount"`
@@ -1171,11 +1223,24 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		RoutePlanObstacleCount:          summary.RoutePlanObstacleCount,
 		RoutePlanRenderedMatch:          summary.RoutePlanRenderedMatch,
 		RoutePlanRenderedMatchCount:     summary.RoutePlanRenderedMatchCnt,
+		SourceEdgeCount:                 summary.SourceEdgeCount,
+		DisplayRouteCount:               summary.DisplayRouteCount,
+		HiddenDetailRouteCount:          summary.HiddenDetailRouteCount,
+		RouteToZoneCount:                summary.RouteToZoneCount,
+		RouteToEntityCount:              summary.RouteToEntityCount,
+		RouteToZoneRatio:                summary.RouteToZoneRatio,
+		RouteSameStyleMismatchCount:     summary.RouteSameStyleMismatch,
+		PathArrowBodyGapCount:           summary.PathArrowBodyGapCount,
+		PathArrowAtBendCount:            summary.PathArrowAtBendCount,
+		RouteColorConsistencyScore:      summary.RouteColorConsistencyScore,
 		EntityBodyRegistryCount:         summary.EntityBodyRegistryCount,
 		EntityKnownBodyCount:            summary.EntityKnownBodyCount,
 		EntityGenericBodyCount:          summary.EntityGenericBodyCount,
 		EntityGenericBodyRatio:          summary.EntityGenericBodyRatio,
 		EntitySemanticBodyScore:         summary.EntitySemanticBodyScore,
+		EntityVisualPaletteVersion:      summary.EntityVisualPaletteVersion,
+		EntityBodyShapeVarietyCount:     summary.EntityBodyShapeVariety,
+		EntityBrightnessScore:           summary.EntityBrightnessScore,
 		RelationComponentsOwnPathCount:  summary.RelationOwnsPath,
 		RelationComponentsOwnArrowCount: summary.RelationOwnsArrow,
 		RelationComponentsOwnHitCount:   summary.RelationOwnsHit,
@@ -1338,14 +1403,38 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	if totalDeclaredLinks > 0 && summary.GroundPathBuilder == false {
 		add("browser_ground_path_builder_missing", "error", "The runtime did not report GroundPathGeometryBuilder.", "Build ground relation path, arrow, hit area, and metrics through a single builder abstraction.", "create_ground_path_geometry_builder")
 	}
-	if totalDeclaredLinks > 0 && summary.GroundPathBuilder && summary.GroundPathBuilderVersion != "v5" {
-		add("browser_ground_path_builder_not_v5", "warning", "GroundPathGeometryBuilder did not report v5 route-plan path-builder metrics.", "Expose Hanan/A* route-plan backed paths, integrated arrow caps, hit areas, hover halos, joins, dash segments, bundles, and parallel offsets through the builder.", "upgrade_ground_path_builder_v5")
+	if totalDeclaredLinks > 0 && summary.GroundPathBuilder && summary.GroundPathBuilderVersion != "v6" {
+		add("browser_ground_path_builder_not_v6", "warning", "GroundPathGeometryBuilder did not report v6 integrated arrow-cap metrics.", "Expose RoutePlan v2 display routes, integrated arrow caps, hit areas, hover halos, joins, dash segments, bundles, and parallel offsets through the builder.", "upgrade_ground_path_builder_v6")
 	}
 	if totalDeclaredLinks > 0 && !summary.RoutePlanPresent {
-		add("browser_route_plan_missing", "warning", "The rendered architecture did not expose a first-class RoutePlan.", "Generate efp.routeplan.v1 during Mermaid compilation and include it in data.js.", "generate_route_plan")
+		add("browser_route_plan_missing", "warning", "The rendered architecture did not expose a first-class RoutePlan.", "Generate efp.routeplan.v2 during Mermaid compilation and include it in data.js.", "generate_route_plan")
 	}
 	if summary.RoutePlanPresent && !summary.RoutePlanRenderedMatch {
 		add("browser_route_plan_render_mismatch", "warning", fmt.Sprintf("Rendered relation count does not match RoutePlan count: rendered=%d planned=%d.", summary.RoutePlanRenderedMatchCnt, summary.RoutePlanRouteCount), "Have the browser runtime render routePlan.routes directly instead of recomputing routes.", "render_route_plan_routes")
+	}
+	if summary.SourceEdgeCount >= 18 && summary.DisplayRouteCount > 12 {
+		add("browser_display_routes_too_many", "warning", fmt.Sprintf("Overview renders too many display routes: %d display routes for %d source edges.", summary.DisplayRouteCount, summary.SourceEdgeCount), "Aggregate repeated source edges into zone-level or bundle-level display routes for the overview.", "aggregate_display_routes")
+	}
+	if summary.SourceEdgeCount >= 18 && summary.HiddenDetailRouteCount < 4 {
+		add("browser_hidden_detail_routes_low", "warning", fmt.Sprintf("Too few source edges were hidden behind overview display routes: %d.", summary.HiddenDetailRouteCount), "Preserve source edges as hidden detail routes and render aggregated display routes in overview.", "hide_detail_routes")
+	}
+	if summary.SourceEdgeCount >= 18 && summary.RouteToZoneRatio < 0.65 {
+		add("browser_route_to_zone_ratio_low", "warning", fmt.Sprintf("Overview relation endpoints are still too entity-level: zone ratio %.2f.", summary.RouteToZoneRatio), "Route secondary and auxiliary overview relations to zone boundaries or bundle trunks.", "route_to_zone_boundaries")
+	}
+	if summary.RouteSameStyleMismatch > 0 {
+		add("browser_route_style_mismatch", "warning", fmt.Sprintf("Some routes have different body and arrow colors: %d.", summary.RouteSameStyleMismatch), "Use RouteStyle tokens so bodyColor and arrowColor match for each display route.", "unify_route_style_tokens")
+	}
+	if summary.PathArrowBodyGapCount > 0 {
+		add("browser_path_arrow_body_gap", "warning", fmt.Sprintf("Some route arrow caps are separated from the path body: %d.", summary.PathArrowBodyGapCount), "Trim the path body to the arrow base and build arrowheads as integrated terminal caps.", "integrate_arrow_cap")
+	}
+	if summary.PathArrowAtBendCount > 0 {
+		add("browser_path_arrow_at_bend", "warning", fmt.Sprintf("Some route arrows terminate on a bend: %d.", summary.PathArrowAtBendCount), "Backtrack along the final route segment so arrow caps sit on a straight terminal segment.", "move_arrow_off_bend")
+	}
+	if summary.SourceEdgeCount >= 18 && summary.EntityBodyShapeVariety < 8 {
+		add("browser_entity_shape_variety_low", "warning", fmt.Sprintf("Entity body shape variety is low: %d.", summary.EntityBodyShapeVariety), "Use semantic entity bodies for gateway, service, registry, cache, database, storage, observability, and admin.", "increase_entity_shape_variety")
+	}
+	if summary.SourceEdgeCount >= 18 && summary.EntityBrightnessScore > 0 && summary.EntityBrightnessScore < 0.7 {
+		add("browser_entity_brightness_low", "warning", fmt.Sprintf("Entity palette brightness is low: %.2f.", summary.EntityBrightnessScore), "Use the iCraft-like brighter isometric palette for architecture entities.", "apply_entity_palette_v2")
 	}
 	if totalDeclaredLinks > 0 && summary.PathArrowCapCount == 0 {
 		add("browser_path_arrow_cap_missing", "warning", "GroundPathGeometryBuilder did not report terminal arrow caps.", "Build arrowheads as route terminal caps owned by RelationComponent.", "build_path_arrow_caps")

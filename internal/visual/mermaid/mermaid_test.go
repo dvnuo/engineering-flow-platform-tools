@@ -102,13 +102,19 @@ func TestCompileMicroserviceGoldenArchitecture(t *testing.T) {
 		t.Fatalf("expected cache/data/storage below service zone: services=%#v cache=%#v data=%#v storage=%#v", zones["services"].Bounds, zones["cache"].Bounds, zones["data"].Bounds, zones["storage"].Bounds)
 	}
 	routing := ArchitectureRoutingEngine(graph, layout)
-	if len(routing.Links) != len(graph.Edges) {
-		t.Fatalf("expected every edge to route: routed=%d edges=%d", len(routing.Links), len(graph.Edges))
+	if len(routing.SourceEdges) != len(graph.Edges) {
+		t.Fatalf("expected every source edge to be preserved: source=%d edges=%d", len(routing.SourceEdges), len(graph.Edges))
+	}
+	if len(routing.Links) > 12 || len(routing.Links) < 8 {
+		t.Fatalf("expected overview display route aggregation: display=%d source=%d", len(routing.Links), len(graph.Edges))
+	}
+	if len(routing.HiddenDetailLinks) < 4 {
+		t.Fatalf("expected hidden detail routes for aggregated overview: hidden=%d", len(routing.HiddenDetailLinks))
 	}
 	if routing.Metrics.PrimaryRouteCount > 8 {
 		t.Fatalf("too many primary routes: %#v", routing.Metrics)
 	}
-	if routing.Metrics.SecondaryRouteCount < 8 {
+	if routing.Metrics.SecondaryRouteCount < 4 {
 		t.Fatalf("expected secondary route layer: %#v", routing.Metrics)
 	}
 	if routing.Metrics.BusLaneCount == 0 || routing.Metrics.BundleCount == 0 {
@@ -128,21 +134,33 @@ func TestCompileMicroserviceGoldenArchitecture(t *testing.T) {
 	if err := json.Unmarshal(compiled, &data); err != nil {
 		t.Fatal(err)
 	}
-	if len(data["zones"].([]any)) < 10 || len(data["entities"].([]any)) < 18 || len(data["links"].([]any)) < 18 {
+	if len(data["zones"].([]any)) < 10 || len(data["entities"].([]any)) < 18 || len(data["links"].([]any)) < 8 || len(data["links"].([]any)) > 12 {
 		t.Fatalf("compiled golden example lost structure: zones=%d entities=%d links=%d", len(data["zones"].([]any)), len(data["entities"].([]any)), len(data["links"].([]any)))
 	}
 	routePlan, ok := data["routePlan"].(map[string]any)
 	if !ok {
 		t.Fatalf("compiled golden example did not include routePlan")
 	}
-	if routePlan["version"] != "efp.routeplan.v1" {
+	if routePlan["version"] != "efp.routeplan.v2" {
 		t.Fatalf("unexpected routePlan version: %#v", routePlan["version"])
 	}
 	routes, _ := routePlan["routes"].([]any)
+	sourceEdges, _ := routePlan["sourceEdges"].([]any)
+	displayRoutes, _ := routePlan["displayRoutes"].([]any)
+	hiddenDetailRoutes, _ := routePlan["hiddenDetailRoutes"].([]any)
 	lanes, _ := routePlan["lanes"].([]any)
 	obstacles, _ := routePlan["obstacles"].([]any)
 	if len(routes) != len(data["links"].([]any)) {
 		t.Fatalf("routePlan routes should match links: routes=%d links=%d", len(routes), len(data["links"].([]any)))
+	}
+	if len(displayRoutes) != len(routes) {
+		t.Fatalf("displayRoutes should alias rendered overview routes: display=%d routes=%d", len(displayRoutes), len(routes))
+	}
+	if len(sourceEdges) != len(graph.Edges) {
+		t.Fatalf("sourceEdges should preserve Mermaid edges: source=%d edges=%d", len(sourceEdges), len(graph.Edges))
+	}
+	if len(hiddenDetailRoutes) < 4 {
+		t.Fatalf("expected hidden detail routes, got %d", len(hiddenDetailRoutes))
 	}
 	if len(lanes) < 5 {
 		t.Fatalf("expected routePlan bus lanes for complex architecture: lanes=%d", len(lanes))

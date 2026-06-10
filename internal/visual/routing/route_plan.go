@@ -38,20 +38,23 @@ func BuildRoutePlan(input Input, opts Options) RoutePlan {
 	if opts.UseRipUp {
 		routes, ripupImprovement = RipUpAndReroute(input, lanes, obstacles, routes, opts)
 	}
-	metrics := ValidateRoutes(input, routes)
+	displayRoutes, hiddenDetailRoutes, metrics := AggregateDisplayRoutes(input, routes, lanes, obstacles, opts)
 	metrics.ParallelOffsetCount += parallelOffsets
 	if opts.UseRipUp {
 		metrics.RipUpRerouteRounds = opts.RipUpRounds
 		metrics.RipUpRerouteImprovement = ripupImprovement
 	}
 	return RoutePlan{
-		Version:   RoutePlanVersion,
-		Backend:   opts.Engine,
-		Routes:    routes,
-		Lanes:     lanes,
-		Bundles:   BuildBundles(routes),
-		Obstacles: obstacles,
-		Metrics:   metrics,
+		Version:            RoutePlanVersion,
+		Backend:            opts.Engine,
+		SourceEdges:        append([]LinkModel(nil), input.Links...),
+		DisplayRoutes:      displayRoutes,
+		HiddenDetailRoutes: hiddenDetailRoutes,
+		Routes:             displayRoutes,
+		Lanes:              lanes,
+		Bundles:            BuildBundles(displayRoutes),
+		Obstacles:          obstacles,
+		Metrics:            metrics,
 	}
 }
 
@@ -117,10 +120,20 @@ func routeSingle(input Input, link LinkModel, lanes []BusLane, obstacles []Route
 		ID:             link.ID,
 		From:           link.From,
 		To:             link.To,
+		Label:          link.Label,
 		Role:           nonEmpty(link.Role, "secondary"),
 		PathGroup:      link.PathGroup,
 		FromPort:       bestSource.Side,
 		ToPort:         bestTarget.Side,
+		SourceEdgeIDs:  []string{link.ID},
+		RouteScope:     "entity",
+		FromZone:       from.Group,
+		ToZone:         to.Group,
+		FromEntity:     link.From,
+		ToEntity:       link.To,
+		TerminalMode:   "entity_port",
+		Arrow:          "forward",
+		Style:          RouteStyleFor(nonEmpty(link.Role, "secondary"), link.PathGroup),
 		Points:         points,
 		BusLaneID:      lane.ID,
 		BundleID:       link.PathGroup,

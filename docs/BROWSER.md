@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It opens an internal URL in Edge/Chrome/Chromium through DevTools and writes diagnostics that help determine whether browser-based enterprise SSO appears to complete.
+`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It can run one-shot probes, or keep a dedicated Chrome automation session open by default for tab selection, semantic element finding, redacted page reads, structured extraction/export, form automation, bounded page actions, assertions, workflows, screenshots, network exports, and performance metadata through DevTools. Edge/Chromium remain available with `--browser`.
 
 ## What It Verifies
 
@@ -11,13 +11,23 @@
 - A provided CSS selector appears after navigation.
 - Page title, final URL, screenshot, HTML, and network event summaries are available for diagnosis.
 - Optional page-context `fetch` can call an API with browser credentials included.
+- A persistent session can list/open/activate tabs, attach to explicitly supplied local DevTools endpoints, snapshot/extract redacted page content, find elements by semantic locators, extract selector-declared schema fields, inspect page structure, produce accessibility-style refs, assert page state and screenshot baselines, record and run whitelisted YAML workflows with locator fallback, inspect/fill forms without echoing values, read sanitized network timing summaries with redacted fetch/XHR response previews, record/export sanitized HAR-lite metadata, inspect performance timing metadata, inspect console/runtime errors, inspect frames, extract/export tables/lists, collect scrolling data, diff page-state JSON captures, click/type/select/check/press/upload/wait, write page or visible-element screenshot artifacts, evaluate sanitized page expressions, run sanitized GET fetches with credentials omitted, and inspect download metadata.
 
 ## What It Does Not Do
 
 - It does not read, decrypt, or export the user's default browser cookies or tokens.
-- It does not reuse the default Edge/Chrome profile.
+- It does not launch managed sessions with the default Edge/Chrome profile.
+- It does not discover arbitrary browser instances; `session discover` and `session attach` require explicit `127.0.0.1` DevTools ports.
 - It does not bypass MFA, Conditional Access, or enterprise browser policy.
 - It does not print `Authorization`, `Cookie`, or `Set-Cookie` headers.
+- It does not return response headers, request bodies, browser storage, or binary download bytes.
+- It returns redacted, truncated fetch/XHR response body previews from the network recorder by default; pass `--body=false` to disable them.
+- It does not return screenshot bytes; `browser page screenshot` writes a local PNG and returns path/size metadata.
+- It does not let workflows run shell commands, arbitrary browser CLI strings, arbitrary JavaScript, `page eval`, or `page fetch`; workflows call only whitelisted browser actions/assertions.
+- It does not export full HAR data; `browser network export` writes HAR-lite metadata plus redacted response body previews when captured.
+- It does not return performance traces; `browser page metrics` returns browser timing metadata only.
+- It does not allow `browser page eval` to access cookies, browser storage, credentials, headers, or network APIs.
+- It does not expose typed text, selected option values, console object previews, raw console stacks without redaction, frame URLs/titles without redaction, or closed shadow roots.
 - It does not treat `negotiate_401_seen` as proof of Kerberos or Windows Integrated Authentication success. It is only an indicator.
 
 ## Windows Manual Test
@@ -44,6 +54,120 @@ To distinguish true OS/enterprise SSO from a cached browser session:
 ```
 
 If a clean profile still reaches the business page, OS/enterprise SSO is more likely working. If the non-clean profile works but the clean profile does not, access is more likely dependent on cached browser session state.
+
+## Persistent Session Workflow
+
+Start or reuse a dedicated browser session, or attach metadata to a browser the user explicitly launched with a local DevTools port:
+
+```bash
+browser session start --name default --url "https://intranet.example.test/app" --json
+browser session status default --json
+browser session discover --ports 9222,9223 --json
+browser session attach --name user-demo --debug-port 9222 --json
+```
+
+`session start` launches the managed browser with a dedicated profile and attempts to detach the browser process from the short-lived CLI or agent command process. This is meant for VS Code/Copilot-style workflows where the agent runs one CLI command, returns to chat, and later runs another command against the same DevTools endpoint.
+
+Select a page target:
+
+```bash
+browser tab list --session default --json
+browser tab current --session default --json
+browser tab activate --session default --target-id <target-id> --json
+browser tab open --session default --url "https://intranet.example.test/app" --json
+```
+
+Read redacted page state:
+
+```bash
+browser page snapshot --session default --json
+browser page extract --session default --selector ".user-avatar" --json
+browser page extract-schema --session default --file "schema.yaml" --json
+browser page find --session default --role button --name "Save" --json
+browser page ax --session default --json
+browser page outline --session default --json
+browser page outline --session default --pierce --json
+browser page network --session default --filter "/api/" --json
+browser page metrics --session default --limit-resources 10 --json
+browser page console --session default --level error --json
+browser page errors --session default --json
+browser frame list --session default --json
+browser page table --session default --selector "table.results" --json
+browser page list --session default --selector "nav" --json
+```
+
+Run bounded page actions:
+
+```bash
+browser page click --session default --selector "button.sign-in" --json
+browser page click --session default --ref "axref-0-abcdef123456" --json
+browser page type --session default --selector "input[name=q]" --text "search" --clear --json
+browser page select --session default --ref "axref-1-abcdef123456" --label "Ready" --json
+browser page check --session default --ref "axref-2-abcdef123456" --json
+browser page press --session default --key Enter --json
+browser page upload --session default --selector "input[type=file]" --file "./report.pdf" --json
+browser page wait --session default --selector ".ready" --network-idle-ms 500 --dom-stable-ms 500 --json
+browser page screenshot --session default --out "result/page-screenshot.png" --json
+browser page screenshot --session default --selector ".avatar" --out "result/avatar.png" --json
+browser page table-export --session default --selector "table.results" --out "result/table.csv" --format csv --json
+browser page list-export --session default --selector "nav" --out "result/nav.json" --json
+browser page scroll-collect --session default --item-selector ".row" --out "result/items.json" --json
+browser page diff --before "before.json" --after "after.json" --json
+browser page eval --session default --expr "document.title" --json
+browser page fetch --session default --url "/api/me" --json
+browser network start --session default --limit 500 --json
+browser network wait --session default --url-contains "/api/" --status 200 --json
+browser network list --session default --filter "/api/" --json
+browser network export --session default --out "result/network.har-lite.json" --format har-lite --json
+browser download wait --session default --filename-contains "report" --json
+browser download list --session default --json
+```
+
+Run assertions and whitelisted workflows:
+
+```bash
+browser assert visible --session default --selector ".ready" --json
+browser assert text --session default --contains "Signed in" --json
+browser assert url --session default --contains "/dashboard" --json
+browser assert count --session default --selector ".result" --min 1 --json
+browser assert screenshot --session default --baseline "baseline.png" --out "actual.png" --diff-out "diff.png" --json
+browser workflow record --session default --out "flow.yaml" --duration-ms 10000 --json
+browser workflow run --file "flow.yaml" --dry-run --var query=demo --report-out "result/workflow-run.json" --evidence-dir "result/evidence" --json
+browser workflow run --file "flow.yaml" --session default --json
+browser form inspect --session default --json
+browser form fill --session default --file "values.yaml" --json
+```
+
+Compact workflow YAML uses an explicit action whitelist:
+
+```yaml
+session: default
+vars:
+  query: ""
+smart_wait:
+  network_idle_ms: 500
+  dom_stable_ms: 300
+steps:
+  - action: page.wait
+    selector: .ready
+  - action: assert.visible
+    selector: .ready
+  - action: page.type
+    locators:
+      - role: textbox
+        name: Search
+      - selector: input[name=q]
+    text: "{{vars.query}}"
+    clear: true
+  - action: assert.screenshot
+    baseline: result/baseline.png
+    out: result/actual.png
+    diff_out: result/diff.png
+```
+
+`page snapshot`, `page extract`, `page extract-schema`, `page find`, `page ax`, `page outline`, `page table`, `page list`, `page table-export`, `page list-export`, `page scroll-collect`, `page diff`, `page console`, `page errors`, `frame snapshot`, `form inspect`, `form fill`, `page eval`, and `page fetch` redact URLs, sensitive assignments, sensitive JSON fields, and known secret-bearing text patterns. `page find` returns refs plus fallback locator candidates; `page ax` is a DOM/ARIA accessibility-style fallback with stable short-session refs stored under `~/.efp/browser/refs`; rerun them after navigation or DOM changes. `page extract`, `page outline`, and `page ax` support `--pierce` for open shadow roots only. `frame snapshot` reads a selected DevTools frame by `--frame-id` and redacts frame URL/title/text. `page screenshot --selector` or `--ref` requires a visible element and returns file metadata only. `assert screenshot` writes actual and diff PNG artifacts and returns metadata only. `form inspect` returns field metadata without current values; `form fill` returns match metadata and value byte counts only. Risky clicks such as submit, delete, pay, save, approve, publish, deploy, or transfer require explicit `--yes`. `page network` reads browser resource timing entries and returns redacted URLs, initiator/resource type, timing, size counters, and an API-like marker only. `browser network start/list/wait/stop/export/clear` records or exports sanitized HAR-lite metadata after `start` via page-side fetch/XHR/resource collectors. Fetch/XHR response body previews are redacted and returned by default; headers, cookies, storage, and request bodies are never returned. `page metrics` returns navigation, paint/resource aggregate, DOM node count, long-task count, and redacted largest-resource metadata only. `browser workflow record` writes a safe YAML skeleton and replaces typed text and selected option values with empty variables plus fallback locators. `browser workflow run` supports variables, CLI `--var`, conditions, `for_each`, locator fallback through `locators:`, `smart_wait`, `human.wait`, `human.confirm`, `--report-out` audit logs, and optional `--evidence-dir` bundles while executing only whitelisted steps. It rejects arbitrary shell, browser CLI strings, JavaScript, `page eval`, and `page fetch`. Dedicated console/network assertions are not included in this pass; use `network wait/list` and `page console/errors`. `page console` and `page errors` capture events only after recorder injection and redact/truncate messages and stacks. `page fetch` rejects unsafe schemes such as `file:`, `data:`, `javascript:`, `chrome:`, and `about:`, runs as GET only, omits credentials, and returns no headers.
+
+`page wait` accepts `--selector`, `--duration-ms`, `--url-contains`, `--text`, `--network-idle-ms`, and `--dom-stable-ms`; all provided conditions must be satisfied within `--timeout`. Network-idle and DOM-stable waits use resource timing counts and DOM/text shape metadata only.
 
 ## Output Files
 
@@ -93,7 +217,7 @@ To disable artifact types, pass `--save-html=false` or `--save-screenshot=false`
 
 ## Security Model
 
-The default profile is a dedicated probe profile:
+The one-shot `browser probe` default profile is a dedicated probe profile:
 
 - Windows: `%LOCALAPPDATA%\browser-probe-profile`
 - macOS: `~/Library/Caches/browser-probe-profile`
@@ -102,7 +226,9 @@ The default profile is a dedicated probe profile:
 
 Use `--profile` to choose another dedicated profile. Use `--clean-profile` to delete the probe profile before launch. Do not point `--profile` at a real user default Edge/Chrome profile.
 
-The tool does not read browser cookie databases, decrypt cookies, export tokens, or print request/response bodies. `--fetch-api` only records `ok`, `status`, redacted `url`, `contentType`, and a capped `bodyPreview`.
+Persistent sessions default to `~/.efp/browser/profiles/<session-name>`, downloads default to `~/.efp/browser/downloads/<session-name>`, session metadata is stored under `~/.efp/browser/sessions`, accessibility refs under `~/.efp/browser/refs`, and network recorder artifacts under `~/.efp/browser/network`. DevTools for launched sessions is bound to `127.0.0.1`.
+
+The tool does not read browser cookie databases, decrypt cookies, export tokens, print request/response headers, print request bodies, echo typed text or selected option values, or read downloaded file contents. Probe `--fetch-api` records `ok`, `status`, redacted `url`, `contentType`, and a capped `bodyPreview`. Persistent `page fetch` records `ok`, `status`, redacted final URL, and a capped redacted `body_preview` with credentials omitted and no headers. The network recorder records redacted fetch/XHR response body previews by default and can disable them with `--body=false`. Persistent `page upload` validates local regular files and returns path/name/size metadata only. Workflow dry-runs and executed step results report typed-text byte counts, not typed text. Form filling and workflow recording preserve automation structure while suppressing user-entered values.
 
 ## OpenCode Runtime Handoff
 

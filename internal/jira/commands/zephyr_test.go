@@ -656,6 +656,186 @@ func TestZephyrCycleResolve(t *testing.T) {
 	requireJiraCode(t, run(t, cfgAmb, "zephyr", "cycle", "resolve", "--name", "Regression"), "ambiguous_zephyr_cycle")
 }
 
+func TestZephyrVersionListAndResolve(t *testing.T) {
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/api/2/project/EFP":
+			w.Write([]byte(`{"id":"10000","key":"EFP"}`))
+		case "/rest/zapi/latest/util/versionBoard-list":
+			if r.URL.Query().Get("projectId") != "10000" {
+				t.Fatalf("bad version query: %s", r.URL.RawQuery)
+			}
+			w.Write([]byte(`{"type":"software","unreleasedVersions":[{"value":"-1","archived":false,"label":"Unscheduled"},{"value":"11700","archived":false,"label":"TestVersion1"}],"releasedVersions":[{"value":"11701","archived":false,"label":"ReleasedVersion"}]}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	list := run(t, cfg, "zephyr", "version", "list", "--project", "EFP")
+	if ok, _ := list["ok"].(bool); !ok {
+		t.Fatalf("version list failed: %#v", list)
+	}
+	data := list["data"].(map[string]interface{})
+	if data["version_count"] != float64(3) {
+		t.Fatalf("bad version count: %#v", data)
+	}
+	resolve := run(t, cfg, "zephyr", "version", "resolve", "--project", "EFP", "--name", "testversion1")
+	if ok, _ := resolve["ok"].(bool); !ok {
+		t.Fatalf("version resolve failed: %#v", resolve)
+	}
+	if got := resolve["data"].(map[string]interface{})["version_id"]; got != "11700" {
+		t.Fatalf("version_id=%#v", got)
+	}
+}
+
+func TestZephyrArchiveCommands(t *testing.T) {
+	var archivedBody map[string]interface{}
+	var restoreBody map[string]interface{}
+	var exportBody map[string]interface{}
+	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/zapi/latest/execution/archive":
+			switch r.Method {
+			case http.MethodGet:
+				if r.URL.Query().Get("projectId") != "10000" || r.URL.Query().Get("versionId") != "-1" || r.URL.Query().Get("cycleId") != "20000" || r.URL.Query().Get("maxRecords") != "25" {
+					t.Fatalf("bad archive list query: %s", r.URL.RawQuery)
+				}
+				w.Write([]byte(`{"executions":[]}`))
+			case http.MethodPost:
+				if err := json.NewDecoder(r.Body).Decode(&archivedBody); err != nil {
+					t.Fatal(err)
+				}
+				w.Write([]byte(`{"jobProgressToken":"archive-token"}`))
+			default:
+				t.Fatalf("bad archive method: %s", r.Method)
+			}
+		case "/rest/zapi/latest/execution/restore":
+			if err := json.NewDecoder(r.Body).Decode(&restoreBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"jobProgressToken":"restore-token"}`))
+		case "/rest/zapi/latest/execution/archive/export":
+			if err := json.NewDecoder(r.Body).Decode(&exportBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"url":"https://jira.example.test/export.xls"}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	if ok, _ := run(t, cfg, "zephyr", "archive", "list", "--project-id", "10000", "--version-id", "-1", "--cycle-id", "20000", "--limit", "25")["ok"].(bool); !ok {
+		t.Fatal("archive list failed")
+	}
+	requireJiraCode(t, run(t, cfg, "zephyr", "archive", "executions", "--execution-ids", "30000"), "invalid_args")
+	before := *hits
+	dry := run(t, cfg, "--yes", "--dry-run", "zephyr", "archive", "executions", "--execution-ids", "30000,30001")
+	if *hits != before {
+		t.Fatal("archive dry-run hit server")
+	}
+	if dry["data"].(map[string]interface{})["path"] != "/rest/zapi/latest/execution/archive" {
+		t.Fatalf("bad archive dry-run: %#v", dry)
+	}
+	if ok, _ := run(t, cfg, "--yes", "zephyr", "archive", "executions", "--execution-ids", "30000,30001")["ok"].(bool); !ok {
+		t.Fatal("archive executions failed")
+	}
+	if ok, _ := run(t, cfg, "zephyr", "archive", "restore", "--execution-ids", "30000")["ok"].(bool); !ok {
+		t.Fatal("archive restore failed")
+	}
+	if ok, _ := run(t, cfg, "zephyr", "archive", "export", "--type", "csv", "--start", "10")["ok"].(bool); !ok {
+		t.Fatal("archive export failed")
+	}
+	if len(archivedBody["executions"].([]interface{})) != 2 || len(restoreBody["executions"].([]interface{})) != 1 || exportBody["exportType"] != "csv" || exportBody["startIndex"] != "10" {
+		t.Fatalf("bad archive bodies: archive=%#v restore=%#v export=%#v", archivedBody, restoreBody, exportBody)
+	}
+}
+
+func TestZephyrCustomFieldCommands(t *testing.T) {
+	var createBody map[string]interface{}
+	var updateBody map[string]interface{}
+	var deleteBulkBody map[string]interface{}
+	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/zapi/latest/customfield/byEntityTypeAndProject":
+			if r.URL.Query().Get("entityType") != "EXECUTION" || r.URL.Query().Get("projectId") != "10000" {
+				t.Fatalf("bad customfield list query: %s", r.URL.RawQuery)
+			}
+			w.Write([]byte(`[{"id":"3","name":"Actual Result"}]`))
+		case "/rest/zapi/latest/customfield/3":
+			switch r.Method {
+			case http.MethodGet:
+				w.Write([]byte(`{"id":"3","name":"Actual Result"}`))
+			case http.MethodPut:
+				if err := json.NewDecoder(r.Body).Decode(&updateBody); err != nil {
+					t.Fatal(err)
+				}
+				w.Write([]byte(`{"id":"3"}`))
+			case http.MethodDelete:
+				w.Write([]byte(`{"message":"deleted"}`))
+			default:
+				t.Fatalf("bad customfield method: %s", r.Method)
+			}
+		case "/rest/zapi/latest/customfield/create":
+			if err := json.NewDecoder(r.Body).Decode(&createBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"id":"3"}`))
+		case "/rest/zapi/latest/customfield/delete-customfields":
+			if err := json.NewDecoder(r.Body).Decode(&deleteBulkBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"message":"deleted"}`))
+		case "/rest/zapi/latest/customfield/3/10000":
+			if r.Method != http.MethodDelete || r.URL.Query().Get("enable") != "false" {
+				t.Fatalf("bad customfield enable request: %s %s", r.Method, r.URL.String())
+			}
+			w.Write([]byte(`{"message":"disabled"}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	if ok, _ := run(t, cfg, "zephyr", "customfield", "list", "--entity-type", "execution", "--project-id", "10000")["ok"].(bool); !ok {
+		t.Fatal("customfield list failed")
+	}
+	if ok, _ := run(t, cfg, "zephyr", "customfield", "get", "3")["ok"].(bool); !ok {
+		t.Fatal("customfield get failed")
+	}
+	if ok, _ := run(t, cfg, "zephyr", "customfield", "create", "--name", "Actual Result", "--entity-type", "execution", "--field-type", "text", "--project-id", "10000")["ok"].(bool); !ok {
+		t.Fatal("customfield create failed")
+	}
+	if createBody["entityType"] != "EXECUTION" || createBody["fieldType"] != "TEXT" || createBody["isActive"] != true {
+		t.Fatalf("bad customfield create body: %#v", createBody)
+	}
+	if ok, _ := run(t, cfg, "zephyr", "customfield", "update", "3", "--name", "Actual Result RC2", "--field", "description=Updated")["ok"].(bool); !ok {
+		t.Fatal("customfield update failed")
+	}
+	if updateBody["name"] != "Actual Result RC2" || updateBody["description"] != "Updated" {
+		t.Fatalf("bad customfield update body: %#v", updateBody)
+	}
+	before := *hits
+	requireJiraCode(t, run(t, cfg, "zephyr", "customfield", "delete", "3"), "invalid_args")
+	dry := run(t, cfg, "--yes", "--dry-run", "zephyr", "customfield", "delete", "3")
+	if *hits != before {
+		t.Fatal("customfield delete validation/dry-run hit server")
+	}
+	if dry["data"].(map[string]interface{})["method"] != "DELETE" {
+		t.Fatalf("bad customfield delete dry-run: %#v", dry)
+	}
+	if ok, _ := run(t, cfg, "--yes", "zephyr", "customfield", "delete", "3")["ok"].(bool); !ok {
+		t.Fatal("customfield delete failed")
+	}
+	if ok, _ := run(t, cfg, "--yes", "zephyr", "customfield", "delete-bulk", "--customfield-ids", "3,14")["ok"].(bool); !ok {
+		t.Fatal("customfield delete-bulk failed")
+	}
+	if len(deleteBulkBody["customfields"].([]interface{})) != 2 {
+		t.Fatalf("bad customfield delete-bulk body: %#v", deleteBulkBody)
+	}
+	if ok, _ := run(t, cfg, "zephyr", "customfield", "enable", "3", "--project-id", "10000", "--enabled=false")["ok"].(bool); !ok {
+		t.Fatal("customfield enable failed")
+	}
+}
+
 func TestZephyrAPICatalogAndDescribe(t *testing.T) {
 	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatalf("api catalog should not hit server: %s %s", r.Method, r.URL.Path)
@@ -670,12 +850,12 @@ func TestZephyrAPICatalogAndDescribe(t *testing.T) {
 	for _, item := range data["groups"].([]interface{}) {
 		groups[item.(string)] = true
 	}
-	for _, want := range []string{"ChartResource", "ExecutionSearchResource", "ZQLFilterResource", "CycleResource", "ZNavResource", "LicenseResource", "PreferenceResource", "StepResultResource", "TraceabilityResource", "TestcaseResource", "UtilResource", "FolderResource", "ExecutionResource", "IssuePickerResource", "AuditResource", "TeststepResource", "AttachmentResource", "ZAPIResource", "ZQLAutoCompleteResource", "SystemInfoResource", "FilterPickerResource"} {
+	for _, want := range []string{"ChartResource", "ExecutionSearchResource", "ZQLFilterResource", "CycleResource", "ZNavResource", "LicenseResource", "PreferenceResource", "StepResultResource", "TraceabilityResource", "TestcaseResource", "UtilResource", "FolderResource", "ExecutionResource", "ExecutionArchiveResource", "IssuePickerResource", "AuditResource", "TeststepResource", "AttachmentResource", "CustomFieldResource", "ZAPIResource", "ZQLAutoCompleteResource", "SystemInfoResource", "FilterPickerResource"} {
 		if !groups[want] {
 			t.Fatalf("catalog missing group %s", want)
 		}
 	}
-	for _, id := range []string{"execution.update-status", "cycle.list", "folder.create", "teststep.list", "attachment.delete", "zql.clauses"} {
+	for _, id := range []string{"execution.update-status", "execution.archive", "customfield.create", "util.version-board-list", "cycle.list", "folder.create", "teststep.list", "attachment.delete", "zql.clauses"} {
 		desc := run(t, cfg, "zephyr", "api", "describe", id)
 		if ok, _ := desc["ok"].(bool); !ok {
 			t.Fatalf("describe %s failed: %#v", id, desc)
@@ -841,6 +1021,9 @@ func TestZephyrCommandSchemaCatalogCoverage(t *testing.T) {
 		"jira zephyr attachment delete <attachment-id>",
 		"jira zephyr execution resolve",
 		"jira zephyr cycle resolve",
+		"jira zephyr version resolve",
+		"jira zephyr archive list",
+		"jira zephyr customfield list",
 		"jira zephyr folder list",
 		"jira zephyr teststep list",
 		"jira zephyr api catalog",
@@ -859,6 +1042,9 @@ func TestZephyrCommandSchemaCatalogCoverage(t *testing.T) {
 		"zephyr.attachment.delete":            "jira zephyr attachment delete <attachment-id>",
 		"zephyr.execution.resolve":            "jira zephyr execution resolve",
 		"zephyr.cycle.resolve":                "jira zephyr cycle resolve",
+		"zephyr.version.resolve":              "jira zephyr version resolve",
+		"zephyr.archive.list":                 "jira zephyr archive list",
+		"zephyr.customfield.list":             "jira zephyr customfield list",
 		"zephyr.folder.list":                  "jira zephyr folder list",
 		"zephyr.teststep.list":                "jira zephyr teststep list",
 		"zephyr.api.catalog":                  "jira zephyr api catalog",

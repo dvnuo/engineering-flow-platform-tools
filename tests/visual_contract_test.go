@@ -396,7 +396,7 @@ func TestVisualOfflineSourceGuards(t *testing.T) {
 
 func TestVisualSmokeScriptsUseMermaidTemplates(t *testing.T) {
 	root := repoRoot(t)
-	for _, rel := range []string{"scripts/smoke.sh", "scripts/smoke.ps1"} {
+	for _, rel := range []string{"scripts/smoke.sh", "scripts/smoke.bat"} {
 		text := mustRead(t, filepath.Join(root, filepath.FromSlash(rel)))
 		for _, want := range []string{"mermaid.sequence", "mermaid.flowchart", "mermaid.architecture", "basic.mmd", "template doctor", "template schema", "template guide", "inspect-plan", "inspect-render"} {
 			if !strings.Contains(text, want) {
@@ -405,6 +405,49 @@ func TestVisualSmokeScriptsUseMermaidTemplates(t *testing.T) {
 		}
 		if strings.Contains(text, ".input.json") {
 			t.Fatalf("%s still references non-Mermaid example input", rel)
+		}
+	}
+}
+
+func TestVisualWindowsBatchScriptsContract(t *testing.T) {
+	root := repoRoot(t)
+	for _, rel := range []string{"scripts/smoke.bat", "scripts/build.bat"} {
+		text := mustRead(t, filepath.Join(root, filepath.FromSlash(rel)))
+		if lineCount(text) <= 20 {
+			t.Fatalf("%s appears collapsed: only %d lines", rel, lineCount(text))
+		}
+		if len(splitLines(text)) <= 1 {
+			t.Fatalf("%s appears to be a single-line batch script", rel)
+		}
+		if !strings.Contains(text, "./cmd/visual") {
+			t.Fatalf("%s missing visual command coverage", rel)
+		}
+	}
+
+	smoke := mustRead(t, filepath.Join(root, "scripts", "smoke.bat"))
+	for _, token := range []string{"go run ./cmd/visual", "template doctor", "render --template", "mermaid.sequence", "basic.mmd"} {
+		if !strings.Contains(smoke, token) {
+			t.Fatalf("scripts/smoke.bat missing visual smoke token %q", token)
+		}
+	}
+
+	build := mustRead(t, filepath.Join(root, "scripts", "build.bat"))
+	for _, token := range []string{"--snapshot", "--os", "--arch", "TARGET_OS", "TARGET_ARCH", "go build", "./cmd/visual"} {
+		if !strings.Contains(build, token) {
+			t.Fatalf("scripts/build.bat missing build token %q", token)
+		}
+	}
+}
+
+func TestVisualWorkflowUsesWindowsBatchSmoke(t *testing.T) {
+	root := repoRoot(t)
+	text := mustRead(t, filepath.Join(root, ".github", "workflows", "test.yml"))
+	if lineCount(text) <= 20 {
+		t.Fatalf(".github/workflows/test.yml appears collapsed: only %d lines", lineCount(text))
+	}
+	for _, token := range []string{"windows-latest", "scripts\\smoke.bat", "go build ./cmd/visual", "shell: cmd"} {
+		if !strings.Contains(text, token) {
+			t.Fatalf(".github/workflows/test.yml missing expected workflow token %q", token)
 		}
 	}
 }
@@ -529,6 +572,24 @@ func objectMap(t *testing.T, value any) map[string]any {
 		t.Fatalf("expected JSON object, got %#v", value)
 	}
 	return m
+}
+
+func lineCount(content string) int {
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.TrimRight(content, "\n")
+	if content == "" {
+		return 0
+	}
+	return strings.Count(content, "\n") + 1
+}
+
+func splitLines(content string) []string {
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.TrimRight(content, "\n")
+	if content == "" {
+		return nil
+	}
+	return strings.Split(content, "\n")
 }
 
 func stringSetFromAny(items []any) map[string]bool {

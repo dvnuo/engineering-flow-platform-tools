@@ -75,8 +75,37 @@ Recommended public templates:
 ## Browser SSO Diagnostics
 
 - Always call `browser schema probe --json` before constructing a probe command.
+- For persistent browser workflows, inspect `browser schema session.start --json`, `browser schema tab.open --json`, and the exact `browser schema page.<command> --json` or `browser schema workflow.run --json` before acting.
 - Always use `--json`.
 - `browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd, not an OpenCode built-in browser tool, MCP tool, or Web UI component.
+- Use `browser session start` for multi-step workflows that need a dedicated browser to stay open, then use `browser tab list/current/activate/open` to select a page target.
+- Use `browser session discover` and `browser session attach` only when the user explicitly provides local DevTools ports, for example a Chrome launched with `--remote-debugging-port=9222`. They do not inspect arbitrary browsers, default profiles, cookies, or tokens.
+- Use `browser page snapshot`, `browser page extract`, and `browser frame snapshot` for redacted page/frame reads.
+- Use `browser page extract-schema --file schema.yaml` when the agent needs stable structured JSON fields from selector-declared YAML instead of raw page text.
+- Use `browser page find` before actions when CSS selectors are unknown or unstable; prefer returned refs or generated `locators:` in workflows.
+- Use `browser page ax` to get accessibility-style refs before ref-based actions; rerun it after navigation or DOM changes.
+- Use `browser page outline`, `table`, and `list` when an agent needs navigable page structure or structured data instead of raw text.
+- Use `browser page table-export`, `list-export`, and `scroll-collect` when the user asks to collect or export visible page data. Use `browser page diff` to compare before/after JSON page-state captures.
+- Use `browser form inspect` to discover form field metadata without current values, then `browser form fill --file values.yaml` to fill fields without echoing values.
+- Use `--pierce` on `page extract`, `page outline`, or `page ax` only when open shadow-root traversal is needed; closed shadow roots are not accessible.
+- Use `browser page network` for sanitized resource timing/API observation; it returns no headers, cookies, or bodies.
+- Use `browser page metrics` for navigation, paint/resource aggregate, DOM node count, long-task count, and bounded largest-resource timing metadata. It is not a trace and returns no headers, cookies, storage, or bodies.
+- Use `browser assert visible|text|url|count|screenshot` for JSON-first page state checks. Assertion failures return `ok=false`, `error.code=assertion_failed`, and sanitized details in `data`. Screenshot assertions write actual/diff PNG files and return metadata only.
+- Console/network assertions are not separate assertion commands in this pass; use `browser network wait/list` and `browser page console/errors`.
+- Use `browser workflow record --out flow.yaml --duration-ms 10000 --json` when the user wants to demonstrate a manual flow and let the agent convert it into a safe workflow skeleton. Typed text and selected option values become empty variables, and fallback locators are included where possible.
+- Use `browser workflow run --file flow.yaml --dry-run --json` before executing YAML workflows. Workflows support top-level `vars`, CLI `--var`, `if`, `for_each`, `locators`, `smart_wait`, `human.wait`, `human.confirm`, `--report-out` audit logs, and optional `--evidence-dir` bundles. Workflows call only whitelisted browser actions/assertions and never execute shell commands, arbitrary browser CLI strings, arbitrary JavaScript, `page eval`, or `page fetch`.
+- Risky clicks such as submit, delete, pay, save, approve, publish, deploy, or transfer require explicit user confirmation and `--yes`.
+- Use `browser network start/list/wait/export/stop/clear` when the user will manually interact and the agent later needs sanitized HAR-lite metadata. It records only after `start`; fetch/XHR response body previews are redacted and returned by default. Network commands never return headers, cookies, storage, or request bodies.
+- Use `browser page console` and `browser page errors` for redacted console/runtime diagnostics. They capture events only after recorder injection and do not return object previews.
+- Use `browser frame list` before `browser frame snapshot --frame-id <id>` when frame-specific reads are needed. Frame URLs and titles are redacted.
+- Use `browser page click`, `type`, `select`, `check`, `uncheck`, `press`, `upload`, `wait`, `screenshot`, `eval`, and `fetch` only as bounded actions against the active or selected tab.
+- Prefer `--ref` from `browser page ax` when selectors are unstable. Selector/ref actions return metadata only and do not echo typed text or selected values.
+- `browser page wait` can wait for selectors, current URL substrings, visible text, resource timing idle windows, DOM stability windows, or a bounded duration.
+- `browser page screenshot` writes a PNG artifact and returns metadata rather than binary image data. Element screenshots require a visible `--selector` or fresh `--ref`; rerun `browser page ax` if a ref is stale.
+- `browser page eval` rejects cookie, storage, header, credential, and network APIs; returned values are recursively redacted.
+- `browser page fetch` performs GET with credentials omitted, rejects unsafe URL schemes, returns no headers, and redacts the body preview.
+- `browser page upload` validates local regular files and returns file metadata only; it never prints file contents.
+- `browser download list` and `browser download wait` read only path/name/size/modified metadata from the session download directory.
 - Use `--selector` for a deterministic login-success signal.
 - Use `--clean-profile` when the user wants to distinguish true OS/enterprise SSO from cached browser session.
 - Read `data.files.summary`, `data.files.screenshot`, `data.files.html`, and `data.files.network`.
@@ -168,6 +197,9 @@ jira schema zephyr.execution.bulk-update-status --json
 confluence schema page.create --json
 confluence schema page.update --json
 browser schema probe --json
+browser schema page.network --json
+browser schema page.outline --json
+browser schema download.wait --json
 jenkins schema job.build-with-params --json
 jenkins schema build.status --json
 jenkins schema artifact.download --json

@@ -50,6 +50,81 @@ func TestSchemaProbeRequiresURL(t *testing.T) {
 	t.Fatalf("schema did not require url: %#v", data)
 }
 
+func TestSchemaBrowserDefaultsToChrome(t *testing.T) {
+	for _, command := range []string{"probe", "session.start"} {
+		out := run(t, &fakeRunner{}, "schema", command, "--json")
+		data := out["data"].(map[string]any)
+		flags := data["flags"].([]any)
+		found := false
+		for _, raw := range flags {
+			flag := raw.(map[string]any)
+			if flag["name"] == "browser" {
+				found = true
+				if flag["default"] != "chrome" {
+					t.Fatalf("%s --browser default = %v want chrome", command, flag["default"])
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("%s missing --browser flag in %#v", command, data)
+		}
+	}
+}
+
+func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
+	cases := map[string][]string{
+		"session.start":       {"download-dir"},
+		"page.ax":             {"limit", "include-hidden", "pierce", "session", "target-id", "timeout"},
+		"page.find":           {"selector", "role", "name", "text", "label", "placeholder", "near-text", "nth", "limit", "include-hidden", "session", "target-id", "timeout"},
+		"page.click":          {"selector", "ref", "yes", "session", "target-id", "timeout"},
+		"page.type":           {"selector", "ref", "text", "clear", "session", "target-id", "timeout"},
+		"page.select":         {"selector", "ref", "value", "label", "index", "session", "target-id", "timeout"},
+		"page.check":          {"selector", "ref", "session", "target-id", "timeout"},
+		"page.uncheck":        {"selector", "ref", "session", "target-id", "timeout"},
+		"page.press":          {"selector", "ref", "key", "session", "target-id", "timeout"},
+		"page.upload":         {"selector", "file", "clear", "session", "target-id", "timeout"},
+		"page.console":        {"level", "limit", "session", "target-id", "timeout"},
+		"page.errors":         {"limit", "session", "target-id", "timeout"},
+		"page.console-clear":  {"session", "target-id", "timeout"},
+		"page.extract":        {"selector", "limit", "include-html", "pierce", "max-html-bytes", "session", "target-id", "timeout"},
+		"page.outline":        {"limit", "include-hidden", "pierce", "session", "target-id", "timeout"},
+		"page.metrics":        {"limit-resources", "filter", "session", "target-id", "timeout"},
+		"page.table-export":   {"selector", "out", "format", "limit-rows", "limit-cells", "session", "target-id", "timeout"},
+		"page.list-export":    {"selector", "out", "format", "limit-items", "session", "target-id", "timeout"},
+		"page.scroll-collect": {"selector", "item-selector", "out", "format", "limit", "max-scrolls", "scroll-step", "interval-ms", "session", "target-id", "timeout"},
+		"page.diff":           {"before", "after", "out", "limit"},
+		"assert.visible":      {"selector", "ref", "not", "session", "target-id", "timeout"},
+		"assert.text":         {"contains", "selector", "ref", "not", "session", "target-id", "timeout"},
+		"assert.url":          {"contains", "not", "session", "target-id", "timeout"},
+		"assert.count":        {"selector", "equals", "min", "max", "session", "target-id", "timeout"},
+		"workflow.run":        {"file", "dry-run", "session", "target-id", "timeout", "continue-on-error", "var", "report-out", "evidence-dir", "allow-human", "yes"},
+		"frame.list":          {"session", "target-id", "timeout"},
+		"frame.snapshot":      {"frame-id", "include-html", "max-text-bytes", "max-html-bytes", "session", "target-id", "timeout"},
+		"network.start":       {"session", "target-id", "timeout", "limit", "filter", "body", "max-body-bytes"},
+		"network.stop":        {"session", "target-id", "timeout"},
+		"network.list":        {"session", "target-id", "timeout", "filter", "limit", "method", "status", "body", "max-body-bytes"},
+		"network.wait":        {"session", "target-id", "timeout", "url-contains", "method", "status", "limit", "body", "max-body-bytes"},
+		"network.export":      {"session", "target-id", "timeout", "out", "format", "filter", "limit"},
+		"network.clear":       {"session", "target-id", "timeout"},
+		"download.list":       {"session"},
+		"download.wait":       {"session", "filename-contains", "timeout"},
+	}
+	for command, flags := range cases {
+		out := run(t, &fakeRunner{}, "schema", command, "--json")
+		data := out["data"].(map[string]any)
+		have := map[string]bool{}
+		for _, raw := range data["flags"].([]any) {
+			flag := raw.(map[string]any)
+			have[flag["name"].(string)] = true
+		}
+		for _, flag := range flags {
+			if !have[flag] {
+				t.Fatalf("%s missing --%s in %#v", command, flag, data)
+			}
+		}
+	}
+}
+
 func TestVersionJSON(t *testing.T) {
 	out := run(t, &fakeRunner{}, "version", "--json")
 	if out["ok"] != true {

@@ -154,9 +154,12 @@ func TestCommandSemanticsMatrixJiraFamilies(t *testing.T) {
 		{"zephyr", "util", "test-issue-type"},
 		{"zephyr", "test", "list", "--project", "PROJ"},
 		{"zephyr", "test", "get", "PROJ-T1"},
+		{"zephyr", "version", "list", "--project", "PROJ"},
 		{"zephyr", "cycle", "list", "--project", "PROJ"},
 		{"zephyr", "execution", "list", "--cycle-id", "1", "--project-id", "123"},
 		{"zephyr", "execution", "get", "1"},
+		{"zephyr", "archive", "list", "--project-id", "123"},
+		{"zephyr", "customfield", "list", "--entity-type", "EXECUTION"},
 		{"zephyr", "api", "get", "cycle", "--query", "projectId=123", "--query", "versionId=-1"},
 	}
 	for _, args := range readCases {
@@ -184,6 +187,10 @@ func TestCommandSemanticsMatrixJiraFamilies(t *testing.T) {
 		{"zephyr", "execution", "create", "--issue-id", "10001", "--cycle-id", "1", "--project-id", "123"},
 		{"zephyr", "execution", "update-status", "1", "--status", "PASS"},
 		{"zephyr", "execution", "add-tests-to-cycle", "--cycle-id", "1", "--project-id", "123", "--issues", "PROJ-T1,PROJ-T2"},
+		{"zephyr", "archive", "executions", "--execution-ids", "1,2", "--yes"},
+		{"zephyr", "archive", "restore", "--execution-ids", "1,2"},
+		{"zephyr", "customfield", "create", "--name", "Actual Result", "--entity-type", "EXECUTION", "--field-type", "TEXT"},
+		{"zephyr", "customfield", "update", "3", "--name", "Actual Result"},
 		{"zephyr", "api", "post", "cycle", "--body", `{}`},
 		{"zephyr", "api", "put", "execution/1/execute", "--body", `{"status":"1"}`},
 	}

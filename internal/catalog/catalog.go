@@ -41,9 +41,12 @@ var jiraCommands = []string{
 	"jira zephyr doctor", "jira zephyr resolve-url <jira-url>", "jira zephyr status list", "jira zephyr util test-issue-type",
 	"jira zephyr summary",
 	"jira zephyr test list", "jira zephyr test get <issue-or-url>", "jira zephyr test create",
+	"jira zephyr version list", "jira zephyr version resolve",
 	"jira zephyr cycle list", "jira zephyr cycle resolve", "jira zephyr cycle get <cycle-id>", "jira zephyr cycle create", "jira zephyr cycle update <cycle-id>", "jira zephyr cycle delete <cycle-id>",
 	"jira zephyr execution list", "jira zephyr execution resolve", "jira zephyr execution get <execution-id>", "jira zephyr execution create", "jira zephyr execution update-status [execution-id]", "jira zephyr execution add-tests-to-cycle", "jira zephyr execution count", "jira zephyr execution delete <execution-id>", "jira zephyr execution bulk-update-status", "jira zephyr execution export",
+	"jira zephyr archive list", "jira zephyr archive executions", "jira zephyr archive restore", "jira zephyr archive export",
 	"jira zephyr zql search", "jira zephyr zql clauses", "jira zephyr zql autocomplete-json", "jira zephyr zql autocomplete", "jira zephyr step-result list", "jira zephyr step-result update-status <step-result-id>", "jira zephyr attachment list", "jira zephyr attachment get <attachment-id>", "jira zephyr attachment upload", "jira zephyr attachment delete <attachment-id>", "jira zephyr folder list", "jira zephyr folder create", "jira zephyr folder update <folder-id>", "jira zephyr folder delete <folder-id>", "jira zephyr teststep list", "jira zephyr teststep get", "jira zephyr teststep create", "jira zephyr teststep update", "jira zephyr teststep delete", "jira zephyr defect list", "jira zephyr defect add", "jira zephyr report coverage",
+	"jira zephyr customfield list", "jira zephyr customfield get <customfield-id>", "jira zephyr customfield create", "jira zephyr customfield update <customfield-id>", "jira zephyr customfield delete <customfield-id>", "jira zephyr customfield delete-bulk", "jira zephyr customfield enable <customfield-id>",
 	"jira zephyr api catalog", "jira zephyr api describe <endpoint-id>", "jira zephyr api get <path>", "jira zephyr api post <path>", "jira zephyr api put <path>", "jira zephyr api delete <path>",
 	"jira issue attachment list <issue-or-url>", "jira issue attachment upload <issue-or-url> <file>", "jira attachment get <attachment-id>", "jira attachment download <attachment-id>", "jira attachment delete <attachment-id>", "jira attachment meta",
 	"jira issue worklog list <issue-or-url>", "jira issue worklog get <issue-or-url> <worklog-id>", "jira issue worklog add <issue-or-url>", "jira issue worklog update <issue-or-url> <worklog-id>", "jira issue worklog delete <issue-or-url> <worklog-id>",
@@ -87,6 +90,63 @@ var jenkinsCommands = []string{
 
 var browserCommands = []string{
 	"browser probe",
+	"browser session start",
+	"browser session list",
+	"browser session status [name]",
+	"browser session attach",
+	"browser session discover",
+	"browser session stop [name]",
+	"browser tab list",
+	"browser tab current",
+	"browser tab activate",
+	"browser tab open",
+	"browser page snapshot",
+	"browser page extract",
+	"browser page extract-schema",
+	"browser page find",
+	"browser page ax",
+	"browser page click",
+	"browser page type",
+	"browser page select",
+	"browser page check",
+	"browser page uncheck",
+	"browser page press",
+	"browser page upload",
+	"browser page wait",
+	"browser page screenshot",
+	"browser page eval",
+	"browser page fetch",
+	"browser page console",
+	"browser page errors",
+	"browser page console-clear",
+	"browser page network",
+	"browser page metrics",
+	"browser page outline",
+	"browser page table",
+	"browser page table-export",
+	"browser page list",
+	"browser page list-export",
+	"browser page scroll-collect",
+	"browser page diff",
+	"browser assert visible",
+	"browser assert text",
+	"browser assert url",
+	"browser assert count",
+	"browser assert screenshot",
+	"browser workflow run",
+	"browser workflow record",
+	"browser form inspect",
+	"browser form fill",
+	"browser frame list",
+	"browser frame snapshot",
+	"browser network start",
+	"browser network stop",
+	"browser network list",
+	"browser network wait",
+	"browser network export",
+	"browser network clear",
+	"browser download list",
+	"browser download wait",
 	"browser commands",
 	"browser schema <command>",
 	"browser help llm",
@@ -529,6 +589,12 @@ func meta(product, usage string) llm.CommandMeta {
 			explicitFound = true
 		}
 	}
+	if product == "browser" {
+		if local, ok := browserExplicit(name); ok {
+			ex = local
+			explicitFound = true
+		}
+	}
 	r := risk(usage)
 	if ex.Risk != "" {
 		r = ex.Risk
@@ -537,7 +603,7 @@ func meta(product, usage string) llm.CommandMeta {
 	if len(flags) == 0 {
 		flags = defaultFlags(product, r)
 	}
-	if product == "browser" && name != "probe" {
+	if product == "browser" && name != "probe" && !explicitFound {
 		flags = []string{"json", "format", "verbose"}
 	}
 	if product == "inspect-image" && name != "inspect" && len(ex.Flags) == 0 {
@@ -633,6 +699,138 @@ func visualExplicit(name string) (explicitMeta, bool) {
 			Flags: common, Risk: "read", Example: "visual help llm --json"},
 		"version": {Description: "Print visual CLI version, commit, and build date.",
 			Flags: common, Risk: "read", Example: "visual version --json"},
+	}
+	item, ok := items[name]
+	return item, ok
+}
+
+func browserExplicit(name string) (explicitMeta, bool) {
+	common := []string{"json", "format", "verbose"}
+	sessionFlag := append([]string{"session"}, common...)
+	pageFlags := append([]string{"session", "target-id", "timeout"}, common...)
+	items := map[string]explicitMeta{
+		"session.start": {Description: "Start a persistent Edge/Chrome/Chromium automation session with DevTools bound to 127.0.0.1.",
+			Flags: []string{"name", "browser", "browser-exe", "headless", "profile", "download-dir", "clean-profile", "port", "url", "json", "format", "verbose"}, Risk: "write", Example: "browser session start --name default --url https://intranet.example.test --json"},
+		"session.list": {Description: "List stored browser automation sessions and refresh their local DevTools status.",
+			Flags: common, Risk: "read", Example: "browser session list --json"},
+		"session.status": {Description: "Show one browser automation session and refresh whether its local DevTools endpoint is alive.",
+			Flags: common, Risk: "read", Example: "browser session status default --json"},
+		"session.attach": {Description: "Attach stored session metadata to an explicitly supplied 127.0.0.1 DevTools endpoint without launching or stopping the browser.",
+			Flags: append([]string{"name", "debug-addr", "debug-port"}, common...), Required: []string{"debug-port"}, Risk: "write", Example: "browser session attach --name user-demo --debug-port 9222 --json"},
+		"session.discover": {Description: "Probe explicitly listed local DevTools ports and return redacted target metadata.",
+			Flags: append([]string{"debug-addr", "ports"}, common...), Risk: "read", Example: "browser session discover --ports 9222,9223 --json"},
+		"session.stop": {Description: "Stop a browser automation session started by this CLI.",
+			Flags: append([]string{"keep-metadata"}, common...), Risk: "write", Example: "browser session stop default --json"},
+		"tab.list": {Description: "List page tabs in a running browser automation session.",
+			Flags: sessionFlag, Risk: "read", Example: "browser tab list --session default --json"},
+		"tab.current": {Description: "Show the active page tab for a browser automation session.",
+			Flags: sessionFlag, Risk: "read", Example: "browser tab current --session default --json"},
+		"tab.activate": {Description: "Activate a page tab and persist it as the session's active target.",
+			Flags: append([]string{"session", "target-id"}, common...), Required: []string{"target-id"}, Risk: "write", Example: "browser tab activate --session default --target-id page-1 --json"},
+		"tab.open": {Description: "Open an HTTP or HTTPS URL in a new tab for a running browser automation session.",
+			Flags: append([]string{"session", "url"}, common...), Required: []string{"url"}, Risk: "write", Example: "browser tab open --session default --url https://intranet.example.test --json"},
+		"page.snapshot": {Description: "Return redacted URL, title, body text preview, and optional HTML preview from the selected page target.",
+			Flags: append([]string{"include-html", "max-text-bytes", "max-html-bytes"}, pageFlags...), Risk: "read", Example: "browser page snapshot --session default --json"},
+		"page.extract": {Description: "Extract redacted text, values, links, labels, and optional HTML from elements matching a CSS selector.",
+			Flags: append([]string{"selector", "limit", "include-html", "pierce", "max-html-bytes"}, pageFlags...), Required: []string{"selector"}, Risk: "read", Example: "browser page extract --selector .user-avatar --json"},
+		"page.extract-schema": {Description: "Extract selector-declared structured page fields from a YAML schema as redacted stable JSON.",
+			Flags: append([]string{"file", "limit"}, pageFlags...), Required: []string{"file"}, Risk: "read", Example: "browser page extract-schema --file schema.yaml --json"},
+		"page.find": {Description: "Find page elements by semantic locators such as role, name, text, label, placeholder, nearby text, or CSS selector.",
+			Flags: append([]string{"selector", "role", "name", "text", "label", "placeholder", "near-text", "nth", "limit", "include-hidden"}, pageFlags...), Risk: "read", Example: "browser page find --role button --name Save --json"},
+		"page.ax": {Description: "Return a bounded DOM/ARIA accessibility-style tree with stable refs for short-session agent interactions.",
+			Flags: append([]string{"limit", "include-hidden", "pierce"}, pageFlags...), Risk: "read", Example: "browser page ax --limit 100 --json"},
+		"page.click": {Description: "Click a visible element in the selected page target and return redacted page metadata.",
+			Flags: append([]string{"selector", "ref", "yes"}, pageFlags...), Required: []string{"selector|ref"}, Risk: "write", Example: "browser page click --ref axref-0-abcdef123456 --json"},
+		"page.type": {Description: "Type text into a visible input or editable element without echoing the typed text in output.",
+			Flags: append([]string{"selector", "ref", "text", "clear"}, pageFlags...), Required: []string{"selector|ref", "text"}, Risk: "write", Example: "browser page type --selector input[name=q] --text search --clear --json"},
+		"page.select": {Description: "Select an option by value, label, or index without echoing the selected value or label.",
+			Flags: append([]string{"selector", "ref", "value", "label", "index"}, pageFlags...), Required: []string{"selector|ref", "value|label|index"}, Risk: "write", Example: "browser page select --ref axref-0-abcdef123456 --label Ready --json"},
+		"page.check": {Description: "Set a checkbox-like page element to checked by selector or accessibility ref.",
+			Flags: append([]string{"selector", "ref"}, pageFlags...), Required: []string{"selector|ref"}, Risk: "write", Example: "browser page check --ref axref-0-abcdef123456 --json"},
+		"page.uncheck": {Description: "Set a checkbox-like page element to unchecked by selector or accessibility ref.",
+			Flags: append([]string{"selector", "ref"}, pageFlags...), Required: []string{"selector|ref"}, Risk: "write", Example: "browser page uncheck --selector input[type=checkbox] --json"},
+		"page.press": {Description: "Press a key in the page, optionally focusing a selector or accessibility ref first.",
+			Flags: append([]string{"selector", "ref", "key"}, pageFlags...), Required: []string{"key"}, Risk: "write", Example: "browser page press --key Enter --json"},
+		"page.upload": {Description: "Attach local regular files to an input[type=file] element without printing file contents.",
+			Flags: append([]string{"selector", "file", "clear"}, pageFlags...), Required: []string{"selector", "file|clear"}, Risk: "write", Example: "browser page upload --selector input[type=file] --file ./report.pdf --json"},
+		"page.wait": {Description: "Wait for selector, text, URL, network-idle, DOM-stable, or bounded-duration conditions in the selected page target.",
+			Flags: append([]string{"selector", "duration-ms", "url-contains", "text", "network-idle-ms", "dom-stable-ms"}, pageFlags...), Required: []string{"selector|duration-ms|url-contains|text|network-idle-ms|dom-stable-ms"}, Risk: "read", Example: "browser page wait --selector .ready --network-idle-ms 500 --json"},
+		"page.screenshot": {Description: "Capture the selected page target or one visible selector/ref element to a PNG artifact and return file metadata instead of image bytes.",
+			Flags: append([]string{"out", "full-page", "selector", "ref"}, pageFlags...), Risk: "read", Example: "browser page screenshot --selector .avatar --out result/avatar.png --json"},
+		"page.eval": {Description: "Evaluate a bounded JavaScript expression and recursively redact returned serializable values.",
+			Flags: append([]string{"expr", "max-string-bytes"}, pageFlags...), Required: []string{"expr"}, Risk: "write", Example: "browser page eval --expr 'document.title' --json"},
+		"page.fetch": {Description: "Fetch an HTTP, HTTPS, or relative URL from the page context with credentials omitted and no headers returned.",
+			Flags: append([]string{"url", "max-body-bytes"}, pageFlags...), Required: []string{"url"}, Risk: "read", Example: "browser page fetch --url /api/me --json"},
+		"page.console": {Description: "Return redacted and truncated page console messages captured after recorder injection.",
+			Flags: append([]string{"level", "limit"}, pageFlags...), Risk: "read", Example: "browser page console --level error --json"},
+		"page.errors": {Description: "Return redacted console errors, runtime exceptions, and unhandled rejections.",
+			Flags: append([]string{"limit"}, pageFlags...), Risk: "read", Example: "browser page errors --limit 50 --json"},
+		"page.console-clear": {Description: "Clear recorded page console messages from the page-side recorder.",
+			Flags: pageFlags, Risk: "write", Example: "browser page console-clear --json"},
+		"page.network": {Description: "Return sanitized page resource timing summaries, favoring API-like fetch/XHR entries by default.",
+			Flags: append([]string{"filter", "limit", "all"}, pageFlags...), Risk: "read", Example: "browser page network --filter /api/ --json"},
+		"page.metrics": {Description: "Return safe browser performance timing metadata, DOM node count, long-task counts, resource aggregates, and bounded largest resources.",
+			Flags: append([]string{"limit-resources", "filter"}, pageFlags...), Risk: "read", Example: "browser page metrics --limit-resources 10 --json"},
+		"page.outline": {Description: "Return a redacted DOM-derived outline of headings, links, buttons, fields, forms, tables, and lists.",
+			Flags: append([]string{"limit", "include-hidden", "pierce"}, pageFlags...), Risk: "read", Example: "browser page outline --limit 100 --json"},
+		"page.table": {Description: "Extract structured table captions, headers, rows, cells, spans, and counts from the selected page.",
+			Flags: append([]string{"selector", "limit-rows", "limit-cells", "include-html"}, pageFlags...), Risk: "read", Example: "browser page table --selector table.results --json"},
+		"page.table-export": {Description: "Export structured page table data to a JSON or CSV artifact.",
+			Flags: append([]string{"selector", "out", "format", "limit-rows", "limit-cells"}, pageFlags...), Required: []string{"out"}, Risk: "read", Example: "browser page table-export --selector table.results --out result/table.csv --format csv --json"},
+		"page.list": {Description: "Extract structured ordered, unordered, and role=list data with item text, hrefs, and nesting levels.",
+			Flags: append([]string{"selector", "limit-items"}, pageFlags...), Risk: "read", Example: "browser page list --selector nav --json"},
+		"page.list-export": {Description: "Export structured page list data to a JSON or CSV artifact.",
+			Flags: append([]string{"selector", "out", "format", "limit-items"}, pageFlags...), Required: []string{"out"}, Risk: "read", Example: "browser page list-export --selector nav --out result/list.json --json"},
+		"page.scroll-collect": {Description: "Scroll a page or container, collect repeated item text and links, deduplicate results, and optionally write JSON or CSV.",
+			Flags: append([]string{"selector", "item-selector", "out", "format", "limit", "max-scrolls", "scroll-step", "interval-ms"}, pageFlags...), Risk: "read", Example: "browser page scroll-collect --item-selector .row --out result/items.csv --format csv --json"},
+		"page.diff": {Description: "Diff two browser JSON page-state files or JSON envelopes and return redacted changed paths.",
+			Flags: append([]string{"before", "after", "out", "limit"}, common...), Required: []string{"before", "after"}, Risk: "read", Example: "browser page diff --before before.json --after after.json --json"},
+		"assert.visible": {Description: "Assert that a selector or accessibility ref resolves to a visible page element.",
+			Flags: append([]string{"selector", "ref", "not"}, pageFlags...), Required: []string{"selector|ref"}, Risk: "read", Example: "browser assert visible --selector .ready --json"},
+		"assert.text": {Description: "Assert that the page body or selected element text contains a substring without returning raw page text snippets.",
+			Flags: append([]string{"contains", "selector", "ref", "not"}, pageFlags...), Required: []string{"contains"}, Risk: "read", Example: "browser assert text --contains 'Signed in' --json"},
+		"assert.url": {Description: "Assert that the current page URL contains a substring, returning only redacted URL metadata.",
+			Flags: append([]string{"contains", "not"}, pageFlags...), Required: []string{"contains"}, Risk: "read", Example: "browser assert url --contains /dashboard --json"},
+		"assert.count": {Description: "Assert a CSS selector count using an exact count or inclusive min/max bounds.",
+			Flags: append([]string{"selector", "equals", "min", "max"}, pageFlags...), Required: []string{"selector", "equals|min|max"}, Risk: "read", Example: "browser assert count --selector .result --min 1 --json"},
+		"assert.screenshot": {Description: "Assert that a page or element screenshot matches a baseline PNG and write a PNG diff artifact.",
+			Flags: append([]string{"baseline", "out", "diff-out", "selector", "ref", "threshold", "full-page"}, pageFlags...), Required: []string{"baseline", "diff-out"}, Risk: "read", Example: "browser assert screenshot --baseline baseline.png --out actual.png --diff-out diff.png --json"},
+		"workflow.run": {Description: "Parse, dry-run, or execute a YAML workflow made only of whitelisted browser actions and assertions.",
+			Flags: append([]string{"file", "dry-run", "session", "target-id", "timeout", "continue-on-error", "var", "report-out", "evidence-dir", "allow-human", "yes"}, common...), Required: []string{"file"}, Risk: "write", Example: "browser workflow run --file flow.yaml --dry-run --json"},
+		"workflow.record": {Description: "Record bounded manual browser actions into a sanitized workflow YAML skeleton with typed text replaced by variables.",
+			Flags: append([]string{"out", "duration-ms", "limit"}, pageFlags...), Required: []string{"out"}, Risk: "write", Example: "browser workflow record --out flow.yaml --duration-ms 10000 --json"},
+		"form.inspect": {Description: "Inspect form field metadata such as labels, names, types, selectors, and options without returning current values.",
+			Flags: append([]string{"selector", "limit"}, pageFlags...), Risk: "read", Example: "browser form inspect --selector form --json"},
+		"form.fill": {Description: "Fill form fields from a YAML file and return match metadata plus value byte counts without echoing values.",
+			Flags: append([]string{"file"}, pageFlags...), Required: []string{"file"}, Risk: "write", Example: "browser form fill --file values.yaml --json"},
+		"frame.list": {Description: "List the DevTools frame tree for the selected page target with redacted frame URLs and names.",
+			Flags: pageFlags, Risk: "read", Example: "browser frame list --session default --json"},
+		"frame.snapshot": {Description: "Snapshot a selected frame with redacted URL, title, text, and optional HTML preview.",
+			Flags: append([]string{"frame-id", "include-html", "max-text-bytes", "max-html-bytes"}, pageFlags...), Required: []string{"frame-id"}, Risk: "read", Example: "browser frame snapshot --frame-id FRAME_ID --json"},
+		"network.start": {Description: "Start a bounded page-side network recorder for metadata and redacted fetch/XHR response body previews by default.",
+			Flags: append([]string{"limit", "filter", "body", "max-body-bytes"}, pageFlags...), Risk: "write", Example: "browser network start --session default --limit 500 --json"},
+		"network.stop": {Description: "Stop the page-side network recorder and persist its final sanitized metadata artifact.",
+			Flags: pageFlags, Risk: "write", Example: "browser network stop --session default --json"},
+		"network.list": {Description: "List sanitized HAR-lite network metadata and redacted fetch/XHR response body previews without headers, cookies, storage, or request bodies.",
+			Flags: append([]string{"filter", "limit", "method", "status", "body", "max-body-bytes"}, pageFlags...), Risk: "read", Example: "browser network list --session default --filter /api/ --json"},
+		"network.wait": {Description: "Wait for a recorded network event matching a URL substring and optional status or method.",
+			Flags: append([]string{"url-contains", "method", "status", "limit", "body", "max-body-bytes"}, pageFlags...), Required: []string{"url-contains"}, Risk: "read", Example: "browser network wait --session default --url-contains /api/ --status 200 --json"},
+		"network.export": {Description: "Write sanitized recorded network metadata and redacted fetch/XHR response body previews to a JSON or HAR-lite artifact and return path/count/size metadata.",
+			Flags: append([]string{"out", "format", "filter", "limit"}, pageFlags...), Required: []string{"out"}, Risk: "read", Example: "browser network export --out result/network.har-lite.json --format har-lite --json"},
+		"network.clear": {Description: "Clear page-side network recorder entries and persist an empty sanitized artifact.",
+			Flags: pageFlags, Risk: "write", Example: "browser network clear --session default --json"},
+		"download.list": {Description: "List completed files in a browser session download directory without reading file contents.",
+			Flags: sessionFlag, Risk: "read", Example: "browser download list --session default --json"},
+		"download.wait": {Description: "Wait for a completed file in a browser session download directory and return file metadata.",
+			Flags: append([]string{"session", "filename-contains", "timeout"}, common...), Risk: "read", Example: "browser download wait --session default --filename-contains report --json"},
+		"commands": {Description: "List available Browser commands with metadata.",
+			Flags: common, Risk: "read", Example: "browser commands --json"},
+		"schema": {Description: "Show argument and flag schema for a Browser command.",
+			Flags: common, Required: []string{"command"}, Risk: "read", Example: "browser schema page.fetch --json"},
+		"help.llm": {Description: "Show Browser CLI usage guidance for LLM agents.",
+			Flags: common, Risk: "read", Example: "browser help llm --json"},
+		"version": {Description: "Print Browser CLI version, commit, and build date.",
+			Flags: common, Risk: "read", Example: "browser version --json"},
 	}
 	item, ok := items[name]
 	return item, ok
@@ -994,6 +1192,8 @@ func argumentDescription(name string) string {
 		return "Zephyr folder id."
 	case "endpoint-id":
 		return "Zephyr API endpoint id from jira zephyr api catalog."
+	case "customfield-id":
+		return "Zephyr custom field id."
 	case "component-id":
 		return "Jira component id."
 	case "version-id":
@@ -1147,13 +1347,13 @@ func flagTypeFor(command, name string) string {
 
 func flagType(name string) string {
 	switch name {
-	case "json", "verbose", "dry-run", "yes", "body-stdin", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot":
+	case "json", "verbose", "dry-run", "yes", "body-stdin", "body", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error", "allow-human", "max-allowed-result", "ui", "active", "enabled":
 		return "bool"
-	case "sample-rows", "max-create", "wait", "timeout", "max-network-events":
+	case "sample-rows", "max-create", "wait", "timeout", "max-network-events", "limit", "limit-resources", "duration-ms", "network-idle-ms", "dom-stable-ms", "equals", "min", "max", "index", "status", "limit-rows", "limit-cells", "limit-items", "debug-port", "nth", "max-scrolls", "scroll-step", "interval-ms", "max-body-bytes":
 		return "int"
-	case "min-confidence":
+	case "min-confidence", "threshold":
 		return "float"
-	case "field", "fields":
+	case "field", "fields", "var":
 		return "string[]"
 	default:
 		return "string"
@@ -1178,6 +1378,20 @@ func flagDescription(command, name string) string {
 		return "Raw query parameter in key=value form; repeat for multiple parameters."
 	case strings.HasPrefix(command, "zephyr.api.") && name == "query":
 		return "Raw Zephyr ZAPI query parameter in key=value form; repeat for multiple parameters."
+	case command == "zephyr.execution.export" && name == "type":
+		return "Export format for Zephyr execution results: xls, xlsx, or csv."
+	case command == "zephyr.archive.export" && name == "type":
+		return "Archived execution export format: xls, csv, html, or xml."
+	case command == "zephyr.archive.export" && name == "expand":
+		return "Archive export expand selector, usually teststeps."
+	case command == "zephyr.archive.export" && name == "field":
+		return "Additional archive export JSON field in key=value form; repeat for multiple fields."
+	case strings.HasPrefix(command, "zephyr.customfield.") && name == "entity-type":
+		return "Zephyr custom field entity type: EXECUTION or TESTSTEP."
+	case strings.HasPrefix(command, "zephyr.customfield.") && name == "project-id":
+		return "Jira project id used to scope the Zephyr custom field."
+	case strings.HasPrefix(command, "zephyr.customfield.") && name == "field":
+		return "Custom field request JSON field in key=value form; repeat for multiple fields."
 	}
 	switch name {
 	case "instance":
@@ -1187,12 +1401,27 @@ func flagDescription(command, name string) string {
 	case "json":
 		return "Print JSON envelope."
 	case "format":
+		if command == "network.export" {
+			return "Network export artifact format: json or har-lite. Use --json for the command envelope."
+		}
+		if command == "page.table-export" || command == "page.list-export" || command == "page.scroll-collect" {
+			return "Data export artifact format: json or csv."
+		}
 		return "Output format: table, json, or yaml."
 	case "verbose":
 		return "Print additional diagnostic details when available; secrets must remain redacted."
 	case "dry-run":
+		if command == "workflow.run" {
+			return "Parse and validate the workflow without attaching to a browser or executing steps."
+		}
 		return "Preview write request without sending it."
 	case "yes":
+		if command == "workflow.run" {
+			return "Allow human.confirm steps only after explicit user confirmation."
+		}
+		if command == "page.click" {
+			return "Confirm a click that appears to be a risky action such as submit, delete, pay, save, approve, or publish."
+		}
 		return "Confirm destructive operations."
 	case "base-url":
 		return "Base URL for the Jira or Confluence instance, for example https://jira.example.test."
@@ -1228,6 +1457,8 @@ func flagDescription(command, name string) string {
 		return "Zephyr test execution id."
 	case "execution-ids":
 		return "Comma-separated Zephyr test execution ids."
+	case "customfield-ids":
+		return "Comma-separated Zephyr custom field ids."
 	case "issue-id":
 		return "Jira issue id."
 	case "issue":
@@ -1235,6 +1466,9 @@ func flagDescription(command, name string) string {
 	case "issues":
 		return "Comma-separated Jira test issue keys."
 	case "status":
+		if strings.HasPrefix(command, "network.") {
+			return "Optional HTTP status filter when status is available."
+		}
 		return "Zephyr execution status name or alias, such as PASS, PASSED, FAIL, WIP, BLOCKED, or UNEXECUTED."
 	case "comment":
 		return "Comment text."
@@ -1257,6 +1491,15 @@ func flagDescription(command, name string) string {
 	case "entity-id":
 		return "Zephyr attachment entity id."
 	case "file":
+		if command == "workflow.run" {
+			return "Workflow YAML file to parse and run."
+		}
+		if command == "page.extract-schema" {
+			return "YAML extraction schema file."
+		}
+		if command == "form.fill" {
+			return "YAML form values file; values are not echoed in output."
+		}
 		return "File path to upload."
 	case "jql":
 		return "Jira JQL query."
@@ -1274,6 +1517,24 @@ func flagDescription(command, name string) string {
 		return "Zephyr ZQL field name."
 	case "field-value":
 		return "Zephyr ZQL field value prefix."
+	case "max-allowed-result":
+		return "Ask Zephyr to export up to its configured maximum result count."
+	case "ui":
+		return "Mark the Zephyr archive export request as UI-originated."
+	case "field-type":
+		return "Zephyr custom field type, such as TEXT, CHECKBOX, DATE, NUMERIC, or USER."
+	case "default-value":
+		return "Default value for a Zephyr custom field."
+	case "alias-name":
+		return "Alias name for a Zephyr custom field."
+	case "display-name":
+		return "Display name for a Zephyr custom field."
+	case "display-field-type":
+		return "Display field type for a Zephyr custom field."
+	case "active":
+		return "Create the Zephyr custom field as active."
+	case "enabled":
+		return "Enable or disable the Zephyr custom field for the project."
 	case "endpoint-id":
 		return "Official Zephyr API endpoint id from jira zephyr api catalog."
 	case "group":
@@ -1281,6 +1542,9 @@ func flagDescription(command, name string) string {
 	case "description":
 		return "Description text."
 	case "name":
+		if command == "page.find" {
+			return "Accessible name substring to match."
+		}
 		return "Resource name for the command target, such as an instance, cycle, folder, component, version, filter, or webhook name."
 	case "key":
 		return "Property key or user key, depending on the command."
@@ -1305,6 +1569,9 @@ func flagDescription(command, name string) string {
 	case "title":
 		return "Page title."
 	case "body":
+		if strings.HasPrefix(command, "network.") {
+			return "Capture and return redacted fetch/XHR response body previews; enabled by default for network recorder commands."
+		}
 		return "Inline request body text or JSON, depending on the command."
 	case "body-file":
 		return "Path to a file containing the request body."
@@ -1389,6 +1656,12 @@ func flagDescription(command, name string) string {
 		if command == "probe" {
 			return "HTTP or HTTPS URL to open in Edge, Chrome, or Chromium."
 		}
+		if command == "tab.open" {
+			return "HTTP or HTTPS URL to open in a new browser tab."
+		}
+		if command == "page.fetch" {
+			return "HTTP, HTTPS, or relative URL to fetch from the page context."
+		}
 		if strings.HasPrefix(command, "page.") {
 			return "Confluence page URL. Use exactly one of --id or --url where both are available."
 		}
@@ -1404,6 +1677,9 @@ func flagDescription(command, name string) string {
 	case "version":
 		return "Confluence content version number."
 	case "label":
+		if command == "page.find" {
+			return "Associated form label substring to match."
+		}
 		return "Confluence label name. Repeat when the flag accepts multiple values."
 	case "prefix":
 		return "Confluence label prefix."
@@ -1412,28 +1688,216 @@ func flagDescription(command, name string) string {
 	case "attachment-id":
 		return "Confluence attachment id."
 	case "text":
+		if command == "page.find" {
+			return "Visible text substring to match."
+		}
+		if command == "page.type" {
+			return "Text to type; the value is not included in command output."
+		}
+		if command == "page.wait" {
+			return "Visible page body text substring to wait for."
+		}
 		return "Text term used to build a Confluence content search query."
 	case "selector":
+		if command == "page.diff" {
+			return "Unused."
+		}
+		if strings.HasPrefix(command, "assert.") {
+			return "CSS selector for the assertion target."
+		}
+		if strings.HasPrefix(command, "form.") {
+			return "Optional form/container selector."
+		}
+		if strings.HasPrefix(command, "page.") {
+			return "CSS selector for the page element to read or automate."
+		}
 		return "CSS selector used as a deterministic login-success signal."
+	case "ref":
+		return "Accessibility ref from browser page ax for the page element target."
+	case "contains":
+		return "Substring to assert; output returns only redacted/truncated expectation metadata and byte counts."
+	case "equals":
+		return "Exact expected selector count."
+	case "min":
+		return "Minimum expected selector count."
+	case "max":
+		return "Maximum expected selector count."
+	case "not":
+		return "Invert the assertion."
+	case "session":
+		return "Browser automation session name."
+	case "target-id":
+		return "Optional DevTools page target id; defaults to the session's active tab."
+	case "include-html":
+		return "Include redacted and truncated HTML in page read output."
+	case "max-text-bytes":
+		return "Maximum bytes of redacted page text preview to return."
+	case "max-html-bytes":
+		return "Maximum bytes of redacted page HTML preview to return."
+	case "max-string-bytes":
+		return "Maximum bytes per redacted string value in page eval output."
+	case "max-body-bytes":
+		if strings.HasPrefix(command, "network.") {
+			return "Maximum bytes of redacted fetch/XHR response body preview per recorded event."
+		}
+		return "Maximum bytes of redacted page fetch body preview to return."
+	case "duration-ms":
+		if command == "workflow.record" {
+			return "Recording duration in milliseconds while the user manually interacts."
+		}
+		return "Bounded page wait duration in milliseconds."
+	case "url-contains":
+		if command == "network.wait" {
+			return "URL substring to wait for in sanitized recorded network metadata."
+		}
+		return "Substring that must appear in the current page URL before page wait returns."
+	case "network-idle-ms":
+		return "Milliseconds that resource timing entries must remain unchanged before page wait returns."
+	case "dom-stable-ms":
+		return "Milliseconds that body text and DOM shape must remain stable before page wait returns."
+	case "filter":
+		if command == "page.network" {
+			return "Case-insensitive filter for resource URL, initiator type, resource type, or API-like marker."
+		}
+		if command == "page.metrics" {
+			return "Case-insensitive filter for resource URL, resource type, or initiator type."
+		}
+		if strings.HasPrefix(command, "network.") {
+			return "Case-insensitive filter for sanitized URL, method, resource type, initiator type, or source."
+		}
+		return "Filter string."
+	case "all":
+		if command == "page.network" {
+			return "Include all resource timing entries instead of only API-like fetch/XHR entries."
+		}
+		return "Include all available results."
+	case "include-hidden":
+		return "Include hidden elements in the DOM-derived page outline."
+	case "limit-rows":
+		return "Maximum number of rows to return per extracted table."
+	case "limit-cells":
+		return "Maximum number of cells to return per extracted table row."
+	case "limit-items":
+		return "Maximum number of items to return per extracted page list."
+	case "nth":
+		return "One-based match index within the semantic locator; 0 returns all matches up to the limit."
+	case "role":
+		return "ARIA-style role to match, such as button, link, textbox, checkbox, combobox, or heading."
+	case "placeholder":
+		return "Input placeholder substring to match."
+	case "near-text":
+		return "Text near the candidate element to match."
+	case "item-selector":
+		return "Selector for repeated items to collect during scrolling."
+	case "max-scrolls":
+		return "Maximum number of scroll steps for scroll collection."
+	case "scroll-step":
+		return "Pixels to scroll per step during scroll collection."
+	case "interval-ms":
+		return "Milliseconds to wait after each scroll step."
+	case "limit-resources":
+		return "Maximum number of largest matching resource timing entries to return."
+	case "filename-contains":
+		return "Case-insensitive substring that a completed download filename must contain."
+	case "full-page":
+		return "Capture the full page instead of only the current viewport; cannot be combined with element screenshot selector/ref."
+	case "continue-on-error":
+		return "Continue later workflow steps after a step fails; final workflow result still fails."
+	case "allow-human":
+		return "Allow bounded human.wait pauses in workflows."
+	case "var":
+		return "Workflow variable override in name=value form; repeatable and not echoed in plans."
+	case "report-out":
+		return "Path to write a sanitized workflow run audit report."
+	case "evidence-dir":
+		return "Optional directory for a workflow evidence bundle; disabled by default."
+	case "debug-addr":
+		return "Explicit local DevTools address; only 127.0.0.1 is allowed."
+	case "debug-port":
+		return "Explicit local DevTools port exposed by a browser launched by the user."
+	case "ports":
+		return "Comma-separated explicit local DevTools ports to probe."
+	case "baseline":
+		return "Baseline PNG path for screenshot assertion."
+	case "diff-out":
+		return "Output PNG path for screenshot assertion diff."
+	case "threshold":
+		return "Maximum allowed changed-pixel ratio from 0 to 1."
+	case "method":
+		if strings.HasPrefix(command, "network.") {
+			return "Optional HTTP method filter such as GET or POST when method is available."
+		}
+		return "HTTP method."
+	case "expr":
+		return "JavaScript expression to evaluate; storage, cookie, header, credential, and network APIs are rejected."
+	case "clear":
+		if command == "page.upload" {
+			return "Clear the file input before attaching files, or clear it without files."
+		}
+		return "Clear the selected page element before typing."
+	case "keep-metadata":
+		return "Keep browser session metadata after stopping or finding a stale browser."
 	case "require-selector":
 		return "Fail with selector_not_found when --selector is not visible."
 	case "wait":
 		return "Seconds to wait after the page body is ready."
 	case "timeout":
+		if command == "workflow.run" {
+			return "Maximum seconds per browser page action/assertion step."
+		}
+		if strings.HasPrefix(command, "page.") {
+			return "Maximum seconds to wait for this page command."
+		}
+		if strings.HasPrefix(command, "assert.") || strings.HasPrefix(command, "network.") {
+			return "Maximum seconds to wait for this browser command."
+		}
+		if command == "download.wait" {
+			return "Maximum seconds to wait for a completed matching download."
+		}
 		return "Overall probe timeout in seconds."
 	case "out":
+		if command == "network.export" {
+			return "Output file path for the sanitized network export."
+		}
+		if command == "page.table-export" || command == "page.list-export" || command == "page.scroll-collect" {
+			return "Output artifact path for exported page data."
+		}
+		if command == "page.diff" {
+			return "Optional JSON output path for the page diff result."
+		}
+		if command == "workflow.record" {
+			return "Output workflow YAML path; typed text is replaced by variables."
+		}
+		if command == "assert.screenshot" {
+			return "Output path for the freshly captured actual screenshot PNG."
+		}
+		if command == "page.screenshot" {
+			return "Screenshot output PNG path; defaults under ~/.efp/browser/artifacts."
+		}
 		if command == "probe" {
 			return "Directory for screenshot, HTML, network, and summary artifacts."
 		}
 		return "Path to write a JSON envelope copy."
+	case "before":
+		return "Before JSON file for page state diff."
+	case "after":
+		return "After JSON file for page state diff."
 	case "profile":
+		if strings.HasPrefix(command, "session.") {
+			return "Dedicated browser profile directory for this automation session."
+		}
 		return "Dedicated browser user-data-dir for this probe."
+	case "download-dir":
+		return "Dedicated browser download directory for this automation session."
 	case "clean-profile":
+		if strings.HasPrefix(command, "session.") {
+			return "Delete the dedicated session profile before launching the browser."
+		}
 		return "Delete the dedicated probe profile before launching the browser."
 	case "browser-exe":
 		return "Explicit Edge/Chrome/Chromium executable path."
 	case "browser":
-		return "Browser family: edge, chrome, chromium, or auto."
+		return "Browser family: chrome, edge, chromium, or auto; defaults to chrome."
 	case "headless":
 		return "Run the browser without a visible UI."
 	case "ignore-cert-errors":
@@ -1492,6 +1956,10 @@ var explicit = map[string]explicitMeta{
 		Flags: []string{"fields", "expand", "instance", "config", "json", "format", "verbose"}, Required: []string{"issue-or-url"}, Risk: "read", Example: "jira zephyr test get EFP-T123 --json"},
 	"zephyr.test.create": {Description: "Create a Jira issue with issue type Test.",
 		Flags: []string{"project", "summary", "description", "field", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"project", "summary"}, Risk: "write", Example: "jira zephyr test create --project EFP --summary 'Login rejects expired token' --dry-run --json"},
+	"zephyr.version.list": {Description: "List Jira versions as Zephyr version board entries for a project.",
+		Flags: []string{"project", "project-id", "version-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"project|project-id"}, Risk: "read", Example: "jira zephyr version list --project EFP --json"},
+	"zephyr.version.resolve": {Description: "Resolve a Jira version name to the Zephyr/Jira version id used by cycles and executions.",
+		Flags: []string{"name", "project", "project-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"name", "project|project-id"}, Risk: "read", Example: "jira zephyr version resolve --project EFP --name '1.0' --json"},
 	"zephyr.cycle.list": {Description: "List Zephyr test cycles for a Jira project and version.",
 		Flags: []string{"project", "project-id", "version-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"project|project-id"}, Risk: "read", Example: "jira zephyr cycle list --project EFP --version-id -1 --json"},
 	"zephyr.cycle.resolve": {Description: "Resolve a Zephyr test cycle name to a deterministic cycle id.",
@@ -1524,6 +1992,14 @@ var explicit = map[string]explicitMeta{
 		Flags: []string{"execution-ids", "status", "comment", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-ids", "status"}, Risk: "write", Example: "jira zephyr execution bulk-update-status --execution-ids 1,2,3 --status PASS --dry-run --json"},
 	"zephyr.execution.export": {Description: "Return exportable Zephyr execution query results as JSON.",
 		Flags: []string{"zql", "type", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"zql"}, Risk: "read", Example: "jira zephyr execution export --zql 'executionStatus != UNEXECUTED' --type xls --json"},
+	"zephyr.archive.list": {Description: "List archived Zephyr executions with optional project, version, cycle, and folder filters.",
+		Flags: []string{"project-id", "version-id", "cycle-id", "folder-id", "offset", "limit", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira zephyr archive list --project-id 10000 --version-id -1 --json"},
+	"zephyr.archive.executions": {Description: "Archive Zephyr executions after explicit confirmation.",
+		Flags: []string{"execution-ids", "yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-ids", "yes"}, Risk: "write_requires_confirmation", Example: "jira zephyr archive executions --execution-ids 30000,30001 --yes --dry-run --json"},
+	"zephyr.archive.restore": {Description: "Restore archived Zephyr executions.",
+		Flags: []string{"execution-ids", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-ids"}, Risk: "write", Example: "jira zephyr archive restore --execution-ids 30000,30001 --dry-run --json"},
+	"zephyr.archive.export": {Description: "Export archived Zephyr execution data in a Zephyr-supported format.",
+		Flags: []string{"type", "max-allowed-result", "expand", "start", "ui", "field", "instance", "config", "json", "format", "verbose", "dry-run"}, Risk: "read", Example: "jira zephyr archive export --type csv --dry-run --json"},
 	"zephyr.zql.search": {Description: "Search Zephyr executions with ZQL through legacy ZAPI.",
 		Flags: []string{"query", "limit", "start", "instance", "config", "json", "format", "verbose"}, Required: []string{"query"}, Risk: "read", Example: "jira zephyr zql search --query 'executionStatus = FAIL' --limit 100 --json"},
 	"zephyr.zql.clauses": {Description: "Fetch official Zephyr ZQL clause metadata.",
@@ -1566,6 +2042,20 @@ var explicit = map[string]explicitMeta{
 		Flags: []string{"execution-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"execution-id"}, Risk: "read", Example: "jira zephyr defect list --execution-id 30000 --json"},
 	"zephyr.defect.add": {Description: "Link a Jira defect issue to a Zephyr execution.",
 		Flags: []string{"execution-id", "issue", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"execution-id", "issue"}, Risk: "write", Example: "jira zephyr defect add --execution-id 30000 --issue EFP-999 --dry-run --json"},
+	"zephyr.customfield.list": {Description: "List Zephyr custom fields by entity type, optionally scoped to a project.",
+		Flags: []string{"entity-type", "project-id", "instance", "config", "json", "format", "verbose"}, Required: []string{"entity-type"}, Risk: "read", Example: "jira zephyr customfield list --entity-type EXECUTION --project-id 10000 --json"},
+	"zephyr.customfield.get": {Description: "Fetch a Zephyr custom field by id.",
+		Flags: []string{"instance", "config", "json", "format", "verbose"}, Required: []string{"customfield-id"}, Risk: "read", Example: "jira zephyr customfield get 3 --json"},
+	"zephyr.customfield.create": {Description: "Create a Zephyr custom field.",
+		Flags: []string{"name", "description", "default-value", "alias-name", "project-id", "display-name", "display-field-type", "entity-type", "field-type", "active", "body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"name|body|body-file|body-stdin"}, Risk: "write", Example: "jira zephyr customfield create --name 'Actual Result' --entity-type EXECUTION --field-type TEXT --dry-run --json"},
+	"zephyr.customfield.update": {Description: "Update a Zephyr custom field.",
+		Flags: []string{"name", "description", "default-value", "alias-name", "project-id", "display-name", "display-field-type", "entity-type", "field", "body", "body-file", "body-stdin", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"customfield-id", "name|description|default-value|alias-name|project-id|display-name|display-field-type|entity-type|field|body|body-file|body-stdin"}, Risk: "write", Example: "jira zephyr customfield update 3 --name 'Actual Result RC2' --dry-run --json"},
+	"zephyr.customfield.delete": {Description: "Delete a Zephyr custom field after explicit confirmation.",
+		Flags: []string{"yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"customfield-id", "yes"}, Risk: "delete", Example: "jira zephyr customfield delete 3 --yes --dry-run --json"},
+	"zephyr.customfield.delete-bulk": {Description: "Delete multiple Zephyr custom fields after explicit confirmation.",
+		Flags: []string{"customfield-ids", "yes", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"customfield-ids", "yes"}, Risk: "delete", Example: "jira zephyr customfield delete-bulk --customfield-ids 3,14 --yes --dry-run --json"},
+	"zephyr.customfield.enable": {Description: "Enable or disable a Zephyr custom field for a project.",
+		Flags: []string{"project-id", "enabled", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"customfield-id", "project-id"}, Risk: "write", Example: "jira zephyr customfield enable 3 --project-id 10000 --enabled=false --dry-run --json"},
 	"zephyr.report.coverage": {Description: "Build a conservative Zephyr coverage summary from cycle data.",
 		Flags: []string{"project", "project-id", "version-id", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira zephyr report coverage --project EFP --version-id -1 --json"},
 	"zephyr.api.get": {Description: "Call a raw Zephyr legacy ZAPI GET path on the selected Jira instance.",

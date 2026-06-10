@@ -108,9 +108,10 @@ For a project you have not inspected, start with:
 ```bash
 jira zephyr doctor --project PROJ --json
 jira zephyr status list --json
+jira zephyr version resolve --project PROJ --name "1.0" --json
 ```
 
-Use Zephyr commands for test cycles, executions, execution status, step results, defects, attachments, folders, ZQL, reports, and test summaries.
+Use Zephyr commands for test cycles, project versions, executions, execution status, step results, defects, attachments, folders, archived executions, custom fields, ZQL, reports, and test summaries.
 
 Important Zephyr patterns:
 
@@ -118,6 +119,8 @@ Important Zephyr patterns:
 jira zephyr cycle resolve --project PROJ --name "Sprint 42 Regression" --version-id -1 --json
 jira zephyr execution resolve --cycle-id 20000 --issue PROJ-123 --project PROJ --version-id -1 --json
 jira zephyr execution update-status --cycle-id 20000 --issue PROJ-123 --status PASSED --dry-run --json
+jira zephyr archive list --project-id 10000 --version-id -1 --json
+jira zephyr customfield list --entity-type EXECUTION --project-id 10000 --json
 ```
 
 Do not hard-code numeric Zephyr status ids. Use `jira zephyr status list --json`.

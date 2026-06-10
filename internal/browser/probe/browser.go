@@ -18,10 +18,10 @@ func FindBrowser(browser, explicitPath string) (string, error) {
 
 	name := strings.ToLower(strings.TrimSpace(browser))
 	if name == "" {
-		name = "auto"
+		name = "chrome"
 	}
 	if name != "auto" && name != "edge" && name != "chrome" && name != "chromium" {
-		return "", &ProbeError{Code: "invalid_args", Message: "--browser must be edge, chrome, chromium, or auto", Hint: "Run browser schema probe --json.", Status: 400}
+		return "", &ProbeError{Code: "invalid_args", Message: "--browser must be chrome, edge, chromium, or auto", Hint: "Run browser schema probe --json.", Status: 400}
 	}
 
 	for _, candidate := range browserCandidates(name) {
@@ -171,8 +171,8 @@ func expandHome(path string) string {
 func browserNotFound() *ProbeError {
 	return &ProbeError{
 		Code:    "browser_not_found",
-		Message: "No supported Edge/Chrome/Chromium browser was found.",
-		Hint:    "Pass --browser-exe or install Microsoft Edge/Google Chrome/Chromium.",
+		Message: "No supported Chrome/Edge/Chromium browser was found.",
+		Hint:    "Pass --browser-exe or install Google Chrome/Microsoft Edge/Chromium.",
 		Status:  404,
 	}
 }

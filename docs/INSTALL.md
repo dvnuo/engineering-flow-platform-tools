@@ -12,6 +12,6 @@ browser version --json
 inspect-image version --json
 ```
 
-`browser probe` requires Edge, Chrome, or Chromium to be installed on the machine where it runs. Inside OpenCode runtime containers, a separate runtime image change is required to install a browser executable and place the `browser` binary on PATH.
+`browser probe` uses Chrome by default and requires Chrome, Edge, or Chromium to be installed on the machine where it runs. Inside OpenCode runtime containers, a separate runtime image change is required to install a browser executable and place the `browser` binary on PATH.
 
 The tools support linux, darwin, and windows on amd64 and arm64.

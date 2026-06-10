@@ -41,9 +41,12 @@ var jiraCommands = []string{
 	"jira zephyr doctor", "jira zephyr resolve-url <jira-url>", "jira zephyr status list", "jira zephyr util test-issue-type",
 	"jira zephyr summary",
 	"jira zephyr test list", "jira zephyr test get <issue-or-url>", "jira zephyr test create",
+	"jira zephyr version list", "jira zephyr version resolve",
 	"jira zephyr cycle list", "jira zephyr cycle resolve", "jira zephyr cycle get <cycle-id>", "jira zephyr cycle create", "jira zephyr cycle update <cycle-id>", "jira zephyr cycle delete <cycle-id>",
 	"jira zephyr execution list", "jira zephyr execution resolve", "jira zephyr execution get <execution-id>", "jira zephyr execution create", "jira zephyr execution update-status [execution-id]", "jira zephyr execution add-tests-to-cycle", "jira zephyr execution count", "jira zephyr execution delete <execution-id>", "jira zephyr execution bulk-update-status", "jira zephyr execution export",
+	"jira zephyr archive list", "jira zephyr archive executions", "jira zephyr archive restore", "jira zephyr archive export",
 	"jira zephyr zql search", "jira zephyr zql clauses", "jira zephyr zql autocomplete-json", "jira zephyr zql autocomplete", "jira zephyr step-result list", "jira zephyr step-result update-status <step-result-id>", "jira zephyr attachment list", "jira zephyr attachment get <attachment-id>", "jira zephyr attachment upload", "jira zephyr attachment delete <attachment-id>", "jira zephyr folder list", "jira zephyr folder create", "jira zephyr folder update <folder-id>", "jira zephyr folder delete <folder-id>", "jira zephyr teststep list", "jira zephyr teststep get", "jira zephyr teststep create", "jira zephyr teststep update", "jira zephyr teststep delete", "jira zephyr defect list", "jira zephyr defect add", "jira zephyr report coverage",
+	"jira zephyr customfield list", "jira zephyr customfield get <customfield-id>", "jira zephyr customfield create", "jira zephyr customfield update <customfield-id>", "jira zephyr customfield delete <customfield-id>", "jira zephyr customfield delete-bulk", "jira zephyr customfield enable <customfield-id>",
 	"jira zephyr api catalog", "jira zephyr api describe <endpoint-id>", "jira zephyr api get <path>", "jira zephyr api post <path>", "jira zephyr api put <path>", "jira zephyr api delete <path>",
 	"jira issue attachment list <issue-or-url>", "jira issue attachment upload <issue-or-url> <file>", "jira attachment get <attachment-id>", "jira attachment download <attachment-id>", "jira attachment delete <attachment-id>", "jira attachment meta",
 	"jira issue worklog list <issue-or-url>", "jira issue worklog get <issue-or-url> <worklog-id>", "jira issue worklog add <issue-or-url>", "jira issue worklog update <issue-or-url> <worklog-id>", "jira issue worklog delete <issue-or-url> <worklog-id>",
@@ -1886,7 +1889,7 @@ func flagDescription(command, name string) string {
 	case "browser-exe":
 		return "Explicit Edge/Chrome/Chromium executable path."
 	case "browser":
-		return "Browser family: edge, chrome, chromium, or auto."
+		return "Browser family: chrome, edge, chromium, or auto; defaults to chrome."
 	case "headless":
 		return "Run the browser without a visible UI."
 	case "ignore-cert-errors":

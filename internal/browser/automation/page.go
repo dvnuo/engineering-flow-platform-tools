@@ -547,23 +547,39 @@ func (m *Manager) Fetch(ctx context.Context, opts FetchOptions) (FetchResult, er
 }
 
 func (m *Manager) attachPage(ctx context.Context, opts PageOptions) (context.Context, context.CancelFunc, Session, Target, error) {
-	session, target, err := m.ResolveTarget(ctx, opts.SessionName, opts.TargetID)
-	if err != nil {
-		return nil, nil, Session{}, Target{}, err
-	}
 	timeout := time.Duration(opts.TimeoutSeconds) * time.Second
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}
 	timeoutCtx, cancelTimeout := context.WithTimeout(ctx, timeout)
+	releaseLock, err := m.acquireSessionLock(timeoutCtx, defaultSessionName(opts.SessionName), timeout)
+	if err != nil {
+		cancelTimeout()
+		return nil, nil, Session{}, Target{}, err
+	}
+	session, target, err := m.ResolveTarget(timeoutCtx, opts.SessionName, opts.TargetID)
+	if err != nil {
+		releaseLock()
+		cancelTimeout()
+		return nil, nil, Session{}, Target{}, err
+	}
 	allocCtx, cancelAlloc := chromedp.NewRemoteAllocator(timeoutCtx, session.BrowserWebSocketURL)
 	pageCtx, cancelPage := chromedp.NewContext(allocCtx, chromedp.WithTargetID(cdpTarget.ID(target.ID)))
 	cancel := func() {
-		cancelPage()
+		cancelPageWithoutClosingTarget(pageCtx, cancelPage)
 		cancelAlloc()
+		releaseLock()
 		cancelTimeout()
 	}
 	return pageCtx, cancel, session, target, nil
+}
+
+func cancelPageWithoutClosingTarget(ctx context.Context, cancel context.CancelFunc) {
+	if c := chromedp.FromContext(ctx); c != nil && c.Target != nil {
+		// chromedp cancels WithTargetID contexts by closing the target; managed sessions must keep the user's tab open.
+		c.Target.TargetID = ""
+	}
+	cancel()
 }
 
 func PageTimeoutSeconds(seconds int) int {

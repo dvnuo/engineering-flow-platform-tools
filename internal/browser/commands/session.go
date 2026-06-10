@@ -17,18 +17,18 @@ func sessionCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "session",
 		Short: "Manage persistent browser automation sessions",
-		Long:  "Manage visible Edge/Chrome/Chromium browser sessions launched with a dedicated profile and local DevTools endpoint.",
+		Long:  "Manage visible Edge/Chrome/Chromium browser sessions launched with a dedicated profile, local DevTools endpoint, and detached process lifetime for multi-step agent workflows.",
 	}
 	c.AddCommand(sessionStartCmd(o), sessionListCmd(o), sessionStatusCmd(o), sessionAttachCmd(o), sessionDiscoverCmd(o), sessionStopCmd(o))
 	return c
 }
 
 func sessionStartCmd(o *Opts) *cobra.Command {
-	opts := automation.StartOptions{Name: "default", Browser: "auto"}
+	opts := automation.StartOptions{Name: "default", Browser: "chrome"}
 	c := &cobra.Command{
 		Use:   "start",
 		Short: "Start a persistent browser automation session",
-		Long:  "Start a visible Edge/Chrome/Chromium process with a dedicated profile and a DevTools endpoint bound to 127.0.0.1.",
+		Long:  "Start a visible Edge/Chrome/Chromium process with a dedicated profile and a DevTools endpoint bound to 127.0.0.1. The browser process is detached from the short-lived CLI caller when the platform allows it.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Verbose = o.Verbose
 			mgr, err := automation.DefaultManager()
@@ -45,7 +45,7 @@ func sessionStartCmd(o *Opts) *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&opts.Name, "name", "default", "Session name used for metadata and the default profile directory.")
-	c.Flags().StringVar(&opts.Browser, "browser", "auto", "Browser family to launch: edge, chrome, chromium, or auto.")
+	c.Flags().StringVar(&opts.Browser, "browser", "chrome", "Browser family to launch: chrome, edge, chromium, or auto.")
 	c.Flags().StringVar(&opts.BrowserExe, "browser-exe", "", "Explicit Edge/Chrome/Chromium executable path to launch.")
 	c.Flags().BoolVar(&opts.Headless, "headless", false, "Run the persistent browser without a visible UI.")
 	c.Flags().StringVar(&opts.ProfileDir, "profile", "", "Dedicated browser profile directory; defaults to ~/.efp/browser/profiles/<session-name>.")

@@ -39,7 +39,7 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 ### Browser
 
-`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Edge/Chrome/Chromium through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. Persistent sessions can also inspect redacted page structure, semantic locators, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, redacted fetch/XHR body previews, performance metadata, HAR-lite recorder/export metadata, tables/lists, data exports, scroll collection, page-state diffs, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
+`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Chrome by default through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. Edge/Chromium remain available with `--browser`. Persistent sessions can also inspect redacted page structure, semantic locators, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, redacted fetch/XHR body previews, performance metadata, HAR-lite recorder/export metadata, tables/lists, data exports, scroll collection, page-state diffs, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
 
@@ -280,7 +280,7 @@ Optional page-context API fetch:
 browser probe --url "https://intranet.example.test/app" --fetch-api "/api/me" --json
 ```
 
-Persistent browser automation session:
+Persistent browser automation session. Managed sessions attempt to detach the browser process from the short-lived CLI or agent command process, so later agent turns can reuse the same DevTools endpoint:
 
 ```bash
 browser session start --name default --url "https://intranet.example.test/app" --json

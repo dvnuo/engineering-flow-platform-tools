@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It can run one-shot probes, or keep a dedicated Edge/Chrome/Chromium automation session open for tab selection, semantic element finding, redacted page reads, structured extraction/export, form automation, bounded page actions, assertions, workflows, screenshots, network exports, and performance metadata through DevTools.
+`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It can run one-shot probes, or keep a dedicated Chrome automation session open by default for tab selection, semantic element finding, redacted page reads, structured extraction/export, form automation, bounded page actions, assertions, workflows, screenshots, network exports, and performance metadata through DevTools. Edge/Chromium remain available with `--browser`.
 
 ## What It Verifies
 
@@ -65,6 +65,8 @@ browser session status default --json
 browser session discover --ports 9222,9223 --json
 browser session attach --name user-demo --debug-port 9222 --json
 ```
+
+`session start` launches the managed browser with a dedicated profile and attempts to detach the browser process from the short-lived CLI or agent command process. This is meant for VS Code/Copilot-style workflows where the agent runs one CLI command, returns to chat, and later runs another command against the same DevTools endpoint.
 
 Select a page target:
 

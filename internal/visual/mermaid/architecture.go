@@ -261,7 +261,104 @@ func buildArchitectureMapLayout(groups []Group, ranks map[string]int, groupNodes
 			}
 		}
 	}
-	return ArchitectureLayoutResult{Ranks: ranks, Zones: zones, Entities: entities, GroupNodes: groupNodes}
+	layout := ArchitectureLayoutResult{Ranks: ranks, Zones: zones, Entities: entities, GroupNodes: groupNodes}
+	if complex {
+		fitArchitectureZonesToEntities(&layout)
+	}
+	return layout
+}
+
+type architectureZoneFitConfig struct {
+	MinWidth  float64
+	MinDepth  float64
+	PadX      float64
+	PadY      float64
+	LabelPadX float64
+	LabelPadY float64
+}
+
+func fitArchitectureZonesToEntities(layout *ArchitectureLayoutResult) {
+	if layout == nil || len(layout.Zones) == 0 || len(layout.Entities) == 0 {
+		return
+	}
+	total := len(layout.Entities)
+	for i, zone := range layout.Zones {
+		children := make([]ArchitectureEntityLayout, 0)
+		for _, entity := range layout.Entities {
+			if entity.GroupID == zone.Group.ID {
+				children = append(children, entity)
+			}
+		}
+		if len(children) == 0 {
+			continue
+		}
+		minX := math.Inf(1)
+		minY := math.Inf(1)
+		maxX := math.Inf(-1)
+		maxY := math.Inf(-1)
+		for _, entity := range children {
+			footprint := entityVisualFootprint(entity.Node, entity.Position, total)
+			minX = math.Min(minX, footprint.X)
+			minY = math.Min(minY, footprint.Y)
+			maxX = math.Max(maxX, footprint.X+footprint.W)
+			maxY = math.Max(maxY, footprint.Y+footprint.H)
+		}
+		cfg := architectureZoneFitConfigFor(zone.Group, len(children))
+		extra := math.Min(0.72, 0.13*math.Sqrt(float64(len(children))))
+		padX := cfg.PadX + cfg.LabelPadX + extra + 0.34
+		padY := cfg.PadY + cfg.LabelPadY + extra + 0.30
+		contentW := math.Max(0.1, maxX-minX)
+		contentH := math.Max(0.1, maxY-minY)
+		width := math.Max(cfg.MinWidth, contentW+padX*2)
+		height := math.Max(cfg.MinDepth, contentH+padY*2)
+		centerX := (minX + maxX) * 0.5
+		centerY := (minY + maxY) * 0.5
+		fit := ArchitectureBounds{
+			X: centerX - width*0.5,
+			Y: centerY - height*0.5,
+			W: width,
+			H: height,
+		}
+		layout.Zones[i].Bounds = fit
+		for id, entity := range layout.Entities {
+			if entity.GroupID == zone.Group.ID {
+				entity.Bounds = fit
+				layout.Entities[id] = entity
+			}
+		}
+	}
+}
+
+func architectureZoneFitConfigFor(group Group, childCount int) architectureZoneFitConfig {
+	key := strings.ToLower(group.ID + " " + group.Label + " " + group.Kind)
+	cfg := architectureZoneFitConfig{MinWidth: 2.9, MinDepth: 2.15, PadX: 0.62, PadY: 0.54, LabelPadX: 0.18, LabelPadY: 0.16}
+	switch {
+	case strings.Contains(key, "client"):
+		cfg = architectureZoneFitConfig{MinWidth: 4.05, MinDepth: 2.95, PadX: 0.76, PadY: 0.64, LabelPadX: 0.28, LabelPadY: 0.26}
+	case strings.Contains(key, "edge"):
+		cfg = architectureZoneFitConfig{MinWidth: 2.85, MinDepth: 2.35, PadX: 0.66, PadY: 0.60, LabelPadX: 0.20, LabelPadY: 0.20}
+	case strings.Contains(key, "gateway"):
+		cfg = architectureZoneFitConfig{MinWidth: 3.3, MinDepth: 2.75, PadX: 0.78, PadY: 0.68, LabelPadX: 0.28, LabelPadY: 0.24}
+	case strings.Contains(key, "service"), strings.Contains(key, "application"), strings.Contains(key, "app"):
+		cfg = architectureZoneFitConfig{MinWidth: 5.25, MinDepth: 3.85, PadX: 1.08, PadY: 0.96, LabelPadX: 0.48, LabelPadY: 0.42}
+	case strings.Contains(key, "cache"):
+		cfg = architectureZoneFitConfig{MinWidth: 4.15, MinDepth: 2.55, PadX: 0.90, PadY: 0.76, LabelPadX: 0.30, LabelPadY: 0.26}
+	case strings.Contains(key, "database"), strings.Contains(key, "data"):
+		cfg = architectureZoneFitConfig{MinWidth: 3.75, MinDepth: 2.65, PadX: 0.86, PadY: 0.74, LabelPadX: 0.30, LabelPadY: 0.26}
+	case strings.Contains(key, "storage"):
+		cfg = architectureZoneFitConfig{MinWidth: 4.25, MinDepth: 2.95, PadX: 0.94, PadY: 0.80, LabelPadX: 0.36, LabelPadY: 0.30}
+	case strings.Contains(key, "registry"):
+		cfg = architectureZoneFitConfig{MinWidth: 4.05, MinDepth: 3.05, PadX: 0.90, PadY: 0.80, LabelPadX: 0.34, LabelPadY: 0.28}
+	case strings.Contains(key, "admin"):
+		cfg = architectureZoneFitConfig{MinWidth: 2.75, MinDepth: 2.25, PadX: 0.70, PadY: 0.64, LabelPadX: 0.26, LabelPadY: 0.22}
+	case strings.Contains(key, "observ"):
+		cfg = architectureZoneFitConfig{MinWidth: 4.15, MinDepth: 2.75, PadX: 0.90, PadY: 0.76, LabelPadX: 0.36, LabelPadY: 0.30}
+	}
+	if childCount >= 5 {
+		cfg.PadX += 0.34
+		cfg.PadY += 0.26
+	}
+	return cfg
 }
 
 func cloneArchitectureGroupNodes(input map[string][]Node) map[string][]Node {
@@ -367,7 +464,7 @@ func architectureRoutingInput(graph ArchitectureSemanticGraph, layout Architectu
 	sort.Strings(ids)
 	for _, id := range ids {
 		entity := layout.Entities[id]
-		footprint := entityFootprint(entity.Position)
+		footprint := entityVisualFootprint(entity.Node, entity.Position, len(layout.Entities))
 		entities = append(entities, visualrouting.EntityFrame{
 			ID:     id,
 			Kind:   inferEntityKind(entity.Node),
@@ -658,13 +755,17 @@ func (layout ArchitectureLayoutResult) ToVisualZones() []any {
 			"style":      "dashed",
 			"importance": 0.7,
 			"presentation": map[string]any{
-				"boundary":      "dashed",
-				"fill":          "#ffffff",
-				"fillOpacity":   0.014,
-				"color":         "#111827",
-				"boundaryColor": "#111827",
-				"cornerRadius":  0.78,
-				"labelPoint":    map[string]any{"x": b.X + 0.74, "y": b.Y + b.H - 0.62},
+				"boundary":        "dashed",
+				"fill":            "#ffffff",
+				"fillOpacity":     0.004,
+				"color":           "#111827",
+				"boundaryColor":   "#111827",
+				"boundaryOpacity": 0.66,
+				"strokeWidth":     0.012,
+				"dashLength":      0.26,
+				"gapLength":       0.16,
+				"cornerRadius":    0.72,
+				"labelPoint":      map[string]any{"x": b.X + 0.82, "y": b.Y + b.H - 0.70},
 			},
 		})
 	}
@@ -1309,9 +1410,11 @@ func placeArchitectureEntityInGroup(group Group, bounds ArchitectureBounds, inde
 			cols := 3
 			col := index % cols
 			row := index / cols
+			centerX := bounds.X + bounds.W*0.5
+			centerY := bounds.Y + bounds.H*0.52
 			return ArchitecturePoint{
-				X: bounds.X + bounds.W*(0.20+0.30*float64(col)),
-				Y: bounds.Y + bounds.H*(0.38+0.34*float64(row)),
+				X: centerX + (float64(col)-1)*1.36 + float64(row%2)*0.26,
+				Y: centerY + (float64(row)-0.5)*1.16,
 			}
 		}
 		cols := 3
@@ -1324,10 +1427,12 @@ func placeArchitectureEntityInGroup(group Group, bounds ArchitectureBounds, inde
 	}
 	if strings.Contains(key, "registry") {
 		if count == 3 {
+			centerX := bounds.X + bounds.W*0.5
+			centerY := bounds.Y + bounds.H*0.53
 			positions := []ArchitecturePoint{
-				{X: bounds.X + bounds.W*0.25, Y: bounds.Y + bounds.H*0.58},
-				{X: bounds.X + bounds.W*0.72, Y: bounds.Y + bounds.H*0.58},
-				{X: bounds.X + bounds.W*0.50, Y: bounds.Y + bounds.H*0.82},
+				{X: centerX - 1.20, Y: centerY - 0.44},
+				{X: centerX + 1.20, Y: centerY - 0.44},
+				{X: centerX, Y: centerY + 0.78},
 			}
 			return positions[index%len(positions)]
 		}
@@ -1338,10 +1443,12 @@ func placeArchitectureEntityInGroup(group Group, bounds ArchitectureBounds, inde
 	}
 	if strings.Contains(key, "cache") {
 		if count == 3 {
+			centerX := bounds.X + bounds.W*0.5
+			centerY := bounds.Y + bounds.H*0.54
 			positions := []ArchitecturePoint{
-				{X: bounds.X + bounds.W*0.24, Y: bounds.Y + bounds.H*0.52},
-				{X: bounds.X + bounds.W*0.50, Y: bounds.Y + bounds.H*0.52},
-				{X: bounds.X + bounds.W*0.76, Y: bounds.Y + bounds.H*0.52},
+				{X: centerX - 1.46, Y: centerY - 0.22},
+				{X: centerX, Y: centerY + 0.06},
+				{X: centerX + 1.46, Y: centerY + 0.34},
 			}
 			return positions[index%len(positions)]
 		}
@@ -1352,9 +1459,11 @@ func placeArchitectureEntityInGroup(group Group, bounds ArchitectureBounds, inde
 	}
 	if strings.Contains(key, "database") || strings.Contains(key, "data") {
 		if count == 2 {
+			centerX := bounds.X + bounds.W*0.5
+			centerY := bounds.Y + bounds.H*0.54
 			positions := []ArchitecturePoint{
-				{X: bounds.X + bounds.W*0.30, Y: bounds.Y + bounds.H*0.54},
-				{X: bounds.X + bounds.W*0.72, Y: bounds.Y + bounds.H*0.54},
+				{X: centerX - 1.02, Y: centerY},
+				{X: centerX + 1.02, Y: centerY},
 			}
 			return positions[index%len(positions)]
 		}
@@ -1363,15 +1472,23 @@ func placeArchitectureEntityInGroup(group Group, bounds ArchitectureBounds, inde
 			Y: bounds.Y + bounds.H*(0.62-0.28*float64(index/3)),
 		}
 	}
+	if strings.Contains(key, "storage") {
+		if count <= 3 {
+			centerX := bounds.X + bounds.W*0.5
+			centerY := bounds.Y + bounds.H*0.55
+			return ArchitecturePoint{
+				X: centerX + (float64(index)-float64(count-1)/2)*1.08,
+				Y: centerY + float64(index%2)*0.30,
+			}
+		}
+	}
 	if strings.Contains(key, "observ") {
 		if count <= 4 {
-			step := 0.84
-			if count > 1 {
-				step = 0.84 / float64(count-1)
-			}
+			centerX := bounds.X + bounds.W*0.5
+			centerY := bounds.Y + bounds.H*0.54
 			return ArchitecturePoint{
-				X: bounds.X + bounds.W*(0.08+float64(index)*step),
-				Y: bounds.Y + bounds.H*0.52,
+				X: centerX + (float64(index)-float64(count-1)/2)*1.08,
+				Y: centerY + float64(index%2)*0.30,
 			}
 		}
 		return ArchitecturePoint{
@@ -1465,7 +1582,7 @@ func architectureRouteObstacles(layout ArchitectureLayoutResult) []ArchitectureR
 	for _, id := range ids {
 		entity := layout.Entities[id]
 		padding := 0.20
-		bounds := inflateArchitectureBounds(entityFootprint(entity.Position), padding)
+		bounds := inflateArchitectureBounds(entityVisualFootprint(entity.Node, entity.Position, len(layout.Entities)), padding)
 		out = append(out, ArchitectureRouteObstacle{
 			ID:       "obstacle-" + id,
 			EntityID: id,
@@ -1493,7 +1610,7 @@ func architectureRoutePorts(from, to ArchitectureEntityLayout, edge Edge, role s
 	if toSide == "" {
 		toSide = automaticArchitecturePortSide(to.Position, from.Position, false)
 	}
-	return architecturePortPoint(entityFootprint(from.Position), fromSide, padding), architecturePortPoint(entityFootprint(to.Position), toSide, padding)
+	return architecturePortPoint(entityVisualFootprint(from.Node, from.Position, 24), fromSide, padding), architecturePortPoint(entityVisualFootprint(to.Node, to.Position, 24), toSide, padding)
 }
 
 func automaticArchitecturePortSide(from, to ArchitecturePoint, source bool) string {
@@ -1951,7 +2068,7 @@ func routeEntityIntersectionsCandidate(route []ArchitecturePoint, layout Archite
 		if id == fromID || id == toID {
 			continue
 		}
-		footprint := inflateArchitectureBounds(entityFootprint(entity.Position), 0.08)
+		footprint := inflateArchitectureBounds(entityVisualFootprint(entity.Node, entity.Position, len(layout.Entities)), 0.08)
 		for i := 0; i < len(route)-1; i++ {
 			if segmentIntersectsBounds(route[i], route[i+1], footprint) {
 				count++
@@ -2047,7 +2164,7 @@ func routeEntityIntersections(link ArchitectureRoutedLink, layout ArchitectureLa
 		if id == link.Edge.From || id == link.Edge.To {
 			continue
 		}
-		footprint := entityFootprint(entity.Position)
+		footprint := entityVisualFootprint(entity.Node, entity.Position, len(layout.Entities))
 		for i := 0; i < len(link.Route)-1; i++ {
 			if segmentIntersectsBounds(link.Route[i], link.Route[i+1], footprint) {
 				count++
@@ -2060,6 +2177,25 @@ func routeEntityIntersections(link ArchitectureRoutedLink, layout ArchitectureLa
 
 func entityFootprint(center ArchitecturePoint) ArchitectureBounds {
 	return ArchitectureBounds{X: center.X - 0.62, Y: center.Y - 0.62, W: 1.24, H: 1.24}
+}
+
+func entityVisualFootprint(node Node, center ArchitecturePoint, total int) ArchitectureBounds {
+	kind := inferEntityKind(node)
+	size := architectureEntityVisualSize(kind, total)
+	width := math.Max(1.24, size.W*1.16)
+	depth := math.Max(1.24, size.D*1.16)
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "pc", "laptop", "mobile", "cdn", "api_gateway", "nginx":
+		width = math.Max(width, 1.42)
+		depth = math.Max(depth, 1.30)
+	case "microservice", "service":
+		width = math.Max(width, 1.32)
+		depth = math.Max(depth, 1.22)
+	case "redis", "cache", "database", "mysql", "registry", "nacos", "storage", "oss", "file_storage", "block_storage":
+		width = math.Max(width, 1.34)
+		depth = math.Max(depth, 1.24)
+	}
+	return ArchitectureBounds{X: center.X - width*0.5, Y: center.Y - depth*0.5, W: width, H: depth}
 }
 
 func segmentIntersectsBounds(a, b ArchitecturePoint, box ArchitectureBounds) bool {

@@ -1580,12 +1580,12 @@
       if (Array.isArray(helper.material)) {
         helper.material.forEach(function (material) {
           material.transparent = true;
-          material.opacity = 0.46;
+          material.opacity = 0.34;
           material.depthWrite = false;
         });
       } else if (helper.material) {
         helper.material.transparent = true;
-        helper.material.opacity = 0.46;
+        helper.material.opacity = 0.34;
         helper.material.depthWrite = false;
       }
       helper.position.y = y || 0;
@@ -4783,28 +4783,41 @@
     return raw || "default";
   }
 
+  var ICRAFT_PALETTE = {
+    bg: { canvasTop: "#E9EAFB", canvasBottom: "#FFFFFF", grid: "#D8DCF4" },
+    ink: { main: "#111827", soft: "#2B3145" },
+    systemBlue: { top: "#7D91F4", face: "#6075E0", side: "#4358CB", dark: "#2F3FAD", highlight: "#AEB9FF" },
+    blueNeutral: { top: "#F8FAFF", face: "#EAF0FF", side: "#CDD8FF", edge: "#9DAEF4", dark: "#7587D9" },
+    whiteSurface: { top: "#FFFFFF", face: "#F4F7FF", side: "#DDE6FF", edge: "#B8C6F6" },
+    redis: { top: "#F36B72", face: "#EB4F57", side: "#C83D4A", dark: "#A92D3A" },
+    nginx: { top: "#38D86B", face: "#00B84A", side: "#008D36", dark: "#06722F" },
+    nacos: { cyan: "#34C7F4", blue: "#6075E0", pale: "#EAF7FF" },
+    accent: { amber: "#F2B84B", pink: "#D93F8C", teal: "#2AC6D6" },
+    shadow: { blue: "#3347B7", ink: "#111827" }
+  };
+
   function entityPaletteV3(kind, spec) {
     var palettes = {
-      client: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
-      pc: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
-      laptop: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
-      mobile: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
-      user: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
-      cdn: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#E8EDFF" },
-      nginx: { base: "#00B84A", top: "#63E58A", side: "#008D36", accent: "#FFFFFF", screen: "#052e16" },
-      api_gateway: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#F2B84B", screen: "#2F3FAD" },
-      microservice: { base: "#6075E0", top: "#7289ED", side: "#4358CB", accent: "#F2B84B", screen: "#E8EDFF" },
-      nacos: { base: "#FFFFFF", top: "#F7FAFF", side: "#D8DDEB", accent: "#3EC7F4", screen: "#E8EDFF" },
-      redis: { base: "#EB4F57", top: "#F68B92", side: "#C83D4A", accent: "#FFFFFF", screen: "#FEE2E2" },
-      mysql: { base: "#FFFFFF", top: "#E8EDFF", side: "#93C5FD", accent: "#6075E0", screen: "#FFFFFF" },
-      storage: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#E8EDFF" },
-      oss: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#E8EDFF" },
-      file_storage: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#E8EDFF" },
-      block_storage: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#E8EDFF" },
-      observability: { base: "#FFFFFF", top: "#F7FAFF", side: "#D8DDEB", accent: "#F2B84B", screen: "#E8EDFF" },
-      admin: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
-      cluster: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#F2B84B", screen: "#E8EDFF" },
-      default: { base: spec && spec.color || "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#F2B84B", screen: "#E8EDFF" }
+      client: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.highlight, side: ICRAFT_PALETTE.systemBlue.side, accent: "#FFFFFF", screen: ICRAFT_PALETTE.systemBlue.dark },
+      pc: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.highlight, side: ICRAFT_PALETTE.systemBlue.side, accent: "#FFFFFF", screen: ICRAFT_PALETTE.systemBlue.dark },
+      laptop: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.highlight, side: ICRAFT_PALETTE.systemBlue.side, accent: "#FFFFFF", screen: ICRAFT_PALETTE.systemBlue.dark },
+      mobile: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.highlight, side: ICRAFT_PALETTE.systemBlue.side, accent: "#FFFFFF", screen: ICRAFT_PALETTE.systemBlue.dark },
+      user: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.highlight, side: ICRAFT_PALETTE.systemBlue.side, accent: "#FFFFFF", screen: ICRAFT_PALETTE.systemBlue.dark },
+      cdn: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.highlight, side: ICRAFT_PALETTE.systemBlue.side, accent: "#FFFFFF", screen: ICRAFT_PALETTE.blueNeutral.face },
+      nginx: { base: ICRAFT_PALETTE.nginx.face, top: ICRAFT_PALETTE.nginx.top, side: ICRAFT_PALETTE.nginx.side, accent: "#FFFFFF", screen: "#052e16" },
+      api_gateway: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.highlight, side: ICRAFT_PALETTE.systemBlue.side, accent: ICRAFT_PALETTE.accent.amber, screen: ICRAFT_PALETTE.systemBlue.dark },
+      microservice: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.top, side: ICRAFT_PALETTE.systemBlue.side, accent: ICRAFT_PALETTE.accent.amber, screen: ICRAFT_PALETTE.blueNeutral.face },
+      nacos: { base: ICRAFT_PALETTE.whiteSurface.top, top: ICRAFT_PALETTE.nacos.pale, side: ICRAFT_PALETTE.whiteSurface.side, accent: ICRAFT_PALETTE.nacos.cyan, screen: ICRAFT_PALETTE.blueNeutral.face },
+      redis: { base: ICRAFT_PALETTE.redis.face, top: ICRAFT_PALETTE.redis.top, side: ICRAFT_PALETTE.redis.side, accent: "#FFFFFF", screen: "#FEE2E2" },
+      mysql: { base: ICRAFT_PALETTE.whiteSurface.top, top: ICRAFT_PALETTE.whiteSurface.face, side: ICRAFT_PALETTE.whiteSurface.side, accent: ICRAFT_PALETTE.systemBlue.face, screen: "#FFFFFF" },
+      storage: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.top, side: ICRAFT_PALETTE.systemBlue.side, accent: "#FFFFFF", screen: ICRAFT_PALETTE.blueNeutral.face },
+      oss: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.whiteSurface.top, side: ICRAFT_PALETTE.systemBlue.side, accent: "#FFFFFF", screen: ICRAFT_PALETTE.blueNeutral.face },
+      file_storage: { base: ICRAFT_PALETTE.blueNeutral.face, top: ICRAFT_PALETTE.whiteSurface.top, side: ICRAFT_PALETTE.blueNeutral.side, accent: ICRAFT_PALETTE.systemBlue.face, screen: ICRAFT_PALETTE.blueNeutral.face },
+      block_storage: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.top, side: ICRAFT_PALETTE.systemBlue.side, accent: "#FFFFFF", screen: ICRAFT_PALETTE.blueNeutral.face },
+      observability: { base: ICRAFT_PALETTE.whiteSurface.top, top: ICRAFT_PALETTE.whiteSurface.face, side: ICRAFT_PALETTE.whiteSurface.side, accent: ICRAFT_PALETTE.accent.amber, screen: ICRAFT_PALETTE.blueNeutral.face },
+      admin: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.highlight, side: ICRAFT_PALETTE.systemBlue.side, accent: "#FFFFFF", screen: ICRAFT_PALETTE.systemBlue.dark },
+      cluster: { base: ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.highlight, side: ICRAFT_PALETTE.systemBlue.side, accent: ICRAFT_PALETTE.accent.amber, screen: ICRAFT_PALETTE.blueNeutral.face },
+      default: { base: spec && spec.color || ICRAFT_PALETTE.systemBlue.face, top: ICRAFT_PALETTE.systemBlue.highlight, side: ICRAFT_PALETTE.systemBlue.side, accent: ICRAFT_PALETTE.accent.amber, screen: ICRAFT_PALETTE.blueNeutral.face }
     };
     return palettes[kind] || palettes.default;
   }
@@ -4840,7 +4853,7 @@
 
   function createContactShadowMaterial(THREE) {
     return new THREE.MeshBasicMaterial({
-      color: 0x0f172a,
+      color: colorValue(ICRAFT_PALETTE.shadow.blue, 0x3347b7),
       transparent: true,
       opacity: 0.13,
       depthWrite: false,
@@ -5054,7 +5067,7 @@
       for (var layer = 0; layer < 3; layer += 1) {
         addBodyBox(THREE, group, { w: size.w * 0.39, h: size.h * 0.1, d: size.d * 0.3 }, 0, -size.h * 0.13 + layer * size.h * 0.13, 0, layer === 2 ? createIsoTopMaterial(THREE, palette) : createIsoFrontMaterial(THREE, palette), "service_rack_layer");
         sidePanel(size.w * 0.07, size.h * 0.02, size.d * 0.035, -size.w * 0.12, -size.h * 0.12 + layer * size.h * 0.13, size.d * 0.18, palette.accent);
-        sidePanel(size.w * 0.055, size.h * 0.02, size.d * 0.035, size.w * 0.08, -size.h * 0.12 + layer * size.h * 0.13, size.d * 0.18, "#93C5FD");
+        sidePanel(size.w * 0.055, size.h * 0.02, size.d * 0.035, size.w * 0.08, -size.h * 0.12 + layer * size.h * 0.13, size.d * 0.18, ICRAFT_PALETTE.accent.amber);
       }
       top(size.w * 0.28, size.d * 0.18, size.h * 0.24, 0);
       addDecal({ w: size.w * 0.13, h: size.h * 0.08, y: size.h * 0.07, z: size.d * 0.2 });
@@ -5065,13 +5078,17 @@
       top(size.w * 0.33, size.d * 0.22, size.h * 0.21, 0);
       addDecal({ w: size.w * 0.17, h: size.h * 0.1, y: size.h * 0.08, z: size.d * 0.2 });
     } else if (visualKind === "mysql") {
-      addBodyCylinder(THREE, group, size.w * 0.27, size.h * 0.46, 0, -size.h * 0.015, 0, createIsoMaterial(THREE, "#FFFFFF", { roughness: 0.18, metalness: 0.03, emissiveIntensity: 0.18 }), "database_cylinder", 48);
-      addBodyCylinder(THREE, group, size.w * 0.278, size.h * 0.052, 0, size.h * 0.23, 0, createIsoMaterial(THREE, "#E8EDFF", { roughness: 0.2, metalness: 0.04, emissiveIntensity: 0.14 }), "database_top_ellipse", 44);
-      addBodyCylinder(THREE, group, size.w * 0.286, size.h * 0.042, 0, size.h * 0.02, 0, createIsoMaterial(THREE, "#93C5FD", { roughness: 0.25, metalness: 0.05, emissiveIntensity: 0.1 }), "database_mid_band", 44);
-      addBodyCylinder(THREE, group, size.w * 0.286, size.h * 0.036, 0, -size.h * 0.22, 0, createIsoMaterial(THREE, "#6075E0", { roughness: 0.23, metalness: 0.06, emissiveIntensity: 0.1, opacity: 0.95 }), "database_bottom_ring", 44);
+      var dbBody = addBodyCylinder(THREE, group, size.w * 0.30, size.h * 0.50, 0, -size.h * 0.01, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.whiteSurface.face, { roughness: 0.16, metalness: 0.03, emissiveIntensity: 0.18 }), "database_cylinder", 56);
+      dbBody.scale.z = 0.78;
+      var dbTop = addBodyCylinder(THREE, group, size.w * 0.315, size.h * 0.052, 0, size.h * 0.25, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.whiteSurface.top, { roughness: 0.18, metalness: 0.04, emissiveIntensity: 0.16 }), "database_top_ellipse", 56);
+      dbTop.scale.z = 0.78;
+      var dbBand = addBodyCylinder(THREE, group, size.w * 0.316, size.h * 0.04, 0, size.h * 0.02, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.blueNeutral.side, { roughness: 0.22, metalness: 0.05, emissiveIntensity: 0.1 }), "database_mid_band", 48);
+      dbBand.scale.z = 0.78;
+      var dbBottom = addBodyCylinder(THREE, group, size.w * 0.318, size.h * 0.034, 0, -size.h * 0.24, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.systemBlue.face, { roughness: 0.22, metalness: 0.06, emissiveIntensity: 0.1, opacity: 0.95 }), "database_bottom_ring", 48);
+      dbBottom.scale.z = 0.78;
       if (THREE.CircleGeometry) {
         var dbTopDisc = new THREE.Mesh(new THREE.CircleGeometry(size.w * 0.288, 48), new THREE.MeshBasicMaterial({
-          color: colorValue("#F8FBFF", 0xf8fbff),
+          color: colorValue(ICRAFT_PALETTE.whiteSurface.top, 0xffffff),
           transparent: true,
           opacity: 0.98,
           side: THREE.DoubleSide,
@@ -5082,7 +5099,7 @@
         dbTopDisc.position.y = size.h * 0.264;
         group.add(markBodyPart(dbTopDisc, "database_top_disc"));
         var dbTopInner = new THREE.Mesh(new THREE.CircleGeometry(size.w * 0.205, 48), new THREE.MeshBasicMaterial({
-          color: colorValue("#E8EDFF", 0xe8edff),
+          color: colorValue(ICRAFT_PALETTE.blueNeutral.face, 0xeaf0ff),
           transparent: true,
           opacity: 0.98,
           side: THREE.DoubleSide,
@@ -5094,45 +5111,47 @@
         group.add(markBodyPart(dbTopInner, "database_top_inner_disc"));
       }
       if (THREE.TorusGeometry) {
-        var dbTopRing = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.278, 0.012, 8, 48), createIsoMaterial(THREE, "#6075E0", { roughness: 0.2, emissiveIntensity: 0.1 }));
+        var dbTopRing = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.306, 0.014, 8, 56), createIsoMaterial(THREE, ICRAFT_PALETTE.systemBlue.face, { roughness: 0.2, emissiveIntensity: 0.1 }));
         dbTopRing.rotation.x = Math.PI / 2;
         dbTopRing.position.y = size.h * 0.274;
+        dbTopRing.scale.z = 0.78;
         group.add(markBodyPart(dbTopRing, "database_top_blue_ring"));
-        var dbLowerRing = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.284, 0.01, 8, 48), createIsoMaterial(THREE, "#A5AEDC", { roughness: 0.24, emissiveIntensity: 0.08 }));
+        var dbLowerRing = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.306, 0.011, 8, 48), createIsoMaterial(THREE, ICRAFT_PALETTE.systemBlue.highlight, { roughness: 0.24, emissiveIntensity: 0.08 }));
         dbLowerRing.rotation.x = Math.PI / 2;
         dbLowerRing.position.y = -size.h * 0.045;
+        dbLowerRing.scale.z = 0.78;
         group.add(markBodyPart(dbLowerRing, "database_lower_highlight_ring"));
       }
       meta.hasTopHighlight = true;
       meta.highlightCount += 1;
       addDecal({ w: size.w * 0.16, h: size.h * 0.08, y: size.h * 0.07, z: size.d * 0.2 });
     } else if (visualKind === "nacos") {
-      addBodyCylinder(THREE, group, size.w * 0.25, size.h * 0.08, 0, -size.h * 0.20, 0, createIsoMaterial(THREE, "#FFFFFF", { roughness: 0.3, emissiveIntensity: 0.07 }), "nacos_white_pedestal", 36);
-      addBodyCylinder(THREE, group, size.w * 0.21, size.h * 0.045, 0, -size.h * 0.12, 0, createIsoMaterial(THREE, "#E8EDFF", { roughness: 0.28, emissiveIntensity: 0.08 }), "nacos_inner_pedestal", 36);
-      addBodyCylinder(THREE, group, size.w * 0.07, size.h * 0.34, 0, size.h * 0.05, 0, createIsoMaterial(THREE, "#3EC7F4", { roughness: 0.26, emissiveIntensity: 0.08 }), "nacos_center_node", 22);
+      addBodyCylinder(THREE, group, size.w * 0.27, size.h * 0.07, 0, -size.h * 0.20, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.whiteSurface.top, { roughness: 0.26, emissiveIntensity: 0.09 }), "nacos_white_pedestal", 40);
+      addBodyCylinder(THREE, group, size.w * 0.22, size.h * 0.035, 0, -size.h * 0.12, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.blueNeutral.face, { roughness: 0.24, emissiveIntensity: 0.09 }), "nacos_inner_pedestal", 40);
+      addBodyCylinder(THREE, group, size.w * 0.035, size.h * 0.20, 0, size.h * 0.03, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.nacos.blue, { roughness: 0.22, emissiveIntensity: 0.08 }), "nacos_center_node", 22);
       if (THREE.TorusGeometry) {
-        var regRing = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.17, 0.014, 8, 36), createIsoMaterial(THREE, "#3EC7F4", { roughness: 0.24, emissiveIntensity: 0.09 }));
+        var regRing = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.18, 0.014, 8, 40), createIsoMaterial(THREE, ICRAFT_PALETTE.nacos.cyan, { roughness: 0.24, emissiveIntensity: 0.09 }));
         regRing.rotation.x = Math.PI / 2;
-        regRing.position.y = size.h * 0.12;
+        regRing.position.y = size.h * 0.08;
         group.add(markBodyPart(regRing, "registry_ring"));
-        var regRingTop = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.105, 0.01, 8, 30), createIsoMaterial(THREE, "#6075E0", { roughness: 0.24, emissiveIntensity: 0.08 }));
+        var regRingTop = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.105, 0.01, 8, 30), createIsoMaterial(THREE, ICRAFT_PALETTE.systemBlue.face, { roughness: 0.24, emissiveIntensity: 0.08 }));
         regRingTop.rotation.x = Math.PI / 2;
         regRingTop.position.y = size.h * 0.29;
         group.add(markBodyPart(regRingTop, "registry_top_ring"));
       }
-      addBodySphere(THREE, group, size.w * 0.045, -size.w * 0.12, size.h * 0.28, 0, createIsoMaterial(THREE, "#3EC7F4", { roughness: 0.24 }), "nacos_orbit_node");
-      addBodySphere(THREE, group, size.w * 0.045, size.w * 0.12, size.h * 0.28, 0, createIsoMaterial(THREE, "#3EC7F4", { roughness: 0.24 }), "nacos_orbit_node");
+      addBodySphere(THREE, group, size.w * 0.045, -size.w * 0.12, size.h * 0.28, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.nacos.cyan, { roughness: 0.24 }), "nacos_orbit_node");
+      addBodySphere(THREE, group, size.w * 0.045, size.w * 0.12, size.h * 0.28, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.nacos.cyan, { roughness: 0.24 }), "nacos_orbit_node");
       meta.hasTopHighlight = true;
       meta.highlightCount += 1;
       addDecal({ w: size.w * 0.1, h: size.h * 0.065, y: size.h * 0.2, z: size.d * 0.16, plateOpacity: 0.72 });
     } else if (visualKind === "oss") {
-      addBodyCylinder(THREE, group, size.w * 0.23, size.h * 0.32, 0, -size.h * 0.03, 0, createIsoFrontMaterial(THREE, palette), "storage_bucket");
-      addBodyCylinder(THREE, group, size.w * 0.235, size.h * 0.045, 0, size.h * 0.16, 0, createIsoTopMaterial(THREE, palette), "bucket_rim", 30);
+      addBodyCylinder(THREE, group, size.w * 0.24, size.h * 0.32, 0, -size.h * 0.03, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.systemBlue.face, { roughness: 0.28, emissiveIntensity: 0.07 }), "storage_bucket");
+      addBodyCylinder(THREE, group, size.w * 0.245, size.h * 0.045, 0, size.h * 0.16, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.whiteSurface.top, { roughness: 0.24, emissiveIntensity: 0.09 }), "bucket_rim", 30);
       top(size.w * 0.2, size.d * 0.11, size.h * 0.22, 0);
       addDecal({ w: size.w * 0.14, h: size.h * 0.08, y: size.h * 0.02, z: size.d * 0.19 });
     } else if (visualKind === "file_storage") {
-      addBodyBox(THREE, group, { w: size.w * 0.44, h: size.h * 0.22, d: size.d * 0.28 }, 0, -size.h * 0.02, 0, createIsoFrontMaterial(THREE, palette), "file_box");
-      addBodyBox(THREE, group, { w: size.w * 0.22, h: size.h * 0.08, d: size.d * 0.12 }, -size.w * 0.09, size.h * 0.13, -size.d * 0.04, createIsoTopMaterial(THREE, palette), "file_tab");
+      addBodyBox(THREE, group, { w: size.w * 0.44, h: size.h * 0.22, d: size.d * 0.28 }, 0, -size.h * 0.02, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.blueNeutral.face, { roughness: 0.26, emissiveIntensity: 0.08 }), "file_box");
+      addBodyBox(THREE, group, { w: size.w * 0.22, h: size.h * 0.08, d: size.d * 0.12 }, -size.w * 0.09, size.h * 0.13, -size.d * 0.04, createIsoMaterial(THREE, ICRAFT_PALETTE.whiteSurface.top, { roughness: 0.24, emissiveIntensity: 0.09 }), "file_tab");
       top(size.w * 0.34, size.d * 0.18, size.h * 0.14, 0);
       addDecal({ w: size.w * 0.14, h: size.h * 0.08, y: size.h * 0.02, z: size.d * 0.19 });
     } else if (visualKind === "block_storage" || visualKind === "storage") {
@@ -5142,10 +5161,10 @@
       top(size.w * 0.2, size.d * 0.14, size.h * 0.2, 0);
       addDecal({ w: size.w * 0.14, h: size.h * 0.08, y: size.h * 0.05, z: size.d * 0.19 });
     } else if (visualKind === "observability") {
-      addBodyCylinder(THREE, group, size.w * 0.21, size.h * 0.08, 0, -size.h * 0.18, 0, createIsoMaterial(THREE, "#FFFFFF", { roughness: 0.3, emissiveIntensity: 0.07 }), "observability_white_base", 32);
-      addBodyCylinder(THREE, group, size.w * 0.17, size.h * 0.035, 0, -size.h * 0.1, 0, createIsoMaterial(THREE, "#E8EDFF", { roughness: 0.28, emissiveIntensity: 0.08 }), "observability_base_ring", 32);
+      addBodyCylinder(THREE, group, size.w * 0.21, size.h * 0.08, 0, -size.h * 0.18, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.whiteSurface.top, { roughness: 0.28, emissiveIntensity: 0.08 }), "observability_white_base", 32);
+      addBodyCylinder(THREE, group, size.w * 0.17, size.h * 0.035, 0, -size.h * 0.1, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.blueNeutral.face, { roughness: 0.24, emissiveIntensity: 0.09 }), "observability_base_ring", 32);
       var labelKey = normalizeMarkKey(itemLabel(item) || item && item.id || "");
-      var bars = labelKey.indexOf("kibana") >= 0 ? ["#D93F8C", "#3EC7F4", "#6075E0"] : labelKey.indexOf("logstash") >= 0 ? ["#F2B84B", "#6075E0", "#3EC7F4"] : ["#F2B84B", "#3EC7F4", "#6075E0"];
+      var bars = labelKey.indexOf("kibana") >= 0 ? [ICRAFT_PALETTE.accent.pink, ICRAFT_PALETTE.nacos.cyan, ICRAFT_PALETTE.systemBlue.face] : labelKey.indexOf("logstash") >= 0 ? [ICRAFT_PALETTE.accent.amber, ICRAFT_PALETTE.systemBlue.face, ICRAFT_PALETTE.nacos.cyan] : [ICRAFT_PALETTE.accent.amber, ICRAFT_PALETTE.nacos.cyan, ICRAFT_PALETTE.systemBlue.face];
       for (var bar = 0; bar < 3; bar += 1) {
         sidePanel(size.w * 0.055, size.h * (0.14 + bar * 0.04), size.d * 0.05, -size.w * 0.09 + bar * size.w * 0.09, size.h * (0.02 + bar * 0.035), size.d * 0.04, bars[bar]);
       }
@@ -5156,10 +5175,10 @@
     } else if (visualKind === "admin") {
       addBodyBox(THREE, group, { w: size.w * 0.34, h: size.h * 0.46, d: size.d * 0.13 }, 0, size.h * 0.05, 0, createIsoFrontMaterial(THREE, palette), "admin_shield_body");
       addBodyBox(THREE, group, { w: size.w * 0.22, h: size.h * 0.09, d: size.d * 0.08 }, 0, size.h * 0.3, -size.d * 0.01, createIsoTopMaterial(THREE, palette), "admin_shield_cap");
-      addBodyCylinder(THREE, group, size.w * 0.23, size.h * 0.075, 0, -size.h * 0.21, 0, createIsoMaterial(THREE, "#FFFFFF", { roughness: 0.3, emissiveIntensity: 0.06 }), "admin_white_pedestal", 28);
+      addBodyCylinder(THREE, group, size.w * 0.23, size.h * 0.075, 0, -size.h * 0.21, 0, createIsoMaterial(THREE, ICRAFT_PALETTE.whiteSurface.top, { roughness: 0.28, emissiveIntensity: 0.07 }), "admin_white_pedestal", 28);
       screen(size.w * 0.19, size.h * 0.12, 0, size.h * 0.08, size.d * 0.095);
-      sidePanel(size.w * 0.055, size.h * 0.035, size.d * 0.025, -size.w * 0.1, -size.h * 0.04, size.d * 0.11, "#F2B84B");
-      sidePanel(size.w * 0.055, size.h * 0.035, size.d * 0.025, size.w * 0.1, -size.h * 0.04, size.d * 0.11, "#FFFFFF");
+      sidePanel(size.w * 0.055, size.h * 0.035, size.d * 0.025, -size.w * 0.1, -size.h * 0.04, size.d * 0.11, ICRAFT_PALETTE.accent.amber);
+      sidePanel(size.w * 0.055, size.h * 0.035, size.d * 0.025, size.w * 0.1, -size.h * 0.04, size.d * 0.11, ICRAFT_PALETTE.whiteSurface.top);
       top(size.w * 0.24, size.d * 0.11, size.h * 0.33, 0);
       addDecal({ w: size.w * 0.12, h: size.h * 0.08, y: size.h * 0.08, z: size.d * 0.14 });
     } else {
@@ -5219,11 +5238,50 @@
     return new THREE.LineBasicMaterial({ color: colorValue(color, 0x1f2937), transparent: true, opacity: opacity === undefined ? 0.8 : opacity });
   }
 
-  function createDashedPolyline(THREE, points, color, opacity, dashLength, gapLength) {
+  function createGroundDashStripSegment(THREE, start, end, width, material) {
+    var dx = end.x - start.x;
+    var dz = end.z - start.z;
+    var length = Math.sqrt(dx * dx + dz * dz);
+    if (!isFinite(length) || length < 0.003) return null;
+    var half = Math.max(0.002, width || 0.012) * 0.5;
+    var nx = -dz / length * half;
+    var nz = dx / length * half;
+    var y = (start.y + end.y) * 0.5;
+    var geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute([
+      start.x + nx, y, start.z + nz,
+      start.x - nx, y, start.z - nz,
+      end.x + nx, y, end.z + nz,
+      end.x - nx, y, end.z - nz
+    ], 3));
+    geometry.setIndex([0, 1, 2, 2, 1, 3]);
+    geometry.computeVertexNormals();
+    var mesh = new THREE.Mesh(geometry, material);
+    mesh.userData.isDashedSegment = true;
+    mesh.userData.isZoneBoundaryDash = true;
+    mesh.userData.zoneStrokeWidth = width || 0.012;
+    mesh.renderOrder = 3;
+    return mesh;
+  }
+
+  function createDashedPolyline(THREE, points, color, opacity, dashLength, gapLength, phase, strokeWidth) {
     var dashed = new THREE.Group();
-    var material = isometricLineMaterial(THREE, color || "#111827", opacity === undefined ? 0.86 : opacity);
-    var dash = Math.max(0.03, dashLength || 0.14);
-    var gap = Math.max(0.02, gapLength || 0.09);
+    var material = new THREE.MeshBasicMaterial({
+      color: colorValue(color || "#111827", 0x111827),
+      transparent: true,
+      opacity: opacity === undefined ? 0.66 : opacity,
+      depthWrite: false,
+      depthTest: true,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1.5,
+      polygonOffsetUnits: -1.5
+    });
+    var dash = Math.max(0.05, dashLength || 0.26);
+    var gap = Math.max(0.03, gapLength || 0.16);
+    var width = Math.max(0.004, strokeWidth || 0.012);
+    var cycle = dash + gap;
+    var distance = -Math.max(0, phase || 0);
     for (var i = 0; i < points.length - 1; i += 1) {
       var start = points[i];
       var end = points[i + 1];
@@ -5233,15 +5291,33 @@
       var direction = delta.clone().normalize();
       var cursor = 0;
       while (cursor < length) {
-        var segStart = start.clone().add(direction.clone().multiplyScalar(cursor));
-        var segEnd = start.clone().add(direction.clone().multiplyScalar(Math.min(length, cursor + dash)));
-        var segment = new THREE.Line(new THREE.BufferGeometry().setFromPoints([segStart, segEnd]), material.clone());
-        segment.userData.isDashedSegment = true;
-        dashed.add(segment);
-        cursor += dash + gap;
+        var local = ((distance % cycle) + cycle) % cycle;
+        var inDash = local < dash;
+        var remaining = inDash ? dash - local : cycle - local;
+        var step = Math.min(length - cursor, Math.max(0.002, remaining));
+        if (inDash && step > 0.002) {
+          var segStart = start.clone().add(direction.clone().multiplyScalar(cursor));
+          var segEnd = start.clone().add(direction.clone().multiplyScalar(cursor + step));
+          var segment = createGroundDashStripSegment(THREE, segStart, segEnd, width, material.clone());
+          if (segment) dashed.add(segment);
+        }
+        cursor += step;
+        distance += step;
       }
     }
+    dashed.userData.isZoneBoundary = true;
+    dashed.userData.isContinuousDashPath = true;
+    dashed.userData.zoneStrokeWidth = width;
     return dashed;
+  }
+
+  function stableDashPhase(value, cycle) {
+    var text = String(value || "");
+    var hash = 0;
+    for (var i = 0; i < text.length; i += 1) {
+      hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+    }
+    return cycle > 0 ? (hash % 1000) / 1000 * cycle : 0;
   }
 
   function createVerticalDashedLeader(THREE, x, z, yStart, yEnd) {
@@ -5284,7 +5360,7 @@
         isometricWorld({ x: bounds.x + bounds.w, y: bounds.y + bounds.h }, scale, center),
         isometricWorld({ x: bounds.x, y: bounds.y + bounds.h }, scale, center),
         isometricWorld({ x: bounds.x, y: bounds.y }, scale, center)
-      ].map(function (p) { return new THREE.Vector3(p.x, 0.035, p.z); });
+        ].map(function (p) { return new THREE.Vector3(p.x, 0.022, p.z); });
     }
     var corners = [
       { cx: bounds.x + radius, cy: bounds.y + radius, a0: Math.PI, a1: Math.PI * 1.5 },
@@ -5298,7 +5374,7 @@
         var t = i / segments;
         var angle = corner.a0 + (corner.a1 - corner.a0) * t;
         var p = isometricWorld({ x: corner.cx + Math.cos(angle) * radius, y: corner.cy + Math.sin(angle) * radius }, scale, center);
-        out.push(new THREE.Vector3(p.x, 0.035, p.z));
+        out.push(new THREE.Vector3(p.x, 0.022, p.z));
       }
     });
     if (out.length) out.push(out[0].clone());
@@ -5309,22 +5385,25 @@
     var bounds = isometricBounds(zone);
     var world = isometricWorld({ x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 }, scale, center);
     var presentation = zone && zone.presentation && typeof zone.presentation === "object" ? zone.presentation : {};
-    var color = colorValue(presentation.fill || presentation.color || "#e6edf5", 0xe6edf5);
+    var color = colorValue(presentation.fill || presentation.color || ICRAFT_PALETTE.whiteSurface.top, 0xffffff);
     var plane = new THREE.Mesh(new THREE.PlaneGeometry(bounds.w * scale, bounds.h * scale), new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
-      opacity: numberValue(presentation.fillOpacity || presentation.fill_opacity, 0.065),
+      opacity: numberValue(presentation.fillOpacity || presentation.fill_opacity, 0.035),
       depthWrite: false
     }));
     plane.rotation.x = -Math.PI / 2;
     plane.position.set(world.x, 0.006, world.z);
     plane.userData = { zone: zone.id, label: itemLabel(zone) };
     root.add(plane);
-    var points = roundedZoneBoundaryWorldPoints(THREE, bounds, scale, center, numberValue(presentation.cornerRadius || presentation.corner_radius, 0.54), 5);
+    var points = roundedZoneBoundaryWorldPoints(THREE, bounds, scale, center, numberValue(presentation.cornerRadius || presentation.corner_radius, 0.72), 9);
     var boundaryStyle = normalizeMarkKey(presentation.boundary || presentation.lineStyle || zone.style || "solid");
     var boundaryColor = presentation.boundaryColor || presentation.borderColor || presentation.color || zone.color || "#111827";
-    var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, 0.94, 0.34, 0.22) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.9));
-    boundary.userData = { isZoneBoundary: true, style: boundaryStyle };
+    var dashLength = numberValue(presentation.dashLength || presentation.dash_length, 0.26);
+    var gapLength = numberValue(presentation.gapLength || presentation.gap_length, 0.16);
+    var strokeWidth = numberValue(presentation.strokeWidth || presentation.stroke_width, 0.012);
+    var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, numberValue(presentation.boundaryOpacity || presentation.boundary_opacity, 0.66), dashLength, gapLength, stableDashPhase(zone && zone.id, dashLength + gapLength), strokeWidth) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.82));
+    boundary.userData = Object.assign({}, boundary.userData || {}, { isZoneBoundary: true, style: boundaryStyle, isContinuousDashPath: boundaryStyle === "dashed" || boundaryStyle === "dash", strokeWidth: strokeWidth, dashLength: dashLength, gapLength: gapLength });
     root.add(boundary);
     var labelPoint = presentation.labelPoint || presentation.label_point || {};
     return {
@@ -5637,7 +5716,7 @@
     base.renderOrder = -30;
     base.userData.isBasePlane = true;
     root.add(base);
-    var grid = addThreeGrid(THREE, root, Math.max(10, span * scale + 1.8), Math.max(10, Math.ceil(span)), 0.002, 0xdadbf2);
+    var grid = addThreeGrid(THREE, root, Math.max(10, span * scale + 1.8), Math.max(10, Math.ceil(span)), 0.002, 0xe0e3f6);
     grid.userData.isIsometricGrid = true;
 
     var labels = [];
@@ -7907,6 +7986,9 @@
       var entitySemanticModelCoverageCount = 0;
       var entityBrightnessTotal = 0;
       var entitySaturationTotal = 0;
+      var neutralGrayMaterialCount = 0;
+      var entityMaterialColorCount = 0;
+      var entityChromaTotal = 0;
       entityComponents.forEach(function (component) {
         var data = component && component.group && component.group.userData || {};
         var kind = data.entityBodyKind || "";
@@ -7921,12 +8003,54 @@
         if (data.entityBodyKnown === true && data.isGenericBody !== true) entitySemanticModelCoverageCount += 1;
         entityBrightnessTotal += numberValue(data.brightnessScoreContribution, data.entityBodyKnown === true ? 0.8 : 0.66);
         entitySaturationTotal += numberValue(data.saturationScoreContribution, data.entityBodyKnown === true ? 0.74 : 0.56);
+        if (component && component.group && component.group.traverse) {
+          component.group.traverse(function (child) {
+            var mats = child && child.material ? (Array.isArray(child.material) ? child.material : [child.material]) : [];
+            mats.forEach(function (mat) {
+              if (!mat || !mat.color || !mat.color.getHSL) return;
+              var hsl = {};
+              mat.color.getHSL(hsl);
+              entityMaterialColorCount += 1;
+              entityChromaTotal += hsl.s;
+              if (hsl.s < 0.08 && hsl.l > 0.18 && hsl.l < 0.95) {
+                neutralGrayMaterialCount += 1;
+              }
+            });
+          });
+        }
       });
       var entityBodyShapeVarietyCount = Object.keys(shapeSet).length;
       var entityBrightnessScore = entityComponents.length ? Math.round(entityBrightnessTotal / entityComponents.length * 100) / 100 : 0;
       var entitySaturationScore = entityComponents.length ? Math.round(entitySaturationTotal / entityComponents.length * 100) / 100 : 0;
+      var entityChromaScore = entityMaterialColorCount ? Math.round(entityChromaTotal / entityMaterialColorCount * 100) / 100 : entitySaturationScore;
+      var neutralGrayMaterialRatio = entityMaterialColorCount ? Math.round(neutralGrayMaterialCount / entityMaterialColorCount * 100) / 100 : 0;
       var entitySemanticModelCoverageRatio = entityComponents.length ? Math.round(entitySemanticModelCoverageCount / entityComponents.length * 100) / 100 : 0;
       var pathGroupOverlapCount = relationParallelOverlapCount();
+      var zoneEntityOverflowCount = 0;
+      var zonePaddingMin = Infinity;
+      entities.forEach(function (entity) {
+        var zone = entity && entity.zone ? zoneByID[entity.zone] : null;
+        if (!zone) return;
+        var bounds = isometricBounds(zone);
+        var pos = entity.position && typeof entity.position === "object" ? entity.position : {};
+        var size = entity.size && typeof entity.size === "object" ? entity.size : {};
+        var x = numberValue(pos.x, NaN);
+        var y = numberValue(pos.y, NaN);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        var halfW = Math.max(0.62, numberValue(size.w || size.width, 1.1) * 0.58);
+        var halfH = Math.max(0.62, numberValue(size.d || size.depth || size.h, 1.1) * 0.58);
+        var pads = [
+          x - halfW - bounds.x,
+          bounds.x + bounds.w - (x + halfW),
+          y - halfH - bounds.y,
+          bounds.y + bounds.h - (y + halfH)
+        ];
+        var minPad = Math.min.apply(Math, pads);
+        zonePaddingMin = Math.min(zonePaddingMin, minPad);
+        if (minPad < -0.01) zoneEntityOverflowCount += 1;
+      });
+      if (!Number.isFinite(zonePaddingMin)) zonePaddingMin = 0;
+      var zonePaddingMinPx = Math.max(0, Math.round(zonePaddingMin * scale * 80));
       return {
         sceneComponentTreePresent: true,
         entityComponentCount: entityComponents.length,
@@ -7979,7 +8103,12 @@
         entitySemanticModelCoverageRatio: entitySemanticModelCoverageRatio,
         entityBrightnessScore: entityBrightnessScore,
         entitySaturationScore: entitySaturationScore,
+        entityChromaScore: entityChromaScore,
+        neutralGrayMaterialRatio: neutralGrayMaterialRatio,
         modelKindCounts: modelKindCounts,
+        zoneEntityOverflowCount: zoneEntityOverflowCount,
+        zoneLabelOverflowCount: 0,
+        zonePaddingMinPx: zonePaddingMinPx,
         relationComponentsOwnPathCount: relationComponentsOwnPathCount,
         relationComponentsOwnArrowCount: relationComponentsOwnArrowCount,
         relationComponentsOwnHitCount: relationComponentsOwnHitCount,

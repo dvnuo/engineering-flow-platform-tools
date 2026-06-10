@@ -1,5 +1,7 @@
 package routing
 
+import "strings"
+
 func BuildRoutePlan(input Input, opts Options) RoutePlan {
 	if opts.Engine == "" {
 		opts = DefaultOptions()
@@ -163,10 +165,10 @@ func shouldUseZoneBoundaryRoute(link LinkModel) bool {
 		return false
 	}
 	switch link.PathGroup {
-	case "gateway", "registry", "data", "cache", "storage", "health", "observability":
+	case "gateway", "service", "main", "registry", "data", "cache", "storage", "health", "observability":
 		return true
 	default:
-		return false
+		return strings.TrimSpace(link.PathGroup) != ""
 	}
 }
 

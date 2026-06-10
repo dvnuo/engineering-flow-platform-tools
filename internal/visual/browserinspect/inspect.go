@@ -186,6 +186,11 @@ type DOMSummary struct {
 	EntitySemanticModelRatio   float64        `json:"entity_semantic_model_coverage_ratio"`
 	EntityBrightnessScore      float64        `json:"entity_brightness_score"`
 	EntitySaturationScore      float64        `json:"entity_saturation_score"`
+	EntityChromaScore          float64        `json:"entity_chroma_score"`
+	NeutralGrayMaterialRatio   float64        `json:"neutral_gray_material_ratio"`
+	ZoneEntityOverflowCount    int            `json:"zone_entity_overflow_count"`
+	ZoneLabelOverflowCount     int            `json:"zone_label_overflow_count"`
+	ZonePaddingMinPx           int            `json:"zone_padding_min_px"`
 	ModelKindCounts            map[string]int `json:"model_kind_counts,omitempty"`
 	RelationOwnsPath           int            `json:"relation_components_own_path_count"`
 	RelationOwnsArrow          int            `json:"relation_components_own_arrow_count"`
@@ -368,6 +373,11 @@ type VisualSummary struct {
 	EntitySemanticModelCoverageRatio float64        `json:"entity_semantic_model_coverage_ratio"`
 	EntityBrightnessScore            float64        `json:"entity_brightness_score"`
 	EntitySaturationScore            float64        `json:"entity_saturation_score"`
+	EntityChromaScore                float64        `json:"entity_chroma_score"`
+	NeutralGrayMaterialRatio         float64        `json:"neutral_gray_material_ratio"`
+	ZoneEntityOverflowCount          int            `json:"zone_entity_overflow_count"`
+	ZoneLabelOverflowCount           int            `json:"zone_label_overflow_count"`
+	ZonePaddingMinPx                 int            `json:"zone_padding_min_px"`
 	ModelKindCounts                  map[string]int `json:"model_kind_counts,omitempty"`
 	RelationComponentsOwnPathCount   int            `json:"relation_components_own_path_count"`
 	RelationComponentsOwnArrowCount  int            `json:"relation_components_own_arrow_count"`
@@ -596,6 +606,11 @@ func Inspect(opts Options) (Result, error) {
 		EntitySemanticModelRatio:   nodeResult.Data.Summary.EntitySemanticModelCoverageRatio,
 		EntityBrightnessScore:      nodeResult.Data.Summary.EntityBrightnessScore,
 		EntitySaturationScore:      nodeResult.Data.Summary.EntitySaturationScore,
+		EntityChromaScore:          nodeResult.Data.Summary.EntityChromaScore,
+		NeutralGrayMaterialRatio:   nodeResult.Data.Summary.NeutralGrayMaterialRatio,
+		ZoneEntityOverflowCount:    nodeResult.Data.Summary.ZoneEntityOverflowCount,
+		ZoneLabelOverflowCount:     nodeResult.Data.Summary.ZoneLabelOverflowCount,
+		ZonePaddingMinPx:           nodeResult.Data.Summary.ZonePaddingMinPx,
 		ModelKindCounts:            nodeResult.Data.Summary.ModelKindCounts,
 		RelationOwnsPath:           nodeResult.Data.Summary.RelationComponentsOwnPathCount,
 		RelationOwnsArrow:          nodeResult.Data.Summary.RelationComponentsOwnArrowCount,
@@ -817,6 +832,11 @@ type browserDOMSummary struct {
 	EntitySemanticModelCoverageRatio float64        `json:"entitySemanticModelCoverageRatio"`
 	EntityBrightnessScore            float64        `json:"entityBrightnessScore"`
 	EntitySaturationScore            float64        `json:"entitySaturationScore"`
+	EntityChromaScore                float64        `json:"entityChromaScore"`
+	NeutralGrayMaterialRatio         float64        `json:"neutralGrayMaterialRatio"`
+	ZoneEntityOverflowCount          int            `json:"zoneEntityOverflowCount"`
+	ZoneLabelOverflowCount           int            `json:"zoneLabelOverflowCount"`
+	ZonePaddingMinPx                 int            `json:"zonePaddingMinPx"`
 	ModelKindCounts                  map[string]int `json:"modelKindCounts"`
 	RelationComponentsOwnPathCount   int            `json:"relationComponentsOwnPathCount"`
 	RelationComponentsOwnArrowCount  int            `json:"relationComponentsOwnArrowCount"`
@@ -1295,6 +1315,11 @@ func buildVisualSummary(summary DOMSummary, screenshot string, nodeResult browse
 		EntitySemanticModelCoverageRatio: summary.EntitySemanticModelRatio,
 		EntityBrightnessScore:            summary.EntityBrightnessScore,
 		EntitySaturationScore:            summary.EntitySaturationScore,
+		EntityChromaScore:                summary.EntityChromaScore,
+		NeutralGrayMaterialRatio:         summary.NeutralGrayMaterialRatio,
+		ZoneEntityOverflowCount:          summary.ZoneEntityOverflowCount,
+		ZoneLabelOverflowCount:           summary.ZoneLabelOverflowCount,
+		ZonePaddingMinPx:                 summary.ZonePaddingMinPx,
 		ModelKindCounts:                  summary.ModelKindCounts,
 		RelationComponentsOwnPathCount:   summary.RelationOwnsPath,
 		RelationComponentsOwnArrowCount:  summary.RelationOwnsArrow,
@@ -1511,6 +1536,21 @@ func warningsForChecks(checks Checks, summary DOMSummary) []preview.Warning {
 	}
 	if summary.SourceEdgeCount >= 18 && summary.EntitySaturationScore > 0 && summary.EntitySaturationScore < 0.68 {
 		add("browser_entity_saturation_low", "warning", fmt.Sprintf("Entity palette saturation is low: %.2f.", summary.EntitySaturationScore), "Use saturated but controlled palette v3 colors for semantic body categories.", "apply_entity_palette_v3")
+	}
+	if summary.SourceEdgeCount >= 18 && summary.EntityChromaScore > 0 && summary.EntityChromaScore < 0.42 {
+		add("browser_entity_chroma_low", "warning", fmt.Sprintf("Entity material chroma is low: %.2f.", summary.EntityChromaScore), "Replace pure gray body/base materials with blue-tinted iCraft neutral surfaces.", "replace_gray_entity_neutrals")
+	}
+	if summary.SourceEdgeCount >= 18 && summary.NeutralGrayMaterialRatio > 0.15 {
+		add("browser_neutral_gray_material_ratio_high", "warning", fmt.Sprintf("Neutral gray material ratio is high: %.2f.", summary.NeutralGrayMaterialRatio), "Use blue-white neutral palette for MySQL, storage, Nacos, admin, and observability bases instead of un-hued gray.", "reduce_neutral_gray_materials")
+	}
+	if summary.SourceEdgeCount >= 18 && summary.ZoneEntityOverflowCount > 0 {
+		add("browser_zone_entity_overflow", "warning", fmt.Sprintf("Some zones do not contain their entity footprints: %d.", summary.ZoneEntityOverflowCount), "Fit zone bounds to child entity footprints before route planning.", "fit_zone_bounds_to_entities")
+	}
+	if summary.SourceEdgeCount >= 18 && summary.ZoneLabelOverflowCount > 0 {
+		add("browser_zone_label_overflow", "warning", fmt.Sprintf("Some zone labels overflow their fitted zone bounds: %d.", summary.ZoneLabelOverflowCount), "Reserve label padding when fitting zone bounds.", "fit_zone_bounds_to_labels")
+	}
+	if summary.SourceEdgeCount >= 18 && summary.ZonePaddingMinPx > 0 && summary.ZonePaddingMinPx < 12 {
+		add("browser_zone_padding_low", "warning", fmt.Sprintf("Minimum zone/entity padding is too small: %dpx.", summary.ZonePaddingMinPx), "Increase zone padding for multi-entity service, storage, registry, cache, and observability areas.", "increase_zone_fit_padding")
 	}
 	if totalDeclaredLinks > 0 && summary.PathArrowCapCount == 0 {
 		add("browser_path_arrow_cap_missing", "warning", "GroundPathGeometryBuilder did not report terminal arrow caps.", "Build arrowheads as route terminal caps owned by RelationComponent.", "build_path_arrow_caps")

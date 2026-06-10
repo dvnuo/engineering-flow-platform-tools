@@ -44,16 +44,16 @@ architecture-beta
 
   user:B -->|User| T:pc
   pc:R -->|API| L:nginx
-  cdn:R -->|Static resources| L:nginx
+  cdn:R -->|Static| L:nginx
   nginx:R -->|API| L:apiGateway
   apiGateway:R -->|Routing| L:orderService
-  authService:T -->|registering service| B:nacos1
-  inventoryService:T -->|registering service| B:nacos3
+  authService:T -->|register service| B:nacos1
+  inventoryService:T -->|register service| B:nacos3
   authService:B -->|Data Cache| T:redis1
   inventoryService:B -->|Data Storage| T:mysqlMaster
-  paymentService:B -->|Distributed file service| T:oss
-  reportService:B -->|Distributed file service| T:blockStorage
-  mysqlMaster:R -->|Data Synchronization| L:mysqlSlave
+  paymentService:B -->|File Service| T:oss
+  reportService:B -->|File Service| T:blockStorage
+  mysqlMaster:R -->|Sync| L:mysqlSlave
   nacos1:R -->|registering| L:nacos2
   nacos2:B -->|registering| T:nacos3
   authService:B -->|Log collection| T:logstash

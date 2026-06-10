@@ -389,11 +389,11 @@ function scenarioExpression() {
     if (!api) return { ok: false, reason: "isometric_api_missing" };
     const applyCamera = (camera) => api.setCamera && api.setCamera(camera);
     if (input.scenario === "angle-left") {
-      applyCamera({ theta: -0.78, phi: 0.98, zoom: input.cameraZoom || 0.9 });
+      applyCamera({ theta: -0.78, phi: 0.98, zoom: input.cameraZoom || 1.04 });
     } else if (input.scenario === "angle-right") {
-      applyCamera({ theta: 1.28, phi: 0.94, zoom: input.cameraZoom || 0.9 });
+      applyCamera({ theta: 1.28, phi: 0.94, zoom: input.cameraZoom || 1.04 });
     } else if (input.scenario === "top") {
-      applyCamera({ theta: 0.78, phi: 0.36, zoom: input.cameraZoom || 0.94 });
+      applyCamera({ theta: 0.78, phi: 0.36, zoom: input.cameraZoom || 1.08 });
     } else if (input.scenario === "drag") {
       if (input.cameraTheta || input.cameraPhi || input.cameraZoom) {
         applyCamera({ theta: input.cameraTheta || undefined, phi: input.cameraPhi || undefined, zoom: input.cameraZoom || undefined });

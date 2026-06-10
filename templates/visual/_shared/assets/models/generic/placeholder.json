@@ -1,0 +1,5 @@
+{
+  "schema": "efp.visual.local_model_placeholder.v1",
+  "id": "generic.placeholder",
+  "description": "Placeholder model record. Current renderer uses geometry primitives and icon billboards; GLB model loading is reserved for a later offline asset pack."
+}

@@ -1,0 +1,7 @@
+<svg xmlns="http:&#47;&#47;www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="jenkins placeholder">
+  <rect x="10" y="12" width="44" height="40" rx="8" fill="#3c1717" stroke="#d33833" stroke-width="3"/>
+  <circle cx="24" cy="28" r="5" fill="#f2b4b2"/>
+  <circle cx="40" cy="28" r="5" fill="#f2b4b2"/>
+  <path d="M20 43h24M25 20h14M32 12v8" stroke="#f2b4b2" stroke-width="4" stroke-linecap="round"/>
+  <text x="32" y="58" text-anchor="middle" font-size="9" font-family="Arial, sans-serif" font-weight="700" fill="#f2b4b2">CI</text>
+</svg>

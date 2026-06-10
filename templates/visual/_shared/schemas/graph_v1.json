@@ -1,5 +1,224 @@
 {
   "$schema": "efp.visual.local.schema",
+  "json_schema": {
+    "$schema": "efp.visual.local.json_schema.draft_2020_12",
+    "additionalProperties": true,
+    "properties": {
+      "edges": {
+        "items": {
+          "properties": {
+            "directed": {
+              "type": "boolean"
+            },
+            "importance": {
+              "description": "0..1 priority used when the renderer caps the initial edge count.",
+              "type": "number"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "presentation": {
+              "additionalProperties": true,
+              "properties": {
+                "arrow": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "string"
+                },
+                "curve": {
+                  "type": "string"
+                },
+                "flow": {
+                  "type": "boolean"
+                },
+                "lineStyle": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "visibility": {
+              "description": "Use detail for noisy class/method/import edges that should stay hidden until search or focus.",
+              "enum": [
+                "overview",
+                "detail",
+                "hidden"
+              ],
+              "type": "string"
+            }
+          }
+        }
+      },
+      "groups": {
+        "description": "Optional logical containers for large graphs. Nodes can reference a group by parent_id, group_id, group, module, or package. Collapsed groups form the initial overview.",
+        "items": {
+          "additionalProperties": true,
+          "properties": {
+            "collapsed": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string"
+            },
+            "importance": {
+              "type": "number"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object"
+            },
+            "metrics": {
+              "type": "object"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "initial_view": {
+        "additionalProperties": true,
+        "description": "Optional first-view guidance for agents. Use overview and collapsed groups for large inputs.",
+        "properties": {
+          "collapse_groups": {
+            "type": "boolean"
+          },
+          "focus_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "hide_edge_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "max_edges": {
+            "type": "number"
+          },
+          "max_nodes": {
+            "type": "number"
+          },
+          "mode": {
+            "enum": [
+              "overview",
+              "detail",
+              "focus"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "nodes": {
+        "items": {
+          "properties": {
+            "group_id": {
+              "description": "Alias for parent_id.",
+              "type": "string"
+            },
+            "importance": {
+              "description": "0..1 priority used for label LOD and large-graph sampling.",
+              "type": "number"
+            },
+            "module": {
+              "description": "Module grouping hint used when parent_id/group_id is absent.",
+              "type": "string"
+            },
+            "package": {
+              "description": "Package grouping hint used when parent_id/group_id is absent.",
+              "type": "string"
+            },
+            "parent_id": {
+              "description": "Logical group id for collapsed overview rendering.",
+              "type": "string"
+            },
+            "platform": {
+              "type": "string"
+            },
+            "presentation": {
+              "additionalProperties": true,
+              "properties": {
+                "color": {
+                  "type": "string"
+                },
+                "depth": {
+                  "type": "number"
+                },
+                "icon": {
+                  "type": "string"
+                },
+                "lane": {
+                  "type": "string"
+                },
+                "mesh": {
+                  "type": "string"
+                },
+                "shape": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "provider": {
+              "type": "string"
+            },
+            "service": {
+              "type": "string"
+            },
+            "visible": {
+              "description": "Set false for low-value detail nodes in the initial overview.",
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "renderHints": {
+        "additionalProperties": true,
+        "properties": {
+          "colorBy": {
+            "type": "string"
+          },
+          "iconMode": {
+            "type": "string"
+          },
+          "palette": {
+            "type": "string"
+          },
+          "showLegend": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "view": {
+        "additionalProperties": true,
+        "properties": {
+          "colorBy": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "required": [
+      "nodes"
+    ],
+    "type": "object"
+  },
   "kind": "graph_v1",
   "offline": true,
   "schema": "efp.visual.shared_input_schema.graph_v1",

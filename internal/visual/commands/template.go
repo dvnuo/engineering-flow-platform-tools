@@ -11,8 +11,10 @@ import (
 	"strings"
 
 	"engineering-flow-platform-tools/internal/output"
+	"engineering-flow-platform-tools/internal/visual/authoring"
 	visualconfig "engineering-flow-platform-tools/internal/visual/config"
 	"engineering-flow-platform-tools/internal/visual/manifest"
+	"engineering-flow-platform-tools/internal/visual/mermaid"
 	"engineering-flow-platform-tools/internal/visual/render"
 	visualschema "engineering-flow-platform-tools/internal/visual/schema"
 	"github.com/spf13/cobra"
@@ -23,7 +25,7 @@ func templateCmd(o *Opts) *cobra.Command {
 		Use:   "template",
 		Short: "Inspect local visual templates",
 	}
-	c.AddCommand(templateCategoriesCmd(o), templateListCmd(o), templateGetCmd(o), templateSchemaCmd(o), templateDoctorCmd(o))
+	c.AddCommand(templateCategoriesCmd(o), templateListCmd(o), templateGetCmd(o), templateSchemaCmd(o), templateGuideCmd(o), templateDoctorCmd(o))
 	return c
 }
 
@@ -123,25 +125,30 @@ func templateGetCmd(o *Opts) *cobra.Command {
 				return print(cmd, o, failureFromError(err, "template_manifest_invalid"))
 			}
 			return print(cmd, o, output.Success("", map[string]any{
-				"template_dir":      templateDir,
-				"requested_id":      requestedID,
-				"canonical_id":      tpl.ID,
-				"registry":          entry,
-				"template":          tpl,
-				"id":                tpl.ID,
-				"title":             tpl.Title,
-				"category":          tpl.Category,
-				"description":       tpl.Description,
-				"version":           tpl.Version,
-				"renderer":          tpl.Renderer,
-				"layout":            tpl.Layout,
-				"input_schema_kind": tpl.InputSchemaKind,
-				"tags":              tpl.Tags,
-				"interactions":      tpl.Interactions,
-				"limits":            tpl.Limits,
-				"schema_file":       schemaFile,
-				"example_file":      templateExampleRel(entry),
-				"aliases":           entry.Aliases,
+				"template_dir":            templateDir,
+				"requested_id":            requestedID,
+				"canonical_id":            tpl.ID,
+				"registry":                entry,
+				"template":                tpl,
+				"id":                      tpl.ID,
+				"title":                   tpl.Title,
+				"category":                tpl.Category,
+				"description":             tpl.Description,
+				"version":                 tpl.Version,
+				"renderer":                tpl.Renderer,
+				"layout":                  tpl.Layout,
+				"visual_design":           tpl.VisualDesign,
+				"input_schema_kind":       tpl.InputSchemaKind,
+				"tags":                    tpl.Tags,
+				"interactions":            tpl.Interactions,
+				"limits":                  tpl.Limits,
+				"schema_file":             schemaFile,
+				"example_file":            templateExampleRel(entry),
+				"aliases":                 entry.Aliases,
+				"agent_guide_available":   authoring.GuideAvailable(templateDir, entry),
+				"agent_guide_path":        authoring.GuideRelPath(entry),
+				"quality_rules_available": authoring.QualityRulesAvailable(templateDir, entry),
+				"quality_rules_path":      authoring.QualityRulesRelPath(entry),
 			}))
 		},
 	}
@@ -150,7 +157,7 @@ func templateGetCmd(o *Opts) *cobra.Command {
 func templateSchemaCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{
 		Use:   "schema <template_id>",
-		Short: "Show one visual template input JSON schema and example",
+		Short: "Show one visual template Mermaid input contract and example",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			templateDir, err := visualconfig.ResolveTemplateDir(o.TemplateDir, o.Config)
@@ -176,7 +183,11 @@ func templateSchemaCmd(o *Opts) *cobra.Command {
 			if err != nil {
 				return print(cmd, o, failureFromError(err, "template_manifest_invalid"))
 			}
-			return print(cmd, o, output.Success("", map[string]any{
+			guide, guideErr := authoring.LoadGuide(templateDir, entry, false)
+			if guideErr != nil {
+				return print(cmd, o, failureFromError(guideErr, "template_manifest_invalid"))
+			}
+			data := map[string]any{
 				"template": map[string]any{
 					"requested_id":      requestedID,
 					"canonical_id":      tpl.ID,
@@ -187,15 +198,73 @@ func templateSchemaCmd(o *Opts) *cobra.Command {
 					"description":       tpl.Description,
 					"renderer":          tpl.Renderer.Contract,
 					"layout":            tpl.Layout,
+					"visual_design":     tpl.VisualDesign,
 					"input_schema_kind": tpl.InputSchemaKind,
 					"tags":              tpl.Tags,
 					"aliases":           entry.Aliases,
 				},
-				"schema_file":  schemaFile,
-				"json_schema":  doc.JSONSchema,
-				"example_file": templateExampleRel(entry),
-				"example":      doc.Example,
-			}))
+				"schema_file":           schemaFile,
+				"json_schema":           doc.JSONSchema,
+				"example_file":          templateExampleRel(entry),
+				"example":               doc.Example,
+				"agent_guide_available": authoring.GuideAvailable(templateDir, entry),
+				"agent_guide_path":      authoring.GuideRelPath(entry),
+				"agent_guide_summary":   guide.Summary,
+			}
+			data["input_format"] = "mermaid"
+			data["mermaid_syntax"] = mermaidSyntaxName(tpl.ID)
+			if raw, err := os.ReadFile(templateExamplePath(templateDir, entry)); err == nil {
+				data["mermaid_example"] = string(raw)
+			}
+			return print(cmd, o, output.Success("", data))
+		},
+	}
+}
+
+func templateGuideCmd(o *Opts) *cobra.Command {
+	return &cobra.Command{
+		Use:   "guide <template-id>",
+		Short: "Show one visual template agent authoring guide",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			templateDir, err := visualconfig.ResolveTemplateDir(o.TemplateDir, o.Config)
+			if err != nil {
+				return print(cmd, o, failureFromError(err, "template_dir_missing"))
+			}
+			registry, err := manifest.LoadRegistry(templateDir)
+			if err != nil {
+				return print(cmd, o, failureFromError(err, "template_registry_missing"))
+			}
+			entry, requestedID, ok := registry.Resolve(args[0])
+			if !ok {
+				return print(cmd, o, output.Failure("template_not_found", "Template "+args[0]+" was not found.", "Run visual template list --template-dir "+templateDir+" --json.", 404))
+			}
+			tpl, err := manifest.LoadTemplateManifest(templateDir, entry)
+			if err != nil {
+				return print(cmd, o, failureFromError(err, "template_manifest_invalid"))
+			}
+			if err := manifest.ValidateTemplateManifest(templateDir, entry, &tpl); err != nil {
+				return print(cmd, o, failureFromError(err, "template_manifest_invalid"))
+			}
+			guide, err := authoring.LoadGuide(templateDir, entry, true)
+			if err != nil {
+				return print(cmd, o, failureFromError(err, "template_manifest_invalid"))
+			}
+			data := map[string]any{
+				"template_id":            tpl.ID,
+				"requested_id":           requestedID,
+				"canonical_id":           tpl.ID,
+				"guide_path":             authoring.GuideRelPath(entry),
+				"agent_guide_available":  guide.Available,
+				"raw_markdown":           guide.Raw,
+				"guide":                  guide.Sections,
+				"guide_summary":          guide.Summary,
+				"missing_guide_sections": authoring.MissingGuideSections(guide.Sections),
+			}
+			if !guide.Available {
+				data["warning"] = "Template agent guide is missing; fall back to visual template schema and common visual quality guidance."
+			}
+			return print(cmd, o, output.Success("", data))
 		},
 	}
 }
@@ -271,13 +340,17 @@ func templateDoctorCmd(o *Opts) *cobra.Command {
 					return print(cmd, o, doctorFailure(visualCommandError{
 						code:       "template_doctor_failed",
 						message:    "visual template example was not found: " + exampleRel,
-						hint:       "Add examples/basic.input.json for " + entry.ID + ".",
+						hint:       "Add Mermaid examples/basic.mmd for " + entry.ID + ".",
 						status:     400,
 						templateID: entry.ID,
 						file:       exampleRel,
 					}, entry.ID, exampleRel))
 				}
-				if _, err := visualschema.ValidateInput(tpl.InputSchemaKind, raw, tpl.Limits); err != nil {
+				compiled, err := mermaid.CompileIfNeeded(tpl.InputSchemaKind, raw)
+				if err != nil {
+					return print(cmd, o, doctorFailure(err, entry.ID, exampleRel))
+				}
+				if _, err := visualschema.ValidateInput(tpl.InputSchemaKind, compiled, tpl.Limits); err != nil {
 					return print(cmd, o, doctorFailure(err, entry.ID, exampleRel))
 				}
 				checkedExamples++
@@ -299,7 +372,7 @@ func templateDoctorCmd(o *Opts) *cobra.Command {
 				return print(cmd, o, doctorFailure(visualCommandError{
 					code:    "template_doctor_failed",
 					message: "visual template examples are not sufficiently unique.",
-					hint:    "Provide semantic examples; at least 190 examples/basic.input.json files must have unique content hashes.",
+					hint:    "Provide semantic Mermaid examples; public examples/basic.mmd files must have unique content hashes.",
 					status:  400,
 				}, "", templateDir))
 			}
@@ -392,11 +465,11 @@ func normalizedTemplateListFilter(category, query, renderer, schemaKind string) 
 
 func checkTemplateRequiredFiles(templateDir string, entry manifest.RegistryEntry) error {
 	templateBase := filepath.Dir(filepath.Join(templateDir, filepath.Clean(entry.Path)))
-	for _, rel := range []string{"template.yaml", "schema.input.json", "style.css", filepath.Join("examples", "basic.input.json")} {
+	for _, rel := range []string{"template.yaml", "schema.input.json", "style.css", filepath.Join("examples", "basic.mmd")} {
 		path := filepath.Join(templateBase, rel)
 		info, err := os.Stat(path)
 		if err != nil || info.IsDir() || info.Size() == 0 {
-			return outputFileError("template_manifest_invalid", "visual template required file is missing or empty: "+filepath.ToSlash(filepath.Join(entry.ID, rel)), "Add non-empty template.yaml, schema.input.json, style.css, and examples/basic.input.json files.")
+			return outputFileError("template_manifest_invalid", "visual template required file is missing or empty: "+filepath.ToSlash(filepath.Join(entry.ID, rel)), "Add non-empty template.yaml, schema.input.json, style.css, and Mermaid examples/basic.mmd files.")
 		}
 	}
 	return nil
@@ -497,11 +570,15 @@ func checkRenderedOutputFiles(outDir string) error {
 }
 
 func templateExamplePath(templateDir string, entry manifest.RegistryEntry) string {
-	return filepath.Join(manifest.TemplateBaseDir(templateDir, entry), "examples", "basic.input.json")
+	return filepath.Join(manifest.TemplateBaseDir(templateDir, entry), "examples", "basic.mmd")
 }
 
 func templateExampleRel(entry manifest.RegistryEntry) string {
-	return filepath.ToSlash(filepath.Join(filepath.Dir(filepath.Clean(entry.Path)), "examples", "basic.input.json"))
+	return filepath.ToSlash(filepath.Join(filepath.Dir(filepath.Clean(entry.Path)), "examples", "basic.mmd"))
+}
+
+func mermaidSyntaxName(templateID string) string {
+	return strings.TrimPrefix(templateID, "mermaid.")
 }
 
 func safeTempName(value string) string {

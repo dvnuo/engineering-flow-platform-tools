@@ -1,0 +1,15 @@
+{
+  "schema": "efp.visual.agent_guide_schema.v1",
+  "type": "object",
+  "required_sections": [
+    "When to use this template",
+    "Semantic model",
+    "Required construction rules",
+    "Recommended fields",
+    "Visual encoding rules",
+    "Common mistakes to avoid",
+    "Quality checklist before render",
+    "Minimal good example"
+  ],
+  "format": "markdown"
+}

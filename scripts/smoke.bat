@@ -37,6 +37,14 @@ go run ./cmd/inspect-image schema inspect --json >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/visual schema render --json >nul
 if errorlevel 1 exit /b 1
+go run ./cmd/visual schema inspect-input --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/visual schema inspect-plan --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/visual schema inspect-render --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/visual schema inspect-browser --json >nul
+if errorlevel 1 exit /b 1
 
 go run ./cmd/inspect-image help llm >nul
 if errorlevel 1 exit /b 1
@@ -62,13 +70,21 @@ go run ./cmd/visual template categories --template-dir ./templates/visual --json
 if errorlevel 1 exit /b 1
 go run ./cmd/visual template list --template-dir ./templates/visual --json >nul
 if errorlevel 1 exit /b 1
-go run ./cmd/visual template list --template-dir ./templates/visual --category agent --json >nul
+go run ./cmd/visual template list --template-dir ./templates/visual --category mermaid --json >nul
 if errorlevel 1 exit /b 1
-go run ./cmd/visual template schema agent.run_trace --template-dir ./templates/visual --json >nul
+go run ./cmd/visual template schema mermaid.sequence --template-dir ./templates/visual --json >nul
 if errorlevel 1 exit /b 1
-go run ./cmd/visual template schema codebase.module_dependency_graph --template-dir ./templates/visual --json >nul
+go run ./cmd/visual template guide mermaid.sequence --template-dir ./templates/visual --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/visual template schema mermaid.flowchart --template-dir ./templates/visual --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/visual inspect-input --template mermaid.sequence --template-dir ./templates/visual --input ./templates/visual/mermaid.sequence/examples/basic.mmd --json >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/visual template doctor --template-dir ./templates/visual --json >nul
+if errorlevel 1 exit /b 1
+
+set "PLAN_OUT=%TEMP%\visual-plan-smoke-%RANDOM%-%RANDOM%"
+go run ./cmd/visual inspect-plan --template mermaid.sequence --template-dir ./templates/visual --input ./templates/visual/mermaid.sequence/examples/basic.mmd --out "%PLAN_OUT%" --json >nul
 if errorlevel 1 exit /b 1
 
 set "TMP_ROOT=%TEMP%\visual-%RANDOM%-%RANDOM%"
@@ -76,27 +92,36 @@ mkdir "%TMP_ROOT%"
 if errorlevel 1 exit /b 1
 
 for %%T in (
-  foundation.graph_3d
-  agent.run_trace
-  codebase.module_dependency_graph
-  runtime.event_reconcile_loop
-  debug.incident_timeline
-  project.requirements_to_code_trace
-  knowledge.evidence_board
-  planning.plan_dag
-  business.kpi_control_room
-  education.auth_flow_animation
+  mermaid.sequence
+  mermaid.flowchart
+  mermaid.timeline
+  mermaid.sankey
+  mermaid.mindmap
+  mermaid.pie
+  mermaid.wardley
 ) do (
   set "TEMPLATE=%%T"
   set "OUT_NAME=!TEMPLATE:.=-!"
   set "OUT_DIR=%TMP_ROOT%\!OUT_NAME!"
-  set "INPUT_PATH=templates\visual\!TEMPLATE!\examples\basic.input.json"
-  go run ./cmd/visual render --template !TEMPLATE! --template-dir ./templates/visual --input "!INPUT_PATH!" --out "!OUT_DIR!" --title "Smoke !TEMPLATE!" --json >nul
+  go run ./cmd/visual render --template !TEMPLATE! --template-dir ./templates/visual --input "./templates/visual/!TEMPLATE!/examples/basic.mmd" --out "!OUT_DIR!" --title "Smoke !TEMPLATE!" --json >nul
   if errorlevel 1 exit /b 1
   if not exist "!OUT_DIR!\index.html" (
     echo visual smoke did not create index.html for !TEMPLATE! 1>&2
     exit /b 1
   )
+  go run ./cmd/visual inspect-render --template-dir ./templates/visual --out "!OUT_DIR!" --json >nul
+  if errorlevel 1 exit /b 1
+)
+
+set "ARCH_OUT=%TMP_ROOT%\mermaid-architecture"
+go run ./cmd/visual render --template mermaid.architecture --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --out "%ARCH_OUT%" --json >nul
+if errorlevel 1 exit /b 1
+
+if not "%EFP_SKIP_BROWSER_SMOKE%"=="1" (
+  go run ./cmd/visual inspect-browser --template-dir ./templates/visual --out "%ARCH_OUT%" --screenshot "%ARCH_OUT%\screenshot.png" --timeout 90 --json >nul
+  if errorlevel 1 exit /b 1
+  go run ./cmd/visual inspect-render --template-dir ./templates/visual --out "%ARCH_OUT%" --screenshot "%ARCH_OUT%\screenshot.png" --json >nul
+  if errorlevel 1 exit /b 1
 )
 
 exit /b 0

@@ -60,20 +60,27 @@ func NewRoot() *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "Plan the operation without writing files")
 	cmd.PersistentFlags().BoolVar(&o.OfflineStrict, "offline-strict", true, "Reject remote URLs, network APIs, and absolute asset references")
 
-	cmd.AddCommand(renderCmd(o), validateCmd(o), templateCmd(o), inspectOutputCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	cmd.AddCommand(renderCmd(o), routePlanCmd(o), inspectInputCmd(o), inspectPlanCmd(o), inspectRenderCmd(o), inspectBrowserCmd(o), validateCmd(o), templateCmd(o), inspectOutputCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
 	clihelp.ApplyCatalogHelp(cmd, clihelp.ProductHelp{
 		Product: "visual",
 		Binary:  "visual",
 		Short:   "Generate complete offline static visualization artifacts from local templates",
 		Long: strings.TrimSpace(`visual is a terminal-invoked CLI for agents and scripts that need deterministic offline HTML/SVG artifacts.
 
-It reads local templates from ~/.efp/template/visual by default, with checkout and release fallbacks, validates JSON input, copies local assets, and writes index.html, manifest.json, manifest.js, data.js, and assets/** to an output directory. It does not start a server, call Portal, call MCP, use Node/npm, download assets, or generate arbitrary JavaScript.`),
+It reads local templates from ~/.efp/template/visual by default, with checkout and release fallbacks, accepts Mermaid input, copies local assets, and writes index.html, manifest.json, manifest.js, data.js, and assets/** to an output directory. It does not start a server, call Portal, call MCP, use Node/npm, download assets, or generate arbitrary JavaScript.`),
 		Examples: []string{
 			`visual commands --json`,
 			`visual schema render --json`,
 			`visual template list --template-dir ./templates/visual --json`,
-			`visual template schema agent.run_trace --template-dir ./templates/visual --json`,
-			`visual render --template agent.run_trace --template-dir ./templates/visual --input ./templates/visual/agent.run_trace/examples/basic.input.json --out ./out/run-trace --title "Agent Run Trace" --json`,
+			`visual template list --template-dir ./templates/visual --category mermaid --json`,
+			`visual template schema mermaid.sequence --template-dir ./templates/visual --json`,
+			`visual template guide mermaid.sequence --template-dir ./templates/visual --json`,
+			`visual inspect-input --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --json`,
+			`visual inspect-plan --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --out ./out/mermaid-architecture --json`,
+			`visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json`,
+			`visual inspect-browser --template-dir ./templates/visual --out ./out/isometric-asset-gallery --json`,
+			`visual route-plan --input ./templates/visual/mermaid.architecture/examples/microservice-golden.mmd --out ./out/routeplan.json --json`,
+			`visual render --template-dir ./templates/visual --input ./templates/visual/mermaid.architecture/examples/basic.mmd --out ./out/mermaid-architecture --json`,
 		},
 		Instructions: "copy cmd/visual/visual-cli.instructions.md to ~/.copilot/instructions/visual-cli.instructions.md.",
 	})

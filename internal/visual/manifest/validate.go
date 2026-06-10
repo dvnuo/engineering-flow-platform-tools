@@ -34,10 +34,10 @@ func ValidateTemplateManifest(templateDir string, entry RegistryEntry, m *Templa
 		return metadata.NewError("template_manifest_invalid", "visual template input_schema must be schema.input.json.", "Set input_schema: schema.input.json.", 400)
 	}
 	if !metadata.SupportedRenderers[m.Renderer.Contract] {
-		return metadata.NewError("unsupported_renderer", "visual template renderer is not supported: "+m.Renderer.Contract, "Use offline.graph.v1, offline.timeline.v1, offline.evidence.v1, or offline.matrix.v1.", 400)
+		return metadata.NewError("unsupported_renderer", "visual template renderer is not supported: "+m.Renderer.Contract, "Use a supported offline visual renderer contract.", 400)
 	}
 	if !SupportedInputSchemaKinds[normalizeInputSchemaKind(m.InputSchemaKind)] {
-		return metadata.NewError("template_manifest_invalid", "visual template input_schema_kind is not supported: "+m.InputSchemaKind, "Use graph_v1, graph_events_v1, timeline_v1, evidence_v1, or matrix_v1.", 400)
+		return metadata.NewError("template_manifest_invalid", "visual template input_schema_kind is not supported: "+m.InputSchemaKind, "Use a supported semantic visual input schema kind.", 400)
 	}
 	m.InputSchemaKind = normalizeInputSchemaKind(m.InputSchemaKind)
 	if strings.TrimSpace(entry.InputSchemaKind) != "" && normalizeInputSchemaKind(entry.InputSchemaKind) != m.InputSchemaKind {
@@ -53,6 +53,10 @@ func ValidateTemplateManifest(templateDir string, entry RegistryEntry, m *Templa
 	if strings.TrimSpace(entry.LayoutPreset) != "" && normalizeManifestValue(entry.LayoutPreset) != m.Layout.Preset {
 		return metadata.NewError("template_manifest_invalid", "visual template layout.preset does not match registry entry.", "Set registry layout_preset to "+m.Layout.Preset+".", 400)
 	}
+	if err := validateEffectsSpec(&m.Effects); err != nil {
+		return err
+	}
+	normalizeVisualDesign(&m.VisualDesign)
 	if err := validateInputSchemaFile(templateDir, entry, m.InputSchema); err != nil {
 		return err
 	}
@@ -145,23 +149,20 @@ func ValidateRegistry(r Registry) error {
 }
 
 func ValidateExpectedCategoryCounts(counts, expected map[string]int) error {
-	for _, category := range SupportedCategoryOrder {
-		want, ok := expected[category]
-		if !ok {
-			return metadata.NewError("template_registry_invalid", "visual template registry expected category count is missing for "+category+".", "Add registry.expected.categories."+category+" to templates/visual/registry.json.", 400)
+	for category, want := range expected {
+		if !SupportedCategories[category] {
+			return metadata.NewError("template_registry_invalid", "visual template registry expected category is not supported: "+category, "Use one of: "+strings.Join(SupportedCategoryOrder, ", ")+".", 400)
 		}
 		if counts[category] != want {
 			return metadata.NewError("template_registry_invalid", "visual template registry expected category count mismatch for "+category+".", "Expected "+category+"="+itoa(want)+", got "+itoa(counts[category])+".", 400)
 		}
 	}
-	for category := range expected {
-		if !SupportedCategories[category] {
-			return metadata.NewError("template_registry_invalid", "visual template registry expected category is not supported: "+category, "Use one of: "+strings.Join(SupportedCategoryOrder, ", ")+".", 400)
-		}
-	}
 	for category, count := range counts {
 		if count > 0 && !SupportedCategories[category] {
 			return metadata.NewError("template_registry_invalid", "visual template category is not supported: "+category, "Use one of: "+strings.Join(SupportedCategoryOrder, ", ")+".", 400)
+		}
+		if _, ok := expected[category]; !ok {
+			return metadata.NewError("template_registry_invalid", "visual template registry expected category count is missing for "+category+".", "Add registry.expected.categories."+category+" to templates/visual/registry.json.", 400)
 		}
 	}
 	return nil
@@ -184,100 +185,106 @@ type CategoryCount struct {
 }
 
 var SupportedInputSchemaKinds = map[string]bool{
-	"graph_v1":        true,
-	"graph_events_v1": true,
-	"timeline_v1":     true,
-	"evidence_v1":     true,
-	"matrix_v1":       true,
+	"graph_v1":                    true,
+	"graph_events_v1":             true,
+	"timeline_v1":                 true,
+	"evidence_v1":                 true,
+	"matrix_v1":                   true,
+	"isometric_architecture_v1":   true,
+	"uml_sequence_v1":             true,
+	"uml_class_v1":                true,
+	"uml_state_machine_v1":        true,
+	"uml_activity_v1":             true,
+	"uml_component_deployment_v1": true,
 }
 
 var SupportedCategoryOrder = []string{
-	"foundation",
-	"agent",
-	"codebase",
-	"runtime",
-	"debug",
-	"project",
-	"knowledge",
-	"planning",
-	"business",
-	"education",
+	"mermaid",
+	"uml",
+	"relationship",
+	"temporal",
+	"flow",
+	"hierarchy",
+	"evidence",
+	"matrix",
+	"spatial",
+	"architecture",
 }
 
 var SupportedCategories = map[string]bool{
-	"foundation": true,
-	"agent":      true,
-	"codebase":   true,
-	"runtime":    true,
-	"debug":      true,
-	"project":    true,
-	"knowledge":  true,
-	"planning":   true,
-	"business":   true,
-	"education":  true,
+	"mermaid":      true,
+	"uml":          true,
+	"relationship": true,
+	"temporal":     true,
+	"flow":         true,
+	"hierarchy":    true,
+	"evidence":     true,
+	"matrix":       true,
+	"spatial":      true,
+	"architecture": true,
 }
 
-const DefaultExpectedCanonicalCount = 195
+var SupportedEffectEngines = map[string]bool{
+	"three.v1": true,
+}
+
+const DefaultExpectedCanonicalCount = 28
 
 var ExpectedCategoryCounts = map[string]int{
-	"foundation": 20,
-	"agent":      15,
-	"codebase":   20,
-	"runtime":    20,
-	"debug":      20,
-	"project":    20,
-	"knowledge":  20,
-	"planning":   20,
-	"business":   20,
-	"education":  20,
+	"mermaid": 28,
 }
 
 var SupportedLayoutPresets = map[string]bool{
-	"graph_3d":             true,
-	"graph_2_5d":           true,
-	"timeline_tunnel":      true,
-	"swimlane_timeline":    true,
-	"radial_tree":          true,
-	"layered_stack":        true,
-	"pipeline_flow":        true,
-	"constellation":        true,
-	"city_map":             true,
-	"terrain_heatmap":      true,
-	"matrix_board":         true,
-	"sankey_3d":            true,
-	"radar_sphere":         true,
-	"diff_split_view":      true,
-	"replay_stage":         true,
-	"orbit_system":         true,
-	"control_room":         true,
-	"document_wall":        true,
-	"flow_particles":       true,
-	"state_machine":        true,
-	"dag":                  true,
-	"galaxy":               true,
-	"ripple":               true,
-	"service_map":          true,
-	"fleet":                true,
-	"incident_timeline":    true,
-	"evidence_board":       true,
-	"knowledge_graph":      true,
-	"decision_matrix":      true,
-	"kanban":               true,
-	"gantt":                true,
-	"roadmap":              true,
-	"journey":              true,
-	"funnel":               true,
-	"radar":                true,
-	"waterfall":            true,
-	"heatmap":              true,
-	"tree":                 true,
-	"river":                true,
-	"board":                true,
-	"network_boundary_map": true,
-	"permission_gate":      true,
-	"step_ladder":          true,
-	"line":                 true,
-	"citation_map":         true,
+	"graph_3d":               true,
+	"graph_2_5d":             true,
+	"timeline_tunnel":        true,
+	"swimlane_timeline":      true,
+	"radial_tree":            true,
+	"layered_stack":          true,
+	"pipeline_flow":          true,
+	"constellation":          true,
+	"city_map":               true,
+	"terrain_heatmap":        true,
+	"matrix_board":           true,
+	"sankey_3d":              true,
+	"radar_sphere":           true,
+	"diff_split_view":        true,
+	"replay_stage":           true,
+	"orbit_system":           true,
+	"control_room":           true,
+	"document_wall":          true,
+	"flow_particles":         true,
+	"state_machine":          true,
+	"dag":                    true,
+	"galaxy":                 true,
+	"ripple":                 true,
+	"service_map":            true,
+	"fleet":                  true,
+	"incident_timeline":      true,
+	"evidence_board":         true,
+	"knowledge_graph":        true,
+	"decision_matrix":        true,
+	"kanban":                 true,
+	"gantt":                  true,
+	"roadmap":                true,
+	"journey":                true,
+	"funnel":                 true,
+	"radar":                  true,
+	"waterfall":              true,
+	"heatmap":                true,
+	"tree":                   true,
+	"river":                  true,
+	"board":                  true,
+	"network_boundary_map":   true,
+	"permission_gate":        true,
+	"step_ladder":            true,
+	"line":                   true,
+	"citation_map":           true,
+	"sequence_lifelines":     true,
+	"class_cards":            true,
+	"activity_swimlanes":     true,
+	"component_deployment":   true,
+	"isometric_architecture": true,
 }
 
 func normalizeInputSchemaKind(kind string) string {
@@ -350,6 +357,56 @@ func containsParentPathSegment(value string) bool {
 
 func TemplateBaseDir(templateDir string, entry RegistryEntry) string {
 	return filepath.Dir(filepath.Join(templateDir, filepath.Clean(entry.Path)))
+}
+
+func validateEffectsSpec(effects *EffectsSpec) error {
+	if effects == nil || strings.TrimSpace(effects.Engine) == "" {
+		return nil
+	}
+	effects.Engine = normalizeManifestValue(effects.Engine)
+	if !SupportedEffectEngines[effects.Engine] {
+		return metadata.NewError("template_manifest_invalid", "visual template effects.engine is not supported: "+effects.Engine, "Use three.v1 for local Three.js effects.", 400)
+	}
+	effects.Scene = normalizeManifestValue(effects.Scene)
+	if effects.Scene == "" {
+		return metadata.NewError("template_manifest_invalid", "visual template effects.scene is required when effects.engine is set.", "Set a scene-specific effect id such as runtime_event_bus_flow.", 400)
+	}
+	effects.Camera = normalizeManifestValue(effects.Camera)
+	effects.Particles = normalizeManifestValue(effects.Particles)
+	effects.Material = normalizeManifestValue(effects.Material)
+	effects.Motion = normalizeManifestValue(effects.Motion)
+	for i, value := range effects.Interaction {
+		effects.Interaction[i] = normalizeManifestValue(value)
+	}
+	for i, value := range effects.Postprocess {
+		effects.Postprocess[i] = normalizeManifestValue(value)
+	}
+	return nil
+}
+
+func normalizeVisualDesign(design *VisualDesign) {
+	if design == nil {
+		return
+	}
+	design.InitialView = normalizeManifestValue(design.InitialView)
+	if design.InitialView == "" {
+		design.InitialView = "overview"
+	}
+	if design.MaxInitialNodes <= 0 {
+		design.MaxInitialNodes = 60
+	}
+	if design.MaxInitialEdges <= 0 {
+		design.MaxInitialEdges = 120
+	}
+	if design.DefaultCollapseDepth < 0 {
+		design.DefaultCollapseDepth = 0
+	}
+	for i, value := range design.GroupBy {
+		design.GroupBy[i] = normalizeManifestValue(value)
+	}
+	for i, value := range design.Supports {
+		design.Supports[i] = normalizeManifestValue(value)
+	}
 }
 
 func validateAsset(templateDir, templatePath string, asset AssetSpec) error {

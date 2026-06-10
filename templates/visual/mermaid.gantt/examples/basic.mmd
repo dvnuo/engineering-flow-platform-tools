@@ -1,0 +1,11 @@
+---
+title: Mermaid Gantt Example
+---
+gantt
+  title Release Plan
+  dateFormat  YYYY-MM-DD
+  section Build
+  Implement feature :done, f1, 2026-06-01, 2d
+  Test release :active, f2, after f1, 2d
+  section Ship
+  Deploy production :f3, after f2, 1d

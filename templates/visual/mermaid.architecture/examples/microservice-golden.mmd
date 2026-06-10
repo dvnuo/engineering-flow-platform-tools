@@ -1,0 +1,62 @@
+---
+title: Microservice Golden Architecture
+---
+architecture-beta
+  group client(cloud)[Client Zone]
+  group edge(cloud)[Edge Zone]
+  group gateway(server)[Gateway Zone]
+  group services(server)[Service Zone]
+  group registry(server)[Registry Zone]
+  group cache(database)[Cache Zone]
+  group data(database)[Database Zone]
+  group storage(database)[Storage Zone]
+  group observability(server)[Observability Zone]
+  group admin(server)[Admin Zone]
+
+  service user(user)[User] in client
+  service pc(pc)[PC] in client
+  service laptop(laptop)[Laptop] in client
+  service mobile(mobile)[Mobile] in client
+  service cdn(cdn)[CDN] in client
+  service nginx(nginx)[Nginx] in edge
+  service apiGateway(api_gateway)[API Gateway] in gateway
+  service authService(microservice)[micro server] in services
+  service orderService(microservice)[micro server] in services
+  service paymentService(microservice)[micro server] in services
+  service inventoryService(microservice)[micro server] in services
+  service notificationService(microservice)[micro server] in services
+  service reportService(microservice)[micro server] in services
+  service nacos1(nacos)[Nacos] in registry
+  service nacos2(nacos)[Nacos] in registry
+  service nacos3(nacos)[Nacos] in registry
+  service redis1(redis)[Redis] in cache
+  service redis2(redis)[Redis] in cache
+  service redis3(redis)[Redis] in cache
+  service mysqlMaster(mysql)[MySQL Master] in data
+  service mysqlSlave(mysql)[MySQL Slave] in data
+  service oss(oss)[OSS] in storage
+  service fileStorage(storage)[File Storage] in storage
+  service blockStorage(storage)[Block Storage] in storage
+  service elasticsearch(elasticsearch)[ElasticSearch] in observability
+  service logstash(logs)[Logstash] in observability
+  service kibana(grafana)[Kibana] in observability
+  service adminConsole(admin)[springboot admin] in admin
+
+  user:B -->|User| T:pc
+  pc:R -->|API| L:nginx
+  cdn:R -->|Static| L:nginx
+  nginx:R -->|API| L:apiGateway
+  apiGateway:R -->|Routing| L:orderService
+  authService:T -->|register service| B:nacos1
+  inventoryService:T -->|register service| B:nacos3
+  authService:B -->|Data Cache| T:redis1
+  inventoryService:B -->|Data Storage| T:mysqlMaster
+  paymentService:B -->|File Service| T:oss
+  reportService:B -->|File Service| T:blockStorage
+  mysqlMaster:R -->|Sync| L:mysqlSlave
+  nacos1:R -->|registering| L:nacos2
+  nacos2:B -->|registering| T:nacos3
+  authService:B -->|Log collection| T:logstash
+  logstash:R -->|Log system| L:kibana
+  adminConsole:L -->|Health Check| R:notificationService
+  adminConsole:T -->|registering| B:nacos3

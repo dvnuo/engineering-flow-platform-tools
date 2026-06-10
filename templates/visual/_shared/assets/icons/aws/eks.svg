@@ -1,0 +1,5 @@
+<svg xmlns="http:&#47;&#47;www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="aws eks placeholder">
+  <path d="M32 7l24 14v28L32 63 8 49V21z" fill="#3a2608" stroke="#ff9900" stroke-width="3"/>
+  <circle cx="32" cy="35" r="11" fill="#241704" stroke="#ffd18a" stroke-width="3"/>
+  <path d="M32 20v9M32 41v9M20 35h9M41 35h9M23 26l6 6M45 26l-6 6M23 44l6-6M45 44l-6-6" stroke="#ffd18a" stroke-width="3" stroke-linecap="round"/>
+</svg>

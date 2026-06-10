@@ -17,16 +17,36 @@ type ParsedInput struct {
 }
 
 type InputSummary struct {
-	Schema  string `json:"schema,omitempty"`
-	Kind    string `json:"kind"`
-	Title   string `json:"title,omitempty"`
-	Nodes   int    `json:"nodes,omitempty"`
-	Edges   int    `json:"edges,omitempty"`
-	Events  int    `json:"events,omitempty"`
-	Claims  int    `json:"claims,omitempty"`
-	Sources int    `json:"sources,omitempty"`
-	Links   int    `json:"links,omitempty"`
-	Items   int    `json:"items,omitempty"`
+	Schema               string `json:"schema,omitempty"`
+	Kind                 string `json:"kind"`
+	Title                string `json:"title,omitempty"`
+	Groups               int    `json:"groups,omitempty"`
+	Zones                int    `json:"zones,omitempty"`
+	Nodes                int    `json:"nodes,omitempty"`
+	Entities             int    `json:"entities,omitempty"`
+	Edges                int    `json:"edges,omitempty"`
+	Events               int    `json:"events,omitempty"`
+	Claims               int    `json:"claims,omitempty"`
+	Sources              int    `json:"sources,omitempty"`
+	Links                int    `json:"links,omitempty"`
+	Items                int    `json:"items,omitempty"`
+	Participants         int    `json:"participants,omitempty"`
+	Messages             int    `json:"messages,omitempty"`
+	Phases               int    `json:"phases,omitempty"`
+	Activations          int    `json:"activations,omitempty"`
+	Fragments            int    `json:"fragments,omitempty"`
+	Classes              int    `json:"classes,omitempty"`
+	Relationships        int    `json:"relationships,omitempty"`
+	States               int    `json:"states,omitempty"`
+	Transitions          int    `json:"transitions,omitempty"`
+	Actions              int    `json:"actions,omitempty"`
+	Flows                int    `json:"flows,omitempty"`
+	Components           int    `json:"components,omitempty"`
+	Deployments          int    `json:"deployments,omitempty"`
+	VisualFocusIDs       int    `json:"visual_focus_ids,omitempty"`
+	VisualHiddenDetails  int    `json:"visual_hidden_details,omitempty"`
+	VisualNarrativeSteps int    `json:"visual_narrative_steps,omitempty"`
+	VisualAnnotations    int    `json:"visual_annotations,omitempty"`
 }
 
 func ValidateInput(kind string, raw []byte, limits manifest.LimitsSpec) (ParsedInput, error) {
@@ -58,6 +78,7 @@ func ValidateInput(kind string, raw []byte, limits manifest.LimitsSpec) (ParsedI
 		}
 		summary.Nodes = graph.nodes
 		summary.Edges = graph.edges
+		summary.Groups = graph.groups
 	case "graph_events_v1":
 		graph, err := validateGraph(data, limits, true)
 		if err != nil {
@@ -66,6 +87,7 @@ func ValidateInput(kind string, raw []byte, limits manifest.LimitsSpec) (ParsedI
 		summary.Nodes = graph.nodes
 		summary.Edges = graph.edges
 		summary.Events = graph.events
+		summary.Groups = graph.groups
 	case "timeline_v1":
 		events, err := requiredArray(data, "events")
 		if err != nil {
@@ -98,22 +120,86 @@ func ValidateInput(kind string, raw []byte, limits manifest.LimitsSpec) (ParsedI
 			return ParsedInput{}, err
 		}
 		summary.Items = len(items)
+	case "isometric_architecture_v1":
+		counts, err := validateIsometricArchitecture(data, limits)
+		if err != nil {
+			return ParsedInput{}, err
+		}
+		summary.Zones = counts.zones
+		summary.Entities = counts.entities
+		summary.Links = counts.links
+	case "uml_sequence_v1":
+		counts, err := validateUMLSequence(data, limits)
+		if err != nil {
+			return ParsedInput{}, err
+		}
+		summary.Participants = counts.participants
+		summary.Messages = counts.messages
+		summary.Phases = counts.phases
+		summary.Activations = counts.activations
+		summary.Fragments = counts.fragments
+	case "uml_class_v1":
+		counts, err := validateUMLClass(data, limits)
+		if err != nil {
+			return ParsedInput{}, err
+		}
+		summary.Classes = counts.classes
+		summary.Relationships = counts.relationships
+	case "uml_state_machine_v1":
+		counts, err := validateUMLStateMachine(data, limits)
+		if err != nil {
+			return ParsedInput{}, err
+		}
+		summary.States = counts.states
+		summary.Transitions = counts.transitions
+	case "uml_activity_v1":
+		counts, err := validateUMLActivity(data, limits)
+		if err != nil {
+			return ParsedInput{}, err
+		}
+		summary.Actions = counts.actions
+		summary.Flows = counts.flows
+	case "uml_component_deployment_v1":
+		counts, err := validateUMLComponentDeployment(data, limits)
+		if err != nil {
+			return ParsedInput{}, err
+		}
+		summary.Components = counts.components
+		summary.Deployments = counts.deployments
+		summary.Links = counts.links
 	default:
-		return ParsedInput{}, invalid("visual input schema kind is not supported: "+kind, "Use graph_v1, graph_events_v1, timeline_v1, evidence_v1, or matrix_v1.")
+		return ParsedInput{}, invalid("visual input schema kind is not supported: "+kind, "Use a supported semantic visual input schema kind.")
 	}
+	visualCounts, err := validateVisualHints(data, collectVisualReferenceIDs(kind, data))
+	if err != nil {
+		return ParsedInput{}, err
+	}
+	summary.VisualFocusIDs = visualCounts.focusIDs
+	summary.VisualHiddenDetails = visualCounts.hiddenDetails
+	summary.VisualNarrativeSteps = visualCounts.narrativeSteps
+	summary.VisualAnnotations = visualCounts.annotations
 	return ParsedInput{Data: data, Title: summary.Title, Summary: summary}, nil
 }
 
 func validateSchemaField(kind string, data map[string]any) error {
 	expected := map[string]string{
-		"graph_v1":        "efp.visual.input.graph.v1",
-		"graph_events_v1": "efp.visual.input.graph_events.v1",
-		"timeline_v1":     "efp.visual.input.timeline.v1",
-		"evidence_v1":     "efp.visual.input.evidence.v1",
-		"matrix_v1":       "efp.visual.input.matrix.v1",
+		"graph_v1":                    "efp.visual.input.graph.v1",
+		"graph_events_v1":             "efp.visual.input.graph_events.v1",
+		"timeline_v1":                 "efp.visual.input.timeline.v1",
+		"evidence_v1":                 "efp.visual.input.evidence.v1",
+		"matrix_v1":                   "efp.visual.input.matrix.v1",
+		"isometric_architecture_v1":   "efp.visual.input.isometric_architecture.v1",
+		"uml_sequence_v1":             "efp.visual.input.uml.sequence.v1",
+		"uml_class_v1":                "efp.visual.input.uml.class.v1",
+		"uml_state_machine_v1":        "efp.visual.input.uml.state_machine.v1",
+		"uml_activity_v1":             "efp.visual.input.uml.activity.v1",
+		"uml_component_deployment_v1": "efp.visual.input.uml.component_deployment.v1",
 	}
 	value, ok := data["schema"].(string)
 	if !ok || strings.TrimSpace(value) == "" {
+		if kind == "isometric_architecture_v1" {
+			return invalid("isometric architecture input is missing schema.", "Set schema to efp.visual.input.isometric_architecture.v1.")
+		}
 		return nil
 	}
 	if expected[kind] != "" && value != expected[kind] {
@@ -122,13 +208,210 @@ func validateSchemaField(kind string, data map[string]any) error {
 	return nil
 }
 
+type isometricCounts struct {
+	zones    int
+	entities int
+	links    int
+}
+
+func validateIsometricArchitecture(data map[string]any, limits manifest.LimitsSpec) (isometricCounts, error) {
+	title := stringField(data, "title")
+	if title == "" {
+		return isometricCounts{}, invalid("isometric architecture input is missing title.", "Set title to a short architecture scene title.")
+	}
+	zones, err := requiredArray(data, "zones")
+	if err != nil {
+		return isometricCounts{}, err
+	}
+	entities, err := requiredArray(data, "entities")
+	if err != nil {
+		return isometricCounts{}, err
+	}
+	links, err := requiredArray(data, "links")
+	if err != nil {
+		return isometricCounts{}, err
+	}
+	if len(entities) > limitOrDefault(limits.MaxNodes, 1000) {
+		return isometricCounts{}, invalid("isometric architecture input has too many entities.", "Reduce entities or raise template max_nodes.")
+	}
+	if len(links) > limitOrDefault(limits.MaxEdges, 3000) {
+		return isometricCounts{}, invalid("isometric architecture input has too many links.", "Reduce links or raise template max_edges.")
+	}
+	zoneIDs := map[string]bool{}
+	for i, item := range zones {
+		zone, ok := item.(map[string]any)
+		if !ok {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric zone at index %d must be an object.", i), "Each zone must contain id, label, and bounds.")
+		}
+		id := stringField(zone, "id")
+		if id == "" {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric zone at index %d is missing id.", i), "Set zone.id to a non-empty string.")
+		}
+		if zoneIDs[id] {
+			return isometricCounts{}, invalid("isometric zone ids must be unique.", "Rename duplicate zone id "+id+".")
+		}
+		zoneIDs[id] = true
+		if _, err := requiredStringPresent(zone, "label", "isometric zone", i); err != nil {
+			return isometricCounts{}, err
+		}
+		bounds, err := requiredObject(zone, "bounds")
+		if err != nil {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric zone %s is missing bounds.", id), "Set zone.bounds with numeric x, y, w, and h.")
+		}
+		for _, name := range []string{"x", "y", "w", "h"} {
+			if _, ok := numberField(bounds, name); !ok {
+				return isometricCounts{}, invalid("isometric zone bounds."+name+" must be numeric.", "Set zone.bounds."+name+" to a number.")
+			}
+		}
+	}
+	entityIDs := map[string]bool{}
+	for i, item := range entities {
+		entity, ok := item.(map[string]any)
+		if !ok {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric entity at index %d must be an object.", i), "Each entity must contain id, label, kind, and optional zone/position/size.")
+		}
+		id := stringField(entity, "id")
+		if id == "" {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric entity at index %d is missing id.", i), "Set entity.id to a non-empty string.")
+		}
+		if entityIDs[id] {
+			return isometricCounts{}, invalid("isometric entity ids must be unique.", "Rename duplicate entity id "+id+".")
+		}
+		entityIDs[id] = true
+		if _, err := requiredStringPresent(entity, "label", "isometric entity", i); err != nil {
+			return isometricCounts{}, err
+		}
+		if _, err := requiredStringPresent(entity, "kind", "isometric entity", i); err != nil {
+			return isometricCounts{}, err
+		}
+		if position, ok := entity["position"]; ok && position != nil {
+			obj, ok := position.(map[string]any)
+			if !ok {
+				return isometricCounts{}, invalid("isometric entity position must be an object.", "Set entity.position to an object with numeric x and y.")
+			}
+			for _, name := range []string{"x", "y"} {
+				if _, ok := numberField(obj, name); !ok {
+					return isometricCounts{}, invalid("isometric entity position."+name+" must be numeric.", "Set entity.position."+name+" to a number.")
+				}
+			}
+		}
+		if size, ok := entity["size"]; ok && size != nil {
+			obj, ok := size.(map[string]any)
+			if !ok {
+				return isometricCounts{}, invalid("isometric entity size must be an object.", "Set entity.size to an object with numeric w, d, and h.")
+			}
+			for _, name := range []string{"w", "d", "h"} {
+				if value, ok := obj[name]; ok && !isNumber(value) {
+					return isometricCounts{}, invalid("isometric entity size."+name+" must be numeric.", "Set entity.size."+name+" to a number.")
+				}
+			}
+		}
+	}
+	linkIDs := map[string]bool{}
+	for i, item := range links {
+		link, ok := item.(map[string]any)
+		if !ok {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric link at index %d must be an object.", i), "Each link must contain id, from, to, and directed. Add label only when the Mermaid edge has meaningful text.")
+		}
+		id := stringField(link, "id")
+		if id == "" {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric link at index %d is missing id.", i), "Set link.id to a non-empty string.")
+		}
+		if linkIDs[id] {
+			return isometricCounts{}, invalid("isometric link ids must be unique.", "Rename duplicate link id "+id+".")
+		}
+		linkIDs[id] = true
+		for _, name := range []string{"from", "to"} {
+			if _, err := requiredStringPresent(link, name, "isometric link", i); err != nil {
+				return isometricCounts{}, err
+			}
+		}
+		if value, ok := link["label"]; ok && strings.TrimSpace(fmt.Sprint(value)) == "" {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric link %s has an empty label.", id), "Omit link.label when there is no meaningful relation label.")
+		}
+		if value, ok := link["directed"]; !ok || !isBool(value) {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric link %s is missing boolean directed.", id), "Set link.directed to true or false.")
+		}
+		if route, ok := link["route"]; ok && route != nil {
+			points, ok := route.([]any)
+			if !ok {
+				return isometricCounts{}, invalid("isometric link route must be an array.", "Set link.route to an array of points with numeric x and y.")
+			}
+			for j, item := range points {
+				point, ok := item.(map[string]any)
+				if !ok {
+					return isometricCounts{}, invalid(fmt.Sprintf("isometric link route point at index %d must be an object.", j), "Set each route point to an object with numeric x and y.")
+				}
+				for _, name := range []string{"x", "y"} {
+					if _, ok := numberField(point, name); !ok {
+						return isometricCounts{}, invalid("isometric link route point "+name+" must be numeric.", "Set route point "+name+" to a number.")
+					}
+				}
+			}
+		}
+	}
+	controls, err := optionalArray(data, "controls")
+	if err != nil {
+		return isometricCounts{}, err
+	}
+	allowedControls := map[string]bool{
+		"overview": true, "focus": true, "isolate": true, "hide_others": true, "show_all": true,
+		"toggle_labels": true, "toggle_boundaries": true, "toggle_arrows": true, "reset_camera": true, "export_json": true,
+	}
+	for i, item := range controls {
+		if value, ok := item.(string); ok {
+			if !allowedControls[value] {
+				return isometricCounts{}, invalid("isometric control action is not supported: "+value, "Use overview, focus, isolate, hide_others, show_all, toggle_labels, toggle_boundaries, toggle_arrows, reset_camera, or export_json.")
+			}
+			continue
+		}
+		control, ok := item.(map[string]any)
+		if !ok {
+			return isometricCounts{}, invalid(fmt.Sprintf("isometric control at index %d must be a string or object.", i), "Each control must be an action string or an object with action or type.")
+		}
+		for _, name := range []string{"action", "type"} {
+			value := stringField(control, name)
+			if value != "" && !allowedControls[value] {
+				return isometricCounts{}, invalid("isometric control "+name+" is not supported: "+value, "Use overview, focus, isolate, hide_others, show_all, toggle_labels, toggle_boundaries, toggle_arrows, reset_camera, or export_json.")
+			}
+		}
+	}
+	return isometricCounts{zones: len(zones), entities: len(entities), links: len(links)}, nil
+}
+
 type graphCounts struct {
+	groups int
 	nodes  int
 	edges  int
 	events int
 }
 
 func validateGraph(data map[string]any, limits manifest.LimitsSpec, withEvents bool) (graphCounts, error) {
+	groups, err := optionalArray(data, "groups")
+	if err != nil {
+		return graphCounts{}, err
+	}
+	groupIDs := map[string]bool{}
+	for i, item := range groups {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return graphCounts{}, invalid(fmt.Sprintf("graph group at index %d must be an object.", i), "Each group must contain at least a non-empty string id.")
+		}
+		id := stringField(obj, "id")
+		if id == "" {
+			return graphCounts{}, invalid(fmt.Sprintf("graph group at index %d is missing id.", i), "Set group.id to a non-empty string.")
+		}
+		if groupIDs[id] {
+			return graphCounts{}, invalid("graph group ids must be unique.", "Rename duplicate group id "+id+".")
+		}
+		groupIDs[id] = true
+		if importance, ok := obj["importance"]; ok && !isNumber(importance) {
+			return graphCounts{}, invalid("graph group importance must be numeric.", "Set group.importance to a number between 0 and 1.")
+		}
+		if collapsed, ok := obj["collapsed"]; ok && !isBool(collapsed) {
+			return graphCounts{}, invalid("graph group collapsed must be boolean.", "Set group.collapsed to true or false.")
+		}
+	}
 	nodes, err := requiredArray(data, "nodes")
 	if err != nil {
 		return graphCounts{}, err
@@ -149,7 +432,27 @@ func validateGraph(data map[string]any, limits manifest.LimitsSpec, withEvents b
 		if nodeIDs[id] {
 			return graphCounts{}, invalid("graph node ids must be unique.", "Rename duplicate node id "+id+".")
 		}
+		if groupIDs[id] {
+			return graphCounts{}, invalid("graph node id conflicts with group id: "+id, "Use distinct ids for groups and nodes.")
+		}
+		parent := firstStringField(obj, "parent_id", "group_id", "group")
+		if parent != "" && len(groupIDs) > 0 && !groupIDs[parent] {
+			return graphCounts{}, invalid("graph node references an unknown group: "+parent, "Set node.parent_id, node.group_id, or node.group to an existing group id.")
+		}
+		if importance, ok := obj["importance"]; ok && !isNumber(importance) {
+			return graphCounts{}, invalid("graph node importance must be numeric.", "Set node.importance to a number between 0 and 1.")
+		}
+		if visible, ok := obj["visible"]; ok && !isBool(visible) {
+			return graphCounts{}, invalid("graph node visible must be boolean.", "Set node.visible to true or false.")
+		}
 		nodeIDs[id] = true
+	}
+	knownIDs := map[string]bool{}
+	for id := range nodeIDs {
+		knownIDs[id] = true
+	}
+	for id := range groupIDs {
+		knownIDs[id] = true
 	}
 	edges, err := optionalArray(data, "edges")
 	if err != nil {
@@ -168,8 +471,25 @@ func validateGraph(data map[string]any, limits manifest.LimitsSpec, withEvents b
 		if from == "" || to == "" {
 			return graphCounts{}, invalid(fmt.Sprintf("graph edge at index %d is missing from/to.", i), "Set edge.from and edge.to to existing node ids.")
 		}
-		if !nodeIDs[from] || !nodeIDs[to] {
+		if !knownIDs[from] || !knownIDs[to] {
 			return graphCounts{}, invalid(fmt.Sprintf("graph edge at index %d references an unknown node.", i), "Ensure every edge.from and edge.to points to an existing node id.")
+		}
+		if importance, ok := obj["importance"]; ok && !isNumber(importance) {
+			return graphCounts{}, invalid("graph edge importance must be numeric.", "Set edge.importance to a number between 0 and 1.")
+		}
+	}
+	if initialView, ok := data["initial_view"]; ok && initialView != nil {
+		obj, ok := initialView.(map[string]any)
+		if !ok {
+			return graphCounts{}, invalid("graph initial_view must be an object.", "Set initial_view to an object with mode, max_nodes, max_edges, and collapse_groups.")
+		}
+		for _, name := range []string{"max_nodes", "max_edges"} {
+			if value, ok := obj[name]; ok && !isNumber(value) {
+				return graphCounts{}, invalid("graph initial_view."+name+" must be numeric.", "Set initial_view."+name+" to a positive number.")
+			}
+		}
+		if value, ok := obj["collapse_groups"]; ok && !isBool(value) {
+			return graphCounts{}, invalid("graph initial_view.collapse_groups must be boolean.", "Set initial_view.collapse_groups to true or false.")
 		}
 	}
 	var events []any
@@ -185,7 +505,7 @@ func validateGraph(data map[string]any, limits manifest.LimitsSpec, withEvents b
 			return graphCounts{}, err
 		}
 	}
-	return graphCounts{nodes: len(nodes), edges: len(edges), events: len(events)}, nil
+	return graphCounts{groups: len(groups), nodes: len(nodes), edges: len(edges), events: len(events)}, nil
 }
 
 func validateEvents(events []any, nodeIDs map[string]bool) error {
@@ -301,6 +621,456 @@ func validateMatrixItems(items []any) error {
 	return nil
 }
 
+type umlSequenceCounts struct {
+	participants int
+	messages     int
+	phases       int
+	activations  int
+	fragments    int
+}
+
+func validateUMLSequence(data map[string]any, limits manifest.LimitsSpec) (umlSequenceCounts, error) {
+	participants, err := requiredArray(data, "participants")
+	if err != nil {
+		return umlSequenceCounts{}, err
+	}
+	if len(participants) > limitOrDefault(limits.MaxNodes, 1000) {
+		return umlSequenceCounts{}, invalid("uml sequence input has too many participants.", "Reduce participants or raise template max_nodes.")
+	}
+	participantIDs, err := collectObjectIDs(participants, "participant")
+	if err != nil {
+		return umlSequenceCounts{}, err
+	}
+	phases, err := optionalArray(data, "phases")
+	if err != nil {
+		return umlSequenceCounts{}, err
+	}
+	phaseIDs := map[string]bool{}
+	for i, item := range phases {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence phase at index %d must be an object.", i), "Each phase must contain at least a non-empty string id.")
+		}
+		id := stringField(obj, "id")
+		if id == "" {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence phase at index %d is missing id.", i), "Set phase.id to a non-empty string.")
+		}
+		if phaseIDs[id] {
+			return umlSequenceCounts{}, invalid("uml sequence phase ids must be unique.", "Rename duplicate phase id "+id+".")
+		}
+		phaseIDs[id] = true
+	}
+	messages, err := requiredArray(data, "messages")
+	if err != nil {
+		return umlSequenceCounts{}, err
+	}
+	if len(messages) > limitOrDefault(limits.MaxEvents, 5000) {
+		return umlSequenceCounts{}, invalid("uml sequence input has too many messages.", "Reduce messages, use fragments for loops, or raise template max_events.")
+	}
+	orders := map[string]bool{}
+	for i, item := range messages {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence message at index %d must be an object.", i), "Each message must contain id, order, from, to, and label.")
+		}
+		if stringField(obj, "id") == "" {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence message at index %d is missing id.", i), "Set message.id to a non-empty string.")
+		}
+		order, ok := numberField(obj, "order")
+		if !ok {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence message %s is missing numeric order.", stringField(obj, "id")), "Set message.order to a positive number that controls vertical time placement.")
+		}
+		orderKey := fmt.Sprintf("%.6f", order)
+		if orders[orderKey] {
+			return umlSequenceCounts{}, invalid("uml sequence message order values must be unique.", "Use one unique order number per message.")
+		}
+		orders[orderKey] = true
+		from := stringField(obj, "from")
+		to := stringField(obj, "to")
+		if !participantIDs[from] || !participantIDs[to] {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence message at index %d references an unknown participant.", i), "Set message.from and message.to to existing participant ids.")
+		}
+		if strings.TrimSpace(firstStringField(obj, "label", "name", "summary")) == "" {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence message at index %d is missing a display label.", i), "Set a short message.label such as beginTimer().")
+		}
+		if phase := stringField(obj, "phase"); phase != "" && len(phaseIDs) > 0 && !phaseIDs[phase] {
+			return umlSequenceCounts{}, invalid("uml sequence message references an unknown phase: "+phase, "Set message.phase to one of phases[].id or omit phases.")
+		}
+	}
+	activations, err := optionalArray(data, "activations")
+	if err != nil {
+		return umlSequenceCounts{}, err
+	}
+	for i, item := range activations {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence activation at index %d must be an object.", i), "Each activation must contain participant_id, start_order, and end_order.")
+		}
+		participantID := stringField(obj, "participant_id")
+		if !participantIDs[participantID] {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence activation at index %d references an unknown participant.", i), "Set activation.participant_id to an existing participant id.")
+		}
+		start, hasStart := numberField(obj, "start_order")
+		end, hasEnd := numberField(obj, "end_order")
+		if !hasStart || !hasEnd || end < start {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence activation at index %d has invalid order range.", i), "Set activation.start_order and end_order to a valid message order range.")
+		}
+	}
+	fragments, err := optionalArray(data, "fragments")
+	if err != nil {
+		return umlSequenceCounts{}, err
+	}
+	for i, item := range fragments {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence fragment at index %d must be an object.", i), "Each fragment must contain kind, start_order, and end_order.")
+		}
+		if stringField(obj, "kind") == "" {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence fragment at index %d is missing kind.", i), "Set fragment.kind to loop, alt, opt, or par.")
+		}
+		start, hasStart := numberField(obj, "start_order")
+		end, hasEnd := numberField(obj, "end_order")
+		if !hasStart || !hasEnd || end < start {
+			return umlSequenceCounts{}, invalid(fmt.Sprintf("uml sequence fragment at index %d has invalid order range.", i), "Set fragment.start_order and end_order to a valid message order range.")
+		}
+	}
+	return umlSequenceCounts{participants: len(participants), messages: len(messages), phases: len(phases), activations: len(activations), fragments: len(fragments)}, nil
+}
+
+type umlClassCounts struct {
+	classes       int
+	relationships int
+}
+
+func validateUMLClass(data map[string]any, limits manifest.LimitsSpec) (umlClassCounts, error) {
+	classes, err := requiredArray(data, "classes")
+	if err != nil {
+		return umlClassCounts{}, err
+	}
+	if len(classes) > limitOrDefault(limits.MaxNodes, 1000) {
+		return umlClassCounts{}, invalid("uml class input has too many classes.", "Reduce classes or raise template max_nodes.")
+	}
+	classIDs, err := collectObjectIDs(classes, "class")
+	if err != nil {
+		return umlClassCounts{}, err
+	}
+	relationships, err := optionalArray(data, "relationships")
+	if err != nil {
+		return umlClassCounts{}, err
+	}
+	if len(relationships) > limitOrDefault(limits.MaxEdges, 3000) {
+		return umlClassCounts{}, invalid("uml class input has too many relationships.", "Reduce relationships or raise template max_edges.")
+	}
+	for i, item := range relationships {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return umlClassCounts{}, invalid(fmt.Sprintf("uml class relationship at index %d must be an object.", i), "Each relationship must contain from and to class ids.")
+		}
+		from := stringField(obj, "from")
+		to := stringField(obj, "to")
+		if !classIDs[from] || !classIDs[to] {
+			return umlClassCounts{}, invalid(fmt.Sprintf("uml class relationship at index %d references an unknown class.", i), "Set relationship.from and relationship.to to existing class ids.")
+		}
+	}
+	return umlClassCounts{classes: len(classes), relationships: len(relationships)}, nil
+}
+
+type umlStateCounts struct {
+	states      int
+	transitions int
+}
+
+func validateUMLStateMachine(data map[string]any, limits manifest.LimitsSpec) (umlStateCounts, error) {
+	states, err := requiredArray(data, "states")
+	if err != nil {
+		return umlStateCounts{}, err
+	}
+	if len(states) > limitOrDefault(limits.MaxNodes, 1000) {
+		return umlStateCounts{}, invalid("uml state machine input has too many states.", "Reduce states or raise template max_nodes.")
+	}
+	stateIDs, err := collectObjectIDs(states, "state")
+	if err != nil {
+		return umlStateCounts{}, err
+	}
+	transitions, err := requiredArray(data, "transitions")
+	if err != nil {
+		return umlStateCounts{}, err
+	}
+	if len(transitions) > limitOrDefault(limits.MaxEdges, 3000) {
+		return umlStateCounts{}, invalid("uml state machine input has too many transitions.", "Reduce transitions or raise template max_edges.")
+	}
+	for i, item := range transitions {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return umlStateCounts{}, invalid(fmt.Sprintf("uml transition at index %d must be an object.", i), "Each transition must contain from and to state ids.")
+		}
+		from := stringField(obj, "from")
+		to := stringField(obj, "to")
+		if !stateIDs[from] || !stateIDs[to] {
+			return umlStateCounts{}, invalid(fmt.Sprintf("uml transition at index %d references an unknown state.", i), "Set transition.from and transition.to to existing state ids.")
+		}
+	}
+	return umlStateCounts{states: len(states), transitions: len(transitions)}, nil
+}
+
+type umlActivityCounts struct {
+	actions int
+	flows   int
+}
+
+func validateUMLActivity(data map[string]any, limits manifest.LimitsSpec) (umlActivityCounts, error) {
+	actions, err := requiredArray(data, "actions")
+	if err != nil {
+		return umlActivityCounts{}, err
+	}
+	if len(actions) > limitOrDefault(limits.MaxNodes, 1000) {
+		return umlActivityCounts{}, invalid("uml activity input has too many actions.", "Reduce actions or raise template max_nodes.")
+	}
+	actionIDs, err := collectObjectIDs(actions, "action")
+	if err != nil {
+		return umlActivityCounts{}, err
+	}
+	flows, err := optionalArray(data, "flows")
+	if err != nil {
+		return umlActivityCounts{}, err
+	}
+	if len(flows) > limitOrDefault(limits.MaxEdges, 3000) {
+		return umlActivityCounts{}, invalid("uml activity input has too many flows.", "Reduce flows or raise template max_edges.")
+	}
+	for i, item := range flows {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return umlActivityCounts{}, invalid(fmt.Sprintf("uml activity flow at index %d must be an object.", i), "Each flow must contain from and to action ids.")
+		}
+		from := stringField(obj, "from")
+		to := stringField(obj, "to")
+		if !actionIDs[from] || !actionIDs[to] {
+			return umlActivityCounts{}, invalid(fmt.Sprintf("uml activity flow at index %d references an unknown action.", i), "Set flow.from and flow.to to existing action ids.")
+		}
+	}
+	return umlActivityCounts{actions: len(actions), flows: len(flows)}, nil
+}
+
+type umlComponentCounts struct {
+	components  int
+	deployments int
+	links       int
+}
+
+func validateUMLComponentDeployment(data map[string]any, limits manifest.LimitsSpec) (umlComponentCounts, error) {
+	components, err := requiredArray(data, "components")
+	if err != nil {
+		return umlComponentCounts{}, err
+	}
+	if len(components) > limitOrDefault(limits.MaxNodes, 1000) {
+		return umlComponentCounts{}, invalid("uml component deployment input has too many components.", "Reduce components or raise template max_nodes.")
+	}
+	componentIDs, err := collectObjectIDs(components, "component")
+	if err != nil {
+		return umlComponentCounts{}, err
+	}
+	deployments, err := optionalArray(data, "deployments")
+	if err != nil {
+		return umlComponentCounts{}, err
+	}
+	deploymentIDs := map[string]bool{}
+	for i, item := range deployments {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return umlComponentCounts{}, invalid(fmt.Sprintf("uml deployment at index %d must be an object.", i), "Each deployment must contain id and label.")
+		}
+		id := stringField(obj, "id")
+		if id == "" {
+			return umlComponentCounts{}, invalid(fmt.Sprintf("uml deployment at index %d is missing id.", i), "Set deployment.id to a non-empty string.")
+		}
+		deploymentIDs[id] = true
+	}
+	links, err := optionalArray(data, "links")
+	if err != nil {
+		return umlComponentCounts{}, err
+	}
+	if len(links) > limitOrDefault(limits.MaxEdges, 3000) {
+		return umlComponentCounts{}, invalid("uml component deployment input has too many links.", "Reduce links or raise template max_edges.")
+	}
+	known := map[string]bool{}
+	for id := range componentIDs {
+		known[id] = true
+	}
+	for id := range deploymentIDs {
+		known[id] = true
+	}
+	for i, item := range links {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return umlComponentCounts{}, invalid(fmt.Sprintf("uml component link at index %d must be an object.", i), "Each link must contain from and to ids.")
+		}
+		from := stringField(obj, "from")
+		to := stringField(obj, "to")
+		if !known[from] || !known[to] {
+			return umlComponentCounts{}, invalid(fmt.Sprintf("uml component link at index %d references an unknown component or deployment.", i), "Set link.from and link.to to existing component or deployment ids.")
+		}
+	}
+	return umlComponentCounts{components: len(components), deployments: len(deployments), links: len(links)}, nil
+}
+
+type visualHintCounts struct {
+	focusIDs       int
+	hiddenDetails  int
+	narrativeSteps int
+	annotations    int
+}
+
+func validateVisualHints(data map[string]any, knownIDs map[string]bool) (visualHintCounts, error) {
+	value, ok := data["visual"]
+	if !ok || value == nil {
+		return visualHintCounts{}, nil
+	}
+	visual, ok := value.(map[string]any)
+	if !ok {
+		return visualHintCounts{}, invalid("visual guidance must be an object.", "Set visual to an object with goal, initial_focus_ids, narrative_steps, and annotations.")
+	}
+	counts := visualHintCounts{}
+	var err error
+	if counts.focusIDs, err = validateVisualStringArray(visual, "initial_focus_ids", knownIDs); err != nil {
+		return visualHintCounts{}, err
+	}
+	if counts.hiddenDetails, err = validateVisualStringArray(visual, "hidden_detail_ids", knownIDs); err != nil {
+		return visualHintCounts{}, err
+	}
+	if _, err = validateVisualStringArray(visual, "emphasis", nil); err != nil {
+		return visualHintCounts{}, err
+	}
+	steps, err := optionalArray(visual, "narrative_steps")
+	if err != nil {
+		return visualHintCounts{}, err
+	}
+	counts.narrativeSteps = len(steps)
+	for i, item := range steps {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return visualHintCounts{}, invalid(fmt.Sprintf("visual narrative step at index %d must be an object.", i), "Each visual.narrative_steps item must contain id, title, and optional focus_ids.")
+		}
+		if stringField(obj, "id") == "" || stringField(obj, "title") == "" {
+			return visualHintCounts{}, invalid(fmt.Sprintf("visual narrative step at index %d is missing id or title.", i), "Set visual.narrative_steps[].id and title to non-empty strings.")
+		}
+		if _, err := validateVisualStringArray(obj, "focus_ids", knownIDs); err != nil {
+			return visualHintCounts{}, err
+		}
+	}
+	annotations, err := optionalArray(visual, "annotations")
+	if err != nil {
+		return visualHintCounts{}, err
+	}
+	counts.annotations = len(annotations)
+	for i, item := range annotations {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return visualHintCounts{}, invalid(fmt.Sprintf("visual annotation at index %d must be an object.", i), "Each visual.annotations item must contain id, target_id, and label.")
+		}
+		if stringField(obj, "id") == "" || stringField(obj, "target_id") == "" || stringField(obj, "label") == "" {
+			return visualHintCounts{}, invalid(fmt.Sprintf("visual annotation at index %d is missing id, target_id, or label.", i), "Set visual.annotations[].id, target_id, and label to non-empty strings.")
+		}
+		targetID := stringField(obj, "target_id")
+		if len(knownIDs) > 0 && !knownIDs[targetID] {
+			return visualHintCounts{}, invalid("visual annotation references an unknown target_id: "+targetID, "Set visual.annotations[].target_id to an existing semantic id from the selected template input.")
+		}
+		if priority, ok := obj["priority"]; ok && !isNumber(priority) {
+			return visualHintCounts{}, invalid("visual annotation priority must be numeric.", "Set visual.annotations[].priority to a number between 0 and 1.")
+		}
+	}
+	return counts, nil
+}
+
+func validateVisualStringArray(data map[string]any, name string, knownIDs map[string]bool) (int, error) {
+	items, err := optionalArray(data, name)
+	if err != nil {
+		return 0, err
+	}
+	for i, item := range items {
+		value, ok := item.(string)
+		if !ok || strings.TrimSpace(value) == "" {
+			return 0, invalid("visual "+name+" must contain non-empty strings.", "Set visual."+name+" to an array of existing semantic ids or short words.")
+		}
+		if knownIDs != nil && len(knownIDs) > 0 && !knownIDs[strings.TrimSpace(value)] {
+			return 0, invalid("visual "+name+" references an unknown id: "+strings.TrimSpace(value), "Use ids that exist in the selected template input.")
+		}
+		if i > 80 {
+			return 0, invalid("visual "+name+" has too many entries.", "Keep visual guidance concise and focused on the first readable view.")
+		}
+	}
+	return len(items), nil
+}
+
+func collectVisualReferenceIDs(kind string, data map[string]any) map[string]bool {
+	ids := map[string]bool{}
+	fieldsByKind := map[string][]string{
+		"graph_v1":                    {"groups", "nodes", "edges"},
+		"graph_events_v1":             {"groups", "nodes", "edges", "events"},
+		"timeline_v1":                 {"events"},
+		"evidence_v1":                 {"claims", "sources", "links"},
+		"matrix_v1":                   {"items"},
+		"isometric_architecture_v1":   {"zones", "entities", "links"},
+		"uml_sequence_v1":             {"participants", "messages", "phases", "activations", "fragments"},
+		"uml_class_v1":                {"classes", "relationships"},
+		"uml_state_machine_v1":        {"states", "transitions"},
+		"uml_activity_v1":             {"actions", "flows"},
+		"uml_component_deployment_v1": {"components", "deployments", "links"},
+	}
+	for _, field := range fieldsByKind[kind] {
+		for _, item := range objectArrayFromAny(data[field]) {
+			for _, id := range visualIDsForObject(item) {
+				ids[id] = true
+			}
+		}
+	}
+	return ids
+}
+
+func objectArrayFromAny(value any) []map[string]any {
+	items, ok := value.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		if obj, ok := item.(map[string]any); ok {
+			out = append(out, obj)
+		}
+	}
+	return out
+}
+
+func visualIDsForObject(obj map[string]any) []string {
+	if id := stringField(obj, "id"); id != "" {
+		return []string{id}
+	}
+	from := firstStringField(obj, "from", "claim_id")
+	to := firstStringField(obj, "to", "source_id")
+	if from != "" && to != "" {
+		return []string{from + "->" + to}
+	}
+	return nil
+}
+
+func collectObjectIDs(items []any, noun string) (map[string]bool, error) {
+	ids := map[string]bool{}
+	for i, item := range items {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return nil, invalid(fmt.Sprintf("uml %s at index %d must be an object.", noun, i), "Each "+noun+" must contain at least a non-empty string id.")
+		}
+		id := stringField(obj, "id")
+		if id == "" {
+			return nil, invalid(fmt.Sprintf("uml %s at index %d is missing id.", noun, i), "Set "+noun+".id to a non-empty string.")
+		}
+		if ids[id] {
+			return nil, invalid("uml "+noun+" ids must be unique.", "Rename duplicate "+noun+" id "+id+".")
+		}
+		ids[id] = true
+	}
+	return ids, nil
+}
+
 func requiredArray(data map[string]any, name string) ([]any, error) {
 	value, ok := data[name]
 	if !ok {
@@ -325,9 +1095,66 @@ func optionalArray(data map[string]any, name string) ([]any, error) {
 	return arr, nil
 }
 
+func requiredObject(data map[string]any, name string) (map[string]any, error) {
+	value, ok := data[name]
+	if !ok {
+		return nil, invalid("visual input is missing required object "+name+".", "Add "+name+" as a JSON object.")
+	}
+	obj, ok := value.(map[string]any)
+	if !ok || obj == nil {
+		return nil, invalid("visual input field "+name+" must be an object.", "Set "+name+" to a JSON object.")
+	}
+	return obj, nil
+}
+
 func stringField(data map[string]any, name string) string {
 	value, _ := data[name].(string)
 	return strings.TrimSpace(value)
+}
+
+func firstStringField(data map[string]any, names ...string) string {
+	for _, name := range names {
+		if value := stringField(data, name); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func requiredStringPresent(data map[string]any, name, noun string, index int) (string, error) {
+	value, ok := data[name]
+	if !ok {
+		return "", invalid(fmt.Sprintf("%s at index %d is missing %s.", noun, index, name), "Set "+name+" to a string.")
+	}
+	text, ok := value.(string)
+	if !ok {
+		return "", invalid(fmt.Sprintf("%s at index %d has non-string %s.", noun, index, name), "Set "+name+" to a string.")
+	}
+	return strings.TrimSpace(text), nil
+}
+
+func numberField(data map[string]any, name string) (float64, bool) {
+	value, ok := data[name]
+	if !ok {
+		return 0, false
+	}
+	switch v := value.(type) {
+	case json.Number:
+		n, err := v.Float64()
+		return n, err == nil
+	case float64:
+		return v, true
+	case float32:
+		return float64(v), true
+	case int:
+		return float64(v), true
+	case int64:
+		return float64(v), true
+	case int32:
+		return float64(v), true
+	default:
+		return 0, false
+	}
 }
 
 func isNumber(value any) bool {
@@ -340,6 +1167,11 @@ func isNumber(value any) bool {
 	default:
 		return false
 	}
+}
+
+func isBool(value any) bool {
+	_, ok := value.(bool)
+	return ok
 }
 
 func limitOrDefault(value, fallback int) int {

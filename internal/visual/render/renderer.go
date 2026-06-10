@@ -1,6 +1,7 @@
 package render
 
 import (
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"engineering-flow-platform-tools/internal/visual/manifest"
+	"engineering-flow-platform-tools/internal/visual/mermaid"
 	"engineering-flow-platform-tools/internal/visual/metadata"
 	visualschema "engineering-flow-platform-tools/internal/visual/schema"
 )
@@ -97,12 +99,27 @@ func Render(opts Options) (Result, error) {
 	if normalizeDataMode(opts.DataMode) != "js-file" {
 		return Result{}, metadata.NewError("unsupported_data_mode", "visual render only supports --data-mode js-file.", "Use --data-mode js-file or omit the flag.", 400)
 	}
-	registry, entry, tpl, err := loadTemplate(opts.TemplateDir, opts.TemplateID)
+	raw, err := readInput(opts.InputPath, opts.Stdin)
+	if err != nil {
+		return Result{}, err
+	}
+	templateID := strings.TrimSpace(opts.TemplateID)
+	if templateID == "" {
+		inferred, ok := mermaid.InferTemplateID(raw)
+		if !ok {
+			return Result{}, metadata.NewError("mermaid_input_required", "visual render accepts Mermaid input.", "Pass a valid Mermaid .mmd file so the template can be inferred, or pass --template with a Mermaid input.", 400)
+		}
+		templateID = inferred
+	}
+	registry, entry, tpl, err := loadTemplate(opts.TemplateDir, templateID)
 	if err != nil {
 		_ = registry
 		return Result{}, err
 	}
-	raw, err := readInput(opts.InputPath, opts.Stdin)
+	if !mermaid.IsMermaid(raw) {
+		return Result{}, metadata.NewError("mermaid_input_required", "visual render accepts Mermaid input for public templates.", "Pass a valid Mermaid .mmd file or omit --template so the CLI can infer the Mermaid template.", 400)
+	}
+	raw, err = mermaid.CompileIfNeededWithOptions(context.Background(), tpl.InputSchemaKind, raw, mermaid.CompileOptions{})
 	if err != nil {
 		return Result{}, err
 	}
@@ -131,6 +148,10 @@ func Render(opts Options) (Result, error) {
 	if _, err := copyAssets(opts.TemplateDir, entry, tpl, opts.OutDir); err != nil {
 		return Result{}, err
 	}
+	outputAssets, err := BuildOutputAssets(opts.TemplateDir)
+	if err != nil {
+		return Result{}, err
+	}
 	outputManifest := manifest.OutputManifest{
 		Schema: "efp.visual.output.manifest.v1",
 		Template: manifest.OutputTemplate{
@@ -143,7 +164,10 @@ func Render(opts Options) (Result, error) {
 		Offline:      true,
 		Entrypoint:   "index.html",
 		Layout:       tpl.Layout,
+		Effects:      tpl.Effects,
+		VisualDesign: tpl.VisualDesign,
 		Interactions: tpl.Interactions,
+		Assets:       outputAssets,
 	}
 	if err := writeJSONFile(filepath.Join(opts.OutDir, "manifest.json"), outputManifest); err != nil {
 		return Result{}, err
@@ -286,13 +310,13 @@ func readInput(path string, stdin io.Reader) ([]byte, error) {
 		}
 		b, err := io.ReadAll(stdin)
 		if err != nil {
-			return nil, metadata.NewError("input_read_failed", "failed to read input JSON from stdin: "+err.Error(), "Pipe valid JSON to visual render --input -.", 400)
+			return nil, metadata.NewError("input_read_failed", "failed to read visual input from stdin: "+err.Error(), "Pipe valid Mermaid to visual render --input -.", 400)
 		}
 		return b, nil
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, metadata.NewError("input_read_failed", "failed to read input JSON: "+err.Error(), "Pass a readable JSON file path to --input.", 400)
+		return nil, metadata.NewError("input_read_failed", "failed to read visual input: "+err.Error(), "Pass a readable Mermaid file path to --input.", 400)
 	}
 	return b, nil
 }

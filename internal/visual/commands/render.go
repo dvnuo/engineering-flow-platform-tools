@@ -12,13 +12,10 @@ func renderCmd(o *Opts) *cobra.Command {
 	var overwrite bool
 	c := &cobra.Command{
 		Use:   "render",
-		Short: "Render an offline visual artifact from a local template and input JSON",
+		Short: "Render an offline visual artifact from Mermaid input",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if templateID == "" {
-				return invalidArgs(cmd, o, "--template is required", "Run visual schema render --json and pass --template <template-id>.")
-			}
 			if inputPath == "" {
-				return invalidArgs(cmd, o, "--input is required", "Pass --input <file> or --input - to read JSON from stdin.")
+				return invalidArgs(cmd, o, "--input is required", "Pass --input <file> or --input - to read Mermaid from stdin.")
 			}
 			if outDir == "" {
 				return invalidArgs(cmd, o, "--out is required", "Pass a new output directory path.")
@@ -45,8 +42,8 @@ func renderCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", result))
 		},
 	}
-	c.Flags().StringVar(&templateID, "template", "", "Template id from visual template list")
-	c.Flags().StringVar(&inputPath, "input", "", "Input JSON file path, or - for stdin")
+	c.Flags().StringVar(&templateID, "template", "", "Template id from visual template list; optional for Mermaid input")
+	c.Flags().StringVar(&inputPath, "input", "", "Input Mermaid file path, or - for stdin")
 	c.Flags().StringVar(&outDir, "out", "", "Output directory for the static artifact")
 	c.Flags().StringVar(&title, "title", "", "Artifact title override")
 	c.Flags().BoolVar(&overwrite, "overwrite", false, "Replace an existing non-empty output directory")

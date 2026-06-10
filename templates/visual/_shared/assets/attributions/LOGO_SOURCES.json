@@ -1,0 +1,146 @@
+{
+  "schema": "efp.visual.logo_sources.v1",
+  "generated_at": "2026-06-07T09:14:17.850Z",
+  "sources": [
+    {
+      "id": "docker",
+      "label": "Docker",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/docker.svg",
+      "path": "assets/icons/simple-icons/docker.svg",
+      "license": "CC0-1.0",
+      "color": "#2496ed",
+      "fetched_at": "2026-06-07T09:13:56.622Z"
+    },
+    {
+      "id": "elasticsearch",
+      "label": "Elasticsearch",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/elasticsearch.svg",
+      "path": "assets/icons/simple-icons/elasticsearch.svg",
+      "license": "CC0-1.0",
+      "color": "#005571",
+      "fetched_at": "2026-06-07T09:13:58.453Z"
+    },
+    {
+      "id": "grafana",
+      "label": "Grafana",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/grafana.svg",
+      "path": "assets/icons/simple-icons/grafana.svg",
+      "license": "CC0-1.0",
+      "color": "#f46800",
+      "fetched_at": "2026-06-07T09:13:59.157Z"
+    },
+    {
+      "id": "jenkins",
+      "label": "Jenkins",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/jenkins.svg",
+      "path": "assets/icons/simple-icons/jenkins.svg",
+      "license": "CC0-1.0",
+      "color": "#d24939",
+      "fetched_at": "2026-06-07T09:13:55.913Z"
+    },
+    {
+      "id": "kafka",
+      "label": "Apache Kafka",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/apachekafka.svg",
+      "path": "assets/icons/simple-icons/kafka.svg",
+      "license": "CC0-1.0",
+      "color": "#231f20",
+      "fetched_at": "2026-06-07T09:13:57.685Z"
+    },
+    {
+      "id": "kubernetes",
+      "label": "Kubernetes",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/kubernetes.svg",
+      "path": "assets/icons/simple-icons/kubernetes.svg",
+      "license": "CC0-1.0",
+      "color": "#326ce5",
+      "fetched_at": "2026-06-07T09:13:56.357Z"
+    },
+    {
+      "id": "mongodb",
+      "label": "MongoDB",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/mongodb.svg",
+      "path": "assets/icons/simple-icons/mongodb.svg",
+      "license": "CC0-1.0",
+      "color": "#47a248",
+      "fetched_at": "2026-06-07T09:13:57.403Z"
+    },
+    {
+      "id": "mysql",
+      "label": "MySQL",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/mysql.svg",
+      "path": "assets/icons/simple-icons/mysql.svg",
+      "license": "CC0-1.0",
+      "color": "#4479a1",
+      "fetched_at": "2026-06-07T09:13:55.352Z"
+    },
+    {
+      "id": "nginx",
+      "label": "NGINX",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/nginx.svg",
+      "path": "assets/icons/simple-icons/nginx.svg",
+      "license": "CC0-1.0",
+      "color": "#009639",
+      "fetched_at": "2026-06-07T09:14:17.362Z"
+    },
+    {
+      "id": "postgresql",
+      "label": "PostgreSQL",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/postgresql.svg",
+      "path": "assets/icons/simple-icons/postgresql.svg",
+      "license": "CC0-1.0",
+      "color": "#4169e1",
+      "fetched_at": "2026-06-07T09:13:56.975Z"
+    },
+    {
+      "id": "prometheus",
+      "label": "Prometheus",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/prometheus.svg",
+      "path": "assets/icons/simple-icons/prometheus.svg",
+      "license": "CC0-1.0",
+      "color": "#e6522c",
+      "fetched_at": "2026-06-07T09:13:58.740Z"
+    },
+    {
+      "id": "rabbitmq",
+      "label": "RabbitMQ",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/rabbitmq.svg",
+      "path": "assets/icons/simple-icons/rabbitmq.svg",
+      "license": "CC0-1.0",
+      "color": "#ff6600",
+      "fetched_at": "2026-06-07T09:13:57.985Z"
+    },
+    {
+      "id": "redis",
+      "label": "Redis",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/redis.svg",
+      "path": "assets/icons/simple-icons/redis.svg",
+      "license": "CC0-1.0",
+      "color": "#ff4438",
+      "fetched_at": "2026-06-07T09:14:17.848Z"
+    },
+    {
+      "id": "spring",
+      "label": "Spring",
+      "source": "simple-icons",
+      "url": "raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/spring.svg",
+      "path": "assets/icons/simple-icons/spring.svg",
+      "license": "CC0-1.0",
+      "color": "#6db33f",
+      "fetched_at": "2026-06-07T09:13:59.497Z"
+    }
+  ]
+}

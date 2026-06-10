@@ -1,0 +1,89 @@
+id: mermaid.venn
+version: 1.0.0
+category: mermaid
+title: Mermaid Venn Diagram
+description: Renders official Mermaid Venn Diagram syntax through the EFP offline visual renderer mapped for this diagram type.
+input_schema: schema.input.json
+input_schema_kind: evidence_v1
+renderer:
+  contract: offline.evidence.v1
+layout:
+  preset: radial_tree
+  group_by: group
+effects:
+  engine: three.v1
+  scene: relationship_knowledge_lineage
+  camera: orbit_isometric
+  particles: semantic_depth_dust
+  material: holographic
+  motion: slow_orbit
+  interaction:
+    - orbit_drag
+    - raycast_inspect
+    - expand_collapse
+  postprocess:
+    - emissive_glow
+visual_design:
+  initial_view: overview
+  max_initial_nodes: 70
+  max_initial_edges: 140
+  default_collapse_depth: 1
+  group_by:
+    - group
+    - module
+    - package
+    - layer
+  supports:
+    - semantic_schema
+    - expand_collapse
+    - edge_type_filter
+    - search
+    - focus_path
+    - label_lod
+    - export_json
+  agent_guidance:
+    - Put secondary or noisy details behind hidden_detail_ids, detail visibility, or collapsed groups instead of showing everything at once.
+    - Fill visual.goal, visual.initial_focus_ids, visual.hidden_detail_ids, visual.narrative_steps, and visual.annotations so the first view tells a readable story.
+    - Choose this template only when the input matches its semantic contract.
+    - Keep the first view readable by grouping detail and marking low-value links as detail.
+    - Run visual template schema before inventing Mermaid diagram syntax.
+offline:
+  required: true
+  forbid_network: true
+  data_mode: js-file
+assets:
+  - from: ../_shared/runtime/efp-visual-runtime.iife.js
+    to: assets/runtime/efp-visual-runtime.iife.js
+  - from: ../_shared/runtime/efp-visual-renderers.iife.js
+    to: assets/runtime/efp-visual-renderers.iife.js
+  - from: ../_shared/runtime/efp-visual-runtime.css
+    to: assets/runtime/efp-visual-runtime.css
+  - from: style.css
+    to: assets/templates/mermaid.venn/style.css
+styles:
+  - assets/runtime/efp-visual-runtime.css
+  - assets/templates/mermaid.venn/style.css
+scripts:
+  - manifest.js
+  - data.js
+  - assets/runtime/efp-visual-runtime.iife.js
+  - assets/runtime/efp-visual-renderers.iife.js
+interactions:
+  - hover_tooltip
+  - click_inspect
+  - search
+  - filter_by_type
+  - filter_by_status
+  - focus_path
+  - expand_collapse
+  - export_json
+limits:
+  max_nodes: 1000
+  max_edges: 3000
+  max_events: 5000
+  max_items: 2000
+tags:
+  - relationship
+  - knowledge
+  - lineage
+  - evidence

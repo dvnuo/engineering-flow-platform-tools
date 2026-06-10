@@ -16,34 +16,46 @@
 
 - Always use `--json`.
 - Use the default `~/.efp/template/visual` catalog when it is installed there; use `--template-dir` when templates are in the workspace or release artifact.
-- Do not read all 195 template details up front.
 - Do not infer available templates from the `templates/visual` file tree.
-- Discover templates only with `visual template categories`, `visual template list`, `visual template get`, and `visual template schema`.
+- Discover templates only with `visual template categories`, `visual template list`, `visual template get`, `visual template schema`, and `visual template guide`.
 - Run `visual template categories --json`, or add `--template-dir ./templates/visual` in a source checkout.
 - Run `visual template list --category <category> --json`, or add `--template-dir ./templates/visual` in a source checkout.
 - Run `visual template get <template-id> --json`, or add `--template-dir ./templates/visual` in a source checkout.
 - Run `visual template schema <template-id> --json`, or add `--template-dir ./templates/visual` in a source checkout.
-- Backward compatibility aliases work, but they are registry aliases rather than duplicate template directories; prefer the returned `canonical_id` for new inputs and examples.
-- Do not invent template paths or point inputs at alias directories.
-- Before every render, run `visual template schema <id> --json`, using `--template-dir` only when the catalog is not installed at `~/.efp/template/visual`.
-- Write input JSON that follows `data.json_schema`; do not invent the input shape and do not generate JavaScript code.
-- Validate with `visual validate --template <template-id> --input <input.json> --json`, using `--template-dir` only when the catalog is not installed at `~/.efp/template/visual`.
-- Render to a new output directory with `visual render --template <template-id> --input <input.json> --out <dir> --json`.
-- Return `data.artifact.entrypoint` to the user.
-- Do not use remote assets, CDN URLs, Node/npm, generated JavaScript, or network APIs.
+- Run `visual template guide <template-id> --json`, or add `--template-dir ./templates/visual` in a source checkout.
+- The built-in public catalog has 28 `mermaid.*` templates in the `mermaid` category, one per supported Mermaid Diagram Syntax family.
+- Do not invent template paths.
+- Author Mermaid `.mmd` input. Pure official Mermaid can be passed directly to `visual inspect-input`, `visual inspect-plan`, `visual validate`, and `visual render` without `--template`; the CLI infers the matching `mermaid.*` template.
+- Use EFP frontmatter only for quality-critical layout hints such as `efp.template`, `efp.camera`, `efp.canvas`, `efp.renderHints`, `efp.visual`, and `efp.view`. Keep the Mermaid body valid Mermaid.
+- Use Mermaid syntax plus optional EFP frontmatter when layout, camera, render hints, or focus guidance is needed.
+- For UML sequence diagrams, use Mermaid `sequenceDiagram` or `zenuml`; the CLI maps them to `mermaid.sequence` or `mermaid.zenuml`.
+- For architecture, topology, deployment, service map, system map, infrastructure map, microservice, cloud, iCraft-like, or isometric architecture requests, use Mermaid `architecture-beta`, `architecture`, `C4Context`, or EFP frontmatter `efp.template: mermaid.architecture`.
+- For class, state, activity, component, and sequence diagrams, use Mermaid `classDiagram`, `stateDiagram`, `flowchart`, C4/architecture syntax, `sequenceDiagram`, or `zenuml`; the CLI maps them to the corresponding `mermaid.*` template.
+- For graph inputs larger than a small overview, keep Mermaid node labels short, use subgraphs when helpful, and move low-value detail into fewer visible edges or optional EFP frontmatter hints.
+- For graph-like, flow, relationship, spatial, and UML diagrams, use official Mermaid arrows and relationships instead of inventing data shapes. Optional EFP frontmatter can add `kind`, `provider`, `service`, `platform`, icon/model/color hints, label priority, or route hints when the Mermaid syntax alone is not enough for the desired visual quality.
+- For isometric architecture inputs, use Mermaid `architecture` / `architecture-beta`, C4, or Mermaid plus optional EFP frontmatter for bounded zones, positioned services, local icon/model ids, explicit routes, camera, grid, and label density hints.
+- Use `view.colorBy` or `renderHints.colorBy` plus `renderHints.showLegend=true` whenever color carries meaning. Good defaults are `provider`, `kind`, `status`, `group`, `phase`, `risk`, and `severity`.
+- Use local icon/model ids from `templates/visual/_shared/asset-registry.json`. Do not use external image/model URLs. Current AWS icon ids are local styled placeholders; generated `*.logo3d` files are local badges derived from vendored SVGs, not official vendor 3D models.
+- For Mermaid architecture diagrams, set `renderHints.badgeMode="icon_and_model"`, `renderHints.badgeSize="medium"`, `renderHints.badgePlacement="front"`, and `renderHints.labelIcon=true` in EFP frontmatter when badge readability matters.
+- For graph event inputs, bind each meaningful event to an existing node with `events[].node_id`; replay views should explain which object changed instead of listing detached events.
+- Before validation/render, run `visual inspect-input --input <input.mmd> --json` and use `data.warnings`, `data.summary`, and `data.recommendations` to reduce clutter.
+- Then run `visual inspect-plan --input <input.mmd> --out <dir> --json` and use `data.visual_plan.ir`, `data.visual_plan.view`, `data.visual_plan.marks`, `data.visual_plan.edges`, `data.visual_plan.colors`, `data.visual_plan.assets`, `data.visual_plan.disclosure`, and `data.visual_plan.quality_loop` to confirm the first view is explainable before render.
+- Validate with `visual validate --input <input.mmd> --json`, using `--template-dir` only when the catalog is not installed at `~/.efp/template/visual`.
+- Render to a new output directory with `visual render --input <input.mmd> --out <dir> --json`.
+- Run `visual inspect-render --out <dir> --json` after render. For browser-level evidence, run `visual inspect-browser --out <dir> --json`; it serves the artifact through local `127.0.0.1`, writes a screenshot, and reuses `inspect-render --screenshot`.
+- Return `data.artifact.entrypoint` to the user only after inspection passes, or return the warnings and screenshot path for review.
+- Visual effects are template-declared. Do not override them with generated JavaScript; choose the right template and provide better input data.
+- Do not use remote assets, CDN URLs, runtime Node/npm, generated JavaScript, or network APIs.
 - Use `--dry-run` to preview planned files before writing.
-- The generated `index.html` is safe for `file://` and for Portal/runtime static proxy subpaths because asset paths are relative.
+- The generated `index.html` is safe for `file://` and for Portal/runtime static proxy subpaths because asset paths, including the local Three.js module bridge, are relative.
 
-Recommended template categories:
+Recommended public templates:
 
-- `agent` or `debug` for agent runs, failures, incidents, traces, and recovery.
-- `codebase` for repo, code, diff, dependency, test, coverage, and migration work.
-- `runtime` for infra, service, adapter, session, event, sandbox, and capability maps.
-- `project` for Jira, GitHub, Confluence, requirements, releases, and reviews.
-- `knowledge` for evidence, research, citation, source, and answer lineage.
-- `planning` for plans, tasks, workflows, automation, approvals, and goals.
-- `business` for KPI, funnel, customer, revenue, support, capacity, and ops views.
-- `education` for explanations, tutorials, lifecycle, process, and tradeoff visuals.
+- `mermaid.flowchart` for flowcharts, dependency graphs, process diagrams, and general directed graphs.
+- `mermaid.sequence` and `mermaid.zenuml` for message flows.
+- `mermaid.class`, `mermaid.er`, `mermaid.state`, `mermaid.requirement`, and `mermaid.c4` for software modeling diagrams.
+- `mermaid.architecture` for architecture, topology, deployment, service maps, infrastructure maps, microservices, cloud maps, and iCraft-like isometric scenes.
+- `mermaid.gantt`, `mermaid.timeline`, `mermaid.journey`, `mermaid.gitgraph`, `mermaid.pie`, `mermaid.quadrant`, `mermaid.sankey`, `mermaid.xy`, `mermaid.radar`, `mermaid.kanban`, `mermaid.mindmap`, `mermaid.block`, `mermaid.packet`, `mermaid.treemap`, `mermaid.venn`, `mermaid.ishikawa`, `mermaid.wardley`, `mermaid.treeview`, and `mermaid.event_modeling` for the matching Mermaid Diagram Syntax families.
 
 ## Jenkins Automation
 
@@ -194,6 +206,9 @@ jenkins schema artifact.download --json
 jenkins schema api.get --json
 inspect-image schema inspect --json
 visual schema render --json
+visual schema inspect-input --json
+visual schema inspect-plan --json
+visual schema inspect-render --json
 ```
 
 The `required` field lists mandatory arguments and flags. The `flags` field includes type and description metadata suitable for tool planning.
@@ -214,3 +229,17 @@ confluence page get --id 123 --json
 ```
 
 Successful responses contain `ok=true` and `data`. Failed responses contain `ok=false`, `error.code`, and `error.message`; many failures also include `error.hint`.
+
+## Template-Level Authoring Workflow
+
+For visual generation, use this loop:
+
+1. Write valid Mermaid `.mmd` for the user-visible diagram. Use only official Mermaid syntax in the body.
+2. Add optional `efp:` frontmatter when the visual needs a specific template, camera, route, render hint, initial focus, or annotation.
+3. `visual inspect-input --input <input.mmd> --json`
+4. `visual inspect-plan --input <input.mmd> --out <dir> --json`
+5. Revise Mermaid/frontmatter using warning `suggestion`, `auto_fix_hint`, `visual_plan.marks`, `visual_plan.edges`, `visual_plan.colors`, `visual_plan.assets`, and `visual_plan.quality_loop`.
+6. `visual render --input <input.mmd> --out <dir> --json`
+7. `visual inspect-render --out <dir> --json`. For isometric architecture or visual-quality work, also run `visual inspect-browser --out <dir> --json` to generate a local HTTP browser screenshot and DOM hook report.
+8. If `inspect-browser` wrote a screenshot, rerun or verify `visual inspect-render --out <dir> --screenshot <png|jpg|gif> --json`. For isometric architecture, require the artifact hook checks such as `artifact_isometric_dom_hooks`, `artifact_entity_label_hooks`, `artifact_grid_hook`, and `artifact_arrow_hook` to pass.
+9. Return `data.artifact.entrypoint` to the user only when inspections report `ready=true`, or return the warnings and screenshot path with the artifact if the user wants to review a draft.

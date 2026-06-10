@@ -22,8 +22,13 @@
 - visual template list --schema-kind <input-schema-kind>
 - visual template get <template-id>
 - visual template schema <template-id>
+- visual template guide <template-id>
 - visual template doctor
 - visual validate
+- visual inspect-input
+- visual inspect-plan
+- visual inspect-render
+- visual inspect-browser
 - visual render
 - visual inspect-output
 - visual commands
@@ -33,15 +38,39 @@
 
 ### Template Discovery
 
-`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`. `canonical_count` is the number of canonical registry entries, `alias_count` is compatibility aliases, and `total_count` is both combined.
+`visual template categories --json` returns category counts plus `canonical_count`, `total_count`, and `alias_count`. In the built-in public Mermaid catalog, `canonical_count=28` and `categories=[{id:"mermaid", count:28}]`.
 
-`visual template list --json` returns 195 canonical templates from `templates/visual/registry.json`. Use `--category`, `--query`, `--renderer`, and `--schema-kind` to narrow discovery before reading template details. The response includes normalized `filters`, `matched_count`, `canonical_count`, `total_count`, and `alias_count`.
+`visual template list --json` returns canonical templates from `templates/visual/registry.json`. Use `--category`, `--query`, `--renderer`, and `--schema-kind` to narrow discovery before reading template details. The response includes normalized `filters`, `matched_count`, `canonical_count`, `total_count`, and `alias_count`.
 
-`visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, aliases, `schema_file`, and `example_file`. Alias ids resolve to the canonical template and include `requested_id` and `canonical_id`.
+`visual template get <template-id> --json` returns template metadata, renderer, layout, schema kind, interactions, limits, tags, `schema_file`, `example_file`, `agent_guide_available`, `agent_guide_path`, `quality_rules_available`, and `quality_rules_path`.
 
-`visual template schema <template-id> --json` returns the template metadata, full local `json_schema`, and example object agents should mirror when writing input JSON. Alias ids resolve the same way as `template get`; the template metadata includes `requested_id`, `canonical_id`, and aliases.
+`visual template schema <template-id> --json` returns template metadata, `visual_design`, the Mermaid input format, `mermaid_syntax`, a `.mmd` example, the internal compiled schema, and guide summary.
 
-Agents must not discover templates by listing `templates/visual` directories or inventing template paths. Use `template categories`, `template list`, `template get`, and `template schema` only. Old IDs are registry aliases, not duplicate directories; prefer the returned `canonical_id` for new inputs.
+Agents must not discover templates by listing `templates/visual` directories or inventing template paths. Use `template categories`, `template list`, `template get`, and `template schema` only.
+
+The public category is `mermaid`. Internal schema kinds such as `graph_v1`, `uml_sequence_v1`, and `isometric_architecture_v1` are compiled targets and are not authored directly by users.
+
+`isometric_architecture_v1` is an internal compiled target for Mermaid architecture/C4 diagrams. Users should author Mermaid and optional EFP frontmatter, not direct renderer IR.
+
+### Input Inspection
+
+`visual inspect-input --input <input.mmd> --json` validates Mermaid input and returns `quality_score`, `summary`, `warnings`, `recommendations`, and the template `visual_design`. Mermaid input can omit `--template`; the CLI infers a template from the Mermaid diagram kind. Public templates reject non-Mermaid input with `mermaid_input_required`. It does not write files. `visual preview` is a compatibility alias for the same command.
+
+Official Mermaid diagram kinds are accepted and mapped to matching public templates: `mermaid.flowchart`, `mermaid.sequence`, `mermaid.class`, `mermaid.state`, `mermaid.er`, `mermaid.journey`, `mermaid.gantt`, `mermaid.pie`, `mermaid.quadrant`, `mermaid.requirement`, `mermaid.gitgraph`, `mermaid.c4`, `mermaid.mindmap`, `mermaid.timeline`, `mermaid.zenuml`, `mermaid.sankey`, `mermaid.xy`, `mermaid.block`, `mermaid.packet`, `mermaid.kanban`, `mermaid.architecture`, `mermaid.radar`, `mermaid.event_modeling`, `mermaid.treemap`, `mermaid.venn`, `mermaid.ishikawa`, `mermaid.wardley`, and `mermaid.treeview`.
+
+### Visual Plan
+
+`visual inspect-plan --input <input.mmd> --out <dir> --json` validates the same Mermaid input and compiles an agent-readable pre-render plan. The response includes `visual_plan.schema=efp.visual.plan.v1`, normalized `visual_plan.ir` objects/relationships/events, first-view budgets, label buckets, legend hints, disclosure strategy, selection behavior, quality-loop actions, and the exact render command shape.
+
+For `isometric_architecture_v1`, `inspect-plan` also returns `visual_plan.isometric` with base plane, grid, zone/entity/link counts, positioned and auto-positioned entity counts, directed and arrow link counts, top labels, leader lines, boundary style counts, camera, and theme.
+
+### Render Inspection
+
+`visual inspect-render --out <dir> --json` reads a generated artifact, validates required files and offline safety, loads `manifest.json` and `data.js`, rebuilds the normalized visual plan, and returns `ready`, `render_score`, `checks`, `warnings`, `visual_plan`, and `next_actions`. Checks include `shape_diversity`, `arrows_visible`, `color_diversity`, `legend_present`, `icon_assets_present`, and `attributions_present` in addition to output, offline, runtime, plan, label, relationship, architecture isometric, artifact hook, and screenshot checks. Architecture checks include `isometric_renderer_used`, `base_plane_present`, `grid_present`, `zones_present`, `zone_boundaries_present`, `entities_present`, `entity_labels_present`, `leader_lines_present`, `directed_arrows_present`, `link_labels_present`, `orthographic_camera_planned`, `architecture_light_theme`, `no_starfield_theme`, and `no_studio_layout`. Artifact hook checks include `artifact_runtime_wired`, `artifact_isometric_runtime_hook`, `artifact_isometric_dom_hooks`, `artifact_entity_label_hooks`, `artifact_link_label_hooks`, `artifact_zone_label_hooks`, `artifact_base_plane_hook`, `artifact_grid_hook`, `artifact_leader_line_hook`, `artifact_arrow_hook`, `artifact_no_studio_runtime`, and `artifact_no_starfield_runtime`; these inspect generated `index.html`, runtime JS/CSS, `manifest.js`, and `data.js` instead of trusting only the plan. Add `--screenshot <png|jpg|gif>` when a browser screenshot is available; the command then also checks blankness, contrast, and visible content coverage with standard-library image decoding.
+
+`visual inspect-browser --out <dir> --json` opens a rendered artifact through a temporary local HTTP server and captures browser evidence. It serves `<dir>/index.html` at `http://127.0.0.1:<port>/index.html`, launches local Chrome/Chromium through a Node.js CDP helper, waits for runtime data and renderer DOM hooks, writes `--screenshot` or `<dir>/visual-screenshot.png`, and then reuses `inspect-render --screenshot`. The response includes `server_url`, `screenshot_path`, `browser_ready`, `render_ready`, `render_score`, `visual_checks`, `visual_summary`, `dom`, `requests`, `warnings`, and `ready`. `visual_summary` reports the screenshot path, total and visible entity label/icon counts, loaded and broken label icon counts, model badge/SVG billboard/fallback counts, canvas/control visibility, approximate entity-label overlap count, bounds, and screenshot size. Checks include page/runtime load, renderer mount, screenshot write, console/network/remote request absence, isometric stage and label layer presence, entity/link/zone label hooks, label icons, model badges, SVG billboards, control bar, canvas visibility, screenshot nonblank/contrast, and expected label count.
+
+`inspect-browser` does not use `file://`, does not make remote requests, and does not perform OCR or logo semantic recognition. It requires Chrome/Chromium and Node.js. Missing runtime returns `browser_runtime_missing`; smoke scripts may set `EFP_SKIP_BROWSER_SMOKE=1` only when that browser runtime is intentionally unavailable.
 
 ### Render Artifact Output
 
@@ -58,6 +87,8 @@ Agents must not discover templates by listing `templates/visual` directories or 
 - `file_url_safe`
 - `http_subpath_safe`
 - `files`
+
+Rendered artifacts also copy the shared Visual Mark System into the output. `manifest.json` includes `assets.icons`, `assets.models`, `assets.attributions`, embedded `assets.mark_registry`, and embedded `assets.asset_registry`; output files include `assets/mark-registry.json`, `assets/asset-registry.json`, `assets/ATTRIBUTIONS.md`, `assets/icons/**`, and `assets/models/**`.
 
 ## Jira
 
@@ -664,3 +695,25 @@ Optional future/P1:
 - `schema <command> --json` returns usage, risk, arguments, flags, examples, and required fields.
 - Destructive commands require `--yes`.
 - Write commands support `--dry-run`.
+
+### visual template guide
+
+`visual template guide <template-id> --json` returns the selected template's agent authoring guide.
+
+The JSON `data` object includes:
+
+- `template_id`
+- `requested_id`
+- `canonical_id`
+- `guide_path`
+- `agent_guide_available`
+- `raw_markdown`
+- `guide` parsed by section
+- `guide_summary`
+- `missing_guide_sections`
+
+If a guide is missing, the command returns `ok=true` with `agent_guide_available=false` and a warning string so agents can fall back to schema and shared guidance without crashing.
+
+`visual inspect-input` warnings include `code`, `severity`, `path`, `message`, `suggestion`, `auto_fix_hint`, and optional `details`.
+
+`visual inspect-plan` returns `ready`, `quality_score`, `visual_plan.schema=efp.visual.plan.v1`, normalized `visual_plan.ir`, `visual_plan.view`, `visual_plan.labels`, `visual_plan.legend`, `visual_plan.marks`, `visual_plan.edges`, `visual_plan.colors`, `visual_plan.assets`, `visual_plan.disclosure`, `visual_plan.quality_loop`, and `visual_plan.agent_next_actions` so agents can revise semantic input before rendering.

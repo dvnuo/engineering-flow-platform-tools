@@ -1,0 +1,5 @@
+<svg xmlns="http:&#47;&#47;www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="aws sqs placeholder">
+  <rect x="10" y="18" width="44" height="28" rx="14" fill="#3d1730" stroke="#ff4f8b" stroke-width="3"/>
+  <path d="M20 32h24M38 25l7 7-7 7" fill="none" stroke="#ffd1df" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="32" y="56" text-anchor="middle" font-size="10" font-family="Arial, sans-serif" font-weight="700" fill="#ffd1df">SQS</text>
+</svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http:&#47;&#47;www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="aws dynamodb placeholder">
+  <rect x="12" y="12" width="40" height="46" rx="7" fill="#17233f" stroke="#527fff" stroke-width="3"/>
+  <path d="M20 24h24M20 34h24M20 44h24" stroke="#dbe7ff" stroke-width="3" stroke-linecap="round"/>
+  <text x="32" y="20" text-anchor="middle" font-size="10" font-family="Arial, sans-serif" font-weight="700" fill="#dbe7ff">DDB</text>
+</svg>

@@ -1,0 +1,820 @@
+{
+  "schema": "efp.visual.mark_registry.v1",
+  "defaults": {
+    "unknown": {
+      "shape": "sphere",
+      "mesh": "sphere",
+      "color": "#63a9ff",
+      "iconFallback": "generic.service"
+    }
+  },
+  "kinds": {
+    "service": {
+      "shape": "service_box",
+      "mesh": "box",
+      "iconFallback": "generic.service",
+      "color": "#63a9ff"
+    },
+    "pc": {
+      "shape": "client_monitor",
+      "mesh": "monitor",
+      "iconFallback": "generic.pc",
+      "color": "#64748b"
+    },
+    "mobile": {
+      "shape": "mobile_slab",
+      "mesh": "slab",
+      "iconFallback": "generic.mobile",
+      "color": "#475569"
+    },
+    "cdn": {
+      "shape": "cdn_globe",
+      "mesh": "globe",
+      "iconFallback": "generic.cdn",
+      "color": "#38bdf8"
+    },
+    "gateway": {
+      "shape": "gateway_tower",
+      "mesh": "tower",
+      "iconFallback": "generic.api",
+      "color": "#0d9488"
+    },
+    "nginx": {
+      "shape": "nginx_tower",
+      "mesh": "tower",
+      "iconFallback": "generic.nginx",
+      "color": "#16a34a",
+      "icon": "nginx",
+      "model": "nginx.logo3d"
+    },
+    "api_gateway": {
+      "shape": "gateway_card",
+      "mesh": "gateway_card",
+      "iconFallback": "generic.api_gateway",
+      "color": "#2563eb"
+    },
+    "microservice": {
+      "shape": "server_block_stack",
+      "mesh": "stacked_box",
+      "iconFallback": "generic.service",
+      "color": "#3b82f6"
+    },
+    "registry": {
+      "shape": "registry_ring",
+      "mesh": "ring_pedestal",
+      "iconFallback": "generic.registry",
+      "color": "#8b5cf6"
+    },
+    "nacos": {
+      "shape": "registry_ring",
+      "mesh": "ring_pedestal",
+      "iconFallback": "generic.registry",
+      "color": "#7c3aed"
+    },
+    "admin": {
+      "shape": "admin_shield",
+      "mesh": "shield",
+      "iconFallback": "generic.admin",
+      "color": "#f59e0b"
+    },
+    "api": {
+      "shape": "hex_service",
+      "mesh": "hex_prism",
+      "iconFallback": "generic.api",
+      "color": "#35c2a1"
+    },
+    "component": {
+      "shape": "component_card",
+      "mesh": "box",
+      "iconFallback": "generic.service",
+      "color": "#63a9ff"
+    },
+    "module": {
+      "shape": "module_card",
+      "mesh": "box",
+      "iconFallback": "generic.service",
+      "color": "#63a9ff"
+    },
+    "class": {
+      "shape": "class_card",
+      "mesh": "card",
+      "iconFallback": "generic.service",
+      "color": "#9db8ff"
+    },
+    "database": {
+      "shape": "database_cylinder",
+      "mesh": "cylinder",
+      "iconFallback": "generic.database",
+      "color": "#527fff"
+    },
+    "mysql": {
+      "shape": "database_cylinder",
+      "mesh": "cylinder",
+      "iconFallback": "generic.mysql",
+      "color": "#2563eb",
+      "icon": "mysql",
+      "model": "mysql.logo3d"
+    },
+    "cache": {
+      "shape": "cache_stack",
+      "mesh": "stacked_cylinder",
+      "iconFallback": "generic.storage",
+      "color": "#dc2626"
+    },
+    "redis": {
+      "shape": "redis_stack",
+      "mesh": "stacked_cylinder",
+      "iconFallback": "generic.redis",
+      "color": "#ef4444",
+      "icon": "redis",
+      "model": "redis.logo3d"
+    },
+    "storage": {
+      "shape": "bucket",
+      "mesh": "cylinder",
+      "iconFallback": "generic.storage",
+      "color": "#569a31"
+    },
+    "oss": {
+      "shape": "object_bucket",
+      "mesh": "bucket",
+      "iconFallback": "generic.oss",
+      "color": "#16a34a"
+    },
+    "file_storage": {
+      "shape": "file_storage_block",
+      "mesh": "storage_block",
+      "iconFallback": "generic.storage",
+      "color": "#22c55e"
+    },
+    "block_storage": {
+      "shape": "block_storage",
+      "mesh": "block_storage",
+      "iconFallback": "generic.storage",
+      "color": "#65a30d"
+    },
+    "queue": {
+      "shape": "queue_capsule",
+      "mesh": "capsule",
+      "iconFallback": "generic.queue",
+      "color": "#ff4f8b"
+    },
+    "event_stream": {
+      "shape": "stream_rail",
+      "mesh": "capsule",
+      "iconFallback": "generic.stream",
+      "color": "#a166ff"
+    },
+    "event": {
+      "shape": "event_bus",
+      "mesh": "capsule",
+      "iconFallback": "generic.stream",
+      "color": "#a166ff"
+    },
+    "pipeline": {
+      "shape": "pipeline_stage",
+      "mesh": "box",
+      "iconFallback": "generic.pipeline",
+      "color": "#35c2a1"
+    },
+    "job": {
+      "shape": "gear_card",
+      "mesh": "box",
+      "iconFallback": "generic.job",
+      "color": "#d33833",
+      "icon": "jenkins",
+      "model": "jenkins.logo3d"
+    },
+    "ci": {
+      "shape": "ci_card",
+      "mesh": "box",
+      "iconFallback": "generic.job",
+      "color": "#d33833",
+      "icon": "jenkins",
+      "model": "jenkins.logo3d"
+    },
+    "user": {
+      "shape": "actor_card",
+      "mesh": "card",
+      "iconFallback": "generic.user",
+      "color": "#cbd5e1"
+    },
+    "actor": {
+      "shape": "actor_card",
+      "mesh": "card",
+      "iconFallback": "generic.user",
+      "color": "#cbd5e1"
+    },
+    "external": {
+      "shape": "cloud_plate",
+      "mesh": "cloud",
+      "iconFallback": "generic.external",
+      "color": "#94a3b8"
+    },
+    "log": {
+      "shape": "log_glyph",
+      "mesh": "log_stack",
+      "iconFallback": "generic.log",
+      "color": "#f97316"
+    },
+    "elasticsearch": {
+      "shape": "search_glyph",
+      "mesh": "search_cluster",
+      "iconFallback": "generic.elasticsearch",
+      "color": "#eab308",
+      "icon": "elasticsearch",
+      "model": "elasticsearch.logo3d"
+    },
+    "search": {
+      "shape": "search_glyph",
+      "mesh": "search_cluster",
+      "iconFallback": "generic.stream",
+      "color": "#eab308"
+    },
+    "security": {
+      "shape": "security_shield",
+      "mesh": "shield",
+      "iconFallback": "generic.security",
+      "color": "#e11d48"
+    },
+    "cluster": {
+      "shape": "cluster_block",
+      "mesh": "cluster",
+      "iconFallback": "generic.service",
+      "color": "#64748b"
+    },
+    "zone": {
+      "shape": "zone_boundary",
+      "mesh": "zone",
+      "iconFallback": "generic.service",
+      "color": "#94a3b8"
+    },
+    "provider": {
+      "shape": "cloud_plate",
+      "mesh": "cloud",
+      "iconFallback": "generic.external",
+      "color": "#94a3b8"
+    },
+    "decision": {
+      "shape": "diamond",
+      "mesh": "octahedron",
+      "iconFallback": "generic.decision",
+      "color": "#e5a84c"
+    },
+    "risk": {
+      "shape": "warning_prism",
+      "mesh": "cone",
+      "iconFallback": "generic.warning",
+      "color": "#ee6b73"
+    },
+    "warning": {
+      "shape": "warning_prism",
+      "mesh": "cone",
+      "iconFallback": "generic.warning",
+      "color": "#ee6b73"
+    },
+    "state": {
+      "shape": "diamond",
+      "mesh": "octahedron",
+      "iconFallback": "generic.decision",
+      "color": "#63a9ff"
+    },
+    "initial": {
+      "shape": "event_bus",
+      "mesh": "capsule",
+      "iconFallback": "generic.stream",
+      "color": "#47c477"
+    },
+    "final": {
+      "shape": "warning_prism",
+      "mesh": "cone",
+      "iconFallback": "generic.warning",
+      "color": "#ee6b73"
+    },
+    "transition": {
+      "shape": "stream_rail",
+      "mesh": "capsule",
+      "iconFallback": "generic.stream",
+      "color": "#35c2a1"
+    },
+    "action": {
+      "shape": "gear_card",
+      "mesh": "box",
+      "iconFallback": "generic.job",
+      "color": "#35c2a1"
+    },
+    "control": {
+      "shape": "hex_service",
+      "mesh": "hex_prism",
+      "iconFallback": "generic.api",
+      "color": "#e5a84c"
+    },
+    "merge": {
+      "shape": "diamond",
+      "mesh": "octahedron",
+      "iconFallback": "generic.decision",
+      "color": "#e5a84c"
+    },
+    "fork": {
+      "shape": "pipeline_stage",
+      "mesh": "box",
+      "iconFallback": "generic.pipeline",
+      "color": "#a166ff"
+    },
+    "join": {
+      "shape": "pipeline_stage",
+      "mesh": "box",
+      "iconFallback": "generic.pipeline",
+      "color": "#a166ff"
+    },
+    "artifact": {
+      "shape": "bucket",
+      "mesh": "cylinder",
+      "iconFallback": "generic.storage",
+      "color": "#527fff"
+    },
+    "server": {
+      "shape": "service_box",
+      "mesh": "box",
+      "iconFallback": "generic.service",
+      "color": "#63a9ff"
+    },
+    "client": {
+      "shape": "actor_card",
+      "mesh": "card",
+      "iconFallback": "generic.user",
+      "color": "#cbd5e1"
+    },
+    "deployment": {
+      "shape": "cloud_plate",
+      "mesh": "cloud",
+      "iconFallback": "generic.external",
+      "color": "#94a3b8"
+    },
+    "gate": {
+      "shape": "diamond",
+      "mesh": "octahedron",
+      "iconFallback": "generic.decision",
+      "color": "#e5a84c"
+    },
+    "stage": {
+      "shape": "pipeline_stage",
+      "mesh": "box",
+      "iconFallback": "generic.pipeline",
+      "color": "#35c2a1"
+    },
+    "evidence": {
+      "shape": "class_card",
+      "mesh": "card",
+      "iconFallback": "generic.decision",
+      "color": "#e5a84c"
+    },
+    "result": {
+      "shape": "component_card",
+      "mesh": "box",
+      "iconFallback": "generic.service",
+      "color": "#47c477"
+    },
+    "kafka": {
+      "shape": "event_bus",
+      "mesh": "capsule",
+      "iconFallback": "generic.kafka",
+      "color": "#8b5cf6",
+      "icon": "kafka",
+      "model": "kafka.logo3d"
+    },
+    "rocketmq": {
+      "shape": "queue_capsule",
+      "mesh": "capsule",
+      "iconFallback": "generic.rocketmq",
+      "color": "#f97316"
+    },
+    "rabbitmq": {
+      "shape": "queue_capsule",
+      "mesh": "capsule",
+      "iconFallback": "generic.rabbitmq",
+      "color": "#22c55e",
+      "icon": "rabbitmq",
+      "model": "rabbitmq.logo3d"
+    },
+    "postgres": {
+      "shape": "database_cylinder",
+      "mesh": "cylinder",
+      "iconFallback": "generic.postgres",
+      "color": "#336791",
+      "icon": "postgresql",
+      "model": "postgresql.logo3d"
+    },
+    "mongodb": {
+      "shape": "database_cylinder",
+      "mesh": "cylinder",
+      "iconFallback": "generic.mongodb",
+      "color": "#10b981",
+      "icon": "mongodb",
+      "model": "mongodb.logo3d"
+    },
+    "minio": {
+      "shape": "object_bucket",
+      "mesh": "bucket",
+      "iconFallback": "generic.minio",
+      "color": "#dc2626"
+    },
+    "kubernetes": {
+      "shape": "cluster_block",
+      "mesh": "cluster",
+      "iconFallback": "generic.kubernetes",
+      "color": "#326ce5",
+      "icon": "kubernetes",
+      "model": "kubernetes.logo3d"
+    },
+    "pod": {
+      "shape": "service_box",
+      "mesh": "box",
+      "iconFallback": "generic.pod",
+      "color": "#60a5fa"
+    },
+    "node": {
+      "shape": "server_block",
+      "mesh": "box",
+      "iconFallback": "generic.node",
+      "color": "#64748b"
+    },
+    "ingress": {
+      "shape": "gateway_card",
+      "mesh": "gateway_card",
+      "iconFallback": "generic.ingress",
+      "color": "#0d9488"
+    },
+    "load_balancer": {
+      "shape": "gateway_tower",
+      "mesh": "tower",
+      "iconFallback": "generic.load_balancer",
+      "color": "#2563eb"
+    }
+  },
+  "providers": {
+    "aws.lambda": {
+      "shape": "service_box",
+      "mesh": "box",
+      "icon": "aws.lambda",
+      "color": "#ff9900"
+    },
+    "aws.s3": {
+      "shape": "bucket",
+      "mesh": "cylinder",
+      "icon": "aws.s3",
+      "color": "#569a31"
+    },
+    "aws.rds": {
+      "shape": "database_cylinder",
+      "mesh": "cylinder",
+      "icon": "aws.rds",
+      "color": "#527fff"
+    },
+    "aws.dynamodb": {
+      "shape": "database_cylinder",
+      "mesh": "cylinder",
+      "icon": "aws.dynamodb",
+      "color": "#527fff"
+    },
+    "aws.ec2": {
+      "shape": "service_box",
+      "mesh": "box",
+      "icon": "aws.ec2",
+      "color": "#ff9900"
+    },
+    "aws.eks": {
+      "shape": "service_box",
+      "mesh": "box",
+      "icon": "aws.eks",
+      "color": "#ff9900"
+    },
+    "aws.sqs": {
+      "shape": "queue_capsule",
+      "mesh": "capsule",
+      "icon": "aws.sqs",
+      "color": "#ff4f8b"
+    },
+    "aws.sns": {
+      "shape": "event_bus",
+      "mesh": "capsule",
+      "icon": "aws.sns",
+      "color": "#a166ff"
+    },
+    "aws.eventbridge": {
+      "shape": "event_bus",
+      "mesh": "capsule",
+      "icon": "aws.eventbridge",
+      "color": "#a166ff"
+    },
+    "aws.api_gateway": {
+      "shape": "hex_service",
+      "mesh": "hex_prism",
+      "icon": "aws.api_gateway",
+      "color": "#ff9900"
+    },
+    "aws.cloudfront": {
+      "shape": "cloud_plate",
+      "mesh": "cloud",
+      "icon": "aws.cloudfront",
+      "color": "#35c2a1"
+    },
+    "aws.cloudwatch": {
+      "shape": "event_bus",
+      "mesh": "capsule",
+      "icon": "aws.cloudwatch",
+      "color": "#63a9ff"
+    },
+    "aws.secrets_manager": {
+      "shape": "warning_prism",
+      "mesh": "cone",
+      "icon": "aws.secrets_manager",
+      "color": "#a166ff"
+    },
+    "jenkins": {
+      "shape": "ci_card",
+      "mesh": "box",
+      "icon": "jenkins",
+      "color": "#d24939",
+      "model": "jenkins.logo3d"
+    },
+    "jenkins.jenkins": {
+      "shape": "ci_card",
+      "mesh": "box",
+      "icon": "jenkins",
+      "color": "#d24939",
+      "model": "jenkins.logo3d"
+    }
+  },
+  "platforms": {
+    "jenkins": {
+      "shape": "ci_card",
+      "mesh": "box",
+      "icon": "jenkins",
+      "color": "#d24939",
+      "model": "jenkins.logo3d"
+    },
+    "aws": {
+      "shape": "cloud_plate",
+      "mesh": "cloud",
+      "icon": "generic.external",
+      "color": "#ff9900"
+    },
+    "kubernetes": {
+      "shape": "cluster_block",
+      "mesh": "cluster",
+      "icon": "generic.kubernetes",
+      "color": "#326ce5"
+    }
+  },
+  "edge_kinds": {
+    "api_call": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#1f2937"
+    },
+    "static_resource": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#0284c7"
+    },
+    "reverse_proxy": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#0f766e"
+    },
+    "load_balancing": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#2563eb"
+    },
+    "register": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#7c3aed"
+    },
+    "registering_service": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#8b5cf6"
+    },
+    "pull_consumption": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dotted",
+      "flow": true,
+      "color": "#0891b2"
+    },
+    "health_check": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": false,
+      "color": "#f59e0b"
+    },
+    "data_cache": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#dc2626"
+    },
+    "data_storage": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#2563eb"
+    },
+    "replication": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#4f46e5"
+    },
+    "distributed_file_service": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#16a34a"
+    },
+    "feign_call": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#334155"
+    },
+    "log_collection": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#f97316"
+    },
+    "calls": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#35c2a1"
+    },
+    "writes": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#527fff"
+    },
+    "reads": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#63a9ff"
+    },
+    "emits": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#a166ff"
+    },
+    "subscribes": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": true,
+      "color": "#a166ff"
+    },
+    "deploys": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#35c2a1"
+    },
+    "validates": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": false,
+      "color": "#e5a84c"
+    },
+    "blocks": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": false,
+      "color": "#ee6b73"
+    },
+    "depends_on": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": false,
+      "color": "#63a9ff"
+    },
+    "sends": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": true,
+      "color": "#35c2a1"
+    },
+    "returns": {
+      "directed": true,
+      "arrow": "reverse",
+      "lineStyle": "dashed",
+      "flow": false,
+      "color": "#cbd5e1"
+    },
+    "contains": {
+      "directed": false,
+      "arrow": "none",
+      "lineStyle": "solid",
+      "flow": false,
+      "color": "#94a3b8"
+    },
+    "supports": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": false,
+      "color": "#47c477"
+    },
+    "refutes": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "solid",
+      "flow": false,
+      "color": "#ee6b73"
+    },
+    "mentions": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": false,
+      "color": "#63a9ff"
+    },
+    "observes": {
+      "directed": true,
+      "arrow": "forward",
+      "lineStyle": "dashed",
+      "flow": false,
+      "color": "#94a3b8"
+    }
+  },
+  "palettes": {
+    "semantic_dark": [
+      "#63a9ff",
+      "#35c2a1",
+      "#a166ff",
+      "#e5a84c",
+      "#ee6b73",
+      "#cbd5e1"
+    ],
+    "cloud_provider": [
+      "#ff9900",
+      "#527fff",
+      "#569a31",
+      "#ff4f8b",
+      "#a166ff",
+      "#35c2a1"
+    ],
+    "status": [
+      "#47c477",
+      "#e5a84c",
+      "#ee6b73",
+      "#a77cff",
+      "#63a9ff"
+    ],
+    "phase": [
+      "#63a9ff",
+      "#35c2a1",
+      "#a77cff",
+      "#e5a84c",
+      "#ee6b73"
+    ],
+    "risk": [
+      "#47c477",
+      "#e5a84c",
+      "#ee6b73",
+      "#a77cff"
+    ]
+  }
+}

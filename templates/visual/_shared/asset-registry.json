@@ -1,0 +1,567 @@
+{
+  "schema": "efp.visual.asset_registry.v1",
+  "icons": {
+    "generic.service": {
+      "path": "assets/icons/generic/service.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.api": {
+      "path": "assets/icons/generic/api.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.database": {
+      "path": "assets/icons/generic/database.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.storage": {
+      "path": "assets/icons/generic/storage.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.queue": {
+      "path": "assets/icons/generic/queue.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.stream": {
+      "path": "assets/icons/generic/stream.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.pipeline": {
+      "path": "assets/icons/generic/pipeline.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.job": {
+      "path": "assets/icons/generic/job.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.user": {
+      "path": "assets/icons/generic/user.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.external": {
+      "path": "assets/icons/generic/external.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.warning": {
+      "path": "assets/icons/generic/warning.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "generic.decision": {
+      "path": "assets/icons/generic/decision.svg",
+      "kind": "generic",
+      "attribution_id": "efp-generic"
+    },
+    "aws.lambda": {
+      "path": "assets/icons/aws/lambda.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.s3": {
+      "path": "assets/icons/aws/s3.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.rds": {
+      "path": "assets/icons/aws/rds.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.dynamodb": {
+      "path": "assets/icons/aws/dynamodb.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.ec2": {
+      "path": "assets/icons/aws/ec2.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.eks": {
+      "path": "assets/icons/aws/eks.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.sqs": {
+      "path": "assets/icons/aws/sqs.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.sns": {
+      "path": "assets/icons/aws/sns.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.eventbridge": {
+      "path": "assets/icons/aws/eventbridge.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.api_gateway": {
+      "path": "assets/icons/aws/api_gateway.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.cloudfront": {
+      "path": "assets/icons/aws/cloudfront.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.cloudwatch": {
+      "path": "assets/icons/aws/cloudwatch.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "aws.secrets_manager": {
+      "path": "assets/icons/aws/secrets_manager.svg",
+      "kind": "vendor-styled-generic",
+      "official": false,
+      "attribution_id": "efp-aws-generic"
+    },
+    "jenkins": {
+      "path": "assets/icons/simple-icons/jenkins.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "Jenkins",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "generic.nginx": {
+      "path": "assets/icons/generic/api.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.mysql": {
+      "path": "assets/icons/generic/database.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.redis": {
+      "path": "assets/icons/generic/storage.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.nacos": {
+      "path": "assets/icons/generic/service.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.cdn": {
+      "path": "assets/icons/generic/external.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.pc": {
+      "path": "assets/icons/generic/user.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.mobile": {
+      "path": "assets/icons/generic/user.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.admin": {
+      "path": "assets/icons/generic/warning.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.security": {
+      "path": "assets/icons/generic/warning.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.log": {
+      "path": "assets/icons/generic/stream.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.elasticsearch": {
+      "path": "assets/icons/generic/stream.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.oss": {
+      "path": "assets/icons/generic/storage.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.kafka": {
+      "path": "assets/icons/generic/stream.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.rocketmq": {
+      "path": "assets/icons/generic/queue.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.rabbitmq": {
+      "path": "assets/icons/generic/queue.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.postgres": {
+      "path": "assets/icons/generic/database.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.mongodb": {
+      "path": "assets/icons/generic/database.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.minio": {
+      "path": "assets/icons/generic/storage.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.kubernetes": {
+      "path": "assets/icons/generic/service.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.pod": {
+      "path": "assets/icons/generic/service.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.node": {
+      "path": "assets/icons/generic/service.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.ingress": {
+      "path": "assets/icons/generic/api.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.load_balancer": {
+      "path": "assets/icons/generic/api.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "nginx": {
+      "path": "assets/icons/simple-icons/nginx.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "NGINX",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "redis": {
+      "path": "assets/icons/simple-icons/redis.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "Redis",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "mysql": {
+      "path": "assets/icons/simple-icons/mysql.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "MySQL",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "kubernetes": {
+      "path": "assets/icons/simple-icons/kubernetes.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "Kubernetes",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "docker": {
+      "path": "assets/icons/simple-icons/docker.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "Docker",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "postgresql": {
+      "path": "assets/icons/simple-icons/postgresql.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "PostgreSQL",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "mongodb": {
+      "path": "assets/icons/simple-icons/mongodb.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "MongoDB",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "kafka": {
+      "path": "assets/icons/simple-icons/kafka.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "Apache Kafka",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "rabbitmq": {
+      "path": "assets/icons/simple-icons/rabbitmq.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "RabbitMQ",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "elasticsearch": {
+      "path": "assets/icons/simple-icons/elasticsearch.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "Elasticsearch",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "prometheus": {
+      "path": "assets/icons/simple-icons/prometheus.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "Prometheus",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "grafana": {
+      "path": "assets/icons/simple-icons/grafana.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "Grafana",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "spring": {
+      "path": "assets/icons/simple-icons/spring.svg",
+      "kind": "simple-icons-logo",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source": "github.com/simple-icons/simple-icons",
+      "license": "CC0-1.0",
+      "brand": "Spring",
+      "trademark": "Brand and trademark rights remain with their owners."
+    },
+    "generic.api_gateway": {
+      "path": "assets/icons/generic/api.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    },
+    "generic.registry": {
+      "path": "assets/icons/generic/service.svg",
+      "kind": "generic-semantic-alias",
+      "attribution_id": "efp-generic"
+    }
+  },
+  "models": {
+    "generic.placeholder": {
+      "path": "assets/models/generic/placeholder.json",
+      "kind": "placeholder",
+      "attribution_id": "efp-generic"
+    },
+    "docker.logo3d": {
+      "path": "assets/models/generated/docker.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/docker.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1244
+    },
+    "elasticsearch.logo3d": {
+      "path": "assets/models/generated/elasticsearch.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/elasticsearch.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1268
+    },
+    "grafana.logo3d": {
+      "path": "assets/models/generated/grafana.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/grafana.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1232
+    },
+    "jenkins.logo3d": {
+      "path": "assets/models/generated/jenkins.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/jenkins.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1248
+    },
+    "kafka.logo3d": {
+      "path": "assets/models/generated/kafka.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/kafka.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1252
+    },
+    "kubernetes.logo3d": {
+      "path": "assets/models/generated/kubernetes.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/kubernetes.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1268
+    },
+    "mongodb.logo3d": {
+      "path": "assets/models/generated/mongodb.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/mongodb.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1248
+    },
+    "mysql.logo3d": {
+      "path": "assets/models/generated/mysql.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/mysql.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1236
+    },
+    "nginx.logo3d": {
+      "path": "assets/models/generated/nginx.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/nginx.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1220
+    },
+    "postgresql.logo3d": {
+      "path": "assets/models/generated/postgresql.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/postgresql.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1268
+    },
+    "prometheus.logo3d": {
+      "path": "assets/models/generated/prometheus.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/prometheus.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1268
+    },
+    "rabbitmq.logo3d": {
+      "path": "assets/models/generated/rabbitmq.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/rabbitmq.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1204
+    },
+    "redis.logo3d": {
+      "path": "assets/models/generated/redis.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/redis.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1220
+    },
+    "spring.logo3d": {
+      "path": "assets/models/generated/spring.glb",
+      "kind": "generated-logo-badge",
+      "official": false,
+      "attribution_id": "simple-icons",
+      "source_icon": "assets/icons/simple-icons/spring.svg",
+      "generated_by": "local_fallback_badge",
+      "byte_length": 1244
+    }
+  },
+  "attributions": [
+    {
+      "id": "efp-aws-generic",
+      "name": "AWS service semantic placeholders",
+      "license": "Local generic cloud-service glyphs, not official AWS Architecture Icons.",
+      "source": "EFP local asset set"
+    },
+    {
+      "id": "efp-generic",
+      "name": "EFP generic visual symbols",
+      "license": "Original local vector shapes for this repository.",
+      "source": "engineering-flow-platform-tools templates visual shared assets"
+    },
+    {
+      "id": "efp-jenkins-generic",
+      "name": "Jenkins CI semantic placeholder",
+      "license": "Local generic CI glyph, not Jenkins project artwork.",
+      "source": "EFP local asset set"
+    },
+    {
+      "id": "simple-icons",
+      "name": "Simple Icons",
+      "license": "CC0-1.0 for icon artwork; trademarks remain with brand owners.",
+      "source": "github.com/simple-icons/simple-icons"
+    }
+  ]
+}

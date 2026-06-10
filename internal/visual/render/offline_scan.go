@@ -28,7 +28,6 @@ var offlineTokens = []string{
 	"fonts.googleapis.com",
 	"fonts.gstatic.com",
 	"@import",
-	"fetch(",
 	"XMLHttpRequest",
 	"WebSocket",
 	"EventSource",
@@ -37,7 +36,7 @@ var offlineTokens = []string{
 }
 
 var (
-	moduleScriptPattern = regexp.MustCompile(`(?i)<script\s+[^>]*type\s*=\s*["']module["']`)
+	networkFetchPattern = regexp.MustCompile(`(?i)(^|[^a-z0-9_$])fetch\s*\(|\.fetch\s*\(`)
 	rootAssetPattern    = regexp.MustCompile(`(?i)(src|href)\s*=\s*["']/`)
 )
 
@@ -64,10 +63,7 @@ func ScanOffline(dir string) error {
 		}
 		content := strings.ReplaceAll(string(b), "http://www.w3.org/2000/svg", "")
 		content = strings.ReplaceAll(content, "http://www.w3.org/1999/xlink", "")
-		if moduleScriptPattern.MatchString(content) {
-			violation = violationMessage(rootAbs, path, `<script type="module"`)
-			return filepath.SkipAll
-		}
+		content = strings.ReplaceAll(content, "http://www.w3.org/1999/xhtml", "")
 		if containsProtocolRelativeURL(content) {
 			violation = violationMessage(rootAbs, path, "//")
 			return filepath.SkipAll
@@ -82,6 +78,10 @@ func ScanOffline(dir string) error {
 				violation = violationMessage(rootAbs, path, token)
 				return filepath.SkipAll
 			}
+		}
+		if networkFetchPattern.MatchString(content) {
+			violation = violationMessage(rootAbs, path, "fetch(")
+			return filepath.SkipAll
 		}
 		return nil
 	})

@@ -301,7 +301,7 @@ func compileIsometric(ctx context.Context, d Diagram, opts CompileOptions) (map[
 			"grid":    map[string]any{"enabled": true, "step": 1, "subdivisions": 4},
 			"padding": 2,
 		},
-		"camera": map[string]any{"mode": "orthographic_isometric", "zoom": 1.0, "theta": 0.78, "phi": 1.02, "radius": 11},
+		"camera": map[string]any{"mode": "orthographic_isometric", "zoom": 1.08, "theta": 0.78, "phi": 1.02, "radius": 11},
 		"zones":  layout.ToVisualZones(), "entities": layout.ToVisualEntities(), "links": routing.ToVisualLinks(),
 		"routePlan": routePlan.ToVisualRoutePlan(),
 		"view":      map[string]any{"colorBy": "kind", "mode": "overview"},
@@ -314,7 +314,7 @@ func compileIsometric(ctx context.Context, d Diagram, opts CompileOptions) (map[
 			},
 		},
 		"renderHints": map[string]any{
-			"badgeMode":            "icon_and_model",
+			"badgeMode":            "icon",
 			"badgeSize":            "small",
 			"badgePlacement":       "front",
 			"labelIcon":            true,

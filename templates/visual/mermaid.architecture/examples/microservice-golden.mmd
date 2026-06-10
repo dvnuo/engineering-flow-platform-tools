@@ -20,12 +20,12 @@ architecture-beta
   service cdn(cdn)[CDN] in client
   service nginx(nginx)[Nginx] in edge
   service apiGateway(api_gateway)[API Gateway] in gateway
-  service authService(microservice)[Auth Service] in services
-  service orderService(microservice)[Order Service] in services
-  service paymentService(microservice)[Payment Service] in services
-  service inventoryService(microservice)[Inventory Service] in services
-  service notificationService(microservice)[Notification Service] in services
-  service reportService(microservice)[Report Service] in services
+  service authService(microservice)[micro server] in services
+  service orderService(microservice)[micro server] in services
+  service paymentService(microservice)[micro server] in services
+  service inventoryService(microservice)[micro server] in services
+  service notificationService(microservice)[micro server] in services
+  service reportService(microservice)[micro server] in services
   service nacos1(nacos)[Nacos] in registry
   service nacos2(nacos)[Nacos] in registry
   service nacos3(nacos)[Nacos] in registry
@@ -40,23 +40,23 @@ architecture-beta
   service elasticsearch(elasticsearch)[ElasticSearch] in observability
   service logstash(logs)[Logstash] in observability
   service kibana(grafana)[Kibana] in observability
-  service adminConsole(admin)[Spring Boot Admin] in admin
+  service adminConsole(admin)[springboot admin] in admin
 
   user:B -->|User| T:pc
   pc:R -->|API| L:nginx
-  cdn:R -->|Static| L:nginx
+  cdn:R -->|Static resources| L:nginx
   nginx:R -->|API| L:apiGateway
-  apiGateway:R -->|Service| L:orderService
-  authService:T -->|Register| B:nacos1
-  inventoryService:T -->|Register| B:nacos3
-  authService:B -->|Cache| T:redis1
-  inventoryService:B -->|Data| T:mysqlMaster
-  paymentService:B -->|Storage| T:oss
-  reportService:B -->|Storage| T:blockStorage
-  mysqlMaster:R -->|Replication| L:mysqlSlave
+  apiGateway:R -->|Routing| L:orderService
+  authService:T -->|registering service| B:nacos1
+  inventoryService:T -->|registering service| B:nacos3
+  authService:B -->|Data Cache| T:redis1
+  inventoryService:B -->|Data Storage| T:mysqlMaster
+  paymentService:B -->|Distributed file service| T:oss
+  reportService:B -->|Distributed file service| T:blockStorage
+  mysqlMaster:R -->|Data Synchronization| L:mysqlSlave
   nacos1:R -->|registering| L:nacos2
   nacos2:B -->|registering| T:nacos3
-  authService:B -->|Logs| T:logstash
+  authService:B -->|Log collection| T:logstash
   logstash:R -->|Log system| L:kibana
-  adminConsole:L -->|Health| R:notificationService
-  adminConsole:T -->|Register| B:nacos3
+  adminConsole:L -->|Health Check| R:notificationService
+  adminConsole:T -->|registering| B:nacos3

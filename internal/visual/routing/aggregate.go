@@ -297,39 +297,39 @@ func RouteStyleFor(role, pathGroup string) RouteStyle {
 	role = strings.ToLower(strings.TrimSpace(role))
 	pathGroup = strings.ToLower(strings.TrimSpace(pathGroup))
 	style := RouteStyle{
-		Color:      "#475569",
-		BodyColor:  "#475569",
-		ArrowColor: "#475569",
-		LabelColor: "#111827",
-		Width:      0.007,
-		Opacity:    0.58,
+		Color:      "#111111",
+		BodyColor:  "#111111",
+		ArrowColor: "#111111",
+		LabelColor: "#111111",
+		Width:      0.014,
+		Opacity:    0.82,
 		CapStyle:   "integrated_arrow",
 		JoinStyle:  "bevel",
 	}
 	switch role {
 	case "primary":
-		style.Color = "#111827"
-		style.BodyColor = "#111827"
-		style.ArrowColor = "#111827"
-		style.Width = 0.014
-		style.Opacity = 0.92
+		style.Color = "#111111"
+		style.BodyColor = "#111111"
+		style.ArrowColor = "#111111"
+		style.Width = 0.022
+		style.Opacity = 0.96
 	case "auxiliary":
-		style.Color = "#94a3b8"
-		style.BodyColor = "#94a3b8"
-		style.ArrowColor = "#94a3b8"
-		style.Width = 0.0045
-		style.Opacity = 0.36
+		style.Color = "#111111"
+		style.BodyColor = "#111111"
+		style.ArrowColor = "#111111"
+		style.Width = 0.008
+		style.Opacity = 0.50
 		style.DashPattern = []float64{0.55, 0.30}
 	}
 	style.AccentColor = map[string]string{
-		"gateway":       "#111827",
-		"service":       "#2563eb",
+		"gateway":       "#111111",
+		"service":       "#6075e0",
 		"registry":      "#14b8a6",
 		"cache":         "#ef4444",
-		"data":          "#2563eb",
-		"storage":       "#16a34a",
+		"data":          "#6075e0",
+		"storage":       "#6075e0",
 		"observability": "#f97316",
-		"health":        "#64748b",
+		"health":        "#111111",
 	}[pathGroup]
 	if style.AccentColor == "" {
 		style.AccentColor = style.Color

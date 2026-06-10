@@ -689,6 +689,7 @@ func (layout ArchitectureLayoutResult) ToVisualEntities() []any {
 		item := layout.Entities[id]
 		kind := inferEntityKind(item.Node)
 		size := architectureEntityVisualSize(kind, len(ids))
+		importance := architectureEntityImportance(kind)
 		entities = append(entities, map[string]any{
 			"id":            item.Node.ID,
 			"label":         nonEmpty(item.Node.Label, item.Node.ID),
@@ -696,42 +697,64 @@ func (layout ArchitectureLayoutResult) ToVisualEntities() []any {
 			"zone":          item.GroupID,
 			"position":      map[string]any{"x": item.Position.X, "y": item.Position.Y},
 			"size":          map[string]any{"w": size.W, "d": size.D, "h": size.H},
-			"importance":    0.74,
-			"labelPriority": "important",
+			"importance":    importance,
+			"labelPriority": architectureEntityLabelPriority(kind),
 			"presentation": map[string]any{
 				"icon":           iconForKind(kind),
 				"color":          architectureVisualPaletteColor(kind),
-				"paletteVersion": 2,
+				"paletteVersion": 3,
 			},
 		})
 	}
 	return entities
 }
 
+func architectureEntityImportance(kind string) float64 {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "pc", "laptop", "mobile", "cdn", "nginx", "api_gateway":
+		return 0.96
+	case "redis", "mysql", "database", "nacos", "admin":
+		return 0.9
+	case "microservice", "service":
+		return 0.76
+	default:
+		return 0.74
+	}
+}
+
+func architectureEntityLabelPriority(kind string) string {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "pc", "laptop", "mobile", "cdn", "nginx", "api_gateway":
+		return "always"
+	default:
+		return "important"
+	}
+}
+
 func architectureVisualPaletteColor(kind string) string {
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case "browser", "client", "user", "pc", "laptop", "mobile":
-		return "#5B8DEF"
+		return "#6075E0"
 	case "cdn":
-		return "#7CB7FF"
+		return "#6075E0"
 	case "nginx", "edge", "gateway", "load_balancer", "ingress":
-		return "#16A34A"
+		return "#00B84A"
 	case "api_gateway":
-		return "#2563EB"
+		return "#6075E0"
 	case "service", "microservice", "api":
-		return "#2F80ED"
+		return "#6075E0"
 	case "registry", "nacos":
-		return "#7C3AED"
+		return "#3EC7F4"
 	case "redis", "cache":
-		return "#EF4444"
+		return "#EB4F57"
 	case "database", "mysql", "postgres", "mongodb":
-		return "#2563EB"
+		return "#6075E0"
 	case "storage", "oss", "file_storage", "block_storage", "minio":
-		return "#16A34A"
+		return "#6075E0"
 	case "observability", "logs", "log", "elasticsearch", "prometheus", "grafana":
-		return "#0EA5E9"
+		return "#3EC7F4"
 	case "admin", "jenkins", "job":
-		return "#F59E0B"
+		return "#6075E0"
 	default:
 		return "#2F80ED"
 	}
@@ -748,23 +771,23 @@ func architectureEntityVisualSize(kind string, count int) architectureEntitySize
 	if count > 18 {
 		switch kind {
 		case "api_gateway", "gateway", "nginx":
-			return architectureEntitySize{W: 1.04, D: 0.78, H: 0.78}
+			return architectureEntitySize{W: 1.24, D: 0.94, H: 0.98}
 		case "service", "microservice", "api":
-			return architectureEntitySize{W: 0.92, D: 0.82, H: 0.76}
+			return architectureEntitySize{W: 1.10, D: 0.96, H: 0.90}
 		case "registry", "nacos":
-			return architectureEntitySize{W: 0.82, D: 0.78, H: 0.62}
+			return architectureEntitySize{W: 1.02, D: 0.94, H: 0.82}
 		case "redis", "cache":
-			return architectureEntitySize{W: 0.88, D: 0.82, H: 0.72}
+			return architectureEntitySize{W: 1.08, D: 0.96, H: 0.88}
 		case "database", "mysql", "postgres", "mongodb":
-			return architectureEntitySize{W: 0.9, D: 0.82, H: 0.72}
+			return architectureEntitySize{W: 1.08, D: 0.96, H: 0.88}
 		case "storage", "oss", "file_storage", "block_storage":
-			return architectureEntitySize{W: 0.88, D: 0.8, H: 0.7}
+			return architectureEntitySize{W: 1.04, D: 0.94, H: 0.86}
 		case "cdn", "browser", "mobile", "client", "pc":
-			return architectureEntitySize{W: 0.9, D: 0.8, H: 0.72}
+			return architectureEntitySize{W: 1.08, D: 0.96, H: 0.90}
 		case "admin", "observability", "log", "logs", "elasticsearch", "prometheus", "grafana":
-			return architectureEntitySize{W: 0.84, D: 0.76, H: 0.68}
+			return architectureEntitySize{W: 1.00, D: 0.90, H: 0.84}
 		default:
-			return architectureEntitySize{W: 0.9, D: 0.8, H: 0.72}
+			return architectureEntitySize{W: 1.04, D: 0.92, H: 0.86}
 		}
 	}
 	if count > 10 {
@@ -1073,25 +1096,25 @@ func preferredArchitectureZoneSlot(group Group, members []Node, ranks map[string
 	key := strings.ToLower(group.ID + " " + group.Label + " " + group.Kind)
 	switch {
 	case strings.Contains(key, "client"):
-		return ArchitecturePoint{X: 0.05, Y: 0.08}
+		return ArchitecturePoint{X: 0.08, Y: 0.55}
 	case strings.Contains(key, "edge"):
-		return ArchitecturePoint{X: 0.92, Y: 0.83}
+		return ArchitecturePoint{X: 0.92, Y: 0.98}
 	case strings.Contains(key, "gateway"):
-		return ArchitecturePoint{X: 1.82, Y: 1.08}
+		return ArchitecturePoint{X: 1.78, Y: 1.08}
 	case strings.Contains(key, "service"), strings.Contains(key, "application"), strings.Contains(key, "app"):
-		return ArchitecturePoint{X: 2.92, Y: 1.35}
+		return ArchitecturePoint{X: 2.82, Y: 1.28}
 	case strings.Contains(key, "registry"):
-		return ArchitecturePoint{X: 4.05, Y: 0.22}
+		return ArchitecturePoint{X: 3.92, Y: 0.34}
 	case strings.Contains(key, "storage"):
-		return ArchitecturePoint{X: 2.92, Y: 3.18}
+		return ArchitecturePoint{X: 2.78, Y: 3.06}
 	case strings.Contains(key, "cache"):
-		return ArchitecturePoint{X: 0.52, Y: 2.00}
+		return ArchitecturePoint{X: 0.46, Y: 2.02}
 	case strings.Contains(key, "database"), strings.Contains(key, "data"):
-		return ArchitecturePoint{X: 2.00, Y: 2.58}
+		return ArchitecturePoint{X: 1.90, Y: 2.50}
 	case strings.Contains(key, "observ"):
-		return ArchitecturePoint{X: 3.75, Y: 3.88}
+		return ArchitecturePoint{X: 3.48, Y: 3.72}
 	case strings.Contains(key, "admin"):
-		return ArchitecturePoint{X: 4.92, Y: 1.30}
+		return ArchitecturePoint{X: 4.42, Y: 1.58}
 	}
 	minRank := 0
 	if len(members) > 0 {
@@ -1267,11 +1290,11 @@ func placeArchitectureEntityInGroup(group Group, bounds ArchitectureBounds, inde
 			return ArchitecturePoint{X: bounds.X + bounds.W*0.5, Y: bounds.Y + bounds.H*0.58}
 		}
 		clientPositions := []ArchitecturePoint{
-			{X: bounds.X + bounds.W*0.22, Y: bounds.Y + bounds.H*0.28},
-			{X: bounds.X + bounds.W*0.24, Y: bounds.Y + bounds.H*0.62},
-			{X: bounds.X + bounds.W*0.50, Y: bounds.Y + bounds.H*0.44},
-			{X: bounds.X + bounds.W*0.72, Y: bounds.Y + bounds.H*0.24},
-			{X: bounds.X + bounds.W*0.72, Y: bounds.Y + bounds.H*0.68},
+			{X: bounds.X + bounds.W*0.24, Y: bounds.Y + bounds.H*0.36},
+			{X: bounds.X + bounds.W*0.24, Y: bounds.Y + bounds.H*0.68},
+			{X: bounds.X + bounds.W*0.50, Y: bounds.Y + bounds.H*0.50},
+			{X: bounds.X + bounds.W*0.72, Y: bounds.Y + bounds.H*0.36},
+			{X: bounds.X + bounds.W*0.72, Y: bounds.Y + bounds.H*0.70},
 		}
 		if index < len(clientPositions) {
 			return clientPositions[index]
@@ -1325,6 +1348,19 @@ func placeArchitectureEntityInGroup(group Group, bounds ArchitectureBounds, inde
 		return ArchitecturePoint{
 			X: bounds.X + bounds.W*(0.22+0.30*float64(index%3)),
 			Y: bounds.Y + bounds.H*(0.67-0.30*float64(index/3)),
+		}
+	}
+	if strings.Contains(key, "database") || strings.Contains(key, "data") {
+		if count == 2 {
+			positions := []ArchitecturePoint{
+				{X: bounds.X + bounds.W*0.30, Y: bounds.Y + bounds.H*0.54},
+				{X: bounds.X + bounds.W*0.72, Y: bounds.Y + bounds.H*0.54},
+			}
+			return positions[index%len(positions)]
+		}
+		return ArchitecturePoint{
+			X: bounds.X + bounds.W*(0.24+0.27*float64(index%3)),
+			Y: bounds.Y + bounds.H*(0.62-0.28*float64(index/3)),
 		}
 	}
 	if strings.Contains(key, "observ") {

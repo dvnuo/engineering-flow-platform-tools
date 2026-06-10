@@ -415,7 +415,7 @@ try {
     "--use-angle=swiftshader",
     "--no-sandbox",
     "--hide-scrollbars",
-    "--window-size=1886,1536",
+    "--window-size=2048,1346",
     "--remote-debugging-port=0",
     `--user-data-dir=${userDataDir}`,
     "about:blank"

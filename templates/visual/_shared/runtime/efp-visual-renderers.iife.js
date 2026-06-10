@@ -4785,26 +4785,26 @@
 
   function entityPaletteV3(kind, spec) {
     var palettes = {
-      client: { base: "#5B8DEF", top: "#8EC5FF", side: "#3B6FD8", accent: "#FFFFFF", screen: "#0f172a" },
-      pc: { base: "#5B8DEF", top: "#8EC5FF", side: "#3B6FD8", accent: "#FFFFFF", screen: "#111827" },
-      laptop: { base: "#5B8DEF", top: "#8EC5FF", side: "#3B6FD8", accent: "#FDE68A", screen: "#111827" },
-      mobile: { base: "#5B8DEF", top: "#8EC5FF", side: "#3B6FD8", accent: "#FFFFFF", screen: "#111827" },
-      user: { base: "#5B8DEF", top: "#8EC5FF", side: "#3B6FD8", accent: "#FFFFFF", screen: "#111827" },
-      cdn: { base: "#6366F1", top: "#A5B4FC", side: "#4338CA", accent: "#FFFFFF", screen: "#DBEAFE" },
-      nginx: { base: "#16A34A", top: "#4ADE80", side: "#15803D", accent: "#FFFFFF", screen: "#052e16" },
-      api_gateway: { base: "#2563EB", top: "#60A5FA", side: "#1D4ED8", accent: "#FBBF24", screen: "#0f172a" },
-      microservice: { base: "#2F80ED", top: "#56CCF2", side: "#1D4ED8", accent: "#FBBF24", screen: "#DBEAFE" },
-      nacos: { base: "#7C3AED", top: "#A78BFA", side: "#5B21B6", accent: "#38BDF8", screen: "#F5F3FF" },
-      redis: { base: "#EF4444", top: "#FB7185", side: "#B91C1C", accent: "#FFFFFF", screen: "#FEE2E2" },
-      mysql: { base: "#2563EB", top: "#DBEAFE", side: "#1D4ED8", accent: "#60A5FA", screen: "#FFFFFF" },
-      storage: { base: "#16A34A", top: "#86EFAC", side: "#15803D", accent: "#FDE68A", screen: "#ECFDF5" },
-      oss: { base: "#16A34A", top: "#86EFAC", side: "#15803D", accent: "#FDE68A", screen: "#ECFDF5" },
-      file_storage: { base: "#16A34A", top: "#86EFAC", side: "#15803D", accent: "#FDE68A", screen: "#ECFDF5" },
-      block_storage: { base: "#16A34A", top: "#86EFAC", side: "#15803D", accent: "#FDE68A", screen: "#ECFDF5" },
-      observability: { base: "#0EA5E9", top: "#7DD3FC", side: "#0369A1", accent: "#F97316", screen: "#E0F2FE" },
-      admin: { base: "#F59E0B", top: "#FDE68A", side: "#B45309", accent: "#FFFFFF", screen: "#451A03" },
-      cluster: { base: "#3B82F6", top: "#93C5FD", side: "#1D4ED8", accent: "#FBBF24", screen: "#DBEAFE" },
-      default: { base: spec && spec.color || "#2F80ED", top: "#7DD3FC", side: "#1D4ED8", accent: "#FBBF24", screen: "#DBEAFE" }
+      client: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
+      pc: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
+      laptop: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
+      mobile: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
+      user: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
+      cdn: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#E8EDFF" },
+      nginx: { base: "#00B84A", top: "#63E58A", side: "#008D36", accent: "#FFFFFF", screen: "#052e16" },
+      api_gateway: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#F2B84B", screen: "#2F3FAD" },
+      microservice: { base: "#6075E0", top: "#7289ED", side: "#4358CB", accent: "#F2B84B", screen: "#E8EDFF" },
+      nacos: { base: "#FFFFFF", top: "#F7FAFF", side: "#D8DDEB", accent: "#3EC7F4", screen: "#E8EDFF" },
+      redis: { base: "#EB4F57", top: "#F68B92", side: "#C83D4A", accent: "#FFFFFF", screen: "#FEE2E2" },
+      mysql: { base: "#FFFFFF", top: "#E8EDFF", side: "#93C5FD", accent: "#6075E0", screen: "#FFFFFF" },
+      storage: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#E8EDFF" },
+      oss: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#E8EDFF" },
+      file_storage: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#E8EDFF" },
+      block_storage: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#E8EDFF" },
+      observability: { base: "#FFFFFF", top: "#F7FAFF", side: "#D8DDEB", accent: "#F2B84B", screen: "#E8EDFF" },
+      admin: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#FFFFFF", screen: "#2F3FAD" },
+      cluster: { base: "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#F2B84B", screen: "#E8EDFF" },
+      default: { base: spec && spec.color || "#6075E0", top: "#A5AEDC", side: "#4358CB", accent: "#F2B84B", screen: "#E8EDFF" }
     };
     return palettes[kind] || palettes.default;
   }
@@ -4813,25 +4813,25 @@
     opts = opts || {};
     return new THREE.MeshStandardMaterial({
       color: colorValue(color, 0x2f80ed),
-      roughness: opts.roughness === undefined ? 0.38 : opts.roughness,
+      roughness: opts.roughness === undefined ? 0.34 : opts.roughness,
       metalness: opts.metalness === undefined ? 0.08 : opts.metalness,
       emissive: colorValue(color, 0x2f80ed),
-      emissiveIntensity: opts.emissiveIntensity === undefined ? 0.035 : opts.emissiveIntensity,
+      emissiveIntensity: opts.emissiveIntensity === undefined ? 0.055 : opts.emissiveIntensity,
       transparent: opts.opacity !== undefined && opts.opacity < 1,
       opacity: opts.opacity === undefined ? 1 : opts.opacity
     });
   }
 
   function createIsoTopMaterial(THREE, palette) {
-    return createIsoMaterial(THREE, palette.top, { roughness: 0.32, metalness: 0.05, emissiveIntensity: 0.05 });
+    return createIsoMaterial(THREE, palette.top, { roughness: 0.28, metalness: 0.05, emissiveIntensity: 0.075 });
   }
 
   function createIsoSideMaterial(THREE, palette) {
-    return createIsoMaterial(THREE, palette.side, { roughness: 0.48, metalness: 0.08, emissiveIntensity: 0.02 });
+    return createIsoMaterial(THREE, palette.side, { roughness: 0.44, metalness: 0.08, emissiveIntensity: 0.032 });
   }
 
   function createIsoFrontMaterial(THREE, palette) {
-    return createIsoMaterial(THREE, palette.base, { roughness: 0.36, metalness: 0.08, emissiveIntensity: 0.04 });
+    return createIsoMaterial(THREE, palette.base, { roughness: 0.32, metalness: 0.08, emissiveIntensity: 0.06 });
   }
 
   function createIsoAccentMaterial(THREE, palette, opacity) {
@@ -5065,24 +5065,66 @@
       top(size.w * 0.33, size.d * 0.22, size.h * 0.21, 0);
       addDecal({ w: size.w * 0.17, h: size.h * 0.1, y: size.h * 0.08, z: size.d * 0.2 });
     } else if (visualKind === "mysql") {
-      addBodyCylinder(THREE, group, size.w * 0.22, size.h * 0.38, 0, 0, 0, createIsoMaterial(THREE, palette.top, { roughness: 0.35 }), "database_cylinder", 36);
-      addBodyCylinder(THREE, group, size.w * 0.225, size.h * 0.04, 0, size.h * 0.21, 0, createIsoTopMaterial(THREE, palette), "database_top_ellipse", 36);
-      addBodyCylinder(THREE, group, size.w * 0.228, size.h * 0.035, 0, -size.h * 0.03, 0, createIsoSideMaterial(THREE, palette), "database_band", 36);
-      addBodyCylinder(THREE, group, size.w * 0.228, size.h * 0.026, 0, -size.h * 0.19, 0, createIsoAccentMaterial(THREE, palette, 0.86), "database_ring", 36);
+      addBodyCylinder(THREE, group, size.w * 0.27, size.h * 0.46, 0, -size.h * 0.015, 0, createIsoMaterial(THREE, "#FFFFFF", { roughness: 0.18, metalness: 0.03, emissiveIntensity: 0.18 }), "database_cylinder", 48);
+      addBodyCylinder(THREE, group, size.w * 0.278, size.h * 0.052, 0, size.h * 0.23, 0, createIsoMaterial(THREE, "#E8EDFF", { roughness: 0.2, metalness: 0.04, emissiveIntensity: 0.14 }), "database_top_ellipse", 44);
+      addBodyCylinder(THREE, group, size.w * 0.286, size.h * 0.042, 0, size.h * 0.02, 0, createIsoMaterial(THREE, "#93C5FD", { roughness: 0.25, metalness: 0.05, emissiveIntensity: 0.1 }), "database_mid_band", 44);
+      addBodyCylinder(THREE, group, size.w * 0.286, size.h * 0.036, 0, -size.h * 0.22, 0, createIsoMaterial(THREE, "#6075E0", { roughness: 0.23, metalness: 0.06, emissiveIntensity: 0.1, opacity: 0.95 }), "database_bottom_ring", 44);
+      if (THREE.CircleGeometry) {
+        var dbTopDisc = new THREE.Mesh(new THREE.CircleGeometry(size.w * 0.288, 48), new THREE.MeshBasicMaterial({
+          color: colorValue("#F8FBFF", 0xf8fbff),
+          transparent: true,
+          opacity: 0.98,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          depthTest: true
+        }));
+        dbTopDisc.rotation.x = -Math.PI / 2;
+        dbTopDisc.position.y = size.h * 0.264;
+        group.add(markBodyPart(dbTopDisc, "database_top_disc"));
+        var dbTopInner = new THREE.Mesh(new THREE.CircleGeometry(size.w * 0.205, 48), new THREE.MeshBasicMaterial({
+          color: colorValue("#E8EDFF", 0xe8edff),
+          transparent: true,
+          opacity: 0.98,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          depthTest: true
+        }));
+        dbTopInner.rotation.x = -Math.PI / 2;
+        dbTopInner.position.y = size.h * 0.268;
+        group.add(markBodyPart(dbTopInner, "database_top_inner_disc"));
+      }
+      if (THREE.TorusGeometry) {
+        var dbTopRing = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.278, 0.012, 8, 48), createIsoMaterial(THREE, "#6075E0", { roughness: 0.2, emissiveIntensity: 0.1 }));
+        dbTopRing.rotation.x = Math.PI / 2;
+        dbTopRing.position.y = size.h * 0.274;
+        group.add(markBodyPart(dbTopRing, "database_top_blue_ring"));
+        var dbLowerRing = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.284, 0.01, 8, 48), createIsoMaterial(THREE, "#A5AEDC", { roughness: 0.24, emissiveIntensity: 0.08 }));
+        dbLowerRing.rotation.x = Math.PI / 2;
+        dbLowerRing.position.y = -size.h * 0.045;
+        group.add(markBodyPart(dbLowerRing, "database_lower_highlight_ring"));
+      }
       meta.hasTopHighlight = true;
       meta.highlightCount += 1;
       addDecal({ w: size.w * 0.16, h: size.h * 0.08, y: size.h * 0.07, z: size.d * 0.2 });
     } else if (visualKind === "nacos") {
-      addBodyCylinder(THREE, group, size.w * 0.22, size.h * 0.08, 0, -size.h * 0.18, 0, createIsoTopMaterial(THREE, palette), "registry_pedestal");
-      addBodyBox(THREE, group, { w: size.w * 0.24, h: size.h * 0.46, d: size.d * 0.24 }, 0, size.h * 0.06, 0, createIsoFrontMaterial(THREE, palette), "registry_node");
+      addBodyCylinder(THREE, group, size.w * 0.25, size.h * 0.08, 0, -size.h * 0.20, 0, createIsoMaterial(THREE, "#FFFFFF", { roughness: 0.3, emissiveIntensity: 0.07 }), "nacos_white_pedestal", 36);
+      addBodyCylinder(THREE, group, size.w * 0.21, size.h * 0.045, 0, -size.h * 0.12, 0, createIsoMaterial(THREE, "#E8EDFF", { roughness: 0.28, emissiveIntensity: 0.08 }), "nacos_inner_pedestal", 36);
+      addBodyCylinder(THREE, group, size.w * 0.07, size.h * 0.34, 0, size.h * 0.05, 0, createIsoMaterial(THREE, "#3EC7F4", { roughness: 0.26, emissiveIntensity: 0.08 }), "nacos_center_node", 22);
       if (THREE.TorusGeometry) {
-        var regRing = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.17, 0.012, 8, 32), createIsoAccentMaterial(THREE, palette, 0.95));
+        var regRing = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.17, 0.014, 8, 36), createIsoMaterial(THREE, "#3EC7F4", { roughness: 0.24, emissiveIntensity: 0.09 }));
         regRing.rotation.x = Math.PI / 2;
-        regRing.position.y = size.h * 0.22;
+        regRing.position.y = size.h * 0.12;
         group.add(markBodyPart(regRing, "registry_ring"));
+        var regRingTop = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.105, 0.01, 8, 30), createIsoMaterial(THREE, "#6075E0", { roughness: 0.24, emissiveIntensity: 0.08 }));
+        regRingTop.rotation.x = Math.PI / 2;
+        regRingTop.position.y = size.h * 0.29;
+        group.add(markBodyPart(regRingTop, "registry_top_ring"));
       }
-      top(size.w * 0.2, size.d * 0.16, size.h * 0.31, 0);
-      addDecal({ w: size.w * 0.13, h: size.h * 0.08, y: size.h * 0.08, z: size.d * 0.16 });
+      addBodySphere(THREE, group, size.w * 0.045, -size.w * 0.12, size.h * 0.28, 0, createIsoMaterial(THREE, "#3EC7F4", { roughness: 0.24 }), "nacos_orbit_node");
+      addBodySphere(THREE, group, size.w * 0.045, size.w * 0.12, size.h * 0.28, 0, createIsoMaterial(THREE, "#3EC7F4", { roughness: 0.24 }), "nacos_orbit_node");
+      meta.hasTopHighlight = true;
+      meta.highlightCount += 1;
+      addDecal({ w: size.w * 0.1, h: size.h * 0.065, y: size.h * 0.2, z: size.d * 0.16, plateOpacity: 0.72 });
     } else if (visualKind === "oss") {
       addBodyCylinder(THREE, group, size.w * 0.23, size.h * 0.32, 0, -size.h * 0.03, 0, createIsoFrontMaterial(THREE, palette), "storage_bucket");
       addBodyCylinder(THREE, group, size.w * 0.235, size.h * 0.045, 0, size.h * 0.16, 0, createIsoTopMaterial(THREE, palette), "bucket_rim", 30);
@@ -5100,21 +5142,26 @@
       top(size.w * 0.2, size.d * 0.14, size.h * 0.2, 0);
       addDecal({ w: size.w * 0.14, h: size.h * 0.08, y: size.h * 0.05, z: size.d * 0.19 });
     } else if (visualKind === "observability") {
-      addBodyBox(THREE, group, { w: size.w * 0.42, h: size.h * 0.32, d: size.d * 0.22 }, 0, 0, 0, createIsoFrontMaterial(THREE, palette), "observability_console");
-      screen(size.w * 0.31, size.h * 0.17, 0, size.h * 0.04, size.d * 0.14);
+      addBodyCylinder(THREE, group, size.w * 0.21, size.h * 0.08, 0, -size.h * 0.18, 0, createIsoMaterial(THREE, "#FFFFFF", { roughness: 0.3, emissiveIntensity: 0.07 }), "observability_white_base", 32);
+      addBodyCylinder(THREE, group, size.w * 0.17, size.h * 0.035, 0, -size.h * 0.1, 0, createIsoMaterial(THREE, "#E8EDFF", { roughness: 0.28, emissiveIntensity: 0.08 }), "observability_base_ring", 32);
+      var labelKey = normalizeMarkKey(itemLabel(item) || item && item.id || "");
+      var bars = labelKey.indexOf("kibana") >= 0 ? ["#D93F8C", "#3EC7F4", "#6075E0"] : labelKey.indexOf("logstash") >= 0 ? ["#F2B84B", "#6075E0", "#3EC7F4"] : ["#F2B84B", "#3EC7F4", "#6075E0"];
       for (var bar = 0; bar < 3; bar += 1) {
-        sidePanel(size.w * 0.04, size.h * (0.06 + bar * 0.025), size.d * 0.025, -size.w * 0.09 + bar * size.w * 0.08, size.h * (0.0 + bar * 0.015), size.d * 0.18, palette.accent);
+        sidePanel(size.w * 0.055, size.h * (0.14 + bar * 0.04), size.d * 0.05, -size.w * 0.09 + bar * size.w * 0.09, size.h * (0.02 + bar * 0.035), size.d * 0.04, bars[bar]);
       }
-      top(size.w * 0.32, size.d * 0.16, size.h * 0.2, 0);
-      addDecal({ w: size.w * 0.13, h: size.h * 0.08, y: size.h * 0.03, z: size.d * 0.2 });
+      screen(size.w * 0.22, size.h * 0.08, 0, size.h * 0.19, size.d * 0.13);
+      meta.hasTopHighlight = true;
+      meta.highlightCount += 1;
+      addDecal({ w: size.w * 0.11, h: size.h * 0.07, y: size.h * 0.03, z: size.d * 0.18, plateOpacity: 0.76 });
     } else if (visualKind === "admin") {
-      addBodyBox(THREE, group, { w: size.w * 0.44, h: size.h * 0.28, d: size.d * 0.24 }, 0, -size.h * 0.02, 0, createIsoFrontMaterial(THREE, palette), "admin_toolbox");
-      addBodyBox(THREE, group, { w: size.w * 0.22, h: size.h * 0.055, d: size.d * 0.06 }, 0, size.h * 0.18, -size.d * 0.08, createIsoTopMaterial(THREE, palette), "admin_handle");
-      screen(size.w * 0.22, size.h * 0.09, 0, size.h * 0.02, size.d * 0.15);
-      sidePanel(size.w * 0.055, size.h * 0.035, size.d * 0.025, -size.w * 0.13, -size.h * 0.06, size.d * 0.17, palette.accent);
-      sidePanel(size.w * 0.055, size.h * 0.035, size.d * 0.025, size.w * 0.13, -size.h * 0.06, size.d * 0.17, palette.top);
-      top(size.w * 0.32, size.d * 0.14, size.h * 0.13, 0);
-      addDecal({ w: size.w * 0.14, h: size.h * 0.08, y: size.h * 0.03, z: size.d * 0.2 });
+      addBodyBox(THREE, group, { w: size.w * 0.34, h: size.h * 0.46, d: size.d * 0.13 }, 0, size.h * 0.05, 0, createIsoFrontMaterial(THREE, palette), "admin_shield_body");
+      addBodyBox(THREE, group, { w: size.w * 0.22, h: size.h * 0.09, d: size.d * 0.08 }, 0, size.h * 0.3, -size.d * 0.01, createIsoTopMaterial(THREE, palette), "admin_shield_cap");
+      addBodyCylinder(THREE, group, size.w * 0.23, size.h * 0.075, 0, -size.h * 0.21, 0, createIsoMaterial(THREE, "#FFFFFF", { roughness: 0.3, emissiveIntensity: 0.06 }), "admin_white_pedestal", 28);
+      screen(size.w * 0.19, size.h * 0.12, 0, size.h * 0.08, size.d * 0.095);
+      sidePanel(size.w * 0.055, size.h * 0.035, size.d * 0.025, -size.w * 0.1, -size.h * 0.04, size.d * 0.11, "#F2B84B");
+      sidePanel(size.w * 0.055, size.h * 0.035, size.d * 0.025, size.w * 0.1, -size.h * 0.04, size.d * 0.11, "#FFFFFF");
+      top(size.w * 0.24, size.d * 0.11, size.h * 0.33, 0);
+      addDecal({ w: size.w * 0.12, h: size.h * 0.08, y: size.h * 0.08, z: size.d * 0.14 });
     } else {
       addBodyBox(THREE, group, { w: size.w * 0.36, h: size.h * 0.38, d: size.d * 0.32 }, 0, 0, 0, createIsoFrontMaterial(THREE, palette), "generic_body");
       top(size.w * 0.28, size.d * 0.18, size.h * 0.22, 0);
@@ -5276,7 +5323,7 @@
     var points = roundedZoneBoundaryWorldPoints(THREE, bounds, scale, center, numberValue(presentation.cornerRadius || presentation.corner_radius, 0.54), 5);
     var boundaryStyle = normalizeMarkKey(presentation.boundary || presentation.lineStyle || zone.style || "solid");
     var boundaryColor = presentation.boundaryColor || presentation.borderColor || presentation.color || zone.color || "#111827";
-    var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, 0.86, 0.26, 0.16) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.82));
+    var boundary = boundaryStyle === "dashed" || boundaryStyle === "dash" ? createDashedPolyline(THREE, points, boundaryColor, 0.94, 0.34, 0.22) : new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), isometricLineMaterial(THREE, boundaryColor, 0.9));
     boundary.userData = { isZoneBoundary: true, style: boundaryStyle };
     root.add(boundary);
     var labelPoint = presentation.labelPoint || presentation.label_point || {};
@@ -5523,12 +5570,14 @@
     var center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
     var span = Math.max(8, maxX - minX, maxY - minY);
     var inputRenderHints = data && data.renderHints && typeof data.renderHints === "object" ? data.renderHints : {};
+    var isMermaidArchitectureTemplate = normalizeMarkKey(manifest.id || data.template_id || data.template || "") === "mermaid.architecture" || !!(routePlan && (routePlan.version === "efp.routeplan.v2" || Array.isArray(routePlan.displayRoutes)));
     var relationLayerMode = normalizeMarkKey(inputRenderHints.relationLayer || inputRenderHints.relation_layer || "world_ground") || "world_ground";
     var svgRelationEnabled = relationLayerMode === "svg_debug";
     var linkLabelMode = normalizeMarkKey(inputRenderHints.linkLabelMode || inputRenderHints.link_label_mode || "html_billboard") || "html_billboard";
     var linkLabelReadabilityFlip = normalizeMarkKey(inputRenderHints.linkLabelReadabilityFlip || inputRenderHints.link_label_readability_flip || "camera_idle") || "camera_idle";
     var linkLabelMaxVisible = Math.max(0, Math.min(20, numberValue(inputRenderHints.linkLabelMaxVisible || inputRenderHints.link_label_max_visible, 7)));
-    var layoutScale = Math.max(0.85, Math.min(2.25, numberValue(inputRenderHints.layoutScale || inputRenderHints.layout_scale, 1)));
+    var entityLabelMaxVisible = Math.max(8, Math.min(34, numberValue(inputRenderHints.entityLabelMaxVisible || inputRenderHints.entity_label_max_visible, isMermaidArchitectureTemplate ? 26 : 34)));
+    var layoutScale = Math.max(0.85, Math.min(2.25, numberValue(inputRenderHints.layoutScale || inputRenderHints.layout_scale, isMermaidArchitectureTemplate ? 1.44 : 1)));
     var scale = (8.65 * layoutScale) / span;
     links.forEach(function (link, index) {
       if (!link || typeof link !== "object") return;
@@ -5557,7 +5606,7 @@
     var camera = new THREE.OrthographicCamera(-6, 6, 4, -4, 0.1, 100);
     var target = new THREE.Vector3(0, 0, 0);
     var inputCamera = data.camera || {};
-    var initialZoom = Math.max(0.72, Math.min(1.55, numberValue(inputCamera.zoom, 1.02)));
+    var initialZoom = Math.max(0.72, Math.min(1.55, numberValue(inputCamera.zoom, isMermaidArchitectureTemplate ? 1.36 : 1.02)));
     var initialTheta = Math.max(-Math.PI, Math.min(Math.PI, numberValue(inputCamera.theta, Math.PI / 4)));
     var initialPhi = Math.max(0.46, Math.min(1.36, numberValue(inputCamera.phi, Math.PI / 3.28)));
     var initialRadius = Math.max(7.5, Math.min(18, numberValue(inputCamera.radius, 11)));
@@ -5575,20 +5624,20 @@
     root.add(leaderRoot);
     scene.add(root);
     if (THREE.HemisphereLight) {
-      scene.add(new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 1.15));
+      scene.add(new THREE.HemisphereLight(0xffffff, 0xdadbf2, 1.34));
     } else {
-      scene.add(new THREE.AmbientLight(0xffffff, 0.78));
+      scene.add(new THREE.AmbientLight(0xffffff, 0.9));
     }
-    var sun = new THREE.DirectionalLight(0xffffff, 1.08);
+    var sun = new THREE.DirectionalLight(0xffffff, 1.16);
     sun.position.set(6, 8, 5);
     scene.add(sun);
-    var base = new THREE.Mesh(new THREE.PlaneGeometry((maxX - minX + 3.4) * scale, (maxY - minY + 3.4) * scale), new THREE.MeshBasicMaterial({ color: 0xf8fafc }));
+    var base = new THREE.Mesh(new THREE.PlaneGeometry((maxX - minX + 3.4) * scale, (maxY - minY + 3.4) * scale), new THREE.MeshBasicMaterial({ color: 0xededfc }));
     base.rotation.x = -Math.PI / 2;
     base.position.y = -0.018;
     base.renderOrder = -30;
     base.userData.isBasePlane = true;
     root.add(base);
-    var grid = addThreeGrid(THREE, root, Math.max(10, span * scale + 1.8), Math.max(10, Math.ceil(span)), 0.002, 0xcbd5e1);
+    var grid = addThreeGrid(THREE, root, Math.max(10, span * scale + 1.8), Math.max(10, Math.ceil(span)), 0.002, 0xdadbf2);
     grid.userData.isIsometricGrid = true;
 
     var labels = [];
@@ -5601,7 +5650,7 @@
     var visualHints = readVisualHints(data);
     var viewMode = normalizeMarkKey(visualHints.labelMode || "overview") || "overview";
     var isAssetGallery = String(data.title || "").toLowerCase().indexOf("logo badge gallery") >= 0;
-    var isMermaidArchitecture = normalizeMarkKey(manifest.id || data.template_id || data.template || "") === "mermaid.architecture";
+    var isMermaidArchitecture = isMermaidArchitectureTemplate;
     function isOverviewMode() {
       return viewMode !== "detail";
     }
@@ -5900,13 +5949,13 @@
         edgeSpec.arrowColor = tokenArrowColor;
         edgeSpec.opacity = numberValue(styleToken.opacity, role === "primary" ? 0.92 : role === "auxiliary" ? 0.36 : 0.58);
         edgeSpec.flow = false;
-        edgeSpec.arrowScale = role === "primary" ? 0.46 : role === "auxiliary" ? 0.30 : 0.38;
+        edgeSpec.arrowScale = role === "primary" ? 0.62 : role === "auxiliary" ? 0.38 : 0.50;
         edgeSpec.groundWidth = Math.max(0.0035, numberValue(styleToken.width, role === "primary" ? 0.014 : role === "auxiliary" ? 0.0045 : 0.007));
         edgeSpec.groundHeight = 0.001;
         edgeSpec.groundY = role === "primary" ? 0.028 : role === "auxiliary" ? 0.024 : 0.026;
-        edgeSpec.groundArrowLength = role === "primary" ? 0.09 : role === "auxiliary" ? 0.045 : 0.06;
-        edgeSpec.groundArrowWidth = role === "primary" ? 0.045 : role === "auxiliary" ? 0.024 : 0.03;
-        edgeSpec.endpointTrim = role === "primary" ? 0.22 : role === "auxiliary" ? 0.18 : 0.20;
+        edgeSpec.groundArrowLength = role === "primary" ? 0.16 : role === "auxiliary" ? 0.075 : 0.12;
+        edgeSpec.groundArrowWidth = role === "primary" ? 0.09 : role === "auxiliary" ? 0.042 : 0.065;
+        edgeSpec.endpointTrim = role === "primary" ? 0.28 : role === "auxiliary" ? 0.20 : 0.24;
         if (Array.isArray(styleToken.dashPattern) && styleToken.dashPattern.length) {
           edgeSpec.lineStyle = "dashed";
           edgeSpec.dashLength = numberValue(styleToken.dashPattern[0], 0.55);
@@ -5997,6 +6046,12 @@
       if (!isOverviewMode()) return true;
       if (visibility === "detail") return priority === "always";
       if (role === "primary") return true;
+      if (isMermaidArchitecture && link.__routePlan) {
+        var scope = normalizeMarkKey(link.routeScope || link.route_scope || link.__routePlan.routeScope || link.__routePlan.route_scope || "");
+        var group = linkPathGroup(link);
+        if (role === "secondary" && (scope === "zone" || scope === "bundle") && group !== "main") return true;
+        if (role === "auxiliary" && priority === "important") return true;
+      }
       if (priority === "always" || priority === "important") return true;
       return q.importance >= 0.82;
     }
@@ -7298,14 +7353,46 @@
       }
       var keepGalleryEntityLabels = isAssetGallery;
       if (isMermaidArchitecture) {
-        labels.forEach(function (label) {
+        var mermaidProjected = labels.map(function (label, index) {
           var p = project(label.point);
-          var visible = labelsVisible && label.visible && insideViewport({ x: p.x - 16, y: p.y - 16, w: 32, h: 32 });
           var transformMode = label.type === "link" || label.type === "zone" ? "translate(-50%, -50%)" : "translate(-50%, -100%)";
-          label.element.style.display = visible ? "" : "none";
-          label.element.style.visibility = visible ? "visible" : "hidden";
-          label.element.style.opacity = visible ? "1" : "0";
+          label.element.style.display = labelsVisible && label.visible ? "" : "none";
+          label.element.style.visibility = "hidden";
+          label.element.style.opacity = "0";
           label.element.style.transform = "translate3d(" + p.x.toFixed(2) + "px, " + p.y.toFixed(2) + "px, 0) " + transformMode;
+          return { label: label, index: index, projected: p, rect: labelRect(label, p), priority: label.priority || 0.5 };
+        });
+        var visibleCounts = { entity: 0, link: 0, zone: 0 };
+        var occupiedRects = [];
+        mermaidProjected.sort(function (a, b) {
+          function displayPriority(item) {
+            var type = item.label.type || "entity";
+            var element = item.label.element;
+            var kind = element && element.getAttribute ? normalizeMarkKey(element.getAttribute("data-entity-kind") || "") : "";
+            var labelText = element ? String(element.textContent || "").toLowerCase().trim() : "";
+            var typeBoost = type === "link" ? 0.74 : type === "entity" ? 0.34 : -0.08;
+            var semanticBoost = kind === "microservice" || labelText === "micro server" ? -0.08 : 0;
+            return (item.priority || 0.5) + typeBoost + semanticBoost;
+          }
+          var aSelected = a.label.id && a.label.id === selected ? 1 : 0;
+          var bSelected = b.label.id && b.label.id === selected ? 1 : 0;
+          if (aSelected !== bSelected) return bSelected - aSelected;
+          return displayPriority(b) - displayPriority(a);
+        }).forEach(function (item) {
+          var label = item.label;
+          var type = label.type || "entity";
+          var maxForType = type === "entity" ? entityLabelMaxVisible : labelBudget(label);
+          var allowed = labelsVisible && label.visible && insideViewport(item.rect) && visibleCounts[type] < maxForType;
+          if (allowed) {
+            var padding = type === "link" ? 7 : type === "zone" ? 4 : 3;
+            allowed = !occupiedRects.some(function (rect) { return rectOverlaps(item.rect, rect, padding); });
+          }
+          label.element.style.visibility = allowed ? "visible" : "hidden";
+          label.element.style.opacity = allowed ? "1" : "0";
+          if (allowed) {
+            visibleCounts[type] += 1;
+            occupiedRects.push(item.rect);
+          }
         });
         return;
       }

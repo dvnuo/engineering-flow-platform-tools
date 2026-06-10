@@ -18,13 +18,17 @@ var (
 	cookieHeaderPattern      = regexp.MustCompile(`(?i)\b(set-cookie|cookie)\s*[:=]\s*[^,\r\n]+`)
 	authCredentialPattern    = regexp.MustCompile(`(?i)\b(?:bearer|basic)\s+[A-Za-z0-9._~+/=-]+`)
 	githubTokenPattern       = regexp.MustCompile(`\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b`)
+	gitlabTokenPattern       = regexp.MustCompile(`\bglpat-[A-Za-z0-9_-]{10,}\b`)
 	openAIKeyPattern         = regexp.MustCompile(`\bsk-[A-Za-z0-9_-]{20,}\b`)
 	slackTokenPattern        = regexp.MustCompile(`\bxox[baprs]-[A-Za-z0-9-]{10,}\b`)
+	npmTokenPattern          = regexp.MustCompile(`\bnpm_[A-Za-z0-9]{10,}\b`)
+	awsAccessKeyIDPattern    = regexp.MustCompile(`\b(?:AKIA|ASIA)[A-Z0-9]{16}\b`)
 	jwtPattern               = regexp.MustCompile(`\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b`)
+	pemPrivateKeyPattern     = regexp.MustCompile(`(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----`)
 	dataImagePattern         = regexp.MustCompile(`(?i)(data:image/[a-z0-9.+-]+;base64,)[A-Za-z0-9+/=_-]+`)
 	tidPattern               = regexp.MustCompile(`(?i)\btid=[^;&,\s"']+`)
-	sensitiveFieldPattern    = regexp.MustCompile(`(?i)(["']?[A-Za-z0-9_.~-]*(?:access[_-]?token|id[_-]?token|refresh[_-]?token|token|api[_-]?key|apikey|password|passwd|pwd|authorization|cookie|secret|credential|session)[A-Za-z0-9_.~-]*["']?\s*[:=]\s*)(["'][^"']*["']|[^,}\]\s;&]+)`)
-	sensitiveAssignPattern   = regexp.MustCompile(`(?i)([A-Za-z0-9_.~-]*(?:access[_-]?token|id[_-]?token|refresh[_-]?token|token|api[_-]?key|apikey|password|passwd|pwd|jwt|saml|secret|credential|cookie|authorization|session|sig|signature)[A-Za-z0-9_.~-]*\s*=\s*)[^&#\s,;"'}]+`)
+	sensitiveFieldPattern    = regexp.MustCompile(`(?i)(["']?[A-Za-z0-9_.~-]*(?:access[_-]?token|id[_-]?token|refresh[_-]?token|token|api[_-]?key|apikey|password|passwd|pwd|authorization|cookie|secret|credential|session|private[_-]?key|access[_-]?key)[A-Za-z0-9_.~-]*["']?\s*[:=]\s*)(["'][^"']*["']|[^,}\]\s;&]+)`)
+	sensitiveAssignPattern   = regexp.MustCompile(`(?i)([A-Za-z0-9_.~-]*(?:access[_-]?token|id[_-]?token|refresh[_-]?token|token|api[_-]?key|apikey|password|passwd|pwd|jwt|saml|secret|credential|cookie|authorization|session|sig|signature|private[_-]?key|access[_-]?key)[A-Za-z0-9_.~-]*\s*=\s*)[^&#\s,;"'}]+`)
 	labeledSecretWordPattern = regexp.MustCompile(`(?i)\b(?:secret|token|password|api[-_]?key)[-_][A-Za-z0-9._~+/\-=]{8,}\b`)
 )
 
@@ -74,9 +78,13 @@ func RedactString(s string) string {
 	out = cookieHeaderPattern.ReplaceAllString(out, `${1}: `+Redacted)
 	out = authCredentialPattern.ReplaceAllString(out, Redacted)
 	out = githubTokenPattern.ReplaceAllString(out, Redacted)
+	out = gitlabTokenPattern.ReplaceAllString(out, Redacted)
 	out = openAIKeyPattern.ReplaceAllString(out, Redacted)
 	out = slackTokenPattern.ReplaceAllString(out, Redacted)
+	out = npmTokenPattern.ReplaceAllString(out, Redacted)
+	out = awsAccessKeyIDPattern.ReplaceAllString(out, Redacted)
 	out = jwtPattern.ReplaceAllString(out, Redacted)
+	out = pemPrivateKeyPattern.ReplaceAllString(out, Redacted)
 	out = dataImagePattern.ReplaceAllString(out, `${1}`+Redacted)
 	out = tidPattern.ReplaceAllString(out, "tid="+Redacted)
 	out = replaceSensitiveFields(out)
@@ -152,21 +160,44 @@ func redactStringSlice(values []string) []string {
 
 func isSensitiveOutputKey(key string) bool {
 	norm := normalizeKey(key)
+	if allowListedNonSecretKey(norm) {
+		return false
+	}
 	switch norm {
 	case "password", "passwd", "pwd", "apikey", "apitoken", "token", "accesstoken", "refreshtoken", "idtoken",
 		"authorization", "proxyauthorization", "cookie", "cookies", "setcookie", "secret", "clientsecret",
 		"privatekey", "credential", "credentials", "sessiontoken", "csrftoken", "xcsrftoken", "xsrftoken",
-		"awssecretaccesskey":
+		"crumb", "awsaccesskeyid", "awssecretaccesskey", "accesskeyid", "secretaccesskey", "secretaccesskeyvalue":
 		return true
 	}
-	if strings.HasSuffix(norm, "token") ||
-		strings.HasSuffix(norm, "password") ||
-		strings.HasSuffix(norm, "apikey") ||
-		strings.HasSuffix(norm, "secret") ||
-		strings.HasSuffix(norm, "privatekey") {
+	if strings.Contains(norm, "credential") ||
+		strings.Contains(norm, "authorization") ||
+		strings.Contains(norm, "cookie") ||
+		strings.Contains(norm, "apikey") ||
+		strings.Contains(norm, "password") ||
+		strings.Contains(norm, "secret") ||
+		strings.Contains(norm, "privatekey") ||
+		strings.Contains(norm, "accesstoken") ||
+		strings.Contains(norm, "refreshtoken") ||
+		strings.Contains(norm, "idtoken") ||
+		strings.Contains(norm, "sessionid") ||
+		strings.Contains(norm, "sessiontoken") ||
+		strings.Contains(norm, "token") ||
+		strings.Contains(norm, "accesskey") {
 		return true
 	}
 	return false
+}
+
+func allowListedNonSecretKey(norm string) bool {
+	switch norm {
+	case "tokenstate", "maxoutputtokens", "messageid", "requestid", "traceid", "spanid",
+		"copilottokenvalid", "copilottokenrefreshable", "tokenvalid", "tokenrefreshable",
+		"tokenstdin", "apikeystdin", "passwordstdin":
+		return true
+	default:
+		return false
+	}
 }
 
 func isSensitiveURLKey(key string) bool {
@@ -202,6 +233,13 @@ func redactURL(raw string) string {
 		u.User = url.User("REDACTED")
 	}
 	q := u.Query()
+	if _, ok := q["sig"]; ok {
+		for _, key := range []string{"sig", "se", "sp", "sv", "sr", "spr"} {
+			if _, exists := q[key]; exists {
+				q.Set(key, "REDACTED")
+			}
+		}
+	}
 	for key := range q {
 		if isSensitiveURLKey(key) {
 			q.Set(key, "REDACTED")

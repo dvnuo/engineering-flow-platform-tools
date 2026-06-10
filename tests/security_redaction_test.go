@@ -153,3 +153,31 @@ func TestSecretsRedactedAcrossSuccessFailureVerboseAndDryRun(t *testing.T) {
 		})
 	}
 }
+
+func TestToolOutputRedactsUpstreamSuccessPayload(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"name": "Ada",
+			"token": "secret-token-should-not-appear",
+			"nested": {"api_key": "secret-api-key-should-not-appear"},
+			"profile_url": "https://example.test/callback?access_token=secret-token-should-not-appear&ok=1#frag",
+			"message": "Authorization: Bearer secret-password-should-not-appear"
+		}`))
+	}))
+	defer srv.Close()
+
+	cfg := secretConfig(t, srv.URL)
+	var b bytes.Buffer
+	c := jcmd.NewRoot()
+	c.SetOut(&b)
+	c.SetErr(&b)
+	c.SetArgs([]string{"--config", cfg, "myself", "--json"})
+	if err := c.Execute(); err != nil {
+		t.Fatalf("command failed: %v output=%s", err, b.String())
+	}
+	assertNoSecrets(t, b.String())
+	if !strings.Contains(b.String(), "***REDACTED***") || !strings.Contains(b.String(), "ok=1") {
+		t.Fatalf("expected redacted output with safe URL query retained: %s", b.String())
+	}
+}

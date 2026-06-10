@@ -33,6 +33,7 @@ func Failure(code, message, hint string, status int) Envelope {
 	return Envelope{OK: false, Error: &ErrorDetail{Code: code, Message: message, Hint: hint, Status: status}}
 }
 func Print(w io.Writer, format string, env Envelope) error {
+	env = RedactEnvelope(env)
 	switch format {
 	case "json":
 		enc := json.NewEncoder(w)

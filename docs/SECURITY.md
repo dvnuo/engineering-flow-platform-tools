@@ -1,6 +1,7 @@
 # Security
 
 - Secret redaction: `password`, `api_key`, and `token` values must not be printed.
+- Output boundary redaction: every CLI envelope is redacted in `internal/output` before JSON, YAML, or table output is written, so upstream tool responses are filtered even if a command forgets command-specific sanitization.
 - Config permissions: saved config files use `0600` permissions where the platform supports it.
 - Bearer token handling: bearer tokens are sent as Authorization headers and should not appear in logs or dry-run output.
 - Basic auth risk: username/password and username/API key auth can expose long-lived credentials if copied into scripts. Prefer stdin-based login and scoped API keys.

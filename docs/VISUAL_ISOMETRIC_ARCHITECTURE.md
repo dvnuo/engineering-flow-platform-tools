@@ -22,7 +22,7 @@ This renderer turns Mermaid `architecture-beta` input into an offline Three.js i
 
 ## Ground Paths
 
-`GroundPathGeometryBuilder v5` owns relation geometry. It builds ground-decal path strips, integrated arrow terminal caps, hit areas, hover halo support, dash segment metrics, bundles, and parallel offsets. The default relation layer is `world_ground`; SVG relation paths are reserved for debug mode and CanvasTexture link labels are not the default.
+`GroundPathGeometryBuilder v6` owns relation geometry. It builds ground-decal path strips, integrated arrow terminal caps, hit areas, hover halo support, dash segment metrics, bundles, and parallel offsets. The default relation layer is `world_ground`; SVG relation paths are reserved for debug mode and CanvasTexture link labels are not the default.
 
 Relation styles are role-driven:
 
@@ -34,9 +34,19 @@ Complex diagrams use `pathGroup` lanes such as `gateway`, `registry`, `data`, `c
 
 `basic.mmd` is a smoke fixture for parser, ranking, simple route ports, labels, and component ownership. `microservice-golden.mmd` is the visual quality fixture for architecture-map layout, bus lanes, route density, entity catalog coverage, camera fit, and manual screenshot review.
 
-## Entity Catalog
+## Entity Visual Model v3
 
-The runtime body registry maps common architecture kinds to procedural bodies: browser/mobile/client, CDN, Nginx/gateway/API gateway, service/microservice, registry/Nacos, Redis/cache, database/MySQL, storage/OSS/file, observability/logs/Prometheus/Grafana, and admin. Unknown kinds still render with a safe generic body, and `inspect-browser` reports known/generic body counts and ratio.
+`EntityBodySystem v3` maps architecture entities to procedural isometric bodies without downloading remote 3D assets. `EntityComponent` still owns the body, badge, label, leader line, bbox, ports, and anchors, but body construction is centralized in the body system instead of scattered across renderer branches.
+
+The body system includes:
+
+- semantic builders for PC, laptop, mobile, user/client, CDN, Nginx, API gateway, service, Redis, MySQL/database, Nacos/registry, OSS, file storage, block storage, observability/log tools, and admin consoles.
+- palette v3 materials with brighter top faces, darker side faces, accent panels, and no pure-black body surfaces.
+- local icon decals or fallback glyph plates on body faces, in addition to label icons.
+- low-cost bevel/highlight construction through stacked slabs, top highlights, side panels, screen panels, and contact shadows.
+- body metadata in `userData` so browser inspection can report semantic coverage, icon decals, brightness, saturation, contact shadows, highlights, and model-kind counts.
+
+Unknown kinds still render with a safe generic body, but `microservice-golden.mmd` is expected to have no generic bodies. `inspect-browser` reports `entity_visual_style_version`, `entity_body_shape_variety_count`, `entity_contact_shadow_count`, `entity_icon_decal_count`, `entity_semantic_model_coverage_ratio`, `entity_brightness_score`, and `entity_saturation_score`.
 
 ## Browser Evidence
 
@@ -45,7 +55,7 @@ The runtime body registry maps common architecture kinds to procedural bodies: b
 - component counts for entities, relations, labels, leaders, and path builder.
 - route metrics for crossings, bus lanes, bundles, port hints, direction violations, and entity intersections.
 - path builder metrics for version, join style, arrow cap count, hit area count, hover halo support, and parallel offsets.
-- entity body registry count, known/generic body counts, and generic body ratio.
+- entity visual model metrics for style version, palette version, known/generic body counts, shape variety, contact shadows, icon decals, top highlights, screen panels, semantic coverage, brightness, saturation, and model-kind counts.
 - camera/label fit metrics including labels outside the stage or under toolbar/inspector.
 - complex-map metrics including route crossings, path-group overlaps, bus lane count, bundle count, route entity intersections, and semantic body score.
 - route-plan metrics including `route_plan_present`, `route_plan_route_count`, `route_plan_lane_count`, `route_plan_obstacle_count`, and whether rendered relation components match the plan.
@@ -54,12 +64,15 @@ These checks are deterministic DOM/runtime checks, not OCR or AI visual scoring.
 
 ## Route Plan
 
-Architecture routing is an internal deterministic stage, not a pluggable third-party backend. The renderer uses a serialized `RoutePlan` so route quality can be inspected independently from drawing code:
+Architecture routing is an internal deterministic stage, not a pluggable third-party backend. The renderer uses a serialized `RoutePlan v2` so route quality can be inspected independently from drawing code:
 
 ```json
 {
-  "version": "efp.routeplan.v1",
+  "version": "efp.routeplan.v2",
   "backend": "semantic_heuristic_v4",
+  "sourceEdges": [],
+  "displayRoutes": [],
+  "hiddenDetailRoutes": [],
   "routes": [],
   "lanes": [],
   "bundles": [],
@@ -68,7 +81,14 @@ Architecture routing is an internal deterministic stage, not a pluggable third-p
 }
 ```
 
-The `backend` field is a legacy JSON key that currently contains the internal route engine name, `semantic_heuristic_v4`. It is not an extension point. The browser runtime renders `routePlan.routes` and only falls back to local runtime heuristics for older artifacts that do not contain a route plan.
+The `backend` field is a legacy JSON key that currently contains the internal route engine name, `semantic_heuristic_v4`. It is not an extension point. The browser runtime renders `routePlan.displayRoutes` through the compatibility alias `routePlan.routes` and only falls back to local runtime heuristics for older artifacts that do not contain a route plan.
+
+`RoutePlan v2` separates source edges from overview display routes:
+
+- `sourceEdges` preserves original Mermaid relations.
+- `displayRoutes` is what the overview renders, usually aggregated by from-zone, to-zone, path group, and role.
+- `hiddenDetailRoutes` keeps detail relations available for future hover/select expansion without crowding the overview.
+- `routes` is retained as a serialized alias for older runtime consumers.
 
 The internal engine uses general routing algorithms that match the needs of architecture maps:
 
@@ -76,6 +96,7 @@ The internal engine uses general routing algorithms that match the needs of arch
 - fixed entity ports from Mermaid `R/L/T/B` hints.
 - bus lanes for gateway, registry, data, cache, storage, health, and observability paths.
 - source/target spurs, bundles, and parallel offsets for same-group routes.
+- display route aggregation so repeated service-to-registry/cache/database/storage edges become zone-level or bundle-level overview relations.
 - sparse Hanan grid visibility graph from ports, obstacles, and lane coordinates.
 - A* orthogonal routing scored by length, bends, crossings, overlaps, entity intersections, port violations, lane violations, and preferred-lane rewards.
 - parallel nudging accepted only when it does not worsen intersections, port violations, or overlap metrics.

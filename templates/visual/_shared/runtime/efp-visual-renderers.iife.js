@@ -4753,6 +4753,194 @@
     });
   }
 
+  function entityVisualKind(item, spec) {
+    var raw = normalizeMarkKey(item && (item.kind || item.type) || spec && (spec.shape || spec.mesh) || "");
+    var label = normalizeMarkKey(itemLabel(item) || item && item.id || "");
+    var icon = normalizeMarkKey(spec && spec.icon || "");
+    if (raw === "browser" || raw === "client") {
+      if (label.indexOf("laptop") >= 0) return "laptop";
+      if (label.indexOf("mobile") >= 0 || label.indexOf("phone") >= 0) return "mobile";
+      if (label === "pc" || label.indexOf("desktop") >= 0) return "pc";
+      return raw || "client";
+    }
+    if (raw === "pc") return "pc";
+    if (raw === "mobile") return "mobile";
+    if (raw === "user") return "user";
+    if (raw === "cdn") return "cdn";
+    if (raw === "nginx" || icon.indexOf("nginx") >= 0) return "nginx";
+    if (raw === "api_gateway" || raw === "gateway" || raw === "ingress" || raw === "load_balancer") return "api_gateway";
+    if (raw === "microservice" || raw === "service" || raw === "api") return "microservice";
+    if (raw === "nacos" || raw === "registry") return "nacos";
+    if (raw === "redis" || raw === "cache") return "redis";
+    if (raw === "mysql" || raw === "database" || raw === "postgres" || raw === "mongodb") return "mysql";
+    if (raw === "oss" || label === "oss") return "oss";
+    if (raw === "file_storage" || raw === "storage" && label.indexOf("file") >= 0) return "file_storage";
+    if (raw === "block_storage" || raw === "storage" && label.indexOf("block") >= 0) return "block_storage";
+    if (raw === "storage" || raw === "minio") return "storage";
+    if (raw === "elasticsearch" || raw === "logs" || raw === "log" || raw === "prometheus" || raw === "grafana" || raw === "observability" || label.indexOf("kibana") >= 0 || label.indexOf("logstash") >= 0) return "observability";
+    if (raw === "admin" || raw === "jenkins" || raw === "job") return "admin";
+    if (raw === "kubernetes" || raw === "cluster") return "cluster";
+    return raw || "default";
+  }
+
+  function entityPaletteV3(kind, spec) {
+    var palettes = {
+      client: { base: "#5B8DEF", top: "#8EC5FF", side: "#3B6FD8", accent: "#FFFFFF", screen: "#0f172a" },
+      pc: { base: "#5B8DEF", top: "#8EC5FF", side: "#3B6FD8", accent: "#FFFFFF", screen: "#111827" },
+      laptop: { base: "#5B8DEF", top: "#8EC5FF", side: "#3B6FD8", accent: "#FDE68A", screen: "#111827" },
+      mobile: { base: "#5B8DEF", top: "#8EC5FF", side: "#3B6FD8", accent: "#FFFFFF", screen: "#111827" },
+      user: { base: "#5B8DEF", top: "#8EC5FF", side: "#3B6FD8", accent: "#FFFFFF", screen: "#111827" },
+      cdn: { base: "#6366F1", top: "#A5B4FC", side: "#4338CA", accent: "#FFFFFF", screen: "#DBEAFE" },
+      nginx: { base: "#16A34A", top: "#4ADE80", side: "#15803D", accent: "#FFFFFF", screen: "#052e16" },
+      api_gateway: { base: "#2563EB", top: "#60A5FA", side: "#1D4ED8", accent: "#FBBF24", screen: "#0f172a" },
+      microservice: { base: "#2F80ED", top: "#56CCF2", side: "#1D4ED8", accent: "#FBBF24", screen: "#DBEAFE" },
+      nacos: { base: "#7C3AED", top: "#A78BFA", side: "#5B21B6", accent: "#38BDF8", screen: "#F5F3FF" },
+      redis: { base: "#EF4444", top: "#FB7185", side: "#B91C1C", accent: "#FFFFFF", screen: "#FEE2E2" },
+      mysql: { base: "#2563EB", top: "#DBEAFE", side: "#1D4ED8", accent: "#60A5FA", screen: "#FFFFFF" },
+      storage: { base: "#16A34A", top: "#86EFAC", side: "#15803D", accent: "#FDE68A", screen: "#ECFDF5" },
+      oss: { base: "#16A34A", top: "#86EFAC", side: "#15803D", accent: "#FDE68A", screen: "#ECFDF5" },
+      file_storage: { base: "#16A34A", top: "#86EFAC", side: "#15803D", accent: "#FDE68A", screen: "#ECFDF5" },
+      block_storage: { base: "#16A34A", top: "#86EFAC", side: "#15803D", accent: "#FDE68A", screen: "#ECFDF5" },
+      observability: { base: "#0EA5E9", top: "#7DD3FC", side: "#0369A1", accent: "#F97316", screen: "#E0F2FE" },
+      admin: { base: "#F59E0B", top: "#FDE68A", side: "#B45309", accent: "#FFFFFF", screen: "#451A03" },
+      cluster: { base: "#3B82F6", top: "#93C5FD", side: "#1D4ED8", accent: "#FBBF24", screen: "#DBEAFE" },
+      default: { base: spec && spec.color || "#2F80ED", top: "#7DD3FC", side: "#1D4ED8", accent: "#FBBF24", screen: "#DBEAFE" }
+    };
+    return palettes[kind] || palettes.default;
+  }
+
+  function createIsoMaterial(THREE, color, opts) {
+    opts = opts || {};
+    return new THREE.MeshStandardMaterial({
+      color: colorValue(color, 0x2f80ed),
+      roughness: opts.roughness === undefined ? 0.38 : opts.roughness,
+      metalness: opts.metalness === undefined ? 0.08 : opts.metalness,
+      emissive: colorValue(color, 0x2f80ed),
+      emissiveIntensity: opts.emissiveIntensity === undefined ? 0.035 : opts.emissiveIntensity,
+      transparent: opts.opacity !== undefined && opts.opacity < 1,
+      opacity: opts.opacity === undefined ? 1 : opts.opacity
+    });
+  }
+
+  function createIsoTopMaterial(THREE, palette) {
+    return createIsoMaterial(THREE, palette.top, { roughness: 0.32, metalness: 0.05, emissiveIntensity: 0.05 });
+  }
+
+  function createIsoSideMaterial(THREE, palette) {
+    return createIsoMaterial(THREE, palette.side, { roughness: 0.48, metalness: 0.08, emissiveIntensity: 0.02 });
+  }
+
+  function createIsoFrontMaterial(THREE, palette) {
+    return createIsoMaterial(THREE, palette.base, { roughness: 0.36, metalness: 0.08, emissiveIntensity: 0.04 });
+  }
+
+  function createIsoAccentMaterial(THREE, palette, opacity) {
+    return createIsoMaterial(THREE, palette.accent, { roughness: 0.3, metalness: 0.05, opacity: opacity });
+  }
+
+  function createContactShadowMaterial(THREE) {
+    return new THREE.MeshBasicMaterial({
+      color: 0x0f172a,
+      transparent: true,
+      opacity: 0.13,
+      depthWrite: false,
+      depthTest: true
+    });
+  }
+
+  function markBodyPart(mesh, role) {
+    if (mesh) {
+      mesh.userData = Object.assign({}, mesh.userData || {}, { entityBodyPart: role || "body" });
+    }
+    return mesh;
+  }
+
+  function addBodyBox(THREE, group, size, x, y, z, material, role) {
+    var mesh = new THREE.Mesh(new THREE.BoxGeometry(size.w, size.h, size.d), material);
+    mesh.position.set(x || 0, y || 0, z || 0);
+    markBodyPart(mesh, role);
+    group.add(mesh);
+    return mesh;
+  }
+
+  function addBodyCylinder(THREE, group, radius, height, x, y, z, material, role, segments) {
+    var mesh = new THREE.Mesh(isometricCylinderGeometry(THREE, radius, height, segments || 30), material);
+    mesh.position.set(x || 0, y || 0, z || 0);
+    markBodyPart(mesh, role);
+    group.add(mesh);
+    return mesh;
+  }
+
+  function addBodySphere(THREE, group, radius, x, y, z, material, role) {
+    var mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 28, 18), material);
+    mesh.position.set(x || 0, y || 0, z || 0);
+    markBodyPart(mesh, role);
+    group.add(mesh);
+    return mesh;
+  }
+
+  function addContactShadow(THREE, group, size) {
+    var plane = new THREE.Mesh(new THREE.PlaneGeometry(size.w, size.d), createContactShadowMaterial(THREE));
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.set(0, -size.h * 0.32, 0);
+    plane.scale.set(0.74, 1, 0.52);
+    plane.userData = { isEntityContactShadow: true, entityBodyPart: "contact_shadow" };
+    group.add(plane);
+    return plane;
+  }
+
+  function addTopHighlight(THREE, group, w, d, y, z, palette) {
+    var highlight = addBodyBox(THREE, group, { w: w, h: Math.max(0.012, w * 0.035), d: d }, 0, y || 0, z || 0, createIsoTopMaterial(THREE, palette), "top_highlight");
+    highlight.userData.hasTopHighlight = true;
+    return highlight;
+  }
+
+  function addScreenPanel(THREE, group, w, h, x, y, z, palette, role) {
+    var panel = addBodyBox(THREE, group, { w: w, h: h, d: Math.max(0.01, w * 0.07) }, x || 0, y || 0, z || 0, createIsoMaterial(THREE, palette.screen || "#0f172a", { roughness: 0.24, metalness: 0.12 }), role || "screen_panel");
+    panel.userData.hasScreenPanel = true;
+    return panel;
+  }
+
+  function createEntityIconDecal(THREE, spec, item, size, markContext, palette, opts) {
+    opts = opts || {};
+    var group = new THREE.Group();
+    var w = opts.w || Math.min(size.w * 0.34, 0.34);
+    var h = opts.h || Math.min(size.h * 0.18, 0.2);
+    var plate = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.16, h * 1.18), new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: opts.plateOpacity === undefined ? 0.9 : opts.plateOpacity,
+      depthWrite: false,
+      depthTest: true
+    }));
+    plate.position.set(0, 0, -0.004);
+    group.add(plate);
+    var texture = null;
+    var path = iconPathFor(spec, markContext);
+    if (path && THREE.TextureLoader) {
+      texture = new THREE.TextureLoader().load(path);
+      if (THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
+    } else {
+      texture = createBadgeTexture(THREE, badgeInitials(spec, item), palette.accent || palette.base);
+    }
+    if (!texture) return null;
+    var icon = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.98,
+      depthWrite: false,
+      depthTest: true
+    }));
+    group.add(icon);
+    group.position.set(opts.x || 0, opts.y || 0, opts.z || size.d * 0.25);
+    group.rotation.set(opts.rx || 0, opts.ry || 0, opts.rz || 0);
+    group.userData = { isEntityIconDecal: true, hasIconDecal: true, icon: spec && spec.icon || "", entityBodyPart: "icon_decal" };
+    group.traverse(function (child) {
+      child.userData = Object.assign({}, group.userData, child.userData || {});
+    });
+    return group;
+  }
+
   function addIsometricBoxDetail(THREE, group, w, h, d, x, y, z, color, opacity) {
     var detail = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), isometricDetailMaterial(THREE, color, opacity));
     detail.position.set(x || 0, y || 0, z || 0);
@@ -4767,137 +4955,214 @@
     return detail;
   }
 
-  function decorateIsometricEntity(THREE, group, item, spec, size, color) {
-    var kind = normalizeMarkKey(item.kind || item.type || spec.shape || spec.mesh);
-    var mesh = normalizeMarkKey(spec.mesh || spec.shape);
-    if (kind === "pc" || kind === "client") {
-      addIsometricBoxDetail(THREE, group, size.w * 0.34, size.h * 0.27, size.d * 0.045, 0, size.h * 0.22, size.d * 0.2, "#111827", 1);
-      addIsometricBoxDetail(THREE, group, size.w * 0.06, size.h * 0.16, size.d * 0.04, 0, size.h * 0.02, size.d * 0.17, "#6b7280", 1);
-      addIsometricBoxDetail(THREE, group, size.w * 0.23, size.h * 0.035, size.d * 0.16, 0, -size.h * 0.08, size.d * 0.1, "#e5e7eb", 1);
-      return;
-    }
-    if (kind === "mobile") {
-      addIsometricBoxDetail(THREE, group, size.w * 0.13, size.h * 0.36, size.d * 0.025, 0, size.h * 0.04, size.d * 0.08, "#111827", 1);
-      addIsometricBoxDetail(THREE, group, size.w * 0.09, size.h * 0.28, size.d * 0.028, 0, size.h * 0.04, size.d * 0.1, "#dbeafe", 0.9);
-      return;
-    }
-    if (kind === "cdn") {
-      if (THREE.TorusGeometry) {
-        var equator = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.2, 0.006, 6, 36), isometricDetailMaterial(THREE, "#dbeafe", 0.9));
-        equator.rotation.x = Math.PI / 2;
-        group.add(equator);
-        var meridian = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.2, 0.006, 6, 36), isometricDetailMaterial(THREE, "#dbeafe", 0.82));
-        meridian.rotation.y = Math.PI / 2;
-        group.add(meridian);
+  function buildEntityBodySystemV3(THREE, item, spec, size, markContext) {
+    var visualKind = entityVisualKind(item, spec);
+    var palette = entityPaletteV3(visualKind, spec);
+    var group = new THREE.Group();
+    var meta = {
+      visualStyleVersion: "isometric_entity_v3",
+      entityBodyKind: visualKind,
+      semanticShapeKind: visualKind,
+      shapeKind: visualKind,
+      hasContactShadow: true,
+      hasTopHighlight: false,
+      hasSidePanel: false,
+      hasIconDecal: false,
+      hasScreenPanel: false,
+      isGenericBody: visualKind === "default",
+      isRoundedOrBeveled: true,
+      brightnessScoreContribution: visualKind === "default" ? 0.68 : 0.82,
+      saturationScoreContribution: visualKind === "default" ? 0.58 : 0.76,
+      decalCount: 0,
+      contactShadowCount: 1,
+      highlightCount: 0
+    };
+    addContactShadow(THREE, group, { w: Math.max(size.w * 0.56, 0.42), h: size.h, d: Math.max(size.d * 0.5, 0.34) });
+    function addDecal(opts) {
+      var decal = createEntityIconDecal(THREE, spec, item, size, markContext, palette, opts);
+      if (decal) {
+        group.add(decal);
+        meta.hasIconDecal = true;
+        meta.decalCount += 1;
       }
-      return;
+      return decal;
     }
-    if (kind === "redis" || kind === "cache") {
+    function top(w, d, y, z) {
+      meta.hasTopHighlight = true;
+      meta.highlightCount += 1;
+      return addTopHighlight(THREE, group, w, d, y, z, palette);
+    }
+    function sidePanel(w, h, d, x, y, z, color) {
+      meta.hasSidePanel = true;
+      return addBodyBox(THREE, group, { w: w, h: h, d: d }, x, y, z, createIsoMaterial(THREE, color || palette.side, { roughness: 0.42 }), "side_panel");
+    }
+    function screen(w, h, x, y, z) {
+      meta.hasScreenPanel = true;
+      return addScreenPanel(THREE, group, w, h, x, y, z, palette, "screen_panel");
+    }
+
+    if (visualKind === "pc" || visualKind === "client") {
+      addBodyBox(THREE, group, { w: size.w * 0.34, h: size.h * 0.12, d: size.d * 0.28 }, 0, -size.h * 0.12, 0, createIsoSideMaterial(THREE, palette), "pc_base");
+      addBodyBox(THREE, group, { w: size.w * 0.08, h: size.h * 0.18, d: size.d * 0.06 }, 0, size.h * 0.01, size.d * 0.02, createIsoFrontMaterial(THREE, palette), "pc_stand");
+      addBodyBox(THREE, group, { w: size.w * 0.44, h: size.h * 0.38, d: size.d * 0.08 }, 0, size.h * 0.22, 0, createIsoTopMaterial(THREE, palette), "pc_monitor");
+      screen(size.w * 0.34, size.h * 0.26, 0, size.h * 0.23, size.d * 0.052);
+      top(size.w * 0.38, size.d * 0.08, size.h * 0.43, 0);
+      addDecal({ w: size.w * 0.15, h: size.h * 0.11, y: size.h * 0.23, z: size.d * 0.102 });
+    } else if (visualKind === "laptop") {
+      addBodyBox(THREE, group, { w: size.w * 0.48, h: size.h * 0.06, d: size.d * 0.34 }, 0, -size.h * 0.12, 0, createIsoSideMaterial(THREE, palette), "laptop_keyboard");
+      addBodyBox(THREE, group, { w: size.w * 0.44, h: size.h * 0.34, d: size.d * 0.055 }, 0, size.h * 0.13, -size.d * 0.12, createIsoTopMaterial(THREE, palette), "laptop_screen_body");
+      screen(size.w * 0.34, size.h * 0.24, 0, size.h * 0.13, -size.d * 0.086);
+      top(size.w * 0.36, size.d * 0.12, -size.h * 0.08, size.d * 0.04);
+      addDecal({ w: size.w * 0.13, h: size.h * 0.09, y: -size.h * 0.07, z: size.d * 0.19 });
+    } else if (visualKind === "mobile") {
+      addBodyBox(THREE, group, { w: size.w * 0.22, h: size.h * 0.58, d: size.d * 0.08 }, 0, size.h * 0.08, 0, createIsoTopMaterial(THREE, palette), "mobile_slab");
+      screen(size.w * 0.16, size.h * 0.43, 0, size.h * 0.08, size.d * 0.055);
+      top(size.w * 0.13, size.d * 0.04, size.h * 0.38, 0);
+      addDecal({ w: size.w * 0.1, h: size.h * 0.075, y: size.h * 0.08, z: size.d * 0.095 });
+    } else if (visualKind === "user") {
+      addBodySphere(THREE, group, size.w * 0.12, 0, size.h * 0.22, 0, createIsoTopMaterial(THREE, palette), "avatar_head");
+      addBodyCylinder(THREE, group, size.w * 0.13, size.h * 0.28, 0, -size.h * 0.02, 0, createIsoFrontMaterial(THREE, palette), "avatar_body", 18);
+      top(size.w * 0.14, size.d * 0.08, size.h * 0.35, 0);
+      addDecal({ w: size.w * 0.12, h: size.h * 0.08, y: size.h * 0.02, z: size.d * 0.14 });
+    } else if (visualKind === "cdn") {
+      addBodySphere(THREE, group, Math.max(size.w, size.d) * 0.22, 0, size.h * 0.05, 0, createIsoFrontMaterial(THREE, palette), "cdn_globe");
+      if (THREE.TorusGeometry) {
+        var ringA = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.23, 0.006, 6, 44), createIsoAccentMaterial(THREE, palette, 0.92));
+        ringA.rotation.x = Math.PI / 2;
+        group.add(markBodyPart(ringA, "cdn_latitude"));
+        var ringB = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.23, 0.006, 6, 44), createIsoAccentMaterial(THREE, palette, 0.82));
+        ringB.rotation.y = Math.PI / 2;
+        group.add(markBodyPart(ringB, "cdn_meridian"));
+      }
+      top(size.w * 0.22, size.d * 0.08, -size.h * 0.22, 0);
+      addDecal({ w: size.w * 0.18, h: size.h * 0.08, y: size.h * 0.17, z: size.d * 0.25 });
+    } else if (visualKind === "nginx") {
+      addBodyCylinder(THREE, group, size.w * 0.26, size.h * 0.08, 0, -size.h * 0.22, 0, createIsoTopMaterial(THREE, palette), "pedestal");
+      addBodyCylinder(THREE, group, size.w * 0.2, size.h * 0.04, 0, -size.h * 0.15, 0, createIsoAccentMaterial(THREE, palette, 0.82), "pedestal_ring", 30);
+      addBodyBox(THREE, group, { w: size.w * 0.34, h: size.h * 0.6, d: size.d * 0.2 }, 0, size.h * 0.1, 0, createIsoFrontMaterial(THREE, palette), "nginx_upright_badge");
+      sidePanel(size.w * 0.22, size.h * 0.5, size.d * 0.035, 0, size.h * 0.1, size.d * 0.12, palette.top);
+      top(size.w * 0.26, size.d * 0.08, size.h * 0.42, 0);
+      addDecal({ w: size.w * 0.19, h: size.h * 0.18, y: size.h * 0.1, z: size.d * 0.142 });
+    } else if (visualKind === "api_gateway") {
+      addBodyBox(THREE, group, { w: size.w * 0.46, h: size.h * 0.42, d: size.d * 0.34 }, 0, size.h * 0.02, 0, createIsoFrontMaterial(THREE, palette), "gateway_appliance");
+      sidePanel(size.w * 0.38, size.h * 0.28, size.d * 0.05, 0, size.h * 0.02, size.d * 0.2, palette.screen);
+      addBodyCylinder(THREE, group, size.w * 0.055, size.d * 0.055, -size.w * 0.12, size.h * 0.04, size.d * 0.23, createIsoAccentMaterial(THREE, palette, 1), "gateway_port", 18);
+      addBodyCylinder(THREE, group, size.w * 0.055, size.d * 0.055, size.w * 0.12, size.h * 0.04, size.d * 0.23, createIsoAccentMaterial(THREE, palette, 1), "gateway_port", 18);
+      top(size.w * 0.34, size.d * 0.22, size.h * 0.25, -size.d * 0.02);
+      addDecal({ w: size.w * 0.16, h: size.h * 0.12, y: size.h * 0.05, z: size.d * 0.26 });
+    } else if (visualKind === "microservice") {
       for (var layer = 0; layer < 3; layer += 1) {
-        addIsometricBoxDetail(THREE, group, size.w * 0.42, size.h * 0.075, size.d * 0.34, 0, -size.h * 0.12 + layer * size.h * 0.13, 0, layer % 2 ? "#ef4444" : "#dc2626", 1);
-        addIsometricBoxDetail(THREE, group, size.w * 0.09, size.h * 0.022, size.d * 0.03, -size.w * 0.13, -size.h * 0.105 + layer * size.h * 0.13, size.d * 0.19, "#fee2e2", 0.95);
+        addBodyBox(THREE, group, { w: size.w * 0.39, h: size.h * 0.1, d: size.d * 0.3 }, 0, -size.h * 0.13 + layer * size.h * 0.13, 0, layer === 2 ? createIsoTopMaterial(THREE, palette) : createIsoFrontMaterial(THREE, palette), "service_rack_layer");
+        sidePanel(size.w * 0.07, size.h * 0.02, size.d * 0.035, -size.w * 0.12, -size.h * 0.12 + layer * size.h * 0.13, size.d * 0.18, palette.accent);
+        sidePanel(size.w * 0.055, size.h * 0.02, size.d * 0.035, size.w * 0.08, -size.h * 0.12 + layer * size.h * 0.13, size.d * 0.18, "#93C5FD");
       }
-      return;
-    }
-    if (kind === "database" || kind === "mysql" || kind === "postgres" || kind === "mongodb" || kind === "redis" || kind === "cache") {
-      addIsometricCylinderDetail(THREE, group, size.w * 0.2, 0.04, 0, size.h * 0.23, 0, "#ffffff", 0.72, 36);
-      addIsometricCylinderDetail(THREE, group, size.w * 0.19, 0.025, 0, size.h * 0.04, 0, "#eff6ff", 0.44, 30);
-      addIsometricCylinderDetail(THREE, group, size.w * 0.19, 0.025, 0, -size.h * 0.12, 0, "#111827", 0.16, 30);
-      return;
-    }
-    if (kind === "storage" || kind === "oss" || kind === "minio" || mesh === "bucket") {
-      addIsometricCylinderDetail(THREE, group, size.w * 0.2, 0.04, 0, size.h * 0.2, 0, "#ffffff", 0.72, 28);
-      addIsometricCylinderDetail(THREE, group, size.w * 0.13, 0.035, 0, size.h * 0.24, 0, "#e0f2fe", 0.78, 28);
-      return;
-    }
-    if (kind === "file_storage" || kind === "block_storage") {
-      for (var i = 0; i < 3; i += 1) {
-        addIsometricBoxDetail(THREE, group, size.w * 0.36, size.h * 0.075, size.d * 0.3, 0, -size.h * 0.12 + i * size.h * 0.12, 0, i % 2 ? "#5b6ee1" : "#4661d9", 1);
+      top(size.w * 0.28, size.d * 0.18, size.h * 0.24, 0);
+      addDecal({ w: size.w * 0.13, h: size.h * 0.08, y: size.h * 0.07, z: size.d * 0.2 });
+    } else if (visualKind === "redis") {
+      for (var r = 0; r < 4; r += 1) {
+        addBodyBox(THREE, group, { w: size.w * 0.46, h: size.h * 0.07, d: size.d * 0.34 }, (r % 2 ? 0.01 : -0.01) * size.w, -size.h * 0.14 + r * size.h * 0.1, 0, r === 3 ? createIsoTopMaterial(THREE, palette) : createIsoFrontMaterial(THREE, palette), "redis_slab");
       }
-      addIsometricBoxDetail(THREE, group, size.w * 0.12, size.h * 0.025, size.d * 0.04, 0, size.h * 0.2, size.d * 0.16, "#dbeafe", 0.92);
-      return;
-    }
-    if (kind === "api_gateway" || kind === "gateway" || kind === "nginx" || kind === "ingress" || kind === "load_balancer") {
-      addIsometricBoxDetail(THREE, group, size.w * 0.14, size.h * 0.5, size.d * 0.06, -size.w * 0.17, size.h * 0.02, size.d * 0.2, "#0f172a", 0.82);
-      addIsometricBoxDetail(THREE, group, size.w * 0.14, size.h * 0.5, size.d * 0.06, size.w * 0.17, size.h * 0.02, size.d * 0.2, "#0f172a", 0.82);
-      addIsometricBoxDetail(THREE, group, size.w * 0.42, size.h * 0.05, size.d * 0.09, 0, size.h * 0.31, size.d * 0.18, "#d1fae5", 0.9);
-      addIsometricBoxDetail(THREE, group, size.w * 0.12, size.h * 0.025, size.d * 0.035, -size.w * 0.11, size.h * 0.04, size.d * 0.23, "#fbbf24", 1);
-      addIsometricBoxDetail(THREE, group, size.w * 0.12, size.h * 0.025, size.d * 0.035, size.w * 0.11, size.h * 0.04, size.d * 0.23, "#60a5fa", 1);
-      return;
-    }
-    if (kind === "service" || kind === "microservice" || kind === "api") {
-      for (var block = 0; block < 2; block += 1) {
-        addIsometricBoxDetail(THREE, group, size.w * 0.32, size.h * 0.12, size.d * 0.25, 0, -size.h * 0.06 + block * size.h * 0.17, 0, block % 2 ? "#60a5fa" : "#2563eb", 0.95);
-      }
-      addIsometricBoxDetail(THREE, group, size.w * 0.28, size.h * 0.04, size.d * 0.22, 0, size.h * 0.19, size.d * 0.17, "#ffffff", 0.45);
-      addIsometricBoxDetail(THREE, group, size.w * 0.08, size.h * 0.025, size.d * 0.03, -size.w * 0.1, size.h * 0.07, size.d * 0.18, "#fbbf24", 1);
-      addIsometricBoxDetail(THREE, group, size.w * 0.08, size.h * 0.025, size.d * 0.03, size.w * 0.08, size.h * 0.07, size.d * 0.18, "#60a5fa", 1);
-      return;
-    }
-    if (kind === "registry" || kind === "nacos" || kind === "event_stream" || kind === "queue" || kind === "kafka" || kind === "rocketmq" || kind === "rabbitmq") {
-      addIsometricCylinderDetail(THREE, group, size.w * 0.24, 0.035, 0, -size.h * 0.22, 0, "#ffffff", 0.88, 30);
-      addIsometricCylinderDetail(THREE, group, size.w * 0.16, 0.025, 0, -size.h * 0.18, 0, "#bfdbfe", 0.76, 30);
-      addIsometricCylinderDetail(THREE, group, size.w * 0.055, 0.06, -size.w * 0.08, size.h * 0.18, size.d * 0.02, "#22d3ee", 1, 14);
-      addIsometricCylinderDetail(THREE, group, size.w * 0.055, 0.06, size.w * 0.08, size.h * 0.18, size.d * 0.02, "#22d3ee", 1, 14);
-      return;
-    }
-    if (kind === "kubernetes" || kind === "cluster") {
+      top(size.w * 0.33, size.d * 0.22, size.h * 0.21, 0);
+      addDecal({ w: size.w * 0.17, h: size.h * 0.1, y: size.h * 0.08, z: size.d * 0.2 });
+    } else if (visualKind === "mysql") {
+      addBodyCylinder(THREE, group, size.w * 0.22, size.h * 0.38, 0, 0, 0, createIsoMaterial(THREE, palette.top, { roughness: 0.35 }), "database_cylinder", 36);
+      addBodyCylinder(THREE, group, size.w * 0.225, size.h * 0.04, 0, size.h * 0.21, 0, createIsoTopMaterial(THREE, palette), "database_top_ellipse", 36);
+      addBodyCylinder(THREE, group, size.w * 0.228, size.h * 0.035, 0, -size.h * 0.03, 0, createIsoSideMaterial(THREE, palette), "database_band", 36);
+      addBodyCylinder(THREE, group, size.w * 0.228, size.h * 0.026, 0, -size.h * 0.19, 0, createIsoAccentMaterial(THREE, palette, 0.86), "database_ring", 36);
+      meta.hasTopHighlight = true;
+      meta.highlightCount += 1;
+      addDecal({ w: size.w * 0.16, h: size.h * 0.08, y: size.h * 0.07, z: size.d * 0.2 });
+    } else if (visualKind === "nacos") {
+      addBodyCylinder(THREE, group, size.w * 0.22, size.h * 0.08, 0, -size.h * 0.18, 0, createIsoTopMaterial(THREE, palette), "registry_pedestal");
+      addBodyBox(THREE, group, { w: size.w * 0.24, h: size.h * 0.46, d: size.d * 0.24 }, 0, size.h * 0.06, 0, createIsoFrontMaterial(THREE, palette), "registry_node");
       if (THREE.TorusGeometry) {
-        var ring = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.2, 0.018, 8, 32), isometricDetailMaterial(THREE, "#dbeafe", 0.9));
-        ring.rotation.x = Math.PI / 2;
-        ring.position.y = size.h * 0.12;
-        group.add(ring);
+        var regRing = new THREE.Mesh(new THREE.TorusGeometry(size.w * 0.17, 0.012, 8, 32), createIsoAccentMaterial(THREE, palette, 0.95));
+        regRing.rotation.x = Math.PI / 2;
+        regRing.position.y = size.h * 0.22;
+        group.add(markBodyPart(regRing, "registry_ring"));
       }
-      for (var node = 0; node < 6; node += 1) {
-        var angle = node / 6 * Math.PI * 2;
-        addIsometricCylinderDetail(THREE, group, size.w * 0.025, 0.035, Math.cos(angle) * size.w * 0.16, size.h * 0.13, Math.sin(angle) * size.d * 0.16, "#bfdbfe", 0.92, 10);
+      top(size.w * 0.2, size.d * 0.16, size.h * 0.31, 0);
+      addDecal({ w: size.w * 0.13, h: size.h * 0.08, y: size.h * 0.08, z: size.d * 0.16 });
+    } else if (visualKind === "oss") {
+      addBodyCylinder(THREE, group, size.w * 0.23, size.h * 0.32, 0, -size.h * 0.03, 0, createIsoFrontMaterial(THREE, palette), "storage_bucket");
+      addBodyCylinder(THREE, group, size.w * 0.235, size.h * 0.045, 0, size.h * 0.16, 0, createIsoTopMaterial(THREE, palette), "bucket_rim", 30);
+      top(size.w * 0.2, size.d * 0.11, size.h * 0.22, 0);
+      addDecal({ w: size.w * 0.14, h: size.h * 0.08, y: size.h * 0.02, z: size.d * 0.19 });
+    } else if (visualKind === "file_storage") {
+      addBodyBox(THREE, group, { w: size.w * 0.44, h: size.h * 0.22, d: size.d * 0.28 }, 0, -size.h * 0.02, 0, createIsoFrontMaterial(THREE, palette), "file_box");
+      addBodyBox(THREE, group, { w: size.w * 0.22, h: size.h * 0.08, d: size.d * 0.12 }, -size.w * 0.09, size.h * 0.13, -size.d * 0.04, createIsoTopMaterial(THREE, palette), "file_tab");
+      top(size.w * 0.34, size.d * 0.18, size.h * 0.14, 0);
+      addDecal({ w: size.w * 0.14, h: size.h * 0.08, y: size.h * 0.02, z: size.d * 0.19 });
+    } else if (visualKind === "block_storage" || visualKind === "storage") {
+      for (var b = 0; b < 3; b += 1) {
+        addBodyBox(THREE, group, { w: size.w * 0.26, h: size.h * 0.18, d: size.d * 0.24 }, (b - 1) * size.w * 0.12, -size.h * 0.05 + b * size.h * 0.05, (b % 2 ? 0.04 : -0.03) * size.d, b === 2 ? createIsoTopMaterial(THREE, palette) : createIsoFrontMaterial(THREE, palette), "storage_block");
       }
-      return;
-    }
-    if (kind === "job" || kind === "jenkins" || kind === "admin") {
-      addIsometricBoxDetail(THREE, group, size.w * 0.34, size.h * 0.035, size.d * 0.1, 0, size.h * 0.18, size.d * 0.09, "#fee2e2", 0.9);
-      for (var tooth = 0; tooth < 8; tooth += 1) {
-        var theta = tooth / 8 * Math.PI * 2;
-        addIsometricBoxDetail(THREE, group, size.w * 0.035, size.h * 0.06, size.d * 0.025, Math.cos(theta) * size.w * 0.14, size.h * 0.04, size.d * 0.13 + Math.sin(theta) * size.d * 0.035, "#fecaca", 0.9);
+      top(size.w * 0.2, size.d * 0.14, size.h * 0.2, 0);
+      addDecal({ w: size.w * 0.14, h: size.h * 0.08, y: size.h * 0.05, z: size.d * 0.19 });
+    } else if (visualKind === "observability") {
+      addBodyBox(THREE, group, { w: size.w * 0.42, h: size.h * 0.32, d: size.d * 0.22 }, 0, 0, 0, createIsoFrontMaterial(THREE, palette), "observability_console");
+      screen(size.w * 0.31, size.h * 0.17, 0, size.h * 0.04, size.d * 0.14);
+      for (var bar = 0; bar < 3; bar += 1) {
+        sidePanel(size.w * 0.04, size.h * (0.06 + bar * 0.025), size.d * 0.025, -size.w * 0.09 + bar * size.w * 0.08, size.h * (0.0 + bar * 0.015), size.d * 0.18, palette.accent);
       }
-      return;
+      top(size.w * 0.32, size.d * 0.16, size.h * 0.2, 0);
+      addDecal({ w: size.w * 0.13, h: size.h * 0.08, y: size.h * 0.03, z: size.d * 0.2 });
+    } else if (visualKind === "admin") {
+      addBodyBox(THREE, group, { w: size.w * 0.44, h: size.h * 0.28, d: size.d * 0.24 }, 0, -size.h * 0.02, 0, createIsoFrontMaterial(THREE, palette), "admin_toolbox");
+      addBodyBox(THREE, group, { w: size.w * 0.22, h: size.h * 0.055, d: size.d * 0.06 }, 0, size.h * 0.18, -size.d * 0.08, createIsoTopMaterial(THREE, palette), "admin_handle");
+      screen(size.w * 0.22, size.h * 0.09, 0, size.h * 0.02, size.d * 0.15);
+      sidePanel(size.w * 0.055, size.h * 0.035, size.d * 0.025, -size.w * 0.13, -size.h * 0.06, size.d * 0.17, palette.accent);
+      sidePanel(size.w * 0.055, size.h * 0.035, size.d * 0.025, size.w * 0.13, -size.h * 0.06, size.d * 0.17, palette.top);
+      top(size.w * 0.32, size.d * 0.14, size.h * 0.13, 0);
+      addDecal({ w: size.w * 0.14, h: size.h * 0.08, y: size.h * 0.03, z: size.d * 0.2 });
+    } else {
+      addBodyBox(THREE, group, { w: size.w * 0.36, h: size.h * 0.38, d: size.d * 0.32 }, 0, 0, 0, createIsoFrontMaterial(THREE, palette), "generic_body");
+      top(size.w * 0.28, size.d * 0.18, size.h * 0.22, 0);
+      addDecal({ w: size.w * 0.13, h: size.h * 0.08, y: size.h * 0.04, z: size.d * 0.2 });
     }
-    if (kind === "log" || kind === "search" || kind === "elasticsearch") {
-      addIsometricBoxDetail(THREE, group, size.w * 0.24, size.h * 0.03, size.d * 0.22, 0, size.h * 0.19, 0, "#fef3c7", 0.84);
-    }
+
+    group.userData = Object.assign(group.userData || {}, meta, {
+      entityVisualStyleVersion: "isometric_entity_v3",
+      paletteKey: visualKind,
+      paletteBase: palette.base,
+      paletteTop: palette.top,
+      paletteSide: palette.side
+    });
+    return { group: group, meta: meta, palette: palette };
   }
 
   function createIsometricEntity(THREE, item, spec, size, markContext) {
-    var color = colorValue(spec.color, 0x2f80ed);
-    var group = new THREE.Group();
-    var material = new THREE.MeshStandardMaterial({
-      color: color,
-      roughness: 0.58,
-      metalness: 0.08,
-      emissive: color,
-      emissiveIntensity: 0.02
-    });
-    var mesh = new THREE.Mesh(isometricEntityGeometry(THREE, item, spec, size), material);
-    mesh.castShadow = false;
-    mesh.receiveShadow = true;
-    group.add(mesh);
-    decorateIsometricEntity(THREE, group, item, spec, size, color);
+    var body = buildEntityBodySystemV3(THREE, item, spec, size, markContext);
+    var group = body.group || new THREE.Group();
+    var settings = badgeSettings(markContext);
     var modelBadge = createModelBadge(THREE, spec, item, size, markContext);
     if (modelBadge) {
+      modelBadge.scale.multiplyScalar(0.82);
+      modelBadge.position.y += size.h * 0.03;
       group.add(modelBadge);
     }
-    var settings = badgeSettings(markContext);
     var icon = createIconBillboard(spec, item, THREE, markContext, size);
     if (icon) {
+      icon.scale.multiplyScalar(0.78);
       if (modelBadge && settings.placement === "front") {
         icon.position.y += size.h * 0.18;
         icon.position.z += size.d * 0.12;
       }
       group.add(icon);
     }
-    var knownBody = isKnownIsometricBodyKind(item, spec);
-    group.userData = { label: itemLabel(item), payload: item, id: item.id, mark: { icon: spec.icon || "", model: spec.model || "", modelPath: modelPathFor(spec, markContext) || "" }, entityBodyKnown: knownBody, entityBodyKind: normalizeMarkKey(item.kind || item.type || spec.shape || spec.mesh) || "default" };
+    var knownBody = isKnownIsometricBodyKind(item, spec) && !body.meta.isGenericBody;
+    group.userData = Object.assign({}, group.userData || {}, {
+      label: itemLabel(item),
+      payload: item,
+      id: item.id,
+      mark: { icon: spec.icon || "", model: spec.model || "", modelPath: modelPathFor(spec, markContext) || "" },
+      entityBodyKnown: knownBody,
+      entityBodyKind: body.meta.entityBodyKind || entityVisualKind(item, spec) || "default",
+      visualStyleVersion: "isometric_entity_v3"
+    });
     group.traverse(function (child) {
+      child.castShadow = false;
+      child.receiveShadow = true;
       child.userData = Object.assign({}, group.userData, child.userData || {});
     });
     return group;
@@ -7545,12 +7810,35 @@
       var busMetrics = relationBusLaneMetrics();
       var entitySemanticBodyScore = entityComponents.length ? Math.round(entityKnownBodyCount / entityComponents.length * 100) / 100 : 0;
       var shapeSet = {};
+      var modelKindCounts = {};
+      var entityContactShadowCount = 0;
+      var entityTopHighlightCount = 0;
+      var entitySidePanelCount = 0;
+      var entityIconDecalCount = 0;
+      var entityRoundedOrBeveledCount = 0;
+      var entityScreenPanelCount = 0;
+      var entitySemanticModelCoverageCount = 0;
+      var entityBrightnessTotal = 0;
+      var entitySaturationTotal = 0;
       entityComponents.forEach(function (component) {
-        var kind = component && component.group && component.group.userData && component.group.userData.entityBodyKind || "";
+        var data = component && component.group && component.group.userData || {};
+        var kind = data.entityBodyKind || "";
         if (kind) shapeSet[kind] = true;
+        if (kind) modelKindCounts[kind] = (modelKindCounts[kind] || 0) + 1;
+        if (data.hasContactShadow) entityContactShadowCount += 1;
+        if (data.hasTopHighlight) entityTopHighlightCount += 1;
+        if (data.hasSidePanel) entitySidePanelCount += 1;
+        if (data.hasIconDecal) entityIconDecalCount += numberValue(data.decalCount, 1);
+        if (data.isRoundedOrBeveled) entityRoundedOrBeveledCount += 1;
+        if (data.hasScreenPanel) entityScreenPanelCount += 1;
+        if (data.entityBodyKnown === true && data.isGenericBody !== true) entitySemanticModelCoverageCount += 1;
+        entityBrightnessTotal += numberValue(data.brightnessScoreContribution, data.entityBodyKnown === true ? 0.8 : 0.66);
+        entitySaturationTotal += numberValue(data.saturationScoreContribution, data.entityBodyKnown === true ? 0.74 : 0.56);
       });
       var entityBodyShapeVarietyCount = Object.keys(shapeSet).length;
-      var entityBrightnessScore = isMermaidArchitecture ? 0.78 : 0.72;
+      var entityBrightnessScore = entityComponents.length ? Math.round(entityBrightnessTotal / entityComponents.length * 100) / 100 : 0;
+      var entitySaturationScore = entityComponents.length ? Math.round(entitySaturationTotal / entityComponents.length * 100) / 100 : 0;
+      var entitySemanticModelCoverageRatio = entityComponents.length ? Math.round(entitySemanticModelCoverageCount / entityComponents.length * 100) / 100 : 0;
       var pathGroupOverlapCount = relationParallelOverlapCount();
       return {
         sceneComponentTreePresent: true,
@@ -7591,9 +7879,20 @@
         entityGenericBodyCount: entityGenericBodyCount,
         entityGenericBodyRatio: entityComponents.length ? Math.round(entityGenericBodyCount / entityComponents.length * 100) / 100 : 0,
         entitySemanticBodyScore: entitySemanticBodyScore,
-        entityVisualPaletteVersion: 2,
+        entityVisualStyleVersion: "isometric_entity_v3",
+        entityVisualPaletteVersion: 3,
         entityBodyShapeVarietyCount: entityBodyShapeVarietyCount,
+        entityContactShadowCount: entityContactShadowCount,
+        entityTopHighlightCount: entityTopHighlightCount,
+        entitySidePanelCount: entitySidePanelCount,
+        entityIconDecalCount: entityIconDecalCount,
+        entityRoundedOrBeveledCount: entityRoundedOrBeveledCount,
+        entityScreenPanelCount: entityScreenPanelCount,
+        entitySemanticModelCoverageCount: entitySemanticModelCoverageCount,
+        entitySemanticModelCoverageRatio: entitySemanticModelCoverageRatio,
         entityBrightnessScore: entityBrightnessScore,
+        entitySaturationScore: entitySaturationScore,
+        modelKindCounts: modelKindCounts,
         relationComponentsOwnPathCount: relationComponentsOwnPathCount,
         relationComponentsOwnArrowCount: relationComponentsOwnArrowCount,
         relationComponentsOwnHitCount: relationComponentsOwnHitCount,

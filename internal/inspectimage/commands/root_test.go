@@ -25,6 +25,12 @@ func (f *fakeClient) Responses(ctx context.Context, req copilot.ResponsesRequest
 	return map[string]any{"output_text": `{"answer":"ok"}`}, nil
 }
 
+type secretClient struct{}
+
+func (f *secretClient) Responses(ctx context.Context, req copilot.ResponsesRequest) (map[string]any, error) {
+	return map[string]any{"output_text": `{"answer":"Authorization: Bearer secret-token-should-not-appear","temporaryCredentials":"secret-password-should-not-appear"}`}, nil
+}
+
 func TestCommandsJSONListsCoreCommands(t *testing.T) {
 	out := run(t, nil, "commands", "--json")
 	commands := out["data"].(map[string]any)["commands"].([]any)
@@ -367,6 +373,32 @@ func TestInspectOutWritesSuccessEnvelope(t *testing.T) {
 	}
 	if !reflect.DeepEqual(out, fileOut) {
 		t.Fatalf("--out should write the same envelope that stdout receives\nstdout=%#v\nfile=%#v", out, fileOut)
+	}
+}
+
+func TestInspectOutRedactsEnvelopeCopy(t *testing.T) {
+	path := writePNG(t)
+	outPath := filepath.Join(t.TempDir(), "result.json")
+	out := run(t, &secretClient{}, "inspect", "--image", path, "--prompt", "x", "--out", outPath, "--json")
+	if out["ok"] != true {
+		t.Fatalf("bad inspect: %#v", out)
+	}
+	fileText, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdoutBytes, err := json.Marshal(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	combined := string(stdoutBytes) + "\n" + string(fileText)
+	for _, leaked := range []string{"secret-token-should-not-appear", "secret-password-should-not-appear", "Bearer secret"} {
+		if strings.Contains(combined, leaked) {
+			t.Fatalf("secret leaked %q:\n%s", leaked, combined)
+		}
+	}
+	if !strings.Contains(combined, "***REDACTED***") {
+		t.Fatalf("expected redacted marker in stdout and file:\n%s", combined)
 	}
 }
 

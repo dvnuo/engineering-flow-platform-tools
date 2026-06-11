@@ -591,6 +591,7 @@ func printWithOut(cmd *cobra.Command, o *Opts, env output.Envelope, outPath stri
 }
 
 func writeEnvelopeFile(path string, env output.Envelope) error {
+	env = output.RedactEnvelope(env)
 	clean := filepath.Clean(path)
 	if dir := filepath.Dir(clean); dir != "." && dir != "" {
 		if err := os.MkdirAll(dir, 0o755); err != nil {

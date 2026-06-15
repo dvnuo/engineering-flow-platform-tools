@@ -97,7 +97,7 @@ func pageCmd(o *Opts) *cobra.Command {
 			}
 			v = int(num) + 1
 		}
-		payload := map[string]any{"version": map[string]any{"number": v}}
+		payload := map[string]any{"type": "page", "version": map[string]any{"number": v}}
 		if minor, _ := cmd.Flags().GetBool("minor-edit"); minor {
 			payload["version"].(map[string]any)["minorEdit"] = true
 		}

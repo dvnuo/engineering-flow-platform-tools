@@ -1555,6 +1555,9 @@ func flagDescription(command, name string) string {
 	case "enable-probe":
 		return "Allow Zephyr doctor to probe even when zephyr.enabled=false."
 	case "type":
+		if strings.HasPrefix(command, "content.") || command == "search.content" {
+			return "Confluence content type, such as page or blogpost."
+		}
 		return "Issue type name."
 	case "summary":
 		return "Issue summary."
@@ -2096,6 +2099,10 @@ var explicit = map[string]explicitMeta{
 	"page.create":               {Description: "Create a Confluence page.", Flags: []string{"space", "title", "parent-id", "body", "body-file", "body-stdin", "body-format", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"space", "title", "body|body-file|body-stdin"}, Risk: "write", Example: "confluence page create --space ENG --title Home --body '<p>Hello</p>' --json"},
 	"page.update":               {Description: "Update a Confluence page.", Flags: []string{"id", "url", "title", "version", "minor-edit", "body", "body-file", "body-stdin", "body-format", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"id|url"}, Risk: "write", Example: "confluence page update --id 123 --title Home --json"},
 	"page.delete":               {Description: "Delete a Confluence page after explicit confirmation.", Flags: []string{"id", "url", "yes", "instance", "config", "json", "format", "verbose"}, Required: []string{"id|url", "yes"}, Risk: "delete", Example: "confluence page delete --id 123 --yes --json"},
+	"content.create":            {Description: "Create generic Confluence content.", Flags: []string{"type", "space", "title", "body", "body-file", "body-stdin", "body-format", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"space", "title", "body|body-file|body-stdin"}, Risk: "write", Example: "confluence content create --space ENG --title Home --body '<p>Hello</p>' --json"},
+	"content.update":            {Description: "Update generic Confluence content.", Flags: []string{"type", "title", "version", "body", "body-file", "body-stdin", "body-format", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"content-id", "title|body|body-file|body-stdin"}, Risk: "write", Example: "confluence content update 123 --title Home --body '<p>Hello</p>' --json"},
+	"blog.create":               {Description: "Create a Confluence blog post.", Flags: []string{"space", "title", "body", "body-file", "body-stdin", "body-format", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"space", "title", "body|body-file|body-stdin"}, Risk: "write", Example: "confluence blog create --space ENG --title Update --body '<p>Hello</p>' --json"},
+	"blog.update":               {Description: "Update a Confluence blog post.", Flags: []string{"title", "version", "body", "body-file", "body-stdin", "body-format", "instance", "config", "json", "format", "verbose", "dry-run"}, Required: []string{"blog-id-or-url", "title|body|body-file|body-stdin"}, Risk: "write", Example: "confluence blog update 123 --title Update --body '<p>Hello</p>' --json"},
 	"page.body":                 {Description: "Fetch a Confluence page body representation.", Flags: []string{"id", "url", "instance", "config", "json", "format", "verbose"}, Required: []string{"id|url"}, Risk: "read", Example: "confluence page body --id 123 --json"},
 	"page.export-markdown":      {Description: "Export a Confluence page body as Markdown.", Flags: []string{"id", "url", "output", "instance", "config", "json", "format", "verbose"}, Required: []string{"id|url"}, Risk: "read", Example: "confluence page export-markdown --id 123 --json"},
 	"page.attachment.list":      {Description: "List attachments on a Confluence page.", Flags: []string{"page-id", "id", "url", "instance", "config", "json", "format", "verbose"}, Required: []string{"page-id|id|url"}, Risk: "read", Example: "confluence page attachment list --id 123 --json"},

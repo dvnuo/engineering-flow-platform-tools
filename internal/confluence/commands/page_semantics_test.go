@@ -44,7 +44,7 @@ func TestPageUpdateFetchesVersionWithExpand(t *testing.T) {
 			_, _ = w.Write([]byte(`{"ok":true}`))
 			return
 		}
-		_, _ = w.Write([]byte(`{"ok":true}`))
+		t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
 	})
 	if !run(t, p, "page", "update", "--id", "123", "--title", "Next")["ok"].(bool) {
 		t.Fatal("page update failed")
@@ -78,11 +78,19 @@ func TestContentAndBlogUpdateIncludeType(t *testing.T) {
 	if out := run(t, p, "blog", "update", "456", "--title", "News", "--body", "<p>Hello</p>"); out["ok"] != true {
 		t.Fatalf("blog update failed: %#v", out)
 	}
-	if got := seen["/rest/api/content/123"]["type"]; got != "page" {
-		t.Fatalf("content update type=%v want page: %#v", got, seen["/rest/api/content/123"])
+	contentPayload, ok := seen["/rest/api/content/123"]
+	if !ok {
+		t.Fatal("content update did not send PUT")
 	}
-	if got := seen["/rest/api/content/456"]["type"]; got != "blogpost" {
-		t.Fatalf("blog update type=%v want blogpost: %#v", got, seen["/rest/api/content/456"])
+	blogPayload, ok := seen["/rest/api/content/456"]
+	if !ok {
+		t.Fatal("blog update did not send PUT")
+	}
+	if got := contentPayload["type"]; got != "page" {
+		t.Fatalf("content update type=%v want page: %#v", got, contentPayload)
+	}
+	if got := blogPayload["type"]; got != "blogpost" {
+		t.Fatalf("blog update type=%v want blogpost: %#v", got, blogPayload)
 	}
 }
 

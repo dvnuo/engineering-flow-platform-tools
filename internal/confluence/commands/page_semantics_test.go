@@ -16,6 +16,7 @@ import (
 )
 
 func TestPageUpdateFetchesVersionWithExpand(t *testing.T) {
+	var sawPut bool
 	p := cfg(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" && r.URL.Path == "/rest/api/content/123" {
 			if r.URL.Query().Get("expand") != "version" {
@@ -24,10 +25,64 @@ func TestPageUpdateFetchesVersionWithExpand(t *testing.T) {
 			_, _ = w.Write([]byte(`{"version":{"number":2}}`))
 			return
 		}
+		if r.Method == "PUT" && r.URL.Path == "/rest/api/content/123" {
+			sawPut = true
+			var payload map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode update body: %v", err)
+			}
+			if payload["type"] != "page" {
+				t.Fatalf("update payload type=%v want page: %#v", payload["type"], payload)
+			}
+			version, _ := payload["version"].(map[string]any)
+			if version["number"] != float64(3) {
+				t.Fatalf("update payload version=%v want 3: %#v", version["number"], payload)
+			}
+			if payload["title"] != "Next" {
+				t.Fatalf("update payload title=%v want Next: %#v", payload["title"], payload)
+			}
+			_, _ = w.Write([]byte(`{"ok":true}`))
+			return
+		}
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 	if !run(t, p, "page", "update", "--id", "123", "--title", "Next")["ok"].(bool) {
 		t.Fatal("page update failed")
+	}
+	if !sawPut {
+		t.Fatal("page update did not send PUT")
+	}
+}
+
+func TestContentAndBlogUpdateIncludeType(t *testing.T) {
+	seen := map[string]map[string]any{}
+	p := cfg(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" && (r.URL.Path == "/rest/api/content/123" || r.URL.Path == "/rest/api/content/456") {
+			_, _ = w.Write([]byte(`{"version":{"number":2}}`))
+			return
+		}
+		if r.Method == "PUT" && (r.URL.Path == "/rest/api/content/123" || r.URL.Path == "/rest/api/content/456") {
+			var payload map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode update body: %v", err)
+			}
+			seen[r.URL.Path] = payload
+			_, _ = w.Write([]byte(`{"ok":true}`))
+			return
+		}
+		t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+	})
+	if out := run(t, p, "content", "update", "123", "--title", "Home", "--body", "<p>Hello</p>"); out["ok"] != true {
+		t.Fatalf("content update failed: %#v", out)
+	}
+	if out := run(t, p, "blog", "update", "456", "--title", "News", "--body", "<p>Hello</p>"); out["ok"] != true {
+		t.Fatalf("blog update failed: %#v", out)
+	}
+	if got := seen["/rest/api/content/123"]["type"]; got != "page" {
+		t.Fatalf("content update type=%v want page: %#v", got, seen["/rest/api/content/123"])
+	}
+	if got := seen["/rest/api/content/456"]["type"]; got != "blogpost" {
+		t.Fatalf("blog update type=%v want blogpost: %#v", got, seen["/rest/api/content/456"])
 	}
 }
 

@@ -119,6 +119,7 @@ func TestSchemaConcreteFlags(t *testing.T) {
 	requireFlags(t, schemaData(t, "jira", "zephyr.api.get"), "query")
 	requireFlags(t, schemaData(t, "confluence", "page.create"), "space", "title", "parent-id", "body", "body-file", "body-stdin", "body-format", "dry-run")
 	requireFlags(t, schemaData(t, "confluence", "page.update"), "id", "url", "title", "version", "minor-edit", "body", "body-file", "body-stdin")
+	requireFlags(t, schemaData(t, "confluence", "content.update"), "type", "title", "version", "body", "body-file", "body-stdin", "body-format")
 	requireRequired(t, schemaData(t, "confluence", "page.get-by-title"), "space", "title")
 	requireFlags(t, schemaData(t, "confluence", "search"), "cql", "limit", "start", "expand")
 	requireFlags(t, schemaData(t, "browser", "probe"), "url", "selector", "wait", "timeout", "out", "browser", "json")

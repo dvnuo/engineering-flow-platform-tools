@@ -52,7 +52,7 @@ func blogCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
 		}
-		return do(o, cmd, "PUT", "content/"+args[0], nil, map[string]any{"title": ti, "version": map[string]any{"number": v}, "body": confluenceBody(cmd, b)})
+		return do(o, cmd, "PUT", "content/"+args[0], nil, map[string]any{"type": "blogpost", "title": ti, "version": map[string]any{"number": v}, "body": confluenceBody(cmd, b)})
 	}})
 	c.Commands()[3].Flags().Int("version", 0, "")
 	c.Commands()[3].Flags().String("title", "", "")

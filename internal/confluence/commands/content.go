@@ -63,13 +63,15 @@ func contentCmd(o *Opts) *cobra.Command {
 			v = int(m["version"].(map[string]any)["number"].(float64)) + 1
 		}
 		ti, _ := cmd.Flags().GetString("title")
+		contentType, _ := cmd.Flags().GetString("type")
 		b, err := readBody(cmd)
 		if err != nil {
 			return print(cmd, o, output.Failure("invalid_args", err.Error(), "", 400))
 		}
-		return do(o, cmd, "PUT", "content/"+args[0], nil, map[string]any{"title": ti, "version": map[string]any{"number": v}, "body": confluenceBody(cmd, b)})
+		return do(o, cmd, "PUT", "content/"+args[0], nil, map[string]any{"type": contentType, "title": ti, "version": map[string]any{"number": v}, "body": confluenceBody(cmd, b)})
 	}})
 	c.Commands()[3].Flags().Int("version", 0, "")
+	c.Commands()[3].Flags().String("type", "page", "")
 	c.Commands()[3].Flags().String("title", "", "")
 	c.Commands()[3].Flags().String("body", "", "")
 	c.Commands()[3].Flags().String("body-file", "", "")

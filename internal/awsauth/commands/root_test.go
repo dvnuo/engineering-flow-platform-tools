@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"engineering-flow-platform-tools/internal/config"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,6 +32,24 @@ func runJSON(t *testing.T, runner *fakeRunner, args ...string) map[string]any {
 	t.Helper()
 	cmd := NewRootWithRunner(runner)
 	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs(args)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute failed: %v\n%s", err, out.String())
+	}
+	var obj map[string]any
+	if err := json.Unmarshal(out.Bytes(), &obj); err != nil {
+		t.Fatalf("invalid json: %v\n%s", err, out.String())
+	}
+	return obj
+}
+
+func runJSONInput(t *testing.T, runner *fakeRunner, input string, args ...string) map[string]any {
+	t.Helper()
+	cmd := NewRootWithRunner(runner)
+	var out bytes.Buffer
+	cmd.SetIn(strings.NewReader(input))
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	cmd.SetArgs(args)
@@ -73,7 +92,7 @@ aws:
   password: aws-password
 `)
 	runner := &fakeRunner{}
-	obj := runJSON(t, runner, "--config", cfg, "login", "--json")
+	obj := runJSON(t, runner, "--config", cfg, "login", "--account", "123456", "--role", "ADFS-ReadOnly", "--json")
 	if obj["ok"] != true {
 		t.Fatalf("expected ok: %#v", obj)
 	}
@@ -85,7 +104,7 @@ aws:
 		t.Fatalf("unexpected command: %s", call.command)
 	}
 	args := strings.Join(call.args, " ")
-	for _, token := range []string{"--jenkins", "-n", "-d HBEU", "-u aws-user"} {
+	for _, token := range []string{"--domain HBEU", "--username aws-user", "--role ADFS-ReadOnly", "--account 123456", "--no-warning", "--display-token", "--jenkins"} {
 		if !strings.Contains(args, token) {
 			t.Fatalf("missing %q in args %#v", token, call.args)
 		}
@@ -104,8 +123,119 @@ aws:
 	if data["authenticated"] != true {
 		t.Fatalf("expected authenticated data: %#v", data)
 	}
-	if !strings.Contains(data["command"].(string), "adfs-assume --jenkins -n -d HBEU -u aws-user") {
+	if !strings.Contains(data["command"].(string), "adfs-assume --domain HBEU --username aws-user --role ADFS-ReadOnly --account 123456 --no-warning --display-token --jenkins") {
 		t.Fatalf("unexpected command data: %#v", data)
+	}
+}
+
+func TestAuthLoginStoresAWSConfigWithoutPrintingPassword(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "config.yaml")
+	obj := runJSONInput(
+		t,
+		&fakeRunner{},
+		"aws-password\n",
+		"--config", cfgPath,
+		"auth", "login",
+		"--domain", "HBEU",
+		"--username", "GB-SVC-XXX-XXX",
+		"--password-stdin",
+		"--json",
+	)
+	if obj["ok"] != true {
+		t.Fatalf("expected ok: %#v", obj)
+	}
+	raw, _ := json.Marshal(obj)
+	if strings.Contains(string(raw), "aws-password") {
+		t.Fatalf("password leaked into response: %s", string(raw))
+	}
+	cfg, err := config.Load(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AWS.Enabled == nil || !*cfg.AWS.Enabled || cfg.AWS.Domain != "HBEU" || cfg.AWS.Username != "GB-SVC-XXX-XXX" || cfg.AWS.Password != "aws-password" {
+		t.Fatalf("bad aws config: %#v", cfg.AWS)
+	}
+}
+
+func TestAuthLoginDryRunDoesNotWriteConfig(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "config.yaml")
+	obj := runJSONInput(
+		t,
+		&fakeRunner{},
+		"aws-password\n",
+		"--config", cfgPath,
+		"--dry-run",
+		"auth", "login",
+		"--domain", "HBEU",
+		"--username", "GB-SVC-XXX-XXX",
+		"--password-stdin",
+		"--json",
+	)
+	if obj["ok"] != true {
+		t.Fatalf("expected ok: %#v", obj)
+	}
+	data := obj["data"].(map[string]any)
+	if data["dry_run"] != true || data["configured"] != false {
+		t.Fatalf("expected dry-run data: %#v", data)
+	}
+	if _, err := os.Stat(cfgPath); !os.IsNotExist(err) {
+		t.Fatalf("config should not be written during dry-run: %v", err)
+	}
+}
+
+func TestLoginPromptsForMissingAccountAndRole(t *testing.T) {
+	cfg := writeConfig(t, `
+version: 1
+aws:
+  enabled: true
+  domain: HBEU
+  username: aws-user
+  password: aws-password
+`)
+	runner := &fakeRunner{}
+	cmd := NewRootWithRunner(runner)
+	var out bytes.Buffer
+	cmd.SetIn(strings.NewReader("123456\nADFS-ReadOnly\n"))
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	cmd.SetArgs([]string{"--config", cfg, "login"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute failed: %v\n%s", err, out.String())
+	}
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected one provider call, got %d", len(runner.calls))
+	}
+	args := strings.Join(runner.calls[0].args, " ")
+	for _, token := range []string{"--account 123456", "--role ADFS-ReadOnly"} {
+		if !strings.Contains(args, token) {
+			t.Fatalf("missing prompted %q in args %#v", token, runner.calls[0].args)
+		}
+	}
+	if !strings.Contains(out.String(), "AWS account: ") || !strings.Contains(out.String(), "AWS role: ") {
+		t.Fatalf("missing prompts in output: %q", out.String())
+	}
+}
+
+func TestLoginJSONRequiresAccountAndRole(t *testing.T) {
+	cfg := writeConfig(t, `
+version: 1
+aws:
+  enabled: true
+  domain: HBEU
+  username: aws-user
+  password: aws-password
+`)
+	runner := &fakeRunner{}
+	obj := runJSON(t, runner, "--config", cfg, "login", "--json")
+	if obj["ok"] != false {
+		t.Fatalf("expected failure: %#v", obj)
+	}
+	if len(runner.calls) != 0 {
+		t.Fatalf("provider should not be called: %#v", runner.calls)
+	}
+	errObj := obj["error"].(map[string]any)
+	if errObj["code"] != "invalid_args" {
+		t.Fatalf("unexpected error: %#v", errObj)
 	}
 }
 
@@ -141,7 +271,7 @@ aws:
   password: aws-password
 `)
 	runner := &fakeRunner{result: commandResult{ExitCode: 1, Stderr: "login failed for aws-password"}}
-	obj := runJSON(t, runner, "--config", cfg, "login", "--json")
+	obj := runJSON(t, runner, "--config", cfg, "login", "--account", "123456", "--role", "ADFS-ReadOnly", "--json")
 	if obj["ok"] != false {
 		t.Fatalf("expected failure: %#v", obj)
 	}
@@ -166,19 +296,29 @@ func TestCommandsAndSchemaExposeLogin(t *testing.T) {
 	}
 	data := commands["data"].(map[string]any)
 	found := false
+	foundAuthLogin := false
 	for _, item := range data["commands"].([]any) {
 		cmd := item.(map[string]any)
 		if cmd["name"] == "login" {
 			found = true
-			break
+		}
+		if cmd["name"] == "auth.login" {
+			foundAuthLogin = true
 		}
 	}
 	if !found {
 		t.Fatalf("login missing from commands: %#v", data)
 	}
+	if !foundAuthLogin {
+		t.Fatalf("auth.login missing from commands: %#v", data)
+	}
 
 	schema := runJSON(t, runner, "schema", "login", "--json")
 	if schema["ok"] != true {
 		t.Fatalf("schema failed: %#v", schema)
+	}
+	authSchema := runJSON(t, runner, "schema", "auth.login", "--json")
+	if authSchema["ok"] != true {
+		t.Fatalf("auth schema failed: %#v", authSchema)
 	}
 }

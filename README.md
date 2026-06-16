@@ -38,13 +38,17 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 `jenkins` provides Jenkins controller automation for jobs, builds, queues, console logs, artifacts, Pipeline REST API resources, views, nodes, plugins, selected controller actions, and raw Jenkins API calls. It supports multiple Jenkins instances under the `jenkins` YAML node and handles Jenkins crumbs for state-changing requests.
 
+### AWS Auth
+
+`aws-auth` stores ADFS AWS auth settings under the `aws` YAML node and runs `adfs-assume` to authorize AWS credentials. Use `aws-auth auth login --password-stdin --json` to save domain, username, and password without putting the password in shell history. Use `aws-auth login --account <account-id> --role <role-name> --json` to run the authorization flow for a specific account and role.
+
 ### Browser
 
 `browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Chrome by default through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. Edge/Chromium remain available with `--browser`. Persistent sessions can also inspect redacted page structure, semantic locators, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, redacted fetch/XHR body previews, performance metadata, HAR-lite recorder/export metadata, tables/lists, data exports, scroll collection, page-state diffs, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
 
-For Jira, Confluence, and Jenkins, copy `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, and `cmd/jenkins/jenkins-cli.instructions.md` into `~/.copilot/instructions/` so Copilot understands the JSON envelope, `--dry-run`, `--yes`, instance selection, and error recovery conventions.
+For Jira, Confluence, Jenkins, and AWS auth, copy `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, and `cmd/aws-auth/aws-auth-cli.instructions.md` into `~/.copilot/instructions/` so Copilot understands the JSON envelope, `--dry-run`, `--yes`, instance selection, auth config, and error recovery conventions.
 
 All CLI binaries return a stable JSON `invalid_args` envelope for command parsing failures when `--json` is present. On Windows `cmd`, use double quotes and `where <binary>` to resolve unstable PATH behavior.
 

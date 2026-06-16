@@ -595,6 +595,12 @@ func meta(product, usage string) llm.CommandMeta {
 			explicitFound = true
 		}
 	}
+	if product == "aws-auth" {
+		if local, ok := awsAuthExplicit(name); ok {
+			ex = local
+			explicitFound = true
+		}
+	}
 	r := risk(usage)
 	if ex.Risk != "" {
 		r = ex.Risk
@@ -608,6 +614,9 @@ func meta(product, usage string) llm.CommandMeta {
 	}
 	if product == "inspect-image" && name != "inspect" && len(ex.Flags) == 0 {
 		flags = []string{"json", "format", "verbose", "config"}
+	}
+	if product == "aws-auth" && len(ex.Flags) == 0 {
+		flags = []string{"config", "json", "format", "verbose", "dry-run"}
 	}
 	if product == "visual" && len(ex.Flags) == 0 {
 		flags = []string{"template-dir", "config", "json", "format", "verbose", "dry-run", "offline-strict"}
@@ -648,7 +657,7 @@ func meta(product, usage string) llm.CommandMeta {
 	}
 	req := ex.Required
 	if len(req) == 0 {
-		if (product == "inspect-image" || product == "jenkins" || product == "visual") && explicitFound {
+		if (product == "inspect-image" || product == "jenkins" || product == "visual" || product == "aws-auth") && explicitFound {
 			req = []string{}
 		} else {
 			req = required(name)
@@ -664,6 +673,28 @@ func meta(product, usage string) llm.CommandMeta {
 		Flags:       flags,
 		Required:    req,
 	}
+}
+
+func awsAuthExplicit(name string) (explicitMeta, bool) {
+	common := []string{"config", "json", "format", "verbose"}
+	items := map[string]explicitMeta{
+		"login": {Description: "Authorize AWS credentials with adfs-assume using saved EFP AWS auth settings.",
+			Flags: append([]string{"account", "role", "dry-run"}, common...), Required: []string{"saved-auth-config", "account", "role"}, Risk: "external_auth", Example: "aws-auth login --account 123456 --role ADFS-ReadOnly --json"},
+		"auth.login": {Description: "Store AWS ADFS domain, username, and password in the shared EFP config.",
+			Flags: append([]string{"domain", "username", "password-stdin"}, common...), Required: []string{"domain", "username", "password-stdin"}, Risk: "write", Example: "printf '%s\\n' \"$AWS_AD_PASSWORD\" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json"},
+		"auth.status": {Description: "Read the configured AWS auth settings with secrets redacted.",
+			Flags: common, Risk: "read", Example: "aws-auth auth status --json"},
+		"commands": {Description: "List aws-auth commands with JSON-friendly metadata.",
+			Flags: common, Risk: "read", Example: "aws-auth commands --json"},
+		"schema": {Description: "Describe one aws-auth command schema.",
+			Flags: common, Required: []string{"command"}, Risk: "read", Example: "aws-auth schema login --json"},
+		"help.llm": {Description: "Return concise agent guidance for aws-auth.",
+			Flags: common, Risk: "read", Example: "aws-auth help llm --json"},
+		"version": {Description: "Print aws-auth version metadata.",
+			Flags: common, Risk: "read", Example: "aws-auth version --json"},
+	}
+	item, ok := items[name]
+	return item, ok
 }
 
 func visualExplicit(name string) (explicitMeta, bool) {

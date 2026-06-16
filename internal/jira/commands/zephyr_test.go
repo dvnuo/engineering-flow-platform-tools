@@ -537,6 +537,99 @@ func TestZephyrExecutionUpdateStatusSemanticDryRunAndInvalidMix(t *testing.T) {
 	requireJiraCode(t, run(t, cfg, "zephyr", "execution", "update-status", "30000", "--issue", "EFP-123", "--status", "PASS"), "invalid_args")
 }
 
+func TestZephyrExecutionAddTestsToCycleFolderMove(t *testing.T) {
+	var addBody map[string]interface{}
+	var moveBody map[string]interface{}
+	executionListHits := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/zapi/latest/execution/addTestsToCycle":
+			if r.Method != http.MethodPost {
+				t.Fatalf("bad add method: %s", r.Method)
+			}
+			if err := json.NewDecoder(r.Body).Decode(&addBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"added":2}`))
+		case "/rest/api/2/issue/EFP-T1":
+			w.Write([]byte(`{"id":"10001","key":"EFP-T1","fields":{"project":{"id":"10000"}}}`))
+		case "/rest/api/2/issue/EFP-T2":
+			w.Write([]byte(`{"id":"10002","key":"EFP-T2","fields":{"project":{"id":"10000"}}}`))
+		case "/rest/zapi/latest/execution":
+			executionListHits++
+			q := r.URL.Query()
+			if q.Get("cycleId") != "20000" || q.Get("projectId") != "10000" || q.Get("versionId") != "-1" || q.Get("action") != "expand" || q.Get("folderId") != "" {
+				t.Fatalf("bad execution resolve query: %s", r.URL.RawQuery)
+			}
+			w.Write([]byte(`{"executions":[{"id":"30000","issueKey":"EFP-T1","issueId":"10001","cycleId":"20000"},{"id":"30001","issueKey":"EFP-T2","issueId":"10002","cycleId":"20000"}]}`))
+		case "/rest/zapi/latest/cycle/20000/move/executions/folder/40000":
+			if r.Method != http.MethodPut {
+				t.Fatalf("bad move method: %s", r.Method)
+			}
+			if err := json.NewDecoder(r.Body).Decode(&moveBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"moved":true}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	out := run(t, cfg, "zephyr", "execution", "add-tests-to-cycle", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1", "--issues", "EFP-T1,EFP-T2", "--folder-id", "40000")
+	if ok, _ := out["ok"].(bool); !ok {
+		t.Fatalf("add and move failed: %#v", out)
+	}
+	if addBody["cycleId"] != "20000" || addBody["projectId"] != "10000" || addBody["versionId"] != "-1" || len(addBody["issues"].([]interface{})) != 2 {
+		t.Fatalf("bad add body: %#v", addBody)
+	}
+	ids := moveBody["ids"].([]interface{})
+	if len(ids) != 2 || ids[0] != float64(30000) || ids[1] != float64(30001) {
+		t.Fatalf("bad move ids: %#v", moveBody)
+	}
+	if executionListHits != 1 {
+		t.Fatalf("execution list hits=%d", executionListHits)
+	}
+	data := out["data"].(map[string]interface{})
+	if data["folder_id"] != "40000" || len(data["execution_ids"].([]interface{})) != 2 {
+		t.Fatalf("bad add/move data: %#v", data)
+	}
+}
+
+func TestZephyrExecutionAddTestsToCycleFolderDryRun(t *testing.T) {
+	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("folder dry-run should not hit server: %s %s", r.Method, r.URL.Path)
+	})
+	before := *hits
+	out := run(t, cfg, "--dry-run", "zephyr", "execution", "add-tests-to-cycle", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1", "--issues", "EFP-T1,EFP-T2", "--folder-id", "40000")
+	if ok, _ := out["ok"].(bool); !ok {
+		t.Fatalf("folder dry-run failed: %#v", out)
+	}
+	if *hits != before {
+		t.Fatal("folder dry-run hit server")
+	}
+	data := out["data"].(map[string]interface{})
+	move := data["post_add_move"].(map[string]interface{})
+	body := move["body"].(map[string]interface{})
+	if move["path"] != "/rest/zapi/latest/cycle/20000/move/executions/folder/40000" || body["ids"] == nil {
+		t.Fatalf("bad folder dry-run data: %#v", data)
+	}
+	if ids, ok := body["ids"].([]interface{}); ok && len(ids) == 0 {
+		t.Fatalf("dry-run should not model an empty ids move: %#v", data)
+	}
+}
+
+func TestZephyrRawMoveFolderRejectsEmptyIDs(t *testing.T) {
+	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("raw empty move should not hit server: %s %s", r.Method, r.URL.Path)
+	})
+	before := *hits
+	out := run(t, cfg, "zephyr", "api", "put", "/rest/zapi/latest/cycle/20000/move/executions/folder/40000", "--body", `{"ids":[]}`)
+	requireJiraCode(t, out, "invalid_args")
+	if *hits != before {
+		t.Fatal("raw empty move hit server")
+	}
+}
+
 func TestZephyrDynamicStatusesAndFallback(t *testing.T) {
 	t.Run("status list parses server statuses", func(t *testing.T) {
 		cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {

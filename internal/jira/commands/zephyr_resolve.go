@@ -130,6 +130,84 @@ func zephyrResolveExecution(rt *zephyrRuntime, opts zephyrExecutionResolveOption
 	return resolved, nil
 }
 
+func zephyrResolveExecutionsForIssues(rt *zephyrRuntime, opts zephyrExecutionResolveOptions, issues []string) ([]zephyrExecutionCandidate, error) {
+	if strings.TrimSpace(opts.CycleID) == "" || len(issues) == 0 {
+		return nil, zapi.NewError("invalid_args", "--cycle-id and --issues required", "Use jira zephyr execution add-tests-to-cycle --cycle-id <ID> --issues EFP-123 --folder-id <ID> --json.", 400)
+	}
+	projectID := strings.TrimSpace(opts.ProjectID)
+	refs := make([]zephyrIssueRef, 0, len(issues))
+	for _, issueValue := range issues {
+		issue, err := zephyrResolveIssue(rt, issueValue)
+		if err != nil {
+			return nil, err
+		}
+		if projectID == "" {
+			projectID = issue.ProjectID
+		}
+		refs = append(refs, issue)
+	}
+	if projectID == "" {
+		var err error
+		projectID, err = zephyrProjectID(rt, opts.Project, "", false)
+		if err != nil {
+			return nil, err
+		}
+	}
+	versionID := firstNonEmpty(strings.TrimSpace(opts.VersionID), rt.cfg.DefaultVersionID)
+	q := map[string]string{
+		"action":    "expand",
+		"cycleId":   opts.CycleID,
+		"projectId": projectID,
+		"versionId": versionID,
+	}
+	if opts.FolderID != "" {
+		q["folderId"] = opts.FolderID
+	}
+	raw, err := rt.client.Get("execution", q)
+	if err != nil {
+		return nil, err
+	}
+	candidates := zephyrExtractExecutionCandidates(raw)
+	resolved := make([]zephyrExecutionCandidate, 0, len(refs))
+	for _, issue := range refs {
+		matches := zephyrFilterExecutionCandidates(candidates, issue)
+		label := firstNonEmpty(issue.Key, issue.ID)
+		if len(matches) == 0 {
+			return nil, zapi.NewError(
+				"zephyr_execution_not_found",
+				"Zephyr execution was not found for issue "+label+" in cycle "+opts.CycleID,
+				"The test may need to be added to the cycle first with jira zephyr execution add-tests-to-cycle.",
+				404,
+			)
+		}
+		if len(matches) > 1 {
+			return nil, zapi.NewError(
+				"ambiguous_zephyr_execution",
+				"Multiple Zephyr executions matched issue "+label+" in cycle "+opts.CycleID,
+				"Candidates: "+zephyrCandidateHint(matches),
+				409,
+			)
+		}
+		item := matches[0]
+		item.IssueKey = firstNonEmpty(item.IssueKey, issue.Key)
+		item.IssueID = firstNonEmpty(item.IssueID, issue.ID)
+		item.CycleID = firstNonEmpty(item.CycleID, opts.CycleID)
+		item.ProjectID = firstNonEmpty(item.ProjectID, projectID)
+		item.VersionID = firstNonEmpty(item.VersionID, versionID)
+		item.FolderID = firstNonEmpty(item.FolderID, opts.FolderID)
+		if strings.TrimSpace(item.ExecutionID) == "" {
+			return nil, zapi.NewError(
+				"zephyr_execution_id_missing",
+				"Zephyr execution for issue "+label+" did not include an execution id",
+				"Inspect jira zephyr execution list --cycle-id "+opts.CycleID+" --project-id "+projectID+" --json before moving executions to a folder.",
+				500,
+			)
+		}
+		resolved = append(resolved, item)
+	}
+	return dedupeExecutionCandidates(resolved), nil
+}
+
 func zephyrResolvedExecutionData(resolved zephyrExecutionCandidate) map[string]interface{} {
 	out := map[string]interface{}{"raw": resolved.Raw}
 	addStringField(out, "execution_id", resolved.ExecutionID)

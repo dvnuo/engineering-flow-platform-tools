@@ -539,24 +539,63 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, zephyrFailure(err, "server_error"))
 		}
+		cycleID := mustS(cmd, "cycle-id")
+		projectID := mustS(cmd, "project-id")
+		versionID := zephyrVersionID(rt, cmd)
+		folderID := mustS(cmd, "folder-id")
 		issues := splitCSV(mustS(cmd, "issues"))
-		if mustS(cmd, "cycle-id") == "" || mustS(cmd, "project-id") == "" || len(issues) == 0 {
+		if cycleID == "" || projectID == "" || len(issues) == 0 {
 			return invalidArgs(cmd, o, "--cycle-id, --project-id, and --issues required", "Use jira zephyr execution add-tests-to-cycle --cycle-id <ID> --project-id <ID> --issues EFP-T1,EFP-T2 --json.")
 		}
-		body := map[string]interface{}{"cycleId": mustS(cmd, "cycle-id"), "projectId": mustS(cmd, "project-id"), "versionId": zephyrVersionID(rt, cmd), "issues": issues}
+		body := map[string]interface{}{"cycleId": cycleID, "projectId": projectID, "versionId": versionID, "issues": issues}
 		path := rt.client.ZAPI("execution/addTestsToCycle")
 		if o.DryRun {
-			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("POST", path, nil, body)))
+			data := jira.DryRunData("POST", path, nil, body)
+			if folderID != "" {
+				data["post_add_move"] = zephyrMoveExecutionsToFolderDryRunData(rt, cycleID, folderID, issues)
+			}
+			return print(cmd, o, output.Success(rt.ctx.Instance, data))
 		}
-		data, err := rt.client.Post("execution/addTestsToCycle", body)
+		added, err := rt.client.Post("execution/addTestsToCycle", body)
 		if err != nil {
 			return print(cmd, o, zephyrFailure(err, "server_error"))
 		}
-		return print(cmd, o, output.Success(rt.ctx.Instance, data))
+		if folderID == "" {
+			return print(cmd, o, output.Success(rt.ctx.Instance, added))
+		}
+		resolved, err := zephyrResolveExecutionsForIssues(rt, zephyrExecutionResolveOptions{
+			CycleID:   cycleID,
+			ProjectID: projectID,
+			VersionID: versionID,
+		}, issues)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "zephyr_execution_not_found"))
+		}
+		ids := zephyrExecutionIDs(resolved)
+		moveBody, err := zephyrMoveExecutionsToFolderBody(ids)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "invalid_args"))
+		}
+		movePath := zephyrMoveExecutionsToFolderPath(rt, cycleID, folderID)
+		moved, err := rt.client.DoJSON(http.MethodPut, movePath, nil, moveBody)
+		if err != nil {
+			return print(cmd, o, zephyrFailure(err, "server_error"))
+		}
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{
+			"added":         added,
+			"moved":         moved,
+			"execution_ids": ids,
+			"issues":        issues,
+			"cycle_id":      cycleID,
+			"project_id":    projectID,
+			"version_id":    versionID,
+			"folder_id":     folderID,
+		}))
 	}}
 	addTests.Flags().String("cycle-id", "", "")
 	addTests.Flags().String("project-id", "", "")
 	addTests.Flags().String("version-id", "", "")
+	addTests.Flags().String("folder-id", "", "")
 	addTests.Flags().String("issues", "", "")
 	c.AddCommand(addTests)
 
@@ -1639,6 +1678,9 @@ func zephyrAPICmd(o *Opts) *cobra.Command {
 				if err != nil {
 					return invalidArgs(cmd, o, err.Error(), "")
 				}
+				if err := zephyrValidateRawAPIBody(method, path, body); err != nil {
+					return print(cmd, o, zephyrFailure(err, "invalid_args"))
+				}
 			}
 			if o.DryRun {
 				return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData(method, path, q, body)))
@@ -1750,6 +1792,98 @@ func zephyrStatusBody(mapped zapi.MappedStatus, comment string) map[string]inter
 		body["comment"] = comment
 	}
 	return body
+}
+
+func zephyrMoveExecutionsToFolderPath(rt *zephyrRuntime, cycleID, folderID string) string {
+	return rt.client.ZAPI("cycle/" + zapi.PathEscape(cycleID) + "/move/executions/folder/" + zapi.PathEscape(folderID))
+}
+
+func zephyrMoveExecutionsToFolderBody(ids []string) (map[string]interface{}, error) {
+	if len(ids) == 0 {
+		return nil, zapi.NewError(
+			"invalid_args",
+			"Zephyr move-to-folder requires at least one execution id",
+			"Resolve executions first with jira zephyr execution resolve, or use jira zephyr execution add-tests-to-cycle --folder-id <ID>.",
+			400,
+		)
+	}
+	return map[string]interface{}{"ids": zephyrExecutionIDBodyValues(ids)}, nil
+}
+
+func zephyrMoveExecutionsToFolderDryRunData(rt *zephyrRuntime, cycleID, folderID string, issues []string) map[string]interface{} {
+	data := jira.DryRunData("PUT", zephyrMoveExecutionsToFolderPath(rt, cycleID, folderID), nil, map[string]interface{}{
+		"ids": "{resolved execution ids}",
+	})
+	data["resolve_from_issues"] = issues
+	return data
+}
+
+func zephyrExecutionIDs(candidates []zephyrExecutionCandidate) []string {
+	ids := make([]string, 0, len(candidates))
+	seen := map[string]bool{}
+	for _, candidate := range candidates {
+		id := strings.TrimSpace(candidate.ExecutionID)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func zephyrExecutionIDBodyValues(ids []string) []interface{} {
+	values := make([]interface{}, 0, len(ids))
+	for _, id := range ids {
+		if n, err := strconv.ParseInt(id, 10, 64); err == nil {
+			values = append(values, n)
+			continue
+		}
+		values = append(values, id)
+	}
+	return values
+}
+
+func zephyrValidateRawAPIBody(method, path string, body interface{}) error {
+	if method != http.MethodPut || !zephyrIsMoveExecutionsToFolderPath(path) {
+		return nil
+	}
+	count, hasIDs := zephyrRawIDsCount(body)
+	if !hasIDs || count == 0 {
+		return zapi.NewError(
+			"invalid_args",
+			"Zephyr move-to-folder raw API requires a non-empty ids array",
+			"Use jira zephyr execution add-tests-to-cycle --cycle-id <ID> --project-id <ID> --issues KEY-1,KEY-2 --folder-id <ID> --json, or pass resolved execution ids.",
+			400,
+		)
+	}
+	return nil
+}
+
+func zephyrIsMoveExecutionsToFolderPath(path string) bool {
+	lower := strings.ToLower(strings.TrimSpace(path))
+	return strings.Contains(lower, "/cycle/") && strings.Contains(lower, "/move/executions/folder/")
+}
+
+func zephyrRawIDsCount(body interface{}) (int, bool) {
+	m, ok := body.(map[string]interface{})
+	if !ok {
+		return 0, false
+	}
+	raw, ok := m["ids"]
+	if !ok {
+		return 0, false
+	}
+	switch ids := raw.(type) {
+	case nil:
+		return 0, true
+	case []interface{}:
+		return len(ids), true
+	case []string:
+		return len(ids), true
+	default:
+		return 1, true
+	}
 }
 
 func zephyrDelete(rt *zephyrRuntime, path string, q map[string]string) error {

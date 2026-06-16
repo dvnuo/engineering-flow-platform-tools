@@ -186,7 +186,7 @@ func TestCommandSemanticsMatrixJiraFamilies(t *testing.T) {
 		{"zephyr", "cycle", "update", "1", "--name", "Regression RC2"},
 		{"zephyr", "execution", "create", "--issue-id", "10001", "--cycle-id", "1", "--project-id", "123"},
 		{"zephyr", "execution", "update-status", "1", "--status", "PASS"},
-		{"zephyr", "execution", "add-tests-to-cycle", "--cycle-id", "1", "--project-id", "123", "--issues", "PROJ-T1,PROJ-T2"},
+		{"zephyr", "execution", "add-tests-to-cycle", "--cycle-id", "1", "--project-id", "123", "--issues", "PROJ-T1,PROJ-T2", "--folder-id", "456"},
 		{"zephyr", "archive", "executions", "--execution-ids", "1,2", "--yes"},
 		{"zephyr", "archive", "restore", "--execution-ids", "1,2"},
 		{"zephyr", "customfield", "create", "--name", "Actual Result", "--entity-type", "EXECUTION", "--field-type", "TEXT"},

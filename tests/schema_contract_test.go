@@ -115,6 +115,7 @@ func TestSchemaConcreteFlags(t *testing.T) {
 	requireFlags(t, schemaData(t, "jira", "issue.comment.add"), "body", "body-file", "body-stdin")
 	requireFlags(t, schemaData(t, "jira", "api.get"), "query", "json", "instance", "config")
 	requireFlags(t, schemaData(t, "jira", "zephyr.execution.update-status"), "status", "dry-run")
+	requireFlags(t, schemaData(t, "jira", "zephyr.execution.add-tests-to-cycle"), "cycle-id", "project-id", "version-id", "issues", "folder-id", "dry-run")
 	requireFlags(t, schemaData(t, "jira", "zephyr.cycle.create"), "project", "project-id", "version-id", "name", "dry-run")
 	requireFlags(t, schemaData(t, "jira", "zephyr.api.get"), "query")
 	requireFlags(t, schemaData(t, "confluence", "page.create"), "space", "title", "parent-id", "body", "body-file", "body-stdin", "body-format", "dry-run")

@@ -20,7 +20,7 @@ For agents, use `--json` for every non-interactive `aws-auth` command:
 aws-auth commands --json
 aws-auth schema login --json
 aws-auth auth status --json
-aws-auth login --account 123456 --role ADFS-ReadOnly --json
+aws-auth login --account 123456 --role ADFS-ReadOnly --profile default --json
 ```
 
 Only omit `--json` for human-facing interactive `aws-auth login`, where the command may prompt for account and role.
@@ -60,13 +60,13 @@ aws-auth auth status --json
 Authorize AWS credentials:
 
 ```bash
-aws-auth login --account 123456 --role ADFS-ReadOnly --json
+aws-auth login --account 123456 --role ADFS-ReadOnly --profile default --json
 ```
 
-Account and role are not stored in runtime profile config. Agents must pass them for each login. For a human terminal session, `aws-auth login` without `--json` can prompt for a missing account or role. The provider command shape is:
+Account and role are not stored in runtime profile config. Agents must pass them for each login. `--profile` defaults to `default`, which writes AWS credentials where SDKs and AWS CLI commands can use them without setting `AWS_PROFILE`. For a human terminal session, `aws-auth login` without `--json` can prompt for a missing account or role. The provider command shape is:
 
 ```bash
-adfs-assume --domain HBEU --username GB-SVC-XXX-XXX --role ADFS-ReadOnly --account 123456 --no-warning --display-token --jenkins
+adfs-assume --domain HBEU --username GB-SVC-XXX-XXX --role ADFS-ReadOnly --account 123456 --profile default --no-warning --display-token --jenkins
 ```
 
 The password is supplied through `AD_PASS` only for the provider process and must not be printed.
@@ -88,7 +88,7 @@ Never print, paste, log, or store raw passwords outside the EFP config path chos
 Use `--dry-run --json` before troubleshooting login command construction:
 
 ```bash
-aws-auth login --account 123456 --role ADFS-ReadOnly --dry-run --json
+aws-auth login --account 123456 --role ADFS-ReadOnly --profile default --dry-run --json
 ```
 
 Treat AWS operations after authentication as potentially destructive. Use `aws --output json` for inspection and avoid changing cloud resources unless the user explicitly asks.

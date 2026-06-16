@@ -114,7 +114,7 @@ aws:
 		t.Fatalf("unexpected command: %s", call.command)
 	}
 	args := strings.Join(call.args, " ")
-	for _, token := range []string{"--domain HBEU", "--username aws-user", "--role ADFS-ReadOnly", "--account 123456", "--no-warning", "--display-token", "--jenkins"} {
+	for _, token := range []string{"--domain HBEU", "--username aws-user", "--role ADFS-ReadOnly", "--account 123456", "--profile default", "--no-warning", "--display-token", "--jenkins"} {
 		if !strings.Contains(args, token) {
 			t.Fatalf("missing %q in args %#v", token, call.args)
 		}
@@ -133,8 +133,31 @@ aws:
 	if data["authenticated"] != true {
 		t.Fatalf("expected authenticated data: %#v", data)
 	}
-	if !strings.Contains(data["command"].(string), "adfs-assume --domain HBEU --username aws-user --role ADFS-ReadOnly --account 123456 --no-warning --display-token --jenkins") {
+	if !strings.Contains(data["command"].(string), "adfs-assume --domain HBEU --username aws-user --role ADFS-ReadOnly --account 123456 --profile default --no-warning --display-token --jenkins") {
 		t.Fatalf("unexpected command data: %#v", data)
+	}
+}
+
+func TestLoginRunsAdfsAssumeWithCustomProfile(t *testing.T) {
+	cfg := writeConfig(t, `
+version: 1
+aws:
+  enabled: true
+  domain: HBEU
+  username: aws-user
+  password: aws-password
+`)
+	runner := &fakeRunner{}
+	obj := runJSON(t, runner, "--config", cfg, "login", "--account", "123456", "--role", "ADFS-ReadOnly", "--profile", "sandbox", "--json")
+	if obj["ok"] != true {
+		t.Fatalf("expected ok: %#v", obj)
+	}
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected one provider call, got %d", len(runner.calls))
+	}
+	args := strings.Join(runner.calls[0].args, " ")
+	if !strings.Contains(args, "--profile sandbox") {
+		t.Fatalf("missing custom profile in args %#v", runner.calls[0].args)
 	}
 }
 

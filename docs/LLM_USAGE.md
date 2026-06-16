@@ -18,6 +18,7 @@
 - Configure it with `printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`.
 - Do not pass passwords as command-line flags. Use `--password-stdin`.
 - Run `aws-auth auth status --json` to inspect configured state with the password redacted.
+- `aws-auth` ignores `ATLASSIAN_CONFIG`; use `--config` or `EFP_CONFIG` for an explicit AWS auth config path.
 - Run `aws-auth login --account 123456 --role ADFS-ReadOnly --json` to authorize credentials for a specific account and role.
 - Human interactive `aws-auth login` may omit `--json` so the CLI can prompt for a missing account or role.
 - If login fails with `execution_failed`, check that `adfs-assume` is installed and on `PATH`.

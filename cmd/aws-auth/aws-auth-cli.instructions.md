@@ -10,7 +10,7 @@ Copy this file into `~/.copilot/instructions/aws-auth-cli.instructions.md` so VS
 
 `aws-auth` is a terminal-invoked CLI for agents and runtimes that need AWS credentials through the enterprise ADFS flow.
 
-It reads and writes the shared EFP config at `~/.efp/config.yaml` by default, or the path provided by `--config` / `EFP_CONFIG`. It invokes `adfs-assume`; it is not AWS CLI itself, not a Portal API, not an MCP server, and not a browser SSO tool.
+It reads and writes the shared EFP config at `~/.efp/config.yaml` by default, or the path provided by `--config` / `EFP_CONFIG`. It ignores `ATLASSIAN_CONFIG`; that legacy override is for Jira and Confluence only. It invokes `adfs-assume`; it is not AWS CLI itself, not a Portal API, not an MCP server, and not a browser SSO tool.
 
 ## Always Use JSON
 

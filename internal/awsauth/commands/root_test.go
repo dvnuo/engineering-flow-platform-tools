@@ -82,6 +82,16 @@ func writeConfig(t *testing.T, body string) string {
 	return path
 }
 
+func writeFile(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLoginRunsAdfsAssumeWithConfiguredADPass(t *testing.T) {
 	cfg := writeConfig(t, `
 version: 1
@@ -128,6 +138,72 @@ aws:
 	}
 }
 
+func TestAWSAuthIgnoresAtlassianConfigAndUsesDefaultEFPConfig(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv(config.EnvConfigPath, "")
+	atlassianPath := filepath.Join(t.TempDir(), "atlassian.json")
+	writeFile(t, atlassianPath, `{"version":1,"jira":{"instances":[]}}`)
+	t.Setenv(config.EnvLegacyConfigPath, atlassianPath)
+
+	defaultPath := filepath.Join(home, ".efp", "config.yaml")
+	writeFile(t, defaultPath, `
+version: 1
+aws:
+  enabled: true
+  domain: HBEU
+  username: aws-user
+  password: aws-password
+`)
+
+	obj := runJSON(t, &fakeRunner{}, "auth", "status", "--json")
+	if obj["ok"] != true {
+		t.Fatalf("expected ok: %#v", obj)
+	}
+	data := obj["data"].(map[string]any)
+	if data["config_path"] != defaultPath {
+		t.Fatalf("expected default EFP config path, got %#v", data["config_path"])
+	}
+	if data["configured"] != true {
+		t.Fatalf("expected configured aws auth: %#v", data)
+	}
+}
+
+func TestAWSAuthReadFallsBackToAdapterStateConfig(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv(config.EnvConfigPath, "")
+	atlassianPath := filepath.Join(t.TempDir(), "atlassian.json")
+	writeFile(t, atlassianPath, `{"version":1,"jira":{"instances":[]}}`)
+	t.Setenv(config.EnvLegacyConfigPath, atlassianPath)
+	stateDir := t.TempDir()
+	t.Setenv(envAdapterStateDir, stateDir)
+
+	stateConfig := filepath.Join(stateDir, "efp", "config.yaml")
+	writeFile(t, stateConfig, `
+version: 1
+aws:
+  enabled: true
+  domain: HBEU
+  username: aws-user
+  password: aws-password
+`)
+
+	obj := runJSON(t, &fakeRunner{}, "auth", "status", "--json")
+	if obj["ok"] != true {
+		t.Fatalf("expected ok: %#v", obj)
+	}
+	data := obj["data"].(map[string]any)
+	if data["config_path"] != stateConfig {
+		t.Fatalf("expected adapter state EFP config path, got %#v", data["config_path"])
+	}
+	if data["configured"] != true {
+		t.Fatalf("expected configured aws auth: %#v", data)
+	}
+}
+
 func TestAuthLoginStoresAWSConfigWithoutPrintingPassword(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "config.yaml")
 	obj := runJSONInput(
@@ -154,6 +230,49 @@ func TestAuthLoginStoresAWSConfigWithoutPrintingPassword(t *testing.T) {
 	}
 	if cfg.AWS.Enabled == nil || !*cfg.AWS.Enabled || cfg.AWS.Domain != "HBEU" || cfg.AWS.Username != "GB-SVC-XXX-XXX" || cfg.AWS.Password != "aws-password" {
 		t.Fatalf("bad aws config: %#v", cfg.AWS)
+	}
+}
+
+func TestAuthLoginWritesDefaultEFPConfigNotAtlassianConfig(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv(config.EnvConfigPath, "")
+	atlassianPath := filepath.Join(t.TempDir(), "atlassian.json")
+	writeFile(t, atlassianPath, `{"version":1,"jira":{"instances":[]}}`)
+	t.Setenv(config.EnvLegacyConfigPath, atlassianPath)
+
+	obj := runJSONInput(
+		t,
+		&fakeRunner{},
+		"aws-password\n",
+		"auth", "login",
+		"--domain", "HBEU",
+		"--username", "GB-SVC-XXX-XXX",
+		"--password-stdin",
+		"--json",
+	)
+	if obj["ok"] != true {
+		t.Fatalf("expected ok: %#v", obj)
+	}
+	defaultPath := filepath.Join(home, ".efp", "config.yaml")
+	data := obj["data"].(map[string]any)
+	if data["config_path"] != defaultPath {
+		t.Fatalf("expected default EFP config path, got %#v", data["config_path"])
+	}
+	atlassianBytes, err := os.ReadFile(atlassianPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(atlassianBytes), "aws-password") {
+		t.Fatalf("password should not be written to ATLASSIAN_CONFIG: %s", atlassianBytes)
+	}
+	cfg, err := config.Load(defaultPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AWS.Username != "GB-SVC-XXX-XXX" || cfg.AWS.Password != "aws-password" {
+		t.Fatalf("bad default aws config: %#v", cfg.AWS)
 	}
 }
 

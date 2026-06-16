@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -21,6 +22,7 @@ import (
 )
 
 const adfsAssumeCommand = "adfs-assume"
+const envAdapterStateDir = "EFP_ADAPTER_STATE_DIR"
 
 var redactedSecretPlaceholders = map[string]struct{}{
 	"***redacted***": {},
@@ -114,8 +116,7 @@ func loginCmd(o *Opts) *cobra.Command {
 		Use:   "login",
 		Short: "Authorize AWS credentials from saved auth config.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path, _ := config.ResolvePath(o.Config)
-			cfg, err := config.Load(path)
+			path, cfg, err := loadAWSConfigForRead(o.Config)
 			if err != nil {
 				return print(cmd, o, output.Failure("config_error", output.RedactString(err.Error()), "Check EFP_CONFIG or pass --config.", 400))
 			}
@@ -173,7 +174,10 @@ func loginCmd(o *Opts) *cobra.Command {
 func authCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "auth"}
 	login := &cobra.Command{Use: "login", RunE: func(cmd *cobra.Command, args []string) error {
-		path, _ := config.ResolvePath(o.Config)
+		path, err := resolveAWSConfigPath(o.Config)
+		if err != nil {
+			return print(cmd, o, output.Failure("config_error", output.RedactString(err.Error()), "Check EFP_CONFIG or pass --config.", 400))
+		}
 		cfg, err := loadConfigForWrite(path)
 		if err != nil {
 			return print(cmd, o, output.Failure("config_error", output.RedactString(err.Error()), "Check EFP_CONFIG or pass --config.", 400))
@@ -221,8 +225,7 @@ func authCmd(o *Opts) *cobra.Command {
 	c.AddCommand(login)
 
 	status := &cobra.Command{Use: "status", RunE: func(cmd *cobra.Command, args []string) error {
-		path, _ := config.ResolvePath(o.Config)
-		cfg, err := config.Load(path)
+		path, cfg, err := loadAWSConfigForRead(o.Config)
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", output.RedactString(err.Error()), "Run aws-auth auth login --json first.", 404))
 		}
@@ -283,6 +286,68 @@ func buildLogin(cmd *cobra.Command, aws config.AWSConfig, opts loginOptions) (lo
 		env:      withADPass(os.Environ(), password),
 		password: password,
 	}, nil
+}
+
+func resolveAWSConfigPath(flagPath string) (string, error) {
+	if flagPath != "" {
+		return flagPath, nil
+	}
+	if p := strings.TrimSpace(os.Getenv(config.EnvConfigPath)); p != "" {
+		return p, nil
+	}
+	return config.DefaultPath()
+}
+
+func loadAWSConfigForRead(flagPath string) (string, config.RootConfig, error) {
+	path, err := resolveAWSConfigPath(flagPath)
+	if err != nil {
+		return "", config.RootConfig{}, err
+	}
+	candidates := []string{path}
+	if flagPath == "" && strings.TrimSpace(os.Getenv(config.EnvConfigPath)) == "" {
+		if fallback := adapterStateEFPConfigPath(); fallback != "" && fallback != path {
+			candidates = append(candidates, fallback)
+		}
+	}
+
+	var firstErr error
+	var firstLoadedPath string
+	var firstLoadedConfig config.RootConfig
+	for _, candidate := range candidates {
+		cfg, err := config.Load(candidate)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		if firstLoadedPath == "" {
+			firstLoadedPath = candidate
+			firstLoadedConfig = cfg
+		}
+		if awsAuthConfigured(cfg.AWS) {
+			return candidate, cfg, nil
+		}
+	}
+	if firstLoadedPath != "" {
+		return firstLoadedPath, firstLoadedConfig, nil
+	}
+	if firstErr == nil {
+		firstErr = os.ErrNotExist
+	}
+	return path, config.RootConfig{}, firstErr
+}
+
+func adapterStateEFPConfigPath() string {
+	stateDir := strings.TrimSpace(os.Getenv(envAdapterStateDir))
+	if stateDir == "" {
+		return ""
+	}
+	return filepath.Join(stateDir, "efp", "config.yaml")
+}
+
+func awsAuthConfigured(aws config.AWSConfig) bool {
+	return (aws.Enabled == nil || *aws.Enabled) && singleLine(aws.Domain) != "" && singleLine(aws.Username) != "" && cleanSecret(aws.Password) != ""
 }
 
 func loadConfigForWrite(path string) (config.RootConfig, error) {

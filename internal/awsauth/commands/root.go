@@ -93,9 +93,9 @@ func NewRootWithRunner(r commandRunner) *cobra.Command {
 Configuration uses the shared EFP config file, normally ~/.efp/config.yaml, under the aws node. The auth login command stores the configured domain, username, and password. The login command reads that config and invokes the installed authorization provider with the account and role supplied for that login.`),
 		Examples: []string{
 			`printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`,
-			`aws-auth login --account 123456 --role ADFS-ReadOnly --json`,
+			`aws-auth login --account 123456 --role ADFS-ReadOnly --profile default --json`,
 			`aws-auth login`,
-			`aws-auth --config ~/.efp/config.yaml login --account 123456 --role ADFS-ReadOnly --json`,
+			`aws-auth --config ~/.efp/config.yaml login --account 123456 --role ADFS-ReadOnly --profile default --json`,
 			`aws-auth commands --json`,
 			`aws-auth schema login --json`,
 			`aws-auth help llm --json`,
@@ -112,6 +112,7 @@ Configuration uses the shared EFP config file, normally ~/.efp/config.yaml, unde
 func loginCmd(o *Opts) *cobra.Command {
 	var account string
 	var role string
+	var profile string
 	c := &cobra.Command{
 		Use:   "login",
 		Short: "Authorize AWS credentials from saved auth config.",
@@ -120,7 +121,7 @@ func loginCmd(o *Opts) *cobra.Command {
 			if err != nil {
 				return print(cmd, o, output.Failure("config_error", output.RedactString(err.Error()), "Check EFP_CONFIG or pass --config.", 400))
 			}
-			login, failure := buildLogin(cmd, cfg.AWS, loginOptions{Account: account, Role: role, Prompt: !o.JSON})
+			login, failure := buildLogin(cmd, cfg.AWS, loginOptions{Account: account, Role: role, Profile: profile, Prompt: !o.JSON})
 			if failure != nil {
 				return print(cmd, o, *failure)
 			}
@@ -168,6 +169,7 @@ func loginCmd(o *Opts) *cobra.Command {
 	}
 	c.Flags().StringVar(&account, "account", "", "AWS account id to pass to adfs-assume.")
 	c.Flags().StringVar(&role, "role", "", "AWS role name to pass to adfs-assume.")
+	c.Flags().StringVar(&profile, "profile", "default", "AWS credentials profile name to create with adfs-assume.")
 	return c
 }
 
@@ -250,6 +252,7 @@ type loginSpec struct {
 type loginOptions struct {
 	Account string
 	Role    string
+	Profile string
 	Prompt  bool
 }
 
@@ -279,7 +282,11 @@ func buildLogin(cmd *cobra.Command, aws config.AWSConfig, opts loginOptions) (lo
 		failure := output.Failure("invalid_args", "account and role are required for AWS login.", "Pass --account and --role when running aws-auth login.", 400)
 		return loginSpec{}, &failure
 	}
-	loginArgs := []string{"--domain", domain, "--username", username, "--role", role, "--account", account, "--no-warning", "--display-token", "--jenkins"}
+	profile := singleLine(opts.Profile)
+	if profile == "" {
+		profile = "default"
+	}
+	loginArgs := []string{"--domain", domain, "--username", username, "--role", role, "--account", account, "--profile", profile, "--no-warning", "--display-token", "--jenkins"}
 	return loginSpec{
 		command:  adfsAssumeCommand,
 		args:     loginArgs,
@@ -510,7 +517,7 @@ func helpLLMCmd(o *Opts) *cobra.Command {
 		tips := []string{
 			"For agents, --json is the default way to use every aws-auth command and subcommand.",
 			"Use aws-auth auth login --password-stdin --json to store AWS auth config without putting the password in shell history.",
-			"Use aws-auth login --account <account-id> --role <role-name> --json to authorize AWS credentials from the shared EFP config.",
+			"Use aws-auth login --account <account-id> --role <role-name> --profile default --json to authorize default AWS credentials from the shared EFP config.",
 			"Use --config or EFP_CONFIG when the caller manages an isolated config file.",
 			"Inspect error.code and error.hint before retrying.",
 		}

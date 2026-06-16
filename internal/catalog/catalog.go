@@ -679,7 +679,7 @@ func awsAuthExplicit(name string) (explicitMeta, bool) {
 	common := []string{"config", "json", "format", "verbose"}
 	items := map[string]explicitMeta{
 		"login": {Description: "Authorize AWS credentials with adfs-assume using saved EFP AWS auth settings.",
-			Flags: append([]string{"account", "role", "dry-run"}, common...), Required: []string{"saved-auth-config", "account", "role"}, Risk: "external_auth", Example: "aws-auth login --account 123456 --role ADFS-ReadOnly --json"},
+			Flags: append([]string{"account", "role", "profile", "dry-run"}, common...), Required: []string{"saved-auth-config", "account", "role"}, Risk: "external_auth", Example: "aws-auth login --account 123456 --role ADFS-ReadOnly --profile default --json"},
 		"auth.login": {Description: "Store AWS ADFS domain, username, and password in the shared EFP config.",
 			Flags: append([]string{"domain", "username", "password-stdin"}, common...), Required: []string{"domain", "username", "password-stdin"}, Risk: "write", Example: "printf '%s\\n' \"$AWS_AD_PASSWORD\" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json"},
 		"auth.status": {Description: "Read the configured AWS auth settings with secrets redacted.",

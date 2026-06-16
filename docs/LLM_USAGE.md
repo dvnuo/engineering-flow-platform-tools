@@ -144,10 +144,13 @@ Recommended public templates:
 - Use `jira zephyr` for test cycles, executions, execution status, step results, defects, attachments, ZQL, reports, and test summary context.
 - A Zephyr Test Cycle is a Zephyr container for test executions, not a Jira issue. Do not send cycle ids to `jira issue ...`.
 - To update "case X in cycle Y", use `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; the CLI resolves the execution id.
+- To add cases to a cycle folder in one operation, use `jira zephyr execution add-tests-to-cycle --cycle-id <ID> --project-id <ID> --version-id -1 --issues KEY-1,KEY-2 --folder-id <FOLDER_ID> --json`; the CLI adds the tests, retries execution resolution, resolves duplicate executions, skips executions already in the target folder, and moves the remaining executions.
+- If the user gives a folder name, prefer `--folder-name '<NAME>'`; add `--create-folder` only when creating a missing folder is desired.
+- For bulk status, archive, or restore requests phrased as case keys in a cycle, prefer `--cycle-id <ID> --issues KEY-1,KEY-2` over raw execution ids; the CLI resolves the execution ids.
 - Prefer `jira zephyr execution resolve --cycle-id <ID> --issue <KEY> --json` before writes when the user's wording or cycle context is uncertain.
 - Use `jira zephyr cycle resolve --project <PROJECT> --name '<cycle name>' --version-id -1 --json` when the user gives a cycle name instead of a cycle id.
 - Use `jira zephyr status list --json` and server status aliases instead of hard-coding numeric Zephyr status ids.
-- Use `jira zephyr api catalog --json` and `jira zephyr api describe <endpoint-id> --json` to discover official long-tail ZAPI endpoints before falling back to raw `jira zephyr api ...`.
+- Use `jira zephyr api catalog --json` and `jira zephyr api describe <endpoint-id> --json` to discover official long-tail ZAPI endpoints before falling back to raw `jira zephyr api ...`; do not call raw folder move with an empty `ids` array.
 - Use `--dry-run` before Zephyr write operations unless the user has explicitly approved the write.
 - Zephyr delete commands and raw `jira zephyr api delete` require `--yes`; do not add it until the user has confirmed the destructive action.
 - Do not browser-scrape Jira Test pages unless the API is unavailable and the user explicitly asks for UI investigation.

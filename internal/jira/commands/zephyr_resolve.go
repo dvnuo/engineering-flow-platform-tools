@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"engineering-flow-platform-tools/internal/jira"
 	zapi "engineering-flow-platform-tools/internal/jira/zephyr"
@@ -17,12 +18,15 @@ type zephyrIssueRef struct {
 }
 
 type zephyrExecutionResolveOptions struct {
-	CycleID   string
-	Issue     string
-	Project   string
-	ProjectID string
-	VersionID string
-	FolderID  string
+	CycleID       string
+	Issue         string
+	Project       string
+	ProjectID     string
+	VersionID     string
+	FolderID      string
+	AllowMultiple bool
+	RetryAttempts int
+	RetryDelay    time.Duration
 }
 
 type zephyrExecutionCandidate struct {
@@ -128,6 +132,151 @@ func zephyrResolveExecution(rt *zephyrRuntime, opts zephyrExecutionResolveOption
 	resolved.VersionID = firstNonEmpty(resolved.VersionID, versionID)
 	resolved.FolderID = firstNonEmpty(resolved.FolderID, opts.FolderID)
 	return resolved, nil
+}
+
+func zephyrResolveExecutionsForIssues(rt *zephyrRuntime, opts zephyrExecutionResolveOptions, issues []string) ([]zephyrExecutionCandidate, error) {
+	if strings.TrimSpace(opts.CycleID) == "" || len(issues) == 0 {
+		return nil, zapi.NewError("invalid_args", "--cycle-id and --issues required", "Use jira zephyr execution add-tests-to-cycle --cycle-id <ID> --issues EFP-123 --folder-id <ID> --json.", 400)
+	}
+	projectID := strings.TrimSpace(opts.ProjectID)
+	refs := make([]zephyrIssueRef, 0, len(issues))
+	for _, issueValue := range issues {
+		issue, err := zephyrResolveIssue(rt, issueValue)
+		if err != nil {
+			return nil, err
+		}
+		if projectID == "" {
+			projectID = issue.ProjectID
+		}
+		refs = append(refs, issue)
+	}
+	if projectID == "" {
+		var err error
+		projectID, err = zephyrProjectID(rt, opts.Project, "", false)
+		if err != nil {
+			return nil, err
+		}
+	}
+	versionID := firstNonEmpty(strings.TrimSpace(opts.VersionID), rt.cfg.DefaultVersionID)
+	q := map[string]string{
+		"action":    "expand",
+		"cycleId":   opts.CycleID,
+		"projectId": projectID,
+		"versionId": versionID,
+	}
+	if opts.FolderID != "" {
+		q["folderId"] = opts.FolderID
+	}
+	attempts := opts.RetryAttempts
+	if attempts < 1 {
+		attempts = 1
+	}
+	var lastErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		raw, err := rt.client.Get("execution", q)
+		if err != nil {
+			return nil, err
+		}
+		resolved, err := zephyrResolveIssuesFromCandidates(zephyrExtractExecutionCandidates(raw), refs, opts, projectID, versionID)
+		if err == nil {
+			return resolved, nil
+		}
+		lastErr = err
+		if attempt < attempts && opts.RetryDelay > 0 {
+			time.Sleep(opts.RetryDelay)
+		}
+	}
+	return nil, lastErr
+}
+
+func zephyrResolveArchivedExecutionsForIssues(rt *zephyrRuntime, opts zephyrExecutionResolveOptions, issues []string) ([]zephyrExecutionCandidate, error) {
+	if strings.TrimSpace(opts.CycleID) == "" || len(issues) == 0 {
+		return nil, zapi.NewError("invalid_args", "--cycle-id and --issues required", "Use jira zephyr archive restore --cycle-id <ID> --issues EFP-123 --json.", 400)
+	}
+	projectID := strings.TrimSpace(opts.ProjectID)
+	refs := make([]zephyrIssueRef, 0, len(issues))
+	for _, issueValue := range issues {
+		issue, err := zephyrResolveIssue(rt, issueValue)
+		if err != nil {
+			return nil, err
+		}
+		if projectID == "" {
+			projectID = issue.ProjectID
+		}
+		refs = append(refs, issue)
+	}
+	if projectID == "" {
+		var err error
+		projectID, err = zephyrProjectID(rt, opts.Project, "", false)
+		if err != nil {
+			return nil, err
+		}
+	}
+	versionID := firstNonEmpty(strings.TrimSpace(opts.VersionID), rt.cfg.DefaultVersionID)
+	q := map[string]string{
+		"cycleId":    opts.CycleID,
+		"projectId":  projectID,
+		"versionId":  versionID,
+		"maxRecords": "1000",
+	}
+	if opts.FolderID != "" {
+		q["folderId"] = opts.FolderID
+	}
+	raw, err := rt.client.Get("execution/archive", q)
+	if err != nil {
+		return nil, err
+	}
+	return zephyrResolveIssuesFromCandidates(zephyrExtractExecutionCandidates(raw), refs, opts, projectID, versionID)
+}
+
+func zephyrResolveIssuesFromCandidates(candidates []zephyrExecutionCandidate, refs []zephyrIssueRef, opts zephyrExecutionResolveOptions, projectID, versionID string) ([]zephyrExecutionCandidate, error) {
+	resolved := make([]zephyrExecutionCandidate, 0, len(refs))
+	for _, issue := range refs {
+		matches := zephyrFilterExecutionCandidates(candidates, issue)
+		label := firstNonEmpty(issue.Key, issue.ID)
+		if len(matches) == 0 {
+			return nil, zapi.NewError(
+				"zephyr_execution_not_found",
+				"Zephyr execution was not found for issue "+label+" in cycle "+opts.CycleID,
+				"The test may need to be added to the cycle first with jira zephyr execution add-tests-to-cycle.",
+				404,
+			)
+		}
+		if len(matches) > 1 && !opts.AllowMultiple {
+			return nil, zapi.NewError(
+				"ambiguous_zephyr_execution",
+				"Multiple Zephyr executions matched issue "+label+" in cycle "+opts.CycleID,
+				"Candidates: "+zephyrCandidateHint(matches),
+				409,
+			)
+		}
+		for _, match := range matches {
+			item := zephyrNormalizeResolvedExecution(match, issue, opts, projectID, versionID)
+			if strings.TrimSpace(item.ExecutionID) == "" {
+				return nil, zapi.NewError(
+					"zephyr_execution_id_missing",
+					"Zephyr execution for issue "+label+" did not include an execution id",
+					"Inspect jira zephyr execution list --cycle-id "+opts.CycleID+" --project-id "+projectID+" --json before moving executions to a folder.",
+					500,
+				)
+			}
+			resolved = append(resolved, item)
+			if !opts.AllowMultiple {
+				break
+			}
+		}
+	}
+	return dedupeExecutionCandidates(resolved), nil
+}
+
+func zephyrNormalizeResolvedExecution(candidate zephyrExecutionCandidate, issue zephyrIssueRef, opts zephyrExecutionResolveOptions, projectID, versionID string) zephyrExecutionCandidate {
+	candidate.IssueKey = firstNonEmpty(candidate.IssueKey, issue.Key)
+	candidate.IssueID = firstNonEmpty(candidate.IssueID, issue.ID)
+	candidate.CycleID = firstNonEmpty(candidate.CycleID, opts.CycleID)
+	candidate.ProjectID = firstNonEmpty(candidate.ProjectID, projectID)
+	candidate.VersionID = firstNonEmpty(candidate.VersionID, versionID)
+	candidate.FolderID = firstNonEmpty(candidate.FolderID, opts.FolderID)
+	return candidate
 }
 
 func zephyrResolvedExecutionData(resolved zephyrExecutionCandidate) map[string]interface{} {

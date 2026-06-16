@@ -537,6 +537,225 @@ func TestZephyrExecutionUpdateStatusSemanticDryRunAndInvalidMix(t *testing.T) {
 	requireJiraCode(t, run(t, cfg, "zephyr", "execution", "update-status", "30000", "--issue", "EFP-123", "--status", "PASS"), "invalid_args")
 }
 
+func TestZephyrExecutionAddTestsToCycleFolderMove(t *testing.T) {
+	var addBody map[string]interface{}
+	var moveBody map[string]interface{}
+	executionListHits := 0
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/zapi/latest/execution/addTestsToCycle":
+			if r.Method != http.MethodPost {
+				t.Fatalf("bad add method: %s", r.Method)
+			}
+			if err := json.NewDecoder(r.Body).Decode(&addBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"added":2}`))
+		case "/rest/api/2/issue/EFP-T1":
+			w.Write([]byte(`{"id":"10001","key":"EFP-T1","fields":{"project":{"id":"10000"}}}`))
+		case "/rest/api/2/issue/EFP-T2":
+			w.Write([]byte(`{"id":"10002","key":"EFP-T2","fields":{"project":{"id":"10000"}}}`))
+		case "/rest/zapi/latest/execution":
+			executionListHits++
+			q := r.URL.Query()
+			if q.Get("cycleId") != "20000" || q.Get("projectId") != "10000" || q.Get("versionId") != "-1" || q.Get("action") != "expand" || q.Get("folderId") != "" {
+				t.Fatalf("bad execution resolve query: %s", r.URL.RawQuery)
+			}
+			if executionListHits == 1 {
+				w.Write([]byte(`{"executions":[]}`))
+				return
+			}
+			w.Write([]byte(`{"executions":[{"id":"30000","issueKey":"EFP-T1","issueId":"10001","cycleId":"20000","folderId":"40000"},{"id":"30002","issueKey":"EFP-T1","issueId":"10001","cycleId":"20000","folderId":"11111"},{"id":"30001","issueKey":"EFP-T2","issueId":"10002","cycleId":"20000"}]}`))
+		case "/rest/zapi/latest/cycle/20000/move/executions/folder/40000":
+			if r.Method != http.MethodPut {
+				t.Fatalf("bad move method: %s", r.Method)
+			}
+			if err := json.NewDecoder(r.Body).Decode(&moveBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"moved":true}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	out := run(t, cfg, "zephyr", "execution", "add-tests-to-cycle", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1", "--issues", "EFP-T1,EFP-T2", "--folder-id", "40000")
+	if ok, _ := out["ok"].(bool); !ok {
+		t.Fatalf("add and move failed: %#v", out)
+	}
+	if addBody["cycleId"] != "20000" || addBody["projectId"] != "10000" || addBody["versionId"] != "-1" || len(addBody["issues"].([]interface{})) != 2 {
+		t.Fatalf("bad add body: %#v", addBody)
+	}
+	ids := moveBody["ids"].([]interface{})
+	if len(ids) != 2 || ids[0] != float64(30002) || ids[1] != float64(30001) {
+		t.Fatalf("bad move ids: %#v", moveBody)
+	}
+	if executionListHits != 2 {
+		t.Fatalf("execution list hits=%d", executionListHits)
+	}
+	data := out["data"].(map[string]interface{})
+	if data["folder_id"] != "40000" || len(data["execution_ids"].([]interface{})) != 3 || len(data["moved_execution_ids"].([]interface{})) != 2 || len(data["already_in_folder_execution_ids"].([]interface{})) != 1 {
+		t.Fatalf("bad add/move data: %#v", data)
+	}
+}
+
+func TestZephyrExecutionAddTestsToCycleFolderDryRun(t *testing.T) {
+	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("folder dry-run should not hit server: %s %s", r.Method, r.URL.Path)
+	})
+	before := *hits
+	out := run(t, cfg, "--dry-run", "zephyr", "execution", "add-tests-to-cycle", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1", "--issues", "EFP-T1,EFP-T2", "--folder-id", "40000")
+	if ok, _ := out["ok"].(bool); !ok {
+		t.Fatalf("folder dry-run failed: %#v", out)
+	}
+	if *hits != before {
+		t.Fatal("folder dry-run hit server")
+	}
+	data := out["data"].(map[string]interface{})
+	move := data["post_add_move"].(map[string]interface{})
+	body := move["body"].(map[string]interface{})
+	if move["path"] != "/rest/zapi/latest/cycle/20000/move/executions/folder/40000" || body["ids"] == nil {
+		t.Fatalf("bad folder dry-run data: %#v", data)
+	}
+	if ids, ok := body["ids"].([]interface{}); ok && len(ids) == 0 {
+		t.Fatalf("dry-run should not model an empty ids move: %#v", data)
+	}
+}
+
+func TestZephyrRawMoveFolderRejectsEmptyIDs(t *testing.T) {
+	cfg, hits := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatalf("raw empty move should not hit server: %s %s", r.Method, r.URL.Path)
+	})
+	before := *hits
+	out := run(t, cfg, "zephyr", "api", "put", "/rest/zapi/latest/cycle/20000/move/executions/folder/40000", "--body", `{"ids":[]}`)
+	requireJiraCode(t, out, "invalid_args")
+	if *hits != before {
+		t.Fatal("raw empty move hit server")
+	}
+}
+
+func TestZephyrExecutionAddTestsToCycleCreatesFolderByName(t *testing.T) {
+	var createFolderBody map[string]interface{}
+	var moveBody map[string]interface{}
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/zapi/latest/cycle/20000/folders":
+			w.Write([]byte(`{"folders":[]}`))
+		case "/rest/zapi/latest/folder/create":
+			if err := json.NewDecoder(r.Body).Decode(&createFolderBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"id":"40000","name":"Smoke"}`))
+		case "/rest/zapi/latest/execution/addTestsToCycle":
+			w.Write([]byte(`{"added":1}`))
+		case "/rest/api/2/issue/EFP-T1":
+			w.Write([]byte(`{"id":"10001","key":"EFP-T1","fields":{"project":{"id":"10000"}}}`))
+		case "/rest/zapi/latest/execution":
+			w.Write([]byte(`{"executions":[{"id":"30000","issueKey":"EFP-T1","issueId":"10001","cycleId":"20000"}]}`))
+		case "/rest/zapi/latest/cycle/20000/move/executions/folder/40000":
+			if err := json.NewDecoder(r.Body).Decode(&moveBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"moved":true}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	out := run(t, cfg, "zephyr", "execution", "add-tests-to-cycle", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1", "--issues", "EFP-T1", "--folder-name", "Smoke", "--create-folder")
+	if ok, _ := out["ok"].(bool); !ok {
+		t.Fatalf("folder-name add/move failed: %#v", out)
+	}
+	if createFolderBody["name"] != "Smoke" || createFolderBody["cycleId"] != "20000" {
+		t.Fatalf("bad folder create body: %#v", createFolderBody)
+	}
+	if ids := moveBody["ids"].([]interface{}); len(ids) != 1 || ids[0] != float64(30000) {
+		t.Fatalf("bad folder-name move body: %#v", moveBody)
+	}
+}
+
+func TestZephyrExecutionBulkUpdateStatusByIssues(t *testing.T) {
+	var updates []map[string]interface{}
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/zapi/latest/util/testExecutionStatus":
+			w.Write([]byte(`[{"id":1,"name":"PASS"}]`))
+		case "/rest/zapi/latest/util/teststepExecutionStatus":
+			w.Write([]byte(`[{"id":1,"name":"PASS"}]`))
+		case "/rest/api/2/issue/EFP-T1":
+			w.Write([]byte(`{"id":"10001","key":"EFP-T1","fields":{"project":{"id":"10000"}}}`))
+		case "/rest/api/2/issue/EFP-T2":
+			w.Write([]byte(`{"id":"10002","key":"EFP-T2","fields":{"project":{"id":"10000"}}}`))
+		case "/rest/zapi/latest/execution":
+			if r.URL.Query().Get("folderId") != "40000" {
+				t.Fatalf("bulk status did not scope folder: %s", r.URL.RawQuery)
+			}
+			w.Write([]byte(`{"executions":[{"id":"30000","issueKey":"EFP-T1","issueId":"10001","folderId":"40000"},{"id":"30001","issueKey":"EFP-T2","issueId":"10002","folderId":"40000"}]}`))
+		case "/rest/zapi/latest/execution/30000/execute", "/rest/zapi/latest/execution/30001/execute":
+			var body map[string]interface{}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			updates = append(updates, body)
+			w.Write([]byte(`{"updated":true}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	out := run(t, cfg, "zephyr", "execution", "bulk-update-status", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1", "--folder-id", "40000", "--issues", "EFP-T1,EFP-T2", "--status", "PASS")
+	if ok, _ := out["ok"].(bool); !ok {
+		t.Fatalf("bulk status by issues failed: %#v", out)
+	}
+	if len(updates) != 2 || updates[0]["status"] != "1" || updates[1]["status"] != "1" {
+		t.Fatalf("bad bulk updates: %#v", updates)
+	}
+}
+
+func TestZephyrArchiveAndRestoreByIssues(t *testing.T) {
+	var archiveBody map[string]interface{}
+	var restoreBody map[string]interface{}
+	cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/rest/api/2/issue/EFP-T1":
+			w.Write([]byte(`{"id":"10001","key":"EFP-T1","fields":{"project":{"id":"10000"}}}`))
+		case "/rest/zapi/latest/execution":
+			w.Write([]byte(`{"executions":[{"id":"30000","issueKey":"EFP-T1","issueId":"10001","cycleId":"20000"}]}`))
+		case "/rest/zapi/latest/execution/archive":
+			if r.Method == http.MethodGet {
+				w.Write([]byte(`{"executions":[{"id":"30000","issueKey":"EFP-T1","issueId":"10001","cycleId":"20000"}]}`))
+				return
+			}
+			if err := json.NewDecoder(r.Body).Decode(&archiveBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"jobProgressToken":"archive-token"}`))
+		case "/rest/zapi/latest/execution/restore":
+			if err := json.NewDecoder(r.Body).Decode(&restoreBody); err != nil {
+				t.Fatal(err)
+			}
+			w.Write([]byte(`{"jobProgressToken":"restore-token"}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	})
+	archive := run(t, cfg, "--yes", "zephyr", "archive", "executions", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1", "--issues", "EFP-T1")
+	if ok, _ := archive["ok"].(bool); !ok {
+		t.Fatalf("archive by issues failed: %#v", archive)
+	}
+	restore := run(t, cfg, "zephyr", "archive", "restore", "--cycle-id", "20000", "--project-id", "10000", "--version-id", "-1", "--issues", "EFP-T1")
+	if ok, _ := restore["ok"].(bool); !ok {
+		t.Fatalf("restore by issues failed: %#v", restore)
+	}
+	if ids := archiveBody["executions"].([]interface{}); len(ids) != 1 || ids[0] != float64(30000) {
+		t.Fatalf("bad archive body: %#v", archiveBody)
+	}
+	if ids := restoreBody["executions"].([]interface{}); len(ids) != 1 || ids[0] != float64(30000) {
+		t.Fatalf("bad restore body: %#v", restoreBody)
+	}
+}
+
 func TestZephyrDynamicStatusesAndFallback(t *testing.T) {
 	t.Run("status list parses server statuses", func(t *testing.T) {
 		cfg, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {

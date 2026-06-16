@@ -119,13 +119,15 @@ Important Zephyr patterns:
 jira zephyr cycle resolve --project PROJ --name "Sprint 42 Regression" --version-id -1 --json
 jira zephyr execution resolve --cycle-id 20000 --issue PROJ-123 --project PROJ --version-id -1 --json
 jira zephyr execution update-status --cycle-id 20000 --issue PROJ-123 --status PASSED --dry-run --json
-jira zephyr execution add-tests-to-cycle --cycle-id 20000 --project-id 10000 --version-id -1 --issues PROJ-123,PROJ-124 --folder-id 40000 --dry-run --json
+jira zephyr execution add-tests-to-cycle --cycle-id 20000 --project-id 10000 --version-id -1 --issues PROJ-123,PROJ-124 --folder-name "Smoke" --create-folder --dry-run --json
+jira zephyr execution bulk-update-status --cycle-id 20000 --project-id 10000 --issues PROJ-123,PROJ-124 --status PASS --dry-run --json
+jira zephyr archive executions --cycle-id 20000 --project-id 10000 --issues PROJ-123,PROJ-124 --yes --dry-run --json
 jira zephyr archive list --project-id 10000 --version-id -1 --json
 jira zephyr customfield list --entity-type EXECUTION --project-id 10000 --json
 ```
 
 Do not hard-code numeric Zephyr status ids. Use `jira zephyr status list --json`.
-When placing tests into a cycle folder, prefer `execution add-tests-to-cycle --folder-id`; raw folder move requires non-empty execution ids and should not be called with `{"ids":[]}`.
+When placing tests into a cycle folder, prefer `execution add-tests-to-cycle --folder-id` or `--folder-name`; raw folder move requires non-empty execution ids and should not be called with `{"ids":[]}`.
 
 ## Auth And Config
 

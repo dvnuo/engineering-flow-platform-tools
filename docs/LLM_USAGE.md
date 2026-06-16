@@ -144,7 +144,9 @@ Recommended public templates:
 - Use `jira zephyr` for test cycles, executions, execution status, step results, defects, attachments, ZQL, reports, and test summary context.
 - A Zephyr Test Cycle is a Zephyr container for test executions, not a Jira issue. Do not send cycle ids to `jira issue ...`.
 - To update "case X in cycle Y", use `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; the CLI resolves the execution id.
-- To add cases to a cycle folder in one operation, use `jira zephyr execution add-tests-to-cycle --cycle-id <ID> --project-id <ID> --version-id -1 --issues KEY-1,KEY-2 --folder-id <FOLDER_ID> --json`; the CLI adds the tests, resolves execution ids, and moves them to the folder.
+- To add cases to a cycle folder in one operation, use `jira zephyr execution add-tests-to-cycle --cycle-id <ID> --project-id <ID> --version-id -1 --issues KEY-1,KEY-2 --folder-id <FOLDER_ID> --json`; the CLI adds the tests, retries execution resolution, resolves duplicate executions, skips executions already in the target folder, and moves the remaining executions.
+- If the user gives a folder name, prefer `--folder-name '<NAME>'`; add `--create-folder` only when creating a missing folder is desired.
+- For bulk status, archive, or restore requests phrased as case keys in a cycle, prefer `--cycle-id <ID> --issues KEY-1,KEY-2` over raw execution ids; the CLI resolves the execution ids.
 - Prefer `jira zephyr execution resolve --cycle-id <ID> --issue <KEY> --json` before writes when the user's wording or cycle context is uncertain.
 - Use `jira zephyr cycle resolve --project <PROJECT> --name '<cycle name>' --version-id -1 --json` when the user gives a cycle name instead of a cycle id.
 - Use `jira zephyr status list --json` and server status aliases instead of hard-coding numeric Zephyr status ids.

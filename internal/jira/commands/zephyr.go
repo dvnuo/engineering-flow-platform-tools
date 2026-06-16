@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/jira"
@@ -23,6 +24,11 @@ type zephyrRuntime struct {
 	client *zapi.Client
 	cfg    zapi.EffectiveConfig
 }
+
+const (
+	zephyrPostAddResolveAttempts = 4
+	zephyrPostAddResolveDelay    = 250 * time.Millisecond
+)
 
 func zephyrCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "zephyr"}
@@ -542,16 +548,25 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 		cycleID := mustS(cmd, "cycle-id")
 		projectID := mustS(cmd, "project-id")
 		versionID := zephyrVersionID(rt, cmd)
-		folderID := mustS(cmd, "folder-id")
 		issues := splitCSV(mustS(cmd, "issues"))
 		if cycleID == "" || projectID == "" || len(issues) == 0 {
 			return invalidArgs(cmd, o, "--cycle-id, --project-id, and --issues required", "Use jira zephyr execution add-tests-to-cycle --cycle-id <ID> --project-id <ID> --issues EFP-T1,EFP-T2 --json.")
+		}
+		moveRequested := mustS(cmd, "folder-id") != "" || mustS(cmd, "folder-name") != ""
+		folderID := ""
+		var folderData map[string]interface{}
+		if moveRequested {
+			folderID, folderData, err = zephyrResolveFolderForCommand(rt, cmd, cycleID, projectID, versionID)
+			if err != nil {
+				return print(cmd, o, zephyrFailure(err, "zephyr_folder_not_found"))
+			}
 		}
 		body := map[string]interface{}{"cycleId": cycleID, "projectId": projectID, "versionId": versionID, "issues": issues}
 		path := rt.client.ZAPI("execution/addTestsToCycle")
 		if o.DryRun {
 			data := jira.DryRunData("POST", path, nil, body)
-			if folderID != "" {
+			if moveRequested {
+				data["folder"] = folderData
 				data["post_add_move"] = zephyrMoveExecutionsToFolderDryRunData(rt, cycleID, folderID, issues)
 			}
 			return print(cmd, o, output.Success(rt.ctx.Instance, data))
@@ -560,42 +575,56 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, zephyrFailure(err, "server_error"))
 		}
-		if folderID == "" {
+		if !moveRequested {
 			return print(cmd, o, output.Success(rt.ctx.Instance, added))
 		}
 		resolved, err := zephyrResolveExecutionsForIssues(rt, zephyrExecutionResolveOptions{
-			CycleID:   cycleID,
-			ProjectID: projectID,
-			VersionID: versionID,
+			CycleID:       cycleID,
+			ProjectID:     projectID,
+			VersionID:     versionID,
+			AllowMultiple: true,
+			RetryAttempts: zephyrPostAddResolveAttempts,
+			RetryDelay:    zephyrPostAddResolveDelay,
 		}, issues)
 		if err != nil {
 			return print(cmd, o, zephyrFailure(err, "zephyr_execution_not_found"))
 		}
 		ids := zephyrExecutionIDs(resolved)
-		moveBody, err := zephyrMoveExecutionsToFolderBody(ids)
-		if err != nil {
-			return print(cmd, o, zephyrFailure(err, "invalid_args"))
-		}
-		movePath := zephyrMoveExecutionsToFolderPath(rt, cycleID, folderID)
-		moved, err := rt.client.DoJSON(http.MethodPut, movePath, nil, moveBody)
-		if err != nil {
-			return print(cmd, o, zephyrFailure(err, "server_error"))
+		moveIDs := zephyrExecutionIDsOutsideFolder(resolved, folderID)
+		alreadyInFolderIDs := zephyrExecutionIDsInFolder(resolved, folderID)
+		var moved interface{} = map[string]interface{}{"skipped": true, "reason": "executions already in target folder"}
+		if len(moveIDs) > 0 {
+			moveBody, err := zephyrMoveExecutionsToFolderBody(moveIDs)
+			if err != nil {
+				return print(cmd, o, zephyrFailure(err, "invalid_args"))
+			}
+			movePath := zephyrMoveExecutionsToFolderPath(rt, cycleID, folderID)
+			moved, err = rt.client.DoJSON(http.MethodPut, movePath, nil, moveBody)
+			if err != nil {
+				return print(cmd, o, zephyrFailure(err, "server_error"))
+			}
 		}
 		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{
-			"added":         added,
-			"moved":         moved,
-			"execution_ids": ids,
-			"issues":        issues,
-			"cycle_id":      cycleID,
-			"project_id":    projectID,
-			"version_id":    versionID,
-			"folder_id":     folderID,
+			"added":                           added,
+			"moved":                           moved,
+			"execution_ids":                   ids,
+			"moved_execution_ids":             moveIDs,
+			"already_in_folder_execution_ids": alreadyInFolderIDs,
+			"issues":                          issues,
+			"cycle_id":                        cycleID,
+			"project_id":                      projectID,
+			"version_id":                      versionID,
+			"folder_id":                       folderID,
+			"folder":                          folderData,
 		}))
 	}}
 	addTests.Flags().String("cycle-id", "", "")
 	addTests.Flags().String("project-id", "", "")
 	addTests.Flags().String("version-id", "", "")
 	addTests.Flags().String("folder-id", "", "")
+	addTests.Flags().String("folder-name", "", "")
+	addTests.Flags().Bool("create-folder", false, "")
+	addTests.Flags().String("folder-description", "", "")
 	addTests.Flags().String("issues", "", "")
 	c.AddCommand(addTests)
 
@@ -654,12 +683,56 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, zephyrFailure(err, "server_error"))
 		}
 		ids := splitCSV(mustS(cmd, "execution-ids"))
-		if len(ids) == 0 || mustS(cmd, "status") == "" {
-			return invalidArgs(cmd, o, "--execution-ids and --status required", "Use jira zephyr execution bulk-update-status --execution-ids 1,2,3 --status PASS --json.")
+		issues := splitCSV(mustS(cmd, "issues"))
+		if (len(ids) == 0 && len(issues) == 0) || mustS(cmd, "status") == "" {
+			return invalidArgs(cmd, o, "--execution-ids or --cycle-id plus --issues, and --status required", "Use jira zephyr execution bulk-update-status --cycle-id 20000 --project-id 10000 --issues EFP-T1,EFP-T2 --status PASS --json.")
+		}
+		if len(ids) > 0 && len(issues) > 0 {
+			return invalidArgs(cmd, o, "--execution-ids cannot be combined with --issues", "Use direct execution id mode or issue resolution mode.")
 		}
 		mapped, err := zephyrMapStatus(rt, mustS(cmd, "status"))
 		if err != nil {
 			return print(cmd, o, zephyrStatusFailure(err, rt.cfg))
+		}
+		resolveData := map[string]interface{}{}
+		if len(issues) > 0 {
+			if mustS(cmd, "cycle-id") == "" {
+				return invalidArgs(cmd, o, "--cycle-id required with --issues", "Use jira zephyr execution bulk-update-status --cycle-id <ID> --project-id <ID> --issues EFP-T1,EFP-T2 --status PASS --json.")
+			}
+			if o.DryRun {
+				ids = zephyrIssueExecutionPlaceholders(issues)
+				resolveData = map[string]interface{}{"cycle_id": mustS(cmd, "cycle-id"), "issues": issues, "execution_ids": ids}
+			} else {
+				folderID, folderData, err := zephyrResolveOptionalFolderScope(rt, cmd)
+				if err != nil {
+					return print(cmd, o, zephyrFailure(err, "zephyr_folder_not_found"))
+				}
+				resolved, err := zephyrResolveExecutionsForIssues(rt, zephyrExecutionResolveOptions{
+					CycleID:       mustS(cmd, "cycle-id"),
+					Project:       mustS(cmd, "project"),
+					ProjectID:     mustS(cmd, "project-id"),
+					VersionID:     zephyrVersionID(rt, cmd),
+					FolderID:      folderID,
+					AllowMultiple: true,
+				}, issues)
+				if err != nil {
+					return print(cmd, o, zephyrFailure(err, "zephyr_execution_not_found"))
+				}
+				ids = zephyrExecutionIDs(resolved)
+				resolveData = map[string]interface{}{
+					"cycle_id":                 mustS(cmd, "cycle-id"),
+					"issues":                   issues,
+					"execution_ids":            ids,
+					"resolved_execution_count": len(ids),
+				}
+				if folderID != "" {
+					resolveData["folder_id"] = folderID
+					resolveData["folder"] = folderData
+				}
+			}
+			if len(ids) == 0 {
+				return print(cmd, o, zephyrFailure(zapi.NewError("zephyr_execution_not_found", "No Zephyr executions were resolved for the requested issues", "Check --cycle-id, --project-id, --version-id, and --folder-id/--folder-name.", 404), "zephyr_execution_not_found"))
+			}
 		}
 		updates := make([]map[string]interface{}, 0, len(ids))
 		for _, id := range ids {
@@ -670,7 +743,7 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 			updates = append(updates, item)
 		}
 		if o.DryRun {
-			return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"dry_run": true, "updates": updates}))
+			return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"dry_run": true, "updates": updates, "resolved": resolveData}))
 		}
 		results := make([]interface{}, 0, len(updates))
 		for i, id := range ids {
@@ -681,9 +754,16 @@ func zephyrExecutionCmd(o *Opts) *cobra.Command {
 			}
 			results = append(results, map[string]interface{}{"execution_id": id, "result": data})
 		}
-		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"updated": len(results), "results": results}))
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"updated": len(results), "results": results, "resolved": resolveData}))
 	}}
 	bulkUpdate.Flags().String("execution-ids", "", "")
+	bulkUpdate.Flags().String("cycle-id", "", "")
+	bulkUpdate.Flags().String("project", "", "")
+	bulkUpdate.Flags().String("project-id", "", "")
+	bulkUpdate.Flags().String("version-id", "", "")
+	bulkUpdate.Flags().String("issues", "", "")
+	bulkUpdate.Flags().String("folder-id", "", "")
+	bulkUpdate.Flags().String("folder-name", "", "")
 	bulkUpdate.Flags().String("status", "", "")
 	bulkUpdate.Flags().String("comment", "", "")
 	c.AddCommand(bulkUpdate)
@@ -760,21 +840,24 @@ func zephyrArchiveCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, zephyrFailure(err, "server_error"))
 		}
-		body, err := zephyrArchiveBody(cmd)
+		body, resolved, err := zephyrArchiveBodyForCommand(rt, cmd, false)
 		if err != nil {
-			return invalidArgs(cmd, o, err.Error(), "Use jira zephyr archive executions --execution-ids 30000,30001 --yes --json.")
+			return print(cmd, o, zephyrFailure(err, "invalid_args"))
 		}
 		path := rt.client.ZAPI("execution/archive")
 		if o.DryRun {
-			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("POST", path, nil, body)))
+			data := jira.DryRunData("POST", path, nil, body)
+			data["resolved"] = resolved
+			return print(cmd, o, output.Success(rt.ctx.Instance, data))
 		}
 		raw, err := rt.client.Post("execution/archive", body)
 		if err != nil {
 			return print(cmd, o, zephyrFailure(err, "server_error"))
 		}
-		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"result": raw, "resolved": resolved}))
 	}}
 	executions.Flags().String("execution-ids", "", "")
+	addArchiveIssueResolveFlags(executions)
 	c.AddCommand(executions)
 
 	restore := &cobra.Command{Use: "restore", RunE: func(cmd *cobra.Command, args []string) error {
@@ -782,21 +865,24 @@ func zephyrArchiveCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return print(cmd, o, zephyrFailure(err, "server_error"))
 		}
-		body, err := zephyrArchiveBody(cmd)
+		body, resolved, err := zephyrArchiveBodyForCommand(rt, cmd, true)
 		if err != nil {
-			return invalidArgs(cmd, o, err.Error(), "Use jira zephyr archive restore --execution-ids 30000,30001 --json.")
+			return print(cmd, o, zephyrFailure(err, "invalid_args"))
 		}
 		path := rt.client.ZAPI("execution/restore")
 		if o.DryRun {
-			return print(cmd, o, output.Success(rt.ctx.Instance, jira.DryRunData("POST", path, nil, body)))
+			data := jira.DryRunData("POST", path, nil, body)
+			data["resolved"] = resolved
+			return print(cmd, o, output.Success(rt.ctx.Instance, data))
 		}
 		raw, err := rt.client.Post("execution/restore", body)
 		if err != nil {
 			return print(cmd, o, zephyrFailure(err, "server_error"))
 		}
-		return print(cmd, o, output.Success(rt.ctx.Instance, raw))
+		return print(cmd, o, output.Success(rt.ctx.Instance, map[string]interface{}{"result": raw, "resolved": resolved}))
 	}}
 	restore.Flags().String("execution-ids", "", "")
+	addArchiveIssueResolveFlags(restore)
 	c.AddCommand(restore)
 
 	exportCmd := &cobra.Command{Use: "export", RunE: func(cmd *cobra.Command, args []string) error {
@@ -1844,18 +1930,57 @@ func zephyrExecutionIDBodyValues(ids []string) []interface{} {
 	return values
 }
 
+func zephyrExecutionIDsInFolder(candidates []zephyrExecutionCandidate, folderID string) []string {
+	ids := make([]string, 0, len(candidates))
+	seen := map[string]bool{}
+	for _, candidate := range candidates {
+		id := strings.TrimSpace(candidate.ExecutionID)
+		if id == "" || seen[id] || strings.TrimSpace(candidate.FolderID) != strings.TrimSpace(folderID) {
+			continue
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func zephyrExecutionIDsOutsideFolder(candidates []zephyrExecutionCandidate, folderID string) []string {
+	ids := make([]string, 0, len(candidates))
+	seen := map[string]bool{}
+	for _, candidate := range candidates {
+		id := strings.TrimSpace(candidate.ExecutionID)
+		if id == "" || seen[id] || strings.TrimSpace(candidate.FolderID) == strings.TrimSpace(folderID) {
+			continue
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 func zephyrValidateRawAPIBody(method, path string, body interface{}) error {
-	if method != http.MethodPut || !zephyrIsMoveExecutionsToFolderPath(path) {
+	if method == http.MethodPut && zephyrIsMoveExecutionsToFolderPath(path) {
+		count, hasIDs := zephyrRawBodyListCount(body, "ids")
+		if !hasIDs || count == 0 {
+			return zapi.NewError(
+				"invalid_args",
+				"Zephyr move-to-folder raw API requires a non-empty ids array",
+				"Use jira zephyr execution add-tests-to-cycle --cycle-id <ID> --project-id <ID> --issues KEY-1,KEY-2 --folder-id <ID> --json, or pass resolved execution ids.",
+				400,
+			)
+		}
 		return nil
 	}
-	count, hasIDs := zephyrRawIDsCount(body)
-	if !hasIDs || count == 0 {
-		return zapi.NewError(
-			"invalid_args",
-			"Zephyr move-to-folder raw API requires a non-empty ids array",
-			"Use jira zephyr execution add-tests-to-cycle --cycle-id <ID> --project-id <ID> --issues KEY-1,KEY-2 --folder-id <ID> --json, or pass resolved execution ids.",
-			400,
-		)
+	if method == http.MethodPost && zephyrIsExecutionArchiveRestorePath(path) {
+		count, hasExecutions := zephyrRawBodyListCount(body, "executions")
+		if !hasExecutions || count == 0 {
+			return zapi.NewError(
+				"invalid_args",
+				"Zephyr archive/restore raw API requires a non-empty executions array",
+				"Use jira zephyr archive executions --issues KEY-1,KEY-2 --cycle-id <ID> --project-id <ID> --yes --json, or pass resolved execution ids.",
+				400,
+			)
+		}
 	}
 	return nil
 }
@@ -1865,25 +1990,150 @@ func zephyrIsMoveExecutionsToFolderPath(path string) bool {
 	return strings.Contains(lower, "/cycle/") && strings.Contains(lower, "/move/executions/folder/")
 }
 
-func zephyrRawIDsCount(body interface{}) (int, bool) {
+func zephyrIsExecutionArchiveRestorePath(path string) bool {
+	lower := strings.ToLower(strings.TrimSpace(path))
+	return strings.HasSuffix(lower, "/execution/archive") || strings.HasSuffix(lower, "/execution/restore")
+}
+
+func zephyrRawBodyListCount(body interface{}, key string) (int, bool) {
 	m, ok := body.(map[string]interface{})
 	if !ok {
 		return 0, false
 	}
-	raw, ok := m["ids"]
+	raw, ok := m[key]
 	if !ok {
 		return 0, false
 	}
-	switch ids := raw.(type) {
+	switch items := raw.(type) {
 	case nil:
 		return 0, true
 	case []interface{}:
-		return len(ids), true
+		return len(items), true
 	case []string:
-		return len(ids), true
+		return len(items), true
 	default:
 		return 1, true
 	}
+}
+
+func zephyrResolveFolderForCommand(rt *zephyrRuntime, cmd *cobra.Command, cycleID, projectID, versionID string) (string, map[string]interface{}, error) {
+	return zephyrResolveFolderID(rt, cycleID, projectID, versionID, mustS(cmd, "folder-id"), mustS(cmd, "folder-name"), mustB(cmd, "create-folder"), mustS(cmd, "folder-description"))
+}
+
+func zephyrResolveOptionalFolderScope(rt *zephyrRuntime, cmd *cobra.Command) (string, map[string]interface{}, error) {
+	folderID := optionalFlagString(cmd, "folder-id")
+	folderName := optionalFlagString(cmd, "folder-name")
+	if folderID == "" && folderName == "" {
+		return "", nil, nil
+	}
+	return zephyrResolveFolderID(
+		rt,
+		optionalFlagString(cmd, "cycle-id"),
+		optionalFlagString(cmd, "project-id"),
+		zephyrVersionID(rt, cmd),
+		folderID,
+		folderName,
+		optionalFlagBool(cmd, "create-folder"),
+		optionalFlagString(cmd, "folder-description"),
+	)
+}
+
+func optionalFlagString(cmd *cobra.Command, name string) string {
+	if cmd.Flags().Lookup(name) == nil {
+		return ""
+	}
+	return mustS(cmd, name)
+}
+
+func optionalFlagBool(cmd *cobra.Command, name string) bool {
+	if cmd.Flags().Lookup(name) == nil {
+		return false
+	}
+	return mustB(cmd, name)
+}
+
+func zephyrIssueExecutionPlaceholders(issues []string) []string {
+	ids := make([]string, 0, len(issues))
+	for _, issue := range issues {
+		ids = append(ids, "{executionId:"+issue+"}")
+	}
+	return ids
+}
+
+func zephyrResolveFolderID(rt *zephyrRuntime, cycleID, projectID, versionID, folderID, folderName string, create bool, description string) (string, map[string]interface{}, error) {
+	folderID = strings.TrimSpace(folderID)
+	folderName = strings.TrimSpace(folderName)
+	if folderID != "" {
+		return folderID, map[string]interface{}{"folder_id": folderID}, nil
+	}
+	if folderName == "" {
+		return "", nil, nil
+	}
+	if cycleID == "" || projectID == "" || versionID == "" {
+		return "", nil, zapi.NewError("invalid_args", "--cycle-id, --project-id, and --version-id required when resolving --folder-name", "Use --folder-id directly or include --cycle-id, --project-id, and --version-id.", 400)
+	}
+	listPath := rt.client.ZAPI("cycle/" + zapi.PathEscape(cycleID) + "/folders")
+	listQuery := map[string]string{"projectId": projectID, "versionId": versionID}
+	if rt.ctx.DryRun {
+		data := map[string]interface{}{
+			"folder_name": folderName,
+			"folder_id":   "{folderId:" + folderName + "}",
+			"resolve":     jira.DryRunData("GET", listPath, listQuery, nil),
+		}
+		if create {
+			data["create_if_missing"] = jira.DryRunData("POST", rt.client.ZAPI("folder/create"), nil, zephyrFolderCreateBody(cycleID, projectID, versionID, folderName, description))
+		}
+		return "{folderId:" + folderName + "}", data, nil
+	}
+	raw, err := rt.client.DoJSON(http.MethodGet, listPath, listQuery, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	folders := zephyrMatchingFolders(zephyrExtractFolders(raw), folderName, true)
+	if len(folders) == 0 {
+		folders = zephyrMatchingFolders(zephyrExtractFolders(raw), folderName, false)
+	}
+	if len(folders) > 1 {
+		return "", nil, zapi.NewError("ambiguous_zephyr_folder", "Multiple Zephyr folders matched: "+folderName, "Candidates: "+zephyrFolderCandidateHint(folders), 409)
+	}
+	if len(folders) == 1 {
+		folder := folders[0]
+		id := zephyrStringField(folder, "folder_id")
+		if id == "" {
+			return "", nil, zapi.NewError("zephyr_folder_id_missing", "Zephyr folder did not include an id: "+folderName, "Run jira zephyr folder list --cycle-id "+cycleID+" --project-id "+projectID+" --version-id "+versionID+" --json.", 500)
+		}
+		return id, map[string]interface{}{"folder_id": id, "folder_name": zephyrStringField(folder, "name"), "raw": folder}, nil
+	}
+	if !create {
+		return "", nil, zapi.NewError("zephyr_folder_not_found", "Zephyr folder was not found: "+folderName, "Run jira zephyr folder list --cycle-id "+cycleID+" --project-id "+projectID+" --version-id "+versionID+" --json, or add --create-folder.", 404)
+	}
+	created, err := rt.client.Post("folder/create", zephyrFolderCreateBody(cycleID, projectID, versionID, folderName, description))
+	if err != nil {
+		return "", nil, err
+	}
+	createdFolders := zephyrMatchingFolders(zephyrExtractFolders(created), folderName, false)
+	if len(createdFolders) > 0 {
+		id := zephyrStringField(createdFolders[0], "folder_id")
+		if id != "" {
+			return id, map[string]interface{}{"folder_id": id, "folder_name": folderName, "created": true, "raw": created}, nil
+		}
+	}
+	raw, err = rt.client.DoJSON(http.MethodGet, listPath, listQuery, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	folders = zephyrMatchingFolders(zephyrExtractFolders(raw), folderName, false)
+	if len(folders) == 1 && zephyrStringField(folders[0], "folder_id") != "" {
+		id := zephyrStringField(folders[0], "folder_id")
+		return id, map[string]interface{}{"folder_id": id, "folder_name": folderName, "created": true, "raw": folders[0]}, nil
+	}
+	return "", nil, zapi.NewError("zephyr_folder_id_missing", "Created Zephyr folder could not be resolved: "+folderName, "Run jira zephyr folder list --cycle-id "+cycleID+" --project-id "+projectID+" --version-id "+versionID+" --json.", 500)
+}
+
+func zephyrFolderCreateBody(cycleID, projectID, versionID, name, description string) map[string]interface{} {
+	body := map[string]interface{}{"cycleId": cycleID, "projectId": projectID, "versionId": versionID, "name": name}
+	addOptionalString(body, "description", description)
+	return body
 }
 
 func zephyrDelete(rt *zephyrRuntime, path string, q map[string]string) error {
@@ -1946,6 +2196,16 @@ func addArchiveScopeFlags(cmd *cobra.Command) {
 	cmd.Flags().String("folder-id", "", "")
 	cmd.Flags().String("offset", "", "")
 	cmd.Flags().String("limit", "", "")
+}
+
+func addArchiveIssueResolveFlags(cmd *cobra.Command) {
+	cmd.Flags().String("issues", "", "")
+	cmd.Flags().String("cycle-id", "", "")
+	cmd.Flags().String("project", "", "")
+	cmd.Flags().String("project-id", "", "")
+	cmd.Flags().String("version-id", "", "")
+	cmd.Flags().String("folder-id", "", "")
+	cmd.Flags().String("folder-name", "", "")
 }
 
 func addExecutionResolverFlags(cmd *cobra.Command) {
@@ -2039,7 +2299,68 @@ func zephyrArchiveBody(cmd *cobra.Command) (map[string]interface{}, error) {
 	if len(ids) == 0 {
 		return nil, fmt.Errorf("--execution-ids required")
 	}
-	return map[string]interface{}{"executions": ids}, nil
+	return zephyrArchiveBodyFromIDs(ids), nil
+}
+
+func zephyrArchiveBodyForCommand(rt *zephyrRuntime, cmd *cobra.Command, archived bool) (map[string]interface{}, map[string]interface{}, error) {
+	ids := splitCSV(mustS(cmd, "execution-ids"))
+	issues := splitCSV(mustS(cmd, "issues"))
+	if len(ids) > 0 && len(issues) > 0 {
+		return nil, nil, zapi.NewError("invalid_args", "--execution-ids cannot be combined with --issues", "Use direct execution id mode or issue resolution mode.", 400)
+	}
+	if len(ids) > 0 {
+		return zephyrArchiveBodyFromIDs(ids), map[string]interface{}{"execution_ids": ids}, nil
+	}
+	if len(issues) == 0 {
+		return nil, nil, zapi.NewError("invalid_args", "--execution-ids or --cycle-id plus --issues required", "Use jira zephyr archive executions --cycle-id <ID> --project-id <ID> --issues EFP-T1,EFP-T2 --yes --json.", 400)
+	}
+	if mustS(cmd, "cycle-id") == "" {
+		return nil, nil, zapi.NewError("invalid_args", "--cycle-id required with --issues", "Use --cycle-id to scope Zephyr execution resolution.", 400)
+	}
+	if rt.ctx.DryRun {
+		ids = zephyrIssueExecutionPlaceholders(issues)
+		return zephyrArchiveBodyFromIDs(ids), map[string]interface{}{"cycle_id": mustS(cmd, "cycle-id"), "issues": issues, "execution_ids": ids}, nil
+	}
+	folderID, folderData, err := zephyrResolveOptionalFolderScope(rt, cmd)
+	if err != nil {
+		return nil, nil, err
+	}
+	opts := zephyrExecutionResolveOptions{
+		CycleID:       mustS(cmd, "cycle-id"),
+		Project:       mustS(cmd, "project"),
+		ProjectID:     mustS(cmd, "project-id"),
+		VersionID:     zephyrVersionID(rt, cmd),
+		FolderID:      folderID,
+		AllowMultiple: true,
+	}
+	var resolved []zephyrExecutionCandidate
+	if archived {
+		resolved, err = zephyrResolveArchivedExecutionsForIssues(rt, opts, issues)
+	} else {
+		resolved, err = zephyrResolveExecutionsForIssues(rt, opts, issues)
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	ids = zephyrExecutionIDs(resolved)
+	if len(ids) == 0 {
+		return nil, nil, zapi.NewError("zephyr_execution_not_found", "No Zephyr executions were resolved for the requested issues", "Check --cycle-id, --project-id, --version-id, and --folder-id/--folder-name.", 404)
+	}
+	meta := map[string]interface{}{
+		"cycle_id":                 mustS(cmd, "cycle-id"),
+		"issues":                   issues,
+		"execution_ids":            ids,
+		"resolved_execution_count": len(ids),
+	}
+	if folderID != "" {
+		meta["folder_id"] = folderID
+		meta["folder"] = folderData
+	}
+	return zephyrArchiveBodyFromIDs(ids), meta, nil
+}
+
+func zephyrArchiveBodyFromIDs(ids []string) map[string]interface{} {
+	return map[string]interface{}{"executions": zephyrExecutionIDBodyValues(ids)}
 }
 
 func zephyrCustomFieldCreateBody(cmd *cobra.Command) (interface{}, error) {
@@ -2334,6 +2655,139 @@ func zephyrVersionCandidateHint(versions []map[string]interface{}) string {
 			fields = append(fields, "version_id="+id)
 		}
 		if name := zephyrStringField(version, "name"); name != "" {
+			fields = append(fields, "name="+name)
+		}
+		parts = append(parts, "{"+strings.Join(fields, ", ")+"}")
+	}
+	return strings.Join(parts, ", ")
+}
+
+func zephyrExtractFolders(raw interface{}) []map[string]interface{} {
+	switch v := raw.(type) {
+	case []interface{}:
+		return zephyrFolderMapsFromList(v, "")
+	case []map[string]interface{}:
+		out := make([]map[string]interface{}, 0, len(v))
+		for _, item := range v {
+			if zephyrLooksLikeFolder(item, "") {
+				out = append(out, zephyrNormalizeFolder(item, ""))
+			}
+		}
+		return dedupeFolders(out)
+	case map[string]interface{}:
+		for _, key := range []string{"folders", "folder", "data", "results", "values"} {
+			if child, ok := v[key]; ok {
+				if folders := zephyrExtractFolders(child); len(folders) > 0 {
+					return folders
+				}
+			}
+		}
+		if zephyrLooksLikeFolder(v, "") {
+			return []map[string]interface{}{zephyrNormalizeFolder(v, "")}
+		}
+		keys := make([]string, 0, len(v))
+		for key := range v {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		out := []map[string]interface{}{}
+		for _, key := range keys {
+			child, ok := v[key].(map[string]interface{})
+			if !ok || !zephyrLooksLikeFolder(child, key) {
+				continue
+			}
+			out = append(out, zephyrNormalizeFolder(child, key))
+		}
+		return dedupeFolders(out)
+	default:
+		return nil
+	}
+}
+
+func zephyrFolderMapsFromList(items []interface{}, mapKey string) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(items))
+	for _, item := range items {
+		m, ok := item.(map[string]interface{})
+		if !ok || !zephyrLooksLikeFolder(m, mapKey) {
+			continue
+		}
+		out = append(out, zephyrNormalizeFolder(m, mapKey))
+	}
+	return dedupeFolders(out)
+}
+
+func zephyrLooksLikeFolder(m map[string]interface{}, mapKey string) bool {
+	for _, key := range []string{"id", "folderId", "folderID", "name", "folderName", "folder"} {
+		if _, ok := m[key]; ok {
+			return true
+		}
+	}
+	return issueIDFallback(mapKey) != ""
+}
+
+func zephyrNormalizeFolder(m map[string]interface{}, mapKey string) map[string]interface{} {
+	out := map[string]interface{}{}
+	for k, v := range m {
+		out[k] = v
+	}
+	id := firstNonEmpty(
+		zephyrStringField(m, "folder_id"),
+		zephyrStringField(m, "folderId"),
+		zephyrStringField(m, "folderID"),
+		zephyrLookupString(m, "folder.id"),
+		zephyrStringField(m, "id"),
+	)
+	if id == "" && issueIDFallback(mapKey) != "" {
+		id = mapKey
+	}
+	name := firstNonEmpty(
+		zephyrStringField(m, "name"),
+		zephyrStringField(m, "folderName"),
+		zephyrLookupString(m, "folder.name"),
+	)
+	out["folder_id"] = id
+	out["name"] = name
+	return out
+}
+
+func zephyrMatchingFolders(folders []map[string]interface{}, name string, caseSensitive bool) []map[string]interface{} {
+	name = strings.TrimSpace(name)
+	var out []map[string]interface{}
+	for _, folder := range folders {
+		candidate := strings.TrimSpace(zephyrStringField(folder, "name"))
+		if caseSensitive && candidate == name {
+			out = append(out, folder)
+			continue
+		}
+		if !caseSensitive && strings.EqualFold(candidate, name) {
+			out = append(out, folder)
+		}
+	}
+	return dedupeFolders(out)
+}
+
+func dedupeFolders(folders []map[string]interface{}) []map[string]interface{} {
+	out := []map[string]interface{}{}
+	seen := map[string]bool{}
+	for _, folder := range folders {
+		key := firstNonEmpty(zephyrStringField(folder, "folder_id"), zephyrStringField(folder, "name"))
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, folder)
+	}
+	return out
+}
+
+func zephyrFolderCandidateHint(folders []map[string]interface{}) string {
+	parts := make([]string, 0, len(folders))
+	for _, folder := range folders {
+		fields := []string{}
+		if id := zephyrStringField(folder, "folder_id"); id != "" {
+			fields = append(fields, "folder_id="+id)
+		}
+		if name := zephyrStringField(folder, "name"); name != "" {
 			fields = append(fields, "name="+name)
 		}
 		parts = append(parts, "{"+strings.Join(fields, ", ")+"}")

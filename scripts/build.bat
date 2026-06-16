@@ -152,6 +152,8 @@ go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\confluence!EXE_VALUE!" ./cmd/confluen
 if errorlevel 1 exit /b 1
 go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\jenkins!EXE_VALUE!" ./cmd/jenkins
 if errorlevel 1 exit /b 1
+go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\aws-auth!EXE_VALUE!" ./cmd/aws-auth
+if errorlevel 1 exit /b 1
 go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\browser!EXE_VALUE!" ./cmd/browser
 if errorlevel 1 exit /b 1
 go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\inspect-image!EXE_VALUE!" ./cmd/inspect-image

@@ -5,6 +5,7 @@ This repository hosts cross-platform Go-based CLI tools for agent, runtime, shel
 - `jira`
 - `confluence`
 - `jenkins`
+- `aws-auth`
 - `browser`
 - `inspect-image`
 - `visual`
@@ -31,7 +32,7 @@ The Atlassian product integrations currently include:
 - `jira`: Jira Server/Data Center automation
 - `confluence`: Confluence Server/Data Center automation
 
-Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squad test-management resources on the same Jira instance, including cycles, executions, semantic execution resolution, server status discovery, test steps, folders, attachments, defects, ZQL metadata/search, conservative summaries, and raw ZAPI catalog/access. Jira, Confluence, Jenkins, and inspect-image share `EFP_CONFIG` and `~/.efp/config.yaml`; each command owns its own YAML node so product settings do not interfere with one another.
+Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squad test-management resources on the same Jira instance, including cycles, executions, semantic execution resolution, server status discovery, test steps, folders, attachments, defects, ZQL metadata/search, conservative summaries, and raw ZAPI catalog/access. Jira, Confluence, Jenkins, AWS auth, and inspect-image share `EFP_CONFIG` and `~/.efp/config.yaml`; each command owns its own YAML node so product settings do not interfere with one another.
 
 ### Jenkins
 
@@ -78,12 +79,13 @@ For VS Code GitHub Copilot, copy `cmd/visual/visual-cli.instructions.md` to `~/.
 
 ## Quick Install
 
-Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` on your `PATH`, then run:
+Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` on your `PATH`, then run:
 
 ```bash
 jira version --json
 confluence version --json
 jenkins version --json
+aws-auth version --json
 browser version --json
 inspect-image version --json
 visual version --json
@@ -153,6 +155,12 @@ jenkins:
       verify_ssl: true
       ca_cert: ""
 
+aws:
+  enabled: true
+  domain: HBEU
+  username: user@example.test
+  password: redacted
+
 visual:
   template_dir: ~/.efp/template/visual
   defaults:
@@ -207,6 +215,7 @@ Config node ownership:
 - `jenkins`: Jenkins instances, defaults, auth, TLS, and crumb behavior.
 - `copilot`: GitHub/Copilot authentication shared by commands that use Copilot-backed APIs.
 - `inspect_image`: inspect-image API defaults, model defaults, image limits, and privacy settings.
+- `aws`: AWS authorization settings used by `aws-auth login`.
 - `visual`: offline artifact template directory and default render behavior.
 
 ## Jenkins Examples
@@ -377,7 +386,7 @@ visual schema render --json
 visual schema inspect-input --json
 ```
 
-For agents, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. For `visual`, run `visual template categories --json`, `visual template list --category <category> --json`, `visual template get <template-id> --json`, and `visual template schema <template-id> --json` before render. Generate input JSON from the template schema and `visual_design`, inspect readability with `visual inspect-input`, revise low relation coverage, repetitive edge kinds, long labels, missing importance, or missing edge visibility before rendering, validate it, render to a new output directory, and return `data.artifact.entrypoint`. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. For `visual`, run `visual template categories --json`, `visual template list --category <category> --json`, `visual template get <template-id> --json`, and `visual template schema <template-id> --json` before render. Generate input JSON from the template schema and `visual_design`, inspect readability with `visual inspect-input`, revise low relation coverage, repetitive edge kinds, long labels, missing importance, or missing edge visibility before rendering, validate it, render to a new output directory, and return `data.artifact.entrypoint`. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
 
 For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jira issue. When a user asks to update case `X` in cycle `Y`, prefer `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; use `execution resolve` or `cycle resolve` first when the target is ambiguous, and use `status list` rather than hard-coding numeric status ids.
 
@@ -446,4 +455,4 @@ scripts\smoke.bat
 
 Tags matching `v*` trigger the release workflow. Release archives are named `engineering-flow-platform-tools_<version>_<goos>_<goarch>`.
 
-Current archives include `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, `visual`, `templates/visual/**`, README, and docs.
+Current archives include `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, `visual`, `templates/visual/**`, README, and docs.

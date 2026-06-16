@@ -21,6 +21,7 @@ jobs:
       - run: go build ./cmd/jira
       - run: go build ./cmd/confluence
       - run: go build ./cmd/jenkins
+      - run: go build ./cmd/aws-auth
       - run: go build ./cmd/browser
       - run: go build ./cmd/inspect-image
       - run: go build ./cmd/visual

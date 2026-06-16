@@ -51,6 +51,7 @@ jobs:
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/jira${{ matrix.ext }}" ./cmd/jira
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/confluence${{ matrix.ext }}" ./cmd/confluence
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/jenkins${{ matrix.ext }}" ./cmd/jenkins
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/aws-auth${{ matrix.ext }}" ./cmd/aws-auth
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/browser${{ matrix.ext }}" ./cmd/browser
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/inspect-image${{ matrix.ext }}" ./cmd/inspect-image
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/visual${{ matrix.ext }}" ./cmd/visual

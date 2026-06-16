@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	acmd "engineering-flow-platform-tools/internal/awsauth/commands"
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
 	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
@@ -34,6 +35,13 @@ func TestVersionJSONContract(t *testing.T) {
 		}},
 		{name: "jenkins", run: func(b *bytes.Buffer) error {
 			cmd := kcmd.NewRoot()
+			cmd.SetOut(b)
+			cmd.SetErr(b)
+			cmd.SetArgs([]string{"version", "--json"})
+			return cmd.Execute()
+		}},
+		{name: "aws-auth", run: func(b *bytes.Buffer) error {
+			cmd := acmd.NewRoot()
 			cmd.SetOut(b)
 			cmd.SetErr(b)
 			cmd.SetArgs([]string{"version", "--json"})
@@ -98,8 +106,10 @@ func TestBuildScriptsListRequiredTargets(t *testing.T) {
 		if !strings.Contains(s, "-ldflags") || !strings.Contains(s, "internal/version.Version") {
 			t.Fatalf("%s does not inject version ldflags", path)
 		}
-		if !strings.Contains(s, "./cmd/visual") {
-			t.Fatalf("%s missing visual build target", path)
+		for _, target := range []string{"./cmd/aws-auth", "./cmd/visual"} {
+			if !strings.Contains(s, target) {
+				t.Fatalf("%s missing build target %s", path, target)
+			}
 		}
 	}
 }
@@ -110,7 +120,7 @@ func TestReleaseWorkflowIncludesVisualTemplates(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(b)
-	for _, token := range []string{"./cmd/visual", "templates/visual"} {
+	for _, token := range []string{"./cmd/aws-auth", "./cmd/visual", "templates/visual"} {
 		if !strings.Contains(s, token) {
 			t.Fatalf("release workflow missing %s", token)
 		}

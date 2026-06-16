@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	acmd "engineering-flow-platform-tools/internal/awsauth/commands"
 	bcmd "engineering-flow-platform-tools/internal/browser/commands"
 	"engineering-flow-platform-tools/internal/clihelp"
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
@@ -17,6 +18,7 @@ import (
 
 func TestExecuteFallbackJSONForAllBinaries(t *testing.T) {
 	for name, root := range map[string]*cobra.Command{
+		"aws-auth":      acmd.NewRoot(),
 		"browser":       bcmd.NewRoot(),
 		"confluence":    ccmd.NewRoot(),
 		"inspect-image": icmd.NewRoot(),
@@ -43,6 +45,7 @@ func TestExecuteFallbackJSONForAllBinaries(t *testing.T) {
 
 func TestExecuteBadFormatFallbackForAllBinaries(t *testing.T) {
 	for name, root := range map[string]*cobra.Command{
+		"aws-auth":      acmd.NewRoot(),
 		"browser":       bcmd.NewRoot(),
 		"confluence":    ccmd.NewRoot(),
 		"inspect-image": icmd.NewRoot(),

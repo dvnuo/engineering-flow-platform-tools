@@ -7,7 +7,15 @@ type RootConfig struct {
 	Jira       ProductConfig `json:"jira" yaml:"jira"`
 	Confluence ProductConfig `json:"confluence" yaml:"confluence"`
 	Jenkins    ProductConfig `json:"jenkins" yaml:"jenkins"`
+	AWS        AWSConfig     `json:"aws" yaml:"aws"`
 	Visual     VisualConfig  `json:"visual" yaml:"visual"`
+}
+
+type AWSConfig struct {
+	Enabled  *bool  `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Domain   string `json:"domain,omitempty" yaml:"domain,omitempty"`
+	Username string `json:"username,omitempty" yaml:"username,omitempty"`
+	Password string `json:"password,omitempty" yaml:"password,omitempty"`
 }
 
 type VisualConfig struct {

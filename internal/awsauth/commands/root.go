@@ -1,10 +1,12 @@
 package commands
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"runtime"
@@ -79,39 +81,45 @@ func NewRootWithRunner(r commandRunner) *cobra.Command {
 	c.PersistentFlags().StringVar(&o.Format, "format", "table", "Output format: table|json|yaml.")
 	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "Print non-secret diagnostics when available.")
 	c.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "Preview authorization without running the provider command.")
-	c.AddCommand(loginCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	c.AddCommand(loginCmd(o), authCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
 	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
 		Product: "aws-auth",
 		Binary:  "aws-auth",
 		Short:   "Authorize AWS credentials from the shared EFP config",
 		Long: strings.TrimSpace(`aws-auth is a terminal-invoked CLI for agents and runtimes that need AWS authorization from the shared EFP config file.
 
-Configuration uses the shared EFP config file, normally ~/.efp/config.yaml, under the aws node. The login command reads the configured domain, username, and password and invokes the installed authorization provider without printing secrets.`),
+Configuration uses the shared EFP config file, normally ~/.efp/config.yaml, under the aws node. The auth login command stores the configured domain, username, and password. The login command reads that config and invokes the installed authorization provider with the account and role supplied for that login.`),
 		Examples: []string{
-			`aws-auth login --json`,
-			`aws-auth --config ~/.efp/config.yaml login --json`,
+			`printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`,
+			`aws-auth login --account 123456 --role ADFS-ReadOnly --json`,
+			`aws-auth login`,
+			`aws-auth --config ~/.efp/config.yaml login --account 123456 --role ADFS-ReadOnly --json`,
 			`aws-auth commands --json`,
 			`aws-auth schema login --json`,
 			`aws-auth help llm --json`,
 		},
+		Instructions: "copy cmd/aws-auth/aws-auth-cli.instructions.md to ~/.copilot/instructions/aws-auth-cli.instructions.md.",
 		Groups: map[string]string{
 			"login": "Authorize AWS credentials.",
+			"auth":  "Manage AWS authorization config.",
 		},
 	})
 	return c
 }
 
 func loginCmd(o *Opts) *cobra.Command {
-	return &cobra.Command{
+	var account string
+	var role string
+	c := &cobra.Command{
 		Use:   "login",
-		Short: "Authorize AWS credentials from configured account credentials.",
+		Short: "Authorize AWS credentials from saved auth config.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path, _ := config.ResolvePath(o.Config)
 			cfg, err := config.Load(path)
 			if err != nil {
 				return print(cmd, o, output.Failure("config_error", output.RedactString(err.Error()), "Check EFP_CONFIG or pass --config.", 400))
 			}
-			login, failure := buildLogin(cfg.AWS)
+			login, failure := buildLogin(cmd, cfg.AWS, loginOptions{Account: account, Role: role, Prompt: !o.JSON})
 			if failure != nil {
 				return print(cmd, o, *failure)
 			}
@@ -142,7 +150,7 @@ func loginCmd(o *Opts) *cobra.Command {
 				return print(cmd, o, output.Failure(
 					"auth_failed",
 					redactWithSecrets(message, login.password),
-					"Verify the configured AWS domain, username, and password.",
+					"Verify the configured AWS domain, username, password, and the supplied account and role.",
 					401,
 				))
 			}
@@ -157,6 +165,76 @@ func loginCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", data))
 		},
 	}
+	c.Flags().StringVar(&account, "account", "", "AWS account id to pass to adfs-assume.")
+	c.Flags().StringVar(&role, "role", "", "AWS role name to pass to adfs-assume.")
+	return c
+}
+
+func authCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "auth"}
+	login := &cobra.Command{Use: "login", RunE: func(cmd *cobra.Command, args []string) error {
+		path, _ := config.ResolvePath(o.Config)
+		cfg, err := loadConfigForWrite(path)
+		if err != nil {
+			return print(cmd, o, output.Failure("config_error", output.RedactString(err.Error()), "Check EFP_CONFIG or pass --config.", 400))
+		}
+		domain := singleLine(mustS(cmd, "domain"))
+		username := singleLine(mustS(cmd, "username"))
+		password, err := passwordFromFlags(cmd)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", output.RedactString(err.Error()), "Pipe the AWS password to --password-stdin.", 400))
+		}
+		if domain == "" || username == "" || password == "" {
+			return print(cmd, o, output.Failure("invalid_args", "domain, username, and password are required", "Use aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json.", 400))
+		}
+		if o.DryRun {
+			return print(cmd, o, output.Success("", map[string]any{
+				"configured":       false,
+				"dry_run":          true,
+				"config_path":      path,
+				"domain":           domain,
+				"username":         username,
+				"password_present": true,
+			}))
+		}
+		enabled := true
+		cfg.AWS = config.AWSConfig{
+			Enabled:  &enabled,
+			Domain:   domain,
+			Username: username,
+			Password: password,
+		}
+		if err := config.Save(path, cfg); err != nil {
+			return print(cmd, o, output.Failure("config_error", output.RedactString(err.Error()), "", 500))
+		}
+		return print(cmd, o, output.Success("", map[string]any{
+			"configured":       true,
+			"config_path":      path,
+			"domain":           domain,
+			"username":         username,
+			"password_present": true,
+		}))
+	}}
+	login.Flags().String("domain", "", "ADFS domain, for example HBEU.")
+	login.Flags().String("username", "", "ADFS username.")
+	login.Flags().Bool("password-stdin", false, "Read the ADFS password from stdin.")
+	c.AddCommand(login)
+
+	status := &cobra.Command{Use: "status", RunE: func(cmd *cobra.Command, args []string) error {
+		path, _ := config.ResolvePath(o.Config)
+		cfg, err := config.Load(path)
+		if err != nil {
+			return print(cmd, o, output.Failure("config_missing", output.RedactString(err.Error()), "Run aws-auth auth login --json first.", 404))
+		}
+		aws := config.RedactAWS(cfg.AWS)
+		return print(cmd, o, output.Success("", map[string]any{
+			"configured":  bool(aws.Enabled == nil || *aws.Enabled) && singleLine(cfg.AWS.Domain) != "" && singleLine(cfg.AWS.Username) != "" && cleanSecret(cfg.AWS.Password) != "",
+			"config_path": path,
+			"aws":         aws,
+		}))
+	}}
+	c.AddCommand(status)
+	return c
 }
 
 type loginSpec struct {
@@ -166,24 +244,102 @@ type loginSpec struct {
 	password string
 }
 
-func buildLogin(aws config.AWSConfig) (loginSpec, *output.Envelope) {
+type loginOptions struct {
+	Account string
+	Role    string
+	Prompt  bool
+}
+
+func buildLogin(cmd *cobra.Command, aws config.AWSConfig, opts loginOptions) (loginSpec, *output.Envelope) {
 	if aws.Enabled != nil && !*aws.Enabled {
-		failure := output.Failure("config_missing", "AWS authorization is not configured.", "Set AWS domain, username, and password in the EFP config.", 400)
+		failure := output.Failure("config_missing", "AWS authorization is not configured.", "Set AWS domain, username, and password with aws-auth auth login.", 400)
 		return loginSpec{}, &failure
 	}
 	domain := singleLine(aws.Domain)
 	username := singleLine(aws.Username)
 	password := cleanSecret(aws.Password)
 	if domain == "" || username == "" || password == "" {
-		failure := output.Failure("config_missing", "AWS authorization is not configured.", "Set AWS domain, username, and password in the EFP config.", 400)
+		failure := output.Failure("config_missing", "AWS authorization is not configured.", "Set AWS domain, username, and password with aws-auth auth login.", 400)
 		return loginSpec{}, &failure
 	}
+	account := singleLine(opts.Account)
+	role := singleLine(opts.Role)
+	if opts.Prompt {
+		var err error
+		account, role, err = promptAccountRole(cmd, account, role)
+		if err != nil {
+			failure := output.Failure("invalid_args", output.RedactString(err.Error()), "Pass --account and --role when running aws-auth login.", 400)
+			return loginSpec{}, &failure
+		}
+	}
+	if account == "" || role == "" {
+		failure := output.Failure("invalid_args", "account and role are required for AWS login.", "Pass --account and --role when running aws-auth login.", 400)
+		return loginSpec{}, &failure
+	}
+	loginArgs := []string{"--domain", domain, "--username", username, "--role", role, "--account", account, "--no-warning", "--display-token", "--jenkins"}
 	return loginSpec{
 		command:  adfsAssumeCommand,
-		args:     []string{"--jenkins", "-n", "-d", domain, "-u", username},
+		args:     loginArgs,
 		env:      withADPass(os.Environ(), password),
 		password: password,
 	}, nil
+}
+
+func loadConfigForWrite(path string) (config.RootConfig, error) {
+	cfg, err := config.Load(path)
+	if err == nil {
+		return cfg, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return config.RootConfig{Version: 1}, nil
+	}
+	return cfg, err
+}
+
+func passwordFromFlags(cmd *cobra.Command) (string, error) {
+	if !mustB(cmd, "password-stdin") {
+		return "", errors.New("missing --password-stdin")
+	}
+	secret, err := io.ReadAll(cmd.InOrStdin())
+	if err != nil {
+		return "", fmt.Errorf("failed to read --password-stdin: %w", err)
+	}
+	password := cleanSecret(string(secret))
+	if password == "" {
+		return "", errors.New("password is empty")
+	}
+	return password, nil
+}
+
+func promptAccountRole(cmd *cobra.Command, account, role string) (string, string, error) {
+	reader := bufio.NewReader(cmd.InOrStdin())
+	var err error
+	if account == "" {
+		account, err = promptLine(cmd, reader, "AWS account")
+		if err != nil {
+			return "", "", err
+		}
+	}
+	if role == "" {
+		role, err = promptLine(cmd, reader, "AWS role")
+		if err != nil {
+			return "", "", err
+		}
+	}
+	return account, role, nil
+}
+
+func promptLine(cmd *cobra.Command, reader *bufio.Reader, label string) (string, error) {
+	_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%s: ", label)
+	value, err := reader.ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", err
+	}
+	value = singleLine(value)
+	if value == "" {
+		return "", fmt.Errorf("%s is required", strings.ToLower(label))
+	}
+	return value, nil
 }
 
 func withADPass(env []string, password string) []string {
@@ -216,6 +372,16 @@ func cleanSecret(value string) string {
 
 func singleLine(value string) string {
 	return strings.Join(strings.Fields(strings.ReplaceAll(strings.ReplaceAll(value, "\x00", ""), "\r", " ")), " ")
+}
+
+func mustS(cmd *cobra.Command, name string) string {
+	v, _ := cmd.Flags().GetString(name)
+	return v
+}
+
+func mustB(cmd *cobra.Command, name string) bool {
+	v, _ := cmd.Flags().GetBool(name)
+	return v
 }
 
 func formatCommand(command string, args []string) string {
@@ -278,7 +444,8 @@ func helpLLMCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "help llm", RunE: func(cmd *cobra.Command, args []string) error {
 		tips := []string{
 			"For agents, --json is the default way to use every aws-auth command and subcommand.",
-			"Use aws-auth login --json to authorize AWS credentials from the shared EFP config.",
+			"Use aws-auth auth login --password-stdin --json to store AWS auth config without putting the password in shell history.",
+			"Use aws-auth login --account <account-id> --role <role-name> --json to authorize AWS credentials from the shared EFP config.",
 			"Use --config or EFP_CONFIG when the caller manages an isolated config file.",
 			"Inspect error.code and error.hint before retrying.",
 		}

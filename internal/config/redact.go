@@ -10,7 +10,13 @@ func RedactRoot(c RootConfig) RootConfig {
 	for i := range c.Jenkins.Instances {
 		c.Jenkins.Instances[i].Auth = RedactAuth(c.Jenkins.Instances[i].Auth)
 	}
+	c.AWS = RedactAWS(c.AWS)
 	return c
+}
+
+func RedactAWS(a AWSConfig) AWSConfig {
+	a.Password = redact(a.Password)
+	return a
 }
 
 func RedactAuth(a AuthConfig) AuthConfig {

@@ -1,16 +1,26 @@
 # LLM/Agent Usage
 
-- For agents, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
+- For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
 - Only omit `--json` when intentionally reading human-oriented `--help` text or when a documented interactive human prompt requires text output.
 - Use --instance when multiple instances are configured.
 - Full Jira/Confluence URLs can auto-select the instance.
 - Use --dry-run before write operations.
 - Use --yes for destructive operations.
 - Inspect error.code and error.hint before retrying.
-- Command parsing failures across `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` return a JSON `invalid_args` envelope when `--json` is present.
+- Command parsing failures across `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` return a JSON `invalid_args` envelope when `--json` is present.
 - On Windows `cmd`, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`; avoid Bash-only quoting and commands.
 - If PATH lookup is unstable, run `where <binary>` and invoke the exact `.exe` path with double quotes.
-- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
+- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, `cmd/aws-auth/aws-auth-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
+
+## AWS Auth
+
+- Use `aws-auth` to store ADFS AWS auth config and run the `adfs-assume` authorization flow.
+- Configure it with `printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`.
+- Do not pass passwords as command-line flags. Use `--password-stdin`.
+- Run `aws-auth auth status --json` to inspect configured state with the password redacted.
+- Run `aws-auth login --account 123456 --role ADFS-ReadOnly --json` to authorize credentials for a specific account and role.
+- Human interactive `aws-auth login` may omit `--json` so the CLI can prompt for a missing account or role.
+- If login fails with `execution_failed`, check that `adfs-assume` is installed and on `PATH`.
 
 ## Visual Artifact Usage
 
@@ -172,7 +182,7 @@ Recommended public templates:
 
 ## Recommended Workflow
 
-1. Discover commands with `jira commands --json`, `confluence commands --json`, `jenkins commands --json`, `browser commands --json`, `inspect-image commands --json`, or `visual commands --json`.
+1. Discover commands with `jira commands --json`, `confluence commands --json`, `jenkins commands --json`, `aws-auth commands --json`, `browser commands --json`, `inspect-image commands --json`, or `visual commands --json`.
 2. Inspect the exact command schema before constructing arguments.
 3. Prefer full Jira issue URLs or Confluence page URLs when the user provides them.
 4. Add `--instance` when the URL is ambiguous across configured instances.

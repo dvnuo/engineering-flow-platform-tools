@@ -1484,6 +1484,12 @@ func flagDescription(command, name string) string {
 		return "Zephyr test cycle id."
 	case "folder-id":
 		return "Zephyr test cycle folder id."
+	case "folder-name":
+		return "Zephyr test cycle folder name to resolve, create, or use as a filter."
+	case "create-folder":
+		return "Create the named Zephyr folder when --folder-name is provided and no matching folder exists."
+	case "folder-description":
+		return "Description to use when creating a Zephyr folder with --create-folder."
 	case "execution-id":
 		return "Zephyr test execution id."
 	case "execution-ids":

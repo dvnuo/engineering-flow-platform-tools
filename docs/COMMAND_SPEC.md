@@ -2,7 +2,8 @@
 
 ## Common Conventions
 
-- For agent workflows, default every `jira`, `confluence`, `jenkins`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json`.
+- For agent workflows, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json`.
+- `aws-auth login` invokes `adfs-assume` with `--profile saml` by default.
 - `--json` returns the stable `ok/data/error` envelope.
 - Command parsing failures return `ok=false` with `error.code=invalid_args` when `--json` is present.
 - `--format table|json|yaml` selects output rendering where supported.

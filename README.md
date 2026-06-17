@@ -48,7 +48,7 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
 
-For Jira, Confluence, Jenkins, and AWS auth, copy `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, and `cmd/aws-auth/aws-auth-cli.instructions.md` into `~/.copilot/instructions/` so Copilot understands the JSON envelope, `--dry-run`, `--yes`, instance selection, auth config, and error recovery conventions.
+For Jira, Confluence, Jenkins, and AWS auth, copy `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, and `cmd/aws-auth/aws-auth-cli.instructions.md` into `~/.copilot/instructions/` so Copilot understands the JSON envelope, `--dry-run`, `--yes`, instance selection, AWS `saml` profile authorization, auth config, and error recovery conventions.
 
 All CLI binaries return a stable JSON `invalid_args` envelope for command parsing failures when `--json` is present. On Windows `cmd`, use double quotes and `where <binary>` to resolve unstable PATH behavior.
 
@@ -222,6 +222,19 @@ Config node ownership:
 - `aws`: AWS authorization settings used by `aws-auth login`.
 - `visual`: offline artifact template directory and default render behavior.
 
+## AWS Auth Examples
+
+```bash
+printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json
+aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json
+aws-auth --config ~/.efp/config.yaml login --account 123456 --role ADFS-ReadOnly --profile saml --json
+aws-auth commands --json
+aws-auth schema login --json
+aws-auth help llm --json
+```
+
+`aws-auth login` invokes `adfs-assume` with `--profile saml` by default and passes the configured password through `AD_PASS` instead of command arguments.
+
 ## Jenkins Examples
 
 ```bash
@@ -376,6 +389,7 @@ Agents should first inspect available commands:
 jira commands --json
 confluence commands --json
 jenkins commands --json
+aws-auth commands --json
 browser commands --json
 inspect-image commands --json
 visual commands --json
@@ -387,13 +401,14 @@ Then inspect the exact schema before calling a command:
 jira schema issue.create --json
 confluence schema page.create --json
 jenkins schema job.build-with-params --json
+aws-auth schema login --json
 browser schema page.fetch --json
 inspect-image schema inspect --json
 visual schema render --json
 visual schema inspect-input --json
 ```
 
-For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. For `visual`, run `visual template categories --json`, `visual template list --category <category> --json`, `visual template get <template-id> --json`, and `visual template schema <template-id> --json` before render. Generate input JSON from the template schema and `visual_design`, inspect readability with `visual inspect-input`, revise low relation coverage, repetitive edge kinds, long labels, missing importance, or missing edge visibility before rendering, validate it, render to a new output directory, and return `data.artifact.entrypoint`. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. `aws-auth login` uses `adfs-assume --profile saml` by default. For `visual`, run `visual template categories --json`, `visual template list --category <category> --json`, `visual template get <template-id> --json`, and `visual template schema <template-id> --json` before render. Generate input JSON from the template schema and `visual_design`, inspect readability with `visual inspect-input`, revise low relation coverage, repetitive edge kinds, long labels, missing importance, or missing edge visibility before rendering, validate it, render to a new output directory, and return `data.artifact.entrypoint`. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
 
 For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jira issue. When a user asks to update case `X` in cycle `Y`, prefer `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; use `execution resolve` or `cycle resolve` first when the target is ambiguous, and use `status list` rather than hard-coding numeric status ids.
 

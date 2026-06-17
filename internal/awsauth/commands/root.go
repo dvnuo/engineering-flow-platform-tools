@@ -21,8 +21,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const adfsAssumeCommand = "adfs-assume"
-const envAdapterStateDir = "EFP_ADAPTER_STATE_DIR"
+const (
+	adfsAssumeCommand     = "adfs-assume"
+	envAdapterStateDir    = "EFP_ADAPTER_STATE_DIR"
+	defaultAWSAuthProfile = "saml"
+)
 
 var redactedSecretPlaceholders = map[string]struct{}{
 	"***redacted***": {},
@@ -93,9 +96,9 @@ func NewRootWithRunner(r commandRunner) *cobra.Command {
 Configuration uses the shared EFP config file, normally ~/.efp/config.yaml, under the aws node. The auth login command stores the configured domain, username, and password. The login command reads that config and invokes the installed authorization provider with the account and role supplied for that login.`),
 		Examples: []string{
 			`printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`,
-			`aws-auth login --account 123456 --role ADFS-ReadOnly --profile default --json`,
+			`aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json`,
 			`aws-auth login`,
-			`aws-auth --config ~/.efp/config.yaml login --account 123456 --role ADFS-ReadOnly --profile default --json`,
+			`aws-auth --config ~/.efp/config.yaml login --account 123456 --role ADFS-ReadOnly --profile saml --json`,
 			`aws-auth commands --json`,
 			`aws-auth schema login --json`,
 			`aws-auth help llm --json`,
@@ -169,7 +172,7 @@ func loginCmd(o *Opts) *cobra.Command {
 	}
 	c.Flags().StringVar(&account, "account", "", "AWS account id to pass to adfs-assume.")
 	c.Flags().StringVar(&role, "role", "", "AWS role name to pass to adfs-assume.")
-	c.Flags().StringVar(&profile, "profile", "default", "AWS credentials profile name to create with adfs-assume.")
+	c.Flags().StringVar(&profile, "profile", defaultAWSAuthProfile, "AWS credentials profile name to create with adfs-assume.")
 	return c
 }
 
@@ -284,7 +287,7 @@ func buildLogin(cmd *cobra.Command, aws config.AWSConfig, opts loginOptions) (lo
 	}
 	profile := singleLine(opts.Profile)
 	if profile == "" {
-		profile = "default"
+		profile = defaultAWSAuthProfile
 	}
 	loginArgs := []string{"--domain", domain, "--username", username, "--role", role, "--account", account, "--profile", profile, "--no-warning", "--display-token", "--jenkins"}
 	return loginSpec{
@@ -517,7 +520,8 @@ func helpLLMCmd(o *Opts) *cobra.Command {
 		tips := []string{
 			"For agents, --json is the default way to use every aws-auth command and subcommand.",
 			"Use aws-auth auth login --password-stdin --json to store AWS auth config without putting the password in shell history.",
-			"Use aws-auth login --account <account-id> --role <role-name> --profile default --json to authorize default AWS credentials from the shared EFP config.",
+			"Use aws-auth login --account <account-id> --role <role-name> --profile saml --json to authorize AWS credentials from the shared EFP config.",
+			"aws-auth login invokes adfs-assume with --profile saml by default.",
 			"Use --config or EFP_CONFIG when the caller manages an isolated config file.",
 			"Inspect error.code and error.hint before retrying.",
 		}

@@ -114,7 +114,7 @@ aws:
 		t.Fatalf("unexpected command: %s", call.command)
 	}
 	args := strings.Join(call.args, " ")
-	for _, token := range []string{"--domain HBEU", "--username aws-user", "--role ADFS-ReadOnly", "--account 123456", "--profile default", "--no-warning", "--display-token", "--jenkins"} {
+	for _, token := range []string{"--domain HBEU", "--username aws-user", "--role ADFS-ReadOnly", "--account 123456", "--profile saml", "--no-warning", "--display-token", "--jenkins"} {
 		if !strings.Contains(args, token) {
 			t.Fatalf("missing %q in args %#v", token, call.args)
 		}
@@ -133,7 +133,7 @@ aws:
 	if data["authenticated"] != true {
 		t.Fatalf("expected authenticated data: %#v", data)
 	}
-	if !strings.Contains(data["command"].(string), "adfs-assume --domain HBEU --username aws-user --role ADFS-ReadOnly --account 123456 --profile default --no-warning --display-token --jenkins") {
+	if !strings.Contains(data["command"].(string), "adfs-assume --domain HBEU --username aws-user --role ADFS-ReadOnly --account 123456 --profile saml --no-warning --display-token --jenkins") {
 		t.Fatalf("unexpected command data: %#v", data)
 	}
 }

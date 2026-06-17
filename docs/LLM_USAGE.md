@@ -2,6 +2,7 @@
 
 - For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
 - Only omit `--json` when intentionally reading human-oriented `--help` text or when a documented interactive human prompt requires text output.
+- Use `aws-auth login --account <account-id> --role <role-name> --json` for AWS authorization; it invokes `adfs-assume` with `--profile saml` by default.
 - Use --instance when multiple instances are configured.
 - Full Jira/Confluence URLs can auto-select the instance.
 - Use --dry-run before write operations.
@@ -19,7 +20,8 @@
 - Do not pass passwords as command-line flags. Use `--password-stdin`.
 - Run `aws-auth auth status --json` to inspect configured state with the password redacted.
 - `aws-auth` ignores `ATLASSIAN_CONFIG`; use `--config` or `EFP_CONFIG` for an explicit AWS auth config path.
-- Run `aws-auth login --account 123456 --role ADFS-ReadOnly --profile default --json` to authorize default AWS credentials for a specific account and role.
+- Run `aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json` to authorize AWS credentials for a specific account and role.
+- `--profile` defaults to `saml`.
 - Human interactive `aws-auth login` may omit `--json` so the CLI can prompt for a missing account or role.
 - If login fails with `execution_failed`, check that `adfs-assume` is installed and on `PATH`.
 

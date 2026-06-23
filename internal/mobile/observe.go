@@ -98,6 +98,7 @@ type CandidateScore struct {
 
 var boundsPattern = regexp.MustCompile(`\[(\d+),(\d+)\]\[(\d+),(\d+)\]`)
 
+// Deprecated: use BuildObservationStrict in production paths so malformed source is reported.
 func BuildObservation(runID, sessionID, obsID, source string, screenshot []byte, limit int) Observation {
 	obs, _ := buildObservation(runID, sessionID, obsID, source, screenshot, limit)
 	return obs
@@ -147,6 +148,7 @@ func LimitObservationCandidates(obs Observation, limit int) Observation {
 	return obs
 }
 
+// Deprecated: use ExtractCandidatesStrict in production paths so malformed source is reported.
 func ExtractCandidates(source, obsID string) []Candidate {
 	candidates, _ := ExtractCandidatesStrict(source, obsID)
 	return candidates

@@ -113,6 +113,38 @@ func TestTunnelStatusMarksDeadManagedProcessExited(t *testing.T) {
 	}
 }
 
+func TestTunnelStatusMarksOwnershipUnverifiedForMismatchedPID(t *testing.T) {
+	store := NewStateStore(filepath.Join(t.TempDir(), "state"), filepath.Join(t.TempDir(), "artifacts"))
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	mgr := &TunnelManager{Store: store}
+	state := TunnelState{
+		Version:         1,
+		RunID:           "run-1",
+		Managed:         true,
+		PID:             os.Getpid(),
+		BinaryPath:      filepath.Join(t.TempDir(), "not-browserstack-local"),
+		LocalIdentifier: "local-1",
+		Owner:           "efp-mobile",
+		Status:          "running",
+		Deadline:        time.Now().UTC().Add(time.Hour),
+	}
+	if err := mgr.Save(state); err != nil {
+		t.Fatal(err)
+	}
+	got, err := mgr.Status("run-1", "local-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != "ownership_unverified" {
+		t.Fatalf("status=%s", got.Status)
+	}
+	if TunnelReusable(state, time.Now().UTC()) {
+		t.Fatal("ownership-mismatched tunnel should not be reusable")
+	}
+}
+
 func TestInspectLocalReadyLog(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tunnel.log")
 	if err := os.WriteFile(path, []byte("[SUCCESS] You can now access your local server(s) in our remote browser"), 0o600); err != nil {
@@ -123,6 +155,20 @@ func TestInspectLocalReadyLog(t *testing.T) {
 		t.Fatalf("ready=%v failed=%q", ready, failed)
 	}
 	if err := os.WriteFile(path, []byte("[ERROR] Could not connect to BrowserStack"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ready, failed = inspectLocalReadyLog(path)
+	if ready || failed == "" {
+		t.Fatalf("ready=%v failed=%q", ready, failed)
+	}
+	if err := os.WriteFile(path, []byte("[ERROR] Could not connect to BrowserStack\n[SUCCESS] You can now access your local server(s) in our remote browser"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ready, failed = inspectLocalReadyLog(path)
+	if !ready || failed != "" {
+		t.Fatalf("ready=%v failed=%q", ready, failed)
+	}
+	if err := os.WriteFile(path, []byte("[SUCCESS] You can now access your local server(s) in our remote browser\n[ERROR] Could not connect to BrowserStack"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	ready, failed = inspectLocalReadyLog(path)

@@ -22,6 +22,7 @@ import (
 const w3cElementKey = "element-6066-11e4-a52e-4f735466cecf"
 const maxErrorSnippet = 2048
 const defaultHTTPTimeout = 10 * time.Minute
+const sessionResponseHeaderTimeout = 5 * time.Minute
 
 var authPattern = regexp.MustCompile(`(?i)\b(?:basic|bearer)\s+[A-Za-z0-9._~+/\-=]+`)
 
@@ -43,7 +44,7 @@ func New(baseURL string, creds browserstack.Credentials, verifySSL bool, caCert 
 	tr.Proxy = http.ProxyFromEnvironment
 	tr.TLSClientConfig = &tls.Config{}
 	tr.TLSHandshakeTimeout = 10 * time.Second
-	tr.ResponseHeaderTimeout = 60 * time.Second
+	tr.ResponseHeaderTimeout = sessionResponseHeaderTimeout
 	tr.IdleConnTimeout = 90 * time.Second
 	if !verifySSL {
 		tr.TLSClientConfig.InsecureSkipVerify = true

@@ -72,6 +72,8 @@ mobile run finish --run-id run-... --status passed --collect-artifacts --json
 
 Set `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` for live BrowserStack calls. To store them in `~/.efp/config.yaml` instead, run `printf '%s\n' "$BROWSERSTACK_ACCESS_KEY" | mobile auth login --username "$BROWSERSTACK_USERNAME" --access-key-stdin --json`; environment variables still take precedence. Use `--network public` for public sessions. Use `private-managed` only when the BrowserStack device needs private/internal hosts and `BrowserStackLocal` is configured.
 
+Current validation is strongest for Android native public sessions and mock/unit coverage. Treat `private-managed` Local, iOS native, hybrid WebView source semantics, and long human handoff/resume as beta until they are verified against live BrowserStack devices in your environment.
+
 For Jira, Confluence, Jenkins, and AWS auth, copy `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, and `cmd/aws-auth/aws-auth-cli.instructions.md` into `~/.copilot/instructions/` so Copilot understands the JSON envelope, `--dry-run`, `--yes`, instance selection, AWS `saml` profile authorization, auth config, and error recovery conventions.
 
 All CLI binaries return a stable JSON `invalid_args` envelope for command parsing failures when `--json` is present. On Windows `cmd`, use double quotes and `where <binary>` to resolve unstable PATH behavior.

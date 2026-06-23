@@ -61,6 +61,9 @@ func TestClientHasBoundedHTTPTimeouts(t *testing.T) {
 	if tr.TLSHandshakeTimeout <= 0 || tr.ResponseHeaderTimeout <= 0 || tr.IdleConnTimeout <= 0 {
 		t.Fatalf("transport timeouts not set: %#v", tr)
 	}
+	if tr.ResponseHeaderTimeout != sessionResponseHeaderTimeout {
+		t.Fatalf("response header timeout=%s", tr.ResponseHeaderTimeout)
+	}
 }
 
 func TestCreateSessionPrivateUsesBooleanLocalCapability(t *testing.T) {

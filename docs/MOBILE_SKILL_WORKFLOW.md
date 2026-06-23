@@ -2,6 +2,8 @@
 
 This document shows how an EFP skill can orchestrate `mobile` from a natural-language test scenario without BrowserStack AI or MCP.
 
+The static test suite validates command behavior, payloads, parsing, and error envelopes. Live production acceptance should still include at least one Android native public run, one private-managed Local run, one iOS native run, and a long human handoff/resume on BrowserStack devices before treating the workflow as fully production-ready.
+
 1. Discover the CLI contract.
 
 ```bash
@@ -62,4 +64,3 @@ mobile run finish --run-id run-... --status passed --collect-artifacts --json
 ```
 
 Skill authors should branch on `error.code`, not message text. Recover from `stale_observation` by observing again, from `ambiguous_element` by adding stable semantic criteria, from `control_locked` by resuming after human handoff, and from `capacity_wait_timeout` by retrying later or reducing required capacity.
-

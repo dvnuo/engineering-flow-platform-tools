@@ -46,6 +46,8 @@ type TunnelStartRequest struct {
 	ReadyTimeout    time.Duration
 }
 
+var localErrorMarkers = []string{"[error]", "could not connect", "failed to", "invalid auth", "authentication failed"}
+
 func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 	if req.NetworkMode == "" || req.NetworkMode == "public" {
 		return TunnelState{Managed: false, LocalIdentifier: "", Status: "not_required"}, nil
@@ -197,16 +199,21 @@ func inspectLocalReadyLog(path string) (bool, string) {
 	if err != nil {
 		return false, ""
 	}
-	lower := strings.ToLower(string(b))
-	if strings.Contains(lower, "you can now access your local server") {
-		return true, ""
-	}
-	for _, marker := range []string{"[error]", "could not connect", "failed to", "invalid auth", "authentication failed"} {
-		if strings.Contains(lower, marker) {
-			return false, marker
+	lastReady := false
+	lastFailure := ""
+	for _, line := range strings.Split(strings.ToLower(string(b)), "\n") {
+		if strings.Contains(line, "you can now access your local server") {
+			lastReady = true
+			lastFailure = ""
+		}
+		for _, marker := range localErrorMarkers {
+			if strings.Contains(line, marker) {
+				lastReady = false
+				lastFailure = marker
+			}
 		}
 	}
-	return false, ""
+	return lastReady, lastFailure
 }
 
 func terminateStartedTunnel(cmd *exec.Cmd, exited <-chan error) {
@@ -300,6 +307,9 @@ func (m *TunnelManager) Status(runID, identifier string) (TunnelState, error) {
 	if err != nil {
 		return TunnelState{}, err
 	}
+	if st.Managed && st.PID != 0 && st.Status == "" {
+		st.Status = "running"
+	}
 	if st.Managed && (st.Status == "running" || st.Status == "starting") && st.PID != 0 && !processRunning(st.PID) {
 		st.Status = "exited"
 		_ = m.Save(st)
@@ -310,14 +320,23 @@ func (m *TunnelManager) Status(runID, identifier string) (TunnelState, error) {
 		_ = m.Save(st)
 		return st, nil
 	}
-	if st.Managed && st.PID != 0 && st.Status == "" {
-		st.Status = "running"
+	if st.Managed && (st.Status == "running" || st.Status == "starting") && st.PID != 0 && !processOwnedByTunnel(st) {
+		st.Status = "ownership_unverified"
+		_ = m.Save(st)
+		return st, nil
+	}
+	if st.Managed && st.Status == "running" {
+		if _, failed := inspectLocalReadyLog(st.LogPath); failed != "" {
+			st.Status = "connection_failed"
+			_ = m.Save(st)
+			return st, nil
+		}
 	}
 	return st, nil
 }
 
 func TunnelReusable(st TunnelState, now time.Time) bool {
-	return st.Status == "running" && !tunnelDeadlineExpired(st, now)
+	return st.Status == "running" && !tunnelDeadlineExpired(st, now) && st.Managed && processRunning(st.PID) && processOwnedByTunnel(st)
 }
 
 func tunnelDeadlineExpired(st TunnelState, now time.Time) bool {

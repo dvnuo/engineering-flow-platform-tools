@@ -81,6 +81,55 @@ func TestTunnelStatusMarksExpiredRunningTunnel(t *testing.T) {
 	}
 }
 
+func TestTunnelStatusMarksDeadManagedProcessExited(t *testing.T) {
+	store := NewStateStore(filepath.Join(t.TempDir(), "state"), filepath.Join(t.TempDir(), "artifacts"))
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	mgr := &TunnelManager{Store: store}
+	state := TunnelState{
+		Version:         1,
+		RunID:           "run-1",
+		Managed:         true,
+		PID:             99999999,
+		LocalIdentifier: "local-1",
+		Owner:           "efp-mobile",
+		Status:          "running",
+		Deadline:        time.Now().UTC().Add(time.Hour),
+	}
+	if err := mgr.Save(state); err != nil {
+		t.Fatal(err)
+	}
+	got, err := mgr.Status("run-1", "local-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != "exited" {
+		t.Fatalf("status=%s", got.Status)
+	}
+	if TunnelReusable(got, time.Now().UTC()) {
+		t.Fatal("exited tunnel should not be reusable")
+	}
+}
+
+func TestInspectLocalReadyLog(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tunnel.log")
+	if err := os.WriteFile(path, []byte("[SUCCESS] You can now access your local server(s) in our remote browser"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ready, failed := inspectLocalReadyLog(path)
+	if !ready || failed != "" {
+		t.Fatalf("ready=%v failed=%q", ready, failed)
+	}
+	if err := os.WriteFile(path, []byte("[ERROR] Could not connect to BrowserStack"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ready, failed = inspectLocalReadyLog(path)
+	if ready || failed == "" {
+		t.Fatalf("ready=%v failed=%q", ready, failed)
+	}
+}
+
 func TestMarkExitedOnlyWhenTunnelStillRunning(t *testing.T) {
 	store := NewStateStore(filepath.Join(t.TempDir(), "state"), filepath.Join(t.TempDir(), "artifacts"))
 	if err := store.Ensure(); err != nil {
@@ -154,6 +203,9 @@ func TestCleanupOrphansStopsStandaloneManagedTunnel(t *testing.T) {
 func TestLocalBinaryArgsDoNotExposeAccessKey(t *testing.T) {
 	secret := "bs-secret-value"
 	args := localBinaryArgs("local.yml", "local-1", config.MobileLocalConfig{})
+	if !containsArg(args, "--enable-logging-for-api") {
+		t.Fatalf("local API logging flag missing: %#v", args)
+	}
 	for _, arg := range args {
 		if arg == "--key" {
 			t.Fatalf("argv should not pass --key: %#v", args)
@@ -169,4 +221,13 @@ func TestLocalBinaryArgsDoNotExposeAccessKey(t *testing.T) {
 	if strings.Contains(cfg, "--key") {
 		t.Fatalf("config should not use argv flag syntax: %s", cfg)
 	}
+}
+
+func containsArg(args []string, want string) bool {
+	for _, arg := range args {
+		if arg == want {
+			return true
+		}
+	}
+	return false
 }

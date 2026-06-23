@@ -12,7 +12,9 @@ type CreateSessionRequest struct {
 	NetworkMode              string
 	LocalIdentifier          string
 	InteractiveDebugging     bool
+	Debug                    bool
 	Video                    bool
+	IdleTimeoutSeconds       int
 	NewCommandTimeoutSeconds int
 	ExtraCaps                map[string]any
 }

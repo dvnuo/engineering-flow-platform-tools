@@ -3,12 +3,14 @@ package appium
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"engineering-flow-platform-tools/internal/browserstack"
+	"engineering-flow-platform-tools/internal/mobile"
 )
 
 func TestCreateSessionPublicDoesNotSetLocal(t *testing.T) {
@@ -65,6 +67,60 @@ func TestCreateSessionPrivateUsesBooleanLocalCapability(t *testing.T) {
 	bs := caps["bstack:options"].(map[string]any)
 	if local, ok := bs["local"].(bool); !ok || !local {
 		t.Fatalf("local capability should be boolean true: %#v", bs["local"])
+	}
+}
+
+func TestCreateSessionSetsInteractiveDebuggingAndIdleTimeout(t *testing.T) {
+	var body map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		_, _ = w.Write([]byte(`{"value":{"sessionId":"abc","capabilities":{}}}`))
+	}))
+	defer srv.Close()
+	c, err := New(srv.URL, browserstack.Credentials{Username: "u", AccessKey: "k"}, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.CreateSession(context.Background(), CreateSessionRequest{
+		PlatformName:             "android",
+		AutomationName:           "UiAutomator2",
+		App:                      "bs://app",
+		DeviceName:               "Pixel",
+		InteractiveDebugging:     true,
+		Video:                    true,
+		IdleTimeoutSeconds:       300,
+		NewCommandTimeoutSeconds: 300,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	caps := body["capabilities"].(map[string]any)["alwaysMatch"].(map[string]any)
+	bs := caps["bstack:options"].(map[string]any)
+	if got, ok := bs["interactiveDebugging"].(bool); !ok || !got {
+		t.Fatalf("interactiveDebugging should be true: %#v", bs)
+	}
+	if _, ok := bs["debug"]; ok {
+		t.Fatalf("debug should not be used as an interactiveDebugging alias: %#v", bs)
+	}
+	if got, ok := bs["video"].(bool); !ok || !got {
+		t.Fatalf("video should be true: %#v", bs)
+	}
+	if got, ok := bs["idleTimeout"].(float64); !ok || got != 300 {
+		t.Fatalf("idleTimeout should be 300: %#v", bs)
+	}
+}
+
+func TestCreateSessionRejectsUnsupportedIdleTimeout(t *testing.T) {
+	c, err := New("http://127.0.0.1:1", browserstack.Credentials{Username: "u", AccessKey: "k"}, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.CreateSession(context.Background(), CreateSessionRequest{IdleTimeoutSeconds: 301})
+	var me *mobile.Error
+	if !errors.As(err, &me) || me.Code != "invalid_args" {
+		t.Fatalf("expected invalid_args mobile error, got %#v", err)
 	}
 }
 

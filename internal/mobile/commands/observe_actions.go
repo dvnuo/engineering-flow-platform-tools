@@ -55,7 +55,10 @@ func captureObservation(ctx context.Context, svc *services, st *mobile.RunState,
 	}
 	st.ObservationVersion++
 	obsID := mobile.NewObservationID(st.ObservationVersion)
-	obs := mobile.BuildObservation(st.RunID, st.SessionID, obsID, source, screen, limit)
+	obs, err := mobile.BuildObservationStrict(st.RunID, st.SessionID, obsID, source, screen)
+	if err != nil {
+		return mobile.Observation{}, err
+	}
 	dir := filepath.Join(svc.Store.ObservationDir(st.RunID), obs.ID)
 	obs.SourcePath = filepath.Join(dir, "source.xml")
 	obs.ScreenshotPath = filepath.Join(dir, "screenshot.png")
@@ -67,7 +70,7 @@ func captureObservation(ctx context.Context, svc *services, st *mobile.RunState,
 	if err := svc.Store.SaveRun(*st); err != nil {
 		return mobile.Observation{}, err
 	}
-	return obs, nil
+	return mobile.LimitObservationCandidates(obs, limit), nil
 }
 
 func locateCmd(o *Opts) *cobra.Command {

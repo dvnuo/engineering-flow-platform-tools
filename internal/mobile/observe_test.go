@@ -84,6 +84,53 @@ func TestExtractCandidatesKeepsNumericOrder(t *testing.T) {
 	}
 }
 
+func TestExtractCandidatesUsesAncestorParentHint(t *testing.T) {
+	source := `<hierarchy><node class="android.widget.LinearLayout" text="Delete account"><node class="android.widget.Button" text="OK" clickable="true"/></node></hierarchy>`
+	candidates := ExtractCandidates(source, "obs-1")
+	var button Candidate
+	for _, c := range candidates {
+		if c.Role == "button" {
+			button = c
+			break
+		}
+	}
+	if button.Ref == "" {
+		t.Fatal("button candidate not found")
+	}
+	if button.ParentHint != "Delete account" {
+		t.Fatalf("parent_hint=%q", button.ParentHint)
+	}
+	if len(button.NearbyText) != 1 || button.NearbyText[0] != "Delete account" {
+		t.Fatalf("nearby_text=%#v", button.NearbyText)
+	}
+}
+
+func TestBuildObservationStrictRejectsMalformedSource(t *testing.T) {
+	_, err := BuildObservationStrict("run-1", "session-1", "obs-1", `<hierarchy><node text="Login"></hierarchy>`, nil)
+	if err == nil {
+		t.Fatal("expected parse error")
+	}
+	me, ok := err.(*Error)
+	if !ok || me.Code != "source_parse_failed" {
+		t.Fatalf("unexpected error: %#v", err)
+	}
+}
+
+func TestLimitObservationCandidatesKeepsFullTotal(t *testing.T) {
+	source := `<hierarchy><node text="One"/><node text="Two"/><node text="Three"/></hierarchy>`
+	obs, err := BuildObservationStrict("run-1", "session-1", "obs-1", source, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(obs.Candidates) != 3 || obs.TotalCandidates != 3 {
+		t.Fatalf("full observation candidates=%d total=%d", len(obs.Candidates), obs.TotalCandidates)
+	}
+	limited := LimitObservationCandidates(obs, 2)
+	if len(limited.Candidates) != 2 || limited.TotalCandidates != 3 {
+		t.Fatalf("limited candidates=%d total=%d", len(limited.Candidates), limited.TotalCandidates)
+	}
+}
+
 func TestLocatorHintsEscapeXPathLiteral(t *testing.T) {
 	c := Candidate{Class: "android.widget.Button", Name: `Save John's "draft"`}
 	hints := LocatorHints(c)

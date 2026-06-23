@@ -57,3 +57,20 @@ func TestWithRunLockRecoversStaleLock(t *testing.T) {
 		t.Fatal("lock callback not called")
 	}
 }
+
+func TestAppCacheRequiresFutureExpiry(t *testing.T) {
+	now := time.Date(2026, 6, 23, 1, 2, 3, 0, time.UTC)
+	if AppCacheReusable(AppRef{AppURL: "bs://old"}, now) {
+		t.Fatal("cache without expiry should not be reusable")
+	}
+	ref := NormalizeAppCacheRef(AppRef{AppURL: "bs://app", SHA256: "sha"}, now)
+	if ref.UploadedAt.IsZero() || ref.ExpiresAt.IsZero() {
+		t.Fatalf("cache times were not populated: %#v", ref)
+	}
+	if !AppCacheReusable(ref, now.Add(time.Hour)) {
+		t.Fatal("fresh cache should be reusable")
+	}
+	if AppCacheReusable(ref, now.Add(AppCacheReuseWindow+time.Hour)) {
+		t.Fatal("expired cache should not be reusable")
+	}
+}

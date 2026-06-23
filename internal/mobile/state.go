@@ -13,6 +13,7 @@ import (
 )
 
 const staleLockAge = 30 * time.Minute
+const AppCacheReuseWindow = 25 * 24 * time.Hour
 
 type RunStatus string
 
@@ -59,10 +60,12 @@ type DeviceSelection struct {
 }
 
 type AppRef struct {
-	AppURL   string `json:"app_url,omitempty"`
-	CustomID string `json:"custom_id,omitempty"`
-	SHA256   string `json:"sha256,omitempty"`
-	Name     string `json:"name,omitempty"`
+	AppURL     string    `json:"app_url,omitempty"`
+	CustomID   string    `json:"custom_id,omitempty"`
+	SHA256     string    `json:"sha256,omitempty"`
+	Name       string    `json:"name,omitempty"`
+	UploadedAt time.Time `json:"uploaded_at,omitempty"`
+	ExpiresAt  time.Time `json:"expires_at,omitempty"`
 }
 
 type NetworkState struct {
@@ -220,6 +223,7 @@ func (s *StateStore) SaveAppCache(app AppRef) error {
 	if strings.TrimSpace(app.SHA256) == "" {
 		return nil
 	}
+	app = NormalizeAppCacheRef(app, time.Now().UTC())
 	if err := os.MkdirAll(filepath.Join(s.RootDir, "apps"), 0o700); err != nil {
 		return err
 	}
@@ -234,6 +238,20 @@ func (s *StateStore) LoadAppCache(sha string) (AppRef, error) {
 	}
 	err = json.Unmarshal(b, &app)
 	return app, err
+}
+
+func NormalizeAppCacheRef(app AppRef, now time.Time) AppRef {
+	if app.UploadedAt.IsZero() {
+		app.UploadedAt = now
+	}
+	if app.ExpiresAt.IsZero() {
+		app.ExpiresAt = app.UploadedAt.Add(AppCacheReuseWindow)
+	}
+	return app
+}
+
+func AppCacheReusable(app AppRef, now time.Time) bool {
+	return strings.TrimSpace(app.AppURL) != "" && !app.ExpiresAt.IsZero() && now.Before(app.ExpiresAt)
 }
 
 func atomicWriteJSON(path string, value any, perm os.FileMode) error {

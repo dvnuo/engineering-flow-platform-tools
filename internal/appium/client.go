@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
 
 	"engineering-flow-platform-tools/internal/browserstack"
 	"engineering-flow-platform-tools/internal/mobile"
@@ -51,7 +50,7 @@ func New(baseURL string, creds browserstack.Credentials, verifySSL bool, caCert 
 		}
 		tr.TLSClientConfig.RootCAs = pool
 	}
-	return &Client{baseURL: baseURL, http: &http.Client{Timeout: 60 * time.Second, Transport: tr}, creds: creds}, nil
+	return &Client{baseURL: baseURL, http: &http.Client{Transport: tr}, creds: creds}, nil
 }
 
 func validateAppiumURL(raw string) error {
@@ -75,6 +74,9 @@ func isLoopbackHost(host string) bool {
 }
 
 func (c *Client) CreateSession(ctx context.Context, req CreateSessionRequest) (Session, error) {
+	if err := validateCreateSessionRequest(req); err != nil {
+		return Session{}, err
+	}
 	caps := map[string]any{}
 	for k, v := range req.ExtraCaps {
 		caps[k] = v
@@ -107,8 +109,14 @@ func (c *Client) CreateSession(ctx context.Context, req CreateSessionRequest) (S
 	if req.SessionName != "" {
 		bstack["sessionName"] = req.SessionName
 	}
-	bstack["debug"] = req.InteractiveDebugging
+	bstack["interactiveDebugging"] = req.InteractiveDebugging
+	if req.Debug {
+		bstack["debug"] = true
+	}
 	bstack["video"] = req.Video
+	if req.IdleTimeoutSeconds > 0 {
+		bstack["idleTimeout"] = req.IdleTimeoutSeconds
+	}
 	switch req.NetworkMode {
 	case "private-managed", "private-external":
 		bstack["local"] = true
@@ -140,6 +148,16 @@ func (c *Client) CreateSession(ctx context.Context, req CreateSessionRequest) (S
 		return Session{}, mobile.NewError("session_creation_failed", "Appium session response did not include a session id", "Inspect BrowserStack Appium response shape.", 502)
 	}
 	return Session{ID: id, Capabilities: capabilities}, nil
+}
+
+func validateCreateSessionRequest(req CreateSessionRequest) error {
+	if req.IdleTimeoutSeconds < 0 || req.IdleTimeoutSeconds > 300 {
+		return mobile.NewError("invalid_args", "idle timeout must be between 1 and 300 seconds", "Set mobile.defaults.idle_timeout_seconds to a BrowserStack-supported value.", 400)
+	}
+	if req.NewCommandTimeoutSeconds < 0 {
+		return mobile.NewError("invalid_args", "new command timeout cannot be negative", "Set mobile.defaults.new_command_timeout_seconds to a positive value.", 400)
+	}
+	return nil
 }
 
 func canonicalPlatform(v string) string {

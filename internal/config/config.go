@@ -60,15 +60,16 @@ type MobileBrowserStack struct {
 }
 
 type MobileLocalConfig struct {
-	Mode               string   `json:"mode" yaml:"mode"`
-	Binary             string   `json:"binary" yaml:"binary"`
-	BinaryEnv          string   `json:"binary_env" yaml:"binary_env"`
-	DefaultHoldMinutes int      `json:"default_hold_minutes" yaml:"default_hold_minutes"`
-	MaxHoldMinutes     int      `json:"max_hold_minutes" yaml:"max_hold_minutes"`
-	HeartbeatSeconds   int      `json:"heartbeat_seconds" yaml:"heartbeat_seconds"`
-	ForceLocal         *bool    `json:"force_local,omitempty" yaml:"force_local,omitempty"`
-	IncludeHosts       []string `json:"include_hosts" yaml:"include_hosts"`
-	ExcludeHosts       []string `json:"exclude_hosts" yaml:"exclude_hosts"`
+	Mode                string   `json:"mode" yaml:"mode"`
+	Binary              string   `json:"binary" yaml:"binary"`
+	BinaryEnv           string   `json:"binary_env" yaml:"binary_env"`
+	DefaultHoldMinutes  int      `json:"default_hold_minutes" yaml:"default_hold_minutes"`
+	MaxHoldMinutes      int      `json:"max_hold_minutes" yaml:"max_hold_minutes"`
+	ReadyTimeoutSeconds int      `json:"ready_timeout_seconds" yaml:"ready_timeout_seconds"`
+	HeartbeatSeconds    int      `json:"heartbeat_seconds" yaml:"heartbeat_seconds"`
+	ForceLocal          *bool    `json:"force_local,omitempty" yaml:"force_local,omitempty"`
+	IncludeHosts        []string `json:"include_hosts" yaml:"include_hosts"`
+	ExcludeHosts        []string `json:"exclude_hosts" yaml:"exclude_hosts"`
 }
 
 type ProductConfig struct {
@@ -182,6 +183,9 @@ func (m *MobileConfig) Normalize() {
 	}
 	if m.BrowserStack.Local.MaxHoldMinutes == 0 {
 		m.BrowserStack.Local.MaxHoldMinutes = 30
+	}
+	if m.BrowserStack.Local.ReadyTimeoutSeconds == 0 {
+		m.BrowserStack.Local.ReadyTimeoutSeconds = 30
 	}
 	if m.BrowserStack.Local.HeartbeatSeconds == 0 {
 		m.BrowserStack.Local.HeartbeatSeconds = 60

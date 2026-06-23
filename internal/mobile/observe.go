@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
+	"io"
 	"regexp"
 	"sort"
 	"strconv"
@@ -98,8 +99,17 @@ type CandidateScore struct {
 var boundsPattern = regexp.MustCompile(`\[(\d+),(\d+)\]\[(\d+),(\d+)\]`)
 
 func BuildObservation(runID, sessionID, obsID, source string, screenshot []byte, limit int) Observation {
+	obs, _ := buildObservation(runID, sessionID, obsID, source, screenshot, limit)
+	return obs
+}
+
+func BuildObservationStrict(runID, sessionID, obsID, source string, screenshot []byte) (Observation, error) {
+	return buildObservation(runID, sessionID, obsID, source, screenshot, 0)
+}
+
+func buildObservation(runID, sessionID, obsID, source string, screenshot []byte, limit int) (Observation, error) {
 	if limit <= 0 {
-		limit = 100
+		limit = 0
 	}
 	sourceHash := sha256.Sum256([]byte(source))
 	screenshotHash := ""
@@ -107,9 +117,12 @@ func BuildObservation(runID, sessionID, obsID, source string, screenshot []byte,
 		screenHash := sha256.Sum256(screenshot)
 		screenshotHash = hex.EncodeToString(screenHash[:])
 	}
-	candidates := ExtractCandidates(source, obsID)
+	candidates, err := ExtractCandidatesStrict(source, obsID)
+	if err != nil {
+		return Observation{}, err
+	}
 	total := len(candidates)
-	if len(candidates) > limit {
+	if limit > 0 && len(candidates) > limit {
 		candidates = candidates[:limit]
 	}
 	return Observation{
@@ -123,43 +136,65 @@ func BuildObservation(runID, sessionID, obsID, source string, screenshot []byte,
 		TotalCandidates: total,
 		Source:          source,
 		Screenshot:      screenshot,
+	}, nil
+}
+
+func LimitObservationCandidates(obs Observation, limit int) Observation {
+	if limit <= 0 || len(obs.Candidates) <= limit {
+		return obs
 	}
+	obs.Candidates = append([]Candidate(nil), obs.Candidates[:limit]...)
+	return obs
 }
 
 func ExtractCandidates(source, obsID string) []Candidate {
+	candidates, _ := ExtractCandidatesStrict(source, obsID)
+	return candidates
+}
+
+type nodeContext struct {
+	Text string
+}
+
+func ExtractCandidatesStrict(source, obsID string) ([]Candidate, error) {
 	dec := xml.NewDecoder(bytes.NewReader([]byte(source)))
 	var out []Candidate
-	var textContext []string
+	var stack []nodeContext
 	seq := 0
 	for {
 		tok, err := dec.Token()
 		if err != nil {
-			break
-		}
-		start, ok := tok.(xml.StartElement)
-		if !ok {
-			continue
-		}
-		attrs := attrsMap(start.Attr)
-		c := candidateFromAttrs(attrs, start.Name.Local)
-		if c.Text != "" || c.Name != "" {
-			textContext = append(textContext, firstNonEmpty(c.Text, c.Name))
-			if len(textContext) > 8 {
-				textContext = textContext[len(textContext)-8:]
+			if err == io.EOF {
+				break
 			}
+			return out, NewError("source_parse_failed", "mobile source XML could not be parsed", "Run observe again or switch to a native context before semantic locate.", 502)
 		}
-		if !informative(c) {
+		switch t := tok.(type) {
+		case xml.StartElement:
+			attrs := attrsMap(t.Attr)
+			c := candidateFromAttrs(attrs, t.Name.Local)
+			parent := parentHintFromStack(stack)
+			context := ancestorText(stack)
+			stack = append(stack, nodeContext{Text: firstNonEmpty(c.Text, c.Name)})
+			if !informative(c) {
+				continue
+			}
+			seq++
+			c.CandidateID = "e" + strconv.Itoa(seq)
+			c.Ref = obsID + ":" + c.CandidateID
+			c.NearbyText = context
+			c.ParentHint = parent
+			c.LocatorHints = LocatorHints(c)
+			out = append(out, c)
+		case xml.EndElement:
+			if len(stack) > 0 {
+				stack = stack[:len(stack)-1]
+			}
+		default:
 			continue
 		}
-		seq++
-		c.CandidateID = "e" + strconv.Itoa(seq)
-		c.Ref = obsID + ":" + c.CandidateID
-		c.NearbyText = append([]string{}, textContext...)
-		c.ParentHint = parentHint(textContext)
-		c.LocatorHints = LocatorHints(c)
-		out = append(out, c)
 	}
-	return out
+	return out, nil
 }
 
 func attrsMap(attrs []xml.Attr) map[string]string {
@@ -276,11 +311,26 @@ func parseBool(v string) bool {
 	}
 }
 
-func parentHint(values []string) string {
-	if len(values) == 0 {
-		return ""
+func parentHintFromStack(stack []nodeContext) string {
+	for i := len(stack) - 1; i >= 0; i-- {
+		if stack[i].Text != "" {
+			return stack[i].Text
+		}
 	}
-	return values[len(values)-1]
+	return ""
+}
+
+func ancestorText(stack []nodeContext) []string {
+	var values []string
+	for _, frame := range stack {
+		if frame.Text != "" {
+			values = append(values, frame.Text)
+		}
+	}
+	if len(values) > 8 {
+		values = values[len(values)-8:]
+	}
+	return append([]string{}, values...)
 }
 
 func redactCandidate(value string, password bool) string {

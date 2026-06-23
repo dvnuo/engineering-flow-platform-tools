@@ -371,6 +371,7 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 		LocalIdentifier:          opts.LocalID,
 		InteractiveDebugging:     cfg.Defaults.InteractiveDebugging != nil && *cfg.Defaults.InteractiveDebugging,
 		Video:                    cfg.Defaults.Video != nil && *cfg.Defaults.Video,
+		IdleTimeoutSeconds:       cfg.Defaults.IdleTimeoutSeconds,
 		NewCommandTimeoutSeconds: cfg.Defaults.NewCommandTimeoutSeconds,
 	})
 	if err != nil {
@@ -397,10 +398,24 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 		StartedAt:    now,
 		UpdatedAt:    now,
 	}
+	if dashboardURL := dashboardURLFromSession(session); dashboardURL != "" {
+		st.DashboardURL = dashboardURL
+	} else if remote, err := svc.Control.GetSession(ctx, session.ID); err == nil {
+		st.DashboardURL = firstNonEmpty(remote.BrowserURL, remote.PublicURL)
+	}
 	if err := svc.Store.SaveRun(st); err != nil {
 		return renderErr(cmd, o, err)
 	}
 	return print(cmd, o, output.Success("", map[string]any{"run": st, "session": session, "device_resolution": dev, "tunnel": tunnel}))
+}
+
+func dashboardURLFromSession(session appium.Session) string {
+	for _, key := range []string{"browserstack.sessionUrl", "browserstack.session_url", "sessionUrl", "session_url"} {
+		if value, ok := session.Capabilities[key].(string); ok && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func resolveApp(ctx context.Context, svc *services, opts runStartOptions) (mobile.AppRef, error) {
@@ -420,25 +435,29 @@ func resolveApp(ctx context.Context, svc *services, opts runStartOptions) (mobil
 		if err != nil {
 			return mobile.AppRef{}, err
 		}
+		var cachedURL string
 		if cached, err := svc.Store.LoadAppCache(sha); err == nil && cached.AppURL != "" {
-			return cached, nil
+			cachedURL = cached.AppURL
+			if mobile.AppCacheReusable(cached, time.Now().UTC()) {
+				return cached, nil
+			}
+		}
+		if ref, ok := findRecentAppRef(ctx, svc, opts.CustomID, sha, cachedURL); ok {
+			_ = svc.Store.SaveAppCache(ref)
+			return ref, nil
 		}
 	}
 	if opts.CustomID != "" {
-		apps, err := svc.Control.ListApps(ctx, browserstack.ListAppsRequest{Limit: 20, CustomID: opts.CustomID})
-		if err == nil {
-			for _, app := range apps {
-				if app.AppURL != "" {
-					return mobile.AppRef{AppURL: app.AppURL, CustomID: opts.CustomID, SHA256: sha, Name: app.AppName}, nil
-				}
-			}
+		if ref, ok := findRecentAppRef(ctx, svc, opts.CustomID, sha, ""); ok {
+			_ = svc.Store.SaveAppCache(ref)
+			return ref, nil
 		}
 	}
 	app, err := svc.Control.UploadApp(ctx, browserstack.UploadAppRequest{FilePath: opts.File, URL: opts.URL, CustomID: opts.CustomID, SHA256: sha})
 	if err != nil {
 		return mobile.AppRef{}, err
 	}
-	ref := mobile.AppRef{AppURL: app.AppURL, CustomID: opts.CustomID, SHA256: sha, Name: app.AppName}
+	ref := appRefFromUploaded(app, opts.CustomID, sha, app.AppName)
 	_ = svc.Store.SaveAppCache(ref)
 	return ref, nil
 }

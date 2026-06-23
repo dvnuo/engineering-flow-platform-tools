@@ -49,7 +49,7 @@ func appUploadCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		_ = svc.Store.SaveAppCache(mobile.AppRef{AppURL: app.AppURL, CustomID: customID, SHA256: sha, Name: filepath.Base(file)})
+		_ = svc.Store.SaveAppCache(appRefFromUploaded(app, customID, sha, filepath.Base(file)))
 		return print(cmd, o, output.Success("", app))
 	}}
 	c.Flags().StringVar(&file, "file", "", "")
@@ -136,20 +136,22 @@ func appResolveCmd(o *Opts) *cobra.Command {
 			if err != nil {
 				return renderErr(cmd, o, err)
 			}
+			var cachedURL string
 			if cached, err := svc.Store.LoadAppCache(sha); err == nil && cached.AppURL != "" {
-				return print(cmd, o, output.Success("", map[string]any{"app": cached, "reused": true, "source": "local_cache"}))
+				cachedURL = cached.AppURL
+				if mobile.AppCacheReusable(cached, time.Now().UTC()) {
+					return print(cmd, o, output.Success("", map[string]any{"app": cached, "reused": true, "source": "local_cache"}))
+				}
+			}
+			if ref, ok := findRecentAppRef(cmd.Context(), svc, customID, sha, cachedURL); ok {
+				_ = svc.Store.SaveAppCache(ref)
+				return print(cmd, o, output.Success("", map[string]any{"app": ref, "reused": true, "source": "browserstack_recent_apps"}))
 			}
 		}
 		if customID != "" {
-			apps, err := svc.Control.ListApps(cmd.Context(), browserstack.ListAppsRequest{Limit: 20, CustomID: customID})
-			if err == nil {
-				for _, app := range apps {
-					if app.AppURL != "" {
-						ref := mobile.AppRef{AppURL: app.AppURL, CustomID: customID, SHA256: sha, Name: app.AppName}
-						_ = svc.Store.SaveAppCache(ref)
-						return print(cmd, o, output.Success("", map[string]any{"app": ref, "reused": true, "source": "browserstack_recent_apps"}))
-					}
-				}
+			if ref, ok := findRecentAppRef(cmd.Context(), svc, customID, sha, ""); ok {
+				_ = svc.Store.SaveAppCache(ref)
+				return print(cmd, o, output.Success("", map[string]any{"app": ref, "reused": true, "source": "browserstack_recent_apps"}))
 			}
 		}
 		if dryRun {
@@ -159,7 +161,7 @@ func appResolveCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		ref := mobile.AppRef{AppURL: app.AppURL, CustomID: customID, SHA256: sha, Name: app.AppName}
+		ref := appRefFromUploaded(app, customID, sha, app.AppName)
 		_ = svc.Store.SaveAppCache(ref)
 		return print(cmd, o, output.Success("", map[string]any{"app": ref, "reused": false}))
 	}}
@@ -169,6 +171,67 @@ func appResolveCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&customID, "custom-id", "", "")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "")
 	return c
+}
+
+func appRefFromUploaded(app browserstack.UploadedApp, customID, sha, fallbackName string) mobile.AppRef {
+	uploadedAt := parseBrowserStackTime(app.UploadedAt)
+	name := firstNonEmpty(app.AppName, fallbackName)
+	ref := mobile.AppRef{
+		AppURL:     app.AppURL,
+		CustomID:   firstNonEmpty(customID, app.CustomID),
+		SHA256:     firstNonEmpty(sha, app.SHA256),
+		Name:       name,
+		UploadedAt: uploadedAt,
+	}
+	return mobile.NormalizeAppCacheRef(ref, time.Now().UTC())
+}
+
+func findRecentAppRef(ctx context.Context, svc *services, customID, sha, appURL string) (mobile.AppRef, bool) {
+	apps, err := svc.Control.ListApps(ctx, browserstack.ListAppsRequest{Limit: 100, CustomID: customID})
+	if err != nil {
+		return mobile.AppRef{}, false
+	}
+	for _, app := range apps {
+		if strings.TrimSpace(app.AppURL) == "" {
+			continue
+		}
+		if sha != "" && app.SHA256 != "" && !strings.EqualFold(app.SHA256, sha) {
+			continue
+		}
+		matches := false
+		switch {
+		case sha != "" && app.SHA256 != "":
+			matches = strings.EqualFold(app.SHA256, sha)
+		case appURL != "":
+			matches = app.AppURL == appURL
+		case customID != "":
+			matches = app.CustomID == "" || app.CustomID == customID
+		}
+		if matches {
+			return appRefFromUploaded(app, customID, firstNonEmpty(sha, app.SHA256), app.AppName), true
+		}
+	}
+	return mobile.AppRef{}, false
+}
+
+func parseBrowserStackTime(value string) time.Time {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return time.Time{}
+	}
+	for _, layout := range []string{
+		time.RFC3339Nano,
+		time.RFC3339,
+		"2006-01-02 15:04:05 -0700",
+		"2006-01-02 15:04:05 MST",
+		"2006-01-02 15:04:05",
+		"2006-01-02",
+	} {
+		if t, err := time.Parse(layout, value); err == nil {
+			return t.UTC()
+		}
+	}
+	return time.Time{}
 }
 
 func appDeleteCmd(o *Opts) *cobra.Command {

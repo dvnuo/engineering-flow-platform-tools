@@ -150,6 +150,7 @@ mobile:
       binary_env: BROWSERSTACK_LOCAL_BINARY
       default_hold_minutes: 10
       max_hold_minutes: 30
+      ready_timeout_seconds: 30
       heartbeat_seconds: 60
       force_local: false
       include_hosts: []

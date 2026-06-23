@@ -2,10 +2,13 @@ package mobile
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +25,7 @@ type TunnelState struct {
 	LocalIdentifier string    `json:"local_identifier"`
 	LogPath         string    `json:"log_path,omitempty"`
 	StartedAt       time.Time `json:"started_at"`
+	ReadyAt         time.Time `json:"ready_at,omitempty"`
 	Deadline        time.Time `json:"deadline,omitempty"`
 	Owner           string    `json:"owner"`
 	Status          string    `json:"status"`
@@ -38,6 +42,7 @@ type TunnelStartRequest struct {
 	NetworkMode     string
 	LocalIdentifier string
 	HoldFor         time.Duration
+	ReadyTimeout    time.Duration
 }
 
 func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
@@ -102,24 +107,31 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 		StartedAt:       time.Now().UTC(),
 		Deadline:        time.Now().UTC().Add(req.HoldFor),
 		Owner:           "efp-mobile",
-		Status:          "running",
+		Status:          "starting",
 	}
 	if err := m.Save(state); err != nil {
 		cleanupStartedTunnel(cmd, localConfigPath)
 		return state, err
 	}
 	exited := m.watchTunnelExit(cmd, state)
-	select {
-	case err := <-exited:
+	readyTimeout := req.ReadyTimeout
+	if readyTimeout <= 0 && m.Config.ReadyTimeoutSeconds > 0 {
+		readyTimeout = time.Duration(m.Config.ReadyTimeoutSeconds) * time.Second
+	}
+	if readyTimeout <= 0 {
+		readyTimeout = 30 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), readyTimeout)
+	defer cancel()
+	state, err = m.WaitReady(ctx, state, exited)
+	if err != nil {
+		terminateStartedTunnel(cmd, exited)
 		_ = os.Remove(localConfigPath)
-		state.Status = "exited"
-		_ = m.Save(state)
-		msg := "BrowserStack Local exited during startup"
-		if err != nil {
-			msg += ": " + err.Error()
+		if state.Status == "starting" {
+			state.Status = "start_timeout"
 		}
-		return state, NewError("local_tunnel_start_failed", msg, "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
-	case <-time.After(300 * time.Millisecond):
+		_ = m.Save(state)
+		return state, err
 	}
 	_ = os.Remove(localConfigPath)
 	return state, nil
@@ -141,8 +153,72 @@ func (m *TunnelManager) watchTunnelExit(cmd *exec.Cmd, state TunnelState) <-chan
 	return exited
 }
 
+func (m *TunnelManager) WaitReady(ctx context.Context, state TunnelState, exited <-chan error) (TunnelState, error) {
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if ready, failed := inspectLocalReadyLog(state.LogPath); failed != "" {
+			state.Status = "exited"
+			_ = m.Save(state)
+			return state, NewError("local_tunnel_start_failed", "BrowserStack Local failed during startup", "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
+		} else if ready {
+			if state.PID != 0 && !processRunning(state.PID) {
+				state.Status = "exited"
+				_ = m.Save(state)
+				return state, NewError("local_tunnel_start_failed", "BrowserStack Local exited before it became reusable", "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
+			}
+			state.Status = "running"
+			state.ReadyAt = time.Now().UTC()
+			_ = m.Save(state)
+			return state, nil
+		}
+		select {
+		case err := <-exited:
+			state.Status = "exited"
+			_ = m.Save(state)
+			msg := "BrowserStack Local exited during startup"
+			if err != nil {
+				msg += ": " + err.Error()
+			}
+			return state, NewError("local_tunnel_start_failed", msg, "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
+		case <-ctx.Done():
+			state.Status = "start_timeout"
+			_ = m.Save(state)
+			return state, RetryableError("local_tunnel_not_ready", "timed out waiting for BrowserStack Local readiness", "Inspect tunnel.log, credentials, proxy, and private network reachability.", "retry", 504)
+		case <-ticker.C:
+		}
+	}
+}
+
+func inspectLocalReadyLog(path string) (bool, string) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return false, ""
+	}
+	lower := strings.ToLower(string(b))
+	if strings.Contains(lower, "you can now access your local server") {
+		return true, ""
+	}
+	for _, marker := range []string{"[error]", "could not connect", "failed to", "invalid auth", "authentication failed"} {
+		if strings.Contains(lower, marker) {
+			return false, marker
+		}
+	}
+	return false, ""
+}
+
+func terminateStartedTunnel(cmd *exec.Cmd, exited <-chan error) {
+	if cmd.Process != nil {
+		_ = cmd.Process.Kill()
+	}
+	select {
+	case <-exited:
+	case <-time.After(2 * time.Second):
+	}
+}
+
 func localBinaryArgs(configPath, identifier string, cfg config.MobileLocalConfig) []string {
-	args := []string{"--config-file", configPath, "--local-identifier", identifier}
+	args := []string{"--config-file", configPath, "--local-identifier", identifier, "--enable-logging-for-api"}
 	if cfg.ForceLocal != nil && *cfg.ForceLocal {
 		args = append(args, "--force-local")
 	}
@@ -211,6 +287,11 @@ func (m *TunnelManager) Status(runID, identifier string) (TunnelState, error) {
 	st, err := m.Load(runID, identifier)
 	if err != nil {
 		return TunnelState{}, err
+	}
+	if st.Managed && (st.Status == "running" || st.Status == "starting") && st.PID != 0 && !processRunning(st.PID) {
+		st.Status = "exited"
+		_ = m.Save(st)
+		return st, nil
 	}
 	if st.Status == "running" && tunnelDeadlineExpired(st, time.Now().UTC()) {
 		st.Status = "expired"
@@ -292,4 +373,15 @@ func (m *TunnelManager) orphanedTunnel(st TunnelState) bool {
 
 func (m *TunnelManager) tunnelPath(runID, identifier string) string {
 	return filepath.Join(m.Store.RunDir(firstNonEmpty(runID, "tunnel-"+identifier)), "tunnel.json")
+}
+
+func processRunning(pid int) bool {
+	if pid <= 0 {
+		return false
+	}
+	if runtime.GOOS == "windows" {
+		out, err := exec.Command("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/FO", "CSV", "/NH").Output()
+		return err == nil && strings.Contains(string(out), strconv.Itoa(pid))
+	}
+	return exec.Command("kill", "-0", strconv.Itoa(pid)).Run() == nil
 }

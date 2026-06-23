@@ -609,12 +609,12 @@ func runFinishCmd(o *Opts) *cobra.Command {
 			return renderErr(cmd, o, err)
 		}
 		var result map[string]any
+		cleanup := []string{}
 		err = svc.Store.WithRunLock(runID, func() error {
 			st, err := svc.Store.LoadRun(runID)
 			if err != nil {
 				return err
 			}
-			var cleanup []string
 			if collect {
 				if bundle, err := collectArtifacts(cmd.Context(), svc, st, ""); err == nil {
 					result = map[string]any{"artifacts": bundle}

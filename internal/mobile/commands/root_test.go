@@ -81,6 +81,17 @@ func TestRunFinishInvalidStatusFailsBeforeServiceSetup(t *testing.T) {
 	}
 }
 
+func TestTunnelStopMissingMetadataFailsBeforeServiceSetup(t *testing.T) {
+	out := runMobile(t, "tunnel", "stop", "--yes", "--json")
+	if out["ok"] != false {
+		t.Fatalf("expected failure: %#v", out)
+	}
+	errObj := out["error"].(map[string]any)
+	if errObj["code"] != "invalid_args" || !strings.Contains(errObj["message"].(string), "--run-id") {
+		t.Fatalf("unexpected error: %#v", errObj)
+	}
+}
+
 func runMobile(t *testing.T, args ...string) map[string]any {
 	t.Helper()
 	cmd := NewRoot()

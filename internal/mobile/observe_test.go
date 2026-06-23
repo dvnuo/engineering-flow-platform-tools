@@ -43,6 +43,17 @@ func TestLocateDeterministicAndAmbiguous(t *testing.T) {
 	}
 }
 
+func TestBuildObservationOmitsEmptyScreenshotHash(t *testing.T) {
+	obs := BuildObservation("run-1", "session-1", "obs-1", `<hierarchy/>`, nil, 100)
+	if obs.ScreenshotHash != "" {
+		t.Fatalf("screenshot hash should be empty when no screenshot is captured: %s", obs.ScreenshotHash)
+	}
+	obs = BuildObservation("run-1", "session-1", "obs-1", `<hierarchy/>`, []byte("png"), 100)
+	if obs.ScreenshotHash == "" {
+		t.Fatal("screenshot hash should be set when screenshot bytes are present")
+	}
+}
+
 func TestDeviceResolveLatestCompatible(t *testing.T) {
 	devices := []DeviceInfo{
 		{OS: "android", OSVersion: "12.0", Name: "Pixel 5", RealMobile: true},

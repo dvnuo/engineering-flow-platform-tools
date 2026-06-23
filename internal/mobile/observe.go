@@ -102,7 +102,11 @@ func BuildObservation(runID, sessionID, obsID, source string, screenshot []byte,
 		limit = 100
 	}
 	sourceHash := sha256.Sum256([]byte(source))
-	screenHash := sha256.Sum256(screenshot)
+	screenshotHash := ""
+	if len(screenshot) > 0 {
+		screenHash := sha256.Sum256(screenshot)
+		screenshotHash = hex.EncodeToString(screenHash[:])
+	}
 	candidates := ExtractCandidates(source, obsID)
 	total := len(candidates)
 	if len(candidates) > limit {
@@ -113,7 +117,7 @@ func BuildObservation(runID, sessionID, obsID, source string, screenshot []byte,
 		RunID:           runID,
 		SessionID:       sessionID,
 		SourceHash:      hex.EncodeToString(sourceHash[:]),
-		ScreenshotHash:  hex.EncodeToString(screenHash[:]),
+		ScreenshotHash:  screenshotHash,
 		CreatedAt:       time.Now().UTC(),
 		Candidates:      candidates,
 		TotalCandidates: total,

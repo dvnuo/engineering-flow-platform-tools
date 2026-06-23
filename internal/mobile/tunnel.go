@@ -65,7 +65,8 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 	if identifier == "" {
 		identifier = "efp-" + shortRandom() + "-" + strconv.FormatInt(time.Now().Unix(), 10)
 	}
-	runDir := m.Store.RunDir(firstNonEmpty(req.RunID, "tunnel-"+identifier))
+	effectiveRunID := firstNonEmpty(req.RunID, "tunnel-"+identifier)
+	runDir := m.Store.RunDir(effectiveRunID)
 	if err := os.MkdirAll(runDir, 0o700); err != nil {
 		return TunnelState{}, err
 	}
@@ -93,7 +94,7 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 	state := TunnelState{
 		Version:         1,
 		TunnelID:        "managed-" + identifier,
-		RunID:           req.RunID,
+		RunID:           effectiveRunID,
 		Managed:         true,
 		PID:             cmd.Process.Pid,
 		LocalIdentifier: identifier,

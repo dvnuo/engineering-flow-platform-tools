@@ -245,6 +245,9 @@ func tunnelStopCmd(o *Opts) *cobra.Command {
 	var runID, localID string
 	var yes bool
 	c := &cobra.Command{Use: "stop", RunE: func(cmd *cobra.Command, args []string) error {
+		if runID == "" || localID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id and --local-identifier are required", "Pass the managed tunnel metadata returned by tunnel start or run start.", 400))
+		}
 		if !yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes is required for tunnel stop", "Re-run with --yes after confirming.", 400))
 		}

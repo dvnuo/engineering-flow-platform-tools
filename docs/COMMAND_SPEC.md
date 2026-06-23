@@ -653,6 +653,37 @@ browser network export --session default --out result/network.har-lite.json --fo
 - `--download-dir <dir>`: dedicated session download directory for `browser session start`.
 - `--json`: return the stable JSON envelope.
 
+## Mobile
+
+### Basic
+- mobile commands
+- mobile schema <command>
+- mobile help llm
+- mobile version
+- mobile doctor
+- mobile auth test
+
+### BrowserStack Control Plane
+- mobile app upload/list/get/resolve/delete
+- mobile device list/resolve/usage
+- mobile capacity get/wait
+- mobile tunnel start/ensure/status/stop/cleanup-orphans
+- mobile project list/get
+- mobile build list/get
+- mobile session list/get/mark/start/status/stop
+
+### Run And Appium Plane
+- mobile run start/status/handoff/resume/finish
+- mobile observe
+- mobile locate
+- mobile tap/type/clear/scroll/swipe/back
+- mobile context list/switch
+- mobile assert exists/visible/enabled/selected/text
+- mobile wait stable
+- mobile artifact list/collect/download
+
+Agent actions use observation refs such as `obs-...:e17`. Re-observe after every mutating command. Public runs do not start BrowserStack Local or set the Appium local capability. Private managed runs start the configured `BrowserStackLocal` binary and use the same local identifier for the tunnel and BrowserStack session capabilities.
+
 ## Inspect Image
 
 ### Basic

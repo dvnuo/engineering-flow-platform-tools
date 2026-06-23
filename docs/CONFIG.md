@@ -119,3 +119,41 @@ updated_at: ""
 
 - `verify_ssl=false` disables certificate verification and is intended only for internal testing.
 - `ca_cert` can embed PEM text for private CA trust.
+
+## Mobile
+
+`mobile` stores settings under the `mobile` YAML node and prefers environment credentials:
+
+```yaml
+mobile:
+  default_provider: browserstack
+  state_dir: ~/.efp/mobile
+  artifacts_dir: ~/.efp/artifacts/mobile
+  retention_hours: 72
+  defaults:
+    platform: android
+    network_mode: public
+    idle_timeout_seconds: 300
+    new_command_timeout_seconds: 300
+    interactive_debugging: true
+    video: true
+  browserstack:
+    api_base_url: https://api-cloud.browserstack.com
+    appium_base_url: https://hub.browserstack.com/wd/hub
+    username_env: BROWSERSTACK_USERNAME
+    access_key_env: BROWSERSTACK_ACCESS_KEY
+    verify_ssl: true
+    ca_cert: ""
+    local:
+      mode: managed
+      binary: BrowserStackLocal
+      binary_env: BROWSERSTACK_LOCAL_BINARY
+      default_hold_minutes: 10
+      max_hold_minutes: 30
+      heartbeat_seconds: 60
+      force_local: false
+      include_hosts: []
+      exclude_hosts: []
+```
+
+Use `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` for credentials when possible. `MOBILE_STATE_DIR` and `MOBILE_ARTIFACTS_DIR` override the state and artifact roots in CI. State and artifact directories are created outside the main config with restrictive permissions where the platform supports them.

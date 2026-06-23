@@ -1,6 +1,6 @@
 # LLM/Agent Usage
 
-- For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
+- For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `mobile`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
 - Only omit `--json` when intentionally reading human-oriented `--help` text or when a documented interactive human prompt requires text output.
 - Use `aws-auth login --account <account-id> --role <role-name> --json` for AWS authorization; it invokes `adfs-assume` with `--profile saml` by default.
 - Use --instance when multiple instances are configured.
@@ -11,7 +11,18 @@
 - Command parsing failures across `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` return a JSON `invalid_args` envelope when `--json` is present.
 - On Windows `cmd`, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`; avoid Bash-only quoting and commands.
 - If PATH lookup is unstable, run `where <binary>` and invoke the exact `.exe` path with double quotes.
-- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, `cmd/aws-auth/aws-auth-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
+- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/mobile/mobile-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, `cmd/aws-auth/aws-auth-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
+
+## Mobile Device Cloud
+
+- Use `mobile` for BrowserStack App Automate real-device sessions. It is a terminal CLI, not MCP and not BrowserStack AI.
+- Start with `mobile commands --json` and `mobile schema run.start --json`.
+- Recommended loop: `run start`, `observe`, `locate`, action, `observe`, assertion, `run finish`.
+- Never invent refs, selectors, XPath, resource IDs, or coordinates. Use refs returned by the latest `observe`.
+- After `tap`, `type`, `clear`, `scroll`, `swipe`, `back`, or `context switch`, old refs are stale. Run `observe` again.
+- Use `--text-env` or `--text-stdin` for secrets. The CLI returns source type and length, not secret values.
+- Use `--network public` for public apps. Use `private-managed` only when BrowserStack devices must reach private/internal hosts.
+- `run handoff` gives control to the human and starts bounded keepalive; mutating actions return `control_locked` until `run resume`.
 
 ## AWS Auth
 

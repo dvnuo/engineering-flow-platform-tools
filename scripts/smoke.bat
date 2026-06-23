@@ -13,6 +13,8 @@ go run ./cmd/aws-auth --help >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/browser --help >nul
 if errorlevel 1 exit /b 1
+go run ./cmd/mobile --help >nul
+if errorlevel 1 exit /b 1
 go run ./cmd/inspect-image --help >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/visual --help >nul
@@ -28,12 +30,18 @@ go run ./cmd/aws-auth commands --json >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/browser commands --json >nul
 if errorlevel 1 exit /b 1
+go run ./cmd/mobile commands --json >nul
+if errorlevel 1 exit /b 1
 go run ./cmd/inspect-image commands --json >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/visual commands --json >nul
 if errorlevel 1 exit /b 1
 
 go run ./cmd/browser schema probe --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/mobile schema run.start --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/mobile schema observe --json >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/jenkins schema job.build --json >nul
 if errorlevel 1 exit /b 1
@@ -68,6 +76,8 @@ if errorlevel 1 exit /b 1
 go run ./cmd/aws-auth version --json >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/browser version --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/mobile version --json >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/inspect-image version --json >nul
 if errorlevel 1 exit /b 1

@@ -7,6 +7,7 @@ This repository hosts cross-platform Go-based CLI tools for agent, runtime, shel
 - `jenkins`
 - `aws-auth`
 - `browser`
+- `mobile`
 - `inspect-image`
 - `visual`
 
@@ -48,6 +49,29 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
 
+### Mobile
+
+`mobile` is a terminal-invoked BrowserStack App Automate real-device controller for agents. It uploads or resolves apps, lists and deterministically resolves devices, checks capacity, starts BrowserStack Local only for private-network sessions, creates remote Appium W3C sessions, observes native UI XML/screenshots into bounded element candidates, performs ref-based actions, supports human handoff/resume, and collects artifacts without printing large logs or binary data.
+
+Examples:
+
+```bash
+mobile doctor --json
+mobile auth test --json
+mobile app resolve --file ./app.apk --custom-id smoke --json
+mobile run start --file ./app.apk --platform android --network public --json
+mobile observe --run-id run-... --json
+mobile locate --run-id run-... --role button --name Login --json
+mobile tap --run-id run-... --ref obs-...:e1 --json
+mobile type --run-id run-... --ref obs-...:e2 --text-env TEST_PASSWORD --json
+mobile assert visible --run-id run-... --name Home --json
+mobile run handoff --run-id run-... --hold-for 10m --json
+mobile run resume --run-id run-... --json
+mobile run finish --run-id run-... --status passed --collect-artifacts --json
+```
+
+Set `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` for live BrowserStack calls. Use `--network public` for public sessions. Use `private-managed` only when the BrowserStack device needs private/internal hosts and `BrowserStackLocal` is configured.
+
 For Jira, Confluence, Jenkins, and AWS auth, copy `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, and `cmd/aws-auth/aws-auth-cli.instructions.md` into `~/.copilot/instructions/` so Copilot understands the JSON envelope, `--dry-run`, `--yes`, instance selection, AWS `saml` profile authorization, auth config, and error recovery conventions.
 
 All CLI binaries return a stable JSON `invalid_args` envelope for command parsing failures when `--json` is present. On Windows `cmd`, use double quotes and `where <binary>` to resolve unstable PATH behavior.
@@ -83,7 +107,7 @@ For VS Code GitHub Copilot, copy `cmd/visual/visual-cli.instructions.md` to `~/.
 
 ## Quick Install
 
-Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` on your `PATH`, then run:
+Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `mobile`, `inspect-image`, and `visual` on your `PATH`, then run:
 
 ```bash
 jira version --json
@@ -91,6 +115,7 @@ confluence version --json
 jenkins version --json
 aws-auth version --json
 browser version --json
+mobile version --json
 inspect-image version --json
 visual version --json
 ```

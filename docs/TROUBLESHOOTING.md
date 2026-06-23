@@ -14,3 +14,9 @@
 | `invalid_args` | Required arguments or flags are missing or invalid. | Run `schema <command> --json`. |
 | `network_error` | DNS, TLS, or connectivity failed. | Check network and TLS settings. |
 | `server_error` | The server returned an unexpected failure. | Retry or inspect server logs. |
+| `capacity_wait_timeout` | BrowserStack capacity did not become available before the bounded timeout. | Retry later, reduce `--required`, or inspect `mobile capacity get --json`. |
+| `local_binary_not_found` | `BrowserStackLocal` was required but not found. | Set `BROWSERSTACK_LOCAL_BINARY`, configure `mobile.browserstack.local.binary`, or use `private-external`. |
+| `session_lost` | The Appium session no longer exists or timed out. | Inspect BrowserStack session status and start a new run if needed. |
+| `control_locked` | A run is in human handoff. | Run `mobile run resume --run-id <id> --json` before agent actions. |
+| `stale_observation` | A ref is missing or belongs to an older observation. | Run `mobile observe --run-id <id> --json` and use a fresh ref. |
+| `ambiguous_element` | A locator or semantic query matched multiple elements. | Add stable name, role, nearby text, resource id, or accessibility id. |

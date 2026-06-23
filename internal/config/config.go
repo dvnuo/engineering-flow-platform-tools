@@ -9,6 +9,7 @@ type RootConfig struct {
 	Jenkins    ProductConfig `json:"jenkins" yaml:"jenkins"`
 	AWS        AWSConfig     `json:"aws" yaml:"aws"`
 	Visual     VisualConfig  `json:"visual" yaml:"visual"`
+	Mobile     MobileConfig  `json:"mobile" yaml:"mobile"`
 }
 
 type AWSConfig struct {
@@ -26,6 +27,48 @@ type VisualConfig struct {
 type VisualDefaults struct {
 	OfflineStrict *bool  `json:"offline_strict,omitempty" yaml:"offline_strict,omitempty"`
 	DataMode      string `json:"data_mode,omitempty" yaml:"data_mode,omitempty"`
+}
+
+type MobileConfig struct {
+	DefaultProvider string             `json:"default_provider" yaml:"default_provider"`
+	StateDir        string             `json:"state_dir" yaml:"state_dir"`
+	ArtifactsDir    string             `json:"artifacts_dir" yaml:"artifacts_dir"`
+	RetentionHours  int                `json:"retention_hours" yaml:"retention_hours"`
+	Defaults        MobileDefaults     `json:"defaults" yaml:"defaults"`
+	BrowserStack    MobileBrowserStack `json:"browserstack" yaml:"browserstack"`
+}
+
+type MobileDefaults struct {
+	Platform                 string `json:"platform" yaml:"platform"`
+	NetworkMode              string `json:"network_mode" yaml:"network_mode"`
+	IdleTimeoutSeconds       int    `json:"idle_timeout_seconds" yaml:"idle_timeout_seconds"`
+	NewCommandTimeoutSeconds int    `json:"new_command_timeout_seconds" yaml:"new_command_timeout_seconds"`
+	InteractiveDebugging     *bool  `json:"interactive_debugging,omitempty" yaml:"interactive_debugging,omitempty"`
+	Video                    *bool  `json:"video,omitempty" yaml:"video,omitempty"`
+}
+
+type MobileBrowserStack struct {
+	APIBaseURL    string            `json:"api_base_url" yaml:"api_base_url"`
+	AppiumBaseURL string            `json:"appium_base_url" yaml:"appium_base_url"`
+	UsernameEnv   string            `json:"username_env" yaml:"username_env"`
+	AccessKeyEnv  string            `json:"access_key_env" yaml:"access_key_env"`
+	Username      string            `json:"username,omitempty" yaml:"username,omitempty"`
+	AccessKey     string            `json:"access_key,omitempty" yaml:"access_key,omitempty"`
+	VerifySSL     *bool             `json:"verify_ssl,omitempty" yaml:"verify_ssl,omitempty"`
+	CACert        string            `json:"ca_cert,omitempty" yaml:"ca_cert,omitempty"`
+	Local         MobileLocalConfig `json:"local" yaml:"local"`
+}
+
+type MobileLocalConfig struct {
+	Mode               string   `json:"mode" yaml:"mode"`
+	Binary             string   `json:"binary" yaml:"binary"`
+	BinaryEnv          string   `json:"binary_env" yaml:"binary_env"`
+	DefaultHoldMinutes int      `json:"default_hold_minutes" yaml:"default_hold_minutes"`
+	MaxHoldMinutes     int      `json:"max_hold_minutes" yaml:"max_hold_minutes"`
+	HeartbeatSeconds   int      `json:"heartbeat_seconds" yaml:"heartbeat_seconds"`
+	ForceLocal         *bool    `json:"force_local,omitempty" yaml:"force_local,omitempty"`
+	IncludeHosts       []string `json:"include_hosts" yaml:"include_hosts"`
+	ExcludeHosts       []string `json:"exclude_hosts" yaml:"exclude_hosts"`
 }
 
 type ProductConfig struct {
@@ -73,6 +116,80 @@ func (c *RootConfig) Normalize() {
 	norm(&c.Jira)
 	norm(&c.Confluence)
 	norm(&c.Jenkins)
+	c.Mobile.Normalize()
+}
+
+func (m *MobileConfig) Normalize() {
+	if strings.TrimSpace(m.DefaultProvider) == "" {
+		m.DefaultProvider = "browserstack"
+	}
+	if strings.TrimSpace(m.StateDir) == "" {
+		m.StateDir = "~/.efp/mobile"
+	}
+	if strings.TrimSpace(m.ArtifactsDir) == "" {
+		m.ArtifactsDir = "~/.efp/artifacts/mobile"
+	}
+	if m.RetentionHours == 0 {
+		m.RetentionHours = 72
+	}
+	if strings.TrimSpace(m.Defaults.Platform) == "" {
+		m.Defaults.Platform = "android"
+	}
+	if strings.TrimSpace(m.Defaults.NetworkMode) == "" {
+		m.Defaults.NetworkMode = "public"
+	}
+	if m.Defaults.IdleTimeoutSeconds == 0 {
+		m.Defaults.IdleTimeoutSeconds = 300
+	}
+	if m.Defaults.NewCommandTimeoutSeconds == 0 {
+		m.Defaults.NewCommandTimeoutSeconds = 300
+	}
+	if m.Defaults.InteractiveDebugging == nil {
+		v := true
+		m.Defaults.InteractiveDebugging = &v
+	}
+	if m.Defaults.Video == nil {
+		v := true
+		m.Defaults.Video = &v
+	}
+	if strings.TrimSpace(m.BrowserStack.APIBaseURL) == "" {
+		m.BrowserStack.APIBaseURL = "https://api-cloud.browserstack.com"
+	}
+	if strings.TrimSpace(m.BrowserStack.AppiumBaseURL) == "" {
+		m.BrowserStack.AppiumBaseURL = "https://hub.browserstack.com/wd/hub"
+	}
+	if strings.TrimSpace(m.BrowserStack.UsernameEnv) == "" {
+		m.BrowserStack.UsernameEnv = "BROWSERSTACK_USERNAME"
+	}
+	if strings.TrimSpace(m.BrowserStack.AccessKeyEnv) == "" {
+		m.BrowserStack.AccessKeyEnv = "BROWSERSTACK_ACCESS_KEY"
+	}
+	if m.BrowserStack.VerifySSL == nil {
+		v := true
+		m.BrowserStack.VerifySSL = &v
+	}
+	if strings.TrimSpace(m.BrowserStack.Local.Mode) == "" {
+		m.BrowserStack.Local.Mode = "managed"
+	}
+	if strings.TrimSpace(m.BrowserStack.Local.Binary) == "" {
+		m.BrowserStack.Local.Binary = "BrowserStackLocal"
+	}
+	if strings.TrimSpace(m.BrowserStack.Local.BinaryEnv) == "" {
+		m.BrowserStack.Local.BinaryEnv = "BROWSERSTACK_LOCAL_BINARY"
+	}
+	if m.BrowserStack.Local.DefaultHoldMinutes == 0 {
+		m.BrowserStack.Local.DefaultHoldMinutes = 10
+	}
+	if m.BrowserStack.Local.MaxHoldMinutes == 0 {
+		m.BrowserStack.Local.MaxHoldMinutes = 30
+	}
+	if m.BrowserStack.Local.HeartbeatSeconds == 0 {
+		m.BrowserStack.Local.HeartbeatSeconds = 60
+	}
+	if m.BrowserStack.Local.ForceLocal == nil {
+		v := false
+		m.BrowserStack.Local.ForceLocal = &v
+	}
 }
 
 func (a *AuthConfig) NormalizeType() {

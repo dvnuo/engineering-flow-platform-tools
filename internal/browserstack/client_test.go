@@ -3,8 +3,11 @@ package browserstack
 import (
 	"context"
 	"encoding/base64"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -52,6 +55,58 @@ func TestStatusErrorRedactsCredentials(t *testing.T) {
 	msg := err.Error()
 	if strings.Contains(msg, "user") || strings.Contains(msg, "key") || strings.Contains(msg, encoded) {
 		t.Fatalf("secret leaked: %s", msg)
+	}
+}
+
+func TestNewLeavesHTTPTimeoutToContext(t *testing.T) {
+	c, err := New("http://127.0.0.1:1", Credentials{}, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.http.Timeout != 0 {
+		t.Fatalf("timeout=%s", c.http.Timeout)
+	}
+}
+
+func TestUploadAppStreamsMultipartFile(t *testing.T) {
+	var sawFile bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/app-automate/upload" {
+			t.Fatalf("path=%s", r.URL.Path)
+		}
+		if err := r.ParseMultipartForm(1024); err != nil {
+			t.Fatalf("ParseMultipartForm: %v", err)
+		}
+		if r.FormValue("custom_id") != "custom-app" || r.FormValue("ios_keychain_support") != "true" {
+			t.Fatalf("unexpected fields: %#v", r.MultipartForm.Value)
+		}
+		f, header, err := r.FormFile("file")
+		if err != nil {
+			t.Fatalf("FormFile: %v", err)
+		}
+		defer f.Close()
+		body, _ := io.ReadAll(f)
+		if header.Filename != "app.apk" || string(body) != "fake app payload" {
+			t.Fatalf("bad file %s %q", header.Filename, string(body))
+		}
+		sawFile = true
+		_, _ = w.Write([]byte(`{"app_url":"bs://uploaded"}`))
+	}))
+	defer srv.Close()
+	appPath := filepath.Join(t.TempDir(), "app.apk")
+	if err := os.WriteFile(appPath, []byte("fake app payload"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c, err := New(srv.URL, Credentials{Username: "user", AccessKey: "key"}, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	app, err := c.UploadApp(context.Background(), UploadAppRequest{FilePath: appPath, CustomID: "custom-app", IOSKeychainSupport: true, SHA256: "sha"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sawFile || app.AppURL != "bs://uploaded" || app.SHA256 != "sha" {
+		t.Fatalf("unexpected upload result saw=%v app=%#v", sawFile, app)
 	}
 }
 

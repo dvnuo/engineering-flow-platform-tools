@@ -232,23 +232,62 @@ func tunnelDeadlineExpired(st TunnelState, now time.Time) bool {
 }
 
 func (m *TunnelManager) CleanupOrphans() ([]TunnelState, error) {
-	runs, err := m.Store.ListRuns()
+	tunnels, err := m.listTunnels()
 	if err != nil {
 		return nil, err
 	}
 	var stopped []TunnelState
-	for _, run := range runs {
-		if run.Status == StatusRunning || run.Status == StatusWaitingForHuman || run.Network.LocalIdentifier == "" {
-			continue
-		}
-		st, err := m.Load(run.RunID, run.Network.LocalIdentifier)
-		if err != nil || !st.Managed || st.Owner != "efp-mobile" || st.Status == "stopped" || st.Status == "exited" {
+	for _, st := range tunnels {
+		if !m.orphanedTunnel(st) {
 			continue
 		}
 		st, _ = m.Stop(st)
 		stopped = append(stopped, st)
 	}
 	return stopped, nil
+}
+
+func (m *TunnelManager) listTunnels() ([]TunnelState, error) {
+	runsDir := filepath.Join(m.Store.RootDir, "runs")
+	entries, err := os.ReadDir(runsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var out []TunnelState
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(runsDir, entry.Name(), "tunnel.json"))
+		if err != nil {
+			continue
+		}
+		var st TunnelState
+		if err := json.Unmarshal(b, &st); err == nil {
+			out = append(out, st)
+		}
+	}
+	return out, nil
+}
+
+func (m *TunnelManager) orphanedTunnel(st TunnelState) bool {
+	if !st.Managed || st.Owner != "efp-mobile" || st.Status == "stopped" || st.Status == "exited" {
+		return false
+	}
+	if tunnelDeadlineExpired(st, time.Now().UTC()) {
+		return true
+	}
+	run, err := m.Store.LoadRun(st.RunID)
+	if err != nil {
+		return true
+	}
+	if run.Status == StatusRunning || run.Status == StatusWaitingForHuman {
+		return run.Network.LocalIdentifier != st.LocalIdentifier
+	}
+	return true
 }
 
 func (m *TunnelManager) tunnelPath(runID, identifier string) string {

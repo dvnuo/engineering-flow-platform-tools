@@ -101,3 +101,14 @@ func TestLocatorHintsEscapeXPathLiteral(t *testing.T) {
 		t.Fatalf("xpath literal was not escaped: %s", xpath)
 	}
 }
+
+func TestLocatorHintsEscapeSelectorBackslashes(t *testing.T) {
+	hints := LocatorHints(Candidate{Text: `C:\Temp "draft"`})
+	for _, hint := range hints {
+		if hint.Using == "-android uiautomator" || hint.Using == "-ios predicate string" {
+			if !strings.Contains(hint.Value, `C:\\Temp \"draft\"`) {
+				t.Fatalf("selector hint was not escaped: %#v", hint)
+			}
+		}
+	}
+}

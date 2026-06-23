@@ -40,5 +40,6 @@ func xpathLocator(name string) Locator {
 }
 
 func selectorString(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
 	return strings.ReplaceAll(s, `"`, `\"`)
 }

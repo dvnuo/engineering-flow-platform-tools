@@ -15,3 +15,11 @@ func TestLocatorsForCandidateEscapesXPathFallback(t *testing.T) {
 		t.Fatalf("xpath fallback was not escaped: %s", value)
 	}
 }
+
+func TestSelectorStringEscapesBackslashAndQuote(t *testing.T) {
+	got := selectorString(`C:\Temp "draft"`)
+	want := `C:\\Temp \"draft\"`
+	if got != want {
+		t.Fatalf("selectorString=%q want %q", got, want)
+	}
+}

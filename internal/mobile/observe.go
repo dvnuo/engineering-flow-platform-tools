@@ -305,7 +305,7 @@ func LocatorHints(c Candidate) []LocatorHint {
 		hints = append(hints, LocatorHint{Using: "id", Value: c.ResourceID, Confidence: 95, Reason: "stable resource id"})
 	}
 	if c.Text != "" {
-		escaped := strings.ReplaceAll(c.Text, `"`, `\"`)
+		escaped := selectorString(c.Text)
 		hints = append(hints, LocatorHint{Using: "-android uiautomator", Value: `new UiSelector().text("` + escaped + `")`, Confidence: 70, Reason: "visible Android text"})
 		hints = append(hints, LocatorHint{Using: "-ios predicate string", Value: `name == "` + escaped + `" OR label == "` + escaped + `"`, Confidence: 70, Reason: "visible iOS name/label"})
 	}

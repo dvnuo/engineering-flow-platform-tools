@@ -116,6 +116,41 @@ func TestMarkExitedOnlyWhenTunnelStillRunning(t *testing.T) {
 	}
 }
 
+func TestCleanupOrphansStopsStandaloneManagedTunnel(t *testing.T) {
+	store := NewStateStore(filepath.Join(t.TempDir(), "state"), filepath.Join(t.TempDir(), "artifacts"))
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	mgr := &TunnelManager{Store: store}
+	state := TunnelState{
+		Version:         1,
+		RunID:           "tunnel-local-1",
+		Managed:         true,
+		PID:             99999999,
+		LocalIdentifier: "local-1",
+		Owner:           "efp-mobile",
+		Status:          "running",
+		Deadline:        time.Now().UTC().Add(-time.Minute),
+	}
+	if err := mgr.Save(state); err != nil {
+		t.Fatal(err)
+	}
+	stopped, err := mgr.CleanupOrphans()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stopped) != 1 || stopped[0].Status != "stopped" {
+		t.Fatalf("stopped=%#v", stopped)
+	}
+	got, err := mgr.Load("tunnel-local-1", "local-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != "stopped" {
+		t.Fatalf("status=%s", got.Status)
+	}
+}
+
 func TestLocalBinaryArgsDoNotExposeAccessKey(t *testing.T) {
 	secret := "bs-secret-value"
 	args := localBinaryArgs("local.yml", "local-1", config.MobileLocalConfig{})

@@ -18,7 +18,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"engineering-flow-platform-tools/internal/mobile"
 )
@@ -54,7 +53,7 @@ func New(baseURL string, creds Credentials, verifySSL bool, caCert string) (*Cli
 		}
 		tr.TLSClientConfig.RootCAs = pool
 	}
-	return &Client{baseURL: baseURL, http: &http.Client{Timeout: 60 * time.Second, Transport: tr}, creds: creds}, nil
+	return &Client{baseURL: baseURL, http: &http.Client{Transport: tr}, creds: creds}, nil
 }
 
 func validateBrowserStackURL(raw, host string) error {
@@ -85,39 +84,84 @@ func (c *Client) UploadApp(ctx context.Context, req UploadAppRequest) (UploadedA
 	if (strings.TrimSpace(req.FilePath) == "") == (strings.TrimSpace(req.URL) == "") {
 		return UploadedApp{}, mobile.NewError("invalid_args", "exactly one of --file or --url is required", "Pass a local app file or a public app URL.", 400)
 	}
-	buf := &bytes.Buffer{}
-	mw := multipart.NewWriter(buf)
-	if req.FilePath != "" {
-		f, err := os.Open(req.FilePath)
-		if err != nil {
-			return UploadedApp{}, mobile.NewError("invalid_args", "app file could not be opened", "Check --file points to a readable .apk, .aab, .xapk, or .ipa file.", 400)
-		}
-		defer f.Close()
-		fw, err := mw.CreateFormFile("file", filepath.Base(req.FilePath))
-		if err != nil {
-			return UploadedApp{}, err
-		}
-		if _, err := io.Copy(fw, f); err != nil {
-			return UploadedApp{}, err
-		}
-	} else {
-		_ = mw.WriteField("url", req.URL)
-	}
-	if req.CustomID != "" {
-		_ = mw.WriteField("custom_id", req.CustomID)
-	}
-	if req.IOSKeychainSupport {
-		_ = mw.WriteField("ios_keychain_support", "true")
-	}
-	if err := mw.Close(); err != nil {
+	body, contentType, err := uploadAppBody(req)
+	if err != nil {
 		return UploadedApp{}, err
 	}
+	defer body.Close()
 	var out UploadedApp
-	if err := c.doJSON(ctx, http.MethodPost, "/app-automate/upload", nil, mw.FormDataContentType(), buf, &out); err != nil {
+	if err := c.doJSON(ctx, http.MethodPost, "/app-automate/upload", nil, contentType, body, &out); err != nil {
 		return UploadedApp{}, err
 	}
 	out.SHA256 = req.SHA256
 	return out, nil
+}
+
+func uploadAppBody(req UploadAppRequest) (io.ReadCloser, string, error) {
+	if req.FilePath != "" {
+		return streamingUploadAppBody(req)
+	}
+	buf := &bytes.Buffer{}
+	mw := multipart.NewWriter(buf)
+	if err := writeUploadAppFields(mw, req); err != nil {
+		return nil, "", err
+	}
+	if err := mw.Close(); err != nil {
+		return nil, "", err
+	}
+	return io.NopCloser(buf), mw.FormDataContentType(), nil
+}
+
+func streamingUploadAppBody(req UploadAppRequest) (io.ReadCloser, string, error) {
+	f, err := os.Open(req.FilePath)
+	if err != nil {
+		return nil, "", mobile.NewError("invalid_args", "app file could not be opened", "Check --file points to a readable .apk, .aab, .xapk, or .ipa file.", 400)
+	}
+	pr, pw := io.Pipe()
+	mw := multipart.NewWriter(pw)
+	go func() {
+		defer f.Close()
+		if err := writeUploadAppFile(mw, req, f); err != nil {
+			_ = pw.CloseWithError(err)
+			return
+		}
+		if err := mw.Close(); err != nil {
+			_ = pw.CloseWithError(err)
+			return
+		}
+		_ = pw.Close()
+	}()
+	return pr, mw.FormDataContentType(), nil
+}
+
+func writeUploadAppFile(mw *multipart.Writer, req UploadAppRequest, f *os.File) error {
+	fw, err := mw.CreateFormFile("file", filepath.Base(req.FilePath))
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(fw, f); err != nil {
+		return err
+	}
+	return writeUploadAppFields(mw, req)
+}
+
+func writeUploadAppFields(mw *multipart.Writer, req UploadAppRequest) error {
+	if req.URL != "" {
+		if err := mw.WriteField("url", req.URL); err != nil {
+			return err
+		}
+	}
+	if req.CustomID != "" {
+		if err := mw.WriteField("custom_id", req.CustomID); err != nil {
+			return err
+		}
+	}
+	if req.IOSKeychainSupport {
+		if err := mw.WriteField("ios_keychain_support", "true"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *Client) ListApps(ctx context.Context, req ListAppsRequest) ([]UploadedApp, error) {

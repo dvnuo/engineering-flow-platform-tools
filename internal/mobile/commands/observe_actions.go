@@ -185,7 +185,11 @@ func readTextValue(cmd *cobra.Command, text, textEnv string, textStdin bool) (st
 	case text != "":
 		return text, "flag", nil
 	case textEnv != "":
-		return os.Getenv(textEnv), "env", nil
+		value, ok := os.LookupEnv(textEnv)
+		if !ok {
+			return "", "", fmt.Errorf("--text-env %s is not set", textEnv)
+		}
+		return value, "env", nil
 	default:
 		b, err := io.ReadAll(cmd.InOrStdin())
 		if err != nil {
@@ -409,18 +413,27 @@ func contextCmd(o *Opts) *cobra.Command {
 		if name == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--name is required", "Pass a context name from context list.", 400))
 		}
-		svc, st, err := servicesAndRun(o, runID, true)
+		svc, _, err := servicesAndRun(o, runID, true)
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		if st.ControlOwner == "human" {
-			return renderErr(cmd, o, mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume first.", 423))
-		}
-		if err := svc.Appium.SwitchContext(cmd.Context(), st.SessionID, name); err != nil {
+		err = svc.Store.WithRunLock(runID, func() error {
+			st, err := svc.Store.LoadRun(runID)
+			if err != nil {
+				return err
+			}
+			if st.ControlOwner == "human" {
+				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume first.", 423)
+			}
+			if err := svc.Appium.SwitchContext(cmd.Context(), st.SessionID, name); err != nil {
+				return err
+			}
+			st.LatestObservationID = ""
+			return svc.Store.SaveRun(st)
+		})
+		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		st.LatestObservationID = ""
-		_ = svc.Store.SaveRun(st)
 		return print(cmd, o, output.Success("", map[string]any{"context": name, "observation_invalidated": true}))
 	}}
 	sw.Flags().StringVar(&runID, "run-id", "", "")

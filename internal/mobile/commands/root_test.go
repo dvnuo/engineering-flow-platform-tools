@@ -47,6 +47,18 @@ func TestInvalidArgsReturnsJSON(t *testing.T) {
 	}
 }
 
+func TestTypeMissingTextEnvFailsBeforeServiceSetup(t *testing.T) {
+	t.Setenv("MOBILE_TEST_SECRET_MISSING", "")
+	out := runMobile(t, "type", "--run-id", "run-1", "--ref", "obs-1:e1", "--text-env", "MOBILE_TEXT_ENV_DOES_NOT_EXIST", "--json")
+	if out["ok"] != false {
+		t.Fatalf("expected failure: %#v", out)
+	}
+	errObj := out["error"].(map[string]any)
+	if errObj["code"] != "invalid_args" || !strings.Contains(errObj["message"].(string), "MOBILE_TEXT_ENV_DOES_NOT_EXIST") {
+		t.Fatalf("unexpected error: %#v", errObj)
+	}
+}
+
 func runMobile(t *testing.T, args ...string) map[string]any {
 	t.Helper()
 	cmd := NewRoot()

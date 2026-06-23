@@ -76,6 +76,9 @@ func TestTunnelStatusMarksExpiredRunningTunnel(t *testing.T) {
 	if got.Status != "expired" {
 		t.Fatalf("status=%s", got.Status)
 	}
+	if TunnelReusable(got, time.Now().UTC()) {
+		t.Fatal("expired tunnel should not be reusable")
+	}
 }
 
 func TestMarkExitedOnlyWhenTunnelStillRunning(t *testing.T) {

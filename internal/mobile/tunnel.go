@@ -223,6 +223,10 @@ func (m *TunnelManager) Status(runID, identifier string) (TunnelState, error) {
 	return st, nil
 }
 
+func TunnelReusable(st TunnelState, now time.Time) bool {
+	return st.Status == "running" && !tunnelDeadlineExpired(st, now)
+}
+
 func tunnelDeadlineExpired(st TunnelState, now time.Time) bool {
 	return !st.Deadline.IsZero() && now.After(st.Deadline)
 }

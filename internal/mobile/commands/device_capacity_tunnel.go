@@ -203,7 +203,7 @@ func tunnelEnsureCmd(o *Opts) *cobra.Command {
 			return renderErr(cmd, o, err)
 		}
 		if runID != "" && localID != "" {
-			if st, err := svc.Tunnel.Status(runID, localID); err == nil && st.Status == "running" {
+			if st, err := svc.Tunnel.Status(runID, localID); err == nil && mobile.TunnelReusable(st, time.Now().UTC()) {
 				return print(cmd, o, output.Success("", st))
 			}
 		}

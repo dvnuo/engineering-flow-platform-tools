@@ -29,7 +29,8 @@ func LocatorsForCandidate(platform string, c Candidate) []Locator {
 	}
 	if len(out) == 0 && (c.Name != "" || c.Text != "") {
 		name := firstNonEmpty(c.Name, c.Text)
-		out = append(out, Locator{Using: "xpath", Value: `//*[@text="` + escapeSelector(name) + `" or @name="` + escapeSelector(name) + `" or @label="` + escapeSelector(name) + `"]`})
+		literal := xpathLiteral(name)
+		out = append(out, Locator{Using: "xpath", Value: `//*[@text=` + literal + ` or @name=` + literal + ` or @label=` + literal + `]`})
 	}
 	return out
 }

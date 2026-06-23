@@ -104,12 +104,16 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 		Status:          "running",
 	}
 	if err := m.Save(state); err != nil {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
 		_ = os.Remove(localConfigPath)
 		return state, err
 	}
 	exited := make(chan error, 1)
 	go func() {
-		exited <- cmd.Wait()
+		err := cmd.Wait()
+		m.markExitedIfRunning(state)
+		exited <- err
 	}()
 	select {
 	case err := <-exited:
@@ -159,6 +163,15 @@ func (m *TunnelManager) Save(st TunnelState) error {
 		return err
 	}
 	return atomicWriteJSON(path, st, 0o600)
+}
+
+func (m *TunnelManager) markExitedIfRunning(st TunnelState) {
+	current, err := m.Load(st.RunID, st.LocalIdentifier)
+	if err != nil || current.Status != "running" {
+		return
+	}
+	st.Status = "exited"
+	_ = m.Save(st)
 }
 
 func (m *TunnelManager) Load(runID, identifier string) (TunnelState, error) {

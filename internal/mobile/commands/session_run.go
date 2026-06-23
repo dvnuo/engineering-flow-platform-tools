@@ -524,7 +524,13 @@ func runHandoffCmd(o *Opts) *cobra.Command {
 			if err := svc.Store.SaveRun(st); err != nil {
 				return err
 			}
-			keeper, _ := startKeeper(o, svc, st.RunID, deadline)
+			keeper, err := startKeeper(o, svc, st.RunID, deadline)
+			if err != nil {
+				st.ControlOwner = "agent"
+				st.Status = mobile.StatusRunning
+				_ = svc.Store.SaveRun(st)
+				return mobile.NewError("keepalive_start_failed", "failed to start keepalive helper", "Retry handoff or finish the run to avoid idle timeout.", 500)
+			}
 			result = map[string]any{
 				"run":              st,
 				"observation":      obs,

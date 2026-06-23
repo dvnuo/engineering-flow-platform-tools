@@ -28,11 +28,14 @@ func LocatorsForCandidate(platform string, c Candidate) []Locator {
 		}
 	}
 	if len(out) == 0 && (c.Name != "" || c.Text != "") {
-		name := firstNonEmpty(c.Name, c.Text)
-		literal := xpathLiteral(name)
-		out = append(out, Locator{Using: "xpath", Value: `//*[@text=` + literal + ` or @name=` + literal + ` or @label=` + literal + `]`})
+		out = append(out, xpathLocator(firstNonEmpty(c.Name, c.Text)))
 	}
 	return out
+}
+
+func xpathLocator(name string) Locator {
+	literal := xpathLiteral(name)
+	return Locator{Using: "xpath", Value: `//*[@text=` + literal + ` or @name=` + literal + ` or @label=` + literal + `]`}
 }
 
 func escapeSelector(s string) string {

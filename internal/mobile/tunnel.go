@@ -105,17 +105,10 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 		Status:          "running",
 	}
 	if err := m.Save(state); err != nil {
-		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
-		_ = os.Remove(localConfigPath)
+		cleanupStartedTunnel(cmd, localConfigPath)
 		return state, err
 	}
-	exited := make(chan error, 1)
-	go func() {
-		err := cmd.Wait()
-		m.markExitedIfRunning(state)
-		exited <- err
-	}()
+	exited := m.watchTunnelExit(cmd, state)
 	select {
 	case err := <-exited:
 		_ = os.Remove(localConfigPath)
@@ -130,6 +123,22 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 	}
 	_ = os.Remove(localConfigPath)
 	return state, nil
+}
+
+func cleanupStartedTunnel(cmd *exec.Cmd, localConfigPath string) {
+	_ = cmd.Process.Kill()
+	_ = cmd.Wait()
+	_ = os.Remove(localConfigPath)
+}
+
+func (m *TunnelManager) watchTunnelExit(cmd *exec.Cmd, state TunnelState) <-chan error {
+	exited := make(chan error, 1)
+	go func() {
+		err := cmd.Wait()
+		m.markExitedIfRunning(state)
+		exited <- err
+	}()
+	return exited
 }
 
 func localBinaryArgs(configPath, identifier string, cfg config.MobileLocalConfig) []string {

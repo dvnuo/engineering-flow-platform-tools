@@ -155,6 +155,14 @@ mobile:
       ready_timeout_seconds: 30
       heartbeat_seconds: 60
       force_local: false
+      disable_proxy_discovery: false
+      force_proxy: false
+      proxy_host: ""
+      proxy_port: 0
+      proxy_user_env: ""
+      proxy_pass_env: ""
+      only_automate: false
+      force: false
       include_hosts: []
       exclude_hosts: []
 ```
@@ -166,3 +174,5 @@ printf '%s\n' "$BROWSERSTACK_ACCESS_KEY" | mobile auth login --username "$BROWSE
 ```
 
 `MOBILE_STATE_DIR` and `MOBILE_ARTIFACTS_DIR` override the state and artifact roots in CI. State and artifact directories are created outside the main config with restrictive permissions where the platform supports them.
+
+For enterprise networks, `mobile.browserstack.local.proxy_user_env` and `proxy_pass_env` name environment variables read at tunnel startup; do not store proxy credentials directly in `config.yaml`. The Local flags are passed only for fields explicitly configured.

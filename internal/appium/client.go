@@ -32,6 +32,25 @@ type Client struct {
 	creds   browserstack.Credentials
 }
 
+type SessionIDMissingError struct {
+	Err      *mobile.Error
+	Response map[string]any
+}
+
+func (e *SessionIDMissingError) Error() string {
+	if e == nil || e.Err == nil {
+		return "session id missing"
+	}
+	return e.Err.Error()
+}
+
+func (e *SessionIDMissingError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Err
+}
+
 func New(baseURL string, creds browserstack.Credentials, verifySSL bool, caCert string) (*Client, error) {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	if baseURL == "" {
@@ -151,7 +170,7 @@ func (c *Client) CreateSession(ctx context.Context, req CreateSessionRequest) (S
 		capabilities, _ = raw["capabilities"].(map[string]any)
 	}
 	if id == "" {
-		return Session{}, mobile.NewError("session_creation_failed", "Appium session response did not include a session id", "Inspect BrowserStack Appium response shape.", 502)
+		return Session{}, missingSessionIDError(raw, c.creds)
 	}
 	return Session{ID: id, Capabilities: capabilities}, nil
 }
@@ -341,7 +360,73 @@ func stringFrom(v any) string {
 	if s, ok := v.(string); ok {
 		return s
 	}
+	if f, ok := v.(float64); ok {
+		return fmt.Sprintf("%.0f", f)
+	}
 	return ""
+}
+
+func missingSessionIDError(raw map[string]any, creds browserstack.Credentials) error {
+	value, _ := raw["value"].(map[string]any)
+	remoteError := firstRemoteString(value, raw, "error", "status")
+	remoteMessage := firstRemoteString(value, raw, "message", "reason", "stacktrace")
+	rawSummary := strings.TrimSpace(strings.Join(nonEmpty(remoteError, remoteMessage), ": "))
+	if rawSummary == "" {
+		rawSummary = "Appium session response did not include a session id"
+	}
+	code, hint, status, action := classifySessionCreationFailure(rawSummary)
+	summary := sanitize(rawSummary, creds)
+	return &SessionIDMissingError{
+		Err: &mobile.Error{
+			Code:              code,
+			Message:           "Appium session was not usable: " + summary,
+			Hint:              hint,
+			Status:            status,
+			Retryable:         code == "local_tunnel_connection_failed",
+			RecommendedAction: action,
+		},
+		Response: raw,
+	}
+}
+
+func firstRemoteString(value map[string]any, raw map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value != nil {
+			if s := stringFrom(value[key]); strings.TrimSpace(s) != "" {
+				return strings.TrimSpace(s)
+			}
+		}
+		if s := stringFrom(raw[key]); strings.TrimSpace(s) != "" {
+			return strings.TrimSpace(s)
+		}
+	}
+	return ""
+}
+
+func nonEmpty(values ...string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			out = append(out, strings.TrimSpace(value))
+		}
+	}
+	return out
+}
+
+func classifySessionCreationFailure(summary string) (string, string, int, string) {
+	lower := strings.ToLower(summary)
+	switch {
+	case strings.Contains(lower, "local") && (strings.Contains(lower, "required") || strings.Contains(lower, "enable") || strings.Contains(lower, "start") || strings.Contains(lower, "not configured")):
+		return "local_tunnel_required", "Use --network private-managed to start BrowserStack Local, or --network private-external with a running --local-identifier.", 424, "start_tunnel"
+	case strings.Contains(lower, "local") && (strings.Contains(lower, "connect") || strings.Contains(lower, "unreachable") || strings.Contains(lower, "not running") || strings.Contains(lower, "disconnected") || strings.Contains(lower, "failed")):
+		return "local_tunnel_connection_failed", "Check BrowserStack Local status, local identifier, proxy, and private network reachability.", 503, "retry"
+	case strings.Contains(lower, "capabil") || strings.Contains(lower, "desired") || strings.Contains(lower, "automationname") || strings.Contains(lower, "platform") || strings.Contains(lower, "device") || strings.Contains(lower, "appium:") || strings.Contains(lower, "invalid argument"):
+		return "invalid_capabilities", "Inspect device, platform, app, and Appium capability values.", 400, "fix_args"
+	case strings.TrimSpace(summary) != "" && summary != "Appium session response did not include a session id":
+		return "browserstack_session_error", "Inspect BrowserStack session and Appium logs for the provider-specific failure.", 502, "inspect"
+	default:
+		return "session_creation_failed", "Inspect BrowserStack Appium response shape.", 502, "inspect"
+	}
 }
 
 func statusError(resp *http.Response, creds browserstack.Credentials) *mobile.Error {

@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -358,6 +359,7 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 	if equalFold(opts.Platform, "ios") {
 		automation = "XCUITest"
 	}
+	sessionCreateStarted := time.Now().UTC()
 	session, err := svc.Appium.CreateSession(ctx, appium.CreateSessionRequest{
 		PlatformName:             opts.Platform,
 		AutomationName:           automation,
@@ -374,11 +376,40 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 		IdleTimeoutSeconds:       cfg.Defaults.IdleTimeoutSeconds,
 		NewCommandTimeoutSeconds: cfg.Defaults.NewCommandTimeoutSeconds,
 	})
+	var remoteSession browserstack.Session
+	var haveRemoteSession bool
+	var recoveredSession bool
+	buildID := ""
 	if err != nil {
-		if tunnel.Managed {
-			_, _ = svc.Tunnel.Stop(tunnel)
+		var missingID *appium.SessionIDMissingError
+		if errors.As(err, &missingID) {
+			if recovered, recoveredBuildID, recoverErr := recoverCreatedSession(ctx, svc, opts, dev.Recommended, sessionCreateStarted); recoverErr == nil {
+				remoteSession = recovered
+				haveRemoteSession = true
+				recoveredSession = true
+				buildID = recoveredBuildID
+				session = appium.Session{ID: recovered.HashedID}
+			} else {
+				if tunnel.Managed {
+					_, _ = svc.Tunnel.Stop(tunnel)
+				}
+				return renderErr(cmd, o, err)
+			}
+		} else {
+			if tunnel.Managed {
+				_, _ = svc.Tunnel.Stop(tunnel)
+			}
+			return renderErr(cmd, o, err)
 		}
-		return renderErr(cmd, o, err)
+	}
+	if !haveRemoteSession {
+		if remote, err := svc.Control.GetSession(ctx, session.ID); err == nil {
+			remoteSession = remote
+			haveRemoteSession = true
+		}
+	}
+	if buildID == "" {
+		buildID = findBuildIDByName(ctx, svc, opts.Build, sessionCreateStarted)
 	}
 	now := time.Now().UTC()
 	st := mobile.RunState{
@@ -391,22 +422,22 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 		Platform:     opts.Platform,
 		Device:       dev.Recommended,
 		App:          appRef,
-		Network:      mobile.NetworkState{Mode: opts.Network, LocalIdentifier: opts.LocalID, TunnelID: tunnel.TunnelID},
+		Network:      mobile.NetworkState{Mode: opts.Network, LocalMode: localModeForNetwork(opts.Network), LocalIdentifier: opts.LocalID, TunnelID: tunnel.TunnelID},
+		BuildID:      buildID,
 		ProjectName:  opts.Project,
 		BuildName:    opts.Build,
 		SessionName:  opts.Name,
+		DashboardURL: dashboardURLFromSession(session),
 		StartedAt:    now,
 		UpdatedAt:    now,
 	}
-	if dashboardURL := dashboardURLFromSession(session); dashboardURL != "" {
-		st.DashboardURL = dashboardURL
-	} else if remote, err := svc.Control.GetSession(ctx, session.ID); err == nil {
-		st.DashboardURL = firstNonEmpty(remote.BrowserURL, remote.PublicURL)
+	if haveRemoteSession {
+		enrichRunStateFromRemote(&st, remoteSession)
 	}
 	if err := svc.Store.SaveRun(st); err != nil {
 		return renderErr(cmd, o, err)
 	}
-	return print(cmd, o, output.Success("", map[string]any{"run": st, "session": session, "device_resolution": dev, "tunnel": tunnel}))
+	return print(cmd, o, output.Success("", map[string]any{"run": st, "session": session, "device_resolution": dev, "tunnel": tunnel, "effective": effectiveRunStart(st, dev), "recovered_session": recoveredSession}))
 }
 
 func dashboardURLFromSession(session appium.Session) string {
@@ -416,6 +447,166 @@ func dashboardURLFromSession(session appium.Session) string {
 		}
 	}
 	return ""
+}
+
+type recoveredSessionCandidate struct {
+	Session browserstack.Session
+	BuildID string
+}
+
+func recoverCreatedSession(ctx context.Context, svc *services, opts runStartOptions, dev mobile.DeviceSelection, since time.Time) (browserstack.Session, string, error) {
+	if strings.TrimSpace(opts.Build) == "" && strings.TrimSpace(opts.Name) == "" {
+		return browserstack.Session{}, "", mobile.NewError("session_recovery_not_possible", "Appium response did not include a session id and no build/session name is available for recovery", "Pass --build and --name so BrowserStack control-plane recovery can uniquely identify the session.", 502)
+	}
+	builds, err := svc.Control.ListBuilds(ctx, 20, 0, "", "")
+	if err != nil {
+		return browserstack.Session{}, "", err
+	}
+	var candidates []recoveredSessionCandidate
+	for _, build := range builds {
+		if opts.Build != "" && !equalFold(build.Name, opts.Build) {
+			continue
+		}
+		if build.HashedID == "" {
+			continue
+		}
+		sessions, err := svc.Control.ListBuildSessions(ctx, build.HashedID, 100, 0, "")
+		if err != nil {
+			continue
+		}
+		for _, session := range sessions {
+			if browserStackSessionMatches(session, opts, dev, since) {
+				candidates = append(candidates, recoveredSessionCandidate{Session: session, BuildID: build.HashedID})
+			}
+		}
+	}
+	if len(candidates) == 1 && candidates[0].Session.HashedID != "" {
+		return candidates[0].Session, candidates[0].BuildID, nil
+	}
+	if len(candidates) > 1 {
+		return browserstack.Session{}, "", mobile.NewError("session_recovery_ambiguous", "BrowserStack control-plane recovery found multiple matching sessions", "Use unique --build and --name values, then retry.", 409)
+	}
+	return browserstack.Session{}, "", mobile.NewError("session_recovery_not_found", "BrowserStack control-plane recovery did not find the created session", "Inspect BrowserStack Appium logs and dashboard for the attempted run.", 502)
+}
+
+func browserStackSessionMatches(session browserstack.Session, opts runStartOptions, dev mobile.DeviceSelection, since time.Time) bool {
+	if session.HashedID == "" {
+		return false
+	}
+	if opts.Name != "" && !equalFold(session.Name, opts.Name) {
+		return false
+	}
+	if opts.Build != "" && session.BuildName != "" && !equalFold(session.BuildName, opts.Build) {
+		return false
+	}
+	if opts.Platform != "" && session.OS != "" && !equalFold(session.OS, opts.Platform) {
+		return false
+	}
+	if dev.Name != "" && session.Device != "" && !equalFold(session.Device, dev.Name) {
+		return false
+	}
+	if t, ok := sessionCreatedAt(session.Raw); ok && t.Before(since.Add(-5*time.Minute)) {
+		return false
+	}
+	return true
+}
+
+func sessionCreatedAt(raw any) (time.Time, bool) {
+	m, _ := raw.(map[string]any)
+	if m == nil {
+		return time.Time{}, false
+	}
+	for _, key := range []string{"created_at", "createdAt", "start_time", "started_at", "created_time"} {
+		if t, ok := parseRemoteTime(m[key]); ok {
+			return t, true
+		}
+	}
+	return time.Time{}, false
+}
+
+func parseRemoteTime(v any) (time.Time, bool) {
+	switch x := v.(type) {
+	case string:
+		x = strings.TrimSpace(x)
+		if x == "" {
+			return time.Time{}, false
+		}
+		for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02T15:04:05Z0700", "2006-01-02 15:04:05 MST", "2006-01-02 15:04:05"} {
+			if t, err := time.Parse(layout, x); err == nil {
+				return t, true
+			}
+		}
+	case float64:
+		if x > 1_000_000_000_000 {
+			return time.UnixMilli(int64(x)), true
+		}
+		if x > 0 {
+			return time.Unix(int64(x), 0), true
+		}
+	}
+	return time.Time{}, false
+}
+
+func findBuildIDByName(ctx context.Context, svc *services, buildName string, since time.Time) string {
+	if strings.TrimSpace(buildName) == "" {
+		return ""
+	}
+	builds, err := svc.Control.ListBuilds(ctx, 20, 0, "", "")
+	if err != nil {
+		return ""
+	}
+	matches := []browserstack.Build{}
+	for _, build := range builds {
+		if equalFold(build.Name, buildName) && build.HashedID != "" && buildRecentEnough(build.Raw, since) {
+			matches = append(matches, build)
+		}
+	}
+	if len(matches) == 1 {
+		return matches[0].HashedID
+	}
+	return ""
+}
+
+func buildRecentEnough(raw any, since time.Time) bool {
+	if t, ok := sessionCreatedAt(raw); ok {
+		return !t.Before(since.Add(-5 * time.Minute))
+	}
+	return true
+}
+
+func enrichRunStateFromRemote(st *mobile.RunState, remote browserstack.Session) {
+	if remote.HashedID != "" {
+		st.BrowserStackSessionID = remote.HashedID
+	}
+	st.BrowserURL = firstNonEmpty(st.BrowserURL, remote.BrowserURL)
+	st.PublicURL = firstNonEmpty(st.PublicURL, remote.PublicURL)
+	st.AppiumLogsURL = firstNonEmpty(st.AppiumLogsURL, remote.AppiumLogsURL)
+	st.DeviceLogsURL = firstNonEmpty(st.DeviceLogsURL, remote.DeviceLogsURL)
+	st.VideoURL = firstNonEmpty(st.VideoURL, remote.VideoURL)
+	st.DashboardURL = firstNonEmpty(st.DashboardURL, remote.BrowserURL, remote.PublicURL)
+}
+
+func localModeForNetwork(network string) string {
+	switch network {
+	case "private-managed":
+		return "managed"
+	case "private-external":
+		return "external"
+	default:
+		return "none"
+	}
+}
+
+func effectiveRunStart(st mobile.RunState, dev mobile.DeviceResolveResult) map[string]any {
+	return map[string]any{
+		"network_mode":       st.Network.Mode,
+		"local_mode":         st.Network.LocalMode,
+		"local_identifier":   st.Network.LocalIdentifier,
+		"build_name":         st.BuildName,
+		"session_name":       st.SessionName,
+		"device_resolution":  dev,
+		"browserstack_links": map[string]string{"dashboard_url": st.DashboardURL, "appium_logs_url": st.AppiumLogsURL, "device_logs_url": st.DeviceLogsURL, "video_url": st.VideoURL},
+	}
 }
 
 func resolveApp(ctx context.Context, svc *services, opts runStartOptions) (mobile.AppRef, error) {

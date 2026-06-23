@@ -144,6 +144,42 @@ func TestCreateSessionRejectsUnsupportedIdleTimeout(t *testing.T) {
 	}
 }
 
+func TestCreateSessionPreservesRemoteLocalError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"value":{"error":"unknown error","message":"BrowserStack Local is required to access this host"}}`))
+	}))
+	defer srv.Close()
+	c, err := New(srv.URL, browserstack.Credentials{Username: "u", AccessKey: "k"}, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.CreateSession(context.Background(), CreateSessionRequest{PlatformName: "android"})
+	var me *mobile.Error
+	if !errors.As(err, &me) || me.Code != "local_tunnel_required" {
+		t.Fatalf("expected local_tunnel_required, got %#v", err)
+	}
+	var missing *SessionIDMissingError
+	if !errors.As(err, &missing) || missing.Response == nil {
+		t.Fatalf("missing response was not preserved: %#v", err)
+	}
+}
+
+func TestCreateSessionPreservesRemoteCapabilityError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"value":{"error":"invalid argument","message":"Invalid capabilities: appium:deviceName is not supported"}}`))
+	}))
+	defer srv.Close()
+	c, err := New(srv.URL, browserstack.Credentials{Username: "u", AccessKey: "k"}, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.CreateSession(context.Background(), CreateSessionRequest{PlatformName: "android"})
+	var me *mobile.Error
+	if !errors.As(err, &me) || me.Code != "invalid_capabilities" {
+		t.Fatalf("expected invalid_capabilities, got %#v", err)
+	}
+}
+
 func TestFindElementsParsesW3CElementKey(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/session/s1/elements" {

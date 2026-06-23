@@ -88,7 +88,12 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 		_ = os.Remove(localConfigPath)
 		return TunnelState{}, err
 	}
-	args := localBinaryArgs(localConfigPath, identifier, m.Config)
+	args, err := localBinaryArgs(localConfigPath, identifier, m.Config)
+	if err != nil {
+		_ = logFile.Close()
+		_ = os.Remove(localConfigPath)
+		return TunnelState{}, err
+	}
 	cmd := exec.Command(resolved, args...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
@@ -164,12 +169,12 @@ func (m *TunnelManager) WaitReady(ctx context.Context, state TunnelState, exited
 		if ready, failed := inspectLocalReadyLog(state.LogPath); failed != "" {
 			state.Status = "exited"
 			_ = m.Save(state)
-			return state, NewError("local_tunnel_start_failed", "BrowserStack Local failed during startup", "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
+			return state, NewError("local_tunnel_start_failed", "BrowserStack Local failed during startup"+m.localLogDiagnostic(state.LogPath), "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
 		} else if ready {
 			if state.PID != 0 && !processRunning(state.PID) {
 				state.Status = "exited"
 				_ = m.Save(state)
-				return state, NewError("local_tunnel_start_failed", "BrowserStack Local exited before it became reusable", "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
+				return state, NewError("local_tunnel_start_failed", "BrowserStack Local exited before it became reusable"+m.localLogDiagnostic(state.LogPath), "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
 			}
 			state.Status = "running"
 			state.ReadyAt = time.Now().UTC()
@@ -184,14 +189,58 @@ func (m *TunnelManager) WaitReady(ctx context.Context, state TunnelState, exited
 			if err != nil {
 				msg += ": " + err.Error()
 			}
+			msg += m.localLogDiagnostic(state.LogPath)
 			return state, NewError("local_tunnel_start_failed", msg, "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
 		case <-ctx.Done():
 			state.Status = "start_timeout"
 			_ = m.Save(state)
-			return state, RetryableError("local_tunnel_not_ready", "timed out waiting for BrowserStack Local readiness", "Inspect tunnel.log, credentials, proxy, and private network reachability.", "retry", 504)
+			return state, RetryableError("local_tunnel_not_ready", "timed out waiting for BrowserStack Local readiness"+m.localLogDiagnostic(state.LogPath), "Inspect tunnel.log, credentials, proxy, and private network reachability.", "retry", 504)
 		case <-ticker.C:
 		}
 	}
+}
+
+func (m *TunnelManager) localLogDiagnostic(path string) string {
+	tail := m.redactLocalLogTail(path, 8)
+	if tail == "" {
+		return ""
+	}
+	return "; last log lines: " + tail
+}
+
+func (m *TunnelManager) redactLocalLogTail(path string, maxLines int) string {
+	b, err := os.ReadFile(path)
+	if err != nil || len(b) == 0 {
+		return ""
+	}
+	text := strings.ReplaceAll(string(b), "\r\n", "\n")
+	lines := strings.Split(text, "\n")
+	trimmed := make([]string, 0, len(lines))
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			trimmed = append(trimmed, line)
+		}
+	}
+	if len(trimmed) == 0 {
+		return ""
+	}
+	if maxLines <= 0 {
+		maxLines = 8
+	}
+	if len(trimmed) > maxLines {
+		trimmed = trimmed[len(trimmed)-maxLines:]
+	}
+	out := strings.Join(trimmed, " | ")
+	for _, secret := range []string{m.Credentials.Username, m.Credentials.AccessKey, os.Getenv(strings.TrimSpace(m.Config.ProxyUserEnv)), os.Getenv(strings.TrimSpace(m.Config.ProxyPassEnv))} {
+		if strings.TrimSpace(secret) != "" {
+			out = strings.ReplaceAll(out, secret, "***REDACTED***")
+		}
+	}
+	if len(out) > 1200 {
+		out = strings.TrimSpace(out[:1197]) + "..."
+	}
+	return out
 }
 
 func inspectLocalReadyLog(path string) (bool, string) {
@@ -226,10 +275,42 @@ func terminateStartedTunnel(cmd *exec.Cmd, exited <-chan error) {
 	}
 }
 
-func localBinaryArgs(configPath, identifier string, cfg config.MobileLocalConfig) []string {
+func localBinaryArgs(configPath, identifier string, cfg config.MobileLocalConfig) ([]string, error) {
 	args := []string{"--config-file", configPath, "--local-identifier", identifier, "--enable-logging-for-api"}
 	if cfg.ForceLocal != nil && *cfg.ForceLocal {
 		args = append(args, "--force-local")
+	}
+	if cfg.DisableProxyDiscovery != nil && *cfg.DisableProxyDiscovery {
+		args = append(args, "--disable-proxy-discovery")
+	}
+	if cfg.ForceProxy != nil && *cfg.ForceProxy {
+		args = append(args, "--force-proxy")
+	}
+	if strings.TrimSpace(cfg.ProxyHost) != "" {
+		args = append(args, "--proxy-host", strings.TrimSpace(cfg.ProxyHost))
+	}
+	if cfg.ProxyPort > 0 {
+		args = append(args, "--proxy-port", strconv.Itoa(cfg.ProxyPort))
+	}
+	if strings.TrimSpace(cfg.ProxyUserEnv) != "" {
+		value, ok := os.LookupEnv(strings.TrimSpace(cfg.ProxyUserEnv))
+		if !ok || strings.TrimSpace(value) == "" {
+			return nil, NewError("config_error", "BrowserStack Local proxy username env var is not set", "Set "+strings.TrimSpace(cfg.ProxyUserEnv)+" or remove mobile.browserstack.local.proxy_user_env.", 400)
+		}
+		args = append(args, "--proxy-user", value)
+	}
+	if strings.TrimSpace(cfg.ProxyPassEnv) != "" {
+		value, ok := os.LookupEnv(strings.TrimSpace(cfg.ProxyPassEnv))
+		if !ok || strings.TrimSpace(value) == "" {
+			return nil, NewError("config_error", "BrowserStack Local proxy password env var is not set", "Set "+strings.TrimSpace(cfg.ProxyPassEnv)+" or remove mobile.browserstack.local.proxy_pass_env.", 400)
+		}
+		args = append(args, "--proxy-pass", value)
+	}
+	if cfg.OnlyAutomate != nil && *cfg.OnlyAutomate {
+		args = append(args, "--only-automate")
+	}
+	if cfg.Force != nil && *cfg.Force {
+		args = append(args, "--force")
 	}
 	if len(cfg.IncludeHosts) > 0 {
 		args = append(args, "--include-hosts")
@@ -239,7 +320,7 @@ func localBinaryArgs(configPath, identifier string, cfg config.MobileLocalConfig
 		args = append(args, "--exclude-hosts")
 		args = append(args, cfg.ExcludeHosts...)
 	}
-	return args
+	return args, nil
 }
 
 func writeLocalBinaryConfig(path string, creds Credentials) error {

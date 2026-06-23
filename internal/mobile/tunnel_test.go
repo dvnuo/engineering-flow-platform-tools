@@ -177,6 +177,22 @@ func TestInspectLocalReadyLog(t *testing.T) {
 	}
 }
 
+func TestLocalLogDiagnosticRedactsSecrets(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tunnel.log")
+	t.Setenv("BS_PROXY_PASS", "proxy-secret")
+	if err := os.WriteFile(path, []byte("old\nkey-secret\nproxy-secret\nlatest"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mgr := &TunnelManager{Credentials: Credentials{AccessKey: "key-secret"}, Config: config.MobileLocalConfig{ProxyPassEnv: "BS_PROXY_PASS"}}
+	got := mgr.localLogDiagnostic(path)
+	if !strings.Contains(got, "latest") {
+		t.Fatalf("diagnostic missing log tail: %q", got)
+	}
+	if strings.Contains(got, "key-secret") || strings.Contains(got, "proxy-secret") {
+		t.Fatalf("secret leaked: %q", got)
+	}
+}
+
 func TestMarkExitedOnlyWhenTunnelStillRunning(t *testing.T) {
 	store := NewStateStore(filepath.Join(t.TempDir(), "state"), filepath.Join(t.TempDir(), "artifacts"))
 	if err := store.Ensure(); err != nil {
@@ -249,13 +265,39 @@ func TestCleanupOrphansStopsStandaloneManagedTunnel(t *testing.T) {
 
 func TestLocalBinaryArgsDoNotExposeAccessKey(t *testing.T) {
 	secret := "bs-secret-value"
-	args := localBinaryArgs("local.yml", "local-1", config.MobileLocalConfig{
-		IncludeHosts: []string{"api.internal", "*.corp"},
-		ExcludeHosts: []string{"blocked.internal", "8.8.8.8"},
+	t.Setenv("BS_PROXY_USER", "proxy-user")
+	t.Setenv("BS_PROXY_PASS", "proxy-pass")
+	disableProxyDiscovery := true
+	forceProxy := true
+	onlyAutomate := true
+	force := true
+	args, err := localBinaryArgs("local.yml", "local-1", config.MobileLocalConfig{
+		IncludeHosts:          []string{"api.internal", "*.corp"},
+		ExcludeHosts:          []string{"blocked.internal", "8.8.8.8"},
+		DisableProxyDiscovery: &disableProxyDiscovery,
+		ForceProxy:            &forceProxy,
+		ProxyHost:             "proxy.internal",
+		ProxyPort:             8080,
+		ProxyUserEnv:          "BS_PROXY_USER",
+		ProxyPassEnv:          "BS_PROXY_PASS",
+		OnlyAutomate:          &onlyAutomate,
+		Force:                 &force,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !containsArg(args, "--enable-logging-for-api") {
 		t.Fatalf("local API logging flag missing: %#v", args)
 	}
+	for _, flag := range []string{"--disable-proxy-discovery", "--force-proxy", "--only-automate", "--force"} {
+		if !containsArg(args, flag) {
+			t.Fatalf("%s missing in %#v", flag, args)
+		}
+	}
+	assertFlagValues(t, args, "--proxy-host", []string{"proxy.internal"})
+	assertFlagValues(t, args, "--proxy-port", []string{"8080"})
+	assertFlagValues(t, args, "--proxy-user", []string{"proxy-user"})
+	assertFlagValues(t, args, "--proxy-pass", []string{"proxy-pass"})
 	assertFlagValues(t, args, "--include-hosts", []string{"api.internal", "*.corp"})
 	assertFlagValues(t, args, "--exclude-hosts", []string{"blocked.internal", "8.8.8.8"})
 	for _, arg := range args {
@@ -272,6 +314,14 @@ func TestLocalBinaryArgsDoNotExposeAccessKey(t *testing.T) {
 	}
 	if strings.Contains(cfg, "--key") {
 		t.Fatalf("config should not use argv flag syntax: %s", cfg)
+	}
+}
+
+func TestLocalBinaryArgsRejectsMissingProxyEnv(t *testing.T) {
+	_, err := localBinaryArgs("local.yml", "local-1", config.MobileLocalConfig{ProxyPassEnv: "BS_PROXY_PASS_MISSING"})
+	var me *Error
+	if !errors.As(err, &me) || me.Code != "config_error" {
+		t.Fatalf("expected config_error, got %#v", err)
 	}
 }
 

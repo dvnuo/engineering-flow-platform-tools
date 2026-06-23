@@ -60,16 +60,24 @@ type MobileBrowserStack struct {
 }
 
 type MobileLocalConfig struct {
-	Mode                string   `json:"mode" yaml:"mode"`
-	Binary              string   `json:"binary" yaml:"binary"`
-	BinaryEnv           string   `json:"binary_env" yaml:"binary_env"`
-	DefaultHoldMinutes  int      `json:"default_hold_minutes" yaml:"default_hold_minutes"`
-	MaxHoldMinutes      int      `json:"max_hold_minutes" yaml:"max_hold_minutes"`
-	ReadyTimeoutSeconds int      `json:"ready_timeout_seconds" yaml:"ready_timeout_seconds"`
-	HeartbeatSeconds    int      `json:"heartbeat_seconds" yaml:"heartbeat_seconds"`
-	ForceLocal          *bool    `json:"force_local,omitempty" yaml:"force_local,omitempty"`
-	IncludeHosts        []string `json:"include_hosts" yaml:"include_hosts"`
-	ExcludeHosts        []string `json:"exclude_hosts" yaml:"exclude_hosts"`
+	Mode                  string   `json:"mode" yaml:"mode"`
+	Binary                string   `json:"binary" yaml:"binary"`
+	BinaryEnv             string   `json:"binary_env" yaml:"binary_env"`
+	DefaultHoldMinutes    int      `json:"default_hold_minutes" yaml:"default_hold_minutes"`
+	MaxHoldMinutes        int      `json:"max_hold_minutes" yaml:"max_hold_minutes"`
+	ReadyTimeoutSeconds   int      `json:"ready_timeout_seconds" yaml:"ready_timeout_seconds"`
+	HeartbeatSeconds      int      `json:"heartbeat_seconds" yaml:"heartbeat_seconds"`
+	ForceLocal            *bool    `json:"force_local,omitempty" yaml:"force_local,omitempty"`
+	DisableProxyDiscovery *bool    `json:"disable_proxy_discovery,omitempty" yaml:"disable_proxy_discovery,omitempty"`
+	ForceProxy            *bool    `json:"force_proxy,omitempty" yaml:"force_proxy,omitempty"`
+	ProxyHost             string   `json:"proxy_host,omitempty" yaml:"proxy_host,omitempty"`
+	ProxyPort             int      `json:"proxy_port,omitempty" yaml:"proxy_port,omitempty"`
+	ProxyUserEnv          string   `json:"proxy_user_env,omitempty" yaml:"proxy_user_env,omitempty"`
+	ProxyPassEnv          string   `json:"proxy_pass_env,omitempty" yaml:"proxy_pass_env,omitempty"`
+	OnlyAutomate          *bool    `json:"only_automate,omitempty" yaml:"only_automate,omitempty"`
+	Force                 *bool    `json:"force,omitempty" yaml:"force,omitempty"`
+	IncludeHosts          []string `json:"include_hosts" yaml:"include_hosts"`
+	ExcludeHosts          []string `json:"exclude_hosts" yaml:"exclude_hosts"`
 }
 
 type ProductConfig struct {

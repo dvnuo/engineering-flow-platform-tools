@@ -28,27 +28,33 @@ const (
 )
 
 type RunState struct {
-	Version             int               `json:"version"`
-	RunID               string            `json:"run_id"`
-	Provider            string            `json:"provider"`
-	Status              RunStatus         `json:"status"`
-	ControlOwner        string            `json:"control_owner"`
-	SessionID           string            `json:"session_id"`
-	Platform            string            `json:"platform"`
-	Device              DeviceSelection   `json:"device"`
-	App                 AppRef            `json:"app"`
-	Network             NetworkState      `json:"network"`
-	LatestObservationID string            `json:"latest_observation_id,omitempty"`
-	ObservationVersion  int               `json:"observation_version"`
-	BuildID             string            `json:"build_id,omitempty"`
-	ProjectName         string            `json:"project_name,omitempty"`
-	BuildName           string            `json:"build_name,omitempty"`
-	SessionName         string            `json:"session_name,omitempty"`
-	DashboardURL        string            `json:"dashboard_url,omitempty"`
-	StartedAt           time.Time         `json:"started_at"`
-	UpdatedAt           time.Time         `json:"updated_at"`
-	FinishedAt          *time.Time        `json:"finished_at,omitempty"`
-	Metadata            map[string]string `json:"metadata,omitempty"`
+	Version               int               `json:"version"`
+	RunID                 string            `json:"run_id"`
+	Provider              string            `json:"provider"`
+	Status                RunStatus         `json:"status"`
+	ControlOwner          string            `json:"control_owner"`
+	SessionID             string            `json:"session_id"`
+	Platform              string            `json:"platform"`
+	Device                DeviceSelection   `json:"device"`
+	App                   AppRef            `json:"app"`
+	Network               NetworkState      `json:"network"`
+	LatestObservationID   string            `json:"latest_observation_id,omitempty"`
+	ObservationVersion    int               `json:"observation_version"`
+	BuildID               string            `json:"build_id,omitempty"`
+	BrowserStackSessionID string            `json:"browserstack_session_id,omitempty"`
+	ProjectName           string            `json:"project_name,omitempty"`
+	BuildName             string            `json:"build_name,omitempty"`
+	SessionName           string            `json:"session_name,omitempty"`
+	DashboardURL          string            `json:"dashboard_url,omitempty"`
+	BrowserURL            string            `json:"browser_url,omitempty"`
+	PublicURL             string            `json:"public_url,omitempty"`
+	AppiumLogsURL         string            `json:"appium_logs_url,omitempty"`
+	DeviceLogsURL         string            `json:"device_logs_url,omitempty"`
+	VideoURL              string            `json:"video_url,omitempty"`
+	StartedAt             time.Time         `json:"started_at"`
+	UpdatedAt             time.Time         `json:"updated_at"`
+	FinishedAt            *time.Time        `json:"finished_at,omitempty"`
+	Metadata              map[string]string `json:"metadata,omitempty"`
 }
 
 type DeviceSelection struct {
@@ -70,6 +76,7 @@ type AppRef struct {
 
 type NetworkState struct {
 	Mode            string `json:"mode"`
+	LocalMode       string `json:"local_mode,omitempty"`
 	LocalIdentifier string `json:"local_identifier,omitempty"`
 	TunnelID        string `json:"tunnel_id,omitempty"`
 }

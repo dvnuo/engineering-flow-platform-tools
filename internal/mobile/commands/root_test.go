@@ -59,6 +59,28 @@ func TestTypeMissingTextEnvFailsBeforeServiceSetup(t *testing.T) {
 	}
 }
 
+func TestRunStartInvalidTimeoutFailsBeforeServiceSetup(t *testing.T) {
+	out := runMobile(t, "run", "start", "--timeout", "soon", "--json")
+	if out["ok"] != false {
+		t.Fatalf("expected failure: %#v", out)
+	}
+	errObj := out["error"].(map[string]any)
+	if errObj["code"] != "invalid_args" || !strings.Contains(errObj["message"].(string), "--timeout") {
+		t.Fatalf("unexpected error: %#v", errObj)
+	}
+}
+
+func TestRunFinishInvalidStatusFailsBeforeServiceSetup(t *testing.T) {
+	out := runMobile(t, "run", "finish", "--run-id", "run-1", "--status", "done", "--json")
+	if out["ok"] != false {
+		t.Fatalf("expected failure: %#v", out)
+	}
+	errObj := out["error"].(map[string]any)
+	if errObj["code"] != "invalid_args" || !strings.Contains(errObj["message"].(string), "--status") {
+		t.Fatalf("unexpected error: %#v", errObj)
+	}
+}
+
 func runMobile(t *testing.T, args ...string) map[string]any {
 	t.Helper()
 	cmd := NewRoot()

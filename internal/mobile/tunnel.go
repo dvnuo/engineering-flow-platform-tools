@@ -1,6 +1,7 @@
 package mobile
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -49,6 +50,9 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 		}
 		return TunnelState{Version: 1, TunnelID: "external-" + req.LocalIdentifier, Managed: false, LocalIdentifier: req.LocalIdentifier, Status: "external"}, nil
 	}
+	if req.NetworkMode != "private-managed" {
+		return TunnelState{}, NewError("invalid_args", "--network must be public, private-managed, or private-external", "Use public unless the app needs private/internal hosts.", 400)
+	}
 	if strings.TrimSpace(m.Credentials.AccessKey) == "" {
 		return TunnelState{}, NewError("auth_error", "BrowserStack access key is required to start Local", "Set BROWSERSTACK_ACCESS_KEY.", 401)
 	}
@@ -66,25 +70,23 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 		return TunnelState{}, err
 	}
 	logPath := filepath.Join(runDir, "tunnel.log")
-	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
-	if err != nil {
+	localConfigPath := filepath.Join(runDir, "browserstack-local.yml")
+	if err := writeLocalBinaryConfig(localConfigPath, m.Credentials); err != nil {
 		return TunnelState{}, err
 	}
-	args := []string{"--key", m.Credentials.AccessKey, "--local-identifier", identifier}
-	if m.Config.ForceLocal != nil && *m.Config.ForceLocal {
-		args = append(args, "--force-local")
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		_ = os.Remove(localConfigPath)
+		return TunnelState{}, err
 	}
-	if len(m.Config.IncludeHosts) > 0 {
-		args = append(args, "--include-hosts", strings.Join(m.Config.IncludeHosts, ","))
-	}
-	if len(m.Config.ExcludeHosts) > 0 {
-		args = append(args, "--exclude-hosts", strings.Join(m.Config.ExcludeHosts, ","))
-	}
+	args := localBinaryArgs(localConfigPath, identifier, m.Config)
 	cmd := exec.Command(resolved, args...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
+	cmd.Env = append(os.Environ(), "BROWSERSTACK_LOCAL_IDENTIFIER="+identifier)
 	if err := cmd.Start(); err != nil {
 		_ = logFile.Close()
+		_ = os.Remove(localConfigPath)
 		return TunnelState{}, NewError("local_tunnel_start_failed", "BrowserStack Local failed to start", "Inspect the sanitized tunnel log and binary permissions.", 500)
 	}
 	_ = logFile.Close()
@@ -102,6 +104,7 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 		Status:          "running",
 	}
 	if err := m.Save(state); err != nil {
+		_ = os.Remove(localConfigPath)
 		return state, err
 	}
 	exited := make(chan error, 1)
@@ -110,6 +113,7 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 	}()
 	select {
 	case err := <-exited:
+		_ = os.Remove(localConfigPath)
 		state.Status = "exited"
 		_ = m.Save(state)
 		msg := "BrowserStack Local exited during startup"
@@ -119,7 +123,34 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 		return state, NewError("local_tunnel_start_failed", msg, "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
 	case <-time.After(300 * time.Millisecond):
 	}
+	_ = os.Remove(localConfigPath)
 	return state, nil
+}
+
+func localBinaryArgs(configPath, identifier string, cfg config.MobileLocalConfig) []string {
+	args := []string{"--config-file", configPath, "--local-identifier", identifier}
+	if cfg.ForceLocal != nil && *cfg.ForceLocal {
+		args = append(args, "--force-local")
+	}
+	if len(cfg.IncludeHosts) > 0 {
+		args = append(args, "--include-hosts", strings.Join(cfg.IncludeHosts, ","))
+	}
+	if len(cfg.ExcludeHosts) > 0 {
+		args = append(args, "--exclude-hosts", strings.Join(cfg.ExcludeHosts, ","))
+	}
+	return args
+}
+
+func writeLocalBinaryConfig(path string, creds Credentials) error {
+	return os.WriteFile(path, localBinaryConfig(creds), 0o600)
+}
+
+func localBinaryConfig(creds Credentials) []byte {
+	var b bytes.Buffer
+	b.WriteString("key: ")
+	b.WriteString(strconv.Quote(creds.AccessKey))
+	b.WriteByte('\n')
+	return b.Bytes()
 }
 
 func (m *TunnelManager) Save(st TunnelState) error {
@@ -158,7 +189,7 @@ func (m *TunnelManager) Status(runID, identifier string) (TunnelState, error) {
 	if err != nil {
 		return TunnelState{}, err
 	}
-	if st.Managed && st.PID != 0 {
+	if st.Managed && st.PID != 0 && st.Status == "" {
 		st.Status = "running"
 	}
 	return st, nil
@@ -175,7 +206,7 @@ func (m *TunnelManager) CleanupOrphans() ([]TunnelState, error) {
 			continue
 		}
 		st, err := m.Load(run.RunID, run.Network.LocalIdentifier)
-		if err != nil || !st.Managed || st.Owner != "efp-mobile" || st.Status == "stopped" {
+		if err != nil || !st.Managed || st.Owner != "efp-mobile" || st.Status == "stopped" || st.Status == "exited" {
 			continue
 		}
 		st, _ = m.Stop(st)

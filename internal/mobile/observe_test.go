@@ -2,6 +2,7 @@ package mobile
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -69,5 +70,23 @@ func TestExtractCandidatesKeepsNumericOrder(t *testing.T) {
 	}
 	if candidates[1].CandidateID != "e2" || candidates[9].CandidateID != "e10" {
 		t.Fatalf("candidate order was not numeric: e2=%s e10slot=%s", candidates[1].CandidateID, candidates[9].CandidateID)
+	}
+}
+
+func TestLocatorHintsEscapeXPathLiteral(t *testing.T) {
+	c := Candidate{Class: "android.widget.Button", Name: `Save John's "draft"`}
+	hints := LocatorHints(c)
+	var xpath string
+	for _, hint := range hints {
+		if hint.Using == "xpath" {
+			xpath = hint.Value
+			break
+		}
+	}
+	if xpath == "" {
+		t.Fatal("missing xpath hint")
+	}
+	if !strings.Contains(xpath, `concat(`) || strings.Contains(xpath, `@name="Save John's "draft""`) {
+		t.Fatalf("xpath literal was not escaped: %s", xpath)
 	}
 }

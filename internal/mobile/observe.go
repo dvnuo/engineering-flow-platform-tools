@@ -307,9 +307,30 @@ func LocatorHints(c Candidate) []LocatorHint {
 	}
 	if c.Class != "" && (c.Text != "" || c.Name != "") {
 		name := firstNonEmpty(c.Text, c.Name)
-		hints = append(hints, LocatorHint{Using: "xpath", Value: `//*[@text="` + name + `" or @name="` + name + `" or @label="` + name + `"]`, Confidence: 30, Reason: "last-resort source-tree fallback"})
+		literal := xpathLiteral(name)
+		hints = append(hints, LocatorHint{Using: "xpath", Value: `//*[@text=` + literal + ` or @name=` + literal + ` or @label=` + literal + `]`, Confidence: 30, Reason: "last-resort source-tree fallback"})
 	}
 	return hints
+}
+
+func xpathLiteral(value string) string {
+	if !strings.Contains(value, `'`) {
+		return `'` + value + `'`
+	}
+	if !strings.Contains(value, `"`) {
+		return `"` + value + `"`
+	}
+	parts := strings.Split(value, `'`)
+	quoted := make([]string, 0, len(parts)*2-1)
+	for i, part := range parts {
+		if i > 0 {
+			quoted = append(quoted, `"'"`)
+		}
+		if part != "" {
+			quoted = append(quoted, `'`+part+`'`)
+		}
+	}
+	return "concat(" + strings.Join(quoted, ", ") + ")"
 }
 
 func Locate(obs Observation, q LocateQuery) LocateResult {

@@ -307,6 +307,10 @@ func bindRunStartFlags(c *cobra.Command, opts *runStartOptions) {
 }
 
 func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
+	timeout, err := time.ParseDuration(opts.Timeout)
+	if err != nil || timeout <= 0 {
+		return print(cmd, o, output.Failure("invalid_args", "invalid --timeout", "Use a positive duration such as 5m.", 400))
+	}
 	svc, err := newServices(o, true)
 	if err != nil {
 		return renderErr(cmd, o, err)
@@ -320,10 +324,6 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 	}
 	if opts.Network != "public" && opts.Network != "private-managed" && opts.Network != "private-external" {
 		return print(cmd, o, output.Failure("invalid_args", "--network must be public, private-managed, or private-external", "Use public unless the app needs private/internal hosts.", 400))
-	}
-	timeout, _ := time.ParseDuration(opts.Timeout)
-	if timeout <= 0 {
-		timeout = 5 * time.Minute
 	}
 	ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 	defer cancel()
@@ -600,6 +600,10 @@ func runFinishCmd(o *Opts) *cobra.Command {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the run to finish.", 400))
 		}
+		status, ok := normalizeFinishStatus(status)
+		if !ok {
+			return print(cmd, o, output.Failure("invalid_args", "--status must be passed or failed", "Use --status passed or --status failed.", 400))
+		}
 		svc, err := newServices(o, true)
 		if err != nil {
 			return renderErr(cmd, o, err)
@@ -620,9 +624,6 @@ func runFinishCmd(o *Opts) *cobra.Command {
 			}
 			if st.SessionID != "" {
 				mark := status
-				if mark == "" {
-					mark = "passed"
-				}
 				if _, err := svc.Control.UpdateSession(cmd.Context(), st.SessionID, browserstack.UpdateSessionRequest{Status: mark, Reason: reason}); err != nil {
 					cleanup = append(cleanup, "session mark: "+err.Error())
 				}
@@ -670,6 +671,17 @@ func runFinishCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&reason, "reason", "", "")
 	c.Flags().BoolVar(&collect, "collect-artifacts", false, "")
 	return c
+}
+
+func normalizeFinishStatus(status string) (string, bool) {
+	normalized := strings.ToLower(strings.TrimSpace(status))
+	if normalized == "" {
+		normalized = "passed"
+	}
+	if normalized != "passed" && normalized != "failed" {
+		return "", false
+	}
+	return normalized, true
 }
 
 func boundHold(d time.Duration, maxMinutes int) time.Duration {

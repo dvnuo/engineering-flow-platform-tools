@@ -54,3 +54,13 @@ func TestStatusErrorRedactsCredentials(t *testing.T) {
 		t.Fatalf("secret leaked: %s", msg)
 	}
 }
+
+func TestSanitizeSnippetBoundsLength(t *testing.T) {
+	got := sanitizeSnippet([]byte(strings.Repeat("x", maxErrorSnippet+20)), Credentials{})
+	if len(got) > maxErrorSnippet {
+		t.Fatalf("len=%d max=%d", len(got), maxErrorSnippet)
+	}
+	if got[len(got)-3:] != "..." {
+		t.Fatalf("missing ellipsis: %q", got[len(got)-10:])
+	}
+}

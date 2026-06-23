@@ -76,12 +76,12 @@ func isLoopbackHost(host string) bool {
 	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }
 
-func (c *Client) AuthTest(ctx any) error {
+func (c *Client) AuthTest(ctx context.Context) error {
 	var plan Plan
-	return c.get(contextOf(ctx), "/app-automate/plan.json", nil, &plan)
+	return c.get(ctx, "/app-automate/plan.json", nil, &plan)
 }
 
-func (c *Client) UploadApp(ctx any, req UploadAppRequest) (UploadedApp, error) {
+func (c *Client) UploadApp(ctx context.Context, req UploadAppRequest) (UploadedApp, error) {
 	if (strings.TrimSpace(req.FilePath) == "") == (strings.TrimSpace(req.URL) == "") {
 		return UploadedApp{}, mobile.NewError("invalid_args", "exactly one of --file or --url is required", "Pass a local app file or a public app URL.", 400)
 	}
@@ -113,14 +113,14 @@ func (c *Client) UploadApp(ctx any, req UploadAppRequest) (UploadedApp, error) {
 		return UploadedApp{}, err
 	}
 	var out UploadedApp
-	if err := c.doJSON(contextOf(ctx), http.MethodPost, "/app-automate/upload", nil, mw.FormDataContentType(), buf, &out); err != nil {
+	if err := c.doJSON(ctx, http.MethodPost, "/app-automate/upload", nil, mw.FormDataContentType(), buf, &out); err != nil {
 		return UploadedApp{}, err
 	}
 	out.SHA256 = req.SHA256
 	return out, nil
 }
 
-func (c *Client) ListApps(ctx any, req ListAppsRequest) ([]UploadedApp, error) {
+func (c *Client) ListApps(ctx context.Context, req ListAppsRequest) ([]UploadedApp, error) {
 	path := "/app-automate/recent_apps"
 	q := url.Values{}
 	if req.Group {
@@ -138,39 +138,39 @@ func (c *Client) ListApps(ctx any, req ListAppsRequest) ([]UploadedApp, error) {
 		q.Set("offset", strconv.Itoa(req.Offset))
 	}
 	var apps []UploadedApp
-	if err := c.get(contextOf(ctx), path, q, &apps); err != nil {
+	if err := c.get(ctx, path, q, &apps); err != nil {
 		return nil, err
 	}
 	return apps, nil
 }
 
-func (c *Client) DeleteApp(ctx any, appID string) (map[string]any, error) {
+func (c *Client) DeleteApp(ctx context.Context, appID string) (map[string]any, error) {
 	var out map[string]any
-	if err := c.doJSON(contextOf(ctx), http.MethodDelete, "/app-automate/app/delete/"+url.PathEscape(appID), nil, "", nil, &out); err != nil {
+	if err := c.doJSON(ctx, http.MethodDelete, "/app-automate/app/delete/"+url.PathEscape(appID), nil, "", nil, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *Client) ListDevices(ctx any) ([]Device, error) {
+func (c *Client) ListDevices(ctx context.Context) ([]Device, error) {
 	var devices []Device
-	if err := c.get(contextOf(ctx), "/app-automate/devices.json", nil, &devices); err != nil {
+	if err := c.get(ctx, "/app-automate/devices.json", nil, &devices); err != nil {
 		return nil, err
 	}
 	return devices, nil
 }
 
-func (c *Client) DeviceTierUsage(ctx any) ([]map[string]any, error) {
+func (c *Client) DeviceTierUsage(ctx context.Context) ([]map[string]any, error) {
 	var usage []map[string]any
-	if err := c.get(contextOf(ctx), "/app-automate/device_tier_limits.json", nil, &usage); err != nil {
+	if err := c.get(ctx, "/app-automate/device_tier_limits.json", nil, &usage); err != nil {
 		return nil, err
 	}
 	return usage, nil
 }
 
-func (c *Client) GetPlan(ctx any) (Plan, error) {
+func (c *Client) GetPlan(ctx context.Context) (Plan, error) {
 	var raw map[string]any
-	if err := c.get(contextOf(ctx), "/app-automate/plan.json", nil, &raw); err != nil {
+	if err := c.get(ctx, "/app-automate/plan.json", nil, &raw); err != nil {
 		return Plan{}, err
 	}
 	b, _ := json.Marshal(raw)
@@ -180,18 +180,18 @@ func (c *Client) GetPlan(ctx any) (Plan, error) {
 	return plan, nil
 }
 
-func (c *Client) CurrentParallelQueueUsage(ctx any) (map[string]any, error) {
+func (c *Client) CurrentParallelQueueUsage(ctx context.Context) (map[string]any, error) {
 	var out map[string]any
-	if err := c.get(contextOf(ctx), "/app-automate/current_parallel_queue_usage", nil, &out); err != nil {
+	if err := c.get(ctx, "/app-automate/current_parallel_queue_usage", nil, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *Client) ListProjects(ctx any, limit, offset int, status string) ([]Project, error) {
+func (c *Client) ListProjects(ctx context.Context, limit, offset int, status string) ([]Project, error) {
 	var raw []map[string]any
 	q := pagingQuery(limit, offset, status)
-	if err := c.get(contextOf(ctx), "/app-automate/projects.json", q, &raw); err != nil {
+	if err := c.get(ctx, "/app-automate/projects.json", q, &raw); err != nil {
 		return nil, err
 	}
 	out := make([]Project, 0, len(raw))
@@ -205,21 +205,21 @@ func (c *Client) ListProjects(ctx any, limit, offset int, status string) ([]Proj
 	return out, nil
 }
 
-func (c *Client) GetProject(ctx any, id string) (map[string]any, error) {
+func (c *Client) GetProject(ctx context.Context, id string) (map[string]any, error) {
 	var out map[string]any
-	if err := c.get(contextOf(ctx), "/app-automate/projects/"+url.PathEscape(id)+".json", nil, &out); err != nil {
+	if err := c.get(ctx, "/app-automate/projects/"+url.PathEscape(id)+".json", nil, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *Client) ListBuilds(ctx any, limit, offset int, status, projectID string) ([]Build, error) {
+func (c *Client) ListBuilds(ctx context.Context, limit, offset int, status, projectID string) ([]Build, error) {
 	var raw []map[string]any
 	q := pagingQuery(limit, offset, status)
 	if projectID != "" {
 		q.Set("projectId", projectID)
 	}
-	if err := c.get(contextOf(ctx), "/app-automate/builds.json", q, &raw); err != nil {
+	if err := c.get(ctx, "/app-automate/builds.json", q, &raw); err != nil {
 		return nil, err
 	}
 	out := make([]Build, 0, len(raw))
@@ -233,9 +233,9 @@ func (c *Client) ListBuilds(ctx any, limit, offset int, status, projectID string
 	return out, nil
 }
 
-func (c *Client) ListBuildSessions(ctx any, buildID string, limit, offset int, status string) ([]Session, error) {
+func (c *Client) ListBuildSessions(ctx context.Context, buildID string, limit, offset int, status string) ([]Session, error) {
 	var raw []map[string]any
-	if err := c.get(contextOf(ctx), "/app-automate/builds/"+url.PathEscape(buildID)+"/sessions.json", pagingQuery(limit, offset, status), &raw); err != nil {
+	if err := c.get(ctx, "/app-automate/builds/"+url.PathEscape(buildID)+"/sessions.json", pagingQuery(limit, offset, status), &raw); err != nil {
 		return nil, err
 	}
 	out := make([]Session, 0, len(raw))
@@ -249,9 +249,9 @@ func (c *Client) ListBuildSessions(ctx any, buildID string, limit, offset int, s
 	return out, nil
 }
 
-func (c *Client) GetSession(ctx any, sessionID string) (Session, error) {
+func (c *Client) GetSession(ctx context.Context, sessionID string) (Session, error) {
 	var raw map[string]any
-	if err := c.get(contextOf(ctx), "/app-automate/sessions/"+url.PathEscape(sessionID)+".json", nil, &raw); err != nil {
+	if err := c.get(ctx, "/app-automate/sessions/"+url.PathEscape(sessionID)+".json", nil, &raw); err != nil {
 		return Session{}, err
 	}
 	sessionRaw, _ := raw["automation_session"].(map[string]any)
@@ -261,9 +261,9 @@ func (c *Client) GetSession(ctx any, sessionID string) (Session, error) {
 	return decodeSession(sessionRaw), nil
 }
 
-func (c *Client) UpdateSession(ctx any, sessionID string, req UpdateSessionRequest) (Session, error) {
+func (c *Client) UpdateSession(ctx context.Context, sessionID string, req UpdateSessionRequest) (Session, error) {
 	var raw map[string]any
-	if err := c.doJSON(contextOf(ctx), http.MethodPut, "/app-automate/sessions/"+url.PathEscape(sessionID)+".json", nil, "application/json", jsonBody(req), &raw); err != nil {
+	if err := c.doJSON(ctx, http.MethodPut, "/app-automate/sessions/"+url.PathEscape(sessionID)+".json", nil, "application/json", jsonBody(req), &raw); err != nil {
 		return Session{}, err
 	}
 	sessionRaw, _ := raw["automation_session"].(map[string]any)
@@ -273,19 +273,19 @@ func (c *Client) UpdateSession(ctx any, sessionID string, req UpdateSessionReque
 	return decodeSession(sessionRaw), nil
 }
 
-func (c *Client) DeleteSessions(ctx any, sessionIDs []string) (map[string]any, error) {
+func (c *Client) DeleteSessions(ctx context.Context, sessionIDs []string) (map[string]any, error) {
 	q := url.Values{}
 	for _, id := range sessionIDs {
 		q.Add("sessionId", id)
 	}
 	var out map[string]any
-	if err := c.doJSON(contextOf(ctx), http.MethodDelete, "/app-automate/sessions", q, "", nil, &out); err != nil {
+	if err := c.doJSON(ctx, http.MethodDelete, "/app-automate/sessions", q, "", nil, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *Client) DownloadArtifact(ctx any, buildID, sessionID, kind string) ([]byte, string, error) {
+func (c *Client) DownloadArtifact(ctx context.Context, buildID, sessionID, kind string) ([]byte, string, error) {
 	allowed := map[string]string{
 		"appiumlogs":  "appiumlogs",
 		"devicelogs":  "devicelogs",
@@ -296,7 +296,7 @@ func (c *Client) DownloadArtifact(ctx any, buildID, sessionID, kind string) ([]b
 	if !ok {
 		return nil, "", mobile.NewError("invalid_args", "unsupported artifact kind", "Use appiumlogs, devicelogs, crashlogs, or networklogs.", 400)
 	}
-	resp, err := c.do(contextOf(ctx), http.MethodGet, "/app-automate/builds/"+url.PathEscape(buildID)+"/sessions/"+url.PathEscape(sessionID)+"/"+path, nil, "", nil)
+	resp, err := c.do(ctx, http.MethodGet, "/app-automate/builds/"+url.PathEscape(buildID)+"/sessions/"+url.PathEscape(sessionID)+"/"+path, nil, "", nil)
 	if err != nil {
 		return nil, "", err
 	}
@@ -376,6 +376,7 @@ func statusError(resp *http.Response, creds Credentials) *mobile.Error {
 }
 
 func sanitizeSnippet(body []byte, creds Credentials) string {
+	truncated := len(body) > maxErrorSnippet
 	if len(body) > maxErrorSnippet {
 		body = body[:maxErrorSnippet]
 	}
@@ -383,14 +384,32 @@ func sanitizeSnippet(body []byte, creds Credentials) string {
 	s = strings.ReplaceAll(s, creds.Username, "***REDACTED***")
 	s = strings.ReplaceAll(s, creds.AccessKey, "***REDACTED***")
 	s = authPattern.ReplaceAllString(s, "***REDACTED***")
-	if len(s) > maxErrorSnippet {
-		s = s[:maxErrorSnippet] + "..."
-	}
-	return s
+	return boundedSnippet(s, truncated)
 }
 
 func redact(s string, creds Credentials) string {
 	return sanitizeSnippet([]byte(s), creds)
+}
+
+func boundedSnippet(s string, truncated bool) string {
+	s = strings.TrimSpace(s)
+	if !truncated && len(s) <= maxErrorSnippet {
+		return s
+	}
+	if maxErrorSnippet <= 3 {
+		if len(s) > maxErrorSnippet {
+			return s[:maxErrorSnippet]
+		}
+		return s
+	}
+	limit := maxErrorSnippet - 3
+	if len(s) > limit {
+		s = strings.TrimSpace(s[:limit])
+	}
+	if truncated {
+		return s + "..."
+	}
+	return s
 }
 
 func jsonBody(v any) io.Reader {
@@ -481,11 +500,4 @@ func ValidAppExtension(path string) bool {
 
 func AppIDFromURL(appURL string) string {
 	return strings.TrimPrefix(strings.TrimSpace(appURL), "bs://")
-}
-
-func contextOf(ctx any) context.Context {
-	if c, ok := ctx.(context.Context); ok && c != nil {
-		return c
-	}
-	return context.Background()
 }

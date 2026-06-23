@@ -113,7 +113,11 @@ func appResolveCmd(o *Opts) *cobra.Command {
 	var appURL, file, remoteURL, customID string
 	var dryRun bool
 	c := &cobra.Command{Use: "resolve", RunE: func(cmd *cobra.Command, args []string) error {
-		if strings.HasPrefix(appURL, "bs://") {
+		appURL = strings.TrimSpace(appURL)
+		if appURL != "" && !strings.HasPrefix(appURL, "bs://") {
+			return print(cmd, o, output.Failure("invalid_args", "--app-url must start with bs://", "Pass a BrowserStack app URL such as bs://<app-id>.", 400))
+		}
+		if appURL != "" {
 			return print(cmd, o, output.Success("", mobile.AppRef{AppURL: appURL, CustomID: customID}))
 		}
 		if file == "" && remoteURL == "" && customID == "" {

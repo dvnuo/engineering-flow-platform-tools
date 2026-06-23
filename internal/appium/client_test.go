@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"engineering-flow-platform-tools/internal/browserstack"
@@ -43,6 +44,30 @@ func TestCreateSessionPublicDoesNotSetLocal(t *testing.T) {
 	}
 }
 
+func TestCreateSessionPrivateUsesBooleanLocalCapability(t *testing.T) {
+	var body map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		_, _ = w.Write([]byte(`{"value":{"sessionId":"abc","capabilities":{}}}`))
+	}))
+	defer srv.Close()
+	c, err := New(srv.URL, browserstack.Credentials{Username: "u", AccessKey: "k"}, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.CreateSession(context.Background(), CreateSessionRequest{PlatformName: "android", AutomationName: "UiAutomator2", App: "bs://app", DeviceName: "Pixel", NetworkMode: "private-managed", LocalIdentifier: "local-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	caps := body["capabilities"].(map[string]any)["alwaysMatch"].(map[string]any)
+	bs := caps["bstack:options"].(map[string]any)
+	if local, ok := bs["local"].(bool); !ok || !local {
+		t.Fatalf("local capability should be boolean true: %#v", bs["local"])
+	}
+}
+
 func TestFindElementsParsesW3CElementKey(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/session/s1/elements" {
@@ -61,5 +86,15 @@ func TestFindElementsParsesW3CElementKey(t *testing.T) {
 	}
 	if len(elements) != 1 || elements[0].ID != "e1" {
 		t.Fatalf("elements=%#v", elements)
+	}
+}
+
+func TestSanitizeBoundsSnippetLength(t *testing.T) {
+	got := sanitize(strings.Repeat("x", maxErrorSnippet+20), browserstack.Credentials{})
+	if len(got) > maxErrorSnippet {
+		t.Fatalf("len=%d max=%d", len(got), maxErrorSnippet)
+	}
+	if got[len(got)-3:] != "..." {
+		t.Fatalf("missing ellipsis: %q", got[len(got)-10:])
 	}
 }

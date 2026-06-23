@@ -111,7 +111,7 @@ func (c *Client) CreateSession(ctx context.Context, req CreateSessionRequest) (S
 	bstack["video"] = req.Video
 	switch req.NetworkMode {
 	case "private-managed", "private-external":
-		bstack["local"] = "true"
+		bstack["local"] = true
 		if req.LocalIdentifier != "" {
 			bstack["localIdentifier"] = req.LocalIdentifier
 		}
@@ -345,11 +345,30 @@ func statusError(resp *http.Response, creds browserstack.Credentials) *mobile.Er
 }
 
 func sanitize(s string, creds browserstack.Credentials) string {
+	truncated := len(s) > maxErrorSnippet
 	s = strings.ReplaceAll(s, creds.Username, "***REDACTED***")
 	s = strings.ReplaceAll(s, creds.AccessKey, "***REDACTED***")
 	s = authPattern.ReplaceAllString(s, "***REDACTED***")
-	if len(s) > maxErrorSnippet {
-		s = s[:maxErrorSnippet] + "..."
+	return boundedSnippet(s, truncated)
+}
+
+func boundedSnippet(s string, truncated bool) string {
+	s = strings.TrimSpace(s)
+	if !truncated && len(s) <= maxErrorSnippet {
+		return s
 	}
-	return strings.TrimSpace(s)
+	if maxErrorSnippet <= 3 {
+		if len(s) > maxErrorSnippet {
+			return s[:maxErrorSnippet]
+		}
+		return s
+	}
+	limit := maxErrorSnippet - 3
+	if len(s) > limit {
+		s = strings.TrimSpace(s[:limit])
+	}
+	if truncated {
+		return s + "..."
+	}
+	return s
 }

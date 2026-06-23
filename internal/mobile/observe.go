@@ -155,9 +155,6 @@ func ExtractCandidates(source, obsID string) []Candidate {
 		c.LocatorHints = LocatorHints(c)
 		out = append(out, c)
 	}
-	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].CandidateID < out[j].CandidateID
-	})
 	return out
 }
 

@@ -1,6 +1,9 @@
 package mobile
 
-import "testing"
+import (
+	"strconv"
+	"testing"
+)
 
 func TestExtractCandidatesAndroidRedactsPassword(t *testing.T) {
 	source := `<hierarchy>
@@ -51,5 +54,20 @@ func TestDeviceResolveLatestCompatible(t *testing.T) {
 	}
 	if res.Recommended.Name != "Pixel 8" {
 		t.Fatalf("recommended=%#v", res.Recommended)
+	}
+}
+
+func TestExtractCandidatesKeepsNumericOrder(t *testing.T) {
+	source := `<hierarchy>`
+	for i := 1; i <= 12; i++ {
+		source += `<node class="android.widget.Button" text="Button` + strconv.Itoa(i) + `" enabled="true" clickable="true"/>`
+	}
+	source += `</hierarchy>`
+	candidates := ExtractCandidates(source, "obs-1")
+	if len(candidates) != 12 {
+		t.Fatalf("len=%d", len(candidates))
+	}
+	if candidates[1].CandidateID != "e2" || candidates[9].CandidateID != "e10" {
+		t.Fatalf("candidate order was not numeric: e2=%s e10slot=%s", candidates[1].CandidateID, candidates[9].CandidateID)
 	}
 }

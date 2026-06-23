@@ -7,9 +7,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
+
+const staleLockAge = 30 * time.Minute
 
 type RunStatus string
 
@@ -153,9 +156,16 @@ func (s *StateStore) WithRunLock(runID string, fn func() error) error {
 	f, err := os.OpenFile(lock, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
-			return NewError("run_locked", "run is locked by another process", "Wait for the other mobile command to finish.", 409)
+			if info, statErr := os.Stat(lock); statErr == nil && time.Since(info.ModTime()) > staleLockAge {
+				_ = os.Remove(lock)
+				f, err = os.OpenFile(lock, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+			}
+			if err != nil {
+				return NewError("run_locked", "run is locked by another process", "Wait for the other mobile command to finish. If the process crashed and the lock is stale, inspect and remove "+lock+".", 409)
+			}
+		} else {
+			return err
 		}
-		return err
 	}
 	_, _ = f.WriteString(time.Now().UTC().Format(time.RFC3339Nano))
 	_ = f.Close()
@@ -234,6 +244,9 @@ func atomicWriteJSON(path string, value any, perm os.FileMode) error {
 	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, b, perm); err != nil {
 		return err
+	}
+	if runtime.GOOS == "windows" {
+		_ = os.Remove(path)
 	}
 	return os.Rename(tmp, path)
 }

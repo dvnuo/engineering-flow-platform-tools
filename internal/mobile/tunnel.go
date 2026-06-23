@@ -104,9 +104,20 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 	if err := m.Save(state); err != nil {
 		return state, err
 	}
-	time.Sleep(300 * time.Millisecond)
-	if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-		return state, NewError("local_tunnel_start_failed", "BrowserStack Local exited during startup", "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
+	exited := make(chan error, 1)
+	go func() {
+		exited <- cmd.Wait()
+	}()
+	select {
+	case err := <-exited:
+		state.Status = "exited"
+		_ = m.Save(state)
+		msg := "BrowserStack Local exited during startup"
+		if err != nil {
+			msg += ": " + err.Error()
+		}
+		return state, NewError("local_tunnel_start_failed", msg, "Inspect tunnel.log for BrowserStack Local diagnostics.", 500)
+	case <-time.After(300 * time.Millisecond):
 	}
 	return state, nil
 }

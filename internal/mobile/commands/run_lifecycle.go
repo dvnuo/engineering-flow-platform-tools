@@ -28,6 +28,7 @@ func markRunTerminal(st *mobile.RunState, status mobile.RunStatus, reason string
 	st.FinishedAt = &now
 	st.LatestObservationID = ""
 	st.StatusReason = strings.TrimSpace(reason)
+	st.ProgressMessage = strings.TrimSpace(reason)
 	if err != nil {
 		code, message := errorCodeAndMessage(err)
 		st.LastErrorCode = code

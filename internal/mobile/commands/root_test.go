@@ -199,6 +199,13 @@ func TestRunStartRecoversMissingSessionIDFromControlPlane(t *testing.T) {
 	if saved["session_id"] != "session-123" || saved["browserstack_session_id"] != "session-123" || saved["build_id"] != "build-123" {
 		t.Fatalf("run ids not enriched: %#v", saved)
 	}
+	if saved["session_create_started_at"] == nil || saved["remote_build_detected_at"] == nil || saved["remote_session_detected_at"] == nil || saved["running_at"] == nil {
+		t.Fatalf("run progress timestamps missing: %#v", saved)
+	}
+	progress, _ := saved["progress_message"].(string)
+	if saved["recovered_session"] != true || !strings.Contains(progress, "enrich completed") {
+		t.Fatalf("run progress fields missing: %#v", saved)
+	}
 	if saved["appium_logs_url"] != "https://logs.example/appium" || saved["device_logs_url"] != "https://logs.example/device" || saved["video_url"] != "https://logs.example/video" {
 		t.Fatalf("run links not enriched: %#v", saved)
 	}
@@ -254,6 +261,9 @@ func TestRunStartRecoversServerErrorFromControlPlane(t *testing.T) {
 	}
 	if saved["status"] != "running" || saved["session_id"] != "session-recover-id" || saved["build_id"] != "build-recover-id" {
 		t.Fatalf("recovered state was not running: %#v", saved)
+	}
+	if saved["remote_build_detected_at"] == nil || saved["remote_session_detected_at"] == nil || saved["running_at"] == nil || saved["recovered_session"] != true {
+		t.Fatalf("recovered progress fields missing: %#v", saved)
 	}
 }
 
@@ -342,6 +352,115 @@ func TestRunStartPersistsMinimalStateWhenEnrichFails(t *testing.T) {
 	}
 	if saved["status"] != "running" || saved["session_id"] != "session-abc" || saved["dashboard_url"] != "https://dashboard.example/session-abc" {
 		t.Fatalf("minimal state was not persisted: %#v", saved)
+	}
+	if saved["session_create_started_at"] == nil || saved["remote_session_detected_at"] == nil || saved["running_at"] == nil {
+		t.Fatalf("minimal progress fields missing: %#v", saved)
+	}
+}
+
+func TestRunStatusRecoversStaleStartingRun(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/app-automate/builds.json":
+			_, _ = w.Write([]byte(`[{"automation_build":{"name":"build-stale","hashed_id":"build-stale-id"}}]`))
+		case "/app-automate/builds/build-stale-id/sessions.json":
+			_, _ = w.Write([]byte(`[{"automation_session":{"name":"session-stale","hashed_id":"session-stale-id","build_name":"build-stale","os":"android","device":"Pixel 8","browser_url":"https://dashboard.example/session-stale"}}]`))
+		case "/app-automate/sessions/session-stale-id.json":
+			_, _ = w.Write([]byte(`{"automation_session":{"name":"session-stale","hashed_id":"session-stale-id","build_name":"build-stale","os":"android","device":"Pixel 8","status":"running","browser_url":"https://dashboard.example/session-stale"}}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	started := time.Now().UTC().Add(-20 * time.Minute)
+	if err := store.SaveRun(mobile.RunState{
+		RunID:                  "run-stale",
+		Provider:               "browserstack",
+		Status:                 mobile.StatusStarting,
+		ControlOwner:           "agent",
+		Platform:               "android",
+		Device:                 mobile.DeviceSelection{Name: "Pixel 8", OS: "android"},
+		Network:                mobile.NetworkState{Mode: "public", LocalMode: "none"},
+		BuildName:              "build-stale",
+		SessionName:            "session-stale",
+		SessionCreateStartedAt: &started,
+		StartedAt:              started,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "run", "status", "--config", path, "--run-id", "run-stale", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	st, err := store.LoadRun("run-stale")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Status != mobile.StatusRunning || st.SessionID != "session-stale-id" || st.BuildID != "build-stale-id" || !st.RecoveredSession {
+		t.Fatalf("stale starting was not recovered: %#v", st)
+	}
+	if st.RemoteBuildDetectedAt == nil || st.RemoteSessionDetectedAt == nil || st.RunningAt == nil {
+		t.Fatalf("recovered starting progress fields missing: %#v", st)
+	}
+}
+
+func TestRunStatusSettlesStaleStartingWithoutRemoteClues(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = "http://127.0.0.1:1"
+	cfg.Mobile.BrowserStack.AppiumBaseURL = "http://127.0.0.1:1"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	started := time.Now().UTC().Add(-20 * time.Minute)
+	if err := store.SaveRun(mobile.RunState{
+		RunID:                  "run-stale-empty",
+		Provider:               "browserstack",
+		Status:                 mobile.StatusStarting,
+		ControlOwner:           "agent",
+		Network:                mobile.NetworkState{Mode: "public", LocalMode: "none"},
+		SessionCreateStartedAt: &started,
+		StartedAt:              started,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "run", "status", "--config", path, "--run-id", "run-stale-empty", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	st, err := store.LoadRun("run-stale-empty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Status != mobile.StatusFailed || st.FinishedAt == nil || st.LastErrorCode != "run_start_stale" {
+		t.Fatalf("stale starting was not settled: %#v", st)
 	}
 }
 

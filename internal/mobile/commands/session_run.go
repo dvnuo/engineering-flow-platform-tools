@@ -279,6 +279,8 @@ type runStartOptions struct {
 	Poll      string
 }
 
+const startingStaleAfter = 15 * time.Minute
+
 func runStartCmd(o *Opts) *cobra.Command {
 	opts := runStartOptions{}
 	c := &cobra.Command{Use: "start", RunE: func(cmd *cobra.Command, args []string) error {
@@ -369,21 +371,24 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 		opts.LocalID = tunnel.LocalIdentifier
 	}
 	startedAt := time.Now().UTC()
+	sessionCreateStarted := time.Now().UTC()
 	st = mobile.RunState{
-		Version:      1,
-		RunID:        runID,
-		Provider:     "browserstack",
-		Status:       mobile.StatusStarting,
-		ControlOwner: "agent",
-		Platform:     opts.Platform,
-		Device:       dev.Recommended,
-		App:          appRef,
-		Network:      mobile.NetworkState{Mode: opts.Network, LocalMode: localModeForNetwork(opts.Network), LocalIdentifier: opts.LocalID, TunnelID: tunnel.TunnelID},
-		ProjectName:  opts.Project,
-		BuildName:    opts.Build,
-		SessionName:  opts.Name,
-		StartedAt:    startedAt,
-		UpdatedAt:    startedAt,
+		Version:                1,
+		RunID:                  runID,
+		Provider:               "browserstack",
+		Status:                 mobile.StatusStarting,
+		ControlOwner:           "agent",
+		Platform:               opts.Platform,
+		Device:                 dev.Recommended,
+		App:                    appRef,
+		Network:                mobile.NetworkState{Mode: opts.Network, LocalMode: localModeForNetwork(opts.Network), LocalIdentifier: opts.LocalID, TunnelID: tunnel.TunnelID},
+		ProjectName:            opts.Project,
+		BuildName:              opts.Build,
+		SessionName:            opts.Name,
+		SessionCreateStartedAt: &sessionCreateStarted,
+		ProgressMessage:        "creating BrowserStack Appium session",
+		StartedAt:              startedAt,
+		UpdatedAt:              startedAt,
 	}
 	if err := svc.Store.SaveRun(st); err != nil {
 		if tunnel.Managed {
@@ -396,7 +401,6 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 	if equalFold(opts.Platform, "ios") {
 		automation = "XCUITest"
 	}
-	sessionCreateStarted := time.Now().UTC()
 	session, err := svc.Appium.CreateSession(ctx, appium.CreateSessionRequest{
 		PlatformName:             opts.Platform,
 		AutomationName:           automation,
@@ -430,6 +434,7 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 				recoveredSession = true
 				buildID = recoveredBuildID
 				session = appium.Session{ID: recovered.HashedID}
+				noteRemoteSessionDetectedBestEffort(svc, &st, recovered, recoveredBuildID, true, "remote BrowserStack session detected via control-plane recovery")
 			} else {
 				if tunnel.Managed {
 					_, _ = svc.Tunnel.Stop(tunnel)
@@ -447,36 +452,88 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 		}
 	}
 	now := time.Now().UTC()
+	if session.ID != "" {
+		noteAppiumSessionIDBestEffort(svc, &st, session.ID, "Appium session id received; promoting run state")
+	}
 	st.Status = mobile.StatusRunning
 	st.SessionID = session.ID
 	st.BuildID = buildID
 	st.DashboardURL = dashboardURLFromSession(session)
+	st.RecoveredSession = recoveredSession
+	st.RunningAt = &now
+	st.ProgressMessage = "run is ready; BrowserStack enrich pending"
 	st.UpdatedAt = now
 	if haveRemoteSession {
-		enrichRunStateFromRemote(&st, remoteSession)
+		noteRemoteSessionDetected(&st, remoteSession, buildID, recoveredSession, "")
 	}
 	if err := svc.Store.SaveRun(st); err != nil {
 		return fail(mobile.NewError("state_persist_failed", "failed to persist running run state after session creation", "The remote session may be active; check mobile.state_dir and use run recover if needed.", 500))
 	}
 	warnings := enrichRunStateBestEffort(svc, &st, session.ID, opts.Build, sessionCreateStarted, haveRemoteSession)
 	return print(cmd, o, output.Success("", map[string]any{
-		"run":                    st,
-		"session":                session,
-		"device_resolution":      dev,
-		"tunnel":                 tunnel,
-		"effective":              effectiveRunStart(st, dev),
-		"state_persisted":        true,
-		"remote_session_created": st.SessionID != "",
-		"recovery_attempted":     recoveryAttempted,
-		"recovered_session":      recoveredSession,
-		"enrich_warnings":        warnings,
-		"warnings":               warnings,
+		"run":                     st,
+		"session":                 session,
+		"device_resolution":       dev,
+		"tunnel":                  tunnel,
+		"effective":               effectiveRunStart(st, dev),
+		"state_persisted":         true,
+		"state_persisted_initial": true,
+		"remote_session_created":  st.SessionID != "",
+		"remote_build_detected":   st.BuildID != "",
+		"remote_session_detected": st.SessionID != "" || st.BrowserStackSessionID != "",
+		"state_promoted_running":  st.Status == mobile.StatusRunning,
+		"recovery_attempted":      recoveryAttempted,
+		"recovered_session":       recoveredSession,
+		"enrich_warnings":         warnings,
+		"warnings":                warnings,
 	}))
 }
 
 func markRunFailedBestEffort(svc *services, st *mobile.RunState, err error) {
 	markRunTerminal(st, mobile.StatusFailed, "run start failed before a usable session was saved", err)
 	_ = svc.Store.SaveRun(*st)
+}
+
+func noteAppiumSessionIDBestEffort(svc *services, st *mobile.RunState, sessionID, message string) {
+	if strings.TrimSpace(sessionID) == "" {
+		return
+	}
+	now := time.Now().UTC()
+	st.SessionID = firstNonEmpty(st.SessionID, sessionID)
+	if st.RemoteSessionDetectedAt == nil {
+		st.RemoteSessionDetectedAt = &now
+	}
+	st.ProgressMessage = message
+	_ = svc.Store.SaveRun(*st)
+}
+
+func noteRemoteSessionDetectedBestEffort(svc *services, st *mobile.RunState, remote browserstack.Session, buildID string, recovered bool, message string) {
+	noteRemoteSessionDetected(st, remote, buildID, recovered, message)
+	_ = svc.Store.SaveRun(*st)
+}
+
+func noteRemoteSessionDetected(st *mobile.RunState, remote browserstack.Session, buildID string, recovered bool, message string) {
+	now := time.Now().UTC()
+	if strings.TrimSpace(buildID) != "" {
+		st.BuildID = buildID
+		if st.RemoteBuildDetectedAt == nil {
+			st.RemoteBuildDetectedAt = &now
+		}
+	}
+	if strings.TrimSpace(remote.HashedID) != "" {
+		st.BrowserStackSessionID = remote.HashedID
+		st.SessionID = firstNonEmpty(st.SessionID, remote.HashedID)
+		if st.RemoteSessionDetectedAt == nil {
+			st.RemoteSessionDetectedAt = &now
+		}
+	}
+	if recovered {
+		st.RecoveredSession = true
+	}
+	if strings.TrimSpace(message) != "" {
+		st.ProgressMessage = message
+	}
+	enrichRunStateFromRemote(st, remote)
 }
 
 func settleStartingRunBestEffort(svc *services, runID string, fallback mobile.RunState, cause error) {
@@ -511,6 +568,20 @@ func mergeKnownRunState(dst *mobile.RunState, src mobile.RunState) {
 	dst.AppiumLogsURL = firstNonEmpty(dst.AppiumLogsURL, src.AppiumLogsURL)
 	dst.DeviceLogsURL = firstNonEmpty(dst.DeviceLogsURL, src.DeviceLogsURL)
 	dst.VideoURL = firstNonEmpty(dst.VideoURL, src.VideoURL)
+	if dst.SessionCreateStartedAt == nil {
+		dst.SessionCreateStartedAt = src.SessionCreateStartedAt
+	}
+	if dst.RemoteBuildDetectedAt == nil {
+		dst.RemoteBuildDetectedAt = src.RemoteBuildDetectedAt
+	}
+	if dst.RemoteSessionDetectedAt == nil {
+		dst.RemoteSessionDetectedAt = src.RemoteSessionDetectedAt
+	}
+	if dst.RunningAt == nil {
+		dst.RunningAt = src.RunningAt
+	}
+	dst.RecoveredSession = dst.RecoveredSession || src.RecoveredSession
+	dst.ProgressMessage = firstNonEmpty(dst.ProgressMessage, src.ProgressMessage)
 }
 
 func shouldRecoverCreateSessionError(err error) bool {
@@ -552,7 +623,7 @@ func enrichRunStateBestEffort(svc *services, st *mobile.RunState, sessionID, bui
 	defer cancel()
 	if !alreadyHaveRemote && sessionID != "" {
 		if remote, err := svc.Control.GetSession(enrichCtx, sessionID); err == nil {
-			enrichRunStateFromRemote(st, remote)
+			noteRemoteSessionDetected(st, remote, "", false, "")
 			changed = true
 		} else {
 			warnings = append(warnings, "browserstack session enrich: "+err.Error())
@@ -560,9 +631,20 @@ func enrichRunStateBestEffort(svc *services, st *mobile.RunState, sessionID, bui
 	}
 	if st.BuildID == "" {
 		if buildID := findBuildIDByName(enrichCtx, svc, buildName, since); buildID != "" {
+			now := time.Now().UTC()
 			st.BuildID = buildID
+			if st.RemoteBuildDetectedAt == nil {
+				st.RemoteBuildDetectedAt = &now
+			}
 			changed = true
 		}
+	}
+	if len(warnings) > 0 {
+		st.ProgressMessage = "run is ready; BrowserStack enrich completed with warnings"
+		changed = true
+	} else {
+		st.ProgressMessage = "run is ready; BrowserStack enrich completed"
+		changed = true
 	}
 	if changed {
 		if err := svc.Store.SaveRun(*st); err != nil {
@@ -910,10 +992,13 @@ func runRecover(cmd *cobra.Command, o *Opts, opts runRecoverOptions) error {
 		ProjectName:           remote.ProjectName,
 		BuildName:             firstNonEmpty(remote.BuildName, opts.BuildName),
 		SessionName:           firstNonEmpty(remote.Name, opts.SessionName),
+		RecoveredSession:      true,
+		ProgressMessage:       "run recovered from BrowserStack control plane",
+		RunningAt:             &now,
 		StartedAt:             now,
 		UpdatedAt:             now,
 	}
-	enrichRunStateFromRemote(&st, remote)
+	noteRemoteSessionDetected(&st, remote, buildID, true, "run recovered from BrowserStack control plane")
 	if status, terminal := runStatusForRemoteSession(remote.Status); terminal {
 		st.Status = status
 		st.FinishedAt = &now
@@ -991,6 +1076,9 @@ func stringMapValue(m map[string]any, key string) string {
 }
 
 func reconcileRunStatusBestEffort(ctx context.Context, svc *services, st mobile.RunState) (mobile.RunState, []string) {
+	if st.Status == mobile.StatusStarting {
+		return reconcileStartingRunBestEffort(ctx, svc, st)
+	}
 	if st.SessionID == "" || !localRunStatusMayBeRemoteActive(st.Status) {
 		return st, nil
 	}
@@ -1002,21 +1090,101 @@ func reconcileRunStatusBestEffort(ctx context.Context, svc *services, st mobile.
 	remote, err := svc.Control.GetSession(reconcileCtx, st.SessionID)
 	if err != nil {
 		if isRemoteSessionGone(err) {
-			markRunLost(&st)
+			markRunLost(&st, err)
 			_ = svc.Store.SaveRun(st)
 		}
 		return st, []string{err.Error()}
 	}
-	enrichRunStateFromRemote(&st, remote)
+	noteRemoteSessionDetected(&st, remote, st.BuildID, false, "run status reconciled with BrowserStack control plane")
 	if status, terminal := runStatusForRemoteSession(remote.Status); terminal {
 		st.Status = status
 		now := time.Now().UTC()
 		st.FinishedAt = &now
 		st.ControlOwner = "agent"
 		st.LatestObservationID = ""
+		st.ProgressMessage = "remote BrowserStack session is terminal"
 	}
 	_ = svc.Store.SaveRun(st)
 	return st, nil
+}
+
+func reconcileStartingRunBestEffort(ctx context.Context, svc *services, st mobile.RunState) (mobile.RunState, []string) {
+	if strings.TrimSpace(st.SessionID) == "" && strings.TrimSpace(st.BrowserStackSessionID) != "" {
+		st.SessionID = st.BrowserStackSessionID
+	}
+	if strings.TrimSpace(st.SessionID) != "" {
+		now := time.Now().UTC()
+		if st.RemoteSessionDetectedAt == nil {
+			st.RemoteSessionDetectedAt = &now
+		}
+		st.Status = mobile.StatusRunning
+		st.RunningAt = &now
+		st.ProgressMessage = "run status promoted from starting using persisted remote session id"
+		_ = svc.Store.SaveRun(st)
+		return reconcileRunStatusBestEffort(ctx, svc, st)
+	}
+	stale := startingRunStale(st, time.Now().UTC())
+	if svc.Runtime.Username && svc.Runtime.AccessKey && (strings.TrimSpace(st.BuildName) != "" || strings.TrimSpace(st.SessionName) != "") {
+		reconcileCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		remote, buildID, err := recoverCreatedSession(reconcileCtx, svc, runStartOptionsFromState(st), st.Device, startingRecoverySince(st))
+		cancel()
+		if err == nil {
+			noteRemoteSessionDetected(&st, remote, buildID, true, "stale starting run recovered from BrowserStack control plane")
+			now := time.Now().UTC()
+			st.Status = mobile.StatusRunning
+			st.RunningAt = &now
+			_ = svc.Store.SaveRun(st)
+			return st, nil
+		}
+		if stale {
+			markRunTerminal(&st, mobile.StatusFailed, "starting run exceeded recovery window and no unique BrowserStack session was found", err)
+			_ = svc.Store.SaveRun(st)
+			return st, []string{err.Error()}
+		}
+		st.ProgressMessage = "creating BrowserStack Appium session; waiting for remote session"
+		_ = svc.Store.SaveRun(st)
+		return st, []string{err.Error()}
+	}
+	if stale {
+		err := mobile.NewError("run_start_stale", "starting run exceeded recovery window without a local or remote session id", "Retry run start or use mobile run recover if BrowserStack has a matching session.", 408)
+		markRunTerminal(&st, mobile.StatusFailed, "starting run exceeded recovery window without remote session clues", err)
+		_ = svc.Store.SaveRun(st)
+		return st, []string{err.Error()}
+	}
+	if st.ProgressMessage == "" {
+		st.ProgressMessage = "creating BrowserStack Appium session; waiting for remote session"
+		_ = svc.Store.SaveRun(st)
+	}
+	return st, nil
+}
+
+func runStartOptionsFromState(st mobile.RunState) runStartOptions {
+	return runStartOptions{
+		AppURL:    st.App.AppURL,
+		Platform:  st.Platform,
+		Device:    st.Device.Name,
+		OSVersion: st.Device.OSVersion,
+		Network:   st.Network.Mode,
+		LocalID:   st.Network.LocalIdentifier,
+		Project:   st.ProjectName,
+		Build:     st.BuildName,
+		Name:      st.SessionName,
+	}
+}
+
+func startingRecoverySince(st mobile.RunState) time.Time {
+	if st.SessionCreateStartedAt != nil && !st.SessionCreateStartedAt.IsZero() {
+		return *st.SessionCreateStartedAt
+	}
+	if !st.StartedAt.IsZero() {
+		return st.StartedAt
+	}
+	return time.Now().UTC().Add(-startingStaleAfter)
+}
+
+func startingRunStale(st mobile.RunState, now time.Time) bool {
+	started := startingRecoverySince(st)
+	return !started.IsZero() && now.Sub(started) > startingStaleAfter
 }
 
 func localRunStatusMayBeRemoteActive(status mobile.RunStatus) bool {

@@ -17,6 +17,7 @@
 | `capacity_wait_timeout` | BrowserStack capacity did not become available before the bounded timeout. | Retry later, reduce `--required`, or inspect `mobile capacity get --json`. |
 | `local_binary_not_found` | `BrowserStackLocal` was required but not found. | Set `BROWSERSTACK_LOCAL_BINARY`, configure `mobile.browserstack.local.binary`, or use `private-external`. |
 | `local_tunnel_not_ready` | Managed BrowserStack Local did not reach the ready state before the configured timeout. | Inspect `tunnel.log`, credentials, proxy settings, and increase `mobile.browserstack.local.ready_timeout_seconds` if the network is slow. |
+| `local_tunnel_ownership_mismatch` | A stored managed tunnel PID could not be proven to still belong to this CLI's BrowserStackLocal process. | Do not retry with force-kill. Inspect `tunnel.log`, stop BrowserStackLocal manually if needed, then run cleanup again. |
 | `session_lost` | The Appium session no longer exists or timed out. | Inspect BrowserStack session status and start a new run if needed. |
 | `source_parse_failed` | Appium returned malformed or non-XML source for semantic observation. | Re-run `mobile observe`, switch back to a native context, or use a live gated test to verify provider source compatibility. |
 | `control_locked` | A run is in human handoff. | Run `mobile run resume --run-id <id> --json` before agent actions. |

@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"engineering-flow-platform-tools/internal/browserstack"
 	"engineering-flow-platform-tools/internal/mobile"
@@ -20,6 +21,7 @@ import (
 
 const w3cElementKey = "element-6066-11e4-a52e-4f735466cecf"
 const maxErrorSnippet = 2048
+const defaultHTTPTimeout = 10 * time.Minute
 
 var authPattern = regexp.MustCompile(`(?i)\b(?:basic|bearer)\s+[A-Za-z0-9._~+/\-=]+`)
 
@@ -40,6 +42,9 @@ func New(baseURL string, creds browserstack.Credentials, verifySSL bool, caCert 
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.Proxy = http.ProxyFromEnvironment
 	tr.TLSClientConfig = &tls.Config{}
+	tr.TLSHandshakeTimeout = 10 * time.Second
+	tr.ResponseHeaderTimeout = 60 * time.Second
+	tr.IdleConnTimeout = 90 * time.Second
 	if !verifySSL {
 		tr.TLSClientConfig.InsecureSkipVerify = true
 	}
@@ -50,7 +55,7 @@ func New(baseURL string, creds browserstack.Credentials, verifySSL bool, caCert 
 		}
 		tr.TLSClientConfig.RootCAs = pool
 	}
-	return &Client{baseURL: baseURL, http: &http.Client{Transport: tr}, creds: creds}, nil
+	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultHTTPTimeout, Transport: tr}, creds: creds}, nil
 }
 
 func validateAppiumURL(raw string) error {

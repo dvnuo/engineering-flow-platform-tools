@@ -22,6 +22,7 @@ type TunnelState struct {
 	RunID           string    `json:"run_id,omitempty"`
 	Managed         bool      `json:"managed"`
 	PID             int       `json:"pid,omitempty"`
+	BinaryPath      string    `json:"binary_path,omitempty"`
 	LocalIdentifier string    `json:"local_identifier"`
 	LogPath         string    `json:"log_path,omitempty"`
 	StartedAt       time.Time `json:"started_at"`
@@ -80,7 +81,7 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 	if err := writeLocalBinaryConfig(localConfigPath, m.Credentials); err != nil {
 		return TunnelState{}, err
 	}
-	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
 		_ = os.Remove(localConfigPath)
 		return TunnelState{}, err
@@ -102,6 +103,7 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 		RunID:           effectiveRunID,
 		Managed:         true,
 		PID:             cmd.Process.Pid,
+		BinaryPath:      resolved,
 		LocalIdentifier: identifier,
 		LogPath:         logPath,
 		StartedAt:       time.Now().UTC(),
@@ -223,10 +225,12 @@ func localBinaryArgs(configPath, identifier string, cfg config.MobileLocalConfig
 		args = append(args, "--force-local")
 	}
 	if len(cfg.IncludeHosts) > 0 {
-		args = append(args, "--include-hosts", strings.Join(cfg.IncludeHosts, ","))
+		args = append(args, "--include-hosts")
+		args = append(args, cfg.IncludeHosts...)
 	}
 	if len(cfg.ExcludeHosts) > 0 {
-		args = append(args, "--exclude-hosts", strings.Join(cfg.ExcludeHosts, ","))
+		args = append(args, "--exclude-hosts")
+		args = append(args, cfg.ExcludeHosts...)
 	}
 	return args
 }
@@ -273,6 +277,14 @@ func (m *TunnelManager) Stop(st TunnelState) (TunnelState, error) {
 	if !st.Managed || st.PID == 0 {
 		st.Status = "external_or_not_required"
 		return st, nil
+	}
+	if !processRunning(st.PID) {
+		st.Status = "exited"
+		_ = m.Save(st)
+		return st, nil
+	}
+	if !processOwnedByTunnel(st) {
+		return st, NewError("local_tunnel_ownership_mismatch", "managed tunnel process ownership could not be verified", "Refusing to kill the PID because it may have been reused. Inspect tunnel status and stop BrowserStack Local manually if needed.", 409)
 	}
 	p, err := os.FindProcess(st.PID)
 	if err == nil {
@@ -322,8 +334,14 @@ func (m *TunnelManager) CleanupOrphans() ([]TunnelState, error) {
 		if !m.orphanedTunnel(st) {
 			continue
 		}
-		st, _ = m.Stop(st)
-		stopped = append(stopped, st)
+		stoppedState, err := m.Stop(st)
+		if err != nil {
+			st.Status = "ownership_unverified"
+			_ = m.Save(st)
+			stopped = append(stopped, st)
+			continue
+		}
+		stopped = append(stopped, stoppedState)
 	}
 	return stopped, nil
 }
@@ -384,4 +402,61 @@ func processRunning(pid int) bool {
 		return err == nil && strings.Contains(string(out), strconv.Itoa(pid))
 	}
 	return exec.Command("kill", "-0", strconv.Itoa(pid)).Run() == nil
+}
+
+func processOwnedByTunnel(st TunnelState) bool {
+	if st.PID <= 0 || strings.TrimSpace(st.BinaryPath) == "" {
+		return false
+	}
+	path, ok := processExecutablePath(st.PID)
+	if !ok {
+		return false
+	}
+	return sameExecutablePath(path, st.BinaryPath)
+}
+
+func processExecutablePath(pid int) (string, bool) {
+	switch runtime.GOOS {
+	case "windows":
+		script := fmt.Sprintf("(Get-CimInstance Win32_Process -Filter \"ProcessId=%d\").ExecutablePath", pid)
+		out, err := exec.Command("powershell", "-NoProfile", "-Command", script).Output()
+		if err != nil {
+			return "", false
+		}
+		path := strings.TrimSpace(string(out))
+		return path, path != ""
+	case "darwin":
+		out, err := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "comm=").Output()
+		if err != nil {
+			return "", false
+		}
+		path := strings.TrimSpace(string(out))
+		return path, path != ""
+	default:
+		path, err := os.Readlink(filepath.Join("/proc", strconv.Itoa(pid), "exe"))
+		if err != nil {
+			return "", false
+		}
+		return path, true
+	}
+}
+
+func sameExecutablePath(a, b string) bool {
+	a = cleanExecutablePath(a)
+	b = cleanExecutablePath(b)
+	return strings.EqualFold(a, b)
+}
+
+func cleanExecutablePath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return ""
+	}
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		path = resolved
+	}
+	if abs, err := filepath.Abs(path); err == nil {
+		path = abs
+	}
+	return filepath.Clean(path)
 }

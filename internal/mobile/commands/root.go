@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"engineering-flow-platform-tools/internal/browserstack"
 	"engineering-flow-platform-tools/internal/catalog"
 	"engineering-flow-platform-tools/internal/clihelp"
+	"engineering-flow-platform-tools/internal/config"
 	"engineering-flow-platform-tools/internal/mobile"
 	"engineering-flow-platform-tools/internal/output"
 	"engineering-flow-platform-tools/internal/version"
@@ -189,6 +191,63 @@ func doctorCmd(o *Opts) *cobra.Command {
 
 func authCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "auth"}
+	var username, accessKey string
+	var accessKeyStdin bool
+	login := &cobra.Command{Use: "login", RunE: func(cmd *cobra.Command, args []string) error {
+		username = strings.TrimSpace(username)
+		accessKey = strings.TrimSpace(accessKey)
+		if accessKeyStdin {
+			b, err := io.ReadAll(cmd.InOrStdin())
+			if err != nil {
+				return print(cmd, o, output.Failure("invalid_args", "could not read access key from stdin", "Pipe the BrowserStack access key to --access-key-stdin.", 400))
+			}
+			accessKey = strings.TrimRight(string(b), "\r\n")
+		}
+		if username == "" || accessKey == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--username and an access key are required", "Use --access-key-stdin to avoid shell history, or set BROWSERSTACK_USERNAME/BROWSERSTACK_ACCESS_KEY.", 400))
+		}
+		if accessKeyStdin && cmd.Flags().Changed("access-key") {
+			return print(cmd, o, output.Failure("invalid_args", "use exactly one access key source", "Choose --access-key or --access-key-stdin.", 400))
+		}
+		path, cfg, err := loadMobileRootConfig(o.ConfigPath)
+		if err != nil {
+			return print(cmd, o, output.Failure("config_error", err.Error(), "Check --config or EFP_CONFIG.", 400))
+		}
+		cfg.Mobile.Normalize()
+		cfg.Mobile.BrowserStack.Username = username
+		cfg.Mobile.BrowserStack.AccessKey = accessKey
+		if err := config.Save(path, cfg); err != nil {
+			return print(cmd, o, output.Failure("config_error", err.Error(), "Check config file permissions.", 500))
+		}
+		return print(cmd, o, output.Success("", map[string]any{
+			"logged_in":   true,
+			"config_path": path,
+			"username":    username,
+			"hint":        "Environment variables BROWSERSTACK_USERNAME/BROWSERSTACK_ACCESS_KEY still take precedence when set.",
+		}))
+	}}
+	login.Flags().StringVar(&username, "username", "", "")
+	login.Flags().StringVar(&accessKey, "access-key", "", "")
+	login.Flags().BoolVar(&accessKeyStdin, "access-key-stdin", false, "")
+	c.AddCommand(login)
+	var yes bool
+	logout := &cobra.Command{Use: "logout", RunE: func(cmd *cobra.Command, args []string) error {
+		if !yes {
+			return print(cmd, o, output.Failure("invalid_args", "--yes is required for auth logout", "Re-run with --yes after confirming removal from config.", 400))
+		}
+		path, cfg, err := loadMobileRootConfig(o.ConfigPath)
+		if err != nil {
+			return print(cmd, o, output.Failure("config_error", err.Error(), "Check --config or EFP_CONFIG.", 400))
+		}
+		cfg.Mobile.BrowserStack.Username = ""
+		cfg.Mobile.BrowserStack.AccessKey = ""
+		if err := config.Save(path, cfg); err != nil {
+			return print(cmd, o, output.Failure("config_error", err.Error(), "Check config file permissions.", 500))
+		}
+		return print(cmd, o, output.Success("", map[string]any{"logged_out": true, "config_path": path}))
+	}}
+	logout.Flags().BoolVar(&yes, "yes", false, "")
+	c.AddCommand(logout)
 	c.AddCommand(&cobra.Command{Use: "test", RunE: func(cmd *cobra.Command, args []string) error {
 		svc, err := newServices(o, true)
 		if err != nil {
@@ -202,6 +261,22 @@ func authCmd(o *Opts) *cobra.Command {
 		return print(cmd, o, output.Success("", map[string]any{"authenticated": true, "provider": "browserstack"}))
 	}})
 	return c
+}
+
+func loadMobileRootConfig(flagPath string) (string, config.RootConfig, error) {
+	path, err := config.ResolvePath(flagPath)
+	if err != nil {
+		return "", config.RootConfig{}, err
+	}
+	cfg, err := config.Load(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return "", config.RootConfig{}, err
+		}
+		cfg = config.RootConfig{}
+		cfg.Normalize()
+	}
+	return path, cfg, nil
 }
 
 func print(cmd *cobra.Command, o *Opts, env output.Envelope) error {

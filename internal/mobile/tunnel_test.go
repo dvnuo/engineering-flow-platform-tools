@@ -1,6 +1,7 @@
 package mobile
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -188,24 +189,29 @@ func TestCleanupOrphansStopsStandaloneManagedTunnel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(stopped) != 1 || stopped[0].Status != "stopped" {
+	if len(stopped) != 1 || stopped[0].Status != "exited" {
 		t.Fatalf("stopped=%#v", stopped)
 	}
 	got, err := mgr.Load("tunnel-local-1", "local-1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Status != "stopped" {
+	if got.Status != "exited" {
 		t.Fatalf("status=%s", got.Status)
 	}
 }
 
 func TestLocalBinaryArgsDoNotExposeAccessKey(t *testing.T) {
 	secret := "bs-secret-value"
-	args := localBinaryArgs("local.yml", "local-1", config.MobileLocalConfig{})
+	args := localBinaryArgs("local.yml", "local-1", config.MobileLocalConfig{
+		IncludeHosts: []string{"api.internal", "*.corp"},
+		ExcludeHosts: []string{"blocked.internal", "8.8.8.8"},
+	})
 	if !containsArg(args, "--enable-logging-for-api") {
 		t.Fatalf("local API logging flag missing: %#v", args)
 	}
+	assertFlagValues(t, args, "--include-hosts", []string{"api.internal", "*.corp"})
+	assertFlagValues(t, args, "--exclude-hosts", []string{"blocked.internal", "8.8.8.8"})
 	for _, arg := range args {
 		if arg == "--key" {
 			t.Fatalf("argv should not pass --key: %#v", args)
@@ -223,6 +229,68 @@ func TestLocalBinaryArgsDoNotExposeAccessKey(t *testing.T) {
 	}
 }
 
+func TestTunnelStopRefusesUnverifiedRunningPID(t *testing.T) {
+	store := NewStateStore(filepath.Join(t.TempDir(), "state"), filepath.Join(t.TempDir(), "artifacts"))
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	mgr := &TunnelManager{Store: store}
+	state := TunnelState{
+		Version:         1,
+		RunID:           "run-1",
+		Managed:         true,
+		PID:             os.Getpid(),
+		BinaryPath:      filepath.Join(t.TempDir(), "not-browserstack-local"),
+		LocalIdentifier: "local-1",
+		Owner:           "efp-mobile",
+		Status:          "running",
+	}
+	if err := mgr.Save(state); err != nil {
+		t.Fatal(err)
+	}
+	_, err := mgr.Stop(state)
+	var me *Error
+	if !errors.As(err, &me) || me.Code != "local_tunnel_ownership_mismatch" {
+		t.Fatalf("expected ownership mismatch, got %#v", err)
+	}
+}
+
+func TestCleanupOrphansMarksUnverifiedRunningPID(t *testing.T) {
+	store := NewStateStore(filepath.Join(t.TempDir(), "state"), filepath.Join(t.TempDir(), "artifacts"))
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	mgr := &TunnelManager{Store: store}
+	state := TunnelState{
+		Version:         1,
+		RunID:           "run-1",
+		Managed:         true,
+		PID:             os.Getpid(),
+		BinaryPath:      filepath.Join(t.TempDir(), "not-browserstack-local"),
+		LocalIdentifier: "local-1",
+		Owner:           "efp-mobile",
+		Status:          "running",
+		Deadline:        time.Now().UTC().Add(-time.Minute),
+	}
+	if err := mgr.Save(state); err != nil {
+		t.Fatal(err)
+	}
+	stopped, err := mgr.CleanupOrphans()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stopped) != 1 || stopped[0].Status != "ownership_unverified" {
+		t.Fatalf("stopped=%#v", stopped)
+	}
+	got, err := mgr.Load("run-1", "local-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != "ownership_unverified" {
+		t.Fatalf("status=%s", got.Status)
+	}
+}
+
 func containsArg(args []string, want string) bool {
 	for _, arg := range args {
 		if arg == want {
@@ -230,4 +298,30 @@ func containsArg(args []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func assertFlagValues(t *testing.T, args []string, flag string, want []string) {
+	t.Helper()
+	for i, arg := range args {
+		if arg != flag {
+			continue
+		}
+		got := []string{}
+		for _, value := range args[i+1:] {
+			if strings.HasPrefix(value, "--") {
+				break
+			}
+			got = append(got, value)
+		}
+		if strings.Join(got, "|") != strings.Join(want, "|") {
+			t.Fatalf("%s values=%#v want %#v in %#v", flag, got, want, args)
+		}
+		for _, value := range got {
+			if strings.Contains(value, ",") {
+				t.Fatalf("%s should pass variadic args, not comma-joined value %q", flag, value)
+			}
+		}
+		return
+	}
+	t.Fatalf("%s missing in %#v", flag, args)
 }

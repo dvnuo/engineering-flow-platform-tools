@@ -16,6 +16,35 @@ func TestLocatorsForCandidateEscapesXPathFallback(t *testing.T) {
 	}
 }
 
+func TestLocatorsForCandidateUsesCompleteAndroidFallbackChain(t *testing.T) {
+	locators := LocatorsForCandidate("android", Candidate{AccessibilityID: "login-a11y", ResourceID: "com.app:id/login", Text: "Login"})
+	want := []string{"accessibility id", "id", "-android uiautomator", "xpath"}
+	if len(locators) != len(want) {
+		t.Fatalf("locators=%#v", locators)
+	}
+	for i, using := range want {
+		if locators[i].Using != using {
+			t.Fatalf("locator[%d]=%s want %s: %#v", i, locators[i].Using, using, locators)
+		}
+	}
+}
+
+func TestLocatorsForCandidateUsesCompleteIOSFallbackChain(t *testing.T) {
+	locators := LocatorsForCandidate("ios", Candidate{AccessibilityID: "login-a11y", Class: "XCUIElementTypeButton", Name: "Login"})
+	want := []string{"accessibility id", "-ios predicate string", "-ios class chain", "xpath"}
+	if len(locators) != len(want) {
+		t.Fatalf("locators=%#v", locators)
+	}
+	for i, using := range want {
+		if locators[i].Using != using {
+			t.Fatalf("locator[%d]=%s want %s: %#v", i, locators[i].Using, using, locators)
+		}
+	}
+	if !strings.Contains(locators[2].Value, "XCUIElementTypeButton") || !strings.Contains(locators[2].Value, "Login") {
+		t.Fatalf("bad class chain: %s", locators[2].Value)
+	}
+}
+
 func TestSelectorStringEscapesBackslashAndQuote(t *testing.T) {
 	got := selectorString(`C:\Temp "draft"`)
 	want := `C:\\Temp \"draft\"`

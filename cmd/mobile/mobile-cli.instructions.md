@@ -10,6 +10,8 @@ mobile schema run.start --json
 mobile schema observe --json
 ```
 
+Credentials should usually come from `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY`. If credentials must be persisted, use `mobile auth login --access-key-stdin --json`; environment variables still take precedence over `~/.efp/config.yaml`.
+
 Recommended flow:
 
 ```text
@@ -47,4 +49,3 @@ mobile type --run-id run-... --ref obs-...:e21 --text-env TEST_PASSWORD --json
 mobile assert visible --run-id run-... --name Home --json
 mobile run finish --run-id run-... --status passed --collect-artifacts --json
 ```
-

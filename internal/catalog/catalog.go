@@ -168,7 +168,7 @@ var inspectImageCommands = []string{
 }
 
 var mobileCommands = []string{
-	"mobile commands", "mobile schema <command>", "mobile help llm", "mobile version", "mobile doctor", "mobile auth test",
+	"mobile commands", "mobile schema <command>", "mobile help llm", "mobile version", "mobile doctor", "mobile auth login", "mobile auth logout", "mobile auth test",
 	"mobile app upload", "mobile app list", "mobile app get", "mobile app resolve", "mobile app delete",
 	"mobile device list", "mobile device resolve", "mobile device usage",
 	"mobile capacity get", "mobile capacity wait",
@@ -731,6 +731,8 @@ func mobileExplicit(name string) (explicitMeta, bool) {
 		"help.llm":      {Description: "Return concise agent guidance for BrowserStack mobile device-cloud workflows.", Flags: common, Risk: "read", Example: "mobile help llm --json"},
 		"version":       {Description: "Print mobile version metadata.", Flags: common, Risk: "read", Example: "mobile version --json"},
 		"doctor":        {Description: "Inspect mobile config, credential presence, BrowserStack endpoints, state/artifact directories, and Local binary availability.", Flags: common, Risk: "read", Example: "mobile doctor --json"},
+		"auth.login":    {Description: "Save BrowserStack credentials into the shared EFP config; environment variables still take precedence.", Flags: append([]string{"username", "access-key", "access-key-stdin"}, common...), Required: []string{"username", "access-key|access-key-stdin"}, Risk: "write", Example: "printf '%s\\n' \"$BROWSERSTACK_ACCESS_KEY\" | mobile auth login --username \"$BROWSERSTACK_USERNAME\" --access-key-stdin --json"},
+		"auth.logout":   {Description: "Remove stored BrowserStack credentials from the shared EFP config after confirmation.", Flags: append([]string{"yes"}, common...), Required: []string{"yes"}, Risk: "write_requires_confirmation", Example: "mobile auth logout --yes --json"},
 		"auth.test":     {Description: "Verify BrowserStack credentials through the configured App Automate control API.", Flags: common, Risk: "read", Example: "mobile auth test --json"},
 		"run.start":     {Description: "Resolve or upload an app, choose a BrowserStack device, optionally ensure Local, create an Appium session, and save run state.", Flags: append([]string{"app", "file", "url", "custom-id", "platform", "device", "os-version", "min-os-version", "network", "local-identifier", "project", "build", "name", "wait-capacity", "timeout", "poll-interval"}, common...), Required: []string{"app|file|url|custom-id"}, Risk: "write", Example: "mobile run start --file ./app.apk --platform android --network public --json"},
 		"observe":       {Description: "Capture source and screenshot for a run and return bounded element candidates.", Flags: append([]string{"run-id", "limit"}, common...), Required: []string{"run-id"}, Risk: "read", Example: "mobile observe --run-id run-... --json"},

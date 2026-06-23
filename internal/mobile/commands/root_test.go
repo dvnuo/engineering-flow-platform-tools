@@ -3,8 +3,12 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"engineering-flow-platform-tools/internal/config"
 )
 
 func TestCommandsJSONIncludesRunStart(t *testing.T) {
@@ -18,6 +22,50 @@ func TestCommandsJSONIncludesRunStart(t *testing.T) {
 		}
 	}
 	t.Fatalf("run.start not found in commands: %#v", commands)
+}
+
+func TestAuthLoginStoresBrowserStackCredentials(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	out := runMobileWithInput(t, "secret-key\n", "auth", "login", "--config", path, "--username", "bs-user", "--access-key-stdin", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	if strings.Contains(string(mustJSON(t, out)), "secret-key") {
+		t.Fatalf("access key leaked in output: %#v", out)
+	}
+	cfg, err := config.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Mobile.BrowserStack.Username != "bs-user" || cfg.Mobile.BrowserStack.AccessKey != "secret-key" {
+		t.Fatalf("credentials not saved: %#v", cfg.Mobile.BrowserStack)
+	}
+}
+
+func TestAuthLogoutRequiresConfirmation(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.BrowserStack.Username = "bs-user"
+	cfg.Mobile.BrowserStack.AccessKey = "secret-key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "auth", "logout", "--config", path, "--json")
+	if out["ok"] != false {
+		t.Fatalf("expected failure: %#v", out)
+	}
+	out = runMobile(t, "auth", "logout", "--config", path, "--yes", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "secret-key") {
+		t.Fatalf("access key was not removed: %s", string(b))
+	}
 }
 
 func TestSchemaRunStartIncludesCoreFlags(t *testing.T) {
@@ -105,10 +153,16 @@ func TestAppResolveInvalidAppURLFailsBeforeServiceSetup(t *testing.T) {
 
 func runMobile(t *testing.T, args ...string) map[string]any {
 	t.Helper()
+	return runMobileWithInput(t, "", args...)
+}
+
+func runMobileWithInput(t *testing.T, input string, args ...string) map[string]any {
+	t.Helper()
 	cmd := NewRoot()
 	var b bytes.Buffer
 	cmd.SetOut(&b)
 	cmd.SetErr(&b)
+	cmd.SetIn(strings.NewReader(input))
 	cmd.SetArgs(args)
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("execute failed: %v out=%s", err, b.String())
@@ -118,4 +172,13 @@ func runMobile(t *testing.T, args ...string) map[string]any {
 		t.Fatalf("invalid json: %v out=%s", err, b.String())
 	}
 	return out
+}
+
+func mustJSON(t *testing.T, v any) []byte {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }

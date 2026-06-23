@@ -58,13 +58,20 @@ func TestStatusErrorRedactsCredentials(t *testing.T) {
 	}
 }
 
-func TestNewLeavesHTTPTimeoutToContext(t *testing.T) {
+func TestNewSetsBoundedHTTPTimeouts(t *testing.T) {
 	c, err := New("http://127.0.0.1:1", Credentials{}, true, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.http.Timeout != 0 {
+	if c.http.Timeout != defaultHTTPTimeout {
 		t.Fatalf("timeout=%s", c.http.Timeout)
+	}
+	tr, ok := c.http.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("transport=%T", c.http.Transport)
+	}
+	if tr.TLSHandshakeTimeout <= 0 || tr.ResponseHeaderTimeout <= 0 || tr.IdleConnTimeout <= 0 {
+		t.Fatalf("transport timeouts not set: %#v", tr)
 	}
 }
 

@@ -18,11 +18,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"engineering-flow-platform-tools/internal/mobile"
 )
 
 const maxErrorSnippet = 2048
+const defaultHTTPTimeout = 10 * time.Minute
 
 var authPattern = regexp.MustCompile(`(?i)\b(?:basic|bearer)\s+[A-Za-z0-9._~+/\-=]+`)
 
@@ -43,6 +45,9 @@ func New(baseURL string, creds Credentials, verifySSL bool, caCert string) (*Cli
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.Proxy = http.ProxyFromEnvironment
 	tr.TLSClientConfig = &tls.Config{}
+	tr.TLSHandshakeTimeout = 10 * time.Second
+	tr.ResponseHeaderTimeout = 60 * time.Second
+	tr.IdleConnTimeout = 90 * time.Second
 	if !verifySSL {
 		tr.TLSClientConfig.InsecureSkipVerify = true
 	}
@@ -53,7 +58,7 @@ func New(baseURL string, creds Credentials, verifySSL bool, caCert string) (*Cli
 		}
 		tr.TLSClientConfig.RootCAs = pool
 	}
-	return &Client{baseURL: baseURL, http: &http.Client{Transport: tr}, creds: creds}, nil
+	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultHTTPTimeout, Transport: tr}, creds: creds}, nil
 }
 
 func validateBrowserStackURL(raw, host string) error {

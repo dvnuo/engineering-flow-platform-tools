@@ -661,6 +661,8 @@ browser network export --session default --out result/network.har-lite.json --fo
 - mobile help llm
 - mobile version
 - mobile doctor
+- mobile auth login
+- mobile auth logout
 - mobile auth test
 
 ### BrowserStack Control Plane

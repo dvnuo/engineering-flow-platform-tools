@@ -142,6 +142,8 @@ mobile:
     appium_base_url: https://hub.browserstack.com/wd/hub
     username_env: BROWSERSTACK_USERNAME
     access_key_env: BROWSERSTACK_ACCESS_KEY
+    username: ""
+    access_key: ""
     verify_ssl: true
     ca_cert: ""
     local:
@@ -157,4 +159,10 @@ mobile:
       exclude_hosts: []
 ```
 
-Use `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` for credentials when possible. `MOBILE_STATE_DIR` and `MOBILE_ARTIFACTS_DIR` override the state and artifact roots in CI. State and artifact directories are created outside the main config with restrictive permissions where the platform supports them.
+Use `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` for credentials when possible; environment credentials take precedence over stored config values. To persist credentials into `~/.efp/config.yaml`, run:
+
+```bash
+printf '%s\n' "$BROWSERSTACK_ACCESS_KEY" | mobile auth login --username "$BROWSERSTACK_USERNAME" --access-key-stdin --json
+```
+
+`MOBILE_STATE_DIR` and `MOBILE_ARTIFACTS_DIR` override the state and artifact roots in CI. State and artifact directories are created outside the main config with restrictive permissions where the platform supports them.

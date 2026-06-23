@@ -46,6 +46,23 @@ func TestCreateSessionPublicDoesNotSetLocal(t *testing.T) {
 	}
 }
 
+func TestClientHasBoundedHTTPTimeouts(t *testing.T) {
+	c, err := New("http://127.0.0.1:1", browserstack.Credentials{Username: "u", AccessKey: "k"}, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.http.Timeout != defaultHTTPTimeout {
+		t.Fatalf("timeout=%s", c.http.Timeout)
+	}
+	tr, ok := c.http.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("transport=%T", c.http.Transport)
+	}
+	if tr.TLSHandshakeTimeout <= 0 || tr.ResponseHeaderTimeout <= 0 || tr.IdleConnTimeout <= 0 {
+		t.Fatalf("transport timeouts not set: %#v", tr)
+	}
+}
+
 func TestCreateSessionPrivateUsesBooleanLocalCapability(t *testing.T) {
 	var body map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

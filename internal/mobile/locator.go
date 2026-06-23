@@ -26,12 +26,21 @@ func LocatorsForCandidate(platform string, c Candidate) []Locator {
 			name := firstNonEmpty(c.Name, c.Text)
 			quoted := selectorString(name)
 			out = append(out, Locator{Using: "-ios predicate string", Value: `name == "` + quoted + `" OR label == "` + quoted + `"`})
+			out = append(out, Locator{Using: "-ios class chain", Value: iosClassChain(c, quoted)})
 		}
 	}
-	if len(out) == 0 && (c.Name != "" || c.Text != "") {
+	if c.Name != "" || c.Text != "" {
 		out = append(out, xpathLocator(firstNonEmpty(c.Name, c.Text)))
 	}
 	return out
+}
+
+func iosClassChain(c Candidate, quotedName string) string {
+	className := "*"
+	if strings.HasPrefix(c.Class, "XCUIElementType") {
+		className = c.Class
+	}
+	return "**/" + className + "[`name == \"" + quotedName + "\" OR label == \"" + quotedName + "\"`]"
 }
 
 func xpathLocator(name string) Locator {

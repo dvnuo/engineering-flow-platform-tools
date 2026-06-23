@@ -51,6 +51,9 @@ type RunState struct {
 	AppiumLogsURL         string            `json:"appium_logs_url,omitempty"`
 	DeviceLogsURL         string            `json:"device_logs_url,omitempty"`
 	VideoURL              string            `json:"video_url,omitempty"`
+	StatusReason          string            `json:"status_reason,omitempty"`
+	LastErrorCode         string            `json:"last_error_code,omitempty"`
+	LastErrorMessage      string            `json:"last_error_message,omitempty"`
 	StartedAt             time.Time         `json:"started_at"`
 	UpdatedAt             time.Time         `json:"updated_at"`
 	FinishedAt            *time.Time        `json:"finished_at,omitempty"`

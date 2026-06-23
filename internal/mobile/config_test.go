@@ -41,3 +41,39 @@ func TestLoadRuntimeConfigRejectsOffProviderURL(t *testing.T) {
 		t.Fatal("expected off-provider config error")
 	}
 }
+
+func TestLoadRuntimeConfigResolvesHTTPProxyCredentials(t *testing.T) {
+	t.Setenv("BROWSERSTACK_USERNAME", "user")
+	t.Setenv("BROWSERSTACK_ACCESS_KEY", "key")
+	t.Setenv("BS_PROXY_USER", "proxy-user")
+	t.Setenv("BS_PROXY_PASS", "proxy-pass")
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(path, []byte(`version: 1
+mobile:
+  browserstack:
+    http_proxy:
+      proxy_host: proxy.internal
+      proxy_port: 8080
+      proxy_user_env: BS_PROXY_USER
+      proxy_pass_env: BS_PROXY_PASS
+      no_proxy_hosts:
+        - internal.example
+      disable_proxy_discovery: true
+      force_proxy: true
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadRuntimeConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.HTTPProxy.ProxyHost != "proxy.internal" || cfg.HTTPProxy.ProxyPort != 8080 {
+		t.Fatalf("proxy host/port not loaded: %#v", cfg.HTTPProxy)
+	}
+	if cfg.HTTPProxy.ProxyUser != "proxy-user" || cfg.HTTPProxy.ProxyPass != "proxy-pass" {
+		t.Fatalf("proxy credentials not resolved: %#v", cfg.HTTPProxy)
+	}
+	if !cfg.HTTPProxy.DisableProxyDiscovery || !cfg.HTTPProxy.ForceProxy {
+		t.Fatalf("proxy booleans not loaded: %#v", cfg.HTTPProxy)
+	}
+}

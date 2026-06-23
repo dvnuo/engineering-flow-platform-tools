@@ -101,11 +101,11 @@ func newServices(o *Opts, requireAuth bool) (*services, error) {
 		verify = *rt.Mobile.BrowserStack.VerifySSL
 	}
 	bsCreds := browserstack.Credentials{Username: rt.Credentials.Username, AccessKey: rt.Credentials.AccessKey}
-	control, err := browserstack.New(rt.Mobile.BrowserStack.APIBaseURL, bsCreds, verify, rt.Mobile.BrowserStack.CACert)
+	control, err := browserstack.New(rt.Mobile.BrowserStack.APIBaseURL, bsCreds, verify, rt.Mobile.BrowserStack.CACert, rt.HTTPProxy)
 	if err != nil {
 		return nil, err
 	}
-	appiumClient, err := appium.New(rt.Mobile.BrowserStack.AppiumBaseURL, bsCreds, verify, rt.Mobile.BrowserStack.CACert)
+	appiumClient, err := appium.New(rt.Mobile.BrowserStack.AppiumBaseURL, bsCreds, verify, rt.Mobile.BrowserStack.CACert, rt.HTTPProxy)
 	if err != nil {
 		return nil, err
 	}
@@ -171,19 +171,31 @@ func doctorCmd(o *Opts) *cobra.Command {
 		local := svc.Runtime.Mobile.BrowserStack.Local
 		bin := firstNonEmpty(os.Getenv(local.BinaryEnv), local.Binary)
 		_, binErr := exec.LookPath(bin)
+		apiProxy := svc.Control.ProxyDiagnostic()
+		appiumProxy := svc.Appium.ProxyDiagnostic()
 		data := map[string]any{
-			"config_path":            svc.Runtime.Path,
-			"warnings":               svc.Runtime.Warnings,
-			"credentials_present":    map[string]bool{"username": svc.Runtime.Username, "access_key": svc.Runtime.AccessKey},
-			"api_base_url":           svc.Runtime.Mobile.BrowserStack.APIBaseURL,
-			"appium_base_url":        svc.Runtime.Mobile.BrowserStack.AppiumBaseURL,
-			"state_dir":              svc.Runtime.Mobile.StateDir,
-			"artifacts_dir":          svc.Runtime.Mobile.ArtifactsDir,
-			"state_dir_writable":     true,
-			"artifacts_dir_writable": true,
-			"local_binary":           bin,
-			"local_binary_found":     binErr == nil,
-			"verify_ssl":             svc.Runtime.Mobile.BrowserStack.VerifySSL == nil || *svc.Runtime.Mobile.BrowserStack.VerifySSL,
+			"config_path":                   svc.Runtime.Path,
+			"warnings":                      svc.Runtime.Warnings,
+			"credentials_present":           map[string]bool{"username": svc.Runtime.Username, "access_key": svc.Runtime.AccessKey},
+			"api_base_url":                  svc.Runtime.Mobile.BrowserStack.APIBaseURL,
+			"appium_base_url":               svc.Runtime.Mobile.BrowserStack.AppiumBaseURL,
+			"state_dir":                     svc.Runtime.Mobile.StateDir,
+			"artifacts_dir":                 svc.Runtime.Mobile.ArtifactsDir,
+			"state_dir_writable":            true,
+			"artifacts_dir_writable":        true,
+			"local_binary":                  bin,
+			"local_binary_found":            binErr == nil,
+			"verify_ssl":                    svc.Runtime.Mobile.BrowserStack.VerifySSL == nil || *svc.Runtime.Mobile.BrowserStack.VerifySSL,
+			"browserstack_api_proxy":        apiProxy,
+			"appium_proxy":                  appiumProxy,
+			"browserstack_api_proxy_source": apiProxy.Source,
+			"browserstack_api_proxy_host":   apiProxy.Host,
+			"browserstack_api_proxy_port":   apiProxy.Port,
+			"appium_proxy_source":           appiumProxy.Source,
+			"appium_proxy_host":             appiumProxy.Host,
+			"appium_proxy_port":             appiumProxy.Port,
+			"http2_enabled":                 false,
+			"transport_mode":                apiProxy.TransportMode,
 		}
 		return print(cmd, o, output.Success("", data))
 	}}

@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -20,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/mobile"
 )
 
@@ -32,9 +31,10 @@ type Client struct {
 	baseURL string
 	http    *http.Client
 	creds   Credentials
+	proxy   httpclient.ProxyDiagnostic
 }
 
-func New(baseURL string, creds Credentials, verifySSL bool, caCert string) (*Client, error) {
+func New(baseURL string, creds Credentials, verifySSL bool, caCert string, proxies ...httpclient.ProxySettings) (*Client, error) {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	if baseURL == "" {
 		baseURL = "https://api-cloud.browserstack.com"
@@ -42,23 +42,27 @@ func New(baseURL string, creds Credentials, verifySSL bool, caCert string) (*Cli
 	if err := validateBrowserStackURL(baseURL, "api-cloud.browserstack.com"); err != nil {
 		return nil, err
 	}
-	tr := http.DefaultTransport.(*http.Transport).Clone()
-	tr.Proxy = http.ProxyFromEnvironment
-	tr.TLSClientConfig = &tls.Config{}
-	tr.TLSHandshakeTimeout = 10 * time.Second
-	tr.ResponseHeaderTimeout = 60 * time.Second
-	tr.IdleConnTimeout = 90 * time.Second
-	if !verifySSL {
-		tr.TLSClientConfig.InsecureSkipVerify = true
+	proxy := httpclient.ProxySettings{}
+	if len(proxies) > 0 {
+		proxy = proxies[0]
 	}
-	if strings.TrimSpace(caCert) != "" {
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM([]byte(caCert)) {
-			return nil, mobile.NewError("config_error", "invalid BrowserStack CA certificate", "Provide a valid PEM ca_cert or remove it.", 400)
-		}
-		tr.TLSClientConfig.RootCAs = pool
+	tr, diag, err := httpclient.NewTransport(httpclient.TransportOptions{
+		BaseURL:               baseURL,
+		VerifySSL:             verifySSL,
+		CACert:                caCert,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 60 * time.Second,
+		IdleConnTimeout:       90 * time.Second,
+		Proxy:                 proxy,
+	})
+	if err != nil {
+		return nil, mobile.NewError("config_error", "invalid BrowserStack HTTP transport configuration: "+err.Error(), "Check mobile.browserstack.http_proxy, verify_ssl, and ca_cert.", 400)
 	}
-	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultHTTPTimeout, Transport: tr}, creds: creds}, nil
+	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultHTTPTimeout, Transport: tr}, creds: creds, proxy: diag}, nil
+}
+
+func (c *Client) ProxyDiagnostic() httpclient.ProxyDiagnostic {
+	return c.proxy
 }
 
 func validateBrowserStackURL(raw, host string) error {
@@ -391,7 +395,8 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	req.SetBasicAuth(c.creds.Username, c.creds.AccessKey)
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, mobile.RetryableError("network_error", "BrowserStack request failed: "+redact(err.Error(), c.creds), "Check DNS, proxy, TLS, and BrowserStack availability.", "retry", 503)
+		context := httpclient.ProxyDiagnosticText(c.baseURL, c.proxy)
+		return nil, mobile.RetryableError("network_error", "BrowserStack request failed: "+redact(err.Error(), c.creds)+" ("+context+")", "Check DNS, proxy, TLS, mobile.browserstack.http_proxy, and BrowserStack availability.", "retry", 503)
 	}
 	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()

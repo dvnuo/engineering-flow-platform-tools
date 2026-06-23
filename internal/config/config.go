@@ -56,7 +56,18 @@ type MobileBrowserStack struct {
 	AccessKey     string            `json:"access_key,omitempty" yaml:"access_key,omitempty"`
 	VerifySSL     *bool             `json:"verify_ssl,omitempty" yaml:"verify_ssl,omitempty"`
 	CACert        string            `json:"ca_cert,omitempty" yaml:"ca_cert,omitempty"`
+	HTTPProxy     MobileHTTPProxy   `json:"http_proxy" yaml:"http_proxy"`
 	Local         MobileLocalConfig `json:"local" yaml:"local"`
+}
+
+type MobileHTTPProxy struct {
+	ProxyHost             string   `json:"proxy_host,omitempty" yaml:"proxy_host,omitempty"`
+	ProxyPort             int      `json:"proxy_port,omitempty" yaml:"proxy_port,omitempty"`
+	ProxyUserEnv          string   `json:"proxy_user_env,omitempty" yaml:"proxy_user_env,omitempty"`
+	ProxyPassEnv          string   `json:"proxy_pass_env,omitempty" yaml:"proxy_pass_env,omitempty"`
+	NoProxyHosts          []string `json:"no_proxy_hosts,omitempty" yaml:"no_proxy_hosts,omitempty"`
+	DisableProxyDiscovery *bool    `json:"disable_proxy_discovery,omitempty" yaml:"disable_proxy_discovery,omitempty"`
+	ForceProxy            *bool    `json:"force_proxy,omitempty" yaml:"force_proxy,omitempty"`
 }
 
 type MobileLocalConfig struct {

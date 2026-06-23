@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"engineering-flow-platform-tools/internal/httpclient"
 )
 
 func TestListDevicesUsesDocumentedPathAndAuth(t *testing.T) {
@@ -72,6 +74,17 @@ func TestNewSetsBoundedHTTPTimeouts(t *testing.T) {
 	}
 	if tr.TLSHandshakeTimeout <= 0 || tr.ResponseHeaderTimeout <= 0 || tr.IdleConnTimeout <= 0 {
 		t.Fatalf("transport timeouts not set: %#v", tr)
+	}
+}
+
+func TestNewUsesExplicitProxyConfig(t *testing.T) {
+	c, err := New("https://api-cloud.browserstack.com", Credentials{}, true, "", httpclient.ProxySettings{ProxyHost: "proxy.internal", ProxyPort: 8080})
+	if err != nil {
+		t.Fatal(err)
+	}
+	diag := c.ProxyDiagnostic()
+	if !diag.Enabled || diag.Source != "config" || diag.Host != "proxy.internal" || diag.Port != "8080" {
+		t.Fatalf("diag=%#v", diag)
 	}
 }
 

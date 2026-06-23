@@ -70,6 +70,32 @@ func TestAuthLogoutRequiresConfirmation(t *testing.T) {
 	}
 }
 
+func TestDoctorReportsEffectiveHTTPProxy(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	forceProxy := true
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.BrowserStack.APIBaseURL = "http://127.0.0.1:1"
+	cfg.Mobile.BrowserStack.AppiumBaseURL = "http://127.0.0.1:1"
+	cfg.Mobile.BrowserStack.HTTPProxy.ProxyHost = "proxy.internal"
+	cfg.Mobile.BrowserStack.HTTPProxy.ProxyPort = 8080
+	cfg.Mobile.BrowserStack.HTTPProxy.ForceProxy = &forceProxy
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "doctor", "--config", path, "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if data["browserstack_api_proxy_source"] != "config" || data["browserstack_api_proxy_host"] != "proxy.internal" || data["browserstack_api_proxy_port"] != "8080" {
+		t.Fatalf("unexpected api proxy fields: %#v", data)
+	}
+	if data["appium_proxy_source"] != "config" || data["appium_proxy_host"] != "proxy.internal" || data["appium_proxy_port"] != "8080" {
+		t.Fatalf("unexpected appium proxy fields: %#v", data)
+	}
+}
+
 func TestSchemaRunStartIncludesCoreFlags(t *testing.T) {
 	out := runMobile(t, "schema", "run.start", "--json")
 	data := out["data"].(map[string]any)

@@ -3,8 +3,6 @@ package appium
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -16,6 +14,7 @@ import (
 	"time"
 
 	"engineering-flow-platform-tools/internal/browserstack"
+	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/mobile"
 )
 
@@ -30,6 +29,7 @@ type Client struct {
 	baseURL string
 	http    *http.Client
 	creds   browserstack.Credentials
+	proxy   httpclient.ProxyDiagnostic
 }
 
 type SessionIDMissingError struct {
@@ -51,7 +51,7 @@ func (e *SessionIDMissingError) Unwrap() error {
 	return e.Err
 }
 
-func New(baseURL string, creds browserstack.Credentials, verifySSL bool, caCert string) (*Client, error) {
+func New(baseURL string, creds browserstack.Credentials, verifySSL bool, caCert string, proxies ...httpclient.ProxySettings) (*Client, error) {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	if baseURL == "" {
 		baseURL = "https://hub.browserstack.com/wd/hub"
@@ -59,23 +59,27 @@ func New(baseURL string, creds browserstack.Credentials, verifySSL bool, caCert 
 	if err := validateAppiumURL(baseURL); err != nil {
 		return nil, err
 	}
-	tr := http.DefaultTransport.(*http.Transport).Clone()
-	tr.Proxy = http.ProxyFromEnvironment
-	tr.TLSClientConfig = &tls.Config{}
-	tr.TLSHandshakeTimeout = 10 * time.Second
-	tr.ResponseHeaderTimeout = sessionResponseHeaderTimeout
-	tr.IdleConnTimeout = 90 * time.Second
-	if !verifySSL {
-		tr.TLSClientConfig.InsecureSkipVerify = true
+	proxy := httpclient.ProxySettings{}
+	if len(proxies) > 0 {
+		proxy = proxies[0]
 	}
-	if strings.TrimSpace(caCert) != "" {
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM([]byte(caCert)) {
-			return nil, mobile.NewError("config_error", "invalid Appium CA certificate", "Provide a valid PEM ca_cert or remove it.", 400)
-		}
-		tr.TLSClientConfig.RootCAs = pool
+	tr, diag, err := httpclient.NewTransport(httpclient.TransportOptions{
+		BaseURL:               baseURL,
+		VerifySSL:             verifySSL,
+		CACert:                caCert,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: sessionResponseHeaderTimeout,
+		IdleConnTimeout:       90 * time.Second,
+		Proxy:                 proxy,
+	})
+	if err != nil {
+		return nil, mobile.NewError("config_error", "invalid Appium HTTP transport configuration: "+err.Error(), "Check mobile.browserstack.http_proxy, verify_ssl, and ca_cert.", 400)
 	}
-	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultHTTPTimeout, Transport: tr}, creds: creds}, nil
+	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultHTTPTimeout, Transport: tr}, creds: creds, proxy: diag}, nil
+}
+
+func (c *Client) ProxyDiagnostic() httpclient.ProxyDiagnostic {
+	return c.proxy
 }
 
 func validateAppiumURL(raw string) error {
@@ -329,7 +333,8 @@ func (c *Client) doJSON(ctx context.Context, method, path string, body any, out 
 	req.SetBasicAuth(c.creds.Username, c.creds.AccessKey)
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return mobile.RetryableError("network_error", "Appium request failed: "+sanitize(err.Error(), c.creds), "Check BrowserStack Appium hub connectivity.", "retry", 503)
+		context := httpclient.ProxyDiagnosticText(c.baseURL, c.proxy)
+		return mobile.RetryableError("network_error", "Appium request failed: "+sanitize(err.Error(), c.creds)+" ("+context+")", "Check BrowserStack Appium hub connectivity and mobile.browserstack.http_proxy.", "retry", 503)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {

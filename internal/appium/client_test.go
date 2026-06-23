@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"engineering-flow-platform-tools/internal/browserstack"
+	"engineering-flow-platform-tools/internal/httpclient"
 	"engineering-flow-platform-tools/internal/mobile"
 )
 
@@ -63,6 +64,17 @@ func TestClientHasBoundedHTTPTimeouts(t *testing.T) {
 	}
 	if tr.ResponseHeaderTimeout != sessionResponseHeaderTimeout {
 		t.Fatalf("response header timeout=%s", tr.ResponseHeaderTimeout)
+	}
+}
+
+func TestClientUsesExplicitProxyConfig(t *testing.T) {
+	c, err := New("https://hub.browserstack.com/wd/hub", browserstack.Credentials{Username: "u", AccessKey: "k"}, true, "", httpclient.ProxySettings{ProxyHost: "proxy.internal", ProxyPort: 8080})
+	if err != nil {
+		t.Fatal(err)
+	}
+	diag := c.ProxyDiagnostic()
+	if !diag.Enabled || diag.Source != "config" || diag.Host != "proxy.internal" || diag.Port != "8080" {
+		t.Fatalf("diag=%#v", diag)
 	}
 }
 

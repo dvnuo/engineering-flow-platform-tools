@@ -7,18 +7,20 @@ import (
 	"strings"
 
 	"engineering-flow-platform-tools/internal/config"
+	"engineering-flow-platform-tools/internal/httpclient"
 )
 
 const EnvStateDir = "MOBILE_STATE_DIR"
 const EnvArtifactsDir = "MOBILE_ARTIFACTS_DIR"
 
 type RuntimeConfig struct {
-	Path        string              `json:"path,omitempty"`
-	Mobile      config.MobileConfig `json:"mobile"`
-	Username    bool                `json:"username_present,omitempty"`
-	AccessKey   bool                `json:"access_key_present,omitempty"`
-	Credentials Credentials         `json:"-"`
-	Warnings    []string            `json:"warnings,omitempty"`
+	Path        string                   `json:"path,omitempty"`
+	Mobile      config.MobileConfig      `json:"mobile"`
+	Username    bool                     `json:"username_present,omitempty"`
+	AccessKey   bool                     `json:"access_key_present,omitempty"`
+	Credentials Credentials              `json:"-"`
+	HTTPProxy   httpclient.ProxySettings `json:"-"`
+	Warnings    []string                 `json:"warnings,omitempty"`
 }
 
 type Credentials struct {
@@ -57,6 +59,10 @@ func LoadRuntimeConfig(flagPath string) (RuntimeConfig, error) {
 	if err := validateProviderURL(m.BrowserStack.AppiumBaseURL, "hub.browserstack.com"); err != nil {
 		return RuntimeConfig{}, err
 	}
+	httpProxy, err := loadHTTPProxy(m.BrowserStack.HTTPProxy)
+	if err != nil {
+		return RuntimeConfig{}, err
+	}
 	stateDir, err := ExpandPath(m.StateDir)
 	if err != nil {
 		return RuntimeConfig{}, err
@@ -73,8 +79,38 @@ func LoadRuntimeConfig(flagPath string) (RuntimeConfig, error) {
 		Username:    present(username),
 		AccessKey:   present(accessKey),
 		Credentials: Credentials{Username: username, AccessKey: accessKey},
+		HTTPProxy:   httpProxy,
 		Warnings:    warnings,
 	}, nil
+}
+
+func loadHTTPProxy(cfg config.MobileHTTPProxy) (httpclient.ProxySettings, error) {
+	proxy := httpclient.ProxySettings{
+		ProxyHost:    cfg.ProxyHost,
+		ProxyPort:    cfg.ProxyPort,
+		NoProxyHosts: append([]string{}, cfg.NoProxyHosts...),
+	}
+	if cfg.DisableProxyDiscovery != nil {
+		proxy.DisableProxyDiscovery = *cfg.DisableProxyDiscovery
+	}
+	if cfg.ForceProxy != nil {
+		proxy.ForceProxy = *cfg.ForceProxy
+	}
+	if strings.TrimSpace(cfg.ProxyUserEnv) != "" {
+		value, ok := os.LookupEnv(strings.TrimSpace(cfg.ProxyUserEnv))
+		if !ok || strings.TrimSpace(value) == "" {
+			return proxy, NewError("config_error", "BrowserStack HTTP proxy username env var is not set", "Set "+strings.TrimSpace(cfg.ProxyUserEnv)+" or remove mobile.browserstack.http_proxy.proxy_user_env.", 400)
+		}
+		proxy.ProxyUser = value
+	}
+	if strings.TrimSpace(cfg.ProxyPassEnv) != "" {
+		value, ok := os.LookupEnv(strings.TrimSpace(cfg.ProxyPassEnv))
+		if !ok || strings.TrimSpace(value) == "" {
+			return proxy, NewError("config_error", "BrowserStack HTTP proxy password env var is not set", "Set "+strings.TrimSpace(cfg.ProxyPassEnv)+" or remove mobile.browserstack.http_proxy.proxy_pass_env.", 400)
+		}
+		proxy.ProxyPass = value
+	}
+	return proxy, nil
 }
 
 func RequireCredentials(c RuntimeConfig) error {

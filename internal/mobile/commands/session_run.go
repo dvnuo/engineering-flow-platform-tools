@@ -256,7 +256,7 @@ func sessionStopCmd(o *Opts) *cobra.Command {
 
 func runCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "run"}
-	c.AddCommand(runStartCmd(o), runStatusCmd(o), runHandoffCmd(o), runResumeCmd(o), runFinishCmd(o))
+	c.AddCommand(runStartCmd(o), runStatusCmd(o), runRecoverCmd(o), runHandoffCmd(o), runResumeCmd(o), runFinishCmd(o))
 	return c
 }
 
@@ -355,6 +355,29 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 		}
 		opts.LocalID = tunnel.LocalIdentifier
 	}
+	startedAt := time.Now().UTC()
+	st := mobile.RunState{
+		Version:      1,
+		RunID:        runID,
+		Provider:     "browserstack",
+		Status:       mobile.StatusStarting,
+		ControlOwner: "agent",
+		Platform:     opts.Platform,
+		Device:       dev.Recommended,
+		App:          appRef,
+		Network:      mobile.NetworkState{Mode: opts.Network, LocalMode: localModeForNetwork(opts.Network), LocalIdentifier: opts.LocalID, TunnelID: tunnel.TunnelID},
+		ProjectName:  opts.Project,
+		BuildName:    opts.Build,
+		SessionName:  opts.Name,
+		StartedAt:    startedAt,
+		UpdatedAt:    startedAt,
+	}
+	if err := svc.Store.SaveRun(st); err != nil {
+		if tunnel.Managed {
+			_, _ = svc.Tunnel.Stop(tunnel)
+		}
+		return renderErr(cmd, o, err)
+	}
 	automation := "UiAutomator2"
 	if equalFold(opts.Platform, "ios") {
 		automation = "XCUITest"
@@ -393,51 +416,66 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 				if tunnel.Managed {
 					_, _ = svc.Tunnel.Stop(tunnel)
 				}
+				markRunFailedBestEffort(svc, &st)
 				return renderErr(cmd, o, err)
 			}
 		} else {
 			if tunnel.Managed {
 				_, _ = svc.Tunnel.Stop(tunnel)
 			}
+			markRunFailedBestEffort(svc, &st)
 			return renderErr(cmd, o, err)
 		}
 	}
-	if !haveRemoteSession {
-		if remote, err := svc.Control.GetSession(ctx, session.ID); err == nil {
-			remoteSession = remote
-			haveRemoteSession = true
-		}
-	}
-	if buildID == "" {
-		buildID = findBuildIDByName(ctx, svc, opts.Build, sessionCreateStarted)
-	}
 	now := time.Now().UTC()
-	st := mobile.RunState{
-		Version:      1,
-		RunID:        runID,
-		Provider:     "browserstack",
-		Status:       mobile.StatusRunning,
-		ControlOwner: "agent",
-		SessionID:    session.ID,
-		Platform:     opts.Platform,
-		Device:       dev.Recommended,
-		App:          appRef,
-		Network:      mobile.NetworkState{Mode: opts.Network, LocalMode: localModeForNetwork(opts.Network), LocalIdentifier: opts.LocalID, TunnelID: tunnel.TunnelID},
-		BuildID:      buildID,
-		ProjectName:  opts.Project,
-		BuildName:    opts.Build,
-		SessionName:  opts.Name,
-		DashboardURL: dashboardURLFromSession(session),
-		StartedAt:    now,
-		UpdatedAt:    now,
-	}
+	st.Status = mobile.StatusRunning
+	st.SessionID = session.ID
+	st.BuildID = buildID
+	st.DashboardURL = dashboardURLFromSession(session)
+	st.UpdatedAt = now
 	if haveRemoteSession {
 		enrichRunStateFromRemote(&st, remoteSession)
 	}
 	if err := svc.Store.SaveRun(st); err != nil {
 		return renderErr(cmd, o, err)
 	}
-	return print(cmd, o, output.Success("", map[string]any{"run": st, "session": session, "device_resolution": dev, "tunnel": tunnel, "effective": effectiveRunStart(st, dev), "recovered_session": recoveredSession}))
+	warnings := enrichRunStateBestEffort(svc, &st, session.ID, opts.Build, sessionCreateStarted, haveRemoteSession)
+	return print(cmd, o, output.Success("", map[string]any{"run": st, "session": session, "device_resolution": dev, "tunnel": tunnel, "effective": effectiveRunStart(st, dev), "recovered_session": recoveredSession, "warnings": warnings}))
+}
+
+func markRunFailedBestEffort(svc *services, st *mobile.RunState) {
+	now := time.Now().UTC()
+	st.Status = mobile.StatusFailed
+	st.ControlOwner = "agent"
+	st.FinishedAt = &now
+	_ = svc.Store.SaveRun(*st)
+}
+
+func enrichRunStateBestEffort(svc *services, st *mobile.RunState, sessionID, buildName string, since time.Time, alreadyHaveRemote bool) []string {
+	warnings := []string{}
+	changed := false
+	enrichCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if !alreadyHaveRemote && sessionID != "" {
+		if remote, err := svc.Control.GetSession(enrichCtx, sessionID); err == nil {
+			enrichRunStateFromRemote(st, remote)
+			changed = true
+		} else {
+			warnings = append(warnings, "browserstack session enrich: "+err.Error())
+		}
+	}
+	if st.BuildID == "" {
+		if buildID := findBuildIDByName(enrichCtx, svc, buildName, since); buildID != "" {
+			st.BuildID = buildID
+			changed = true
+		}
+	}
+	if changed {
+		if err := svc.Store.SaveRun(*st); err != nil {
+			warnings = append(warnings, "run state enrich save: "+err.Error())
+		}
+	}
+	return warnings
 }
 
 func dashboardURLFromSession(session appium.Session) string {
@@ -698,10 +736,212 @@ func runStatusCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
+		st, _ = reconcileRunStatusBestEffort(cmd.Context(), svc, st)
 		return print(cmd, o, output.Success("", st))
 	}}
 	c.Flags().StringVar(&runID, "run-id", "", "")
 	return c
+}
+
+type runRecoverOptions struct {
+	RunID           string
+	SessionID       string
+	BuildID         string
+	BuildName       string
+	SessionName     string
+	Network         string
+	LocalIdentifier string
+	Platform        string
+	App             string
+}
+
+func runRecoverCmd(o *Opts) *cobra.Command {
+	opts := runRecoverOptions{}
+	c := &cobra.Command{Use: "recover", RunE: func(cmd *cobra.Command, args []string) error {
+		return runRecover(cmd, o, opts)
+	}}
+	c.Flags().StringVar(&opts.RunID, "run-id", "", "")
+	c.Flags().StringVar(&opts.SessionID, "session-id", "", "")
+	c.Flags().StringVar(&opts.BuildID, "build-id", "", "")
+	c.Flags().StringVar(&opts.BuildName, "build", "", "")
+	c.Flags().StringVar(&opts.SessionName, "name", "", "")
+	c.Flags().StringVar(&opts.Network, "network", "", "")
+	c.Flags().StringVar(&opts.LocalIdentifier, "local-identifier", "", "")
+	c.Flags().StringVar(&opts.Platform, "platform", "", "")
+	c.Flags().StringVar(&opts.App, "app", "", "")
+	return c
+}
+
+func runRecover(cmd *cobra.Command, o *Opts, opts runRecoverOptions) error {
+	if strings.TrimSpace(opts.SessionID) == "" && strings.TrimSpace(opts.BuildID) == "" && strings.TrimSpace(opts.BuildName) == "" {
+		return print(cmd, o, output.Failure("invalid_args", "--session-id, --build-id, or --build is required", "Pass a BrowserStack session or build identifier to attach local run state.", 400))
+	}
+	svc, err := newServices(o, true)
+	if err != nil {
+		return renderErr(cmd, o, err)
+	}
+	remote, buildID, err := recoverRemoteSession(cmd.Context(), svc, opts)
+	if err != nil {
+		return renderErr(cmd, o, err)
+	}
+	if opts.RunID == "" {
+		opts.RunID = mobile.NewRunID()
+	}
+	network := opts.Network
+	if network == "" {
+		if opts.LocalIdentifier != "" {
+			network = "private-external"
+		} else {
+			network = "public"
+		}
+	}
+	if network != "public" && network != "private-managed" && network != "private-external" {
+		return print(cmd, o, output.Failure("invalid_args", "--network must be public, private-managed, or private-external", "Use private-external when attaching to a pre-running BrowserStack Local tunnel.", 400))
+	}
+	sessionID := firstNonEmpty(remote.HashedID, opts.SessionID)
+	now := time.Now().UTC()
+	st := mobile.RunState{
+		Version:               1,
+		RunID:                 opts.RunID,
+		Provider:              "browserstack",
+		Status:                mobile.StatusRunning,
+		ControlOwner:          "agent",
+		SessionID:             sessionID,
+		BrowserStackSessionID: sessionID,
+		Platform:              firstNonEmpty(opts.Platform, remote.OS),
+		Device:                remoteDeviceSelection(remote),
+		App:                   remoteAppRef(remote, opts.App),
+		Network:               mobile.NetworkState{Mode: network, LocalMode: localModeForNetwork(network), LocalIdentifier: opts.LocalIdentifier},
+		BuildID:               buildID,
+		ProjectName:           remote.ProjectName,
+		BuildName:             firstNonEmpty(remote.BuildName, opts.BuildName),
+		SessionName:           firstNonEmpty(remote.Name, opts.SessionName),
+		StartedAt:             now,
+		UpdatedAt:             now,
+	}
+	enrichRunStateFromRemote(&st, remote)
+	if status, terminal := runStatusForRemoteSession(remote.Status); terminal {
+		st.Status = status
+		st.FinishedAt = &now
+	}
+	if err := svc.Store.SaveRun(st); err != nil {
+		return renderErr(cmd, o, err)
+	}
+	return print(cmd, o, output.Success("", map[string]any{"run": st, "recovered": true, "remote_status": remote.Status}))
+}
+
+func recoverRemoteSession(ctx context.Context, svc *services, opts runRecoverOptions) (browserstack.Session, string, error) {
+	if opts.SessionID != "" {
+		remote, err := svc.Control.GetSession(ctx, opts.SessionID)
+		if err != nil {
+			return browserstack.Session{}, "", err
+		}
+		buildID := opts.BuildID
+		if buildID == "" {
+			buildID = findBuildIDByName(ctx, svc, firstNonEmpty(remote.BuildName, opts.BuildName), time.Now().UTC().Add(-24*time.Hour))
+		}
+		return remote, buildID, nil
+	}
+	buildID := opts.BuildID
+	if buildID == "" {
+		builds, err := svc.Control.ListBuilds(ctx, 20, 0, "", "")
+		if err != nil {
+			return browserstack.Session{}, "", err
+		}
+		matches := []browserstack.Build{}
+		for _, build := range builds {
+			if equalFold(build.Name, opts.BuildName) && build.HashedID != "" {
+				matches = append(matches, build)
+			}
+		}
+		if len(matches) != 1 {
+			return browserstack.Session{}, "", mobile.NewError("session_recovery_ambiguous", "BrowserStack build recovery did not find exactly one matching build", "Pass --build-id for the build you want to attach.", 409)
+		}
+		buildID = matches[0].HashedID
+	}
+	sessions, err := svc.Control.ListBuildSessions(ctx, buildID, 100, 0, "")
+	if err != nil {
+		return browserstack.Session{}, "", err
+	}
+	matches := []browserstack.Session{}
+	for _, session := range sessions {
+		if opts.SessionName != "" && !equalFold(session.Name, opts.SessionName) {
+			continue
+		}
+		matches = append(matches, session)
+	}
+	if len(matches) != 1 || matches[0].HashedID == "" {
+		return browserstack.Session{}, "", mobile.NewError("session_recovery_ambiguous", "BrowserStack session recovery did not find exactly one matching session", "Pass --session-id or add --name to uniquely identify the session.", 409)
+	}
+	return matches[0], buildID, nil
+}
+
+func remoteDeviceSelection(remote browserstack.Session) mobile.DeviceSelection {
+	return mobile.DeviceSelection{Name: remote.Device, OS: remote.OS, OSVersion: remote.OSVersion, Reason: "recovered"}
+}
+
+func remoteAppRef(remote browserstack.Session, app string) mobile.AppRef {
+	ref := mobile.AppRef{AppURL: app}
+	if remote.AppDetails == nil {
+		return ref
+	}
+	ref.AppURL = firstNonEmpty(ref.AppURL, stringMapValue(remote.AppDetails, "app_url"), stringMapValue(remote.AppDetails, "app"))
+	ref.Name = firstNonEmpty(stringMapValue(remote.AppDetails, "app_name"), stringMapValue(remote.AppDetails, "name"))
+	ref.CustomID = stringMapValue(remote.AppDetails, "custom_id")
+	return ref
+}
+
+func stringMapValue(m map[string]any, key string) string {
+	v, _ := m[key].(string)
+	return strings.TrimSpace(v)
+}
+
+func reconcileRunStatusBestEffort(ctx context.Context, svc *services, st mobile.RunState) (mobile.RunState, []string) {
+	if st.SessionID == "" || !localRunStatusMayBeRemoteActive(st.Status) {
+		return st, nil
+	}
+	if !svc.Runtime.Username || !svc.Runtime.AccessKey {
+		return st, nil
+	}
+	reconcileCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	remote, err := svc.Control.GetSession(reconcileCtx, st.SessionID)
+	if err != nil {
+		if isRemoteSessionGone(err) {
+			markRunLost(&st)
+			_ = svc.Store.SaveRun(st)
+		}
+		return st, []string{err.Error()}
+	}
+	enrichRunStateFromRemote(&st, remote)
+	if status, terminal := runStatusForRemoteSession(remote.Status); terminal {
+		st.Status = status
+		now := time.Now().UTC()
+		st.FinishedAt = &now
+		st.ControlOwner = "agent"
+		st.LatestObservationID = ""
+	}
+	_ = svc.Store.SaveRun(st)
+	return st, nil
+}
+
+func localRunStatusMayBeRemoteActive(status mobile.RunStatus) bool {
+	return status == mobile.StatusStarting || status == mobile.StatusRunning || status == mobile.StatusWaitingForHuman || status == mobile.StatusResuming
+}
+
+func runStatusForRemoteSession(status string) (mobile.RunStatus, bool) {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "", "running", "queued", "created":
+		return "", false
+	case "passed", "completed", "done":
+		return mobile.StatusFinished, true
+	case "failed", "error", "errored":
+		return mobile.StatusFailed, true
+	case "timeout", "timed_out", "stopped", "aborted":
+		return mobile.StatusLost, true
+	default:
+		return "", false
+	}
 }
 
 func runHandoffCmd(o *Opts) *cobra.Command {

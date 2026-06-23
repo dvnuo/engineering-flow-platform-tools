@@ -9,8 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"engineering-flow-platform-tools/internal/config"
+	"engineering-flow-platform-tools/internal/mobile"
 )
 
 func TestCommandsJSONIncludesRunStart(t *testing.T) {
@@ -202,6 +204,151 @@ func TestRunStartRecoversMissingSessionIDFromControlPlane(t *testing.T) {
 	}
 }
 
+func TestRunStartPersistsMinimalStateWhenEnrichFails(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/app-automate/devices.json":
+			_, _ = w.Write([]byte(`[{"os":"android","os_version":"14.0","device":"Pixel 8","realMobile":true}]`))
+		case "/session":
+			_, _ = w.Write([]byte(`{"value":{"sessionId":"session-abc","capabilities":{"browserstack.sessionUrl":"https://dashboard.example/session-abc"}}}`))
+		case "/app-automate/sessions/session-abc.json", "/app-automate/builds.json":
+			http.Error(w, "temporary control-plane failure", http.StatusInternalServerError)
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "run", "start", "--config", path, "--app", "bs://app", "--platform", "android", "--device", "Pixel 8", "--build", "build-enrich", "--name", "session-enrich", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	run := data["run"].(map[string]any)
+	runID := run["run_id"].(string)
+	b, err := os.ReadFile(filepath.Join(stateDir, "runs", runID, "state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var saved map[string]any
+	if err := json.Unmarshal(b, &saved); err != nil {
+		t.Fatal(err)
+	}
+	if saved["status"] != "running" || saved["session_id"] != "session-abc" || saved["dashboard_url"] != "https://dashboard.example/session-abc" {
+		t.Fatalf("minimal state was not persisted: %#v", saved)
+	}
+}
+
+func TestRunRecoverAttachesExistingBrowserStackSession(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/app-automate/sessions/session-99.json":
+			_, _ = w.Write([]byte(`{"automation_session":{"name":"session-99","hashed_id":"session-99","build_name":"build-99","project_name":"proj","os":"android","os_version":"14.0","device":"Pixel 8","status":"running","browser_url":"https://dashboard.example/session-99","appium_logs_url":"https://logs.example/appium"}}`))
+		case "/app-automate/builds.json":
+			_, _ = w.Write([]byte(`[{"automation_build":{"name":"build-99","hashed_id":"build-99-id"}}]`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "run", "recover", "--config", path, "--session-id", "session-99", "--local-identifier", "local-99", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	run := out["data"].(map[string]any)["run"].(map[string]any)
+	runID := run["run_id"].(string)
+	b, err := os.ReadFile(filepath.Join(stateDir, "runs", runID, "state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var saved map[string]any
+	if err := json.Unmarshal(b, &saved); err != nil {
+		t.Fatal(err)
+	}
+	if saved["session_id"] != "session-99" || saved["status"] != "running" || saved["build_id"] != "build-99-id" {
+		t.Fatalf("unexpected recovered run: %#v", saved)
+	}
+	network := saved["network"].(map[string]any)
+	if network["mode"] != "private-external" || network["local_identifier"] != "local-99" {
+		t.Fatalf("unexpected recovered network: %#v", network)
+	}
+}
+
+func TestObserveSessionLostMarksRunLost(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/session/session-lost/source":
+			http.Error(w, "Session not started or terminated", http.StatusNotFound)
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-lost", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-lost", StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "observe", "--config", path, "--run-id", "run-lost", "--json")
+	if out["ok"] != false {
+		t.Fatalf("expected failure: %#v", out)
+	}
+	errObj := out["error"].(map[string]any)
+	if errObj["code"] != "session_lost" {
+		t.Fatalf("unexpected error: %#v", errObj)
+	}
+	st, err := store.LoadRun("run-lost")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Status != mobile.StatusLost || st.FinishedAt == nil {
+		t.Fatalf("run was not marked lost: %#v", st)
+	}
+}
+
 func TestRunFinishInvalidStatusFailsBeforeServiceSetup(t *testing.T) {
 	out := runMobile(t, "run", "finish", "--run-id", "run-1", "--status", "done", "--json")
 	if out["ok"] != false {
@@ -233,6 +380,10 @@ func TestAppResolveInvalidAppURLFailsBeforeServiceSetup(t *testing.T) {
 	if errObj["code"] != "invalid_args" || !strings.Contains(errObj["message"].(string), "bs://") {
 		t.Fatalf("unexpected error: %#v", errObj)
 	}
+}
+
+func mobileTestNow() time.Time {
+	return time.Date(2026, 6, 23, 12, 0, 0, 0, time.UTC)
 }
 
 func runMobile(t *testing.T, args ...string) map[string]any {

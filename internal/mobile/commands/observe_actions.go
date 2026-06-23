@@ -47,10 +47,12 @@ func observeCmd(o *Opts) *cobra.Command {
 func captureObservation(ctx context.Context, svc *services, st *mobile.RunState, limit int) (mobile.Observation, error) {
 	source, err := svc.Appium.GetSource(ctx, st.SessionID)
 	if err != nil {
+		markRunLostIfSessionGone(svc, st, err)
 		return mobile.Observation{}, err
 	}
 	screen, err := svc.Appium.Screenshot(ctx, st.SessionID)
 	if err != nil {
+		markRunLostIfSessionGone(svc, st, err)
 		return mobile.Observation{}, err
 	}
 	st.ObservationVersion++
@@ -220,10 +222,12 @@ func mutateRefCore(cmd *cobra.Command, o *Opts, runID, ref, action string, fn fu
 	err = svc.Store.WithRunLock(runID, func() error {
 		st, obs, candidate, element, locator, err := resolveRefElement(cmd.Context(), svc, runID, ref)
 		if err != nil {
+			markRunLostIfSessionGone(svc, &st, err)
 			return err
 		}
 		extra, err := fn(cmd.Context(), svc, st, element)
 		if err != nil {
+			markRunLostIfSessionGone(svc, &st, err)
 			return err
 		}
 		st.LatestObservationID = ""
@@ -324,6 +328,7 @@ func swipeLike(cmd *cobra.Command, o *Opts, runID, direction string, duration in
 			return err
 		}
 		if err := svc.Appium.PerformActions(cmd.Context(), st.SessionID, actions); err != nil {
+			markRunLostIfSessionGone(svc, &st, err)
 			return err
 		}
 		st.LatestObservationID = ""
@@ -382,6 +387,7 @@ func backCmd(o *Opts) *cobra.Command {
 				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
 			}
 			if err := svc.Appium.Back(cmd.Context(), st.SessionID); err != nil {
+				markRunLostIfSessionGone(svc, &st, err)
 				return err
 			}
 			st.LatestObservationID = ""
@@ -406,6 +412,7 @@ func contextCmd(o *Opts) *cobra.Command {
 		}
 		contexts, err := svc.Appium.Contexts(cmd.Context(), st.SessionID)
 		if err != nil {
+			markRunLostIfSessionGone(svc, &st, err)
 			return renderErr(cmd, o, err)
 		}
 		return print(cmd, o, output.Success("", map[string]any{"contexts": contexts}))
@@ -429,6 +436,7 @@ func contextCmd(o *Opts) *cobra.Command {
 				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume first.", 423)
 			}
 			if err := svc.Appium.SwitchContext(cmd.Context(), st.SessionID, name); err != nil {
+				markRunLostIfSessionGone(svc, &st, err)
 				return err
 			}
 			st.LatestObservationID = ""

@@ -22,6 +22,9 @@ func TestLoadRuntimeConfigDefaultsAndEnvCredentials(t *testing.T) {
 	if cfg.Credentials.Username != "user" || cfg.Credentials.AccessKey != "key" {
 		t.Fatalf("credentials not loaded from env: %#v", cfg.Credentials)
 	}
+	if !cfg.Username || !cfg.AccessKey {
+		t.Fatalf("credential presence should be boolean true: username=%v access_key=%v", cfg.Username, cfg.AccessKey)
+	}
 	if cfg.Mobile.Defaults.NetworkMode != "public" {
 		t.Fatalf("network default=%s", cfg.Mobile.Defaults.NetworkMode)
 	}

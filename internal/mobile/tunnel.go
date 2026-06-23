@@ -212,10 +212,19 @@ func (m *TunnelManager) Status(runID, identifier string) (TunnelState, error) {
 	if err != nil {
 		return TunnelState{}, err
 	}
+	if st.Status == "running" && tunnelDeadlineExpired(st, time.Now().UTC()) {
+		st.Status = "expired"
+		_ = m.Save(st)
+		return st, nil
+	}
 	if st.Managed && st.PID != 0 && st.Status == "" {
 		st.Status = "running"
 	}
 	return st, nil
+}
+
+func tunnelDeadlineExpired(st TunnelState, now time.Time) bool {
+	return !st.Deadline.IsZero() && now.After(st.Deadline)
 }
 
 func (m *TunnelManager) CleanupOrphans() ([]TunnelState, error) {

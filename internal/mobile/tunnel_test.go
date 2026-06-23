@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"engineering-flow-platform-tools/internal/config"
 )
@@ -45,6 +46,34 @@ func TestTunnelStatusDoesNotOverwriteTerminalState(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Status != "stopped" {
+		t.Fatalf("status=%s", got.Status)
+	}
+}
+
+func TestTunnelStatusMarksExpiredRunningTunnel(t *testing.T) {
+	store := NewStateStore(filepath.Join(t.TempDir(), "state"), filepath.Join(t.TempDir(), "artifacts"))
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	mgr := &TunnelManager{Store: store}
+	state := TunnelState{
+		Version:         1,
+		RunID:           "run-1",
+		Managed:         true,
+		PID:             os.Getpid(),
+		LocalIdentifier: "local-1",
+		Owner:           "efp-mobile",
+		Status:          "running",
+		Deadline:        time.Now().UTC().Add(-time.Minute),
+	}
+	if err := mgr.Save(state); err != nil {
+		t.Fatal(err)
+	}
+	got, err := mgr.Status("run-1", "local-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != "expired" {
 		t.Fatalf("status=%s", got.Status)
 	}
 }

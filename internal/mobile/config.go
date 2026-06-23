@@ -15,8 +15,8 @@ const EnvArtifactsDir = "MOBILE_ARTIFACTS_DIR"
 type RuntimeConfig struct {
 	Path        string              `json:"path,omitempty"`
 	Mobile      config.MobileConfig `json:"mobile"`
-	Username    string              `json:"username_present,omitempty"`
-	AccessKey   string              `json:"access_key_present,omitempty"`
+	Username    bool                `json:"username_present,omitempty"`
+	AccessKey   bool                `json:"access_key_present,omitempty"`
 	Credentials Credentials         `json:"-"`
 	Warnings    []string            `json:"warnings,omitempty"`
 }
@@ -131,9 +131,6 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
-func present(value string) string {
-	if strings.TrimSpace(value) == "" {
-		return "false"
-	}
-	return "true"
+func present(value string) bool {
+	return strings.TrimSpace(value) != ""
 }

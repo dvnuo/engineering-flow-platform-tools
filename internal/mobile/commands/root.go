@@ -172,7 +172,7 @@ func doctorCmd(o *Opts) *cobra.Command {
 		data := map[string]any{
 			"config_path":            svc.Runtime.Path,
 			"warnings":               svc.Runtime.Warnings,
-			"credentials_present":    map[string]string{"username": svc.Runtime.Username, "access_key": svc.Runtime.AccessKey},
+			"credentials_present":    map[string]bool{"username": svc.Runtime.Username, "access_key": svc.Runtime.AccessKey},
 			"api_base_url":           svc.Runtime.Mobile.BrowserStack.APIBaseURL,
 			"appium_base_url":        svc.Runtime.Mobile.BrowserStack.AppiumBaseURL,
 			"state_dir":              svc.Runtime.Mobile.StateDir,

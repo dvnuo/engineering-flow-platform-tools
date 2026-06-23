@@ -19,12 +19,13 @@ func LocatorsForCandidate(platform string, c Candidate) []Locator {
 			out = append(out, Locator{Using: "id", Value: c.ResourceID})
 		}
 		if c.Text != "" {
-			out = append(out, Locator{Using: "-android uiautomator", Value: `new UiSelector().text("` + escapeSelector(c.Text) + `")`})
+			out = append(out, Locator{Using: "-android uiautomator", Value: `new UiSelector().text("` + selectorString(c.Text) + `")`})
 		}
 	} else {
 		if c.Name != "" || c.Text != "" {
 			name := firstNonEmpty(c.Name, c.Text)
-			out = append(out, Locator{Using: "-ios predicate string", Value: `name == "` + escapeSelector(name) + `" OR label == "` + escapeSelector(name) + `"`})
+			quoted := selectorString(name)
+			out = append(out, Locator{Using: "-ios predicate string", Value: `name == "` + quoted + `" OR label == "` + quoted + `"`})
 		}
 	}
 	if len(out) == 0 && (c.Name != "" || c.Text != "") {
@@ -38,6 +39,6 @@ func xpathLocator(name string) Locator {
 	return Locator{Using: "xpath", Value: `//*[@text=` + literal + ` or @name=` + literal + ` or @label=` + literal + `]`}
 }
 
-func escapeSelector(s string) string {
+func selectorString(s string) string {
 	return strings.ReplaceAll(s, `"`, `\"`)
 }

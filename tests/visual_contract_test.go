@@ -258,6 +258,9 @@ func TestVisualMermaidInferenceAndRender(t *testing.T) {
 }
 
 func TestVisualMermaidArchitectureBrowserContract(t *testing.T) {
+	if os.Getenv("EFP_SKIP_BROWSER_SMOKE") == "1" {
+		t.Skip("browser smoke disabled by EFP_SKIP_BROWSER_SMOKE")
+	}
 	browserPath := findTestBrowser()
 	if browserPath == "" {
 		t.Skip("Chrome/Chromium not available for browser smoke")

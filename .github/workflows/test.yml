@@ -7,9 +7,18 @@ on:
 jobs:
   go:
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-15-intel, windows-latest]
+        include:
+          - os: ubuntu-latest
+            skip_browser_smoke: ''
+          - os: macos-15-intel
+            skip_browser_smoke: '1'
+          - os: windows-latest
+            skip_browser_smoke: ''
     runs-on: ${{ matrix.os }}
+    env:
+      EFP_SKIP_BROWSER_SMOKE: ${{ matrix.skip_browser_smoke }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

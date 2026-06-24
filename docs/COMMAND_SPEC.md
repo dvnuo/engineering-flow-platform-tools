@@ -678,7 +678,7 @@ browser network export --session default --out result/network.har-lite.json --fo
 - mobile run start/status/handoff/resume/finish
 - mobile observe
 - mobile locate
-- mobile tap/type/clear/scroll/swipe/back
+- mobile tap/tap-point/long-press/double-tap/drag/type/clear/scroll/scroll-to/swipe/back
 - mobile context list/switch
 - mobile assert exists/visible/enabled/selected/text
 - mobile wait stable

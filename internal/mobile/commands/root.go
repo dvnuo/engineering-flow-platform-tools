@@ -47,7 +47,8 @@ func NewRoot() *cobra.Command {
 	c.AddCommand(
 		doctorCmd(o), authCmd(o), appCmd(o), deviceCmd(o), capacityCmd(o), tunnelCmd(o),
 		projectCmd(o), buildCmd(o), sessionCmd(o), runCmd(o),
-		observeCmd(o), locateCmd(o), tapCmd(o), typeCmd(o), clearCmd(o), scrollCmd(o), swipeCmd(o), backCmd(o), contextCmd(o),
+		observeCmd(o), locateCmd(o), tapCmd(o), tapPointCmd(o), typeCmd(o), clearCmd(o),
+		scrollCmd(o), scrollToCmd(o), swipeCmd(o), longPressCmd(o), doubleTapCmd(o), dragCmd(o), backCmd(o), contextCmd(o),
 		assertCmd(o), waitCmd(o), artifactCmd(o), keepaliveCmd(o),
 		commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o),
 	)

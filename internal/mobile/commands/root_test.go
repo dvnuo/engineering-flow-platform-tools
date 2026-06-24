@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -558,6 +559,120 @@ func TestObserveSessionLostMarksRunLost(t *testing.T) {
 	}
 	if st.Status != mobile.StatusLost || st.FinishedAt == nil {
 		t.Fatalf("run was not marked lost: %#v", st)
+	}
+}
+
+func TestSwipeUsesViewportRelativeCoordinates(t *testing.T) {
+	actions := make(chan map[string]any, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/session/session-gesture/window/rect":
+			_, _ = w.Write([]byte(`{"value":{"x":0,"y":0,"width":1080,"height":2400}}`))
+		case "/session/session-gesture/actions":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			actions <- body
+			_, _ = w.Write([]byte(`{"value":null}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-gesture", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-gesture", StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "swipe", "--config", path, "--run-id", "run-gesture", "--direction", "up", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	body := <-actions
+	steps := body["actions"].([]any)[0].(map[string]any)["actions"].([]any)
+	start := steps[0].(map[string]any)
+	move := steps[2].(map[string]any)
+	if start["x"] != float64(540) || start["y"] != float64(1920) || move["x"] != float64(540) || move["y"] != float64(480) {
+		t.Fatalf("unexpected viewport-relative swipe actions: %#v", steps)
+	}
+}
+
+func TestScrollToFindsElementAfterViewportScroll(t *testing.T) {
+	actions := make(chan map[string]any, 4)
+	var sourceCalls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/session/session-scroll/source":
+			if atomic.AddInt32(&sourceCalls, 1) == 1 {
+				_, _ = w.Write([]byte(`{"value":"<hierarchy><node class=\"android.widget.TextView\" text=\"Home\" bounds=\"[0,0][100,100]\" /></hierarchy>"}`))
+				return
+			}
+			_, _ = w.Write([]byte(`{"value":"<hierarchy><node class=\"android.widget.Button\" text=\"Checkout\" clickable=\"true\" bounds=\"[10,10][200,90]\" /></hierarchy>"}`))
+		case "/session/session-scroll/screenshot":
+			_, _ = w.Write([]byte(`{"value":"c2NyZWVu"}`))
+		case "/session/session-scroll/window/rect":
+			_, _ = w.Write([]byte(`{"value":{"x":0,"y":0,"width":1000,"height":2000}}`))
+		case "/session/session-scroll/actions":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			actions <- body
+			_, _ = w.Write([]byte(`{"value":null}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-scroll", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-scroll", StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "scroll-to", "--config", path, "--run-id", "run-scroll", "--text", "Checkout", "--max-scrolls", "2", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if data["found"] != true || data["scrolls"] != float64(1) || data["recommended_ref"] == "" {
+		t.Fatalf("unexpected scroll-to result: %#v", data)
+	}
+	<-actions
+	if got := atomic.LoadInt32(&sourceCalls); got != 2 {
+		t.Fatalf("expected two observations, got %d", got)
 	}
 }
 

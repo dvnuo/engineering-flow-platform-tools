@@ -277,6 +277,14 @@ func (c *Client) SessionStatus(ctx context.Context, sessionID string) (map[strin
 	return raw, nil
 }
 
+func (c *Client) WindowRect(ctx context.Context, sessionID string) (Rect, error) {
+	var out valueResponse[Rect]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/window/rect", nil, &out); err != nil {
+		return Rect{}, err
+	}
+	return out.Value, nil
+}
+
 func (c *Client) ElementDisplayed(ctx context.Context, sessionID, elementID string) (bool, error) {
 	var out valueResponse[bool]
 	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/element/"+url.PathEscape(elementID)+"/displayed", nil, &out); err != nil {

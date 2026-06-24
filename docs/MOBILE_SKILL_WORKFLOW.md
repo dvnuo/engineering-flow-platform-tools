@@ -40,6 +40,8 @@ mobile locate --run-id run-... --role button --name Login --actionable --json
 mobile tap --run-id run-... --ref obs-...:e17 --json
 mobile observe --run-id run-... --json
 mobile type --run-id run-... --ref obs-...:e21 --text-env TEST_PASSWORD --json
+mobile scroll-to --run-id run-... --text Dashboard --max-scrolls 4 --json
+mobile long-press --run-id run-... --ref obs-...:e30 --duration-ms 900 --json
 ```
 
 5. Assert state and wait for stability when needed.
@@ -64,3 +66,5 @@ mobile run finish --run-id run-... --status passed --collect-artifacts --json
 ```
 
 Skill authors should branch on `error.code`, not message text. Recover from `stale_observation` by observing again, from `ambiguous_element` by adding stable semantic criteria, from `control_locked` by resuming after human handoff, and from `capacity_wait_timeout` by retrying later or reducing required capacity.
+
+Prefer ref-based actions when an element is observable. Use `tap-point`, coordinate/percent `long-press`, coordinate/percent `double-tap`, or coordinate/percent `drag` only when the user intent is explicitly spatial or the UI element is not represented in the observation tree. `scroll` and `swipe` are viewport-relative, and `scroll-to` should be preferred when searching for a semantic target across a scrollable screen.

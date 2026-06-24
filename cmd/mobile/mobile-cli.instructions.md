@@ -27,9 +27,9 @@ run finish
 
 Rules for agents:
 
-- Never invent refs, selectors, XPath, resource IDs, accessibility IDs, or coordinates.
+- Prefer latest observation refs for element actions. Use coordinates only with an explicit user target or a measured viewport-relative plan.
 - Use only refs returned by the latest `mobile observe`.
-- Re-observe after every mutating command: `tap`, `type`, `clear`, `scroll`, `swipe`, `back`, or `context switch`.
+- Re-observe after every mutating command: `tap`, `tap-point`, `long-press`, `double-tap`, `drag`, `type`, `clear`, `scroll`, `scroll-to`, `swipe`, `back`, or `context switch`.
 - Never act on ambiguous `locate` results.
 - Use `--text-env` or `--text-stdin` for secrets.
 - Public sessions must not require BrowserStack Local.
@@ -46,6 +46,8 @@ mobile locate --run-id run-... --role button --name Login --json
 mobile tap --run-id run-... --ref obs-...:e17 --json
 mobile observe --run-id run-... --json
 mobile type --run-id run-... --ref obs-...:e21 --text-env TEST_PASSWORD --json
+mobile scroll-to --run-id run-... --text Checkout --max-scrolls 4 --json
+mobile swipe --run-id run-... --direction up --json
 mobile assert visible --run-id run-... --name Home --json
 mobile run finish --run-id run-... --status passed --collect-artifacts --json
 ```

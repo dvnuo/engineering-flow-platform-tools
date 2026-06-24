@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -204,6 +205,206 @@ func readTextValue(cmd *cobra.Command, text, textEnv string, textStdin bool) (st
 	}
 }
 
+type pointTargetOptions struct {
+	RunID    string
+	Ref      string
+	X        int
+	Y        int
+	XPercent float64
+	YPercent float64
+}
+
+func tapPointCmd(o *Opts) *cobra.Command {
+	opts := pointTargetOptions{X: -1, Y: -1, XPercent: -1, YPercent: -1}
+	c := &cobra.Command{Use: "tap-point", RunE: func(cmd *cobra.Command, args []string) error {
+		if opts.RunID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
+		}
+		return runGesture(cmd, o, opts.RunID, "tap_point", func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			target, viewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, opts)
+			if err != nil {
+				return nil, err
+			}
+			if err := svc.Appium.PerformActions(ctx, st.SessionID, pointerTapActions(target.Point)); err != nil {
+				return nil, err
+			}
+			return map[string]any{"target": target, "viewport": viewport}, nil
+		})
+	}}
+	bindPointTargetFlags(c, &opts, false)
+	return c
+}
+
+func longPressCmd(o *Opts) *cobra.Command {
+	opts := pointTargetOptions{X: -1, Y: -1, XPercent: -1, YPercent: -1}
+	var duration int
+	c := &cobra.Command{Use: "long-press", RunE: func(cmd *cobra.Command, args []string) error {
+		if opts.RunID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
+		}
+		return runGesture(cmd, o, opts.RunID, "long_press", func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			target, viewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, opts)
+			if err != nil {
+				return nil, err
+			}
+			if err := svc.Appium.PerformActions(ctx, st.SessionID, pointerLongPressActions(target.Point, duration)); err != nil {
+				return nil, err
+			}
+			return map[string]any{"target": target, "viewport": viewport, "duration_ms": normalizeDuration(duration, 800)}, nil
+		})
+	}}
+	bindPointTargetFlags(c, &opts, true)
+	c.Flags().IntVar(&duration, "duration-ms", 800, "")
+	return c
+}
+
+func doubleTapCmd(o *Opts) *cobra.Command {
+	opts := pointTargetOptions{X: -1, Y: -1, XPercent: -1, YPercent: -1}
+	c := &cobra.Command{Use: "double-tap", RunE: func(cmd *cobra.Command, args []string) error {
+		if opts.RunID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
+		}
+		return runGesture(cmd, o, opts.RunID, "double_tap", func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			target, viewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, opts)
+			if err != nil {
+				return nil, err
+			}
+			if err := svc.Appium.PerformActions(ctx, st.SessionID, pointerDoubleTapActions(target.Point)); err != nil {
+				return nil, err
+			}
+			return map[string]any{"target": target, "viewport": viewport}, nil
+		})
+	}}
+	bindPointTargetFlags(c, &opts, true)
+	return c
+}
+
+type dragCommandOptions struct {
+	RunID        string
+	FromRef      string
+	ToRef        string
+	FromX        int
+	FromY        int
+	ToX          int
+	ToY          int
+	FromXPercent float64
+	FromYPercent float64
+	ToXPercent   float64
+	ToYPercent   float64
+	DurationMS   int
+}
+
+func dragCmd(o *Opts) *cobra.Command {
+	opts := dragCommandOptions{FromX: -1, FromY: -1, ToX: -1, ToY: -1, FromXPercent: -1, FromYPercent: -1, ToXPercent: -1, ToYPercent: -1, DurationMS: 700}
+	c := &cobra.Command{Use: "drag", RunE: func(cmd *cobra.Command, args []string) error {
+		if opts.RunID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
+		}
+		return runGesture(cmd, o, opts.RunID, "drag", func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			from, to, viewport, err := resolveDragTargets(ctx, svc, st, opts)
+			if err != nil {
+				return nil, err
+			}
+			if err := svc.Appium.PerformActions(ctx, st.SessionID, pointerSwipeActions(from.Point, to.Point, opts.DurationMS)); err != nil {
+				return nil, err
+			}
+			return map[string]any{"from": from, "to": to, "viewport": viewport, "duration_ms": normalizeDuration(opts.DurationMS, 700)}, nil
+		})
+	}}
+	c.Flags().StringVar(&opts.RunID, "run-id", "", "")
+	c.Flags().StringVar(&opts.FromRef, "from-ref", "", "")
+	c.Flags().StringVar(&opts.ToRef, "to-ref", "", "")
+	c.Flags().IntVar(&opts.FromX, "from-x", -1, "")
+	c.Flags().IntVar(&opts.FromY, "from-y", -1, "")
+	c.Flags().IntVar(&opts.ToX, "to-x", -1, "")
+	c.Flags().IntVar(&opts.ToY, "to-y", -1, "")
+	c.Flags().Float64Var(&opts.FromXPercent, "from-x-percent", -1, "")
+	c.Flags().Float64Var(&opts.FromYPercent, "from-y-percent", -1, "")
+	c.Flags().Float64Var(&opts.ToXPercent, "to-x-percent", -1, "")
+	c.Flags().Float64Var(&opts.ToYPercent, "to-y-percent", -1, "")
+	c.Flags().IntVar(&opts.DurationMS, "duration-ms", 700, "")
+	return c
+}
+
+func bindPointTargetFlags(c *cobra.Command, opts *pointTargetOptions, allowRef bool) {
+	c.Flags().StringVar(&opts.RunID, "run-id", "", "")
+	if allowRef {
+		c.Flags().StringVar(&opts.Ref, "ref", "", "")
+	}
+	c.Flags().IntVar(&opts.X, "x", -1, "")
+	c.Flags().IntVar(&opts.Y, "y", -1, "")
+	c.Flags().Float64Var(&opts.XPercent, "x-percent", -1, "")
+	c.Flags().Float64Var(&opts.YPercent, "y-percent", -1, "")
+}
+
+func resolvePointTarget(ctx context.Context, svc *services, st *mobile.RunState, runID string, opts pointTargetOptions) (gestureTarget, *appium.Rect, error) {
+	if opts.Ref != "" {
+		_, _, _, element, _, err := resolveRefElement(ctx, svc, runID, opts.Ref)
+		if err != nil {
+			return gestureTarget{}, nil, err
+		}
+		rect, err := svc.Appium.ElementRect(ctx, st.SessionID, element.ID)
+		if err != nil {
+			return gestureTarget{}, nil, err
+		}
+		target := gestureTarget{Point: rectCenter(rect), Source: "ref", ElementID: element.ID, Rect: &rect}
+		return target, nil, nil
+	}
+	return resolveCoordinateTarget(ctx, svc, st, opts.X, opts.Y, opts.XPercent, opts.YPercent, "point")
+}
+
+func resolveDragTargets(ctx context.Context, svc *services, st *mobile.RunState, opts dragCommandOptions) (gestureTarget, gestureTarget, *appium.Rect, error) {
+	fromOpts := pointTargetOptions{RunID: opts.RunID, Ref: opts.FromRef, X: opts.FromX, Y: opts.FromY, XPercent: opts.FromXPercent, YPercent: opts.FromYPercent}
+	toOpts := pointTargetOptions{RunID: opts.RunID, Ref: opts.ToRef, X: opts.ToX, Y: opts.ToY, XPercent: opts.ToXPercent, YPercent: opts.ToYPercent}
+	from, viewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, fromOpts)
+	if err != nil {
+		return gestureTarget{}, gestureTarget{}, nil, err
+	}
+	to, toViewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, toOpts)
+	if err != nil {
+		return gestureTarget{}, gestureTarget{}, nil, err
+	}
+	if viewport == nil {
+		viewport = toViewport
+	}
+	return from, to, viewport, nil
+}
+
+func resolveCoordinateTarget(ctx context.Context, svc *services, st *mobile.RunState, x, y int, xPercent, yPercent float64, source string) (gestureTarget, *appium.Rect, error) {
+	hasAbs := x >= 0 || y >= 0
+	hasPercent := xPercent >= 0 || yPercent >= 0
+	if hasAbs && hasPercent {
+		return gestureTarget{}, nil, mobile.NewError("invalid_args", "use either absolute coordinates or percent coordinates", "Choose --x/--y or --x-percent/--y-percent.", 400)
+	}
+	if hasAbs {
+		if x < 0 || y < 0 {
+			return gestureTarget{}, nil, mobile.NewError("invalid_args", "absolute point requires both x and y", "Pass both --x and --y.", 400)
+		}
+		return gestureTarget{Point: gesturePoint{X: x, Y: y}, Source: source + "_absolute"}, nil, nil
+	}
+	if hasPercent {
+		if xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100 {
+			return gestureTarget{}, nil, mobile.NewError("invalid_args", "percent point requires x/y percent between 0 and 100", "Pass both --x-percent and --y-percent.", 400)
+		}
+		rect, err := svc.Appium.WindowRect(ctx, st.SessionID)
+		if err != nil {
+			return gestureTarget{}, nil, err
+		}
+		if err := validateViewport(rect); err != nil {
+			return gestureTarget{}, nil, err
+		}
+		return gestureTarget{Point: percentPoint(rect, xPercent, yPercent), Source: source + "_percent"}, &rect, nil
+	}
+	return gestureTarget{}, nil, mobile.NewError("invalid_args", "a gesture target is required", "Pass --ref, --x/--y, or --x-percent/--y-percent.", 400)
+}
+
+func rectCenter(rect appium.Rect) gesturePoint {
+	return gesturePoint{
+		X: int(math.Round(rect.X + rect.Width/2)),
+		Y: int(math.Round(rect.Y + rect.Height/2)),
+	}
+}
+
 func mutateRef(cmd *cobra.Command, o *Opts, runID, ref, action string, fn func(context.Context, *services, mobile.RunState, appium.RemoteElement) error) error {
 	return mutateRefCore(cmd, o, runID, ref, action, func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) (map[string]any, error) {
 		return nil, fn(ctx, svc, st, element)
@@ -283,38 +484,191 @@ func resolveRefElement(ctx context.Context, svc *services, runID, ref string) (m
 	return st, obs, candidate, appium.RemoteElement{}, last, mobile.RetryableError("element_not_found", "no generated locator matched the element", "Run mobile observe again or use locate with stable criteria.", "observe", 404)
 }
 
+type swipeCommandOptions struct {
+	RunID         string
+	Direction     string
+	DurationMS    int
+	StartXPercent float64
+	StartYPercent float64
+	EndXPercent   float64
+	EndYPercent   float64
+}
+
+type gesturePoint struct {
+	X int `json:"x"`
+	Y int `json:"y"`
+}
+
+type gestureTarget struct {
+	Point     gesturePoint `json:"point"`
+	Source    string       `json:"source"`
+	ElementID string       `json:"element_id,omitempty"`
+	Rect      *appium.Rect `json:"rect,omitempty"`
+}
+
 func scrollCmd(o *Opts) *cobra.Command {
-	var runID, direction string
-	var duration int
+	opts := swipeCommandOptions{Direction: "down", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1}
 	c := &cobra.Command{Use: "scroll", RunE: func(cmd *cobra.Command, args []string) error {
-		return swipeLike(cmd, o, runID, direction, duration, "scroll")
+		return swipeLike(cmd, o, opts, "scroll")
 	}}
-	c.Flags().StringVar(&runID, "run-id", "", "")
-	c.Flags().StringVar(&direction, "direction", "down", "")
-	c.Flags().IntVar(&duration, "duration-ms", 500, "")
+	bindSwipeCommandFlags(c, &opts)
 	return c
 }
 
 func swipeCmd(o *Opts) *cobra.Command {
-	var runID, direction string
-	var duration int
+	opts := swipeCommandOptions{Direction: "up", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1}
 	c := &cobra.Command{Use: "swipe", RunE: func(cmd *cobra.Command, args []string) error {
-		return swipeLike(cmd, o, runID, direction, duration, "swipe")
+		return swipeLike(cmd, o, opts, "swipe")
 	}}
-	c.Flags().StringVar(&runID, "run-id", "", "")
-	c.Flags().StringVar(&direction, "direction", "up", "")
-	c.Flags().IntVar(&duration, "duration-ms", 500, "")
+	bindSwipeCommandFlags(c, &opts)
 	return c
 }
 
-func swipeLike(cmd *cobra.Command, o *Opts, runID, direction string, duration int, action string) error {
-	if runID == "" {
+func scrollToCmd(o *Opts) *cobra.Command {
+	opts := swipeCommandOptions{Direction: "down", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1}
+	q := mobile.LocateQuery{}
+	var limit, maxScrolls int
+	var visible, enabled bool
+	var useVisible, useEnabled bool
+	c := &cobra.Command{Use: "scroll-to", RunE: func(cmd *cobra.Command, args []string) error {
+		if opts.RunID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
+		}
+		if !locateQueryHasCriteria(q) {
+			return print(cmd, o, output.Failure("invalid_args", "at least one locate criterion is required", "Pass --text, --name, --role, --resource-id, --accessibility-id, or --parent-text.", 400))
+		}
+		if maxScrolls < 0 {
+			return print(cmd, o, output.Failure("invalid_args", "--max-scrolls cannot be negative", "Use 0 to only observe and locate without scrolling.", 400))
+		}
+		if useVisible {
+			q.Visible = &visible
+		}
+		if useEnabled {
+			q.Enabled = &enabled
+		}
+		svc, err := newServices(o, true)
+		if err != nil {
+			return renderErr(cmd, o, err)
+		}
+		var data map[string]any
+		err = svc.Store.WithRunLock(opts.RunID, func() error {
+			st, err := svc.Store.LoadRun(opts.RunID)
+			if err != nil {
+				return err
+			}
+			if st.ControlOwner == "human" {
+				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
+			}
+			for scrolls := 0; scrolls <= maxScrolls; scrolls++ {
+				obs, err := captureObservation(cmd.Context(), svc, &st, limit)
+				if err != nil {
+					return err
+				}
+				located := mobile.Locate(obs, q)
+				if ref := scrollToResolvedRef(located); ref != "" {
+					data = map[string]any{"found": true, "run_id": opts.RunID, "scrolls": scrolls, "recommended_ref": ref, "locate": located, "observation": obs}
+					return nil
+				}
+				if scrolls == maxScrolls {
+					return mobile.RetryableError("element_not_found", "target was not found after scrolling", "Try another direction, increase --max-scrolls, or broaden the locate query.", "observe", 404)
+				}
+				rect, err := svc.Appium.WindowRect(cmd.Context(), st.SessionID)
+				if err != nil {
+					markRunLostIfSessionGone(svc, &st, err)
+					return err
+				}
+				start, end, err := swipePointsForViewport(rect, opts)
+				if err != nil {
+					return err
+				}
+				if err := svc.Appium.PerformActions(cmd.Context(), st.SessionID, pointerSwipeActions(start, end, opts.DurationMS)); err != nil {
+					markRunLostIfSessionGone(svc, &st, err)
+					return err
+				}
+				st.LatestObservationID = ""
+				if err := svc.Store.SaveRun(st); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return renderErr(cmd, o, err)
+		}
+		return print(cmd, o, output.Success("", data))
+	}}
+	c.Flags().IntVar(&limit, "limit", 100, "")
+	c.Flags().IntVar(&maxScrolls, "max-scrolls", 8, "")
+	c.Flags().StringVar(&q.Name, "name", "", "")
+	c.Flags().StringVar(&q.Text, "text", "", "")
+	c.Flags().StringVar(&q.Role, "role", "", "")
+	c.Flags().StringVar(&q.ResourceID, "resource-id", "", "")
+	c.Flags().StringVar(&q.AccessibilityID, "accessibility-id", "", "")
+	c.Flags().StringVar(&q.ParentText, "parent-text", "", "")
+	c.Flags().StringVar(&q.NearbyText, "nearby-text", "", "")
+	c.Flags().BoolVar(&q.Actionable, "actionable", false, "")
+	c.Flags().BoolVar(&visible, "visible", true, "")
+	c.Flags().BoolVar(&enabled, "enabled", true, "")
+	c.Flags().BoolVar(&useVisible, "require-visible", true, "")
+	c.Flags().BoolVar(&useEnabled, "require-enabled", false, "")
+	bindSwipeCommandFlags(c, &opts)
+	return c
+}
+
+func locateQueryHasCriteria(q mobile.LocateQuery) bool {
+	return strings.TrimSpace(q.Name) != "" || strings.TrimSpace(q.Text) != "" || strings.TrimSpace(q.Role) != "" ||
+		strings.TrimSpace(q.ResourceID) != "" || strings.TrimSpace(q.AccessibilityID) != "" ||
+		strings.TrimSpace(q.ParentText) != "" || strings.TrimSpace(q.NearbyText) != "" || q.Actionable
+}
+
+func scrollToResolvedRef(res mobile.LocateResult) string {
+	if res.RecommendedRef != "" {
+		return res.RecommendedRef
+	}
+	if len(res.Matches) == 1 {
+		return res.Matches[0].Candidate.Ref
+	}
+	return ""
+}
+
+func bindSwipeCommandFlags(c *cobra.Command, opts *swipeCommandOptions) {
+	c.Flags().StringVar(&opts.RunID, "run-id", "", "")
+	c.Flags().StringVar(&opts.Direction, "direction", opts.Direction, "")
+	c.Flags().IntVar(&opts.DurationMS, "duration-ms", opts.DurationMS, "")
+	c.Flags().Float64Var(&opts.StartXPercent, "start-x-percent", -1, "")
+	c.Flags().Float64Var(&opts.StartYPercent, "start-y-percent", -1, "")
+	c.Flags().Float64Var(&opts.EndXPercent, "end-x-percent", -1, "")
+	c.Flags().Float64Var(&opts.EndYPercent, "end-y-percent", -1, "")
+}
+
+func swipeLike(cmd *cobra.Command, o *Opts, opts swipeCommandOptions, action string) error {
+	if opts.RunID == "" {
 		return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 	}
+	err := runGesture(cmd, o, opts.RunID, action, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		rect, err := svc.Appium.WindowRect(ctx, st.SessionID)
+		if err != nil {
+			return nil, err
+		}
+		start, end, err := swipePointsForViewport(rect, opts)
+		if err != nil {
+			return nil, err
+		}
+		actions := pointerSwipeActions(start, end, opts.DurationMS)
+		if err := svc.Appium.PerformActions(ctx, st.SessionID, actions); err != nil {
+			return nil, err
+		}
+		return map[string]any{"direction": opts.Direction, "duration_ms": normalizeDuration(opts.DurationMS, 500), "viewport": rect, "start": start, "end": end}, nil
+	})
+	return err
+}
+
+func runGesture(cmd *cobra.Command, o *Opts, runID, action string, fn func(context.Context, *services, *mobile.RunState) (map[string]any, error)) error {
 	svc, err := newServices(o, true)
 	if err != nil {
 		return renderErr(cmd, o, err)
 	}
+	var data map[string]any
 	err = svc.Store.WithRunLock(runID, func() error {
 		st, err := svc.Store.LoadRun(runID)
 		if err != nil {
@@ -323,49 +677,131 @@ func swipeLike(cmd *cobra.Command, o *Opts, runID, direction string, duration in
 		if st.ControlOwner == "human" {
 			return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
 		}
-		actions, err := swipeActions(direction, duration)
+		extra, err := fn(cmd.Context(), svc, &st)
 		if err != nil {
-			return err
-		}
-		if err := svc.Appium.PerformActions(cmd.Context(), st.SessionID, actions); err != nil {
 			markRunLostIfSessionGone(svc, &st, err)
 			return err
 		}
 		st.LatestObservationID = ""
-		return svc.Store.SaveRun(st)
+		if err := svc.Store.SaveRun(st); err != nil {
+			return err
+		}
+		data = map[string]any{"action": action, "run_id": runID, "observation_invalidated": true}
+		for k, v := range extra {
+			data[k] = v
+		}
+		return nil
 	})
 	if err != nil {
 		return renderErr(cmd, o, err)
 	}
-	return print(cmd, o, output.Success("", map[string]any{"action": action, "direction": direction, "observation_invalidated": true}))
+	return print(cmd, o, output.Success("", data))
 }
 
-func swipeActions(direction string, duration int) (appium.ActionsRequest, error) {
-	if duration <= 0 {
-		duration = 500
+func swipePointsForViewport(rect appium.Rect, opts swipeCommandOptions) (gesturePoint, gesturePoint, error) {
+	if err := validateViewport(rect); err != nil {
+		return gesturePoint{}, gesturePoint{}, err
 	}
-	startX, startY, endX, endY := 500, 500, 500, 500
-	switch strings.ToLower(direction) {
+	startX, startY, endX, endY, err := swipePercents(opts)
+	if err != nil {
+		return gesturePoint{}, gesturePoint{}, err
+	}
+	return percentPoint(rect, startX, startY), percentPoint(rect, endX, endY), nil
+}
+
+func swipePercents(opts swipeCommandOptions) (float64, float64, float64, float64, error) {
+	custom := opts.StartXPercent >= 0 || opts.StartYPercent >= 0 || opts.EndXPercent >= 0 || opts.EndYPercent >= 0
+	if custom {
+		values := []float64{opts.StartXPercent, opts.StartYPercent, opts.EndXPercent, opts.EndYPercent}
+		for _, v := range values {
+			if v < 0 || v > 100 {
+				return 0, 0, 0, 0, mobile.NewError("invalid_args", "custom swipe percentages must all be between 0 and 100", "Pass all of --start-x-percent, --start-y-percent, --end-x-percent, and --end-y-percent.", 400)
+			}
+		}
+		return opts.StartXPercent, opts.StartYPercent, opts.EndXPercent, opts.EndYPercent, nil
+	}
+	switch strings.ToLower(strings.TrimSpace(opts.Direction)) {
 	case "up":
-		startY, endY = 700, 300
+		return 50, 80, 50, 20, nil
 	case "down":
-		startY, endY = 300, 700
+		return 50, 20, 50, 80, nil
 	case "left":
-		startX, endX = 800, 200
+		return 80, 50, 20, 50, nil
 	case "right":
-		startX, endX = 200, 800
+		return 20, 50, 80, 50, nil
 	default:
-		return appium.ActionsRequest{}, mobile.NewError("invalid_args", "--direction must be up, down, left, or right", "Use a bounded direction.", 400)
+		return 0, 0, 0, 0, mobile.NewError("invalid_args", "--direction must be up, down, left, or right", "Use a bounded direction or pass explicit start/end percentages.", 400)
 	}
+}
+
+func pointerSwipeActions(start, end gesturePoint, duration int) appium.ActionsRequest {
 	return appium.ActionsRequest{Actions: []map[string]any{{
 		"type": "pointer", "id": "finger1", "parameters": map[string]any{"pointerType": "touch"},
 		"actions": []map[string]any{
-			{"type": "pointerMove", "duration": 0, "x": startX, "y": startY},
+			{"type": "pointerMove", "duration": 0, "x": start.X, "y": start.Y},
 			{"type": "pointerDown", "button": 0},
-			{"type": "pointerMove", "duration": duration, "x": endX, "y": endY},
+			{"type": "pointerMove", "duration": normalizeDuration(duration, 500), "x": end.X, "y": end.Y},
 			{"type": "pointerUp", "button": 0},
 		},
-	}}}, nil
+	}}}
+}
+
+func pointerTapActions(point gesturePoint) appium.ActionsRequest {
+	return appium.ActionsRequest{Actions: []map[string]any{{
+		"type": "pointer", "id": "finger1", "parameters": map[string]any{"pointerType": "touch"},
+		"actions": []map[string]any{
+			{"type": "pointerMove", "duration": 0, "x": point.X, "y": point.Y},
+			{"type": "pointerDown", "button": 0},
+			{"type": "pointerUp", "button": 0},
+		},
+	}}}
+}
+
+func pointerLongPressActions(point gesturePoint, duration int) appium.ActionsRequest {
+	return appium.ActionsRequest{Actions: []map[string]any{{
+		"type": "pointer", "id": "finger1", "parameters": map[string]any{"pointerType": "touch"},
+		"actions": []map[string]any{
+			{"type": "pointerMove", "duration": 0, "x": point.X, "y": point.Y},
+			{"type": "pointerDown", "button": 0},
+			{"type": "pause", "duration": normalizeDuration(duration, 800)},
+			{"type": "pointerUp", "button": 0},
+		},
+	}}}
+}
+
+func pointerDoubleTapActions(point gesturePoint) appium.ActionsRequest {
+	return appium.ActionsRequest{Actions: []map[string]any{{
+		"type": "pointer", "id": "finger1", "parameters": map[string]any{"pointerType": "touch"},
+		"actions": []map[string]any{
+			{"type": "pointerMove", "duration": 0, "x": point.X, "y": point.Y},
+			{"type": "pointerDown", "button": 0},
+			{"type": "pointerUp", "button": 0},
+			{"type": "pause", "duration": 100},
+			{"type": "pointerDown", "button": 0},
+			{"type": "pointerUp", "button": 0},
+		},
+	}}}
+}
+
+func validateViewport(rect appium.Rect) error {
+	if rect.Width <= 0 || rect.Height <= 0 {
+		return mobile.NewError("server_error", "Appium window rect did not include a usable viewport", "Retry the command after the session is fully ready.", 502)
+	}
+	return nil
+}
+
+func percentPoint(rect appium.Rect, xPercent, yPercent float64) gesturePoint {
+	return gesturePoint{
+		X: int(math.Round(rect.X + rect.Width*xPercent/100)),
+		Y: int(math.Round(rect.Y + rect.Height*yPercent/100)),
+	}
+}
+
+func normalizeDuration(value, fallback int) int {
+	if value <= 0 {
+		return fallback
+	}
+	return value
 }
 
 func backCmd(o *Opts) *cobra.Command {

@@ -18,8 +18,8 @@
 - Use `mobile` for BrowserStack App Automate real-device sessions. It is a terminal CLI, not MCP and not BrowserStack AI.
 - Start with `mobile commands --json` and `mobile schema run.start --json`.
 - Recommended loop: `run start`, `observe`, `locate`, action, `observe`, assertion, `run finish`.
-- Never invent refs, selectors, XPath, resource IDs, or coordinates. Use refs returned by the latest `observe`.
-- After `tap`, `type`, `clear`, `scroll`, `swipe`, `back`, or `context switch`, old refs are stale. Run `observe` again.
+- Never invent refs, selectors, XPath, resource IDs, or coordinates. Prefer refs returned by the latest `observe`; use coordinate actions only for explicit spatial instructions or measured viewport-relative gestures.
+- After `tap`, `tap-point`, `long-press`, `double-tap`, `drag`, `type`, `clear`, `scroll`, `scroll-to`, `swipe`, `back`, or `context switch`, old refs are stale. Run `observe` again.
 - Use `--text-env` or `--text-stdin` for secrets. The CLI returns source type and length, not secret values.
 - Use `--network public` for public apps. Use `private-managed` only when BrowserStack devices must reach private/internal hosts.
 - `run handoff` gives control to the human and starts bounded keepalive; mutating actions return `control_locked` until `run resume`.

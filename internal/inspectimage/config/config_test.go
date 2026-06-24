@@ -108,6 +108,54 @@ inspect_image:
 	}
 }
 
+func TestUnifiedConfigLoadsCopilotAPIFromRootNode(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	body := []byte(`
+version: 1
+copilot:
+  provider: github_copilot_plugin
+  api:
+    endpoint_kind: responses
+    base_url: https://copilot.example
+    timeout_seconds: 45
+    use_system_proxy: true
+  auth:
+    method: device_code
+inspect_image:
+  provider: github_copilot_plugin
+`)
+	if err := os.WriteFile(cfgPath, body, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.API.BaseURL != "https://copilot.example" || cfg.API.TimeoutSeconds != 45 {
+		t.Fatalf("bad copilot api load: %#v", cfg.API)
+	}
+	if err := Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var root map[string]any
+	if err := yaml.Unmarshal(b, &root); err != nil {
+		t.Fatal(err)
+	}
+	copilotNode := root["copilot"].(map[string]any)
+	if copilotNode["api"] == nil {
+		t.Fatalf("copilot api missing after save:\n%s", string(b))
+	}
+	inspectNode := root["inspect_image"].(map[string]any)
+	if _, ok := inspectNode["api"]; ok {
+		t.Fatalf("inspect_image api should not be saved in new layout:\n%s", string(b))
+	}
+}
+
 func TestUnifiedConfigReportsInvalidCopilotTokenFile(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.yaml")
@@ -179,6 +227,49 @@ func TestSaveMigratesLegacyInspectJSONWithoutTopLevelAuth(t *testing.T) {
 	}
 	if !strings.Contains(string(tokenBytes), "cp-secret") {
 		t.Fatalf("copilot token was not written to token file: %s", string(tokenBytes))
+	}
+}
+
+func TestSaveStoresAIPlatformTokenOutsideMainConfig(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	tokenPath := filepath.Join(dir, "tmp", "ai_platform_token")
+	cfg := Default()
+	cfg.Provider = ProviderAIPlatform
+	cfg.AIPlatform.Chat.Host = "https://ai.example"
+	cfg.AIPlatform.IB2B.Host = "https://ib2b.example"
+	cfg.AIPlatform.Auth.Username = "alice"
+	cfg.AIPlatform.Auth.Password = "secret-password"
+	cfg.AIPlatform.Auth.Usercase = "case-123"
+	cfg.AIPlatform.Auth.Token = "short-lived-token"
+	cfg.AIPlatform.Auth.TokenExpiresAt = "2099-01-01T00:00:00Z"
+	cfg.AIPlatform.Auth.TokenFile = tokenPath
+	if err := Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "short-lived-token") {
+		t.Fatalf("ai platform token leaked into main config:\n%s", string(b))
+	}
+	if !strings.Contains(string(b), "provider: ai_platform") || !strings.Contains(string(b), "usercase: case-123") {
+		t.Fatalf("ai platform config missing expected fields:\n%s", string(b))
+	}
+	tokenBytes, err := os.ReadFile(tokenPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(tokenBytes), "short-lived-token") {
+		t.Fatalf("ai platform token was not written to token file: %s", string(tokenBytes))
+	}
+	loaded, err := Load(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Provider != ProviderAIPlatform || loaded.AIPlatform.Auth.Token != "short-lived-token" || loaded.AIPlatform.Auth.Usercase != "case-123" {
+		t.Fatalf("bad loaded ai platform config: %#v", loaded)
 	}
 }
 

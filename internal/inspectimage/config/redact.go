@@ -10,6 +10,8 @@ const Redacted = "***REDACTED***"
 func Redact(c Config) Config {
 	c.Auth.GitHubAccessToken = redact(c.Auth.GitHubAccessToken)
 	c.Auth.CopilotToken = redact(c.Auth.CopilotToken)
+	c.AIPlatform.Auth.Password = redact(c.AIPlatform.Auth.Password)
+	c.AIPlatform.Auth.Token = redact(c.AIPlatform.Auth.Token)
 	return c
 }
 
@@ -19,14 +21,16 @@ func RedactString(s string) string {
 		regexp.MustCompile(`gh[pousr]_[A-Za-z0-9._~+/=-]+`),
 		regexp.MustCompile(`tid=[^;&,\s"']+`),
 		regexp.MustCompile(`(?i)\b([a-z][a-z0-9+.-]*://)[^/\s?#@]+@`),
-		regexp.MustCompile(`(?i)"?(?:github_access_token|copilot_token|access_token|token)"?\s*[:=]\s*"?[^",;&\s}]+`),
+		regexp.MustCompile(`(?i)"?(?:github_access_token|copilot_token|access_token|issued_token|token|password)"?\s*[:=]\s*"?[^",;&\s}]+`),
+		regexp.MustCompile(`(?i)(x-[a-z0-9-]*trust[a-z0-9-]*token)\s*[:=]\s*[^;&,\s"']+`),
 		regexp.MustCompile(`(?i)authorization\s*[:=]\s*bearer\s+[^;&,\s"']+`),
 		regexp.MustCompile(`(?i)\bbearer\s+[^;&,\s"']+`),
+		regexp.MustCompile(`\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b`),
 		regexp.MustCompile(`(?i)(data:image/[a-z0-9.+-]+;base64,)[A-Za-z0-9+/=_-]+`),
 	} {
 		out = re.ReplaceAllString(out, Redacted)
 	}
-	for _, marker := range []string{"github_access_token", "copilot_token", "Authorization", "Bearer "} {
+	for _, marker := range []string{"github_access_token", "copilot_token", "issued_token", "Authorization", "Bearer "} {
 		if strings.Contains(out, marker) {
 			out = strings.ReplaceAll(out, marker, Redacted)
 		}

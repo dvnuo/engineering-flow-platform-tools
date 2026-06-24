@@ -13,6 +13,7 @@ import (
 
 	"engineering-flow-platform-tools/internal/catalog"
 	"engineering-flow-platform-tools/internal/clihelp"
+	"engineering-flow-platform-tools/internal/inspectimage/aiplatform"
 	iauth "engineering-flow-platform-tools/internal/inspectimage/auth"
 	"engineering-flow-platform-tools/internal/inspectimage/config"
 	"engineering-flow-platform-tools/internal/inspectimage/copilot"
@@ -34,6 +35,15 @@ var exchangeCopilotToken = func(ctx context.Context, cfg config.Config) (string,
 	return client.ExchangeCopilotToken(ctx, cfg.Auth.GitHubAccessToken)
 }
 
+var exchangeAIPlatformToken = func(ctx context.Context, cfg config.Config, timeout time.Duration) (string, time.Time, error) {
+	client := aiplatform.NewClient(cfg, timeout)
+	result, err := client.ExchangeToken(ctx, cfg.AIPlatform.Auth.Username, cfg.AIPlatform.Auth.Password)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return result.Token, result.ExpiresAt, nil
+}
+
 func NewRoot() *cobra.Command {
 	return NewRootWithClient(nil)
 }
@@ -47,12 +57,12 @@ func NewRootWithClient(client inspect.ResponsesClient) *cobra.Command {
 	o := &Opts{Format: "table"}
 	c := &cobra.Command{
 		Use:   "inspect-image",
-		Short: "Inspect one local image with a GitHub Copilot backed vision model",
+		Short: "Inspect one local image with a configured vision provider",
 		Long: strings.TrimSpace(`inspect-image is a local CLI for text-only agents that need to understand a screenshot, UI state, diagram, chart, or visible text in exactly one image.
 
 It is invoked from Bash or a terminal. It is not a Portal tool, runtime built-in tool, or MCP server.
 
-The inspect command validates the local image first, then sends the image bytes to the configured GitHub Copilot plugin /responses endpoint. For agent workflows, default every command and subcommand to --json so callers can read ok, data.result.answer, data.result.visible_text, error.code, and error.hint.
+The inspect command validates the local image first, then sends the image bytes to the configured provider endpoint. Supported providers are GitHub Copilot /responses and AI Platform /chat/completions. For agent workflows, default every command and subcommand to --json so callers can read ok, data.result.answer, data.result.visible_text, error.code, and error.hint.
 
 Configuration is stored in ~/.efp/config.yaml by default. Set EFP_CONFIG or pass --config to use a different file.`),
 		Example: strings.TrimSpace(`inspect-image auth status --json
@@ -76,7 +86,7 @@ func inspectCmd(o *Opts, client inspect.ResponsesClient) *cobra.Command {
 	var outPath string
 	c := &cobra.Command{Use: "inspect --image <path> --prompt <text>",
 		Short: "Inspect exactly one local image",
-		Long: strings.TrimSpace(`Validate one local JPEG, PNG, WEBP, or GIF image and send it to the GitHub Copilot plugin /responses endpoint for visual inspection.
+		Long: strings.TrimSpace(`Validate one local JPEG, PNG, WEBP, or GIF image and send it to the configured provider endpoint for visual inspection.
 
 Use this for screenshots, UI states, diagrams, charts, visible errors, and OCR-like extraction where plain OCR is too narrow. Remote image URLs, PDFs, video, audio, and multiple images are not supported.
 
@@ -106,7 +116,7 @@ inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visib
 			if timeout <= 0 {
 				timeout = cfg.API.TimeoutSeconds
 			}
-			debugf(cmd, o, "config loaded base_url=%s timeout_seconds=%d", cfg.API.BaseURL, timeout)
+			debugf(cmd, o, "config loaded provider=%s base_url=%s timeout_seconds=%d", cfg.Provider, cfg.API.BaseURL, timeout)
 			ctx, cancel := context.WithTimeout(cmd.Context(), time.Duration(timeout)*time.Second)
 			defer cancel()
 			if client == nil {
@@ -116,26 +126,26 @@ inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visib
 				}
 				debugf(cmd, o, "image validated path=%s mime=%s size_bytes=%d sha256=%s width=%d height=%d animated=%t warnings=%d", img.Path, img.MIMEType, img.SizeBytes, img.SHA256, img.Width, img.Height, img.Animated, len(warnings))
 				var refreshErr error
-				debugf(cmd, o, "checking Copilot auth token")
-				cfg, refreshErr = ensureCopilotToken(cmd.Context(), cfg, cfgPath)
+				debugf(cmd, o, "checking provider auth token provider=%s", cfg.Provider)
+				cfg, refreshErr = ensureProviderToken(cmd.Context(), cfg, cfgPath, time.Duration(timeout)*time.Second)
 				if refreshErr != nil {
 					return printErrWithOut(cmd, o, refreshErr, outPath)
 				}
-				debugf(cmd, o, "Copilot auth token ready")
+				debugf(cmd, o, "provider auth token ready provider=%s", cfg.Provider)
 			}
 			if client == nil {
-				client = &copilot.Client{BaseURL: cfg.API.BaseURL, Token: cfg.Auth.CopilotToken, HTTPClient: copilot.NewHTTPClient(time.Duration(timeout) * time.Second)}
+				client = newProviderClient(cfg, time.Duration(timeout)*time.Second)
 			}
 			client = wrapVerboseClient(cmd, o, client)
 			result, err := inspect.Run(ctx, cfg, client, opts)
-			if err != nil && !externalClient && shouldRefreshAfterResponsesAuthError(err, cfg) {
-				debugf(cmd, o, "responses auth failed; refreshing Copilot token with stored GitHub access token")
+			if err != nil && !externalClient && shouldRefreshAfterProviderAuthError(err, cfg) {
+				debugf(cmd, o, "provider request auth failed; refreshing token provider=%s", cfg.Provider)
 				var refreshErr error
-				cfg, refreshErr = refreshCopilotToken(cmd.Context(), cfg, cfgPath)
+				cfg, refreshErr = refreshProviderToken(cmd.Context(), cfg, cfgPath, time.Duration(timeout)*time.Second)
 				if refreshErr != nil {
 					return printErrWithOut(cmd, o, refreshErr, outPath)
 				}
-				client = wrapVerboseClient(cmd, o, &copilot.Client{BaseURL: cfg.API.BaseURL, Token: cfg.Auth.CopilotToken, HTTPClient: copilot.NewHTTPClient(time.Duration(timeout) * time.Second)})
+				client = wrapVerboseClient(cmd, o, newProviderClient(cfg, time.Duration(timeout)*time.Second))
 				result, err = inspect.Run(ctx, cfg, client, opts)
 			}
 			if err != nil {
@@ -147,7 +157,7 @@ inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visib
 	c.Flags().StringVar(&opts.ImagePath, "image", "", "Local image path. Exactly one regular file; remote URLs are rejected.")
 	c.Flags().StringVar(&opts.Prompt, "prompt", "", "Task for the model, such as reading an error, explaining a UI state, or summarizing a diagram.")
 	c.Flags().StringVar(&opts.PromptFile, "prompt-file", "", "Read the task prompt from a local text file instead of --prompt.")
-	c.Flags().StringVar(&opts.Model, "model", config.DefaultModel, "Model to use. Allowed: gpt-5.4, gpt-5-mini, gpt-5.4-mini.")
+	c.Flags().StringVar(&opts.Model, "model", config.DefaultModel, "Model to use. Defaults to gpt-5.4-mini; model names are passed through to the configured provider.")
 	c.Flags().StringVar(&opts.Reasoning, "reasoning", config.DefaultReasoning, "Reasoning effort. Allowed: low, medium, high, xhigh.")
 	c.Flags().StringVar(&opts.Preset, "preset", "general", "Prompt preset: general, ocr, ui, diagram, chart, or error.")
 	c.Flags().IntVar(&opts.TimeoutSecond, "timeout", 0, "Request timeout in seconds. Defaults to config api.timeout_seconds.")
@@ -155,21 +165,21 @@ inspect-image.exe inspect --image "%CD%\screenshot.png" --prompt "Read the visib
 	return c
 }
 
-func shouldRefreshAfterResponsesAuthError(err error, cfg config.Config) bool {
+func shouldRefreshAfterProviderAuthError(err error, cfg config.Config) bool {
 	var apiErr *copilot.APIError
-	return errors.As(err, &apiErr) && apiErr.Code == "auth_required" && iauth.GitHubTokenValid(cfg, time.Now())
+	if errors.As(err, &apiErr) && apiErr.Code == "auth_required" && cfg.Provider == config.ProviderGitHubCopilot {
+		return iauth.GitHubTokenValid(cfg, time.Now())
+	}
+	var aiErr *aiplatform.APIError
+	if errors.As(err, &aiErr) && aiErr.Code == "auth_required" && cfg.Provider == config.ProviderAIPlatform {
+		return aiplatform.CredentialsConfigured(cfg) && aiplatform.EndpointsConfigured(cfg)
+	}
+	return false
 }
 
 func inspectLocalOnly(cfg config.Config, opts inspect.Options) (imagecheck.ImageInfo, []string, error) {
 	if _, err := inspect.ReadPrompt(opts.Prompt, opts.PromptFile); err != nil {
 		return imagecheck.ImageInfo{}, nil, err
-	}
-	model := opts.Model
-	if model == "" {
-		model = cfg.Defaults.Model
-	}
-	if !config.StringAllowed(model, config.AllowedModels) {
-		return imagecheck.ImageInfo{}, nil, &copilot.APIError{Code: "model_not_allowed", Message: "Model is not allowed for inspect-image.", Hint: "Run inspect-image models --json and choose an allowed model.", Status: 400}
 	}
 	reasoning := opts.Reasoning
 	if reasoning == "" {
@@ -179,6 +189,37 @@ func inspectLocalOnly(cfg config.Config, opts inspect.Options) (imagecheck.Image
 		return imagecheck.ImageInfo{}, nil, &copilot.APIError{Code: "reasoning_not_allowed", Message: "Reasoning effort is not allowed for inspect-image.", Hint: "Use one of: low, medium, high, xhigh.", Status: 400}
 	}
 	return imagecheck.Validate(opts.ImagePath, cfg.Limits.MaxImageBytes, cfg.Limits.AllowedMIMETypes)
+}
+
+func newProviderClient(cfg config.Config, timeout time.Duration) inspect.ResponsesClient {
+	switch cfg.Provider {
+	case config.ProviderAIPlatform:
+		return aiplatform.NewClient(cfg, timeout)
+	default:
+		return &copilot.Client{BaseURL: cfg.API.BaseURL, Token: cfg.Auth.CopilotToken, HTTPClient: copilot.NewHTTPClient(timeout)}
+	}
+}
+
+func ensureProviderToken(ctx context.Context, cfg config.Config, path string, timeout time.Duration) (config.Config, error) {
+	switch cfg.Provider {
+	case config.ProviderAIPlatform:
+		return ensureAIPlatformToken(ctx, cfg, path, timeout)
+	case config.ProviderGitHubCopilot:
+		return ensureCopilotToken(ctx, cfg, path)
+	default:
+		return cfg, &copilot.APIError{Code: "config_error", Message: "Unsupported inspect-image provider: " + cfg.Provider, Hint: "Use provider github_copilot_plugin or ai_platform.", Status: 400}
+	}
+}
+
+func refreshProviderToken(ctx context.Context, cfg config.Config, path string, timeout time.Duration) (config.Config, error) {
+	switch cfg.Provider {
+	case config.ProviderAIPlatform:
+		return refreshAIPlatformToken(ctx, cfg, path, timeout)
+	case config.ProviderGitHubCopilot:
+		return refreshCopilotToken(ctx, cfg, path)
+	default:
+		return cfg, &copilot.APIError{Code: "config_error", Message: "Unsupported inspect-image provider: " + cfg.Provider, Hint: "Use provider github_copilot_plugin or ai_platform.", Status: 400}
+	}
 }
 
 func ensureCopilotToken(ctx context.Context, cfg config.Config, path string) (config.Config, error) {
@@ -211,13 +252,42 @@ func refreshCopilotToken(ctx context.Context, cfg config.Config, path string) (c
 	return cfg, nil
 }
 
+func ensureAIPlatformToken(ctx context.Context, cfg config.Config, path string, timeout time.Duration) (config.Config, error) {
+	if aiplatform.TokenValid(cfg, time.Now()) {
+		return cfg, nil
+	}
+	if !aiplatform.CredentialsConfigured(cfg) || !aiplatform.EndpointsConfigured(cfg) {
+		return cfg, &aiplatform.APIError{Code: "auth_required", Message: "AI Platform authentication is required.", Hint: "Configure ai_platform.auth.username, password, usercase, chat host/uri, and ib2b host/uri in ~/.efp/config.yaml, then run inspect-image auth test --json.", Status: 401}
+	}
+	return refreshAIPlatformToken(ctx, cfg, path, timeout)
+}
+
+func refreshAIPlatformToken(ctx context.Context, cfg config.Config, path string, timeout time.Duration) (config.Config, error) {
+	if !aiplatform.CredentialsConfigured(cfg) || !aiplatform.EndpointsConfigured(cfg) {
+		return cfg, &aiplatform.APIError{Code: "auth_required", Message: "AI Platform authentication is required.", Hint: "Configure ai_platform.auth.username, password, usercase, chat host/uri, and ib2b host/uri in ~/.efp/config.yaml.", Status: 401}
+	}
+	token, expires, err := exchangeAIPlatformToken(ctx, cfg, timeout)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.AIPlatform.Auth.Token = token
+	cfg.AIPlatform.Auth.TokenExpiresAt = expires.UTC().Format(time.RFC3339)
+	cfg.AIPlatform.Auth.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	if err := config.Save(path, cfg); err != nil {
+		return cfg, &aiplatform.APIError{Code: "config_error", Message: messageWithDetail("Config file could not be saved.", err), Hint: "Check permissions for ~/.efp/config.yaml and ~/.efp/tmp/ai_platform_token.", Status: 500}
+	}
+	return cfg, nil
+}
+
 func authCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "auth",
-		Short: "Manage GitHub Copilot authentication",
-		Long: strings.TrimSpace(`Manage the GitHub device-flow login used to exchange a GitHub access token for a GitHub Copilot plugin token.
+		Short: "Manage inspect-image provider authentication",
+		Long: strings.TrimSpace(`Manage authentication for the configured inspect-image provider.
 
-Tokens are stored in the same inspect-image config file as defaults and limits. Token values are never printed by auth status, doctor, errors, or verbose diagnostics.`),
+GitHub Copilot uses GitHub device-flow login. AI Platform uses configured username, password, and usercase credentials to exchange a short-lived iB2B token.
+
+Token values are never printed by auth status, doctor, errors, or verbose diagnostics.`),
 		Example: strings.TrimSpace(`inspect-image auth status --json
 inspect-image auth login
 inspect-image auth test --json
@@ -232,14 +302,26 @@ type authTestResult struct {
 	Refreshed bool `json:"refreshed"`
 }
 
+type aiAuthTestResult struct {
+	aiplatform.Status
+	Refreshed bool `json:"refreshed"`
+}
+
 func authLoginCmd(o *Opts) *cobra.Command {
-	return &cobra.Command{Use: "login",
+	var providerFlag, username, password, usercase string
+	var passwordStdin bool
+	c := &cobra.Command{Use: "login",
 		Short: "Sign in with GitHub device flow",
-		Long: strings.TrimSpace(`Create the config file if needed, start GitHub device authentication, print the verification URL and user code in human mode, then exchange the GitHub token for a Copilot plugin token.
+		Long: strings.TrimSpace(`Create the config file if needed.
+
+For GitHub Copilot, start GitHub device authentication, print the verification URL and user code in human mode, then exchange the GitHub token for a Copilot plugin token.
+
+For AI Platform, save username, password, and usercase credentials from flags or stdin, then validate them by exchanging an iB2B token.
 
 JSON mode prints only non-secret status fields such as auth_configured, github_host, github_user, and copilot_token_expires_at.`),
 		Example: strings.TrimSpace(`inspect-image auth login
-inspect-image auth login --json`),
+inspect-image auth login --json
+inspect-image auth login --provider ai_platform --username <user> --usercase <case> --password-stdin --json`),
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path, err := config.ResolvePath(o.ConfigPath)
@@ -249,6 +331,41 @@ inspect-image auth login --json`),
 			cfg, err := config.LoadOrDefault(path)
 			if err != nil {
 				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix ~/.efp/config.yaml or pass --config.", 400))
+			}
+			if strings.TrimSpace(providerFlag) != "" {
+				cfg.Provider = config.NormalizeProvider(providerFlag)
+			}
+			if cfg.Provider != config.ProviderGitHubCopilot && cfg.Provider != config.ProviderAIPlatform {
+				return print(cmd, o, fail("config_error", "Unsupported inspect-image provider: "+cfg.Provider, "Use provider github_copilot_plugin or ai_platform.", 400))
+			}
+			if cfg.Provider == config.ProviderAIPlatform {
+				if strings.TrimSpace(username) != "" {
+					cfg.AIPlatform.Auth.Username = strings.TrimSpace(username)
+				}
+				if passwordStdin {
+					b, err := io.ReadAll(cmd.InOrStdin())
+					if err != nil {
+						return print(cmd, o, fail("invalid_args", messageWithDetail("Password could not be read from stdin.", err), "Pipe the AI Platform password to --password-stdin.", 400))
+					}
+					password = strings.TrimSpace(string(b))
+				}
+				if strings.TrimSpace(password) != "" {
+					cfg.AIPlatform.Auth.Password = strings.TrimSpace(password)
+				}
+				if strings.TrimSpace(usercase) != "" {
+					cfg.AIPlatform.Auth.Usercase = strings.TrimSpace(usercase)
+				}
+				if !aiplatform.CredentialsConfigured(cfg) {
+					return print(cmd, o, fail("invalid_args", "AI Platform username, password, and usercase are required.", "Pass --username, --usercase, and --password-stdin, or edit ~/.efp/config.yaml.", 400))
+				}
+				if !aiplatform.EndpointsConfigured(cfg) {
+					return print(cmd, o, fail("config_error", "AI Platform chat and iB2B endpoints are required.", "Set ai_platform.chat.host/uri and ai_platform.ib2b.host/uri in ~/.efp/config.yaml.", 400))
+				}
+				updated, err := refreshAIPlatformToken(cmd.Context(), cfg, path, time.Duration(cfg.API.TimeoutSeconds)*time.Second)
+				if err != nil {
+					return printErr(cmd, o, err)
+				}
+				return print(cmd, o, output.Success("", aiplatform.Summarize(updated, time.Now())))
 			}
 			var humanOut io.Writer
 			if fmtOut(o) != "json" {
@@ -264,14 +381,20 @@ inspect-image auth login --json`),
 			}
 			return print(cmd, o, output.Success("", result))
 		}}
+	c.Flags().StringVar(&providerFlag, "provider", "", "Provider to authenticate: github_copilot_plugin or ai_platform. Defaults to configured provider.")
+	c.Flags().StringVar(&username, "username", "", "AI Platform username. Used only with --provider ai_platform.")
+	c.Flags().StringVar(&password, "password", "", "AI Platform password. Prefer --password-stdin to avoid shell history.")
+	c.Flags().BoolVar(&passwordStdin, "password-stdin", false, "Read the AI Platform password from stdin.")
+	c.Flags().StringVar(&usercase, "usercase", "", "AI Platform usercase value, sent as the chat/completions user field.")
+	return c
 }
 
 func authStatusCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "status",
 		Short: "Show non-secret authentication status",
-		Long: strings.TrimSpace(`Read the inspect-image config and report whether Copilot authentication is configured, currently valid, or refreshable using the stored GitHub access token.
+		Long: strings.TrimSpace(`Read the inspect-image config and report whether provider authentication is configured, currently valid, or refreshable.
 
-This command never prints github_access_token, copilot_token, Authorization headers, or token-derived secrets. In --json mode, an expired Copilot token still returns ok=true when the stored GitHub access token can refresh it.`),
+This command never prints github_access_token, copilot_token, AI Platform passwords, iB2B tokens, Authorization headers, or token-derived secrets. In --json mode, an expired short-lived token still returns ok=true when stored credentials can refresh it.`),
 		Example: "inspect-image auth status --json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -287,6 +410,13 @@ This command never prints github_access_token, copilot_token, Authorization head
 				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
 			}
 			now := time.Now()
+			if cfg.Provider == config.ProviderAIPlatform {
+				status := aiplatform.Summarize(cfg, now)
+				if !aiplatform.AuthUsable(cfg, now) {
+					return print(cmd, o, fail("auth_required", "AI Platform authentication is required.", "Configure ai_platform auth and endpoints, then run inspect-image auth test --json.", 401))
+				}
+				return print(cmd, o, output.Success("", status))
+			}
 			status := iauth.Summarize(cfg, now)
 			if !iauth.AuthUsable(cfg, now) {
 				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
@@ -297,25 +427,39 @@ This command never prints github_access_token, copilot_token, Authorization head
 
 func authTestCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "test",
-		Short: "Refresh and validate Copilot authentication",
+		Short: "Refresh and validate provider authentication",
 		Long: strings.TrimSpace(`Validate inspect-image authentication without printing secrets.
 
-If the short-lived Copilot token is expired but the stored GitHub access token is still usable, this command exchanges it for a fresh Copilot token and saves the updated config. Only run auth login when this command returns auth_required or auth_expired.`),
+If the short-lived provider token is expired but stored credentials are still usable, this command exchanges them for a fresh token and saves the updated config. Only run auth login when this command returns auth_required or auth_expired.`),
 		Example: "inspect-image auth test --json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path, err := config.ResolvePath(o.ConfigPath)
 			if err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set INSPECT_IMAGE_CONFIG or pass --config.", 500))
+				return print(cmd, o, fail("config_error", messageWithDetail("Config path could not be resolved.", err), "Set EFP_CONFIG or pass --config.", 500))
 			}
 			cfg, err := config.Load(path)
 			if err != nil {
 				if !errors.Is(err, os.ErrNotExist) {
-					return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix inspect-image.json or pass --config.", 400))
+					return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix ~/.efp/config.yaml or pass --config.", 400))
 				}
 				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
 			}
 			refreshed := false
+			if cfg.Provider == config.ProviderAIPlatform {
+				if !aiplatform.AuthUsable(cfg, time.Now()) {
+					return print(cmd, o, fail("auth_required", "AI Platform authentication is required.", "Configure ai_platform auth and endpoints, then run inspect-image auth login --provider ai_platform or auth test.", 401))
+				}
+				if !aiplatform.TokenValid(cfg, time.Now()) {
+					var refreshErr error
+					cfg, refreshErr = refreshAIPlatformToken(cmd.Context(), cfg, path, time.Duration(cfg.API.TimeoutSeconds)*time.Second)
+					if refreshErr != nil {
+						return printErr(cmd, o, refreshErr)
+					}
+					refreshed = true
+				}
+				return print(cmd, o, output.Success("", aiAuthTestResult{Status: aiplatform.Summarize(cfg, time.Now()), Refreshed: refreshed}))
+			}
 			if !iauth.TokenValid(cfg, time.Now()) || iauth.NeedsExchange(cfg) {
 				var refreshErr error
 				cfg, refreshErr = refreshCopilotToken(cmd.Context(), cfg, path)
@@ -332,7 +476,7 @@ func authLogoutCmd(o *Opts) *cobra.Command {
 	var yes bool
 	c := &cobra.Command{Use: "logout",
 		Short: "Clear stored authentication tokens",
-		Long: strings.TrimSpace(`Clear GitHub and Copilot token fields from the inspect-image config while preserving api, defaults, limits, privacy, and other non-secret settings.
+		Long: strings.TrimSpace(`Clear active provider authentication fields from the inspect-image config while preserving api, defaults, limits, privacy, and other non-secret settings.
 
 This command requires --yes so agents do not accidentally remove credentials during discovery.`),
 		Example: "inspect-image auth logout --yes --json",
@@ -349,11 +493,15 @@ This command requires --yes so agents do not accidentally remove credentials dur
 			if err != nil {
 				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix ~/.efp/config.yaml or pass --config.", 400))
 			}
-			cfg = iauth.Logout(cfg)
+			if cfg.Provider == config.ProviderAIPlatform {
+				cfg = aiplatform.Logout(cfg)
+			} else {
+				cfg = iauth.Logout(cfg)
+			}
 			if err := config.Save(path, cfg); err != nil {
 				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be saved.", err), "Check permissions for ~/.efp/config.yaml and ~/.efp/tmp/copilot_token.", 500))
 			}
-			return print(cmd, o, output.Success("", map[string]any{"auth_configured": false, "github_host": cfg.Auth.GitHubHost}))
+			return print(cmd, o, output.Success("", map[string]any{"auth_configured": false, "provider": cfg.Provider, "github_host": cfg.Auth.GitHubHost}))
 		}}
 	c.Flags().BoolVar(&yes, "yes", false, "Confirm that stored auth tokens should be cleared.")
 	return c
@@ -361,10 +509,10 @@ This command requires --yes so agents do not accidentally remove credentials dur
 
 func doctorCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "doctor",
-		Short: "Check inspect-image configuration and Copilot readiness",
-		Long: strings.TrimSpace(`Run local readiness checks for the config file, permissions, authentication, system proxy mode, /responses endpoint configuration, and allowed model defaults.
+		Short: "Check inspect-image configuration and provider readiness",
+		Long: strings.TrimSpace(`Run local readiness checks for the config file, permissions, authentication, system proxy mode, provider endpoint configuration, and model defaults.
 
-Doctor does not print tokens. An expired Copilot token is ok when it is refreshable from the stored GitHub access token; missing or unusable auth returns ok=false with error.code=auth_required.`),
+Doctor does not print tokens. An expired short-lived token is ok when it is refreshable from stored provider credentials; missing or unusable auth returns ok=false with error.code=auth_required.`),
 		Example: "inspect-image doctor --json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -380,6 +528,29 @@ Doctor does not print tokens. An expired Copilot token is ok when it is refresha
 				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
 			}
 			now := time.Now()
+			if cfg.Provider == config.ProviderAIPlatform {
+				status := aiplatform.Summarize(cfg, now)
+				if !aiplatform.AuthUsable(cfg, now) {
+					return print(cmd, o, fail("auth_required", "AI Platform authentication is required.", "Configure ai_platform auth and endpoints, then run inspect-image auth test --json.", 401))
+				}
+				authCheck := "ok"
+				if !status.TokenValid && status.TokenRefreshable {
+					authCheck = "refreshable"
+				}
+				return print(cmd, o, output.Success("", map[string]any{"checks": map[string]any{
+					"config":                    "ok",
+					"permissions":               permStatus(path),
+					"provider":                  cfg.Provider,
+					"auth":                      authCheck,
+					"token_valid":               status.TokenValid,
+					"token_refreshable":         status.TokenRefreshable,
+					"chat_endpoint_configured":  status.ChatEndpointConfigured,
+					"ib2b_endpoint_configured":  status.IB2BEndpointConfigured,
+					"proxy":                     "system",
+					"chat_completions_endpoint": "ok",
+					"default_model":             cfg.Defaults.Model,
+				}}))
+			}
 			status := iauth.Summarize(cfg, now)
 			if !iauth.AuthUsable(cfg, now) {
 				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
@@ -391,6 +562,7 @@ Doctor does not print tokens. An expired Copilot token is ok when it is refresha
 			return print(cmd, o, output.Success("", map[string]any{"checks": map[string]any{
 				"config":                    "ok",
 				"permissions":               permStatus(path),
+				"provider":                  cfg.Provider,
 				"auth":                      authCheck,
 				"copilot_token_valid":       status.CopilotTokenValid,
 				"copilot_token_refreshable": status.CopilotTokenRefreshable,
@@ -403,14 +575,14 @@ Doctor does not print tokens. An expired Copilot token is ok when it is refresha
 
 func modelsCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "models",
-		Short: "List allowed models and reasoning efforts",
-		Long: strings.TrimSpace(`Print the hard-coded model and reasoning allowlists used by inspect-image.
+		Short: "Show model defaults and reasoning efforts",
+		Long: strings.TrimSpace(`Print the default model and reasoning allowlist used by inspect-image.
 
-Use this before constructing commands dynamically. Requests using other model names or reasoning efforts fail locally before any image bytes are sent.`),
+Model names are passed through to the configured provider. Reasoning efforts are still validated locally before any image bytes are sent.`),
 		Example: "inspect-image models --json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return print(cmd, o, output.Success("", map[string]any{"default_model": config.DefaultModel, "allowed_models": config.AllowedModels, "default_reasoning": config.DefaultReasoning, "allowed_reasoning": config.AllowedReasoning}))
+			return print(cmd, o, output.Success("", map[string]any{"default_model": config.DefaultModel, "model_restrictions": "none", "default_reasoning": config.DefaultReasoning, "allowed_reasoning": config.AllowedReasoning}))
 		}}
 }
 
@@ -430,7 +602,7 @@ Agents should call this with --json when discovering how to use inspect-image.`)
 func schemaCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "schema <command>",
 		Short: "Show a machine-readable command schema",
-		Long: strings.TrimSpace(`Show the schema for a command. For inspect, the schema includes required parameters, model and reasoning enums, and image size and MIME type limits.
+		Long: strings.TrimSpace(`Show the schema for a command. For inspect, the schema includes required parameters, the reasoning enum, model default, and image size and MIME type limits.
 
 Agents should call inspect-image schema inspect --json before building complex inspect commands.`),
 		Example: "inspect-image schema inspect --json",
@@ -481,7 +653,7 @@ func inspectSchema() map[string]any {
 			"image":     map[string]any{"type": "string", "description": "Local image path. Exactly one image."},
 			"prompt":    map[string]any{"type": "string"},
 			"out":       map[string]any{"type": "string", "description": "Optional file path for a JSON envelope copy. Useful when terminal stdout capture is unreliable."},
-			"model":     map[string]any{"type": "string", "enum": config.AllowedModels, "default": config.DefaultModel},
+			"model":     map[string]any{"type": "string", "default": config.DefaultModel, "description": "Passed through to the configured provider; no local allowlist is enforced."},
 			"reasoning": map[string]any{"type": "string", "enum": config.AllowedReasoning, "default": config.DefaultReasoning},
 		},
 		"limits": map[string]any{"max_image_bytes": config.MaxImageBytes, "allowed_mime_types": config.AllowedMIMETypes},
@@ -541,6 +713,10 @@ func errEnvelope(err error) output.Envelope {
 	var ce *copilot.APIError
 	if errors.As(err, &ce) {
 		return fail(ce.Code, ce.Message, ce.Hint, ce.Status)
+	}
+	var ai *aiplatform.APIError
+	if errors.As(err, &ai) {
+		return fail(ai.Code, ai.Message, ai.Hint, ai.Status)
 	}
 	var ae *iauth.APIError
 	if errors.As(err, &ae) {
@@ -632,13 +808,13 @@ func wrapVerboseClient(cmd *cobra.Command, o *Opts, client inspect.ResponsesClie
 }
 
 func (v *verboseResponsesClient) Responses(ctx context.Context, req copilot.ResponsesRequest) (map[string]any, error) {
-	debugf(v.cmd, v.opts, "sending /responses request model=%s reasoning=%s content_items=%d", req.Model, req.Reasoning.Effort, countInputContent(req))
+	debugf(v.cmd, v.opts, "sending provider image request model=%s reasoning=%s content_items=%d", req.Model, req.Reasoning.Effort, countInputContent(req))
 	raw, err := v.inner.Responses(ctx, req)
 	if err != nil {
-		debugf(v.cmd, v.opts, "responses request failed error=%s", err.Error())
+		debugf(v.cmd, v.opts, "provider image request failed error=%s", err.Error())
 		return raw, err
 	}
-	debugf(v.cmd, v.opts, "responses response received")
+	debugf(v.cmd, v.opts, "provider image response received")
 	return raw, nil
 }
 

@@ -149,18 +149,18 @@ Recommended public templates:
 - Do not use OCR tools as the primary path, and do not write Python/OpenCV/Tesseract/image-parser scripts to recognize or interpret image content.
 - `inspect-image` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd, not a Portal tool, runtime built-in tool, MCP tool, or Web UI component.
 - For agents, `--json` is the default way to use this CLI. Add `--json` to `inspect`, `auth status`, `auth test`, `doctor`, `models`, `commands`, `schema`, `version`, and `help llm`.
-- Only omit `--json` for human-facing interactive output such as asking the user to run `inspect-image auth login` and read the device-code prompt.
+- Only omit `--json` for human-facing interactive output such as asking the user to run GitHub Copilot `inspect-image auth login` and read the device-code prompt.
 - Always call `inspect-image schema inspect --json` before constructing a complex command.
 - Always use `--json`.
 - Use `inspect-image inspect --image <path> --prompt "<task>" --json`.
 - Stdout is the primary output path. If terminal stdout capture is unreliable, use `inspect-image inspect --image <path> --prompt "<task>" --out <workspace-file> --json`; `--out` writes an additional JSON envelope copy and does not replace stdout.
 - Prefer a result file inside the current workspace or next to the inspected image, then read it with the file-read tool. Use shell commands such as `type` only when no file-read tool is available.
-- Use `--verbose` for non-secret diagnostics when debugging command execution; it reports config load, image validation, auth checks, `/responses` request/response, output file writes, and JSON envelope status.
+- Use `--verbose` for non-secret diagnostics when debugging command execution; it reports config load, image validation, auth checks, provider request/response, output file writes, and JSON envelope status.
 - Read `data.result.answer` first.
 - For OCR-like tasks, read `data.result.visible_text`.
 - If `ok=false`, inspect `error.code` and `error.hint`.
-- If `inspect-image auth status --json` returns `token_state=refreshable` or `copilot_token_refreshable=true`, run `inspect-image auth test --json` or retry `inspect-image inspect --json`; do not ask the user to log in again.
-- If `auth_required` or `auth_expired` is not refreshable, ask the user to run `inspect-image auth login`, wait for completion, and then retry `inspect-image inspect --json`; do not fall back to OCR, Python image recognition, or guessing.
+- If `inspect-image auth status --json` returns `token_state=refreshable`, `copilot_token_refreshable=true`, or `token_refreshable=true`, run `inspect-image auth test --json` or retry `inspect-image inspect --json`; do not ask the user to log in again.
+- If `auth_required` or `auth_expired` is not refreshable, ask the user to configure the selected provider and run `inspect-image auth login`, wait for completion, and then retry `inspect-image inspect --json`; do not fall back to OCR, Python image recognition, or guessing.
 - On Windows `cmd`, use double quotes, `where`, `dir`, and `cd`; avoid Bash-only commands such as `pwd`, `command -v`, `cat`, `ls`, `cd "$PWD"`, `$PWD`, and single quotes. If capture is unreliable, use `--out "%CD%\inspect-image-result.json"` rather than shell redirection.
 - For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so this guidance is available during coding sessions.
 

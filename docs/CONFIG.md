@@ -28,6 +28,11 @@ jenkins:
 
 copilot:
   provider: github_copilot_plugin
+  api:
+    endpoint_kind: responses
+    base_url: https://api.githubcopilot.com
+    timeout_seconds: 90
+    use_system_proxy: true
   auth:
     method: device_code
     github_host: github.com
@@ -38,13 +43,9 @@ copilot:
     updated_at: ""
 
 inspect_image:
-  api:
-    endpoint_kind: responses
-    base_url: https://api.githubcopilot.com
-    timeout_seconds: 90
-    use_system_proxy: true
+  provider: github_copilot_plugin # github_copilot_plugin | ai_platform
   defaults:
-    model: gpt-5.4
+    model: gpt-5.4-mini
     reasoning: medium
     output: text
   limits:
@@ -59,6 +60,22 @@ inspect_image:
     store_raw_image: false
     store_raw_response: false
     redact_tokens_in_logs: true
+
+ai_platform:
+  chat:
+    host: https://ai-platform.example.internal
+    uri: /v1/api/v1/chat/completions
+  ib2b:
+    host: https://dsp.example.internal
+    uri: /dsp/rest-sts/DSP_iB2B/iB2B_tokenTranslator_v2?_action=translate
+  auth:
+    username: ""
+    password: ""
+    usercase: ""
+    token_file: ~/.efp/tmp/ai_platform_token
+    trust_token_header: X-XXXX-E2E-Trust-Token
+    tracking_prefix: EFP
+    updated_at: ""
 ```
 
 ## Jira Instance Fields
@@ -114,6 +131,29 @@ copilot_token: ""
 copilot_token_expires_at: ""
 updated_at: ""
 ```
+
+## inspect-image Providers
+
+`inspect_image.provider` selects the image-inspection backend:
+
+- `github_copilot_plugin`: uses the GitHub Copilot plugin `/responses` endpoint.
+- `ai_platform`: uses the enterprise AI Platform `/chat/completions` endpoint after exchanging an iB2B JWT.
+
+Model names are not locally restricted. `inspect_image.defaults.model` defaults to `gpt-5.4-mini`, and `--model <name>` is passed through to the selected provider.
+
+Provider-specific endpoint settings live at the root provider nodes. `copilot.api` configures the GitHub Copilot `/responses` endpoint, while `ai_platform.chat` and `ai_platform.ib2b` configure AI Platform.
+
+## AI Platform Auth
+
+`ai_platform.auth.username`, `ai_platform.auth.password`, and `ai_platform.auth.usercase` are used to call the configured iB2B token translator. The translator response must include `issued_token`; inspect-image treats that token as short-lived for 30 seconds and stores it outside the main config in `ai_platform.auth.token_file`, defaulting to `~/.efp/tmp/ai_platform_token`.
+
+The AI Platform `/chat/completions` request sends:
+
+- `X-XXXX-E2E-Trust-Token` or the configured `trust_token_header`: the short-lived iB2B token.
+- `x-correlation-id` and `x-usersession-id`: generated from `tracking_prefix` and the current timestamp.
+- Body field `user`: the configured `usercase`.
+
+The chat request supports exactly one local image and uses OpenAI-style content with a `text` item and an `image_url` item.
 
 ## TLS and CA Behavior
 

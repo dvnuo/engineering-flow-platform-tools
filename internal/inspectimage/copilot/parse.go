@@ -28,6 +28,9 @@ func outputText(raw map[string]any) string {
 	if s, ok := raw["output_text"].(string); ok {
 		return s
 	}
+	if text := chatCompletionText(raw); strings.TrimSpace(text) != "" {
+		return text
+	}
 	var parts []string
 	output, _ := raw["output"].([]any)
 	for _, item := range output {
@@ -40,6 +43,28 @@ func outputText(raw map[string]any) string {
 			}
 			if s, ok := cm["output_text"].(string); ok {
 				parts = append(parts, s)
+			}
+		}
+	}
+	return strings.Join(parts, "\n")
+}
+
+func chatCompletionText(raw map[string]any) string {
+	var parts []string
+	choices, _ := raw["choices"].([]any)
+	for _, choice := range choices {
+		cm, _ := choice.(map[string]any)
+		message, _ := cm["message"].(map[string]any)
+		if s, ok := message["content"].(string); ok {
+			parts = append(parts, s)
+			continue
+		}
+		if content, ok := message["content"].([]any); ok {
+			for _, item := range content {
+				im, _ := item.(map[string]any)
+				if s, ok := im["text"].(string); ok {
+					parts = append(parts, s)
+				}
 			}
 		}
 	}

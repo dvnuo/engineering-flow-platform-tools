@@ -922,9 +922,9 @@ func browserExplicit(name string) (explicitMeta, bool) {
 
 func inspectImageExplicit(name string) (explicitMeta, bool) {
 	items := map[string]explicitMeta{
-		"inspect": {Description: "Inspect exactly one local image using a GitHub Copilot plugin backed vision model.",
+		"inspect": {Description: "Inspect exactly one local image using the configured vision provider.",
 			Flags: []string{"image", "prompt", "prompt-file", "model", "reasoning", "preset", "timeout", "out", "config", "json", "format", "verbose"}, Required: []string{"image", "prompt"}, Risk: "external_network_data_egress", Example: "inspect-image inspect --image ./screenshot.png --prompt \"Read the error message\" --out ./inspect-image-result.json --json"},
-		"auth.login": {Description: "Authenticate inspect-image with GitHub device code flow.",
+		"auth.login": {Description: "Authenticate inspect-image with the configured provider.",
 			Flags: []string{"config", "json", "format", "verbose"}, Risk: "write", Example: "inspect-image auth login"},
 		"auth.status": {Description: "Show redacted inspect-image authentication status.",
 			Flags: []string{"config", "json", "format", "verbose"}, Risk: "read", Example: "inspect-image auth status --json"},
@@ -932,9 +932,9 @@ func inspectImageExplicit(name string) (explicitMeta, bool) {
 			Flags: []string{"config", "json", "format", "verbose"}, Risk: "read", Example: "inspect-image auth test --json"},
 		"auth.logout": {Description: "Clear inspect-image token fields after explicit confirmation.",
 			Flags: []string{"yes", "config", "json", "format", "verbose"}, Required: []string{"yes"}, Risk: "delete", Example: "inspect-image auth logout --yes --json"},
-		"doctor": {Description: "Check inspect-image config, auth, proxy mode, and model defaults.",
+		"doctor": {Description: "Check inspect-image config, auth, proxy mode, provider endpoint, and model defaults.",
 			Flags: []string{"config", "json", "format", "verbose"}, Risk: "read", Example: "inspect-image doctor --json"},
-		"models": {Description: "List inspect-image allowed models and reasoning efforts.",
+		"models": {Description: "Show inspect-image model default and allowed reasoning efforts.",
 			Flags: []string{"json", "format", "verbose"}, Risk: "read", Example: "inspect-image models --json"},
 		"commands": {Description: "List available Inspect Image commands with metadata.",
 			Flags: []string{"json", "format", "verbose", "config"}, Risk: "read", Example: "inspect-image commands --json"},
@@ -2020,9 +2020,9 @@ func FlagDescription(command, name string) string {
 }
 
 var explicit = map[string]explicitMeta{
-	"inspect":              {Description: "Inspect exactly one local image using a GitHub Copilot plugin backed vision model.", Flags: []string{"image", "prompt", "prompt-file", "model", "reasoning", "preset", "timeout", "config", "json", "format", "verbose"}, Required: []string{"image", "prompt"}, Risk: "external_network_data_egress", Example: "inspect-image inspect --image ./screenshot.png --prompt \"Read the error message\" --json"},
-	"doctor":               {Description: "Check inspect-image config, auth, proxy mode, and model defaults.", Flags: []string{"config", "json", "format", "verbose"}, Risk: "read", Example: "inspect-image doctor --json"},
-	"models":               {Description: "List inspect-image allowed models and reasoning efforts.", Flags: []string{"json", "format", "verbose"}, Risk: "read", Example: "inspect-image models --json"},
+	"inspect":              {Description: "Inspect exactly one local image using the configured vision provider.", Flags: []string{"image", "prompt", "prompt-file", "model", "reasoning", "preset", "timeout", "config", "json", "format", "verbose"}, Required: []string{"image", "prompt"}, Risk: "external_network_data_egress", Example: "inspect-image inspect --image ./screenshot.png --prompt \"Read the error message\" --json"},
+	"doctor":               {Description: "Check inspect-image config, auth, proxy mode, provider endpoint, and model defaults.", Flags: []string{"config", "json", "format", "verbose"}, Risk: "read", Example: "inspect-image doctor --json"},
+	"models":               {Description: "Show inspect-image model default and allowed reasoning efforts.", Flags: []string{"json", "format", "verbose"}, Risk: "read", Example: "inspect-image models --json"},
 	"probe":                {Description: "Open an internal URL in Edge/Chrome/Chromium, capture screenshot/HTML/network summary, and report browser SSO indicators.", Flags: []string{"url", "selector", "require-selector", "wait", "timeout", "out", "profile", "clean-profile", "browser-exe", "browser", "headless", "ignore-cert-errors", "fetch-api", "network-filter", "max-network-events", "save-html", "save-screenshot", "json", "format", "verbose"}, Required: []string{"url"}, Risk: "read", Example: "browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json"},
 	"version":              {Description: "Print CLI version, commit, and build date.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira version --json"},
 	"auth.test":            {Description: "Verify configured credentials against the current user endpoint.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira auth test --json"},

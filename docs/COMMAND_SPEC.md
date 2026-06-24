@@ -709,11 +709,11 @@ Agent actions use observation refs such as `obs-...:e17`. Re-observe after every
 ### Inspect flags
 - `--image <path>`: exactly one local JPEG, PNG, WEBP, or GIF regular file.
 - `--prompt <text>` or `--prompt-file <path>`: required task text.
-- `--model <model>`: `gpt-5.4`, `gpt-5-mini`, or `gpt-5.4-mini`.
+- `--model <model>`: model name passed through to the configured provider. Defaults to `gpt-5.4-mini`; no local allowlist is enforced.
 - `--reasoning <effort>`: `low`, `medium`, `high`, or `xhigh`.
 - `--preset <preset>`: `general`, `ocr`, `ui`, `diagram`, `chart`, or `error`.
 - `--out <file>`: write the full JSON envelope to a file in addition to stdout. Use this when Windows terminal stdout capture is unreliable.
-- `--verbose`: write non-secret diagnostics to stderr for config load, image validation, auth checks, `/responses` request/response, output file writes, and envelope status.
+- `--verbose`: write non-secret diagnostics to stderr for config load, image validation, auth checks, provider request/response, output file writes, and envelope status.
 
 Windows `cmd` agents should use double quotes and cmd-native commands:
 

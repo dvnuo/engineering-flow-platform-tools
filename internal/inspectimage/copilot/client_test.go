@@ -50,10 +50,14 @@ func TestResponsesUsesResponsesPathAndShape(t *testing.T) {
 	}
 }
 
-func TestBuildRequestRejectsAllowlists(t *testing.T) {
+func TestBuildRequestAllowsArbitraryModelAndRejectsReasoning(t *testing.T) {
 	img := imagecheck.ImageInfo{MIMEType: "image/png", Data: []byte{1}}
-	if _, err := BuildRequest("bad", "medium", "task", img); err == nil {
-		t.Fatal("expected model rejection")
+	req, err := BuildRequest("custom-model", "medium", "task", img)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if req.Model != "custom-model" {
+		t.Fatalf("model was not passed through: %#v", req)
 	}
 	if _, err := BuildRequest("gpt-5.4", "bad", "task", img); err == nil {
 		t.Fatal("expected reasoning rejection")

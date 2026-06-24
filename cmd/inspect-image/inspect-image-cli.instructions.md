@@ -24,7 +24,7 @@ If `inspect-image` is not authenticated, first check whether the stored GitHub a
 inspect-image auth status --json
 ```
 
-If `data.token_state` is `refreshable` or `data.copilot_token_refreshable` is `true`, do not ask the user to log in again. Run:
+If `data.token_state` is `refreshable`, `data.copilot_token_refreshable` is `true`, or `data.token_refreshable` is `true`, do not ask the user to log in again. Run:
 
 ```bash
 inspect-image auth test --json
@@ -32,7 +32,7 @@ inspect-image auth test --json
 
 Then retry `inspect-image inspect --json`.
 
-Only when auth status/test returns `auth_required` or `auth_expired` and it is not refreshable, ask the user to run:
+Only when auth status/test returns `auth_required` or `auth_expired` and it is not refreshable, ask the user to configure the selected provider and run:
 
 ```bash
 inspect-image auth login
@@ -48,7 +48,7 @@ For agents, `--json` is the default way to use every `inspect-image` command and
 inspect-image inspect --image <local-path> --prompt "<task>" --json
 ```
 
-Only omit `--json` for human-facing interactive output such as asking the user to run `inspect-image auth login` and read the device-code prompt.
+Only omit `--json` for human-facing interactive output such as asking the user to run GitHub Copilot `inspect-image auth login` and read the device-code prompt.
 
 The CLI writes the JSON envelope to stdout by default. `--out <file>` is only a diagnostic fallback or a second copy for terminal-capture issues; it is not required for normal use.
 
@@ -110,7 +110,7 @@ inspect-image inspect --image ./screenshot.png --prompt "Read the visible error 
 
 Prefer a result file inside the current workspace or next to the inspected image, not a temp directory, when you have a file-read tool available. After the command returns, read the `--out` JSON file with the file-read tool and answer from `ok`, `data.result.answer`, `data.result.visible_text`, `error.code`, and `error.hint`.
 
-Use `--verbose` for non-secret stage diagnostics on stderr. It reports whether config loaded, the image validated, auth was checked, the `/responses` request was sent, the response was received, and the JSON envelope was written.
+Use `--verbose` for non-secret stage diagnostics on stderr. It reports whether config loaded, the image validated, auth was checked, the provider request was sent, the response was received, and the JSON envelope was written.
 
 Use presets to focus the task:
 
@@ -187,13 +187,13 @@ Common errors:
 
 - `auth_required`: run `inspect-image auth status --json`; if not refreshable, ask the user to run `inspect-image auth login`, then wait. Do not use OCR, Python, or another image-analysis path.
 - `auth_expired`: run `inspect-image auth status --json`; if not refreshable, ask the user to run `inspect-image auth login`, then wait. Do not use OCR, Python, or another image-analysis path.
-- `token_state=refreshable`: run `inspect-image auth test --json` or retry `inspect-image inspect --json`; do not ask the user to log in again.
+- `token_state=refreshable` or `token_refreshable=true`: run `inspect-image auth test --json` or retry `inspect-image inspect --json`; do not ask the user to log in again.
 - `image_not_found`: check the local path and retry.
 - `not_a_file`: pass a regular image file, not a directory or device.
 - `unsupported_image_type`: convert to JPEG, PNG, WEBP, or GIF.
 - `image_too_large`: ask the user to resize or compress below `3145728` bytes.
 - `prompt_required`: add `--prompt "<task>"` or `--prompt-file <path>`.
-- `model_not_allowed`: run `inspect-image models --json` and choose an allowed model.
+- Models are passed through to the configured provider. `inspect-image models --json` reports the default model and reasoning options.
 - `reasoning_not_allowed`: use `low`, `medium`, `high`, or `xhigh`.
 - `invalid_args`: command parsing failed; call `inspect-image schema inspect --json` and rebuild the command.
 - `rate_limited`: wait and retry the same request.
@@ -207,12 +207,15 @@ Common errors:
 
 ## Security Rules
 
-Image bytes are sent to the configured GitHub Copilot plugin `/responses` endpoint. Treat this as data egress.
+Image bytes are sent to the configured provider endpoint: GitHub Copilot `/responses` or AI Platform `/chat/completions`. Treat this as data egress.
 
 Never print, paste, log, or store:
 
 - `github_access_token`
 - `copilot_token`
+- AI Platform passwords
+- iB2B issued tokens
+- trust-token headers
 - `Authorization` headers
 - Base64 image data
 - Raw image bytes

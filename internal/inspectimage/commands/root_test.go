@@ -141,7 +141,7 @@ func TestHelpIncludesDetailedCommandGuidance(t *testing.T) {
 		{
 			name: "root",
 			args: []string{"--help"},
-			want: []string{"text-only agents", "GitHub Copilot plugin /responses endpoint", "EFP_CONFIG"},
+			want: []string{"text-only agents", "GitHub Copilot /responses", "AI Platform /chat/completions", "EFP_CONFIG"},
 		},
 		{
 			name: "inspect",
@@ -166,7 +166,7 @@ func TestHelpIncludesDetailedCommandGuidance(t *testing.T) {
 		{
 			name: "schema",
 			args: []string{"schema", "--help"},
-			want: []string{"model and reasoning enums", "image size and MIME type limits"},
+			want: []string{"reasoning enum", "model default", "image size and MIME type limits"},
 		},
 		{
 			name: "help llm",
@@ -352,6 +352,123 @@ func TestInspectRefreshesAfterResponsesAuthError(t *testing.T) {
 	}
 }
 
+func TestInspectAIPlatformExchangesIB2BTokenAndCallsChatCompletions(t *testing.T) {
+	var tokenCalls, chatCalls int
+	var chatBody map[string]any
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/ib2b":
+			tokenCalls++
+			if r.Method != http.MethodPost {
+				t.Fatalf("bad token method %s", r.Method)
+			}
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			input := body["input_token_state"].(map[string]any)
+			if input["token_type"] != "CREDENTIAL" || input["username"] != "alice" || input["password"] != "secret-password" {
+				t.Fatalf("bad token request: %#v", body)
+			}
+			_, _ = w.Write([]byte(`{"issued_token":"eyJheader.eyJpayload.signature"}`))
+		case "/chat/completions":
+			chatCalls++
+			if r.Header.Get("X-XXXX-E2E-Trust-Token") != "eyJheader.eyJpayload.signature" {
+				t.Fatalf("missing trust token header: %#v", r.Header)
+			}
+			if r.Header.Get("x-correlation-id") == "" || r.Header.Get("x-usersession-id") == "" {
+				t.Fatalf("missing tracking headers: %#v", r.Header)
+			}
+			if err := json.NewDecoder(r.Body).Decode(&chatBody); err != nil {
+				t.Fatal(err)
+			}
+			_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"answer\":\"ai platform ok\",\"visible_text\":[]}"}}]}`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer s.Close()
+	path := writePNG(t)
+	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
+	cfg := config.Default()
+	cfg.Provider = config.ProviderAIPlatform
+	cfg.AIPlatform.Chat.Host = s.URL
+	cfg.AIPlatform.Chat.URI = "/chat/completions"
+	cfg.AIPlatform.IB2B.Host = s.URL
+	cfg.AIPlatform.IB2B.URI = "/ib2b"
+	cfg.AIPlatform.Auth.Username = "alice"
+	cfg.AIPlatform.Auth.Password = "secret-password"
+	cfg.AIPlatform.Auth.Usercase = "case-123"
+	cfg.AIPlatform.Auth.TokenFile = filepath.Join(t.TempDir(), "ai_platform_token")
+	if err := config.Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := run(t, nil, "inspect", "--config", cfgPath, "--image", path, "--prompt", "x", "--model", "custom-model", "--json")
+	if out["ok"] != true {
+		t.Fatalf("bad ai platform inspect: %#v", out)
+	}
+	if tokenCalls != 1 || chatCalls != 1 {
+		t.Fatalf("calls token=%d chat=%d", tokenCalls, chatCalls)
+	}
+	if chatBody["model"] != "custom-model" || chatBody["user"] != "case-123" || chatBody["reasoning_effort"] != "medium" {
+		t.Fatalf("bad chat body: %#v", chatBody)
+	}
+	messages := chatBody["messages"].([]any)
+	content := messages[1].(map[string]any)["content"].([]any)
+	if content[0].(map[string]any)["type"] != "text" || content[1].(map[string]any)["type"] != "image_url" {
+		t.Fatalf("bad content: %#v", content)
+	}
+	data := out["data"].(map[string]any)
+	if data["provider"] != config.ProviderAIPlatform || data["model"] != "custom-model" {
+		t.Fatalf("bad result provider/model: %#v", data)
+	}
+	saved, err := config.Load(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.AIPlatform.Auth.Token == "" || saved.AIPlatform.Auth.TokenExpiresAt == "" {
+		t.Fatalf("ai platform token was not saved: %#v", saved.AIPlatform.Auth)
+	}
+}
+
+func TestAuthTestRefreshesAIPlatformToken(t *testing.T) {
+	oldExchange := exchangeAIPlatformToken
+	t.Cleanup(func() { exchangeAIPlatformToken = oldExchange })
+	expires := time.Now().Add(30 * time.Second).UTC()
+	exchangeAIPlatformToken = func(ctx context.Context, cfg config.Config, timeout time.Duration) (string, time.Time, error) {
+		return "fresh-ai-platform-token", expires, nil
+	}
+	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
+	cfg := config.Default()
+	cfg.Provider = config.ProviderAIPlatform
+	cfg.AIPlatform.Chat.Host = "https://ai.example"
+	cfg.AIPlatform.IB2B.Host = "https://ib2b.example"
+	cfg.AIPlatform.Auth.Username = "alice"
+	cfg.AIPlatform.Auth.Password = "secret-password"
+	cfg.AIPlatform.Auth.Usercase = "case-123"
+	cfg.AIPlatform.Auth.Token = "stale-token"
+	cfg.AIPlatform.Auth.TokenExpiresAt = time.Now().Add(-time.Minute).UTC().Format(time.RFC3339)
+	cfg.AIPlatform.Auth.TokenFile = filepath.Join(t.TempDir(), "ai_platform_token")
+	if err := config.Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := run(t, nil, "auth", "test", "--config", cfgPath, "--json")
+	if out["ok"] != true {
+		t.Fatalf("bad ai auth test: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if data["refreshed"] != true || data["token_valid"] != true || data["token_state"] != "valid" || data["provider"] != config.ProviderAIPlatform {
+		t.Fatalf("bad ai auth test data: %#v", data)
+	}
+	saved, err := config.Load(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.AIPlatform.Auth.Token != "fresh-ai-platform-token" {
+		t.Fatalf("token was not refreshed: %#v", saved.AIPlatform.Auth)
+	}
+}
+
 func TestInspectWithInjectedClient(t *testing.T) {
 	path := writePNG(t)
 	out := run(t, &fakeClient{}, "inspect", "--image", path, "--prompt", "x", "--json")
@@ -430,7 +547,7 @@ func TestInspectVerboseDiagnostics(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &out); err != nil {
 		t.Fatalf("invalid stdout json: %v out=%s stderr=%s", err, stdout, stderr)
 	}
-	for _, want := range []string{"sending /responses request", "responses response received", "wrote JSON envelope", "process_exit_code=0"} {
+	for _, want := range []string{"sending provider image request", "provider image response received", "wrote JSON envelope", "process_exit_code=0"} {
 		if !strings.Contains(stderr, want) {
 			t.Fatalf("stderr missing %q\nstdout=%s\nstderr=%s", want, stdout, stderr)
 		}

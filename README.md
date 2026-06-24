@@ -212,13 +212,14 @@ copilot:
     updated_at: ""
 
 inspect_image:
+  provider: github_copilot_plugin
   api:
     endpoint_kind: responses
     base_url: https://api.githubcopilot.com
     timeout_seconds: 90
     use_system_proxy: true
   defaults:
-    model: gpt-5.4
+    model: gpt-5.4-mini
     reasoning: medium
     output: text
   limits:
@@ -233,6 +234,21 @@ inspect_image:
     store_raw_image: false
     store_raw_response: false
     redact_tokens_in_logs: true
+
+ai_platform:
+  chat:
+    host: https://ai-platform.example.internal
+    uri: /v1/api/v1/chat/completions
+  ib2b:
+    host: https://dsp.example.internal
+    uri: /dsp/rest-sts/DSP_iB2B/iB2B_tokenTranslator_v2?_action=translate
+  auth:
+    username: ""
+    password: ""
+    usercase: ""
+    token_file: ~/.efp/tmp/ai_platform_token
+    trust_token_header: X-XXXX-E2E-Trust-Token
+    tracking_prefix: EFP
 ```
 
 Supported authentication modes:

@@ -10,7 +10,7 @@
 - `internal/httpclient`: REST client, pagination helpers, URL guarding, and HTTP error normalization.
 - `internal/output`: table, JSON, and YAML envelope rendering.
 - `internal/catalog`: command metadata used by `commands --json` and `schema <command> --json`.
-- `internal/inspectimage`: standalone image inspection CLI packages for Copilot auth, one-file image validation, `/responses` calls, and agent-facing command metadata. It does not use the Atlassian `internal/config` schema.
+- `internal/inspectimage`: standalone image inspection CLI packages for GitHub Copilot auth, AI Platform iB2B auth, one-file image validation, provider calls, and agent-facing command metadata. It does not use the Atlassian `internal/config` schema.
 - `internal/mobile/commands`: Cobra command tree for the BrowserStack mobile device-cloud controller.
 - `internal/browserstack`: BrowserStack App Automate control-plane REST client for apps, devices, capacity, projects, builds, sessions, and artifacts.
 - `internal/appium`: small W3C/Appium HTTP client for remote BrowserStack sessions.
@@ -32,5 +32,5 @@ Jenkins commands for auth test, server info, crumb discovery, jobs, builds, queu
 - Secrets must stay redacted in success, failure, verbose, and dry-run output.
 - Schema metadata must stay aligned with actual command flags.
 - Mock-server tests should cover REST methods, request paths, query parameters, and request bodies.
-- `inspect-image` must validate local image type and size before network egress and must never log tokens or base64 image data.
+- `inspect-image` must validate local image type and size before network egress and must never log tokens, passwords, trust-token headers, or base64 image data.
 - `mobile` must keep BrowserStack credentials, typed secrets, tunnel keys, screenshots, source XML, and videos out of stdout/stderr except as local artifact metadata.

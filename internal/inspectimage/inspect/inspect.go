@@ -51,7 +51,7 @@ func Run(ctx context.Context, cfg config.Config, client ResponsesClient, opts Op
 	img.Data = nil
 	return Result{
 		Tool:      "inspect_image",
-		Provider:  config.Provider,
+		Provider:  cfg.Provider,
 		Model:     model,
 		Reasoning: reasoning,
 		Image:     img,

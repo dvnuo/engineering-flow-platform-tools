@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 
-	"engineering-flow-platform-tools/internal/inspectimage/config"
 	"engineering-flow-platform-tools/internal/inspectimage/imagecheck"
 )
 
@@ -37,10 +36,10 @@ type ResponsesContent struct {
 }
 
 func BuildRequest(model, reasoning, prompt string, img imagecheck.ImageInfo) (ResponsesRequest, error) {
-	if !config.StringAllowed(model, config.AllowedModels) {
-		return ResponsesRequest{}, &APIError{Code: "model_not_allowed", Message: "Model is not allowed for inspect-image.", Hint: "Run inspect-image models --json and choose an allowed model.", Status: 400}
+	if reasoning == "" {
+		reasoning = "medium"
 	}
-	if !config.StringAllowed(reasoning, config.AllowedReasoning) {
+	if !stringAllowed(reasoning, []string{"low", "medium", "high", "xhigh"}) {
 		return ResponsesRequest{}, &APIError{Code: "reasoning_not_allowed", Message: "Reasoning effort is not allowed for inspect-image.", Hint: "Use one of: low, medium, high, xhigh.", Status: 400}
 	}
 	dataURL := "data:" + img.MIMEType + ";base64," + base64.StdEncoding.EncodeToString(img.Data)
@@ -58,6 +57,15 @@ func BuildRequest(model, reasoning, prompt string, img imagecheck.ImageInfo) (Re
 			},
 		}},
 	}, nil
+}
+
+func stringAllowed(v string, allowed []string) bool {
+	for _, item := range allowed {
+		if v == item {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Client) Responses(ctx context.Context, req ResponsesRequest) (map[string]any, error) {

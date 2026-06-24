@@ -14,6 +14,7 @@ type unifiedConfig struct {
 	Version      int                `json:"version" yaml:"version"`
 	Copilot      copilotConfig      `json:"copilot" yaml:"copilot"`
 	InspectImage inspectImageConfig `json:"inspect_image" yaml:"inspect_image"`
+	AIPlatform   AIPlatformConfig   `json:"ai_platform" yaml:"ai_platform"`
 }
 
 type copilotConfig struct {
@@ -22,6 +23,7 @@ type copilotConfig struct {
 }
 
 type inspectImageConfig struct {
+	Provider string         `json:"provider" yaml:"provider"`
 	API      APIConfig      `json:"api" yaml:"api"`
 	Defaults DefaultsConfig `json:"defaults" yaml:"defaults"`
 	Limits   LimitsConfig   `json:"limits" yaml:"limits"`
@@ -32,6 +34,12 @@ type copilotTokenFile struct {
 	CopilotToken          string `json:"copilot_token" yaml:"copilot_token"`
 	CopilotTokenExpiresAt string `json:"copilot_token_expires_at" yaml:"copilot_token_expires_at"`
 	UpdatedAt             string `json:"updated_at" yaml:"updated_at"`
+}
+
+type aiPlatformTokenFile struct {
+	Token          string `json:"token" yaml:"token"`
+	TokenExpiresAt string `json:"token_expires_at" yaml:"token_expires_at"`
+	UpdatedAt      string `json:"updated_at" yaml:"updated_at"`
 }
 
 func Load(path string) (Config, error) {
@@ -45,12 +53,15 @@ func Load(path string) (Config, error) {
 	_ = yaml.Unmarshal(b, &raw)
 	_, hasInspectImage := raw["inspect_image"]
 	_, hasCopilot := raw["copilot"]
-	if err := yaml.Unmarshal(b, &root); err == nil && (hasInspectImage || hasCopilot) {
+	_, hasAIPlatform := raw["ai_platform"]
+	if err := yaml.Unmarshal(b, &root); err == nil && (hasInspectImage || hasCopilot || hasAIPlatform) {
 		c = Default()
 		if root.Version != 0 {
 			c.Version = root.Version
 		}
-		if root.Copilot.Provider != "" {
+		if root.InspectImage.Provider != "" {
+			c.Provider = root.InspectImage.Provider
+		} else if root.Copilot.Provider != "" {
 			c.Provider = root.Copilot.Provider
 		}
 		c.API = root.InspectImage.API
@@ -58,8 +69,12 @@ func Load(path string) (Config, error) {
 		c.Limits = root.InspectImage.Limits
 		c.Privacy = root.InspectImage.Privacy
 		c.Auth = root.Copilot.Auth
+		c.AIPlatform = root.AIPlatform
 		c.FillDefaults()
 		if err := loadCopilotToken(&c); err != nil {
+			return c, err
+		}
+		if err := loadAIPlatformToken(&c); err != nil {
 			return c, err
 		}
 		return c, nil
@@ -68,6 +83,12 @@ func Load(path string) (Config, error) {
 		return c, err
 	}
 	c.FillDefaults()
+	if err := loadCopilotToken(&c); err != nil {
+		return c, err
+	}
+	if err := loadAIPlatformToken(&c); err != nil {
+		return c, err
+	}
 	return c, nil
 }
 
@@ -93,17 +114,25 @@ func Save(path string, c Config) error {
 	if err := saveCopilotToken(c); err != nil {
 		return err
 	}
+	if err := saveAIPlatformToken(c); err != nil {
+		return err
+	}
 	doc, root := loadYAMLDocument(path)
 	removeMappingKeys(root, "provider", "api", "defaults", "limits", "auth", "privacy")
 	auth := c.Auth
 	auth.CopilotToken = ""
+	aiPlatform := c.AIPlatform
+	aiPlatform.Auth.Token = ""
 	if err := setMappingValue(root, "version", c.Version); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "copilot", copilotConfig{Provider: c.Provider, Auth: auth}); err != nil {
+	if err := setMappingValue(root, "copilot", copilotConfig{Provider: ProviderGitHubCopilot, Auth: auth}); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "inspect_image", inspectImageConfig{API: c.API, Defaults: c.Defaults, Limits: c.Limits, Privacy: c.Privacy}); err != nil {
+	if err := setMappingValue(root, "inspect_image", inspectImageConfig{Provider: c.Provider, API: c.API, Defaults: c.Defaults, Limits: c.Limits, Privacy: c.Privacy}); err != nil {
+		return err
+	}
+	if err := setMappingValue(root, "ai_platform", aiPlatform); err != nil {
 		return err
 	}
 	b, err := yaml.Marshal(doc)
@@ -177,6 +206,69 @@ func saveCopilotToken(c Config) error {
 		return err
 	}
 	token := copilotTokenFile{CopilotToken: c.Auth.CopilotToken, CopilotTokenExpiresAt: c.Auth.CopilotTokenExpiresAt, UpdatedAt: c.Auth.UpdatedAt}
+	b, err := yaml.Marshal(token)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		return err
+	}
+	_ = os.Chmod(path, 0o600)
+	return nil
+}
+
+func loadAIPlatformToken(c *Config) error {
+	path, err := expandPath(c.AIPlatform.Auth.TokenFile)
+	if err != nil || path == "" {
+		return err
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	trimmed := strings.TrimSpace(string(b))
+	if trimmed == "" {
+		return nil
+	}
+	var doc yaml.Node
+	if err := yaml.Unmarshal(b, &doc); err != nil {
+		return err
+	}
+	if len(doc.Content) == 0 {
+		return nil
+	}
+	node := doc.Content[0]
+	if node.Kind == yaml.ScalarNode {
+		c.AIPlatform.Auth.Token = strings.TrimSpace(node.Value)
+		return nil
+	}
+	var token aiPlatformTokenFile
+	if err := node.Decode(&token); err != nil {
+		return err
+	}
+	c.AIPlatform.Auth.Token = token.Token
+	c.AIPlatform.Auth.TokenExpiresAt = token.TokenExpiresAt
+	return nil
+}
+
+func saveAIPlatformToken(c Config) error {
+	path, err := expandPath(c.AIPlatform.Auth.TokenFile)
+	if err != nil || path == "" {
+		return err
+	}
+	if c.AIPlatform.Auth.Token == "" && c.AIPlatform.Auth.TokenExpiresAt == "" {
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	token := aiPlatformTokenFile{Token: c.AIPlatform.Auth.Token, TokenExpiresAt: c.AIPlatform.Auth.TokenExpiresAt, UpdatedAt: c.AIPlatform.Auth.UpdatedAt}
 	b, err := yaml.Marshal(token)
 	if err != nil {
 		return err

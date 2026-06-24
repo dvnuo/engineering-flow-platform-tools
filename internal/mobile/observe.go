@@ -78,9 +78,11 @@ type LocateQuery struct {
 	AccessibilityID string
 	ParentText      string
 	NearbyText      string
+	WithinText      string
 	Visible         *bool
 	Enabled         *bool
 	Actionable      bool
+	Index           int
 	Limit           int
 }
 
@@ -412,7 +414,13 @@ func Locate(obs Observation, q LocateQuery) LocateResult {
 		scores = scores[:limit]
 	}
 	res := LocateResult{Matches: scores}
-	if len(scores) == 1 && scores[0].Score >= 80 {
+	if q.Index > 0 {
+		if q.Index <= len(scores) {
+			res.RecommendedRef = scores[q.Index-1].Candidate.Ref
+		}
+		return res
+	}
+	if len(scores) == 1 && scores[0].Score >= 50 {
 		res.RecommendedRef = scores[0].Candidate.Ref
 		return res
 	}
@@ -454,10 +462,10 @@ func scoreCandidate(c Candidate, q LocateQuery) (int, []string) {
 	}
 	if q.Name != "" {
 		if equalFold(c.Name, q.Name) || equalFold(c.AccessibilityID, q.Name) {
-			score += 55
+			score += 65
 			reasons = append(reasons, "exact name match")
 		} else if containsFold(c.Name, q.Name) || containsFold(c.Text, q.Name) {
-			score += 20
+			score += 30
 			reasons = append(reasons, "fuzzy name match")
 		} else {
 			return 0, nil
@@ -465,10 +473,10 @@ func scoreCandidate(c Candidate, q LocateQuery) (int, []string) {
 	}
 	if q.Text != "" {
 		if equalFold(c.Text, q.Text) {
-			score += 45
+			score += 55
 			reasons = append(reasons, "exact text match")
 		} else if containsFold(c.Text, q.Text) || containsFold(c.Name, q.Text) {
-			score += 18
+			score += 28
 			reasons = append(reasons, "fuzzy text match")
 		} else {
 			return 0, nil
@@ -476,7 +484,7 @@ func scoreCandidate(c Candidate, q LocateQuery) (int, []string) {
 	}
 	if q.ParentText != "" {
 		if containsFold(c.ParentHint, q.ParentText) {
-			score += 15
+			score += 25
 			reasons = append(reasons, "parent context")
 		} else {
 			return 0, nil
@@ -484,8 +492,16 @@ func scoreCandidate(c Candidate, q LocateQuery) (int, []string) {
 	}
 	if q.NearbyText != "" {
 		if nearbyContains(c.NearbyText, q.NearbyText) {
-			score += 15
+			score += 25
 			reasons = append(reasons, "nearby text")
+		} else {
+			return 0, nil
+		}
+	}
+	if q.WithinText != "" {
+		if containsFold(c.ParentHint, q.WithinText) || nearbyContains(c.NearbyText, q.WithinText) {
+			score += 30
+			reasons = append(reasons, "within text")
 		} else {
 			return 0, nil
 		}

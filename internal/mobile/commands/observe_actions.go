@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"engineering-flow-platform-tools/internal/appium"
 	"engineering-flow-platform-tools/internal/mobile"
@@ -46,6 +47,10 @@ func observeCmd(o *Opts) *cobra.Command {
 }
 
 func captureObservation(ctx context.Context, svc *services, st *mobile.RunState, limit int) (mobile.Observation, error) {
+	contextName := ""
+	if st.Metadata != nil {
+		contextName = st.Metadata["context"]
+	}
 	source, err := svc.Appium.GetSource(ctx, st.SessionID)
 	if err != nil {
 		markRunLostIfSessionGone(svc, st, err)
@@ -62,6 +67,7 @@ func captureObservation(ctx context.Context, svc *services, st *mobile.RunState,
 	if err != nil {
 		return mobile.Observation{}, err
 	}
+	obs.Context = contextName
 	dir := filepath.Join(svc.Store.ObservationDir(st.RunID), obs.ID)
 	obs.SourcePath = filepath.Join(dir, "source.xml")
 	obs.ScreenshotPath = filepath.Join(dir, "screenshot.png")
@@ -73,6 +79,13 @@ func captureObservation(ctx context.Context, svc *services, st *mobile.RunState,
 	if err := svc.Store.SaveRun(*st); err != nil {
 		return mobile.Observation{}, err
 	}
+	appendTimelineBestEffort(svc, st.RunID, "observe", "", obs.ID, st.Status, map[string]any{
+		"candidate_count":  len(obs.Candidates),
+		"total_candidates": obs.TotalCandidates,
+		"context":          obs.Context,
+		"source_hash":      obs.SourceHash,
+		"screenshot_hash":  obs.ScreenshotHash,
+	})
 	return mobile.LimitObservationCandidates(obs, limit), nil
 }
 
@@ -117,7 +130,9 @@ func locateCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&q.AccessibilityID, "accessibility-id", "", "")
 	c.Flags().StringVar(&q.ParentText, "parent-text", "", "")
 	c.Flags().StringVar(&q.NearbyText, "nearby-text", "", "")
+	c.Flags().StringVar(&q.WithinText, "within-text", "", "")
 	c.Flags().BoolVar(&q.Actionable, "actionable", false, "")
+	c.Flags().IntVar(&q.Index, "index", 0, "")
 	c.Flags().BoolVar(&visible, "visible", true, "")
 	c.Flags().BoolVar(&enabled, "enabled", true, "")
 	c.Flags().BoolVar(&useVisible, "require-visible", true, "")
@@ -128,38 +143,43 @@ func locateCmd(o *Opts) *cobra.Command {
 
 func tapCmd(o *Opts) *cobra.Command {
 	var runID, ref string
+	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "tap", RunE: func(cmd *cobra.Command, args []string) error {
-		return mutateRef(cmd, o, runID, ref, "tap", func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) error {
+		return mutateRef(cmd, o, runID, ref, "tap", actionOpts, func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) error {
 			return svc.Appium.Click(ctx, st.SessionID, element.ID)
 		})
 	}}
 	c.Flags().StringVar(&runID, "run-id", "", "")
 	c.Flags().StringVar(&ref, "ref", "", "")
+	bindActionOptions(c, &actionOpts, true)
 	return c
 }
 
 func clearCmd(o *Opts) *cobra.Command {
 	var runID, ref string
+	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "clear", RunE: func(cmd *cobra.Command, args []string) error {
-		return mutateRef(cmd, o, runID, ref, "clear", func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) error {
+		return mutateRef(cmd, o, runID, ref, "clear", actionOpts, func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) error {
 			return svc.Appium.Clear(ctx, st.SessionID, element.ID)
 		})
 	}}
 	c.Flags().StringVar(&runID, "run-id", "", "")
 	c.Flags().StringVar(&ref, "ref", "", "")
+	bindActionOptions(c, &actionOpts, true)
 	return c
 }
 
 func typeCmd(o *Opts) *cobra.Command {
 	var runID, ref, text, textEnv string
 	var textStdin bool
+	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "type", RunE: func(cmd *cobra.Command, args []string) error {
 		value, source, err := readTextValue(cmd, text, textEnv, textStdin)
 		if err != nil {
 			return print(cmd, o, output.Failure("invalid_args", err.Error(), "Use exactly one of --text, --text-env, or --text-stdin.", 400))
 		}
 		var typed int
-		err = mutateRefCore(cmd, o, runID, ref, "type", func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) (map[string]any, error) {
+		err = mutateRefCore(cmd, o, runID, ref, "type", actionOpts, func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) (map[string]any, error) {
 			typed = len(value)
 			return map[string]any{"text_source": source, "text_length": typed}, svc.Appium.SendKeys(ctx, st.SessionID, element.ID, value)
 		})
@@ -170,6 +190,7 @@ func typeCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&text, "text", "", "")
 	c.Flags().StringVar(&textEnv, "text-env", "", "")
 	c.Flags().BoolVar(&textStdin, "text-stdin", false, "")
+	bindActionOptions(c, &actionOpts, true)
 	return c
 }
 
@@ -205,6 +226,32 @@ func readTextValue(cmd *cobra.Command, text, textEnv string, textStdin bool) (st
 	}
 }
 
+type actionOptions struct {
+	PostObserve  bool
+	WaitChange   bool
+	WaitVisible  string
+	WaitGone     string
+	WaitTimeout  string
+	PollInterval string
+	RecoverStale bool
+}
+
+func defaultActionOptions() actionOptions {
+	return actionOptions{WaitTimeout: "10s", PollInterval: "500ms", RecoverStale: true}
+}
+
+func bindActionOptions(c *cobra.Command, opts *actionOptions, includeRecover bool) {
+	c.Flags().BoolVar(&opts.PostObserve, "post-observe", false, "")
+	c.Flags().BoolVar(&opts.WaitChange, "wait-change", false, "")
+	c.Flags().StringVar(&opts.WaitVisible, "wait-visible", "", "")
+	c.Flags().StringVar(&opts.WaitGone, "wait-gone", "", "")
+	c.Flags().StringVar(&opts.WaitTimeout, "wait-timeout", opts.WaitTimeout, "")
+	c.Flags().StringVar(&opts.PollInterval, "poll-interval", opts.PollInterval, "")
+	if includeRecover {
+		c.Flags().BoolVar(&opts.RecoverStale, "recover-stale", opts.RecoverStale, "")
+	}
+}
+
 type pointTargetOptions struct {
 	RunID    string
 	Ref      string
@@ -216,11 +263,12 @@ type pointTargetOptions struct {
 
 func tapPointCmd(o *Opts) *cobra.Command {
 	opts := pointTargetOptions{X: -1, Y: -1, XPercent: -1, YPercent: -1}
+	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "tap-point", RunE: func(cmd *cobra.Command, args []string) error {
 		if opts.RunID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, opts.RunID, "tap_point", func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, opts.RunID, "tap_point", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
 			target, viewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, opts)
 			if err != nil {
 				return nil, err
@@ -232,17 +280,19 @@ func tapPointCmd(o *Opts) *cobra.Command {
 		})
 	}}
 	bindPointTargetFlags(c, &opts, false)
+	bindActionOptions(c, &actionOpts, false)
 	return c
 }
 
 func longPressCmd(o *Opts) *cobra.Command {
 	opts := pointTargetOptions{X: -1, Y: -1, XPercent: -1, YPercent: -1}
 	var duration int
+	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "long-press", RunE: func(cmd *cobra.Command, args []string) error {
 		if opts.RunID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, opts.RunID, "long_press", func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, opts.RunID, "long_press", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
 			target, viewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, opts)
 			if err != nil {
 				return nil, err
@@ -255,16 +305,18 @@ func longPressCmd(o *Opts) *cobra.Command {
 	}}
 	bindPointTargetFlags(c, &opts, true)
 	c.Flags().IntVar(&duration, "duration-ms", 800, "")
+	bindActionOptions(c, &actionOpts, false)
 	return c
 }
 
 func doubleTapCmd(o *Opts) *cobra.Command {
 	opts := pointTargetOptions{X: -1, Y: -1, XPercent: -1, YPercent: -1}
+	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "double-tap", RunE: func(cmd *cobra.Command, args []string) error {
 		if opts.RunID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, opts.RunID, "double_tap", func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, opts.RunID, "double_tap", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
 			target, viewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, opts)
 			if err != nil {
 				return nil, err
@@ -276,6 +328,7 @@ func doubleTapCmd(o *Opts) *cobra.Command {
 		})
 	}}
 	bindPointTargetFlags(c, &opts, true)
+	bindActionOptions(c, &actionOpts, false)
 	return c
 }
 
@@ -296,11 +349,12 @@ type dragCommandOptions struct {
 
 func dragCmd(o *Opts) *cobra.Command {
 	opts := dragCommandOptions{FromX: -1, FromY: -1, ToX: -1, ToY: -1, FromXPercent: -1, FromYPercent: -1, ToXPercent: -1, ToYPercent: -1, DurationMS: 700}
+	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "drag", RunE: func(cmd *cobra.Command, args []string) error {
 		if opts.RunID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, opts.RunID, "drag", func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, opts.RunID, "drag", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
 			from, to, viewport, err := resolveDragTargets(ctx, svc, st, opts)
 			if err != nil {
 				return nil, err
@@ -323,6 +377,7 @@ func dragCmd(o *Opts) *cobra.Command {
 	c.Flags().Float64Var(&opts.ToXPercent, "to-x-percent", -1, "")
 	c.Flags().Float64Var(&opts.ToYPercent, "to-y-percent", -1, "")
 	c.Flags().IntVar(&opts.DurationMS, "duration-ms", 700, "")
+	bindActionOptions(c, &actionOpts, false)
 	return c
 }
 
@@ -405,13 +460,13 @@ func rectCenter(rect appium.Rect) gesturePoint {
 	}
 }
 
-func mutateRef(cmd *cobra.Command, o *Opts, runID, ref, action string, fn func(context.Context, *services, mobile.RunState, appium.RemoteElement) error) error {
-	return mutateRefCore(cmd, o, runID, ref, action, func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) (map[string]any, error) {
+func mutateRef(cmd *cobra.Command, o *Opts, runID, ref, action string, opts actionOptions, fn func(context.Context, *services, mobile.RunState, appium.RemoteElement) error) error {
+	return mutateRefCore(cmd, o, runID, ref, action, opts, func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) (map[string]any, error) {
 		return nil, fn(ctx, svc, st, element)
 	})
 }
 
-func mutateRefCore(cmd *cobra.Command, o *Opts, runID, ref, action string, fn func(context.Context, *services, mobile.RunState, appium.RemoteElement) (map[string]any, error)) error {
+func mutateRefCore(cmd *cobra.Command, o *Opts, runID, ref, action string, opts actionOptions, fn func(context.Context, *services, mobile.RunState, appium.RemoteElement) (map[string]any, error)) error {
 	if runID == "" || ref == "" {
 		return print(cmd, o, output.Failure("invalid_args", "--run-id and --ref are required", "Use a ref from the latest observation.", 400))
 	}
@@ -421,11 +476,12 @@ func mutateRefCore(cmd *cobra.Command, o *Opts, runID, ref, action string, fn fu
 	}
 	var data map[string]any
 	err = svc.Store.WithRunLock(runID, func() error {
-		st, obs, candidate, element, locator, err := resolveRefElement(cmd.Context(), svc, runID, ref)
+		st, obs, candidate, element, locator, resolvedRef, recoveredRef, err := resolveRefElementWithRecovery(cmd.Context(), svc, runID, ref, opts)
 		if err != nil {
 			markRunLostIfSessionGone(svc, &st, err)
 			return err
 		}
+		beforeHash := obs.SourceHash
 		extra, err := fn(cmd.Context(), svc, st, element)
 		if err != nil {
 			markRunLostIfSessionGone(svc, &st, err)
@@ -435,10 +491,14 @@ func mutateRefCore(cmd *cobra.Command, o *Opts, runID, ref, action string, fn fu
 		if err := svc.Store.SaveRun(st); err != nil {
 			return err
 		}
-		data = map[string]any{"action": action, "run_id": runID, "ref": ref, "observation_id": obs.ID, "candidate_id": candidate.CandidateID, "locator": locator, "observation_invalidated": true}
+		data = map[string]any{"action": action, "run_id": runID, "ref": resolvedRef, "requested_ref": ref, "observation_id": obs.ID, "candidate_id": candidate.CandidateID, "locator": locator, "observation_invalidated": true, "recovered_stale_ref": recoveredRef}
 		for k, v := range extra {
 			data[k] = v
 		}
+		if err := applyPostAction(cmd.Context(), svc, &st, beforeHash, opts, data); err != nil {
+			return err
+		}
+		appendTimelineBestEffort(svc, runID, "action", action, "", st.Status, data)
 		return nil
 	})
 	if err != nil {
@@ -484,9 +544,88 @@ func resolveRefElement(ctx context.Context, svc *services, runID, ref string) (m
 	return st, obs, candidate, appium.RemoteElement{}, last, mobile.RetryableError("element_not_found", "no generated locator matched the element", "Run mobile observe again or use locate with stable criteria.", "observe", 404)
 }
 
+func resolveRefElementWithRecovery(ctx context.Context, svc *services, runID, ref string, opts actionOptions) (mobile.RunState, mobile.Observation, mobile.Candidate, appium.RemoteElement, appium.Locator, string, bool, error) {
+	st, obs, candidate, element, locator, err := resolveRefElement(ctx, svc, runID, ref)
+	if err == nil || !opts.RecoverStale || !isMobileErrorCode(err, "stale_observation") {
+		return st, obs, candidate, element, locator, ref, false, err
+	}
+	oldObsID := mobile.RefObservationID(ref)
+	oldObs, loadErr := svc.Store.LoadObservation(runID, oldObsID)
+	if loadErr != nil {
+		return st, obs, candidate, element, locator, ref, false, err
+	}
+	oldCandidate, ok := mobile.CandidateByRef(oldObs, ref)
+	if !ok {
+		return st, obs, candidate, element, locator, ref, false, err
+	}
+	for _, q := range locateQueriesForStaleCandidate(oldCandidate) {
+		fresh, captureErr := captureObservation(ctx, svc, &st, 100)
+		if captureErr != nil {
+			return st, fresh, oldCandidate, appium.RemoteElement{}, locator, ref, false, captureErr
+		}
+		res := mobile.Locate(fresh, q)
+		recoveredRef := scrollToResolvedRef(res)
+		if recoveredRef == "" {
+			continue
+		}
+		st, obs, candidate, element, locator, resolveErr := resolveRefElement(ctx, svc, runID, recoveredRef)
+		if resolveErr == nil {
+			return st, obs, candidate, element, locator, recoveredRef, true, nil
+		}
+		err = resolveErr
+	}
+	return st, obs, candidate, element, locator, ref, false, err
+}
+
+func locateQueriesForStaleCandidate(c mobile.Candidate) []mobile.LocateQuery {
+	var queries []mobile.LocateQuery
+	if c.AccessibilityID != "" {
+		queries = append(queries, mobile.LocateQuery{AccessibilityID: c.AccessibilityID, Visible: boolPtr(true), Limit: 2})
+	}
+	if c.ResourceID != "" {
+		queries = append(queries, mobile.LocateQuery{ResourceID: c.ResourceID, Visible: boolPtr(true), Limit: 2})
+	}
+	if name := firstNonEmpty(c.Name, c.Text); name != "" {
+		queries = append(queries, mobile.LocateQuery{Name: name, Role: c.Role, Visible: boolPtr(true), Limit: 2})
+	}
+	if c.Text != "" {
+		queries = append(queries, mobile.LocateQuery{Text: c.Text, Role: c.Role, Visible: boolPtr(true), Limit: 2})
+	}
+	return queries
+}
+
+func boolPtr(v bool) *bool {
+	return &v
+}
+
+func isMobileErrorCode(err error, code string) bool {
+	if err == nil {
+		return false
+	}
+	var me *mobile.Error
+	return strings.TrimSpace(code) != "" && errorAsMobile(err, &me) && me.Code == code
+}
+
+func errorAsMobile(err error, target **mobile.Error) bool {
+	for err != nil {
+		if me, ok := err.(*mobile.Error); ok {
+			*target = me
+			return true
+		}
+		type unwrapper interface{ Unwrap() error }
+		u, ok := err.(unwrapper)
+		if !ok {
+			return false
+		}
+		err = u.Unwrap()
+	}
+	return false
+}
+
 type swipeCommandOptions struct {
 	RunID         string
 	Direction     string
+	ContainerRef  string
 	DurationMS    int
 	StartXPercent float64
 	StartYPercent float64
@@ -508,19 +647,23 @@ type gestureTarget struct {
 
 func scrollCmd(o *Opts) *cobra.Command {
 	opts := swipeCommandOptions{Direction: "down", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1}
+	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "scroll", RunE: func(cmd *cobra.Command, args []string) error {
-		return swipeLike(cmd, o, opts, "scroll")
+		return swipeLike(cmd, o, opts, "scroll", actionOpts)
 	}}
 	bindSwipeCommandFlags(c, &opts)
+	bindActionOptions(c, &actionOpts, false)
 	return c
 }
 
 func swipeCmd(o *Opts) *cobra.Command {
 	opts := swipeCommandOptions{Direction: "up", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1}
+	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "swipe", RunE: func(cmd *cobra.Command, args []string) error {
-		return swipeLike(cmd, o, opts, "swipe")
+		return swipeLike(cmd, o, opts, "swipe", actionOpts)
 	}}
 	bindSwipeCommandFlags(c, &opts)
+	bindActionOptions(c, &actionOpts, false)
 	return c
 }
 
@@ -559,20 +702,22 @@ func scrollToCmd(o *Opts) *cobra.Command {
 			if st.ControlOwner == "human" {
 				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
 			}
+			seenSources := map[string]int{}
 			for scrolls := 0; scrolls <= maxScrolls; scrolls++ {
 				obs, err := captureObservation(cmd.Context(), svc, &st, limit)
 				if err != nil {
 					return err
 				}
+				seenSources[obs.SourceHash]++
 				located := mobile.Locate(obs, q)
 				if ref := scrollToResolvedRef(located); ref != "" {
-					data = map[string]any{"found": true, "run_id": opts.RunID, "scrolls": scrolls, "recommended_ref": ref, "locate": located, "observation": obs}
+					data = map[string]any{"found": true, "run_id": opts.RunID, "scrolls": scrolls, "recommended_ref": ref, "locate": located, "observation": obs, "repeated_source": seenSources[obs.SourceHash] > 1}
 					return nil
 				}
 				if scrolls == maxScrolls {
 					return mobile.RetryableError("element_not_found", "target was not found after scrolling", "Try another direction, increase --max-scrolls, or broaden the locate query.", "observe", 404)
 				}
-				rect, err := svc.Appium.WindowRect(cmd.Context(), st.SessionID)
+				rect, err := gestureViewport(cmd.Context(), svc, &st, opts)
 				if err != nil {
 					markRunLostIfSessionGone(svc, &st, err)
 					return err
@@ -588,6 +733,9 @@ func scrollToCmd(o *Opts) *cobra.Command {
 				st.LatestObservationID = ""
 				if err := svc.Store.SaveRun(st); err != nil {
 					return err
+				}
+				if seenSources[obs.SourceHash] > 1 {
+					return mobile.RetryableError("element_not_found", "target was not found and the screen stopped changing", "Try another direction, a container ref, or a broader locate query.", "observe", 404)
 				}
 			}
 			return nil
@@ -606,7 +754,9 @@ func scrollToCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&q.AccessibilityID, "accessibility-id", "", "")
 	c.Flags().StringVar(&q.ParentText, "parent-text", "", "")
 	c.Flags().StringVar(&q.NearbyText, "nearby-text", "", "")
+	c.Flags().StringVar(&q.WithinText, "within-text", "", "")
 	c.Flags().BoolVar(&q.Actionable, "actionable", false, "")
+	c.Flags().IntVar(&q.Index, "index", 0, "")
 	c.Flags().BoolVar(&visible, "visible", true, "")
 	c.Flags().BoolVar(&enabled, "enabled", true, "")
 	c.Flags().BoolVar(&useVisible, "require-visible", true, "")
@@ -618,7 +768,8 @@ func scrollToCmd(o *Opts) *cobra.Command {
 func locateQueryHasCriteria(q mobile.LocateQuery) bool {
 	return strings.TrimSpace(q.Name) != "" || strings.TrimSpace(q.Text) != "" || strings.TrimSpace(q.Role) != "" ||
 		strings.TrimSpace(q.ResourceID) != "" || strings.TrimSpace(q.AccessibilityID) != "" ||
-		strings.TrimSpace(q.ParentText) != "" || strings.TrimSpace(q.NearbyText) != "" || q.Actionable
+		strings.TrimSpace(q.ParentText) != "" || strings.TrimSpace(q.NearbyText) != "" ||
+		strings.TrimSpace(q.WithinText) != "" || q.Actionable
 }
 
 func scrollToResolvedRef(res mobile.LocateResult) string {
@@ -634,6 +785,7 @@ func scrollToResolvedRef(res mobile.LocateResult) string {
 func bindSwipeCommandFlags(c *cobra.Command, opts *swipeCommandOptions) {
 	c.Flags().StringVar(&opts.RunID, "run-id", "", "")
 	c.Flags().StringVar(&opts.Direction, "direction", opts.Direction, "")
+	c.Flags().StringVar(&opts.ContainerRef, "container-ref", "", "")
 	c.Flags().IntVar(&opts.DurationMS, "duration-ms", opts.DurationMS, "")
 	c.Flags().Float64Var(&opts.StartXPercent, "start-x-percent", -1, "")
 	c.Flags().Float64Var(&opts.StartYPercent, "start-y-percent", -1, "")
@@ -641,12 +793,12 @@ func bindSwipeCommandFlags(c *cobra.Command, opts *swipeCommandOptions) {
 	c.Flags().Float64Var(&opts.EndYPercent, "end-y-percent", -1, "")
 }
 
-func swipeLike(cmd *cobra.Command, o *Opts, opts swipeCommandOptions, action string) error {
+func swipeLike(cmd *cobra.Command, o *Opts, opts swipeCommandOptions, action string, actionOpts actionOptions) error {
 	if opts.RunID == "" {
 		return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 	}
-	err := runGesture(cmd, o, opts.RunID, action, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
-		rect, err := svc.Appium.WindowRect(ctx, st.SessionID)
+	err := runGesture(cmd, o, opts.RunID, action, actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		rect, err := gestureViewport(ctx, svc, st, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -663,7 +815,18 @@ func swipeLike(cmd *cobra.Command, o *Opts, opts swipeCommandOptions, action str
 	return err
 }
 
-func runGesture(cmd *cobra.Command, o *Opts, runID, action string, fn func(context.Context, *services, *mobile.RunState) (map[string]any, error)) error {
+func gestureViewport(ctx context.Context, svc *services, st *mobile.RunState, opts swipeCommandOptions) (appium.Rect, error) {
+	if opts.ContainerRef == "" {
+		return svc.Appium.WindowRect(ctx, st.SessionID)
+	}
+	_, _, _, element, _, _, _, err := resolveRefElementWithRecovery(ctx, svc, st.RunID, opts.ContainerRef, defaultActionOptions())
+	if err != nil {
+		return appium.Rect{}, err
+	}
+	return svc.Appium.ElementRect(ctx, st.SessionID, element.ID)
+}
+
+func runGesture(cmd *cobra.Command, o *Opts, runID, action string, opts actionOptions, fn func(context.Context, *services, *mobile.RunState) (map[string]any, error)) error {
 	svc, err := newServices(o, true)
 	if err != nil {
 		return renderErr(cmd, o, err)
@@ -676,6 +839,14 @@ func runGesture(cmd *cobra.Command, o *Opts, runID, action string, fn func(conte
 		}
 		if st.ControlOwner == "human" {
 			return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
+		}
+		beforeHash := latestObservationHash(svc, st)
+		if beforeHash == "" && opts.WaitChange {
+			obs, err := captureObservation(cmd.Context(), svc, &st, 100)
+			if err != nil {
+				return err
+			}
+			beforeHash = obs.SourceHash
 		}
 		extra, err := fn(cmd.Context(), svc, &st)
 		if err != nil {
@@ -690,12 +861,108 @@ func runGesture(cmd *cobra.Command, o *Opts, runID, action string, fn func(conte
 		for k, v := range extra {
 			data[k] = v
 		}
+		if err := applyPostAction(cmd.Context(), svc, &st, beforeHash, opts, data); err != nil {
+			return err
+		}
+		appendTimelineBestEffort(svc, runID, "action", action, "", st.Status, data)
 		return nil
 	})
 	if err != nil {
 		return renderErr(cmd, o, err)
 	}
 	return print(cmd, o, output.Success("", data))
+}
+
+func latestObservationHash(svc *services, st mobile.RunState) string {
+	if st.LatestObservationID == "" {
+		return ""
+	}
+	obs, err := svc.Store.LoadObservation(st.RunID, st.LatestObservationID)
+	if err != nil {
+		return ""
+	}
+	return obs.SourceHash
+}
+
+func applyPostAction(ctx context.Context, svc *services, st *mobile.RunState, beforeHash string, opts actionOptions, data map[string]any) error {
+	needsObserve := opts.PostObserve || opts.WaitChange || opts.WaitVisible != "" || opts.WaitGone != ""
+	if !needsObserve {
+		return nil
+	}
+	timeout, err := time.ParseDuration(opts.WaitTimeout)
+	if err != nil || timeout <= 0 {
+		return mobile.NewError("invalid_args", "invalid --wait-timeout", "Use a duration such as 10s.", 400)
+	}
+	poll, err := time.ParseDuration(opts.PollInterval)
+	if err != nil || poll <= 0 {
+		return mobile.NewError("invalid_args", "invalid --poll-interval", "Use a duration such as 500ms.", 400)
+	}
+	waitCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	attempts := 0
+	for {
+		attempts++
+		obs, err := captureObservation(waitCtx, svc, st, 100)
+		if err != nil {
+			return err
+		}
+		changed := beforeHash != "" && obs.SourceHash != beforeHash
+		visibleOK := opts.WaitVisible == "" || observationContainsVisibleText(obs, opts.WaitVisible)
+		goneOK := opts.WaitGone == "" || !observationContainsVisibleText(obs, opts.WaitGone)
+		changeOK := !opts.WaitChange || changed
+		data["post_observe"] = obs
+		data["post_observe_attempts"] = attempts
+		data["wait_change_satisfied"] = changeOK
+		data["wait_visible_satisfied"] = visibleOK
+		data["wait_gone_satisfied"] = goneOK
+		if changeOK && visibleOK && goneOK {
+			data["observation_invalidated"] = false
+			return nil
+		}
+		if opts.PostObserve && !opts.WaitChange && opts.WaitVisible == "" && opts.WaitGone == "" {
+			data["observation_invalidated"] = false
+			return nil
+		}
+		select {
+		case <-waitCtx.Done():
+			return mobile.RetryableError("post_action_wait_timeout", "post-action condition was not satisfied before timeout", "Inspect post_observe and retry with a broader wait condition or longer timeout.", "observe", 408)
+		case <-time.After(poll):
+		}
+	}
+}
+
+func observationContainsVisibleText(obs mobile.Observation, text string) bool {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return false
+	}
+	for _, c := range obs.Candidates {
+		if !c.Visible {
+			continue
+		}
+		if containsTextFold(c.Name, text) || containsTextFold(c.Text, text) || containsTextFold(c.AccessibilityID, text) || containsTextFold(c.ResourceID, text) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsTextFold(value, needle string) bool {
+	return strings.Contains(strings.ToLower(value), strings.ToLower(strings.TrimSpace(needle)))
+}
+
+func appendTimelineBestEffort(svc *services, runID, eventType, action, observationID string, status mobile.RunStatus, data map[string]any) {
+	if svc == nil || svc.Store == nil || runID == "" {
+		return
+	}
+	_ = svc.Store.AppendTimeline(mobile.TimelineEvent{
+		RunID:         runID,
+		Type:          eventType,
+		Action:        action,
+		ObservationID: observationID,
+		Status:        status,
+		Data:          data,
+	})
 }
 
 func swipePointsForViewport(rect appium.Rect, opts swipeCommandOptions) (gesturePoint, gesturePoint, error) {
@@ -806,41 +1073,89 @@ func normalizeDuration(value, fallback int) int {
 
 func backCmd(o *Opts) *cobra.Command {
 	var runID string
+	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "back", RunE: func(cmd *cobra.Command, args []string) error {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		svc, err := newServices(o, true)
-		if err != nil {
-			return renderErr(cmd, o, err)
-		}
-		err = svc.Store.WithRunLock(runID, func() error {
-			st, err := svc.Store.LoadRun(runID)
-			if err != nil {
-				return err
-			}
-			if st.ControlOwner == "human" {
-				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
-			}
-			if err := svc.Appium.Back(cmd.Context(), st.SessionID); err != nil {
-				markRunLostIfSessionGone(svc, &st, err)
-				return err
-			}
-			st.LatestObservationID = ""
-			return svc.Store.SaveRun(st)
+		return runGesture(cmd, o, runID, "back", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			return nil, svc.Appium.Back(ctx, st.SessionID)
 		})
-		if err != nil {
-			return renderErr(cmd, o, err)
-		}
-		return print(cmd, o, output.Success("", map[string]any{"action": "back", "observation_invalidated": true}))
 	}}
 	c.Flags().StringVar(&runID, "run-id", "", "")
+	bindActionOptions(c, &actionOpts, false)
+	return c
+}
+
+func keyboardCmd(o *Opts) *cobra.Command {
+	c := &cobra.Command{Use: "keyboard"}
+	var runID string
+	actionOpts := defaultActionOptions()
+	hide := &cobra.Command{Use: "hide", RunE: func(cmd *cobra.Command, args []string) error {
+		if runID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
+		}
+		return runGesture(cmd, o, runID, "keyboard_hide", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			return nil, svc.Appium.HideKeyboard(ctx, st.SessionID)
+		})
+	}}
+	hide.Flags().StringVar(&runID, "run-id", "", "")
+	bindActionOptions(hide, &actionOpts, false)
+
+	var keyRunID string
+	var keycode int
+	keyOpts := defaultActionOptions()
+	key := &cobra.Command{Use: "keycode", RunE: func(cmd *cobra.Command, args []string) error {
+		if keyRunID == "" || keycode <= 0 {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id and positive --keycode are required", "Use Android keycodes such as 66 for enter/search.", 400))
+		}
+		return runGesture(cmd, o, keyRunID, "keyboard_keycode", keyOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			if !strings.EqualFold(st.Platform, "android") {
+				return nil, mobile.NewError("unsupported_platform", "keycode is only supported for Android sessions", "Use native controls or context-specific input on iOS.", 400)
+			}
+			return map[string]any{"keycode": keycode}, svc.Appium.PressKeyCode(ctx, st.SessionID, keycode)
+		})
+	}}
+	key.Flags().StringVar(&keyRunID, "run-id", "", "")
+	key.Flags().IntVar(&keycode, "keycode", 0, "")
+	bindActionOptions(key, &keyOpts, false)
+
+	var enterRunID string
+	enterOpts := defaultActionOptions()
+	enter := &cobra.Command{Use: "enter", RunE: func(cmd *cobra.Command, args []string) error {
+		if enterRunID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
+		}
+		return runGesture(cmd, o, enterRunID, "keyboard_enter", enterOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			if !strings.EqualFold(st.Platform, "android") {
+				return nil, mobile.NewError("unsupported_platform", "keyboard enter is only supported for Android sessions", "Use native controls or context-specific input on iOS.", 400)
+			}
+			return map[string]any{"keycode": 66}, svc.Appium.PressKeyCode(ctx, st.SessionID, 66)
+		})
+	}}
+	enter.Flags().StringVar(&enterRunID, "run-id", "", "")
+	bindActionOptions(enter, &enterOpts, false)
+	c.AddCommand(hide, key, enter)
 	return c
 }
 
 func contextCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "context"}
 	var runID string
+	current := &cobra.Command{Use: "current", RunE: func(cmd *cobra.Command, args []string) error {
+		svc, st, err := servicesAndRun(o, runID, true)
+		if err != nil {
+			return renderErr(cmd, o, err)
+		}
+		name, err := svc.Appium.CurrentContext(cmd.Context(), st.SessionID)
+		if err != nil {
+			markRunLostIfSessionGone(svc, &st, err)
+			return renderErr(cmd, o, err)
+		}
+		return print(cmd, o, output.Success("", map[string]any{"context": name, "type": contextType(name)}))
+	}}
+	current.Flags().StringVar(&runID, "run-id", "", "")
+
 	list := &cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
 		svc, st, err := servicesAndRun(o, runID, true)
 		if err != nil {
@@ -851,7 +1166,7 @@ func contextCmd(o *Opts) *cobra.Command {
 			markRunLostIfSessionGone(svc, &st, err)
 			return renderErr(cmd, o, err)
 		}
-		return print(cmd, o, output.Success("", map[string]any{"contexts": contexts}))
+		return print(cmd, o, output.Success("", map[string]any{"contexts": contexts, "classified": classifyContexts(contexts)}))
 	}}
 	list.Flags().StringVar(&runID, "run-id", "", "")
 	var name string
@@ -876,7 +1191,16 @@ func contextCmd(o *Opts) *cobra.Command {
 				return err
 			}
 			st.LatestObservationID = ""
-			return svc.Store.SaveRun(st)
+			if st.Metadata == nil {
+				st.Metadata = map[string]string{}
+			}
+			st.Metadata["context"] = name
+			st.Metadata["context_type"] = contextType(name)
+			if err := svc.Store.SaveRun(st); err != nil {
+				return err
+			}
+			appendTimelineBestEffort(svc, runID, "action", "context_switch", "", st.Status, map[string]any{"context": name, "type": contextType(name), "observation_invalidated": true})
+			return nil
 		})
 		if err != nil {
 			return renderErr(cmd, o, err)
@@ -885,8 +1209,75 @@ func contextCmd(o *Opts) *cobra.Command {
 	}}
 	sw.Flags().StringVar(&runID, "run-id", "", "")
 	sw.Flags().StringVar(&name, "name", "", "")
-	c.AddCommand(list, sw)
+	var autoRunID string
+	auto := &cobra.Command{Use: "auto-webview", RunE: func(cmd *cobra.Command, args []string) error {
+		svc, _, err := servicesAndRun(o, autoRunID, true)
+		if err != nil {
+			return renderErr(cmd, o, err)
+		}
+		var selected string
+		err = svc.Store.WithRunLock(autoRunID, func() error {
+			st, err := svc.Store.LoadRun(autoRunID)
+			if err != nil {
+				return err
+			}
+			contexts, err := svc.Appium.Contexts(cmd.Context(), st.SessionID)
+			if err != nil {
+				markRunLostIfSessionGone(svc, &st, err)
+				return err
+			}
+			for _, candidate := range contexts {
+				if contextType(candidate) == "webview" {
+					selected = candidate
+					break
+				}
+			}
+			if selected == "" {
+				return mobile.RetryableError("webview_not_found", "no WebView context is currently available", "Wait for the embedded web content to load, then run context list again.", "observe", 404)
+			}
+			if err := svc.Appium.SwitchContext(cmd.Context(), st.SessionID, selected); err != nil {
+				markRunLostIfSessionGone(svc, &st, err)
+				return err
+			}
+			st.LatestObservationID = ""
+			if st.Metadata == nil {
+				st.Metadata = map[string]string{}
+			}
+			st.Metadata["context"] = selected
+			st.Metadata["context_type"] = contextType(selected)
+			if err := svc.Store.SaveRun(st); err != nil {
+				return err
+			}
+			appendTimelineBestEffort(svc, autoRunID, "action", "context_auto_webview", "", st.Status, map[string]any{"context": selected, "observation_invalidated": true})
+			return nil
+		})
+		if err != nil {
+			return renderErr(cmd, o, err)
+		}
+		return print(cmd, o, output.Success("", map[string]any{"context": selected, "type": "webview", "observation_invalidated": true}))
+	}}
+	auto.Flags().StringVar(&autoRunID, "run-id", "", "")
+	c.AddCommand(current, list, sw, auto)
 	return c
+}
+
+func classifyContexts(contexts []string) []map[string]string {
+	out := make([]map[string]string, 0, len(contexts))
+	for _, name := range contexts {
+		out = append(out, map[string]string{"name": name, "type": contextType(name)})
+	}
+	return out
+}
+
+func contextType(name string) string {
+	upper := strings.ToUpper(strings.TrimSpace(name))
+	if strings.HasPrefix(upper, "WEBVIEW") || strings.Contains(upper, "CHROMIUM") || strings.Contains(upper, "SAFARI") {
+		return "webview"
+	}
+	if strings.Contains(upper, "NATIVE") {
+		return "native"
+	}
+	return "unknown"
 }
 
 func servicesAndRun(o *Opts, runID string, auth bool) (*services, mobile.RunState, error) {

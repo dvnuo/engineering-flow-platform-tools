@@ -676,6 +676,145 @@ func TestScrollToFindsElementAfterViewportScroll(t *testing.T) {
 	}
 }
 
+func TestTapWaitChangeCapturesPostObservation(t *testing.T) {
+	var clicked int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/session/session-post/elements":
+			_, _ = w.Write([]byte(`{"value":[{"element-6066-11e4-a52e-4f735466cecf":"element-login"}]}`))
+		case "/session/session-post/element/element-login/click":
+			atomic.AddInt32(&clicked, 1)
+			_, _ = w.Write([]byte(`{"value":null}`))
+		case "/session/session-post/source":
+			_, _ = w.Write([]byte(`{"value":"<hierarchy><node class=\"android.widget.TextView\" text=\"Home\" bounds=\"[0,0][100,100]\" /></hierarchy>"}`))
+		case "/session/session-post/screenshot":
+			_, _ = w.Write([]byte(`{"value":"c2NyZWVu"}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	oldObs, err := mobile.BuildObservationStrict("run-post", "session-post", "obs-old", `<hierarchy><node class="android.widget.Button" text="Login" content-desc="Login" clickable="true" bounds="[0,0][100,100]" /></hierarchy>`, []byte("old"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveObservation("run-post", oldObs); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-post", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-post", Platform: "android", LatestObservationID: oldObs.ID, ObservationVersion: 1, StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "tap", "--config", path, "--run-id", "run-post", "--ref", "obs-old:e1", "--wait-change", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if data["wait_change_satisfied"] != true || data["post_observe"] == nil || data["observation_invalidated"] != false {
+		t.Fatalf("post action observation missing: %#v", data)
+	}
+	if atomic.LoadInt32(&clicked) != 1 {
+		t.Fatalf("expected one click")
+	}
+	events, err := store.LoadTimeline("run-post")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) == 0 {
+		t.Fatalf("expected timeline events")
+	}
+}
+
+func TestKeyboardKeycodePostsAndroidKeycode(t *testing.T) {
+	keycodes := make(chan float64, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/session/session-key/appium/device/press_keycode":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			keycodes <- body["keycode"].(float64)
+			_, _ = w.Write([]byte(`{"value":null}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-key", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-key", Platform: "android", StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "keyboard", "keycode", "--config", path, "--run-id", "run-key", "--keycode", "66", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	if got := <-keycodes; got != 66 {
+		t.Fatalf("keycode=%v", got)
+	}
+}
+
+func TestWorkflowRunDryRunRedactsText(t *testing.T) {
+	workflowPath := filepath.Join(t.TempDir(), "flow.yaml")
+	if err := os.WriteFile(workflowPath, []byte(`name: smoke
+steps:
+  - action: observe
+    run_id: run-1
+  - action: type
+    run_id: run-1
+    ref: obs-1:e2
+    text: super-secret
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "workflow", "run", "--file", workflowPath, "--dry-run", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	steps := data["steps"].([]any)
+	typed := steps[1].([]any)
+	for _, part := range typed {
+		if part == "super-secret" {
+			t.Fatalf("dry-run leaked text: %#v", typed)
+		}
+	}
+}
+
 func TestRunFinishInvalidStatusFailsBeforeServiceSetup(t *testing.T) {
 	out := runMobile(t, "run", "finish", "--run-id", "run-1", "--status", "done", "--json")
 	if out["ok"] != false {

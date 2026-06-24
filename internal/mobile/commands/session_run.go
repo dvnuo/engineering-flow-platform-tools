@@ -256,7 +256,7 @@ func sessionStopCmd(o *Opts) *cobra.Command {
 
 func runCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "run"}
-	c.AddCommand(runStartCmd(o), runStatusCmd(o), runRecoverCmd(o), runHandoffCmd(o), runResumeCmd(o), runFinishCmd(o))
+	c.AddCommand(runStartCmd(o), runStatusCmd(o), runRecoverCmd(o), runReportCmd(o), runHandoffCmd(o), runResumeCmd(o), runFinishCmd(o))
 	return c
 }
 
@@ -396,6 +396,16 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 		}
 		return fail(mobile.NewError("state_persist_failed", "failed to persist initial run state", "Check mobile.state_dir permissions and free disk space.", 500))
 	}
+	appendTimelineBestEffort(svc, runID, "run", "start", "", st.Status, map[string]any{
+		"phase":         "starting",
+		"build_name":    st.BuildName,
+		"session_name":  st.SessionName,
+		"network_mode":  st.Network.Mode,
+		"local_mode":    st.Network.LocalMode,
+		"device":        st.Device.Name,
+		"platform":      st.Platform,
+		"state_written": true,
+	})
 	startingPersisted = true
 	automation := "UiAutomator2"
 	if equalFold(opts.Platform, "ios") {
@@ -469,6 +479,15 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 	if err := svc.Store.SaveRun(st); err != nil {
 		return fail(mobile.NewError("state_persist_failed", "failed to persist running run state after session creation", "The remote session may be active; check mobile.state_dir and use run recover if needed.", 500))
 	}
+	appendTimelineBestEffort(svc, runID, "run", "running", "", st.Status, map[string]any{
+		"session_id":         st.SessionID,
+		"browserstack_id":    st.BrowserStackSessionID,
+		"build_id":           st.BuildID,
+		"recovered_session":  st.RecoveredSession,
+		"dashboard_url":      st.DashboardURL,
+		"state_promoted":     true,
+		"enrich_in_progress": true,
+	})
 	warnings := enrichRunStateBestEffort(svc, &st, session.ID, opts.Build, sessionCreateStarted, haveRemoteSession)
 	return print(cmd, o, output.Success("", map[string]any{
 		"run":                     st,
@@ -492,6 +511,11 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 func markRunFailedBestEffort(svc *services, st *mobile.RunState, err error) {
 	markRunTerminal(st, mobile.StatusFailed, "run start failed before a usable session was saved", err)
 	_ = svc.Store.SaveRun(*st)
+	appendTimelineBestEffort(svc, st.RunID, "run", "failed", "", st.Status, map[string]any{
+		"reason":             st.StatusReason,
+		"last_error_code":    st.LastErrorCode,
+		"last_error_message": st.LastErrorMessage,
+	})
 }
 
 func noteAppiumSessionIDBestEffort(svc *services, st *mobile.RunState, sessionID, message string) {
@@ -556,6 +580,11 @@ func settleStartingRunBestEffort(svc *services, runID string, fallback mobile.Ru
 	}
 	markRunTerminal(&current, status, reason, cause)
 	_ = svc.Store.SaveRun(current)
+	appendTimelineBestEffort(svc, current.RunID, "run", string(status), "", current.Status, map[string]any{
+		"reason":             current.StatusReason,
+		"last_error_code":    current.LastErrorCode,
+		"last_error_message": current.LastErrorMessage,
+	})
 }
 
 func mergeKnownRunState(dst *mobile.RunState, src mobile.RunState) {
@@ -1006,6 +1035,13 @@ func runRecover(cmd *cobra.Command, o *Opts, opts runRecoverOptions) error {
 	if err := svc.Store.SaveRun(st); err != nil {
 		return renderErr(cmd, o, err)
 	}
+	appendTimelineBestEffort(svc, st.RunID, "run", "recover", "", st.Status, map[string]any{
+		"session_id":       st.SessionID,
+		"build_id":         st.BuildID,
+		"remote_status":    remote.Status,
+		"network_mode":     st.Network.Mode,
+		"local_identifier": st.Network.LocalIdentifier,
+	})
 	return print(cmd, o, output.Success("", map[string]any{"run": st, "recovered": true, "remote_status": remote.Status}))
 }
 
@@ -1369,6 +1405,12 @@ func runFinishCmd(o *Opts) *cobra.Command {
 			if err := svc.Store.SaveRun(st); err != nil {
 				return err
 			}
+			appendTimelineBestEffort(svc, runID, "run", "finish", "", st.Status, map[string]any{
+				"status":         status,
+				"reason":         reason,
+				"collect":        collect,
+				"cleanup_errors": cleanup,
+			})
 			if result == nil {
 				result = map[string]any{}
 			}

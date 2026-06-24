@@ -19,10 +19,12 @@
 - Start with `mobile commands --json` and `mobile schema run.start --json`.
 - Recommended loop: `run start`, `observe`, `locate`, action, `observe`, assertion, `run finish`.
 - Never invent refs, selectors, XPath, resource IDs, or coordinates. Prefer refs returned by the latest `observe`; use coordinate actions only for explicit spatial instructions or measured viewport-relative gestures.
-- After `tap`, `tap-point`, `long-press`, `double-tap`, `drag`, `type`, `clear`, `scroll`, `scroll-to`, `swipe`, `back`, or `context switch`, old refs are stale. Run `observe` again.
+- After `tap`, `tap-point`, `long-press`, `double-tap`, `drag`, `type`, `clear`, `scroll`, `scroll-to`, `swipe`, `back`, `keyboard`, or `context switch`, old refs are stale unless the command returned a `post_observe`.
+- Use `--wait-change`, `--wait-visible`, or `--wait-gone` for actions that must prove the UI changed before the next step.
 - Use `--text-env` or `--text-stdin` for secrets. The CLI returns source type and length, not secret values.
 - Use `--network public` for public apps. Use `private-managed` only when BrowserStack devices must reach private/internal hosts.
 - `run handoff` gives control to the human and starts bounded keepalive; mutating actions return `control_locked` until `run resume`.
+- `workflow run` accepts only structured whitelisted steps, and `workflow record` creates a YAML skeleton from the local run timeline.
 
 ## AWS Auth
 

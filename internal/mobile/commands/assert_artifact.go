@@ -119,6 +119,7 @@ func runAssertion(cmd *cobra.Command, o *Opts, runID, ref, name, role string, fn
 	if ref != "" {
 		_, _, _, element, loc, err := resolveRefElement(cmd.Context(), svc, runID, ref)
 		if err != nil {
+			markRunLostIfSessionGone(svc, &st, err)
 			return renderErr(cmd, o, err)
 		}
 		elementID = element.ID
@@ -137,6 +138,7 @@ func runAssertion(cmd *cobra.Command, o *Opts, runID, ref, name, role string, fn
 		}
 		_, _, _, element, loc, err := resolveRefElement(cmd.Context(), svc, runID, res.RecommendedRef)
 		if err != nil {
+			markRunLostIfSessionGone(svc, &st, err)
 			return renderErr(cmd, o, err)
 		}
 		elementID = element.ID
@@ -145,9 +147,11 @@ func runAssertion(cmd *cobra.Command, o *Opts, runID, ref, name, role string, fn
 	}
 	ok, evidence, err := fn(cmd.Context(), svc, st, elementID)
 	if err != nil {
+		markRunLostIfSessionGone(svc, &st, err)
 		return renderErr(cmd, o, err)
 	}
 	data := map[string]any{"passed": ok, "run_id": runID, "ref": ref, "locator": locator, "evidence": evidence}
+	appendTimelineBestEffort(svc, runID, "assert", cmd.CalledAs(), "", st.Status, data)
 	if !ok {
 		env := output.Failure("assertion_failed", "mobile assertion failed", "Inspect evidence and observe the page again if needed.", 412)
 		env.Data = data
@@ -205,7 +209,9 @@ func waitCmd(o *Opts) *cobra.Command {
 				lastHash = latest.SourceHash
 			}
 			if same >= stableCount {
-				return print(cmd, o, output.Success("", map[string]any{"stable": true, "observation": latest, "stable_count": same}))
+				data := map[string]any{"stable": true, "observation": latest, "stable_count": same}
+				appendTimelineBestEffort(svc, runID, "wait", "stable", latest.ID, mobile.StatusRunning, data)
+				return print(cmd, o, output.Success("", data))
 			}
 			select {
 			case <-ctx.Done():

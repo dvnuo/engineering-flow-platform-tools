@@ -51,7 +51,7 @@ For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~
 
 ### Mobile
 
-`mobile` is a terminal-invoked BrowserStack App Automate real-device controller for agents. It uploads or resolves apps, lists and deterministically resolves devices, checks capacity, starts BrowserStack Local only for private-network sessions, creates remote Appium W3C sessions, observes native UI XML/screenshots into bounded element candidates, performs ref-based actions, supports human handoff/resume, and collects artifacts without printing large logs or binary data.
+`mobile` is a terminal-invoked BrowserStack App Automate real-device controller for agents. It uploads or resolves apps, lists and deterministically resolves devices, checks capacity, starts BrowserStack Local only for private-network sessions, creates remote Appium W3C sessions, observes native UI XML/screenshots into bounded element candidates, performs ref-based and viewport-relative actions with optional post-action waits, supports keyboard/context/workflow/report helpers, supports human handoff/resume, and collects artifacts without printing large logs or binary data.
 
 Examples:
 

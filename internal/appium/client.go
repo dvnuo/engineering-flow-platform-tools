@@ -249,6 +249,14 @@ func (c *Client) SendKeys(ctx context.Context, sessionID, elementID, text string
 	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/element/"+url.PathEscape(elementID)+"/value", map[string]any{"text": text}, nil)
 }
 
+func (c *Client) HideKeyboard(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/device/hide_keyboard", map[string]any{}, nil)
+}
+
+func (c *Client) PressKeyCode(ctx context.Context, sessionID string, keycode int) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/device/press_keycode", map[string]any{"keycode": keycode}, nil)
+}
+
 func (c *Client) PerformActions(ctx context.Context, sessionID string, actions ActionsRequest) error {
 	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/actions", actions, nil)
 }
@@ -261,6 +269,14 @@ func (c *Client) Contexts(ctx context.Context, sessionID string) ([]string, erro
 	var out valueResponse[[]string]
 	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/contexts", nil, &out); err != nil {
 		return nil, err
+	}
+	return out.Value, nil
+}
+
+func (c *Client) CurrentContext(ctx context.Context, sessionID string) (string, error) {
+	var out valueResponse[string]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/context", nil, &out); err != nil {
+		return "", err
 	}
 	return out.Value, nil
 }

@@ -1,6 +1,7 @@
 package mobile
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -90,6 +91,16 @@ type NetworkState struct {
 	TunnelID        string `json:"tunnel_id,omitempty"`
 }
 
+type TimelineEvent struct {
+	Time          time.Time      `json:"time"`
+	RunID         string         `json:"run_id"`
+	Type          string         `json:"type"`
+	Action        string         `json:"action,omitempty"`
+	ObservationID string         `json:"observation_id,omitempty"`
+	Status        RunStatus      `json:"status,omitempty"`
+	Data          map[string]any `json:"data,omitempty"`
+}
+
 type StateStore struct {
 	RootDir      string
 	ArtifactsDir string
@@ -127,6 +138,65 @@ func (s *StateStore) SaveRun(st RunState) error {
 		return err
 	}
 	return atomicWriteJSON(filepath.Join(dir, "state.json"), st, 0o600)
+}
+
+func (s *StateStore) TimelinePath(runID string) string {
+	return filepath.Join(s.RunDir(runID), "timeline.jsonl")
+}
+
+func (s *StateStore) AppendTimeline(event TimelineEvent) error {
+	if strings.TrimSpace(event.RunID) == "" {
+		return nil
+	}
+	if event.Time.IsZero() {
+		event.Time = time.Now().UTC()
+	}
+	dir := s.RunDir(event.RunID)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	b, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+	f, err := os.OpenFile(s.TimelinePath(event.RunID), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := f.Write(append(b, '\n')); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *StateStore) LoadTimeline(runID string) ([]TimelineEvent, error) {
+	path := s.TimelinePath(runID)
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer f.Close()
+	var events []TimelineEvent
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		var event TimelineEvent
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			return nil, NewError("state_error", "timeline contains malformed JSON", "Inspect "+path+" or start a new run.", 500)
+		}
+		events = append(events, event)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return events, nil
 }
 
 func (s *StateStore) LoadRun(runID string) (RunState, error) {

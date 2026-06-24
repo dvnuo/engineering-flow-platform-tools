@@ -202,6 +202,11 @@ visual:
 
 copilot:
   provider: github_copilot_plugin
+  api:
+    endpoint_kind: responses
+    base_url: https://api.githubcopilot.com
+    timeout_seconds: 90
+    use_system_proxy: true
   auth:
     method: device_code
     github_host: github.com
@@ -213,11 +218,6 @@ copilot:
 
 inspect_image:
   provider: github_copilot_plugin
-  api:
-    endpoint_kind: responses
-    base_url: https://api.githubcopilot.com
-    timeout_seconds: 90
-    use_system_proxy: true
   defaults:
     model: gpt-5.4-mini
     reasoning: medium

@@ -108,6 +108,54 @@ inspect_image:
 	}
 }
 
+func TestUnifiedConfigLoadsCopilotAPIFromRootNode(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	body := []byte(`
+version: 1
+copilot:
+  provider: github_copilot_plugin
+  api:
+    endpoint_kind: responses
+    base_url: https://copilot.example
+    timeout_seconds: 45
+    use_system_proxy: true
+  auth:
+    method: device_code
+inspect_image:
+  provider: github_copilot_plugin
+`)
+	if err := os.WriteFile(cfgPath, body, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.API.BaseURL != "https://copilot.example" || cfg.API.TimeoutSeconds != 45 {
+		t.Fatalf("bad copilot api load: %#v", cfg.API)
+	}
+	if err := Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var root map[string]any
+	if err := yaml.Unmarshal(b, &root); err != nil {
+		t.Fatal(err)
+	}
+	copilotNode := root["copilot"].(map[string]any)
+	if copilotNode["api"] == nil {
+		t.Fatalf("copilot api missing after save:\n%s", string(b))
+	}
+	inspectNode := root["inspect_image"].(map[string]any)
+	if _, ok := inspectNode["api"]; ok {
+		t.Fatalf("inspect_image api should not be saved in new layout:\n%s", string(b))
+	}
+}
+
 func TestUnifiedConfigReportsInvalidCopilotTokenFile(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.yaml")

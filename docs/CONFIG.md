@@ -28,6 +28,11 @@ jenkins:
 
 copilot:
   provider: github_copilot_plugin
+  api:
+    endpoint_kind: responses
+    base_url: https://api.githubcopilot.com
+    timeout_seconds: 90
+    use_system_proxy: true
   auth:
     method: device_code
     github_host: github.com
@@ -39,11 +44,6 @@ copilot:
 
 inspect_image:
   provider: github_copilot_plugin # github_copilot_plugin | ai_platform
-  api:
-    endpoint_kind: responses
-    base_url: https://api.githubcopilot.com
-    timeout_seconds: 90
-    use_system_proxy: true
   defaults:
     model: gpt-5.4-mini
     reasoning: medium
@@ -140,6 +140,8 @@ updated_at: ""
 - `ai_platform`: uses the enterprise AI Platform `/chat/completions` endpoint after exchanging an iB2B JWT.
 
 Model names are not locally restricted. `inspect_image.defaults.model` defaults to `gpt-5.4-mini`, and `--model <name>` is passed through to the selected provider.
+
+Provider-specific endpoint settings live at the root provider nodes. `copilot.api` configures the GitHub Copilot `/responses` endpoint, while `ai_platform.chat` and `ai_platform.ib2b` configure AI Platform.
 
 ## AI Platform Auth
 

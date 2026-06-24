@@ -19,12 +19,13 @@ type unifiedConfig struct {
 
 type copilotConfig struct {
 	Provider string     `json:"provider" yaml:"provider"`
+	API      *APIConfig `json:"api,omitempty" yaml:"api,omitempty"`
 	Auth     AuthConfig `json:"auth" yaml:"auth"`
 }
 
 type inspectImageConfig struct {
 	Provider string         `json:"provider" yaml:"provider"`
-	API      APIConfig      `json:"api" yaml:"api"`
+	API      *APIConfig     `json:"api,omitempty" yaml:"api,omitempty"`
 	Defaults DefaultsConfig `json:"defaults" yaml:"defaults"`
 	Limits   LimitsConfig   `json:"limits" yaml:"limits"`
 	Privacy  PrivacyConfig  `json:"privacy" yaml:"privacy"`
@@ -64,7 +65,11 @@ func Load(path string) (Config, error) {
 		} else if root.Copilot.Provider != "" {
 			c.Provider = root.Copilot.Provider
 		}
-		c.API = root.InspectImage.API
+		if root.Copilot.API != nil {
+			c.API = *root.Copilot.API
+		} else if root.InspectImage.API != nil {
+			c.API = *root.InspectImage.API
+		}
 		c.Defaults = root.InspectImage.Defaults
 		c.Limits = root.InspectImage.Limits
 		c.Privacy = root.InspectImage.Privacy
@@ -123,13 +128,14 @@ func Save(path string, c Config) error {
 	auth.CopilotToken = ""
 	aiPlatform := c.AIPlatform
 	aiPlatform.Auth.Token = ""
+	api := c.API
 	if err := setMappingValue(root, "version", c.Version); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "copilot", copilotConfig{Provider: ProviderGitHubCopilot, Auth: auth}); err != nil {
+	if err := setMappingValue(root, "copilot", copilotConfig{Provider: ProviderGitHubCopilot, API: &api, Auth: auth}); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "inspect_image", inspectImageConfig{Provider: c.Provider, API: c.API, Defaults: c.Defaults, Limits: c.Limits, Privacy: c.Privacy}); err != nil {
+	if err := setMappingValue(root, "inspect_image", inspectImageConfig{Provider: c.Provider, Defaults: c.Defaults, Limits: c.Limits, Privacy: c.Privacy}); err != nil {
 		return err
 	}
 	if err := setMappingValue(root, "ai_platform", aiPlatform); err != nil {

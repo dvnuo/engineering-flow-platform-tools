@@ -257,6 +257,45 @@ func (c *Client) PressKeyCode(ctx context.Context, sessionID string, keycode int
 	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/device/press_keycode", map[string]any{"keycode": keycode}, nil)
 }
 
+func (c *Client) LaunchApp(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/app/launch", map[string]any{}, nil)
+}
+
+func (c *Client) CloseApp(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/app/close", map[string]any{}, nil)
+}
+
+func (c *Client) ResetApp(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/app/reset", map[string]any{}, nil)
+}
+
+func (c *Client) ActivateApp(ctx context.Context, sessionID, appID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/device/activate_app", map[string]any{"appId": appID, "bundleId": appID}, nil)
+}
+
+func (c *Client) TerminateApp(ctx context.Context, sessionID, appID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/device/terminate_app", map[string]any{"appId": appID, "bundleId": appID}, nil)
+}
+
+func (c *Client) DeepLink(ctx context.Context, sessionID, link, packageName string) error {
+	body := map[string]any{"url": link}
+	if packageName != "" {
+		body["package"] = packageName
+		body["appId"] = packageName
+		bundleID := packageName
+		body["bundleId"] = bundleID
+	}
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/device/deep_link", body, nil)
+}
+
+func (c *Client) AcceptAlert(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/alert/accept", map[string]any{}, nil)
+}
+
+func (c *Client) DismissAlert(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/alert/dismiss", map[string]any{}, nil)
+}
+
 func (c *Client) PerformActions(ctx context.Context, sessionID string, actions ActionsRequest) error {
 	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/actions", actions, nil)
 }

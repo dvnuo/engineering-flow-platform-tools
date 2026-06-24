@@ -666,7 +666,7 @@ browser network export --session default --out result/network.har-lite.json --fo
 - mobile auth test
 
 ### BrowserStack Control Plane
-- mobile app upload/list/get/resolve/delete
+- mobile app upload/list/get/resolve/delete/launch/close/reset/activate/terminate/deep-link
 - mobile device list/resolve/usage
 - mobile capacity get/wait
 - mobile tunnel start/ensure/status/stop/cleanup-orphans
@@ -680,10 +680,13 @@ browser network export --session default --out result/network.har-lite.json --fo
 - mobile locate
 - mobile tap/tap-point/long-press/double-tap/drag/type/clear/scroll/scroll-to/swipe/back
 - mobile keyboard hide/keycode/enter
+- mobile permissions accept/deny
 - mobile context current/list/switch/auto-webview
-- mobile assert exists/visible/enabled/selected/text
-- mobile wait stable
+- mobile assert exists/not-exists/visible/not-visible/enabled/selected/text/count
+- mobile wait stable/visible/gone/text/enabled
+- mobile inspector config/attach/export/locator import
 - mobile workflow run/record
+- mobile test run
 - mobile artifact list/collect/download
 
 Agent actions use observation refs such as `obs-...:e17`. Re-observe after every mutating command. Public runs do not start BrowserStack Local or set the Appium local capability. Private managed runs start the configured `BrowserStackLocal` binary and use the same local identifier for the tunnel and BrowserStack session capabilities.

@@ -25,6 +25,8 @@
 - Use `--network public` for public apps. Use `private-managed` only when BrowserStack devices must reach private/internal hosts.
 - `run handoff` gives control to the human and starts bounded keepalive; mutating actions return `control_locked` until `run resume`.
 - `workflow run` accepts only structured whitelisted steps, and `workflow record` creates a YAML skeleton from the local run timeline.
+- `test run` executes structured suites with tags, variables, JSON/JUnit reports, and failure evidence directories.
+- `inspector config/attach/export` bridges live CLI runs with Appium Inspector for manual locator debugging.
 
 ## AWS Auth
 

@@ -50,7 +50,9 @@ mobile keyboard enter --run-id run-... --json
 
 ```bash
 mobile wait stable --run-id run-... --timeout 30s --poll-interval 1s --json
+mobile wait visible --run-id run-... --text Dashboard --timeout 20s --json
 mobile assert visible --run-id run-... --name Dashboard --json
+mobile assert count --run-id run-... --role button --expected 3 --json
 ```
 
 6. Handoff to a human when manual inspection is needed.
@@ -65,6 +67,7 @@ mobile run resume --run-id run-... --json
 ```bash
 mobile artifact collect --run-id run-... --json
 mobile run report --run-id run-... --out report.json --json
+mobile inspector export --run-id run-... --out inspector-evidence --json
 mobile run finish --run-id run-... --status passed --collect-artifacts --json
 ```
 
@@ -73,3 +76,5 @@ Skill authors should branch on `error.code`, not message text. Recover from `sta
 Prefer ref-based actions when an element is observable. Use `tap-point`, coordinate/percent `long-press`, coordinate/percent `double-tap`, or coordinate/percent `drag` only when the user intent is explicitly spatial or the UI element is not represented in the observation tree. `scroll` and `swipe` are viewport-relative, and `scroll-to` should be preferred when searching for a semantic target across a scrollable screen.
 
 Use `workflow record` to turn a run timeline into an editable YAML skeleton, and `workflow run` to replay whitelisted structured steps. Workflows do not execute arbitrary shell or raw CLI strings.
+
+Use `test run` for CI-facing suites with case filters, tags, JSON/JUnit output, and failure evidence. Use `inspector config` or `inspector attach` to hand a live BrowserStack session to Appium Inspector without recreating capabilities by hand.

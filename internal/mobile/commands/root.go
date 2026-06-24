@@ -49,7 +49,7 @@ func NewRoot() *cobra.Command {
 		projectCmd(o), buildCmd(o), sessionCmd(o), runCmd(o),
 		observeCmd(o), locateCmd(o), tapCmd(o), tapPointCmd(o), typeCmd(o), clearCmd(o),
 		scrollCmd(o), scrollToCmd(o), swipeCmd(o), longPressCmd(o), doubleTapCmd(o), dragCmd(o), backCmd(o), keyboardCmd(o), contextCmd(o),
-		assertCmd(o), waitCmd(o), workflowCmd(o), artifactCmd(o), keepaliveCmd(o),
+		permissionsCmd(o), assertCmd(o), waitCmd(o), inspectorCmd(o), workflowCmd(o), testCmd(o), artifactCmd(o), keepaliveCmd(o),
 		commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o),
 	)
 	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
@@ -71,13 +71,15 @@ It is not an MCP server, not BrowserStack AI, and not an arbitrary Appium pass-t
 		},
 		Instructions: "copy cmd/mobile/mobile-cli.instructions.md to ~/.copilot/instructions/mobile-cli.instructions.md.",
 		Groups: map[string]string{
-			"app":      "Manage BrowserStack App Automate app uploads and app references.",
-			"device":   "List and deterministically resolve BrowserStack real devices.",
-			"capacity": "Inspect and wait for BrowserStack parallel and queue capacity.",
-			"tunnel":   "Manage BrowserStack Local tunnels for private network sessions.",
-			"run":      "Orchestrate full mobile runs, human handoff, resume, and cleanup.",
-			"session":  "Start, inspect, mark, and stop remote Appium/BrowserStack sessions.",
-			"artifact": "Collect local and BrowserStack artifacts without printing large content.",
+			"app":       "Manage BrowserStack App Automate app uploads and app references.",
+			"device":    "List and deterministically resolve BrowserStack real devices.",
+			"capacity":  "Inspect and wait for BrowserStack parallel and queue capacity.",
+			"tunnel":    "Manage BrowserStack Local tunnels for private network sessions.",
+			"run":       "Orchestrate full mobile runs, human handoff, resume, and cleanup.",
+			"session":   "Start, inspect, mark, and stop remote Appium/BrowserStack sessions.",
+			"inspector": "Generate Appium Inspector config, attach hints, and observation exports.",
+			"test":      "Run structured mobile automation suites with reports and evidence.",
+			"artifact":  "Collect local and BrowserStack artifacts without printing large content.",
 		},
 	})
 	return c

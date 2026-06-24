@@ -20,32 +20,40 @@ type workflowSpec struct {
 }
 
 type workflowStep struct {
-	Action       string  `json:"action" yaml:"action"`
-	RunID        string  `json:"run_id,omitempty" yaml:"run_id,omitempty"`
-	Ref          string  `json:"ref,omitempty" yaml:"ref,omitempty"`
-	Name         string  `json:"name,omitempty" yaml:"name,omitempty"`
-	Text         string  `json:"text,omitempty" yaml:"text,omitempty"`
-	TextEnv      string  `json:"text_env,omitempty" yaml:"text_env,omitempty"`
-	Role         string  `json:"role,omitempty" yaml:"role,omitempty"`
-	ResourceID   string  `json:"resource_id,omitempty" yaml:"resource_id,omitempty"`
-	Direction    string  `json:"direction,omitempty" yaml:"direction,omitempty"`
-	Network      string  `json:"network,omitempty" yaml:"network,omitempty"`
-	App          string  `json:"app,omitempty" yaml:"app,omitempty"`
-	File         string  `json:"file,omitempty" yaml:"file,omitempty"`
-	Platform     string  `json:"platform,omitempty" yaml:"platform,omitempty"`
-	Device       string  `json:"device,omitempty" yaml:"device,omitempty"`
-	Build        string  `json:"build,omitempty" yaml:"build,omitempty"`
-	SessionName  string  `json:"session_name,omitempty" yaml:"session_name,omitempty"`
-	Timeout      string  `json:"timeout,omitempty" yaml:"timeout,omitempty"`
-	PollInterval string  `json:"poll_interval,omitempty" yaml:"poll_interval,omitempty"`
-	Status       string  `json:"status,omitempty" yaml:"status,omitempty"`
-	Contains     string  `json:"contains,omitempty" yaml:"contains,omitempty"`
-	Equals       string  `json:"equals,omitempty" yaml:"equals,omitempty"`
-	MaxScrolls   int     `json:"max_scrolls,omitempty" yaml:"max_scrolls,omitempty"`
-	Keycode      int     `json:"keycode,omitempty" yaml:"keycode,omitempty"`
-	XPercent     float64 `json:"x_percent,omitempty" yaml:"x_percent,omitempty"`
-	YPercent     float64 `json:"y_percent,omitempty" yaml:"y_percent,omitempty"`
-	DurationMS   int     `json:"duration_ms,omitempty" yaml:"duration_ms,omitempty"`
+	Action          string  `json:"action" yaml:"action"`
+	RunID           string  `json:"run_id,omitempty" yaml:"run_id,omitempty"`
+	Ref             string  `json:"ref,omitempty" yaml:"ref,omitempty"`
+	Name            string  `json:"name,omitempty" yaml:"name,omitempty"`
+	Text            string  `json:"text,omitempty" yaml:"text,omitempty"`
+	TextEnv         string  `json:"text_env,omitempty" yaml:"text_env,omitempty"`
+	Role            string  `json:"role,omitempty" yaml:"role,omitempty"`
+	ResourceID      string  `json:"resource_id,omitempty" yaml:"resource_id,omitempty"`
+	AccessibilityID string  `json:"accessibility_id,omitempty" yaml:"accessibility_id,omitempty"`
+	ParentText      string  `json:"parent_text,omitempty" yaml:"parent_text,omitempty"`
+	NearbyText      string  `json:"nearby_text,omitempty" yaml:"nearby_text,omitempty"`
+	WithinText      string  `json:"within_text,omitempty" yaml:"within_text,omitempty"`
+	Direction       string  `json:"direction,omitempty" yaml:"direction,omitempty"`
+	Network         string  `json:"network,omitempty" yaml:"network,omitempty"`
+	App             string  `json:"app,omitempty" yaml:"app,omitempty"`
+	AppID           string  `json:"app_id,omitempty" yaml:"app_id,omitempty"`
+	URL             string  `json:"url,omitempty" yaml:"url,omitempty"`
+	Package         string  `json:"package,omitempty" yaml:"package,omitempty"`
+	File            string  `json:"file,omitempty" yaml:"file,omitempty"`
+	Platform        string  `json:"platform,omitempty" yaml:"platform,omitempty"`
+	Device          string  `json:"device,omitempty" yaml:"device,omitempty"`
+	Build           string  `json:"build,omitempty" yaml:"build,omitempty"`
+	SessionName     string  `json:"session_name,omitempty" yaml:"session_name,omitempty"`
+	Timeout         string  `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	PollInterval    string  `json:"poll_interval,omitempty" yaml:"poll_interval,omitempty"`
+	Status          string  `json:"status,omitempty" yaml:"status,omitempty"`
+	Contains        string  `json:"contains,omitempty" yaml:"contains,omitempty"`
+	Equals          string  `json:"equals,omitempty" yaml:"equals,omitempty"`
+	Expected        int     `json:"expected,omitempty" yaml:"expected,omitempty"`
+	MaxScrolls      int     `json:"max_scrolls,omitempty" yaml:"max_scrolls,omitempty"`
+	Keycode         int     `json:"keycode,omitempty" yaml:"keycode,omitempty"`
+	XPercent        float64 `json:"x_percent,omitempty" yaml:"x_percent,omitempty"`
+	YPercent        float64 `json:"y_percent,omitempty" yaml:"y_percent,omitempty"`
+	DurationMS      int     `json:"duration_ms,omitempty" yaml:"duration_ms,omitempty"`
 }
 
 func workflowCmd(o *Opts) *cobra.Command {
@@ -205,6 +213,10 @@ func workflowStepArgs(step workflowStep) ([]string, error) {
 		args = appendFlag(args, "--text", step.Text)
 		args = appendFlag(args, "--role", step.Role)
 		args = appendFlag(args, "--resource-id", step.ResourceID)
+		args = appendFlag(args, "--accessibility-id", step.AccessibilityID)
+		args = appendFlag(args, "--parent-text", step.ParentText)
+		args = appendFlag(args, "--nearby-text", step.NearbyText)
+		args = appendFlag(args, "--within-text", step.WithinText)
 		return args, nil
 	case "tap", "clear", "back":
 		args := appendRunID([]string{action}, step.RunID)
@@ -264,11 +276,34 @@ func workflowStepArgs(step workflowStep) ([]string, error) {
 		args = appendFlag(args, "--timeout", step.Timeout)
 		args = appendFlag(args, "--poll-interval", step.PollInterval)
 		return args, nil
+	case "wait.visible", "wait.gone", "wait.text", "wait.enabled":
+		args := appendRunID([]string{"wait", strings.TrimPrefix(action, "wait.")}, step.RunID)
+		args = appendLocatorStepFlags(args, step)
+		args = appendFlag(args, "--timeout", step.Timeout)
+		args = appendFlag(args, "--poll-interval", step.PollInterval)
+		return args, nil
 	case "assert.visible":
 		args := appendRunID([]string{"assert", "visible"}, step.RunID)
 		args = appendFlag(args, "--ref", step.Ref)
 		args = appendFlag(args, "--name", step.Name)
 		args = appendFlag(args, "--role", step.Role)
+		return args, nil
+	case "assert.not-visible":
+		args := appendRunID([]string{"assert", "not-visible"}, step.RunID)
+		args = appendFlag(args, "--ref", step.Ref)
+		args = appendFlag(args, "--name", step.Name)
+		args = appendFlag(args, "--role", step.Role)
+		return args, nil
+	case "assert.not-exists":
+		args := appendRunID([]string{"assert", "not-exists"}, step.RunID)
+		args = appendLocatorStepFlags(args, step)
+		return args, nil
+	case "assert.count":
+		args := appendRunID([]string{"assert", "count"}, step.RunID)
+		args = appendLocatorStepFlags(args, step)
+		if step.Expected >= 0 {
+			args = append(args, "--expected", intString(step.Expected))
+		}
 		return args, nil
 	case "assert.text":
 		args := appendRunID([]string{"assert", "text"}, step.RunID)
@@ -282,9 +317,36 @@ func workflowStepArgs(step workflowStep) ([]string, error) {
 		args := appendRunID([]string{"run", "finish"}, step.RunID)
 		args = appendFlag(args, "--status", firstNonEmpty(step.Status, "passed"))
 		return args, nil
+	case "app.launch", "app.close", "app.reset":
+		return appendRunID([]string{"app", strings.TrimPrefix(action, "app.")}, step.RunID), nil
+	case "app.activate", "app.terminate":
+		args := appendRunID([]string{"app", strings.TrimPrefix(action, "app.")}, step.RunID)
+		args = appendFlag(args, "--app-id", step.AppID)
+		return args, nil
+	case "app.deep-link":
+		args := appendRunID([]string{"app", "deep-link"}, step.RunID)
+		args = appendFlag(args, "--url", step.URL)
+		args = appendFlag(args, "--package", step.Package)
+		return args, nil
+	case "permissions.accept":
+		return appendRunID([]string{"permissions", "accept"}, step.RunID), nil
+	case "permissions.deny":
+		return appendRunID([]string{"permissions", "deny"}, step.RunID), nil
 	default:
 		return nil, mobileError("invalid_args", "workflow action is not whitelisted: "+action, "Use structured mobile workflow actions such as observe, tap, assert.visible, or run.finish.", 400)
 	}
+}
+
+func appendLocatorStepFlags(args []string, step workflowStep) []string {
+	args = appendFlag(args, "--name", step.Name)
+	args = appendFlag(args, "--text", step.Text)
+	args = appendFlag(args, "--role", step.Role)
+	args = appendFlag(args, "--resource-id", step.ResourceID)
+	args = appendFlag(args, "--accessibility-id", step.AccessibilityID)
+	args = appendFlag(args, "--parent-text", step.ParentText)
+	args = appendFlag(args, "--nearby-text", step.NearbyText)
+	args = appendFlag(args, "--within-text", step.WithinText)
+	return args
 }
 
 func executeWorkflowCommand(parent *cobra.Command, o *Opts, args []string) (output.Envelope, string, error) {

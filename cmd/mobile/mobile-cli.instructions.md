@@ -31,6 +31,8 @@ Rules for agents:
 - Use only refs returned by the latest `mobile observe`.
 - Re-observe after every mutating command unless you used `--post-observe`: `tap`, `tap-point`, `long-press`, `double-tap`, `drag`, `type`, `clear`, `scroll`, `scroll-to`, `swipe`, `back`, `keyboard`, or `context switch`.
 - Prefer action-level waits such as `--wait-change`, `--wait-visible`, and `--wait-gone` when the next step depends on the previous action taking effect.
+- Use `mobile inspector config/attach/export` when switching from CLI automation to Appium Inspector debugging.
+- Use `mobile test run --file suite.yaml --junit-out junit.xml --evidence-dir evidence --json` for CI-style suite execution.
 - Never act on ambiguous `locate` results.
 - Use `--text-env` or `--text-stdin` for secrets.
 - Public sessions must not require BrowserStack Local.
@@ -52,6 +54,9 @@ mobile swipe --run-id run-... --direction up --json
 mobile tap --run-id run-... --ref obs-...:e30 --wait-change --post-observe --json
 mobile keyboard enter --run-id run-... --json
 mobile assert visible --run-id run-... --name Home --json
+mobile wait visible --run-id run-... --text Home --timeout 20s --json
+mobile inspector attach --run-id run-... --json
+mobile test run --file suite.yaml --junit-out junit.xml --json
 mobile run report --run-id run-... --out report.json --json
 mobile run finish --run-id run-... --status passed --collect-artifacts --json
 ```

@@ -1243,10 +1243,16 @@ func runStatusForRemoteSession(status string) (mobile.RunStatus, bool) {
 }
 
 func runHandoffCmd(o *Opts) *cobra.Command {
-	var runID, hold string
+	var runID, hold, mode string
 	c := &cobra.Command{Use: "handoff", RunE: func(cmd *cobra.Command, args []string) error {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the running run id.", 400))
+		}
+		if mode == "" {
+			mode = "human"
+		}
+		if mode != "human" && mode != "inspector" {
+			return print(cmd, o, output.Failure("invalid_args", "--mode must be human or inspector", "Use --mode inspector when handing the session to Appium Inspector.", 400))
 		}
 		holdDur, err := time.ParseDuration(hold)
 		if err != nil || holdDur <= 0 {
@@ -1269,6 +1275,10 @@ func runHandoffCmd(o *Opts) *cobra.Command {
 			deadline := time.Now().UTC().Add(boundHold(holdDur, svc.Runtime.Mobile.BrowserStack.Local.MaxHoldMinutes))
 			st.ControlOwner = "human"
 			st.Status = mobile.StatusWaitingForHuman
+			if st.Metadata == nil {
+				st.Metadata = map[string]string{}
+			}
+			st.Metadata["handoff_mode"] = mode
 			if err := svc.Store.SaveRun(st); err != nil {
 				return err
 			}
@@ -1283,8 +1293,12 @@ func runHandoffCmd(o *Opts) *cobra.Command {
 				"run":              st,
 				"observation":      obs,
 				"hold_deadline":    deadline,
+				"mode":             mode,
 				"keeper":           keeper,
 				"capacity_warning": "This BrowserStack session continues to consume parallel capacity until resume or finish.",
+			}
+			if mode == "inspector" {
+				result["inspector_hint"] = "Run mobile inspector attach --run-id " + runID + " --json to get Appium Inspector connection details."
 			}
 			return nil
 		})
@@ -1295,6 +1309,7 @@ func runHandoffCmd(o *Opts) *cobra.Command {
 	}}
 	c.Flags().StringVar(&runID, "run-id", "", "")
 	c.Flags().StringVar(&hold, "hold-for", "10m", "")
+	c.Flags().StringVar(&mode, "mode", "human", "")
 	return c
 }
 

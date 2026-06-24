@@ -51,7 +51,7 @@ For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~
 
 ### Mobile
 
-`mobile` is a terminal-invoked BrowserStack App Automate real-device controller for agents. It uploads or resolves apps, lists and deterministically resolves devices, checks capacity, starts BrowserStack Local only for private-network sessions, creates remote Appium W3C sessions, observes native UI XML/screenshots into bounded element candidates, performs ref-based and viewport-relative actions with optional post-action waits, supports keyboard/context/workflow/report helpers, supports human handoff/resume, and collects artifacts without printing large logs or binary data.
+`mobile` is a terminal-invoked BrowserStack App Automate real-device controller for agents. It uploads or resolves apps, lists and deterministically resolves devices, checks capacity, starts BrowserStack Local only for private-network sessions, creates remote Appium W3C sessions, observes native UI XML/screenshots into bounded element candidates, performs ref-based and viewport-relative actions with optional post-action waits, supports app lifecycle, permissions, keyboard/context/workflow/test/report helpers, generates Appium Inspector handoff/config artifacts, supports human handoff/resume, and collects artifacts without printing large logs or binary data.
 
 Examples:
 
@@ -65,6 +65,8 @@ mobile locate --run-id run-... --role button --name Login --json
 mobile tap --run-id run-... --ref obs-...:e1 --json
 mobile type --run-id run-... --ref obs-...:e2 --text-env TEST_PASSWORD --json
 mobile assert visible --run-id run-... --name Home --json
+mobile inspector attach --run-id run-... --json
+mobile test run --file suite.yaml --junit-out junit.xml --json
 mobile run handoff --run-id run-... --hold-for 10m --json
 mobile run resume --run-id run-... --json
 mobile run finish --run-id run-... --status passed --collect-artifacts --json

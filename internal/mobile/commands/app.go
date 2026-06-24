@@ -14,7 +14,10 @@ import (
 
 func appCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "app"}
-	c.AddCommand(appUploadCmd(o), appListCmd(o), appGetCmd(o), appResolveCmd(o), appDeleteCmd(o))
+	c.AddCommand(
+		appUploadCmd(o), appListCmd(o), appGetCmd(o), appResolveCmd(o), appDeleteCmd(o),
+		appLaunchCmd(o), appCloseCmd(o), appResetCmd(o), appActivateCmd(o), appTerminateCmd(o), appDeepLinkCmd(o),
+	)
 	return c
 }
 
@@ -265,5 +268,105 @@ func appDeleteCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&appURL, "app-url", "", "")
 	c.Flags().BoolVar(&yes, "yes", false, "")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "")
+	return c
+}
+
+func appLaunchCmd(o *Opts) *cobra.Command {
+	var runID string
+	actionOpts := defaultActionOptions()
+	c := &cobra.Command{Use: "launch", RunE: func(cmd *cobra.Command, args []string) error {
+		if runID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
+		}
+		return runGesture(cmd, o, runID, "app_launch", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			return nil, svc.Appium.LaunchApp(ctx, st.SessionID)
+		})
+	}}
+	c.Flags().StringVar(&runID, "run-id", "", "")
+	bindActionOptions(c, &actionOpts, false)
+	return c
+}
+
+func appCloseCmd(o *Opts) *cobra.Command {
+	var runID string
+	actionOpts := defaultActionOptions()
+	c := &cobra.Command{Use: "close", RunE: func(cmd *cobra.Command, args []string) error {
+		if runID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
+		}
+		return runGesture(cmd, o, runID, "app_close", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			return nil, svc.Appium.CloseApp(ctx, st.SessionID)
+		})
+	}}
+	c.Flags().StringVar(&runID, "run-id", "", "")
+	bindActionOptions(c, &actionOpts, false)
+	return c
+}
+
+func appResetCmd(o *Opts) *cobra.Command {
+	var runID string
+	actionOpts := defaultActionOptions()
+	c := &cobra.Command{Use: "reset", RunE: func(cmd *cobra.Command, args []string) error {
+		if runID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
+		}
+		return runGesture(cmd, o, runID, "app_reset", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			return nil, svc.Appium.ResetApp(ctx, st.SessionID)
+		})
+	}}
+	c.Flags().StringVar(&runID, "run-id", "", "")
+	bindActionOptions(c, &actionOpts, false)
+	return c
+}
+
+func appActivateCmd(o *Opts) *cobra.Command {
+	var runID, appID string
+	actionOpts := defaultActionOptions()
+	c := &cobra.Command{Use: "activate", RunE: func(cmd *cobra.Command, args []string) error {
+		if runID == "" || appID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id and --app-id are required", "Pass the package name or bundle id to activate.", 400))
+		}
+		return runGesture(cmd, o, runID, "app_activate", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			return map[string]any{"app_id": appID}, svc.Appium.ActivateApp(ctx, st.SessionID, appID)
+		})
+	}}
+	c.Flags().StringVar(&runID, "run-id", "", "")
+	c.Flags().StringVar(&appID, "app-id", "", "")
+	bindActionOptions(c, &actionOpts, false)
+	return c
+}
+
+func appTerminateCmd(o *Opts) *cobra.Command {
+	var runID, appID string
+	actionOpts := defaultActionOptions()
+	c := &cobra.Command{Use: "terminate", RunE: func(cmd *cobra.Command, args []string) error {
+		if runID == "" || appID == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id and --app-id are required", "Pass the package name or bundle id to terminate.", 400))
+		}
+		return runGesture(cmd, o, runID, "app_terminate", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			return map[string]any{"app_id": appID}, svc.Appium.TerminateApp(ctx, st.SessionID, appID)
+		})
+	}}
+	c.Flags().StringVar(&runID, "run-id", "", "")
+	c.Flags().StringVar(&appID, "app-id", "", "")
+	bindActionOptions(c, &actionOpts, false)
+	return c
+}
+
+func appDeepLinkCmd(o *Opts) *cobra.Command {
+	var runID, link, packageName string
+	actionOpts := defaultActionOptions()
+	c := &cobra.Command{Use: "deep-link", RunE: func(cmd *cobra.Command, args []string) error {
+		if runID == "" || link == "" {
+			return print(cmd, o, output.Failure("invalid_args", "--run-id and --url are required", "Pass the deep link URL and, on Android, --package.", 400))
+		}
+		return runGesture(cmd, o, runID, "app_deep_link", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+			return map[string]any{"url": link, "package": packageName}, svc.Appium.DeepLink(ctx, st.SessionID, link, packageName)
+		})
+	}}
+	c.Flags().StringVar(&runID, "run-id", "", "")
+	c.Flags().StringVar(&link, "url", "", "")
+	c.Flags().StringVar(&packageName, "package", "", "")
+	bindActionOptions(c, &actionOpts, false)
 	return c
 }

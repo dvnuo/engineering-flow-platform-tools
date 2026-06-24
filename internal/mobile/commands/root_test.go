@@ -14,6 +14,7 @@ import (
 
 	"engineering-flow-platform-tools/internal/config"
 	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/output"
 )
 
 func TestCommandsJSONIncludesRunStart(t *testing.T) {
@@ -812,6 +813,166 @@ steps:
 		if part == "super-secret" {
 			t.Fatalf("dry-run leaked text: %#v", typed)
 		}
+	}
+}
+
+func TestInspectorConfigFromRunRedactsAccessKey(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = "http://127.0.0.1:1"
+	cfg.Mobile.BrowserStack.AppiumBaseURL = "http://127.0.0.1:4723/wd/hub"
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "secret-key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{
+		RunID:       "run-inspector",
+		Provider:    "browserstack",
+		Status:      mobile.StatusRunning,
+		SessionID:   "session-inspector",
+		Platform:    "android",
+		Device:      mobile.DeviceSelection{Name: "Pixel 8", OSVersion: "14.0"},
+		App:         mobile.AppRef{AppURL: "bs://app"},
+		Network:     mobile.NetworkState{Mode: "private-external", LocalIdentifier: "local-1"},
+		BuildName:   "build-1",
+		SessionName: "session-1",
+		StartedAt:   mobileTestNow(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "inspector", "config", "--config", path, "--run-id", "run-inspector", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	b := mustJSON(t, out)
+	if strings.Contains(string(b), "secret-key") {
+		t.Fatalf("access key leaked: %s", string(b))
+	}
+	data := out["data"].(map[string]any)
+	caps := data["capabilities"].(map[string]any)
+	if caps["platformName"] != "Android" || caps["appium:app"] != "bs://app" {
+		t.Fatalf("unexpected caps: %#v", caps)
+	}
+	bstack := caps["bstack:options"].(map[string]any)
+	if bstack["localIdentifier"] != "local-1" || bstack["accessKey"] != output.Redacted {
+		t.Fatalf("unexpected bstack options: %#v", bstack)
+	}
+}
+
+func TestAppLaunchPostsAppiumLifecycleEndpoint(t *testing.T) {
+	called := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/session/session-app/appium/app/launch":
+			called <- r.URL.Path
+			_, _ = w.Write([]byte(`{"value":null}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-app", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-app", Platform: "android", StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "app", "launch", "--config", path, "--run-id", "run-app", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	if got := <-called; got != "/session/session-app/appium/app/launch" {
+		t.Fatalf("path=%s", got)
+	}
+}
+
+func TestObservationAssertionsNotExistsAndCount(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = "http://127.0.0.1:1"
+	cfg.Mobile.BrowserStack.AppiumBaseURL = "http://127.0.0.1:1"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	obs, err := mobile.BuildObservationStrict("run-assert", "session-assert", "obs-assert", `<hierarchy><node class="android.widget.Button" text="Login" clickable="true" bounds="[0,0][100,100]" /></hierarchy>`, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveObservation("run-assert", obs); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-assert", Provider: "browserstack", Status: mobile.StatusRunning, LatestObservationID: obs.ID, StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "assert", "not-exists", "--config", path, "--run-id", "run-assert", "--text", "Missing", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	out = runMobile(t, "assert", "count", "--config", path, "--run-id", "run-assert", "--role", "button", "--expected", "1", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+}
+
+func TestMobileTestRunDryRunRedactsText(t *testing.T) {
+	suitePath := filepath.Join(t.TempDir(), "suite.yaml")
+	if err := os.WriteFile(suitePath, []byte(`name: smoke
+variables:
+  run: run-1
+cases:
+  - name: login
+    tags: [smoke]
+    steps:
+      - action: observe
+        run_id: "{{run}}"
+      - action: type
+        run_id: "{{run}}"
+        ref: obs-1:e2
+        text: super-secret
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "test", "run", "--file", suitePath, "--tag", "smoke", "--dry-run", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	b := mustJSON(t, out)
+	if strings.Contains(string(b), "super-secret") {
+		t.Fatalf("dry-run leaked text: %s", string(b))
 	}
 }
 

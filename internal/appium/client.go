@@ -1,0 +1,551 @@
+package appium
+
+import (
+	"bytes"
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"regexp"
+	"strings"
+	"time"
+
+	"engineering-flow-platform-tools/internal/browserstack"
+	"engineering-flow-platform-tools/internal/httpclient"
+	"engineering-flow-platform-tools/internal/mobile"
+)
+
+const w3cElementKey = "element-6066-11e4-a52e-4f735466cecf"
+const maxErrorSnippet = 2048
+const defaultHTTPTimeout = 10 * time.Minute
+const sessionResponseHeaderTimeout = 5 * time.Minute
+
+var authPattern = regexp.MustCompile(`(?i)\b(?:basic|bearer)\s+[A-Za-z0-9._~+/\-=]+`)
+
+type Client struct {
+	baseURL string
+	http    *http.Client
+	creds   browserstack.Credentials
+	proxy   httpclient.ProxyDiagnostic
+}
+
+type SessionIDMissingError struct {
+	Err      *mobile.Error
+	Response map[string]any
+}
+
+func (e *SessionIDMissingError) Error() string {
+	if e == nil || e.Err == nil {
+		return "session id missing"
+	}
+	return e.Err.Error()
+}
+
+func (e *SessionIDMissingError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Err
+}
+
+func New(baseURL string, creds browserstack.Credentials, verifySSL bool, caCert string, proxies ...httpclient.ProxySettings) (*Client, error) {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" {
+		baseURL = "https://hub.browserstack.com/wd/hub"
+	}
+	if err := validateAppiumURL(baseURL); err != nil {
+		return nil, err
+	}
+	proxy := httpclient.ProxySettings{}
+	if len(proxies) > 0 {
+		proxy = proxies[0]
+	}
+	tr, diag, err := httpclient.NewTransport(httpclient.TransportOptions{
+		BaseURL:               baseURL,
+		VerifySSL:             verifySSL,
+		CACert:                caCert,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: sessionResponseHeaderTimeout,
+		IdleConnTimeout:       90 * time.Second,
+		Proxy:                 proxy,
+	})
+	if err != nil {
+		return nil, mobile.NewError("config_error", "invalid Appium HTTP transport configuration: "+err.Error(), "Check mobile.browserstack.http_proxy, verify_ssl, and ca_cert.", 400)
+	}
+	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultHTTPTimeout, Transport: tr}, creds: creds, proxy: diag}, nil
+}
+
+func (c *Client) ProxyDiagnostic() httpclient.ProxyDiagnostic {
+	return c.proxy
+}
+
+func validateAppiumURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return mobile.NewError("config_error", "invalid Appium hub URL", "Use an absolute https:// BrowserStack Appium hub URL.", 400)
+	}
+	if u.Scheme != "https" && !isLoopbackHost(u.Hostname()) {
+		return mobile.NewError("config_error", "Appium hub URL must use https", "Only loopback HTTP is allowed for tests.", 400)
+	}
+	host := strings.ToLower(u.Hostname())
+	if !strings.HasSuffix(host, ".browserstack.com") && !strings.EqualFold(host, "hub.browserstack.com") && !isLoopbackHost(host) {
+		return mobile.NewError("config_error", "off-provider Appium hub URL rejected", "Use hub.browserstack.com or a BrowserStack-owned host.", 400)
+	}
+	return nil
+}
+
+func isLoopbackHost(host string) bool {
+	host = strings.ToLower(strings.Trim(host, "[]"))
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
+}
+
+func (c *Client) CreateSession(ctx context.Context, req CreateSessionRequest) (Session, error) {
+	if err := validateCreateSessionRequest(req); err != nil {
+		return Session{}, err
+	}
+	caps := map[string]any{}
+	for k, v := range req.ExtraCaps {
+		caps[k] = v
+	}
+	if req.PlatformName != "" {
+		caps["platformName"] = canonicalPlatform(req.PlatformName)
+	}
+	if req.AutomationName != "" {
+		caps["appium:automationName"] = req.AutomationName
+	}
+	if req.App != "" {
+		caps["appium:app"] = req.App
+	}
+	if req.DeviceName != "" {
+		caps["appium:deviceName"] = req.DeviceName
+	}
+	if req.PlatformVersion != "" {
+		caps["appium:platformVersion"] = req.PlatformVersion
+	}
+	if req.NewCommandTimeoutSeconds > 0 {
+		caps["appium:newCommandTimeout"] = req.NewCommandTimeoutSeconds
+	}
+	bstack := map[string]any{}
+	if req.ProjectName != "" {
+		bstack["projectName"] = req.ProjectName
+	}
+	if req.BuildName != "" {
+		bstack["buildName"] = req.BuildName
+	}
+	if req.SessionName != "" {
+		bstack["sessionName"] = req.SessionName
+	}
+	bstack["interactiveDebugging"] = req.InteractiveDebugging
+	if req.Debug {
+		bstack["debug"] = true
+	}
+	bstack["video"] = req.Video
+	if req.IdleTimeoutSeconds > 0 {
+		bstack["idleTimeout"] = req.IdleTimeoutSeconds
+	}
+	switch req.NetworkMode {
+	case "private-managed", "private-external":
+		bstack["local"] = true
+		if req.LocalIdentifier != "" {
+			bstack["localIdentifier"] = req.LocalIdentifier
+		}
+	}
+	if len(bstack) > 0 {
+		caps["bstack:options"] = bstack
+	}
+	body := map[string]any{"capabilities": map[string]any{"alwaysMatch": caps}}
+	var raw map[string]any
+	if err := c.doJSON(ctx, http.MethodPost, "/session", body, &raw); err != nil {
+		return Session{}, err
+	}
+	value, _ := raw["value"].(map[string]any)
+	id := stringFrom(raw["sessionId"])
+	if id == "" && value != nil {
+		id = stringFrom(value["sessionId"])
+	}
+	if id == "" {
+		id = stringFrom(raw["id"])
+	}
+	capabilities, _ := value["capabilities"].(map[string]any)
+	if capabilities == nil {
+		capabilities, _ = raw["capabilities"].(map[string]any)
+	}
+	if id == "" {
+		return Session{}, missingSessionIDError(raw, c.creds)
+	}
+	return Session{ID: id, Capabilities: capabilities}, nil
+}
+
+func validateCreateSessionRequest(req CreateSessionRequest) error {
+	if req.IdleTimeoutSeconds < 0 || req.IdleTimeoutSeconds > 300 {
+		return mobile.NewError("invalid_args", "idle timeout must be between 1 and 300 seconds", "Set mobile.defaults.idle_timeout_seconds to a BrowserStack-supported value.", 400)
+	}
+	if req.NewCommandTimeoutSeconds < 0 {
+		return mobile.NewError("invalid_args", "new command timeout cannot be negative", "Set mobile.defaults.new_command_timeout_seconds to a positive value.", 400)
+	}
+	return nil
+}
+
+func canonicalPlatform(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "ios":
+		return "iOS"
+	default:
+		return "Android"
+	}
+}
+
+func (c *Client) DeleteSession(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodDelete, "/session/"+url.PathEscape(sessionID), nil, nil)
+}
+
+func (c *Client) GetSource(ctx context.Context, sessionID string) (string, error) {
+	var out valueResponse[string]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/source", nil, &out); err != nil {
+		return "", err
+	}
+	return out.Value, nil
+}
+
+func (c *Client) Screenshot(ctx context.Context, sessionID string) ([]byte, error) {
+	var out valueResponse[string]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/screenshot", nil, &out); err != nil {
+		return nil, err
+	}
+	b, err := base64.StdEncoding.DecodeString(out.Value)
+	if err != nil {
+		return nil, mobile.NewError("server_error", "Appium screenshot response was not valid base64", "Retry observe or inspect the Appium response.", 502)
+	}
+	return b, nil
+}
+
+func (c *Client) FindElements(ctx context.Context, sessionID string, locator Locator) ([]RemoteElement, error) {
+	var out valueResponse[[]map[string]any]
+	body := map[string]any{"using": locator.Using, "value": locator.Value}
+	if err := c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/elements", body, &out); err != nil {
+		return nil, err
+	}
+	elements := make([]RemoteElement, 0, len(out.Value))
+	for _, raw := range out.Value {
+		if id := elementID(raw); id != "" {
+			elements = append(elements, RemoteElement{ID: id})
+		}
+	}
+	return elements, nil
+}
+
+func (c *Client) Click(ctx context.Context, sessionID, elementID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/element/"+url.PathEscape(elementID)+"/click", map[string]any{}, nil)
+}
+
+func (c *Client) Clear(ctx context.Context, sessionID, elementID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/element/"+url.PathEscape(elementID)+"/clear", map[string]any{}, nil)
+}
+
+func (c *Client) SendKeys(ctx context.Context, sessionID, elementID, text string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/element/"+url.PathEscape(elementID)+"/value", map[string]any{"text": text}, nil)
+}
+
+func (c *Client) HideKeyboard(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/device/hide_keyboard", map[string]any{}, nil)
+}
+
+func (c *Client) PressKeyCode(ctx context.Context, sessionID string, keycode int) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/device/press_keycode", map[string]any{"keycode": keycode}, nil)
+}
+
+func (c *Client) LaunchApp(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/app/launch", map[string]any{}, nil)
+}
+
+func (c *Client) CloseApp(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/app/close", map[string]any{}, nil)
+}
+
+func (c *Client) ResetApp(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/app/reset", map[string]any{}, nil)
+}
+
+func (c *Client) ActivateApp(ctx context.Context, sessionID, appID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/device/activate_app", map[string]any{"appId": appID, "bundleId": appID}, nil)
+}
+
+func (c *Client) TerminateApp(ctx context.Context, sessionID, appID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/device/terminate_app", map[string]any{"appId": appID, "bundleId": appID}, nil)
+}
+
+func (c *Client) DeepLink(ctx context.Context, sessionID, link, packageName string) error {
+	body := map[string]any{"url": link}
+	if packageName != "" {
+		body["package"] = packageName
+		body["appId"] = packageName
+		bundleID := packageName
+		body["bundleId"] = bundleID
+	}
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/appium/device/deep_link", body, nil)
+}
+
+func (c *Client) AcceptAlert(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/alert/accept", map[string]any{}, nil)
+}
+
+func (c *Client) DismissAlert(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/alert/dismiss", map[string]any{}, nil)
+}
+
+func (c *Client) PerformActions(ctx context.Context, sessionID string, actions ActionsRequest) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/actions", actions, nil)
+}
+
+func (c *Client) Back(ctx context.Context, sessionID string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/back", map[string]any{}, nil)
+}
+
+func (c *Client) Contexts(ctx context.Context, sessionID string) ([]string, error) {
+	var out valueResponse[[]string]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/contexts", nil, &out); err != nil {
+		return nil, err
+	}
+	return out.Value, nil
+}
+
+func (c *Client) CurrentContext(ctx context.Context, sessionID string) (string, error) {
+	var out valueResponse[string]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/context", nil, &out); err != nil {
+		return "", err
+	}
+	return out.Value, nil
+}
+
+func (c *Client) SwitchContext(ctx context.Context, sessionID, contextName string) error {
+	return c.doJSON(ctx, http.MethodPost, "/session/"+url.PathEscape(sessionID)+"/context", map[string]any{"name": contextName}, nil)
+}
+
+func (c *Client) SessionStatus(ctx context.Context, sessionID string) (map[string]any, error) {
+	var raw map[string]any
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID), nil, &raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
+func (c *Client) WindowRect(ctx context.Context, sessionID string) (Rect, error) {
+	var out valueResponse[Rect]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/window/rect", nil, &out); err != nil {
+		return Rect{}, err
+	}
+	return out.Value, nil
+}
+
+func (c *Client) ElementDisplayed(ctx context.Context, sessionID, elementID string) (bool, error) {
+	var out valueResponse[bool]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/element/"+url.PathEscape(elementID)+"/displayed", nil, &out); err != nil {
+		return false, err
+	}
+	return out.Value, nil
+}
+
+func (c *Client) ElementEnabled(ctx context.Context, sessionID, elementID string) (bool, error) {
+	var out valueResponse[bool]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/element/"+url.PathEscape(elementID)+"/enabled", nil, &out); err != nil {
+		return false, err
+	}
+	return out.Value, nil
+}
+
+func (c *Client) ElementSelected(ctx context.Context, sessionID, elementID string) (bool, error) {
+	var out valueResponse[bool]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/element/"+url.PathEscape(elementID)+"/selected", nil, &out); err != nil {
+		return false, err
+	}
+	return out.Value, nil
+}
+
+func (c *Client) ElementText(ctx context.Context, sessionID, elementID string) (string, error) {
+	var out valueResponse[string]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/element/"+url.PathEscape(elementID)+"/text", nil, &out); err != nil {
+		return "", err
+	}
+	return out.Value, nil
+}
+
+func (c *Client) ElementRect(ctx context.Context, sessionID, elementID string) (Rect, error) {
+	var out valueResponse[Rect]
+	if err := c.doJSON(ctx, http.MethodGet, "/session/"+url.PathEscape(sessionID)+"/element/"+url.PathEscape(elementID)+"/rect", nil, &out); err != nil {
+		return Rect{}, err
+	}
+	return out.Value, nil
+}
+
+func (c *Client) doJSON(ctx context.Context, method, path string, body any, out any) error {
+	var reader io.Reader
+	if body != nil {
+		b, _ := json.Marshal(body)
+		reader = bytes.NewReader(b)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, reader)
+	if err != nil {
+		return err
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.SetBasicAuth(c.creds.Username, c.creds.AccessKey)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		context := httpclient.ProxyDiagnosticText(c.baseURL, c.proxy)
+		return mobile.RetryableError("network_error", "Appium request failed: "+sanitize(err.Error(), c.creds)+" ("+context+")", "Check BrowserStack Appium hub connectivity and mobile.browserstack.http_proxy.", "retry", 503)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return statusError(resp, c.creds)
+	}
+	if out == nil {
+		return nil
+	}
+	dec := json.NewDecoder(resp.Body)
+	if err := dec.Decode(out); err != nil {
+		return mobile.NewError("server_error", "Appium returned invalid JSON", "Retry or inspect BrowserStack Appium logs.", 502)
+	}
+	return nil
+}
+
+type valueResponse[T any] struct {
+	Value T `json:"value"`
+}
+
+func elementID(raw map[string]any) string {
+	if id := stringFrom(raw[w3cElementKey]); id != "" {
+		return id
+	}
+	return stringFrom(raw["ELEMENT"])
+}
+
+func stringFrom(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	if f, ok := v.(float64); ok {
+		return fmt.Sprintf("%.0f", f)
+	}
+	return ""
+}
+
+func missingSessionIDError(raw map[string]any, creds browserstack.Credentials) error {
+	value, _ := raw["value"].(map[string]any)
+	remoteError := firstRemoteString(value, raw, "error", "status")
+	remoteMessage := firstRemoteString(value, raw, "message", "reason", "stacktrace")
+	rawSummary := strings.TrimSpace(strings.Join(nonEmpty(remoteError, remoteMessage), ": "))
+	if rawSummary == "" {
+		rawSummary = "Appium session response did not include a session id"
+	}
+	code, hint, status, action := classifySessionCreationFailure(rawSummary)
+	summary := sanitize(rawSummary, creds)
+	return &SessionIDMissingError{
+		Err: &mobile.Error{
+			Code:              code,
+			Message:           "Appium session was not usable: " + summary,
+			Hint:              hint,
+			Status:            status,
+			Retryable:         code == "local_tunnel_connection_failed",
+			RecommendedAction: action,
+		},
+		Response: raw,
+	}
+}
+
+func firstRemoteString(value map[string]any, raw map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value != nil {
+			if s := stringFrom(value[key]); strings.TrimSpace(s) != "" {
+				return strings.TrimSpace(s)
+			}
+		}
+		if s := stringFrom(raw[key]); strings.TrimSpace(s) != "" {
+			return strings.TrimSpace(s)
+		}
+	}
+	return ""
+}
+
+func nonEmpty(values ...string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			out = append(out, strings.TrimSpace(value))
+		}
+	}
+	return out
+}
+
+func classifySessionCreationFailure(summary string) (string, string, int, string) {
+	lower := strings.ToLower(summary)
+	switch {
+	case strings.Contains(lower, "local") && (strings.Contains(lower, "required") || strings.Contains(lower, "enable") || strings.Contains(lower, "start") || strings.Contains(lower, "not configured")):
+		return "local_tunnel_required", "Use --network private-managed to start BrowserStack Local, or --network private-external with a running --local-identifier.", 424, "start_tunnel"
+	case strings.Contains(lower, "local") && (strings.Contains(lower, "connect") || strings.Contains(lower, "unreachable") || strings.Contains(lower, "not running") || strings.Contains(lower, "disconnected") || strings.Contains(lower, "failed")):
+		return "local_tunnel_connection_failed", "Check BrowserStack Local status, local identifier, proxy, and private network reachability.", 503, "retry"
+	case strings.Contains(lower, "capabil") || strings.Contains(lower, "desired") || strings.Contains(lower, "automationname") || strings.Contains(lower, "platform") || strings.Contains(lower, "device") || strings.Contains(lower, "appium:") || strings.Contains(lower, "invalid argument"):
+		return "invalid_capabilities", "Inspect device, platform, app, and Appium capability values.", 400, "fix_args"
+	case strings.TrimSpace(summary) != "" && summary != "Appium session response did not include a session id":
+		return "browserstack_session_error", "Inspect BrowserStack session and Appium logs for the provider-specific failure.", 502, "inspect"
+	default:
+		return "session_creation_failed", "Inspect BrowserStack Appium response shape.", 502, "inspect"
+	}
+}
+
+func statusError(resp *http.Response, creds browserstack.Credentials) *mobile.Error {
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorSnippet+1))
+	msg := fmt.Sprintf("Appium request failed with HTTP %d", resp.StatusCode)
+	if snippet := sanitize(string(body), creds); strings.TrimSpace(snippet) != "" {
+		msg += ": " + snippet
+	}
+	code := "server_error"
+	retryable := false
+	switch resp.StatusCode {
+	case http.StatusUnauthorized, http.StatusForbidden:
+		code = "auth_error"
+	case http.StatusNotFound:
+		code = "session_lost"
+	case http.StatusTooManyRequests:
+		code = "rate_limited"
+		retryable = true
+	default:
+		if resp.StatusCode >= 500 {
+			retryable = true
+		}
+	}
+	return &mobile.Error{Code: code, Message: msg, Hint: "Inspect session status and BrowserStack Appium logs.", Status: resp.StatusCode, Retryable: retryable, RecommendedAction: "observe"}
+}
+
+func sanitize(s string, creds browserstack.Credentials) string {
+	truncated := len(s) > maxErrorSnippet
+	s = strings.ReplaceAll(s, creds.Username, "***REDACTED***")
+	s = strings.ReplaceAll(s, creds.AccessKey, "***REDACTED***")
+	s = authPattern.ReplaceAllString(s, "***REDACTED***")
+	return boundedSnippet(s, truncated)
+}
+
+func boundedSnippet(s string, truncated bool) string {
+	s = strings.TrimSpace(s)
+	if !truncated && len(s) <= maxErrorSnippet {
+		return s
+	}
+	if maxErrorSnippet <= 3 {
+		if len(s) > maxErrorSnippet {
+			return s[:maxErrorSnippet]
+		}
+		return s
+	}
+	limit := maxErrorSnippet - 3
+	if len(s) > limit {
+		s = strings.TrimSpace(s[:limit])
+	}
+	if truncated {
+		return s + "..."
+	}
+	return s
+}

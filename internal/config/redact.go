@@ -11,6 +11,8 @@ func RedactRoot(c RootConfig) RootConfig {
 		c.Jenkins.Instances[i].Auth = RedactAuth(c.Jenkins.Instances[i].Auth)
 	}
 	c.AWS = RedactAWS(c.AWS)
+	c.Mobile.BrowserStack.Username = redact(c.Mobile.BrowserStack.Username)
+	c.Mobile.BrowserStack.AccessKey = redact(c.Mobile.BrowserStack.AccessKey)
 	return c
 }
 

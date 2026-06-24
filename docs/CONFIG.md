@@ -119,3 +119,70 @@ updated_at: ""
 
 - `verify_ssl=false` disables certificate verification and is intended only for internal testing.
 - `ca_cert` can embed PEM text for private CA trust.
+
+## Mobile
+
+`mobile` stores settings under the `mobile` YAML node and prefers environment credentials:
+
+```yaml
+mobile:
+  default_provider: browserstack
+  state_dir: ~/.efp/mobile
+  artifacts_dir: ~/.efp/artifacts/mobile
+  retention_hours: 72
+  defaults:
+    platform: android
+    network_mode: public
+    idle_timeout_seconds: 300
+    new_command_timeout_seconds: 300
+    interactive_debugging: true
+    video: true
+  browserstack:
+    api_base_url: https://api-cloud.browserstack.com
+    appium_base_url: https://hub.browserstack.com/wd/hub
+    username_env: BROWSERSTACK_USERNAME
+    access_key_env: BROWSERSTACK_ACCESS_KEY
+    username: ""
+    access_key: ""
+    verify_ssl: true
+    ca_cert: ""
+    http_proxy:
+      proxy_host: ""
+      proxy_port: 0
+      proxy_user_env: ""
+      proxy_pass_env: ""
+      no_proxy_hosts: []
+      disable_proxy_discovery: false
+      force_proxy: false
+    local:
+      mode: managed
+      binary: BrowserStackLocal
+      binary_env: BROWSERSTACK_LOCAL_BINARY
+      default_hold_minutes: 10
+      max_hold_minutes: 30
+      ready_timeout_seconds: 30
+      heartbeat_seconds: 60
+      force_local: false
+      disable_proxy_discovery: false
+      force_proxy: false
+      proxy_host: ""
+      proxy_port: 0
+      proxy_user_env: ""
+      proxy_pass_env: ""
+      only_automate: false
+      force: false
+      include_hosts: []
+      exclude_hosts: []
+```
+
+Use `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` for credentials when possible; environment credentials take precedence over stored config values. To persist credentials into `~/.efp/config.yaml`, run:
+
+```bash
+printf '%s\n' "$BROWSERSTACK_ACCESS_KEY" | mobile auth login --username "$BROWSERSTACK_USERNAME" --access-key-stdin --json
+```
+
+`MOBILE_STATE_DIR` and `MOBILE_ARTIFACTS_DIR` override the state and artifact roots in CI. State and artifact directories are created outside the main config with restrictive permissions where the platform supports them.
+
+`mobile.browserstack.http_proxy` controls the Go HTTP clients used for BrowserStack REST and Appium hub requests. When it is unset, the CLI can still use standard non-empty `HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY`, and `NO_PROXY` environment variables unless `disable_proxy_discovery` is true. `proxy_user_env` and `proxy_pass_env` name environment variables read at startup; do not store proxy credentials directly in `config.yaml`.
+
+For enterprise networks, `mobile.browserstack.local.proxy_user_env` and `proxy_pass_env` name environment variables read at tunnel startup; do not store proxy credentials directly in `config.yaml`. The Local flags are passed only for fields explicitly configured.

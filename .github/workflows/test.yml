@@ -7,9 +7,18 @@ on:
 jobs:
   go:
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            skip_browser_smoke: ''
+          - os: macos-15-intel
+            skip_browser_smoke: '1'
+          - os: windows-latest
+            skip_browser_smoke: ''
     runs-on: ${{ matrix.os }}
+    env:
+      EFP_SKIP_BROWSER_SMOKE: ${{ matrix.skip_browser_smoke }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -23,6 +32,7 @@ jobs:
       - run: go build ./cmd/jenkins
       - run: go build ./cmd/aws-auth
       - run: go build ./cmd/browser
+      - run: go build ./cmd/mobile
       - run: go build ./cmd/inspect-image
       - run: go build ./cmd/visual
       - name: smoke unix

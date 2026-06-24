@@ -25,8 +25,8 @@
 - Use `--network public` for public apps. Use `private-managed` only when BrowserStack devices must reach private/internal hosts.
 - `run handoff` gives control to the human and starts bounded keepalive; mutating actions return `control_locked` until `run resume`.
 - `workflow run` accepts only structured whitelisted steps, and `workflow record` creates a YAML skeleton from the local run timeline.
-- `test run` executes structured suites with tags, variables, JSON/JUnit reports, and failure evidence directories.
-- `inspector config/attach/export` bridges live CLI runs with Appium Inspector for manual locator debugging.
+- `test run` executes structured suites with tags, variables, JSON/JUnit reports, and failure evidence directories. Treat suite `after` steps as cleanup; they run after failures, and `secrets_env` should carry environment variable names rather than secret values.
+- `inspector config/attach/export` bridges live CLI runs with Appium Inspector for manual locator debugging. Use `--secret-mode env` when a human needs credential environment-variable hints; JSON output still redacts access keys.
 
 ## AWS Auth
 

@@ -816,6 +816,18 @@ steps:
 	}
 }
 
+func TestWorkflowAssertCountOmitsMissingExpected(t *testing.T) {
+	args, err := workflowStepArgs(workflowStep{Action: "assert.count", RunID: "run-1", Role: "button"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, arg := range args {
+		if arg == "--expected" {
+			t.Fatalf("missing expected should not emit --expected: %#v", args)
+		}
+	}
+}
+
 func TestInspectorConfigFromRunRedactsAccessKey(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	stateDir := filepath.Join(t.TempDir(), "state")
@@ -866,6 +878,87 @@ func TestInspectorConfigFromRunRedactsAccessKey(t *testing.T) {
 	bstack := caps["bstack:options"].(map[string]any)
 	if bstack["localIdentifier"] != "local-1" || bstack["accessKey"] != output.Redacted {
 		t.Fatalf("unexpected bstack options: %#v", bstack)
+	}
+}
+
+func TestInspectorConfigSecretModeEnvExplainsCredentialVariables(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = filepath.Join(t.TempDir(), "state")
+	cfg.Mobile.ArtifactsDir = filepath.Join(t.TempDir(), "artifacts")
+	cfg.Mobile.BrowserStack.APIBaseURL = "http://127.0.0.1:1"
+	cfg.Mobile.BrowserStack.AppiumBaseURL = "http://127.0.0.1:4723/wd/hub"
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "secret-key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "inspector", "config", "--config", path, "--app", "bs://app", "--platform", "android", "--secret-mode", "env", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	if strings.Contains(string(mustJSON(t, out)), "secret-key") {
+		t.Fatalf("access key leaked: %s", string(mustJSON(t, out)))
+	}
+	data := out["data"].(map[string]any)
+	auth := data["auth"].(map[string]any)
+	if auth["mode"] != "env" {
+		t.Fatalf("unexpected auth mode: %#v", auth)
+	}
+	envVars := auth["env_vars"].(map[string]any)
+	if envVars["key"] != "BROWSERSTACK_ACCESS_KEY" || data["username"] != "${BROWSERSTACK_USERNAME}" {
+		t.Fatalf("unexpected env credential hints: %#v data=%#v", envVars, data)
+	}
+}
+
+func TestInspectorAttachWarningsMarkRunLost(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/session/session-lost/contexts", "/session/session-lost/context":
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"value":{"error":"invalid session id","message":"Session not started or terminated"}}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-lost", Provider: "browserstack", Status: mobile.StatusRunning, SessionID: "session-lost", Platform: "android", StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "inspector", "attach", "--config", path, "--run-id", "run-lost", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success with warnings: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	warnings := data["warnings"].([]any)
+	if len(warnings) == 0 {
+		t.Fatalf("expected warnings: %#v", data)
+	}
+	st, err := store.LoadRun("run-lost")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Status != mobile.StatusLost || st.FinishedAt == nil {
+		t.Fatalf("run was not marked lost: %#v", st)
 	}
 }
 
@@ -973,6 +1066,105 @@ cases:
 	b := mustJSON(t, out)
 	if strings.Contains(string(b), "super-secret") {
 		t.Fatalf("dry-run leaked text: %s", string(b))
+	}
+}
+
+func TestMobileTestRunUsesSecretsEnvAsVariableNames(t *testing.T) {
+	suite := mobileTestSuite{
+		SecretsEnv: map[string]string{"password_env": "MOBILE_TEST_PASSWORD"},
+		Cases: []mobileTestCase{{
+			Name:  "login",
+			Steps: []workflowStep{{Action: "type", RunID: "run-1", TextEnv: "{{password_env}}"}},
+		}},
+	}
+	executions := expandMobileTestCases(suite, "", nil)
+	if len(executions) != 1 {
+		t.Fatalf("expected execution: %#v", executions)
+	}
+	if executions[0].Variables["password_env"] != "MOBILE_TEST_PASSWORD" {
+		t.Fatalf("secret env variable name was not merged: %#v", executions[0].Variables)
+	}
+	step := substituteWorkflowStep(executions[0].Case.Steps[0], executions[0].Variables)
+	if step.TextEnv != "MOBILE_TEST_PASSWORD" {
+		t.Fatalf("unexpected text env substitution: %#v", step)
+	}
+}
+
+func TestMobileTestRunExecutesAfterAndWritesEvidenceOnFailure(t *testing.T) {
+	var closed int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/session/session-after/appium/app/close":
+			atomic.AddInt32(&closed, 1)
+			_, _ = w.Write([]byte(`{"value":null}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "config.yaml")
+	stateDir := filepath.Join(tmp, "state")
+	artifactsDir := filepath.Join(tmp, "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	obs, err := mobile.BuildObservationStrict("run-after", "session-after", "obs-after", `<hierarchy><node class="android.widget.Button" text="Login" clickable="true" bounds="[0,0][100,100]" /></hierarchy>`, []byte("png"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	obsDir := filepath.Join(store.ObservationDir("run-after"), obs.ID)
+	obs.SourcePath = filepath.Join(obsDir, "source.xml")
+	obs.ScreenshotPath = filepath.Join(obsDir, "screenshot.png")
+	obs.CandidatesPath = filepath.Join(obsDir, "candidates.json")
+	if err := store.SaveObservation("run-after", obs); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-after", Provider: "browserstack", Status: mobile.StatusRunning, SessionID: "session-after", Platform: "android", LatestObservationID: obs.ID, StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	suitePath := filepath.Join(tmp, "suite.yaml")
+	if err := os.WriteFile(suitePath, []byte(`name: cleanup
+after:
+  - action: app.close
+    run_id: run-after
+cases:
+  - name: cleanup
+    steps:
+      - action: assert.not-exists
+        run_id: run-after
+        text: Login
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	evidenceDir := filepath.Join(tmp, "evidence")
+	out := runMobile(t, "test", "run", "--config", path, "--file", suitePath, "--evidence-dir", evidenceDir, "--json")
+	if out["ok"] != false {
+		t.Fatalf("expected failed test result: %#v", out)
+	}
+	if atomic.LoadInt32(&closed) != 1 {
+		t.Fatalf("expected after cleanup to close app")
+	}
+	data := out["data"].(map[string]any)
+	results := data["results"].([]any)
+	result := results[0].(map[string]any)
+	evidencePath := result["evidence_path"].(string)
+	for _, name := range []string{"failure.json", "run-report.json", "source.xml", "screenshot.png", "candidates.json"} {
+		if _, err := os.Stat(filepath.Join(evidencePath, name)); err != nil {
+			t.Fatalf("missing evidence %s: %v", name, err)
+		}
 	}
 }
 

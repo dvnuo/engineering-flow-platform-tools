@@ -170,6 +170,9 @@ func expandMobileTestCases(suite mobileTestSuite, caseFilter string, tags []stri
 			for k, v := range suite.Variables {
 				vars[k] = v
 			}
+			for k, v := range suite.SecretsEnv {
+				vars[k] = v
+			}
 			for k, v := range item.Variables {
 				vars[k] = v
 			}
@@ -189,21 +192,65 @@ func runMobileTestCase(cmd *cobra.Command, o *Opts, suite mobileTestSuite, execu
 		name = execution.Matrix.Name + "/" + name
 	}
 	result := mobileTestCaseResult{Name: execution.Case.Name, Matrix: execution.Matrix.Name, Tags: execution.Case.Tags, Passed: true}
-	steps := append([]workflowStep{}, suite.Before...)
-	steps = append(steps, execution.Case.Steps...)
-	steps = append(steps, suite.After...)
 	currentRunID := ""
-	for i, step := range steps {
-		step = substituteWorkflowStep(step, execution.Variables)
+	stepIndex := 0
+	var primaryError any
+
+	currentRunID, failed, errValue := runMobileTestSteps(cmd, o, &result, suite.Before, execution.Variables, currentRunID, "before", true, &stepIndex)
+	if failed && primaryError == nil {
+		primaryError = errValue
+	}
+	if !failed {
+		currentRunID, failed, errValue = runMobileTestSteps(cmd, o, &result, execution.Case.Steps, execution.Variables, currentRunID, "case", !execution.Case.ContinueOnFailure, &stepIndex)
+		if failed && primaryError == nil {
+			primaryError = errValue
+		}
+	}
+	currentRunID, afterFailed, afterError := runMobileTestSteps(cmd, o, &result, suite.After, execution.Variables, currentRunID, "after", false, &stepIndex)
+	_ = currentRunID
+	if afterFailed {
+		primaryError = mergeTestErrors(primaryError, afterError)
+	}
+	result.Passed = primaryError == nil
+	result.Error = primaryError
+	result.DurationMS = time.Since(start).Milliseconds()
+	if !result.Passed && evidenceDir != "" {
+		if path := writeTestEvidence(o, evidenceDir, name, result); path != "" {
+			result.EvidencePath = path
+		}
+	}
+	return result
+}
+
+func runMobileTestSteps(cmd *cobra.Command, o *Opts, result *mobileTestCaseResult, steps []workflowStep, vars map[string]string, currentRunID, phase string, stopOnFailure bool, stepIndex *int) (string, bool, any) {
+	failed := false
+	var firstError any
+	for _, original := range steps {
+		*stepIndex++
+		step := substituteWorkflowStep(original, vars)
 		args, err := workflowStepArgs(step)
+		item := map[string]any{"index": *stepIndex, "phase": phase, "action": step.Action}
 		if err != nil {
-			result.Passed = false
-			result.Error = err.Error()
-			break
+			item["ok"] = false
+			item["error"] = err.Error()
+			result.Steps = append(result.Steps, item)
+			if firstError == nil {
+				firstError = err.Error()
+			}
+			failed = true
+			if stopOnFailure {
+				return currentRunID, true, firstError
+			}
+			continue
 		}
 		args = fillWorkflowRunID(args, currentRunID)
+		if id := runIDFromArgs(args); id != "" {
+			currentRunID = id
+			result.RunID = id
+		}
 		env, raw, err := executeWorkflowCommand(cmd, o, args)
-		item := map[string]any{"index": i + 1, "action": step.Action, "args": redactArgs(args), "ok": env.OK}
+		item["args"] = redactArgs(args)
+		item["ok"] = env.OK
 		if raw != "" {
 			item["raw_length"] = len(raw)
 		}
@@ -219,25 +266,44 @@ func runMobileTestCase(cmd *cobra.Command, o *Opts, suite mobileTestSuite, execu
 			result.RunID = id
 		}
 		if err != nil || !env.OK {
-			result.Passed = false
-			if env.Error != nil {
-				result.Error = env.Error
-			} else if err != nil {
-				result.Error = err.Error()
+			failed = true
+			if firstError == nil {
+				if env.Error != nil {
+					firstError = env.Error
+				} else if err != nil {
+					firstError = err.Error()
+				} else {
+					firstError = "workflow command returned ok=false"
+				}
 			}
-			break
+			if stopOnFailure {
+				return currentRunID, true, firstError
+			}
 		}
 	}
-	result.DurationMS = time.Since(start).Milliseconds()
-	if !result.Passed && evidenceDir != "" {
-		if path := writeTestEvidence(evidenceDir, name, result); path != "" {
-			result.EvidencePath = path
-		}
-	}
-	return result
+	return currentRunID, failed, firstError
 }
 
-func writeTestEvidence(evidenceDir, caseName string, result mobileTestCaseResult) string {
+func runIDFromArgs(args []string) string {
+	for i, arg := range args {
+		if arg == "--run-id" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return ""
+}
+
+func mergeTestErrors(primary, cleanup any) any {
+	if primary == nil {
+		return cleanup
+	}
+	if cleanup == nil {
+		return primary
+	}
+	return map[string]any{"primary": primary, "cleanup": cleanup}
+}
+
+func writeTestEvidence(o *Opts, evidenceDir, caseName string, result mobileTestCaseResult) string {
 	dir := filepath.Join(evidenceDir, mobile.SafeArtifactName(caseName))
 	_ = os.MkdirAll(dir, 0o700)
 	path := filepath.Join(dir, "failure.json")
@@ -248,7 +314,47 @@ func writeTestEvidence(evidenceDir, caseName string, result mobileTestCaseResult
 	if err := os.WriteFile(path, b, 0o600); err != nil {
 		return ""
 	}
-	return path
+	writeRunEvidence(o, dir, result.RunID)
+	return dir
+}
+
+func writeRunEvidence(o *Opts, dir, runID string) {
+	if strings.TrimSpace(runID) == "" {
+		return
+	}
+	svc, err := newServices(o, false)
+	if err != nil {
+		return
+	}
+	report := map[string]any{}
+	st, err := svc.Store.LoadRun(runID)
+	if err != nil {
+		return
+	}
+	report["run"] = st
+	if events, err := svc.Store.LoadTimeline(runID); err == nil {
+		report["timeline"] = events
+	}
+	if st.LatestObservationID != "" {
+		if obs, err := svc.Store.LoadObservation(runID, st.LatestObservationID); err == nil {
+			report["latest_observation"] = obs
+			copyObservationEvidence(dir, obs)
+		}
+	}
+	_ = writeJSONFile(filepath.Join(dir, "run-report.json"), report)
+}
+
+func copyObservationEvidence(dir string, obs mobile.Observation) {
+	for name, path := range map[string]string{
+		"source.xml":     obs.SourcePath,
+		"screenshot.png": obs.ScreenshotPath,
+		"candidates.json": obs.CandidatesPath,
+	} {
+		if strings.TrimSpace(path) == "" {
+			continue
+		}
+		_ = copyFile(path, filepath.Join(dir, name))
+	}
 }
 
 func substituteWorkflowStep(step workflowStep, vars map[string]string) workflowStep {

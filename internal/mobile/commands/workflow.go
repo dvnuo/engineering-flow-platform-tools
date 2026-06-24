@@ -48,7 +48,7 @@ type workflowStep struct {
 	Status          string  `json:"status,omitempty" yaml:"status,omitempty"`
 	Contains        string  `json:"contains,omitempty" yaml:"contains,omitempty"`
 	Equals          string  `json:"equals,omitempty" yaml:"equals,omitempty"`
-	Expected        int     `json:"expected,omitempty" yaml:"expected,omitempty"`
+	Expected        *int    `json:"expected,omitempty" yaml:"expected,omitempty"`
 	MaxScrolls      int     `json:"max_scrolls,omitempty" yaml:"max_scrolls,omitempty"`
 	Keycode         int     `json:"keycode,omitempty" yaml:"keycode,omitempty"`
 	XPercent        float64 `json:"x_percent,omitempty" yaml:"x_percent,omitempty"`
@@ -301,8 +301,8 @@ func workflowStepArgs(step workflowStep) ([]string, error) {
 	case "assert.count":
 		args := appendRunID([]string{"assert", "count"}, step.RunID)
 		args = appendLocatorStepFlags(args, step)
-		if step.Expected >= 0 {
-			args = append(args, "--expected", intString(step.Expected))
+		if step.Expected != nil {
+			args = append(args, "--expected", intString(*step.Expected))
 		}
 		return args, nil
 	case "assert.text":

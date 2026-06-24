@@ -77,4 +77,6 @@ Prefer ref-based actions when an element is observable. Use `tap-point`, coordin
 
 Use `workflow record` to turn a run timeline into an editable YAML skeleton, and `workflow run` to replay whitelisted structured steps. Workflows do not execute arbitrary shell or raw CLI strings.
 
-Use `test run` for CI-facing suites with case filters, tags, JSON/JUnit output, and failure evidence. Use `inspector config` or `inspector attach` to hand a live BrowserStack session to Appium Inspector without recreating capabilities by hand.
+Use `test run` for CI-facing suites with case filters, tags, JSON/JUnit output, and failure evidence. Suite-level `after` steps are cleanup and run even after a before/case failure; use `secrets_env` to map suite variables to environment variable names consumed by workflow `text_env` fields without putting secret values in reports.
+
+Use `inspector config` or `inspector attach` to hand a live BrowserStack session to Appium Inspector without recreating capabilities by hand. Inspector JSON keeps `accessKey` redacted; pass `--secret-mode env` to include safe environment-variable hints for manual Inspector setup.

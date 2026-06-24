@@ -65,7 +65,7 @@ mobile locate --run-id run-... --role button --name Login --json
 mobile tap --run-id run-... --ref obs-...:e1 --json
 mobile type --run-id run-... --ref obs-...:e2 --text-env TEST_PASSWORD --json
 mobile assert visible --run-id run-... --name Home --json
-mobile inspector attach --run-id run-... --json
+mobile inspector attach --run-id run-... --secret-mode env --json
 mobile test run --file suite.yaml --junit-out junit.xml --json
 mobile run handoff --run-id run-... --hold-for 10m --json
 mobile run resume --run-id run-... --json

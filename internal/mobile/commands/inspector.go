@@ -25,6 +25,7 @@ type inspectorConfigOptions struct {
 	Build           string
 	Name            string
 	ShowSecret      bool
+	SecretMode      string
 	Out             string
 }
 
@@ -49,6 +50,11 @@ func inspectorConfigCmd(o *Opts) *cobra.Command {
 			}
 			st = &loaded
 		}
+		mode, err := normalizeInspectorSecretMode(opts.SecretMode)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "Use --secret-mode redacted or --secret-mode env.", 400))
+		}
+		opts.SecretMode = mode
 		data := inspectorConfigData(svc, opts, st)
 		if opts.Out != "" {
 			if err := writeJSONFile(opts.Out, data); err != nil {
@@ -65,9 +71,14 @@ func inspectorConfigCmd(o *Opts) *cobra.Command {
 func inspectorAttachCmd(o *Opts) *cobra.Command {
 	var runID string
 	var showSecret bool
+	var secretMode string
 	c := &cobra.Command{Use: "attach", RunE: func(cmd *cobra.Command, args []string) error {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the run id to inspect.", 400))
+		}
+		mode, err := normalizeInspectorSecretMode(secretMode)
+		if err != nil {
+			return print(cmd, o, output.Failure("invalid_args", err.Error(), "Use --secret-mode redacted or --secret-mode env.", 400))
 		}
 		svc, err := newServices(o, true)
 		if err != nil {
@@ -77,32 +88,45 @@ func inspectorAttachCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		opts := inspectorConfigOptions{RunID: runID, ShowSecret: showSecret}
+		opts := inspectorConfigOptions{RunID: runID, ShowSecret: showSecret, SecretMode: mode}
 		data := inspectorConfigData(svc, opts, &st)
 		contexts := []string{}
 		currentContext := ""
+		warnings := []string{}
 		if st.SessionID != "" {
 			if got, err := svc.Appium.Contexts(cmd.Context(), st.SessionID); err == nil {
 				contexts = got
+			} else {
+				warnings = append(warnings, "contexts unavailable: "+output.RedactString(err.Error()))
+				markRunLostIfSessionGone(svc, &st, err)
 			}
 			if got, err := svc.Appium.CurrentContext(cmd.Context(), st.SessionID); err == nil {
 				currentContext = got
+			} else {
+				warnings = append(warnings, "current context unavailable: "+output.RedactString(err.Error()))
+				markRunLostIfSessionGone(svc, &st, err)
 			}
+		}
+		if len(warnings) > 0 {
+			data["warnings"] = appendStringValues(data["warnings"], warnings...)
 		}
 		data["attach"] = map[string]any{
 			"run_id":          runID,
+			"run_status":      st.Status,
 			"session_id":      st.SessionID,
 			"dashboard_url":   st.DashboardURL,
 			"browser_url":     st.BrowserURL,
 			"public_url":      st.PublicURL,
 			"current_context": currentContext,
 			"contexts":        classifyContexts(contexts),
+			"warnings":        warnings,
 			"handoff_hint":    "Use mobile run handoff --run-id " + runID + " --mode inspector --json before manual Inspector work, then mobile run resume.",
 		}
 		return print(cmd, o, output.Success("", data))
 	}}
 	c.Flags().StringVar(&runID, "run-id", "", "")
 	c.Flags().BoolVar(&showSecret, "show-secret", false, "")
+	c.Flags().StringVar(&secretMode, "secret-mode", "redacted", "")
 	return c
 }
 
@@ -187,6 +211,7 @@ func bindInspectorConfigFlags(c *cobra.Command, opts *inspectorConfigOptions) {
 	c.Flags().StringVar(&opts.Build, "build", "", "")
 	c.Flags().StringVar(&opts.Name, "name", "", "")
 	c.Flags().BoolVar(&opts.ShowSecret, "show-secret", false, "")
+	c.Flags().StringVar(&opts.SecretMode, "secret-mode", "redacted", "")
 	c.Flags().StringVar(&opts.Out, "out", "", "")
 }
 
@@ -219,11 +244,8 @@ func inspectorConfigData(svc *services, opts inspectorConfigOptions, st *mobile.
 		caps["appium:platformVersion"] = osVersion
 	}
 	bstack := map[string]any{
-		"userName":  svc.Runtime.Credentials.Username,
-		"accessKey": inspectorAccessKey(svc, opts.ShowSecret),
-	}
-	if opts.ShowSecret {
-		bstack["accessKey_warning"] = "secret displayed because --show-secret was passed"
+		"userName":  inspectorUsername(svc, opts.SecretMode),
+		"accessKey": inspectorAccessKey(svc, opts.SecretMode),
 	}
 	if opts.Project != "" || runProjectName(st) != "" {
 		bstack["projectName"] = firstNonEmpty(opts.Project, runProjectName(st))
@@ -242,8 +264,9 @@ func inspectorConfigData(svc *services, opts inspectorConfigOptions, st *mobile.
 	data := map[string]any{
 		"remote_url":        appiumURL,
 		"server":            parts,
-		"username":          svc.Runtime.Credentials.Username,
-		"access_key":        inspectorAccessKey(svc, opts.ShowSecret),
+		"username":          inspectorUsername(svc, opts.SecretMode),
+		"access_key":        inspectorAccessKey(svc, opts.SecretMode),
+		"auth":              inspectorAuthSummary(opts),
 		"capabilities":      caps,
 		"network_mode":      network,
 		"local_identifier":  localID,
@@ -251,6 +274,9 @@ func inspectorConfigData(svc *services, opts inspectorConfigOptions, st *mobile.
 		"session_id":        runSessionID(st),
 		"dashboard_url":     runDashboardURL(st),
 		"copy_to_inspector": map[string]any{"remote_server_url": appiumURL, "capabilities": caps},
+	}
+	if warnings := inspectorConfigWarnings(opts); len(warnings) > 0 {
+		data["warnings"] = warnings
 	}
 	return data
 }
@@ -274,14 +300,64 @@ func appiumURLParts(raw string) map[string]string {
 	return map[string]string{"url": raw, "scheme": u.Scheme, "host": u.Host, "path": u.Path}
 }
 
-func inspectorAccessKey(svc *services, show bool) string {
-	if show {
-		return svc.Runtime.Credentials.AccessKey
+func normalizeInspectorSecretMode(mode string) (string, error) {
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	if mode == "" {
+		return "redacted", nil
 	}
+	switch mode {
+	case "redacted", "env":
+		return mode, nil
+	default:
+		return "", mobileError("invalid_args", "unsupported inspector secret mode: "+mode, "Use redacted or env.", 400)
+	}
+}
+
+func inspectorUsername(svc *services, mode string) string {
+	if mode == "env" {
+		return "${BROWSERSTACK_USERNAME}"
+	}
+	return svc.Runtime.Credentials.Username
+}
+
+func inspectorAccessKey(svc *services, mode string) string {
 	if svc.Runtime.Credentials.AccessKey == "" {
 		return ""
 	}
+	if mode == "env" {
+		return "${BROWSERSTACK_ACCESS_KEY}"
+	}
 	return output.Redacted
+}
+
+func inspectorAuthSummary(opts inspectorConfigOptions) map[string]any {
+	mode := firstNonEmpty(opts.SecretMode, "redacted")
+	out := map[string]any{"mode": mode}
+	if mode == "env" {
+		out["env_vars"] = map[string]string{"username": "BROWSERSTACK_USERNAME", "key": "BROWSERSTACK_ACCESS_KEY"}
+		out["note"] = "capabilities keep sensitive accessKey fields redacted in CLI JSON; use these environment variables when pasting into Inspector."
+	}
+	return out
+}
+
+func inspectorConfigWarnings(opts inspectorConfigOptions) []string {
+	if !opts.ShowSecret {
+		return nil
+	}
+	return []string{"--show-secret is ignored for JSON safety; use --secret-mode env to emit environment variable placeholders instead."}
+}
+
+func appendStringValues(existing any, values ...string) []string {
+	out := []string{}
+	if list, ok := existing.([]string); ok {
+		out = append(out, list...)
+	}
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			out = append(out, value)
+		}
+	}
+	return out
 }
 
 func valueFromRun(st *mobile.RunState, key string) string {

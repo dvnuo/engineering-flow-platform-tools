@@ -21,6 +21,8 @@
 - Never invent refs, selectors, XPath, resource IDs, or coordinates. Prefer refs returned by the latest `observe`; use coordinate actions only for explicit spatial instructions or measured viewport-relative gestures.
 - After `tap`, `tap-point`, `long-press`, `double-tap`, `drag`, `type`, `clear`, `scroll`, `scroll-to`, `swipe`, `back`, `keyboard`, or `context switch`, old refs are stale unless the command returned a `post_observe`.
 - Use `--wait-change`, `--wait-visible`, or `--wait-gone` for actions that must prove the UI changed before the next step.
+- Use `scroll-to --edge bottom|top` for boundary scrolling and `swipe`/`scroll --until-stable --max-swipes N` for repeated gestures. Branch on `stopped_reason`, `repeated_source`, and before/after `source_hash` fields instead of guessing how many swipes happened.
+- Percent inputs accept both `50` and `0.5` for fifty percent; use scroll profiles such as `fast-page-down`, `fine-scroll`, and `page-up` when you do not need custom coordinates.
 - Use `--text-env` or `--text-stdin` for secrets. The CLI returns source type and length, not secret values.
 - Use `--network public` for public apps. Use `private-managed` only when BrowserStack devices must reach private/internal hosts.
 - `run handoff` gives control to the human and starts bounded keepalive; mutating actions return `control_locked` until `run resume`.

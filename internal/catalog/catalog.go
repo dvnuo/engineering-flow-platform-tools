@@ -176,7 +176,7 @@ var mobileCommands = []string{
 	"mobile project list", "mobile project get", "mobile build list", "mobile build get",
 	"mobile session list", "mobile session get", "mobile session mark", "mobile session start", "mobile session status", "mobile session stop",
 	"mobile run start", "mobile run status", "mobile run handoff", "mobile run resume", "mobile run finish",
-	"mobile observe", "mobile locate", "mobile tap", "mobile type", "mobile clear", "mobile scroll", "mobile swipe", "mobile back",
+	"mobile observe", "mobile locate", "mobile tap", "mobile type", "mobile clear", "mobile scroll", "mobile scroll-to", "mobile swipe", "mobile back",
 	"mobile context list", "mobile context switch",
 	"mobile assert exists", "mobile assert visible", "mobile assert enabled", "mobile assert selected", "mobile assert text",
 	"mobile wait stable", "mobile artifact list", "mobile artifact collect", "mobile artifact download",

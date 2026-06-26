@@ -332,11 +332,19 @@ func writeRunEvidence(o *Opts, dir, runID string) {
 		return
 	}
 	report["run"] = st
+	var events []mobile.TimelineEvent
 	if events, err := svc.Store.LoadTimeline(runID); err == nil {
 		report["timeline"] = events
 	}
-	if st.LatestObservationID != "" {
-		if obs, err := svc.Store.LoadObservation(runID, st.LatestObservationID); err == nil {
+	obsID := st.LatestObservationID
+	if obsID == "" {
+		obsID = latestTimelineObservationID(events)
+	}
+	if obsID == "" {
+		obsID = latestStoredObservationID(svc.Store, runID)
+	}
+	if obsID != "" {
+		if obs, err := svc.Store.LoadObservation(runID, obsID); err == nil {
 			report["latest_observation"] = obs
 			copyObservationEvidence(dir, obs)
 		}
@@ -344,10 +352,45 @@ func writeRunEvidence(o *Opts, dir, runID string) {
 	_ = writeJSONFile(filepath.Join(dir, "run-report.json"), report)
 }
 
+func latestTimelineObservationID(events []mobile.TimelineEvent) string {
+	for i := len(events) - 1; i >= 0; i-- {
+		if strings.TrimSpace(events[i].ObservationID) != "" {
+			return events[i].ObservationID
+		}
+	}
+	return ""
+}
+
+func latestStoredObservationID(store *mobile.StateStore, runID string) string {
+	if store == nil {
+		return ""
+	}
+	entries, err := os.ReadDir(store.ObservationDir(runID))
+	if err != nil {
+		return ""
+	}
+	var latestID string
+	var latestTime time.Time
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		obs, err := store.LoadObservation(runID, entry.Name())
+		if err != nil {
+			continue
+		}
+		if latestID == "" || obs.CreatedAt.After(latestTime) {
+			latestID = obs.ID
+			latestTime = obs.CreatedAt
+		}
+	}
+	return latestID
+}
+
 func copyObservationEvidence(dir string, obs mobile.Observation) {
 	for name, path := range map[string]string{
-		"source.xml":     obs.SourcePath,
-		"screenshot.png": obs.ScreenshotPath,
+		"source.xml":      obs.SourcePath,
+		"screenshot.png":  obs.ScreenshotPath,
 		"candidates.json": obs.CandidatesPath,
 	} {
 		if strings.TrimSpace(path) == "" {

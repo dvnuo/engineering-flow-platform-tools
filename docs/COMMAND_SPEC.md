@@ -691,6 +691,8 @@ browser network export --session default --out result/network.har-lite.json --fo
 
 Agent actions use observation refs such as `obs-...:e17`. Re-observe after every mutating command. Public runs do not start BrowserStack Local or set the Appium local capability. Private managed runs start the configured `BrowserStackLocal` binary and use the same local identifier for the tunnel and BrowserStack session capabilities.
 
+Mobile scrolling supports both single gestures and task-level loops. Use `mobile scroll-to --edge bottom|top` to continue until a boundary/stable page is reached, or `mobile swipe|scroll --until-stable --max-swipes N` to repeat viewport-relative gestures until content stops changing. `--until-visible` and `--until-gone` provide explicit text stop conditions. Percent flags accept either `50` or `0.5` for fifty percent; `--profile fast-page-down`, `--profile fine-scroll`, and `--profile page-up` map to safe preset percentages and durations. Scroll JSON includes `scrolls`, `stopped_reason`, `repeated_source`, before/after `source_hash`, `last_observation_id`, visible text summaries, and final controls.
+
 ## Inspect Image
 
 ### Basic

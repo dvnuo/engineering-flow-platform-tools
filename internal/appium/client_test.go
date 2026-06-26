@@ -11,7 +11,7 @@ import (
 
 	"engineering-flow-platform-tools/internal/browserstack"
 	"engineering-flow-platform-tools/internal/httpclient"
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 )
 
 func TestCreateSessionPublicDoesNotSetLocal(t *testing.T) {
@@ -150,7 +150,7 @@ func TestCreateSessionRejectsUnsupportedIdleTimeout(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = c.CreateSession(context.Background(), CreateSessionRequest{IdleTimeoutSeconds: 301})
-	var me *mobile.Error
+	var me *mobileauto.Error
 	if !errors.As(err, &me) || me.Code != "invalid_args" {
 		t.Fatalf("expected invalid_args mobile error, got %#v", err)
 	}
@@ -166,7 +166,7 @@ func TestCreateSessionPreservesRemoteLocalError(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = c.CreateSession(context.Background(), CreateSessionRequest{PlatformName: "android"})
-	var me *mobile.Error
+	var me *mobileauto.Error
 	if !errors.As(err, &me) || me.Code != "local_tunnel_required" {
 		t.Fatalf("expected local_tunnel_required, got %#v", err)
 	}
@@ -186,7 +186,7 @@ func TestCreateSessionPreservesRemoteCapabilityError(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = c.CreateSession(context.Background(), CreateSessionRequest{PlatformName: "android"})
-	var me *mobile.Error
+	var me *mobileauto.Error
 	if !errors.As(err, &me) || me.Code != "invalid_capabilities" {
 		t.Fatalf("expected invalid_capabilities, got %#v", err)
 	}

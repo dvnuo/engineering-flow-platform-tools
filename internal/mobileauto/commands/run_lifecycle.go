@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 )
 
-func markRunLostIfSessionGone(svc *services, st *mobile.RunState, err error) {
+func markRunLostIfSessionGone(svc *services, st *mobileauto.RunState, err error) {
 	if !isSessionLostError(err) {
 		return
 	}
@@ -17,11 +17,11 @@ func markRunLostIfSessionGone(svc *services, st *mobile.RunState, err error) {
 	_ = svc.Store.SaveRun(*st)
 }
 
-func markRunLost(st *mobile.RunState, causes ...error) {
-	markRunTerminal(st, mobile.StatusLost, "remote session is no longer available", firstError(causes...))
+func markRunLost(st *mobileauto.RunState, causes ...error) {
+	markRunTerminal(st, mobileauto.StatusLost, "remote session is no longer available", firstError(causes...))
 }
 
-func markRunTerminal(st *mobile.RunState, status mobile.RunStatus, reason string, err error) {
+func markRunTerminal(st *mobileauto.RunState, status mobileauto.RunStatus, reason string, err error) {
 	now := time.Now().UTC()
 	st.Status = status
 	st.ControlOwner = "agent"
@@ -37,12 +37,12 @@ func markRunTerminal(st *mobile.RunState, status mobile.RunStatus, reason string
 }
 
 func isSessionLostError(err error) bool {
-	var me *mobile.Error
+	var me *mobileauto.Error
 	return errors.As(err, &me) && me.Code == "session_lost"
 }
 
 func isRemoteSessionGone(err error) bool {
-	var me *mobile.Error
+	var me *mobileauto.Error
 	return errors.As(err, &me) && (me.Code == "session_lost" || me.Code == "not_found")
 }
 
@@ -50,7 +50,7 @@ func errorCodeAndMessage(err error) (string, string) {
 	if err == nil {
 		return "", ""
 	}
-	var me *mobile.Error
+	var me *mobileauto.Error
 	if errors.As(err, &me) {
 		return me.Code, output.RedactString(me.Message)
 	}

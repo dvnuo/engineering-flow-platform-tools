@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"engineering-flow-platform-tools/internal/appium"
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -27,7 +27,7 @@ func observeCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		var obs mobile.Observation
+		var obs mobileauto.Observation
 		err = svc.Store.WithRunLock(runID, func() error {
 			st, err := svc.Store.LoadRun(runID)
 			if err != nil {
@@ -46,7 +46,7 @@ func observeCmd(o *Opts) *cobra.Command {
 	return c
 }
 
-func captureObservation(ctx context.Context, svc *services, st *mobile.RunState, limit int) (mobile.Observation, error) {
+func captureObservation(ctx context.Context, svc *services, st *mobileauto.RunState, limit int) (mobileauto.Observation, error) {
 	contextName := ""
 	if st.Metadata != nil {
 		contextName = st.Metadata["context"]
@@ -54,18 +54,18 @@ func captureObservation(ctx context.Context, svc *services, st *mobile.RunState,
 	source, err := svc.Appium.GetSource(ctx, st.SessionID)
 	if err != nil {
 		markRunLostIfSessionGone(svc, st, err)
-		return mobile.Observation{}, err
+		return mobileauto.Observation{}, err
 	}
 	screen, err := svc.Appium.Screenshot(ctx, st.SessionID)
 	if err != nil {
 		markRunLostIfSessionGone(svc, st, err)
-		return mobile.Observation{}, err
+		return mobileauto.Observation{}, err
 	}
 	st.ObservationVersion++
-	obsID := mobile.NewObservationID(st.ObservationVersion)
-	obs, err := mobile.BuildObservationStrict(st.RunID, st.SessionID, obsID, source, screen)
+	obsID := mobileauto.NewObservationID(st.ObservationVersion)
+	obs, err := mobileauto.BuildObservationStrict(st.RunID, st.SessionID, obsID, source, screen)
 	if err != nil {
-		return mobile.Observation{}, err
+		return mobileauto.Observation{}, err
 	}
 	obs.Context = contextName
 	dir := filepath.Join(svc.Store.ObservationDir(st.RunID), obs.ID)
@@ -73,11 +73,11 @@ func captureObservation(ctx context.Context, svc *services, st *mobile.RunState,
 	obs.ScreenshotPath = filepath.Join(dir, "screenshot.png")
 	obs.CandidatesPath = filepath.Join(dir, "candidates.json")
 	if err := svc.Store.SaveObservation(st.RunID, obs); err != nil {
-		return mobile.Observation{}, err
+		return mobileauto.Observation{}, err
 	}
 	st.LatestObservationID = obs.ID
 	if err := svc.Store.SaveRun(*st); err != nil {
-		return mobile.Observation{}, err
+		return mobileauto.Observation{}, err
 	}
 	appendTimelineBestEffort(svc, st.RunID, "observe", "", obs.ID, st.Status, map[string]any{
 		"candidate_count":  len(obs.Candidates),
@@ -86,12 +86,12 @@ func captureObservation(ctx context.Context, svc *services, st *mobile.RunState,
 		"source_hash":      obs.SourceHash,
 		"screenshot_hash":  obs.ScreenshotHash,
 	})
-	return mobile.LimitObservationCandidates(obs, limit), nil
+	return mobileauto.LimitObservationCandidates(obs, limit), nil
 }
 
 func locateCmd(o *Opts) *cobra.Command {
 	var runID string
-	q := mobile.LocateQuery{}
+	q := mobileauto.LocateQuery{}
 	var visible, enabled bool
 	var useVisible, useEnabled bool
 	c := &cobra.Command{Use: "locate", RunE: func(cmd *cobra.Command, args []string) error {
@@ -119,7 +119,7 @@ func locateCmd(o *Opts) *cobra.Command {
 		if useEnabled {
 			q.Enabled = &enabled
 		}
-		res := mobile.Locate(obs, q)
+		res := mobileauto.Locate(obs, q)
 		return print(cmd, o, output.Success("", res))
 	}}
 	c.Flags().StringVar(&runID, "run-id", "", "")
@@ -145,7 +145,7 @@ func tapCmd(o *Opts) *cobra.Command {
 	var runID, ref string
 	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "tap", RunE: func(cmd *cobra.Command, args []string) error {
-		return mutateRef(cmd, o, runID, ref, "tap", actionOpts, func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) error {
+		return mutateRef(cmd, o, runID, ref, "tap", actionOpts, func(ctx context.Context, svc *services, st mobileauto.RunState, element appium.RemoteElement) error {
 			return svc.Appium.Click(ctx, st.SessionID, element.ID)
 		})
 	}}
@@ -159,7 +159,7 @@ func clearCmd(o *Opts) *cobra.Command {
 	var runID, ref string
 	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "clear", RunE: func(cmd *cobra.Command, args []string) error {
-		return mutateRef(cmd, o, runID, ref, "clear", actionOpts, func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) error {
+		return mutateRef(cmd, o, runID, ref, "clear", actionOpts, func(ctx context.Context, svc *services, st mobileauto.RunState, element appium.RemoteElement) error {
 			return svc.Appium.Clear(ctx, st.SessionID, element.ID)
 		})
 	}}
@@ -179,7 +179,7 @@ func typeCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Failure("invalid_args", err.Error(), "Use exactly one of --text, --text-env, or --text-stdin.", 400))
 		}
 		var typed int
-		err = mutateRefCore(cmd, o, runID, ref, "type", actionOpts, func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) (map[string]any, error) {
+		err = mutateRefCore(cmd, o, runID, ref, "type", actionOpts, func(ctx context.Context, svc *services, st mobileauto.RunState, element appium.RemoteElement) (map[string]any, error) {
 			typed = len(value)
 			return map[string]any{"text_source": source, "text_length": typed}, svc.Appium.SendKeys(ctx, st.SessionID, element.ID, value)
 		})
@@ -268,7 +268,7 @@ func tapPointCmd(o *Opts) *cobra.Command {
 		if opts.RunID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, opts.RunID, "tap_point", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, opts.RunID, "tap_point", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			target, viewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, opts)
 			if err != nil {
 				return nil, err
@@ -292,7 +292,7 @@ func longPressCmd(o *Opts) *cobra.Command {
 		if opts.RunID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, opts.RunID, "long_press", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, opts.RunID, "long_press", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			target, viewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, opts)
 			if err != nil {
 				return nil, err
@@ -316,7 +316,7 @@ func doubleTapCmd(o *Opts) *cobra.Command {
 		if opts.RunID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, opts.RunID, "double_tap", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, opts.RunID, "double_tap", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			target, viewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, opts)
 			if err != nil {
 				return nil, err
@@ -354,7 +354,7 @@ func dragCmd(o *Opts) *cobra.Command {
 		if opts.RunID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, opts.RunID, "drag", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, opts.RunID, "drag", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			from, to, viewport, err := resolveDragTargets(ctx, svc, st, opts)
 			if err != nil {
 				return nil, err
@@ -392,7 +392,7 @@ func bindPointTargetFlags(c *cobra.Command, opts *pointTargetOptions, allowRef b
 	c.Flags().Float64Var(&opts.YPercent, "y-percent", -1, "")
 }
 
-func resolvePointTarget(ctx context.Context, svc *services, st *mobile.RunState, runID string, opts pointTargetOptions) (gestureTarget, *appium.Rect, error) {
+func resolvePointTarget(ctx context.Context, svc *services, st *mobileauto.RunState, runID string, opts pointTargetOptions) (gestureTarget, *appium.Rect, error) {
 	if opts.Ref != "" {
 		_, _, _, element, _, err := resolveRefElement(ctx, svc, runID, opts.Ref)
 		if err != nil {
@@ -408,7 +408,7 @@ func resolvePointTarget(ctx context.Context, svc *services, st *mobile.RunState,
 	return resolveCoordinateTarget(ctx, svc, st, opts.X, opts.Y, opts.XPercent, opts.YPercent, "point")
 }
 
-func resolveDragTargets(ctx context.Context, svc *services, st *mobile.RunState, opts dragCommandOptions) (gestureTarget, gestureTarget, *appium.Rect, error) {
+func resolveDragTargets(ctx context.Context, svc *services, st *mobileauto.RunState, opts dragCommandOptions) (gestureTarget, gestureTarget, *appium.Rect, error) {
 	fromOpts := pointTargetOptions{RunID: opts.RunID, Ref: opts.FromRef, X: opts.FromX, Y: opts.FromY, XPercent: opts.FromXPercent, YPercent: opts.FromYPercent}
 	toOpts := pointTargetOptions{RunID: opts.RunID, Ref: opts.ToRef, X: opts.ToX, Y: opts.ToY, XPercent: opts.ToXPercent, YPercent: opts.ToYPercent}
 	from, viewport, err := resolvePointTarget(ctx, svc, st, opts.RunID, fromOpts)
@@ -425,15 +425,15 @@ func resolveDragTargets(ctx context.Context, svc *services, st *mobile.RunState,
 	return from, to, viewport, nil
 }
 
-func resolveCoordinateTarget(ctx context.Context, svc *services, st *mobile.RunState, x, y int, xPercent, yPercent float64, source string) (gestureTarget, *appium.Rect, error) {
+func resolveCoordinateTarget(ctx context.Context, svc *services, st *mobileauto.RunState, x, y int, xPercent, yPercent float64, source string) (gestureTarget, *appium.Rect, error) {
 	hasAbs := x >= 0 || y >= 0
 	hasPercent := xPercent >= 0 || yPercent >= 0
 	if hasAbs && hasPercent {
-		return gestureTarget{}, nil, mobile.NewError("invalid_args", "use either absolute coordinates or percent coordinates", "Choose --x/--y or --x-percent/--y-percent.", 400)
+		return gestureTarget{}, nil, mobileauto.NewError("invalid_args", "use either absolute coordinates or percent coordinates", "Choose --x/--y or --x-percent/--y-percent.", 400)
 	}
 	if hasAbs {
 		if x < 0 || y < 0 {
-			return gestureTarget{}, nil, mobile.NewError("invalid_args", "absolute point requires both x and y", "Pass both --x and --y.", 400)
+			return gestureTarget{}, nil, mobileauto.NewError("invalid_args", "absolute point requires both x and y", "Pass both --x and --y.", 400)
 		}
 		return gestureTarget{Point: gesturePoint{X: x, Y: y}, Source: source + "_absolute"}, nil, nil
 	}
@@ -441,11 +441,11 @@ func resolveCoordinateTarget(ctx context.Context, svc *services, st *mobile.RunS
 		var err error
 		xPercent, err = normalizePercentInput(xPercent)
 		if err != nil {
-			return gestureTarget{}, nil, mobile.NewError("invalid_args", "percent point requires x/y percent between 0 and 100, or 0.0 and 1.0 as fractions", "Use 50 or 0.5 for fifty percent, and pass both --x-percent and --y-percent.", 400)
+			return gestureTarget{}, nil, mobileauto.NewError("invalid_args", "percent point requires x/y percent between 0 and 100, or 0.0 and 1.0 as fractions", "Use 50 or 0.5 for fifty percent, and pass both --x-percent and --y-percent.", 400)
 		}
 		yPercent, err = normalizePercentInput(yPercent)
 		if err != nil {
-			return gestureTarget{}, nil, mobile.NewError("invalid_args", "percent point requires x/y percent between 0 and 100, or 0.0 and 1.0 as fractions", "Use 50 or 0.5 for fifty percent, and pass both --x-percent and --y-percent.", 400)
+			return gestureTarget{}, nil, mobileauto.NewError("invalid_args", "percent point requires x/y percent between 0 and 100, or 0.0 and 1.0 as fractions", "Use 50 or 0.5 for fifty percent, and pass both --x-percent and --y-percent.", 400)
 		}
 		rect, err := svc.Appium.WindowRect(ctx, st.SessionID)
 		if err != nil {
@@ -456,7 +456,7 @@ func resolveCoordinateTarget(ctx context.Context, svc *services, st *mobile.RunS
 		}
 		return gestureTarget{Point: percentPoint(rect, xPercent, yPercent), Source: source + "_percent"}, &rect, nil
 	}
-	return gestureTarget{}, nil, mobile.NewError("invalid_args", "a gesture target is required", "Pass --ref, --x/--y, or --x-percent/--y-percent.", 400)
+	return gestureTarget{}, nil, mobileauto.NewError("invalid_args", "a gesture target is required", "Pass --ref, --x/--y, or --x-percent/--y-percent.", 400)
 }
 
 func rectCenter(rect appium.Rect) gesturePoint {
@@ -466,13 +466,13 @@ func rectCenter(rect appium.Rect) gesturePoint {
 	}
 }
 
-func mutateRef(cmd *cobra.Command, o *Opts, runID, ref, action string, opts actionOptions, fn func(context.Context, *services, mobile.RunState, appium.RemoteElement) error) error {
-	return mutateRefCore(cmd, o, runID, ref, action, opts, func(ctx context.Context, svc *services, st mobile.RunState, element appium.RemoteElement) (map[string]any, error) {
+func mutateRef(cmd *cobra.Command, o *Opts, runID, ref, action string, opts actionOptions, fn func(context.Context, *services, mobileauto.RunState, appium.RemoteElement) error) error {
+	return mutateRefCore(cmd, o, runID, ref, action, opts, func(ctx context.Context, svc *services, st mobileauto.RunState, element appium.RemoteElement) (map[string]any, error) {
 		return nil, fn(ctx, svc, st, element)
 	})
 }
 
-func mutateRefCore(cmd *cobra.Command, o *Opts, runID, ref, action string, opts actionOptions, fn func(context.Context, *services, mobile.RunState, appium.RemoteElement) (map[string]any, error)) error {
+func mutateRefCore(cmd *cobra.Command, o *Opts, runID, ref, action string, opts actionOptions, fn func(context.Context, *services, mobileauto.RunState, appium.RemoteElement) (map[string]any, error)) error {
 	if runID == "" || ref == "" {
 		return print(cmd, o, output.Failure("invalid_args", "--run-id and --ref are required", "Use a ref from the latest observation.", 400))
 	}
@@ -513,27 +513,27 @@ func mutateRefCore(cmd *cobra.Command, o *Opts, runID, ref, action string, opts 
 	return print(cmd, o, output.Success("", data))
 }
 
-func resolveRefElement(ctx context.Context, svc *services, runID, ref string) (mobile.RunState, mobile.Observation, mobile.Candidate, appium.RemoteElement, appium.Locator, error) {
+func resolveRefElement(ctx context.Context, svc *services, runID, ref string) (mobileauto.RunState, mobileauto.Observation, mobileauto.Candidate, appium.RemoteElement, appium.Locator, error) {
 	st, err := svc.Store.LoadRun(runID)
 	if err != nil {
-		return st, mobile.Observation{}, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, err
+		return st, mobileauto.Observation{}, mobileauto.Candidate{}, appium.RemoteElement{}, appium.Locator{}, err
 	}
 	if st.ControlOwner == "human" {
-		return st, mobile.Observation{}, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobile.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
+		return st, mobileauto.Observation{}, mobileauto.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobileauto.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
 	}
-	if st.LatestObservationID == "" || mobile.RefObservationID(ref) != st.LatestObservationID {
-		return st, mobile.Observation{}, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobile.RetryableError("stale_observation", "ref does not belong to the latest observation", "Run mobile-auto observe again and use a fresh ref.", "observe", 409)
+	if st.LatestObservationID == "" || mobileauto.RefObservationID(ref) != st.LatestObservationID {
+		return st, mobileauto.Observation{}, mobileauto.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobileauto.RetryableError("stale_observation", "ref does not belong to the latest observation", "Run mobile-auto observe again and use a fresh ref.", "observe", 409)
 	}
 	obs, err := svc.Store.LoadObservation(runID, st.LatestObservationID)
 	if err != nil {
-		return st, obs, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, err
+		return st, obs, mobileauto.Candidate{}, appium.RemoteElement{}, appium.Locator{}, err
 	}
-	candidate, ok := mobile.CandidateByRef(obs, ref)
+	candidate, ok := mobileauto.CandidateByRef(obs, ref)
 	if !ok {
-		return st, obs, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobile.NewError("element_not_found", "ref was not found in the observation", "Run mobile-auto observe again.", 404)
+		return st, obs, mobileauto.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobileauto.NewError("element_not_found", "ref was not found in the observation", "Run mobile-auto observe again.", 404)
 	}
 	var last appium.Locator
-	for _, hint := range mobile.LocatorsForCandidate(st.Platform, candidate) {
+	for _, hint := range mobileauto.LocatorsForCandidate(st.Platform, candidate) {
 		locator := appium.Locator{Using: hint.Using, Value: hint.Value}
 		last = locator
 		elements, err := svc.Appium.FindElements(ctx, st.SessionID, locator)
@@ -544,23 +544,23 @@ func resolveRefElement(ctx context.Context, svc *services, runID, ref string) (m
 			return st, obs, candidate, elements[0], locator, nil
 		}
 		if len(elements) > 1 {
-			return st, obs, candidate, appium.RemoteElement{}, locator, mobile.NewError("ambiguous_element", "locator matched multiple elements", "Observe again or locate with more specific semantic criteria.", 409)
+			return st, obs, candidate, appium.RemoteElement{}, locator, mobileauto.NewError("ambiguous_element", "locator matched multiple elements", "Observe again or locate with more specific semantic criteria.", 409)
 		}
 	}
-	return st, obs, candidate, appium.RemoteElement{}, last, mobile.RetryableError("element_not_found", "no generated locator matched the element", "Run mobile-auto observe again or use locate with stable criteria.", "observe", 404)
+	return st, obs, candidate, appium.RemoteElement{}, last, mobileauto.RetryableError("element_not_found", "no generated locator matched the element", "Run mobile-auto observe again or use locate with stable criteria.", "observe", 404)
 }
 
-func resolveRefElementWithRecovery(ctx context.Context, svc *services, runID, ref string, opts actionOptions) (mobile.RunState, mobile.Observation, mobile.Candidate, appium.RemoteElement, appium.Locator, string, bool, error) {
+func resolveRefElementWithRecovery(ctx context.Context, svc *services, runID, ref string, opts actionOptions) (mobileauto.RunState, mobileauto.Observation, mobileauto.Candidate, appium.RemoteElement, appium.Locator, string, bool, error) {
 	st, obs, candidate, element, locator, err := resolveRefElement(ctx, svc, runID, ref)
 	if err == nil || !opts.RecoverStale || !isMobileErrorCode(err, "stale_observation") {
 		return st, obs, candidate, element, locator, ref, false, err
 	}
-	oldObsID := mobile.RefObservationID(ref)
+	oldObsID := mobileauto.RefObservationID(ref)
 	oldObs, loadErr := svc.Store.LoadObservation(runID, oldObsID)
 	if loadErr != nil {
 		return st, obs, candidate, element, locator, ref, false, err
 	}
-	oldCandidate, ok := mobile.CandidateByRef(oldObs, ref)
+	oldCandidate, ok := mobileauto.CandidateByRef(oldObs, ref)
 	if !ok {
 		return st, obs, candidate, element, locator, ref, false, err
 	}
@@ -569,7 +569,7 @@ func resolveRefElementWithRecovery(ctx context.Context, svc *services, runID, re
 		if captureErr != nil {
 			return st, fresh, oldCandidate, appium.RemoteElement{}, locator, ref, false, captureErr
 		}
-		res := mobile.Locate(fresh, q)
+		res := mobileauto.Locate(fresh, q)
 		recoveredRef := scrollToResolvedRef(res)
 		if recoveredRef == "" {
 			continue
@@ -583,19 +583,19 @@ func resolveRefElementWithRecovery(ctx context.Context, svc *services, runID, re
 	return st, obs, candidate, element, locator, ref, false, err
 }
 
-func locateQueriesForStaleCandidate(c mobile.Candidate) []mobile.LocateQuery {
-	var queries []mobile.LocateQuery
+func locateQueriesForStaleCandidate(c mobileauto.Candidate) []mobileauto.LocateQuery {
+	var queries []mobileauto.LocateQuery
 	if c.AccessibilityID != "" {
-		queries = append(queries, mobile.LocateQuery{AccessibilityID: c.AccessibilityID, Visible: boolPtr(true), Limit: 2})
+		queries = append(queries, mobileauto.LocateQuery{AccessibilityID: c.AccessibilityID, Visible: boolPtr(true), Limit: 2})
 	}
 	if c.ResourceID != "" {
-		queries = append(queries, mobile.LocateQuery{ResourceID: c.ResourceID, Visible: boolPtr(true), Limit: 2})
+		queries = append(queries, mobileauto.LocateQuery{ResourceID: c.ResourceID, Visible: boolPtr(true), Limit: 2})
 	}
 	if name := firstNonEmpty(c.Name, c.Text); name != "" {
-		queries = append(queries, mobile.LocateQuery{Name: name, Role: c.Role, Visible: boolPtr(true), Limit: 2})
+		queries = append(queries, mobileauto.LocateQuery{Name: name, Role: c.Role, Visible: boolPtr(true), Limit: 2})
 	}
 	if c.Text != "" {
-		queries = append(queries, mobile.LocateQuery{Text: c.Text, Role: c.Role, Visible: boolPtr(true), Limit: 2})
+		queries = append(queries, mobileauto.LocateQuery{Text: c.Text, Role: c.Role, Visible: boolPtr(true), Limit: 2})
 	}
 	return queries
 }
@@ -608,13 +608,13 @@ func isMobileErrorCode(err error, code string) bool {
 	if err == nil {
 		return false
 	}
-	var me *mobile.Error
+	var me *mobileauto.Error
 	return strings.TrimSpace(code) != "" && errorAsMobile(err, &me) && me.Code == code
 }
 
-func errorAsMobile(err error, target **mobile.Error) bool {
+func errorAsMobile(err error, target **mobileauto.Error) bool {
 	for err != nil {
-		if me, ok := err.(*mobile.Error); ok {
+		if me, ok := err.(*mobileauto.Error); ok {
 			*target = me
 			return true
 		}
@@ -683,7 +683,7 @@ func swipeCmd(o *Opts) *cobra.Command {
 
 func scrollToCmd(o *Opts) *cobra.Command {
 	opts := swipeCommandOptions{Direction: "down", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1, StableCount: 1}
-	q := mobile.LocateQuery{}
+	q := mobileauto.LocateQuery{}
 	var limit, maxScrolls int
 	var edge, untilVisible, untilGone string
 	var visible, enabled bool
@@ -725,7 +725,7 @@ func scrollToCmd(o *Opts) *cobra.Command {
 				return err
 			}
 			if st.ControlOwner == "human" {
-				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
+				return mobileauto.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
 			}
 			loopOpts := scrollLoopOptions{
 				RunID:        opts.RunID,
@@ -789,14 +789,14 @@ func scrollToCmd(o *Opts) *cobra.Command {
 	return c
 }
 
-func locateQueryHasCriteria(q mobile.LocateQuery) bool {
+func locateQueryHasCriteria(q mobileauto.LocateQuery) bool {
 	return strings.TrimSpace(q.Name) != "" || strings.TrimSpace(q.Text) != "" || strings.TrimSpace(q.Role) != "" ||
 		strings.TrimSpace(q.ResourceID) != "" || strings.TrimSpace(q.AccessibilityID) != "" ||
 		strings.TrimSpace(q.ParentText) != "" || strings.TrimSpace(q.NearbyText) != "" ||
 		strings.TrimSpace(q.WithinText) != "" || q.Actionable
 }
 
-func scrollToResolvedRef(res mobile.LocateResult) string {
+func scrollToResolvedRef(res mobileauto.LocateResult) string {
 	if res.RecommendedRef != "" {
 		return res.RecommendedRef
 	}
@@ -813,7 +813,7 @@ type scrollLoopOptions struct {
 	MaxScrolls   int
 	StableCount  int
 	Edge         string
-	Target       *mobile.LocateQuery
+	Target       *mobileauto.LocateQuery
 	UntilVisible string
 	UntilGone    string
 }
@@ -851,9 +851,9 @@ type scrollControlSummary struct {
 	Clickable bool   `json:"clickable,omitempty"`
 }
 
-func runScrollLoop(ctx context.Context, svc *services, st *mobile.RunState, opts scrollLoopOptions) (scrollLoopResult, error) {
+func runScrollLoop(ctx context.Context, svc *services, st *mobileauto.RunState, opts scrollLoopOptions) (scrollLoopResult, error) {
 	if opts.MaxScrolls < 0 {
-		return scrollLoopResult{}, mobile.NewError("invalid_args", "--max-scrolls cannot be negative", "Pass zero or a positive scroll limit.", 400)
+		return scrollLoopResult{}, mobileauto.NewError("invalid_args", "--max-scrolls cannot be negative", "Pass zero or a positive scroll limit.", 400)
 	}
 	if opts.StableCount <= 0 {
 		opts.StableCount = 1
@@ -908,7 +908,7 @@ func runScrollLoop(ctx context.Context, svc *services, st *mobile.RunState, opts
 		}
 
 		if opts.Target != nil {
-			located := mobile.Locate(obs, *opts.Target)
+			located := mobileauto.Locate(obs, *opts.Target)
 			data["locate"] = located
 			if ref := scrollToResolvedRef(located); ref != "" {
 				data["found"] = true
@@ -972,7 +972,7 @@ func runScrollLoop(ctx context.Context, svc *services, st *mobile.RunState, opts
 	}
 }
 
-func updateScrollObservationData(data map[string]any, obs mobile.Observation) {
+func updateScrollObservationData(data map[string]any, obs mobileauto.Observation) {
 	summary := summarizeScrollObservation(obs)
 	data["observation"] = obs
 	data["after_observation"] = summary
@@ -982,7 +982,7 @@ func updateScrollObservationData(data map[string]any, obs mobile.Observation) {
 	data["final_controls"] = summary.Controls
 }
 
-func summarizeScrollObservation(obs mobile.Observation) scrollObservationSummary {
+func summarizeScrollObservation(obs mobileauto.Observation) scrollObservationSummary {
 	return scrollObservationSummary{
 		ID:              obs.ID,
 		SourceHash:      obs.SourceHash,
@@ -994,7 +994,7 @@ func summarizeScrollObservation(obs mobile.Observation) scrollObservationSummary
 	}
 }
 
-func visibleTextSummary(obs mobile.Observation, limit int) []string {
+func visibleTextSummary(obs mobileauto.Observation, limit int) []string {
 	seen := map[string]bool{}
 	out := []string{}
 	for _, c := range obs.Candidates {
@@ -1014,7 +1014,7 @@ func visibleTextSummary(obs mobile.Observation, limit int) []string {
 	return out
 }
 
-func visibleControlSummary(obs mobile.Observation, limit int) []scrollControlSummary {
+func visibleControlSummary(obs mobileauto.Observation, limit int) []scrollControlSummary {
 	out := []scrollControlSummary{}
 	for _, c := range obs.Candidates {
 		if !c.Visible || !(c.Clickable || c.Role == "button" || c.Enabled && c.Focusable) {
@@ -1054,7 +1054,7 @@ func swipeUntilStop(cmd *cobra.Command, o *Opts, opts swipeCommandOptions, actio
 			return err
 		}
 		if st.ControlOwner == "human" {
-			return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
+			return mobileauto.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
 		}
 		result, err = runScrollLoop(cmd.Context(), svc, &st, scrollLoopOptions{
 			RunID:        opts.RunID,
@@ -1113,7 +1113,7 @@ func swipeLike(cmd *cobra.Command, o *Opts, opts swipeCommandOptions, action str
 	if opts.UntilStable || strings.TrimSpace(opts.UntilVisible) != "" || strings.TrimSpace(opts.UntilGone) != "" {
 		return swipeUntilStop(cmd, o, opts, action)
 	}
-	err := runGesture(cmd, o, opts.RunID, action, actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+	err := runGesture(cmd, o, opts.RunID, action, actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 		rect, err := gestureViewport(ctx, svc, st, opts)
 		if err != nil {
 			return nil, err
@@ -1131,7 +1131,7 @@ func swipeLike(cmd *cobra.Command, o *Opts, opts swipeCommandOptions, action str
 	return err
 }
 
-func gestureViewport(ctx context.Context, svc *services, st *mobile.RunState, opts swipeCommandOptions) (appium.Rect, error) {
+func gestureViewport(ctx context.Context, svc *services, st *mobileauto.RunState, opts swipeCommandOptions) (appium.Rect, error) {
 	if opts.ContainerRef == "" {
 		return svc.Appium.WindowRect(ctx, st.SessionID)
 	}
@@ -1145,11 +1145,11 @@ func gestureViewport(ctx context.Context, svc *services, st *mobile.RunState, op
 	return svc.Appium.ElementRect(ctx, st.SessionID, element.ID)
 }
 
-func containerRectFromObservation(svc *services, st *mobile.RunState, ref string) (appium.Rect, bool) {
+func containerRectFromObservation(svc *services, st *mobileauto.RunState, ref string) (appium.Rect, bool) {
 	if svc == nil || svc.Store == nil || st == nil || strings.TrimSpace(ref) == "" || st.LatestObservationID == "" {
 		return appium.Rect{}, false
 	}
-	obsID := mobile.RefObservationID(ref)
+	obsID := mobileauto.RefObservationID(ref)
 	if obsID != "" && obsID != st.LatestObservationID {
 		return appium.Rect{}, false
 	}
@@ -1157,7 +1157,7 @@ func containerRectFromObservation(svc *services, st *mobile.RunState, ref string
 	if err != nil {
 		return appium.Rect{}, false
 	}
-	candidate, ok := mobile.CandidateByRef(obs, ref)
+	candidate, ok := mobileauto.CandidateByRef(obs, ref)
 	if !ok || candidate.Bounds.Width <= 0 || candidate.Bounds.Height <= 0 {
 		return appium.Rect{}, false
 	}
@@ -1169,7 +1169,7 @@ func containerRectFromObservation(svc *services, st *mobile.RunState, ref string
 	}, true
 }
 
-func runGesture(cmd *cobra.Command, o *Opts, runID, action string, opts actionOptions, fn func(context.Context, *services, *mobile.RunState) (map[string]any, error)) error {
+func runGesture(cmd *cobra.Command, o *Opts, runID, action string, opts actionOptions, fn func(context.Context, *services, *mobileauto.RunState) (map[string]any, error)) error {
 	svc, err := newServices(o, true)
 	if err != nil {
 		return renderErr(cmd, o, err)
@@ -1181,7 +1181,7 @@ func runGesture(cmd *cobra.Command, o *Opts, runID, action string, opts actionOp
 			return err
 		}
 		if st.ControlOwner == "human" {
-			return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
+			return mobileauto.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
 		}
 		beforeHash := latestObservationHash(svc, st)
 		if beforeHash == "" && opts.WaitChange {
@@ -1216,7 +1216,7 @@ func runGesture(cmd *cobra.Command, o *Opts, runID, action string, opts actionOp
 	return print(cmd, o, output.Success("", data))
 }
 
-func latestObservationHash(svc *services, st mobile.RunState) string {
+func latestObservationHash(svc *services, st mobileauto.RunState) string {
 	if st.LatestObservationID == "" {
 		return ""
 	}
@@ -1227,18 +1227,18 @@ func latestObservationHash(svc *services, st mobile.RunState) string {
 	return obs.SourceHash
 }
 
-func applyPostAction(ctx context.Context, svc *services, st *mobile.RunState, beforeHash string, opts actionOptions, data map[string]any) error {
+func applyPostAction(ctx context.Context, svc *services, st *mobileauto.RunState, beforeHash string, opts actionOptions, data map[string]any) error {
 	needsObserve := opts.PostObserve || opts.WaitChange || opts.WaitVisible != "" || opts.WaitGone != ""
 	if !needsObserve {
 		return nil
 	}
 	timeout, err := time.ParseDuration(opts.WaitTimeout)
 	if err != nil || timeout <= 0 {
-		return mobile.NewError("invalid_args", "invalid --wait-timeout", "Use a duration such as 10s.", 400)
+		return mobileauto.NewError("invalid_args", "invalid --wait-timeout", "Use a duration such as 10s.", 400)
 	}
 	poll, err := time.ParseDuration(opts.PollInterval)
 	if err != nil || poll <= 0 {
-		return mobile.NewError("invalid_args", "invalid --poll-interval", "Use a duration such as 500ms.", 400)
+		return mobileauto.NewError("invalid_args", "invalid --poll-interval", "Use a duration such as 500ms.", 400)
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -1268,13 +1268,13 @@ func applyPostAction(ctx context.Context, svc *services, st *mobile.RunState, be
 		}
 		select {
 		case <-waitCtx.Done():
-			return mobile.RetryableError("post_action_wait_timeout", "post-action condition was not satisfied before timeout", "Inspect post_observe and retry with a broader wait condition or longer timeout.", "observe", 408)
+			return mobileauto.RetryableError("post_action_wait_timeout", "post-action condition was not satisfied before timeout", "Inspect post_observe and retry with a broader wait condition or longer timeout.", "observe", 408)
 		case <-time.After(poll):
 		}
 	}
 }
 
-func observationContainsVisibleText(obs mobile.Observation, text string) bool {
+func observationContainsVisibleText(obs mobileauto.Observation, text string) bool {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		return false
@@ -1294,11 +1294,11 @@ func containsTextFold(value, needle string) bool {
 	return strings.Contains(strings.ToLower(value), strings.ToLower(strings.TrimSpace(needle)))
 }
 
-func appendTimelineBestEffort(svc *services, runID, eventType, action, observationID string, status mobile.RunStatus, data map[string]any) {
+func appendTimelineBestEffort(svc *services, runID, eventType, action, observationID string, status mobileauto.RunStatus, data map[string]any) {
 	if svc == nil || svc.Store == nil || runID == "" {
 		return
 	}
-	_ = svc.Store.AppendTimeline(mobile.TimelineEvent{
+	_ = svc.Store.AppendTimeline(mobileauto.TimelineEvent{
 		RunID:         runID,
 		Type:          eventType,
 		Action:        action,
@@ -1331,7 +1331,7 @@ func swipePercents(opts swipeCommandOptions) (float64, float64, float64, float64
 		for _, v := range values {
 			n, err := normalizePercentInput(v)
 			if err != nil {
-				return 0, 0, 0, 0, mobile.NewError("invalid_args", "custom swipe percentages must all be between 0 and 100, or 0.0 and 1.0 as fractions", "Use 50 or 0.5 for fifty percent, and pass all four start/end percentage flags.", 400)
+				return 0, 0, 0, 0, mobileauto.NewError("invalid_args", "custom swipe percentages must all be between 0 and 100, or 0.0 and 1.0 as fractions", "Use 50 or 0.5 for fifty percent, and pass all four start/end percentage flags.", 400)
 			}
 			normalized = append(normalized, n)
 		}
@@ -1347,7 +1347,7 @@ func swipePercents(opts swipeCommandOptions) (float64, float64, float64, float64
 	case "right":
 		return 20, 50, 80, 50, nil
 	default:
-		return 0, 0, 0, 0, mobile.NewError("invalid_args", "--direction must be up, down, left, or right", "Use a bounded direction or pass explicit start/end percentages.", 400)
+		return 0, 0, 0, 0, mobileauto.NewError("invalid_args", "--direction must be up, down, left, or right", "Use a bounded direction or pass explicit start/end percentages.", 400)
 	}
 }
 
@@ -1357,7 +1357,7 @@ func resolveSwipeProfile(opts swipeCommandOptions) (swipeCommandOptions, error) 
 		return opts, nil
 	}
 	if hasCustomSwipePercents(opts) {
-		return opts, mobile.NewError("invalid_args", "--profile cannot be combined with explicit swipe percentages", "Choose a profile or pass all four custom percentage flags.", 400)
+		return opts, mobileauto.NewError("invalid_args", "--profile cannot be combined with explicit swipe percentages", "Choose a profile or pass all four custom percentage flags.", 400)
 	}
 	switch profile {
 	case "fast-page-down":
@@ -1380,10 +1380,10 @@ func resolveSwipeProfile(opts swipeCommandOptions) (swipeCommandOptions, error) 
 		case "right":
 			opts.StartXPercent, opts.StartYPercent, opts.EndXPercent, opts.EndYPercent = 38, 50, 58, 50
 		default:
-			return opts, mobile.NewError("invalid_args", "--direction must be up, down, left, or right", "Use a supported direction with --profile fine-scroll.", 400)
+			return opts, mobileauto.NewError("invalid_args", "--direction must be up, down, left, or right", "Use a supported direction with --profile fine-scroll.", 400)
 		}
 	default:
-		return opts, mobile.NewError("invalid_args", "--profile must be fast-page-down, fine-scroll, or page-up", "Use a supported scroll profile or pass explicit percentages.", 400)
+		return opts, mobileauto.NewError("invalid_args", "--profile must be fast-page-down, fine-scroll, or page-up", "Use a supported scroll profile or pass explicit percentages.", 400)
 	}
 	opts.Profile = ""
 	return opts, nil
@@ -1490,7 +1490,7 @@ func pointerDoubleTapActions(point gesturePoint) appium.ActionsRequest {
 
 func validateViewport(rect appium.Rect) error {
 	if rect.Width <= 0 || rect.Height <= 0 {
-		return mobile.NewError("server_error", "Appium window rect did not include a usable viewport", "Retry the command after the session is fully ready.", 502)
+		return mobileauto.NewError("server_error", "Appium window rect did not include a usable viewport", "Retry the command after the session is fully ready.", 502)
 	}
 	return nil
 }
@@ -1516,7 +1516,7 @@ func backCmd(o *Opts) *cobra.Command {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, runID, "back", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, runID, "back", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			return nil, svc.Appium.Back(ctx, st.SessionID)
 		})
 	}}
@@ -1533,7 +1533,7 @@ func keyboardCmd(o *Opts) *cobra.Command {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, runID, "keyboard_hide", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, runID, "keyboard_hide", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			return nil, svc.Appium.HideKeyboard(ctx, st.SessionID)
 		})
 	}}
@@ -1547,9 +1547,9 @@ func keyboardCmd(o *Opts) *cobra.Command {
 		if keyRunID == "" || keycode <= 0 {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id and positive --keycode are required", "Use Android keycodes such as 66 for enter/search.", 400))
 		}
-		return runGesture(cmd, o, keyRunID, "keyboard_keycode", keyOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, keyRunID, "keyboard_keycode", keyOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			if !strings.EqualFold(st.Platform, "android") {
-				return nil, mobile.NewError("unsupported_platform", "keycode is only supported for Android sessions", "Use native controls or context-specific input on iOS.", 400)
+				return nil, mobileauto.NewError("unsupported_platform", "keycode is only supported for Android sessions", "Use native controls or context-specific input on iOS.", 400)
 			}
 			return map[string]any{"keycode": keycode}, svc.Appium.PressKeyCode(ctx, st.SessionID, keycode)
 		})
@@ -1564,9 +1564,9 @@ func keyboardCmd(o *Opts) *cobra.Command {
 		if enterRunID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, enterRunID, "keyboard_enter", enterOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, enterRunID, "keyboard_enter", enterOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			if !strings.EqualFold(st.Platform, "android") {
-				return nil, mobile.NewError("unsupported_platform", "keyboard enter is only supported for Android sessions", "Use native controls or context-specific input on iOS.", 400)
+				return nil, mobileauto.NewError("unsupported_platform", "keyboard enter is only supported for Android sessions", "Use native controls or context-specific input on iOS.", 400)
 			}
 			return map[string]any{"keycode": 66}, svc.Appium.PressKeyCode(ctx, st.SessionID, 66)
 		})
@@ -1622,7 +1622,7 @@ func contextCmd(o *Opts) *cobra.Command {
 				return err
 			}
 			if st.ControlOwner == "human" {
-				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume first.", 423)
+				return mobileauto.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume first.", 423)
 			}
 			if err := svc.Appium.SwitchContext(cmd.Context(), st.SessionID, name); err != nil {
 				markRunLostIfSessionGone(svc, &st, err)
@@ -1671,7 +1671,7 @@ func contextCmd(o *Opts) *cobra.Command {
 				}
 			}
 			if selected == "" {
-				return mobile.RetryableError("webview_not_found", "no WebView context is currently available", "Wait for the embedded web content to load, then run context list again.", "observe", 404)
+				return mobileauto.RetryableError("webview_not_found", "no WebView context is currently available", "Wait for the embedded web content to load, then run context list again.", "observe", 404)
 			}
 			if err := svc.Appium.SwitchContext(cmd.Context(), st.SessionID, selected); err != nil {
 				markRunLostIfSessionGone(svc, &st, err)
@@ -1718,10 +1718,10 @@ func contextType(name string) string {
 	return "unknown"
 }
 
-func servicesAndRun(o *Opts, runID string, auth bool) (*services, mobile.RunState, error) {
-	var st mobile.RunState
+func servicesAndRun(o *Opts, runID string, auth bool) (*services, mobileauto.RunState, error) {
+	var st mobileauto.RunState
 	if runID == "" {
-		return nil, st, mobile.NewError("invalid_args", "--run-id is required", "Pass the active run id.", 400)
+		return nil, st, mobileauto.NewError("invalid_args", "--run-id is required", "Pass the active run id.", 400)
 	}
 	svc, err := newServices(o, auth)
 	if err != nil {

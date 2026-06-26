@@ -3,7 +3,7 @@ package commands
 import (
 	"context"
 
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +21,7 @@ func permissionAcceptCmd(o *Opts) *cobra.Command {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, runID, "permissions_accept", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, runID, "permissions_accept", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			return nil, svc.Appium.AcceptAlert(ctx, st.SessionID)
 		})
 	}}
@@ -37,7 +37,7 @@ func permissionDenyCmd(o *Opts) *cobra.Command {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, runID, "permissions_deny", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, runID, "permissions_deny", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			return nil, svc.Appium.DismissAlert(ctx, st.SessionID)
 		})
 	}}

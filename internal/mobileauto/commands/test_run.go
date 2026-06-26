@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -304,7 +304,7 @@ func mergeTestErrors(primary, cleanup any) any {
 }
 
 func writeTestEvidence(o *Opts, evidenceDir, caseName string, result mobileTestCaseResult) string {
-	dir := filepath.Join(evidenceDir, mobile.SafeArtifactName(caseName))
+	dir := filepath.Join(evidenceDir, mobileauto.SafeArtifactName(caseName))
 	_ = os.MkdirAll(dir, 0o700)
 	path := filepath.Join(dir, "failure.json")
 	b, err := json.MarshalIndent(output.RedactValue(result), "", "  ")
@@ -332,7 +332,7 @@ func writeRunEvidence(o *Opts, dir, runID string) {
 		return
 	}
 	report["run"] = st
-	var events []mobile.TimelineEvent
+	var events []mobileauto.TimelineEvent
 	if events, err := svc.Store.LoadTimeline(runID); err == nil {
 		report["timeline"] = events
 	}
@@ -352,7 +352,7 @@ func writeRunEvidence(o *Opts, dir, runID string) {
 	_ = writeJSONFile(filepath.Join(dir, "run-report.json"), report)
 }
 
-func latestTimelineObservationID(events []mobile.TimelineEvent) string {
+func latestTimelineObservationID(events []mobileauto.TimelineEvent) string {
 	for i := len(events) - 1; i >= 0; i-- {
 		if strings.TrimSpace(events[i].ObservationID) != "" {
 			return events[i].ObservationID
@@ -361,7 +361,7 @@ func latestTimelineObservationID(events []mobile.TimelineEvent) string {
 	return ""
 }
 
-func latestStoredObservationID(store *mobile.StateStore, runID string) string {
+func latestStoredObservationID(store *mobileauto.StateStore, runID string) string {
 	if store == nil {
 		return ""
 	}
@@ -387,7 +387,7 @@ func latestStoredObservationID(store *mobile.StateStore, runID string) string {
 	return latestID
 }
 
-func copyObservationEvidence(dir string, obs mobile.Observation) {
+func copyObservationEvidence(dir string, obs mobileauto.Observation) {
 	for name, path := range map[string]string{
 		"source.xml":      obs.SourcePath,
 		"screenshot.png":  obs.ScreenshotPath,

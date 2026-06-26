@@ -15,7 +15,7 @@ import (
 
 	"engineering-flow-platform-tools/internal/browserstack"
 	"engineering-flow-platform-tools/internal/httpclient"
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 )
 
 const w3cElementKey = "element-6066-11e4-a52e-4f735466cecf"
@@ -33,7 +33,7 @@ type Client struct {
 }
 
 type SessionIDMissingError struct {
-	Err      *mobile.Error
+	Err      *mobileauto.Error
 	Response map[string]any
 }
 
@@ -73,7 +73,7 @@ func New(baseURL string, creds browserstack.Credentials, verifySSL bool, caCert 
 		Proxy:                 proxy,
 	})
 	if err != nil {
-		return nil, mobile.NewError("config_error", "invalid Appium HTTP transport configuration: "+err.Error(), "Check mobile-auto.browserstack.http_proxy, verify_ssl, and ca_cert.", 400)
+		return nil, mobileauto.NewError("config_error", "invalid Appium HTTP transport configuration: "+err.Error(), "Check mobile-auto.browserstack.http_proxy, verify_ssl, and ca_cert.", 400)
 	}
 	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultHTTPTimeout, Transport: tr}, creds: creds, proxy: diag}, nil
 }
@@ -85,14 +85,14 @@ func (c *Client) ProxyDiagnostic() httpclient.ProxyDiagnostic {
 func validateAppiumURL(raw string) error {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme == "" || u.Host == "" {
-		return mobile.NewError("config_error", "invalid Appium hub URL", "Use an absolute https:// BrowserStack Appium hub URL.", 400)
+		return mobileauto.NewError("config_error", "invalid Appium hub URL", "Use an absolute https:// BrowserStack Appium hub URL.", 400)
 	}
 	if u.Scheme != "https" && !isLoopbackHost(u.Hostname()) {
-		return mobile.NewError("config_error", "Appium hub URL must use https", "Only loopback HTTP is allowed for tests.", 400)
+		return mobileauto.NewError("config_error", "Appium hub URL must use https", "Only loopback HTTP is allowed for tests.", 400)
 	}
 	host := strings.ToLower(u.Hostname())
 	if !strings.HasSuffix(host, ".browserstack.com") && !strings.EqualFold(host, "hub.browserstack.com") && !isLoopbackHost(host) {
-		return mobile.NewError("config_error", "off-provider Appium hub URL rejected", "Use hub.browserstack.com or a BrowserStack-owned host.", 400)
+		return mobileauto.NewError("config_error", "off-provider Appium hub URL rejected", "Use hub.browserstack.com or a BrowserStack-owned host.", 400)
 	}
 	return nil
 }
@@ -181,10 +181,10 @@ func (c *Client) CreateSession(ctx context.Context, req CreateSessionRequest) (S
 
 func validateCreateSessionRequest(req CreateSessionRequest) error {
 	if req.IdleTimeoutSeconds < 0 || req.IdleTimeoutSeconds > 300 {
-		return mobile.NewError("invalid_args", "idle timeout must be between 1 and 300 seconds", "Set mobile-auto.defaults.idle_timeout_seconds to a BrowserStack-supported value.", 400)
+		return mobileauto.NewError("invalid_args", "idle timeout must be between 1 and 300 seconds", "Set mobile-auto.defaults.idle_timeout_seconds to a BrowserStack-supported value.", 400)
 	}
 	if req.NewCommandTimeoutSeconds < 0 {
-		return mobile.NewError("invalid_args", "new command timeout cannot be negative", "Set mobile-auto.defaults.new_command_timeout_seconds to a positive value.", 400)
+		return mobileauto.NewError("invalid_args", "new command timeout cannot be negative", "Set mobile-auto.defaults.new_command_timeout_seconds to a positive value.", 400)
 	}
 	return nil
 }
@@ -217,7 +217,7 @@ func (c *Client) Screenshot(ctx context.Context, sessionID string) ([]byte, erro
 	}
 	b, err := base64.StdEncoding.DecodeString(out.Value)
 	if err != nil {
-		return nil, mobile.NewError("server_error", "Appium screenshot response was not valid base64", "Retry observe or inspect the Appium response.", 502)
+		return nil, mobileauto.NewError("server_error", "Appium screenshot response was not valid base64", "Retry observe or inspect the Appium response.", 502)
 	}
 	return b, nil
 }
@@ -397,7 +397,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, body any, out 
 	resp, err := c.http.Do(req)
 	if err != nil {
 		context := httpclient.ProxyDiagnosticText(c.baseURL, c.proxy)
-		return mobile.RetryableError("network_error", "Appium request failed: "+sanitize(err.Error(), c.creds)+" ("+context+")", "Check BrowserStack Appium hub connectivity and mobile-auto.browserstack.http_proxy.", "retry", 503)
+		return mobileauto.RetryableError("network_error", "Appium request failed: "+sanitize(err.Error(), c.creds)+" ("+context+")", "Check BrowserStack Appium hub connectivity and mobile-auto.browserstack.http_proxy.", "retry", 503)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
@@ -408,7 +408,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, body any, out 
 	}
 	dec := json.NewDecoder(resp.Body)
 	if err := dec.Decode(out); err != nil {
-		return mobile.NewError("server_error", "Appium returned invalid JSON", "Retry or inspect BrowserStack Appium logs.", 502)
+		return mobileauto.NewError("server_error", "Appium returned invalid JSON", "Retry or inspect BrowserStack Appium logs.", 502)
 	}
 	return nil
 }
@@ -445,7 +445,7 @@ func missingSessionIDError(raw map[string]any, creds browserstack.Credentials) e
 	code, hint, status, action := classifySessionCreationFailure(rawSummary)
 	summary := sanitize(rawSummary, creds)
 	return &SessionIDMissingError{
-		Err: &mobile.Error{
+		Err: &mobileauto.Error{
 			Code:              code,
 			Message:           "Appium session was not usable: " + summary,
 			Hint:              hint,
@@ -497,7 +497,7 @@ func classifySessionCreationFailure(summary string) (string, string, int, string
 	}
 }
 
-func statusError(resp *http.Response, creds browserstack.Credentials) *mobile.Error {
+func statusError(resp *http.Response, creds browserstack.Credentials) *mobileauto.Error {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorSnippet+1))
 	msg := fmt.Sprintf("Appium request failed with HTTP %d", resp.StatusCode)
 	if snippet := sanitize(string(body), creds); strings.TrimSpace(snippet) != "" {
@@ -518,7 +518,7 @@ func statusError(resp *http.Response, creds browserstack.Credentials) *mobile.Er
 			retryable = true
 		}
 	}
-	return &mobile.Error{Code: code, Message: msg, Hint: "Inspect session status and BrowserStack Appium logs.", Status: resp.StatusCode, Retryable: retryable, RecommendedAction: "observe"}
+	return &mobileauto.Error{Code: code, Message: msg, Hint: "Inspect session status and BrowserStack Appium logs.", Status: resp.StatusCode, Retryable: retryable, RecommendedAction: "observe"}
 }
 
 func sanitize(s string, creds browserstack.Credentials) string {

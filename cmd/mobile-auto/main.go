@@ -2,7 +2,7 @@ package main
 
 import (
 	"engineering-flow-platform-tools/internal/clihelp"
-	"engineering-flow-platform-tools/internal/mobile/commands"
+	"engineering-flow-platform-tools/internal/mobileauto/commands"
 	"os"
 )
 

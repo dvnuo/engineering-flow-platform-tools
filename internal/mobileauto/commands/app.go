@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"engineering-flow-platform-tools/internal/browserstack"
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -121,7 +121,7 @@ func appResolveCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Failure("invalid_args", "--app-url must start with bs://", "Pass a BrowserStack app URL such as bs://<app-id>.", 400))
 		}
 		if appURL != "" {
-			return print(cmd, o, output.Success("", mobile.AppRef{AppURL: appURL, CustomID: customID}))
+			return print(cmd, o, output.Success("", mobileauto.AppRef{AppURL: appURL, CustomID: customID}))
 		}
 		if file == "" && remoteURL == "" && customID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--app-url, --file, --url, or --custom-id is required", "Pass an existing bs:// app or an app source to upload.", 400))
@@ -142,7 +142,7 @@ func appResolveCmd(o *Opts) *cobra.Command {
 			var cachedURL string
 			if cached, err := svc.Store.LoadAppCache(sha); err == nil && cached.AppURL != "" {
 				cachedURL = cached.AppURL
-				if mobile.AppCacheReusable(cached, time.Now().UTC()) {
+				if mobileauto.AppCacheReusable(cached, time.Now().UTC()) {
 					return print(cmd, o, output.Success("", map[string]any{"app": cached, "reused": true, "source": "local_cache"}))
 				}
 			}
@@ -176,23 +176,23 @@ func appResolveCmd(o *Opts) *cobra.Command {
 	return c
 }
 
-func appRefFromUploaded(app browserstack.UploadedApp, customID, sha, fallbackName string) mobile.AppRef {
+func appRefFromUploaded(app browserstack.UploadedApp, customID, sha, fallbackName string) mobileauto.AppRef {
 	uploadedAt := parseBrowserStackTime(app.UploadedAt)
 	name := firstNonEmpty(app.AppName, fallbackName)
-	ref := mobile.AppRef{
+	ref := mobileauto.AppRef{
 		AppURL:     app.AppURL,
 		CustomID:   firstNonEmpty(customID, app.CustomID),
 		SHA256:     firstNonEmpty(sha, app.SHA256),
 		Name:       name,
 		UploadedAt: uploadedAt,
 	}
-	return mobile.NormalizeAppCacheRef(ref, time.Now().UTC())
+	return mobileauto.NormalizeAppCacheRef(ref, time.Now().UTC())
 }
 
-func findRecentAppRef(ctx context.Context, svc *services, customID, sha, appURL string) (mobile.AppRef, bool) {
+func findRecentAppRef(ctx context.Context, svc *services, customID, sha, appURL string) (mobileauto.AppRef, bool) {
 	apps, err := svc.Control.ListApps(ctx, browserstack.ListAppsRequest{Limit: 100, CustomID: customID})
 	if err != nil {
-		return mobile.AppRef{}, false
+		return mobileauto.AppRef{}, false
 	}
 	for _, app := range apps {
 		if strings.TrimSpace(app.AppURL) == "" {
@@ -214,7 +214,7 @@ func findRecentAppRef(ctx context.Context, svc *services, customID, sha, appURL 
 			return appRefFromUploaded(app, customID, firstNonEmpty(sha, app.SHA256), app.AppName), true
 		}
 	}
-	return mobile.AppRef{}, false
+	return mobileauto.AppRef{}, false
 }
 
 func parseBrowserStackTime(value string) time.Time {
@@ -278,7 +278,7 @@ func appLaunchCmd(o *Opts) *cobra.Command {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, runID, "app_launch", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, runID, "app_launch", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			return nil, svc.Appium.LaunchApp(ctx, st.SessionID)
 		})
 	}}
@@ -294,7 +294,7 @@ func appCloseCmd(o *Opts) *cobra.Command {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, runID, "app_close", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, runID, "app_close", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			return nil, svc.Appium.CloseApp(ctx, st.SessionID)
 		})
 	}}
@@ -310,7 +310,7 @@ func appResetCmd(o *Opts) *cobra.Command {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		return runGesture(cmd, o, runID, "app_reset", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, runID, "app_reset", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			return nil, svc.Appium.ResetApp(ctx, st.SessionID)
 		})
 	}}
@@ -326,7 +326,7 @@ func appActivateCmd(o *Opts) *cobra.Command {
 		if runID == "" || appID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id and --app-id are required", "Pass the package name or bundle id to activate.", 400))
 		}
-		return runGesture(cmd, o, runID, "app_activate", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, runID, "app_activate", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			return map[string]any{"app_id": appID}, svc.Appium.ActivateApp(ctx, st.SessionID, appID)
 		})
 	}}
@@ -343,7 +343,7 @@ func appTerminateCmd(o *Opts) *cobra.Command {
 		if runID == "" || appID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id and --app-id are required", "Pass the package name or bundle id to terminate.", 400))
 		}
-		return runGesture(cmd, o, runID, "app_terminate", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, runID, "app_terminate", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			return map[string]any{"app_id": appID}, svc.Appium.TerminateApp(ctx, st.SessionID, appID)
 		})
 	}}
@@ -360,7 +360,7 @@ func appDeepLinkCmd(o *Opts) *cobra.Command {
 		if runID == "" || link == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id and --url are required", "Pass the deep link URL and, on Android, --package.", 400))
 		}
-		return runGesture(cmd, o, runID, "app_deep_link", actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
+		return runGesture(cmd, o, runID, "app_deep_link", actionOpts, func(ctx context.Context, svc *services, st *mobileauto.RunState) (map[string]any, error) {
 			return map[string]any{"url": link, "package": packageName}, svc.Appium.DeepLink(ctx, st.SessionID, link, packageName)
 		})
 	}}

@@ -9,7 +9,7 @@ type RootConfig struct {
 	Jenkins    ProductConfig `json:"jenkins" yaml:"jenkins"`
 	AWS        AWSConfig     `json:"aws" yaml:"aws"`
 	Visual     VisualConfig  `json:"visual" yaml:"visual"`
-	Mobile     MobileConfig  `json:"mobile" yaml:"mobile"`
+	Mobile     MobileConfig  `json:"mobile-auto" yaml:"mobile-auto"`
 }
 
 type AWSConfig struct {
@@ -144,10 +144,10 @@ func (m *MobileConfig) Normalize() {
 		m.DefaultProvider = "browserstack"
 	}
 	if strings.TrimSpace(m.StateDir) == "" {
-		m.StateDir = "~/.efp/mobile"
+		m.StateDir = "~/.efp/mobile-auto"
 	}
 	if strings.TrimSpace(m.ArtifactsDir) == "" {
-		m.ArtifactsDir = "~/.efp/artifacts/mobile"
+		m.ArtifactsDir = "~/.efp/artifacts/mobile-auto"
 	}
 	if m.RetentionHours == 0 {
 		m.RetentionHours = 72

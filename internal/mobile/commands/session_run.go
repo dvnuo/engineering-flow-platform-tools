@@ -576,7 +576,7 @@ func settleStartingRunBestEffort(svc *services, runID string, fallback mobile.Ru
 		reason = "remote session was identified but run start exited before local control became usable"
 	}
 	if cause == nil {
-		cause = mobile.NewError("run_start_incomplete", "run start exited while local state was still starting", "Inspect the command output and retry or use mobile run recover.", 500)
+		cause = mobile.NewError("run_start_incomplete", "run start exited while local state was still starting", "Inspect the command output and retry or use mobile-auto run recover.", 500)
 	}
 	markRunTerminal(&current, status, reason, cause)
 	_ = svc.Store.SaveRun(current)
@@ -642,7 +642,7 @@ func sessionRecoveryFailedError(createErr, recoverErr error) error {
 	if createCode != "" || recoverCode != "" {
 		message += ": create=" + createCode + " " + createMessage + "; recovery=" + recoverCode + " " + recoverMessage
 	}
-	return mobile.NewError("session_recovery_failed", message, "Use unique --build and --name values, inspect BrowserStack builds/sessions, or run mobile run recover with the BrowserStack session id.", 502)
+	return mobile.NewError("session_recovery_failed", message, "Use unique --build and --name values, inspect BrowserStack builds/sessions, or run mobile-auto run recover with the BrowserStack session id.", 502)
 }
 
 func enrichRunStateBestEffort(svc *services, st *mobile.RunState, sessionID, buildName string, since time.Time, alreadyHaveRemote bool) []string {
@@ -1182,7 +1182,7 @@ func reconcileStartingRunBestEffort(ctx context.Context, svc *services, st mobil
 		return st, []string{err.Error()}
 	}
 	if stale {
-		err := mobile.NewError("run_start_stale", "starting run exceeded recovery window without a local or remote session id", "Retry run start or use mobile run recover if BrowserStack has a matching session.", 408)
+		err := mobile.NewError("run_start_stale", "starting run exceeded recovery window without a local or remote session id", "Retry run start or use mobile-auto run recover if BrowserStack has a matching session.", 408)
 		markRunTerminal(&st, mobile.StatusFailed, "starting run exceeded recovery window without remote session clues", err)
 		_ = svc.Store.SaveRun(st)
 		return st, []string{err.Error()}
@@ -1298,7 +1298,7 @@ func runHandoffCmd(o *Opts) *cobra.Command {
 				"capacity_warning": "This BrowserStack session continues to consume parallel capacity until resume or finish.",
 			}
 			if mode == "inspector" {
-				result["inspector_hint"] = "Run mobile inspector attach --run-id " + runID + " --json to get Appium Inspector connection details."
+				result["inspector_hint"] = "Run mobile-auto inspector attach --run-id " + runID + " --json to get Appium Inspector connection details."
 			}
 			return nil
 		})

@@ -52,7 +52,8 @@ func Save(path string, c RootConfig) error {
 	if err := setMappingValue(root, "visual", c.Visual); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "mobile", c.Mobile); err != nil {
+	deleteMappingValue(root, "mobile")
+	if err := setMappingValue(root, "mobile-auto", c.Mobile); err != nil {
 		return err
 	}
 	b, err := yaml.Marshal(doc)
@@ -93,6 +94,15 @@ func setMappingValue(root *yaml.Node, key string, value any) error {
 	}
 	root.Content = append(root.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: key}, newValue)
 	return nil
+}
+
+func deleteMappingValue(root *yaml.Node, key string) {
+	for i := 0; i+1 < len(root.Content); i += 2 {
+		if root.Content[i].Value == key {
+			root.Content = append(root.Content[:i], root.Content[i+2:]...)
+			return
+		}
+	}
 }
 
 func yamlValueNode(value any) (*yaml.Node, error) {

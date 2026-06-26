@@ -56,7 +56,7 @@ func New(baseURL string, creds Credentials, verifySSL bool, caCert string, proxi
 		Proxy:                 proxy,
 	})
 	if err != nil {
-		return nil, mobile.NewError("config_error", "invalid BrowserStack HTTP transport configuration: "+err.Error(), "Check mobile.browserstack.http_proxy, verify_ssl, and ca_cert.", 400)
+		return nil, mobile.NewError("config_error", "invalid BrowserStack HTTP transport configuration: "+err.Error(), "Check mobile-auto.browserstack.http_proxy, verify_ssl, and ca_cert.", 400)
 	}
 	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultHTTPTimeout, Transport: tr}, creds: creds, proxy: diag}, nil
 }
@@ -396,7 +396,7 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	resp, err := c.http.Do(req)
 	if err != nil {
 		context := httpclient.ProxyDiagnosticText(c.baseURL, c.proxy)
-		return nil, mobile.RetryableError("network_error", "BrowserStack request failed: "+redact(err.Error(), c.creds)+" ("+context+")", "Check DNS, proxy, TLS, mobile.browserstack.http_proxy, and BrowserStack availability.", "retry", 503)
+		return nil, mobile.RetryableError("network_error", "BrowserStack request failed: "+redact(err.Error(), c.creds)+" ("+context+")", "Check DNS, proxy, TLS, mobile-auto.browserstack.http_proxy, and BrowserStack availability.", "retry", 503)
 	}
 	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()

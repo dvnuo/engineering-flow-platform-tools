@@ -63,7 +63,7 @@ func ResolveDevice(devices []DeviceInfo, q DeviceQuery) (DeviceResolveResult, er
 		filtered = append(filtered, d)
 	}
 	if len(filtered) == 0 {
-		return DeviceResolveResult{}, NewError("device_not_supported", "no BrowserStack device matched the requested filters", "Relax device filters or run mobile device list --json.", 404)
+		return DeviceResolveResult{}, NewError("device_not_supported", "no BrowserStack device matched the requested filters", "Relax device filters or run mobile-auto device list --json.", 404)
 	}
 	sortDevices(filtered, q.Strategy)
 	choices := make([]DeviceSelection, 0, len(filtered))

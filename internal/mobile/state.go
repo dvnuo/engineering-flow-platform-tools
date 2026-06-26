@@ -204,7 +204,7 @@ func (s *StateStore) LoadRun(runID string) (RunState, error) {
 	b, err := os.ReadFile(s.StatePath(runID))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return st, NewError("not_found", "run state was not found", "Check --run-id or run mobile run status.", 404)
+			return st, NewError("not_found", "run state was not found", "Check --run-id or run mobile-auto run status.", 404)
 		}
 		return st, err
 	}
@@ -250,7 +250,7 @@ func (s *StateStore) WithRunLock(runID string, fn func() error) error {
 				f, err = os.OpenFile(lock, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 			}
 			if err != nil {
-				return NewError("run_locked", "run is locked by another process", "Wait for the other mobile command to finish. If the process crashed and the lock is stale, inspect and remove "+lock+".", 409)
+				return NewError("run_locked", "run is locked by another process", "Wait for the other mobile-auto command to finish. If the process crashed and the lock is stale, inspect and remove "+lock+".", 409)
 			}
 		} else {
 			return err
@@ -291,7 +291,7 @@ func (s *StateStore) LoadObservation(runID, obsID string) (Observation, error) {
 	b, err := os.ReadFile(filepath.Join(s.ObservationDir(runID), cleanName(obsID), "candidates.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return obs, NewError("stale_observation", "observation was not found", "Run mobile observe --json again.", 409)
+			return obs, NewError("stale_observation", "observation was not found", "Run mobile-auto observe --json again.", 409)
 		}
 		return obs, err
 	}

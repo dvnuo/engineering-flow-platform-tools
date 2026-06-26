@@ -167,19 +167,19 @@ var inspectImageCommands = []string{
 	"inspect-image version",
 }
 
-var mobileCommands = []string{
-	"mobile commands", "mobile schema <command>", "mobile help llm", "mobile version", "mobile doctor", "mobile auth login", "mobile auth logout", "mobile auth test",
-	"mobile app upload", "mobile app list", "mobile app get", "mobile app resolve", "mobile app delete",
-	"mobile device list", "mobile device resolve", "mobile device usage",
-	"mobile capacity get", "mobile capacity wait",
-	"mobile tunnel start", "mobile tunnel ensure", "mobile tunnel status", "mobile tunnel stop", "mobile tunnel cleanup-orphans",
-	"mobile project list", "mobile project get", "mobile build list", "mobile build get",
-	"mobile session list", "mobile session get", "mobile session mark", "mobile session start", "mobile session status", "mobile session stop",
-	"mobile run start", "mobile run status", "mobile run handoff", "mobile run resume", "mobile run finish",
-	"mobile observe", "mobile locate", "mobile tap", "mobile type", "mobile clear", "mobile scroll", "mobile scroll-to", "mobile swipe", "mobile back",
-	"mobile context list", "mobile context switch",
-	"mobile assert exists", "mobile assert visible", "mobile assert enabled", "mobile assert selected", "mobile assert text",
-	"mobile wait stable", "mobile artifact list", "mobile artifact collect", "mobile artifact download",
+var mobileAutoCommands = []string{
+	"mobile-auto commands", "mobile-auto schema <command>", "mobile-auto help llm", "mobile-auto version", "mobile-auto doctor", "mobile-auto auth login", "mobile-auto auth logout", "mobile-auto auth test",
+	"mobile-auto app upload", "mobile-auto app list", "mobile-auto app get", "mobile-auto app resolve", "mobile-auto app delete",
+	"mobile-auto device list", "mobile-auto device resolve", "mobile-auto device usage",
+	"mobile-auto capacity get", "mobile-auto capacity wait",
+	"mobile-auto tunnel start", "mobile-auto tunnel ensure", "mobile-auto tunnel status", "mobile-auto tunnel stop", "mobile-auto tunnel cleanup-orphans",
+	"mobile-auto project list", "mobile-auto project get", "mobile-auto build list", "mobile-auto build get",
+	"mobile-auto session list", "mobile-auto session get", "mobile-auto session mark", "mobile-auto session start", "mobile-auto session status", "mobile-auto session stop",
+	"mobile-auto run start", "mobile-auto run status", "mobile-auto run handoff", "mobile-auto run resume", "mobile-auto run finish",
+	"mobile-auto observe", "mobile-auto locate", "mobile-auto tap", "mobile-auto type", "mobile-auto clear", "mobile-auto scroll", "mobile-auto scroll-to", "mobile-auto swipe", "mobile-auto back",
+	"mobile-auto context list", "mobile-auto context switch",
+	"mobile-auto assert exists", "mobile-auto assert visible", "mobile-auto assert enabled", "mobile-auto assert selected", "mobile-auto assert text",
+	"mobile-auto wait stable", "mobile-auto artifact list", "mobile-auto artifact collect", "mobile-auto artifact download",
 }
 
 func Commands(product string) []llm.CommandMeta {
@@ -195,8 +195,8 @@ func Commands(product string) []llm.CommandMeta {
 		src = browserCommands
 	case "inspect-image":
 		src = inspectImageCommands
-	case "mobile":
-		src = mobileCommands
+	case "mobile-auto":
+		src = mobileAutoCommands
 	default:
 		return nil
 	}
@@ -618,8 +618,8 @@ func meta(product, usage string) llm.CommandMeta {
 			explicitFound = true
 		}
 	}
-	if product == "mobile" {
-		if local, ok := mobileExplicit(name); ok {
+	if product == "mobile-auto" {
+		if local, ok := mobileAutoExplicit(name); ok {
 			ex = local
 			explicitFound = true
 		}
@@ -644,7 +644,7 @@ func meta(product, usage string) llm.CommandMeta {
 	if product == "visual" && len(ex.Flags) == 0 {
 		flags = []string{"template-dir", "config", "json", "format", "verbose", "dry-run", "offline-strict"}
 	}
-	if product == "mobile" && len(ex.Flags) == 0 {
+	if product == "mobile-auto" && len(ex.Flags) == 0 {
 		flags = []string{"config", "json", "format", "verbose"}
 	}
 	desc := ex.Description
@@ -683,7 +683,7 @@ func meta(product, usage string) llm.CommandMeta {
 	}
 	req := ex.Required
 	if len(req) == 0 {
-		if (product == "inspect-image" || product == "jenkins" || product == "visual" || product == "aws-auth" || product == "mobile") && explicitFound {
+		if (product == "inspect-image" || product == "jenkins" || product == "visual" || product == "aws-auth" || product == "mobile-auto") && explicitFound {
 			req = []string{}
 		} else {
 			req = required(name)
@@ -723,28 +723,28 @@ func awsAuthExplicit(name string) (explicitMeta, bool) {
 	return item, ok
 }
 
-func mobileExplicit(name string) (explicitMeta, bool) {
+func mobileAutoExplicit(name string) (explicitMeta, bool) {
 	common := []string{"config", "json", "format", "verbose"}
 	items := map[string]explicitMeta{
-		"commands":      {Description: "List mobile commands with JSON-friendly metadata.", Flags: common, Risk: "read", Example: "mobile commands --json"},
-		"schema":        {Description: "Describe one mobile command schema.", Flags: common, Required: []string{"command"}, Risk: "read", Example: "mobile schema run.start --json"},
-		"help.llm":      {Description: "Return concise agent guidance for BrowserStack mobile device-cloud workflows.", Flags: common, Risk: "read", Example: "mobile help llm --json"},
-		"version":       {Description: "Print mobile version metadata.", Flags: common, Risk: "read", Example: "mobile version --json"},
-		"doctor":        {Description: "Inspect mobile config, credential presence, BrowserStack endpoints, state/artifact directories, and Local binary availability.", Flags: common, Risk: "read", Example: "mobile doctor --json"},
-		"auth.login":    {Description: "Save BrowserStack credentials into the shared EFP config; environment variables still take precedence.", Flags: append([]string{"username", "access-key", "access-key-stdin"}, common...), Required: []string{"username", "access-key|access-key-stdin"}, Risk: "write", Example: "printf '%s\\n' \"$BROWSERSTACK_ACCESS_KEY\" | mobile auth login --username \"$BROWSERSTACK_USERNAME\" --access-key-stdin --json"},
-		"auth.logout":   {Description: "Remove stored BrowserStack credentials from the shared EFP config after confirmation.", Flags: append([]string{"yes"}, common...), Required: []string{"yes"}, Risk: "write_requires_confirmation", Example: "mobile auth logout --yes --json"},
-		"auth.test":     {Description: "Verify BrowserStack credentials through the configured App Automate control API.", Flags: common, Risk: "read", Example: "mobile auth test --json"},
-		"run.start":     {Description: "Resolve or upload an app, choose a BrowserStack device, optionally ensure Local, create an Appium session, and save run state.", Flags: append([]string{"app", "file", "url", "custom-id", "platform", "device", "os-version", "min-os-version", "network", "local-identifier", "project", "build", "name", "wait-capacity", "timeout", "poll-interval"}, common...), Required: []string{"app|file|url|custom-id"}, Risk: "write", Example: "mobile run start --file ./app.apk --platform android --network public --json"},
-		"observe":       {Description: "Capture source and screenshot for a run and return bounded element candidates.", Flags: append([]string{"run-id", "limit"}, common...), Required: []string{"run-id"}, Risk: "read", Example: "mobile observe --run-id run-... --json"},
-		"locate":        {Description: "Deterministically rank candidates from the latest observation using semantic criteria.", Flags: append([]string{"run-id", "name", "text", "role", "resource-id", "accessibility-id", "parent-text", "nearby-text", "actionable", "visible", "enabled", "require-visible", "require-enabled", "limit"}, common...), Required: []string{"run-id"}, Risk: "read", Example: "mobile locate --run-id run-... --role button --name Login --json"},
-		"tap":           {Description: "Tap a unique element resolved from a latest-observation ref.", Flags: append([]string{"run-id", "ref"}, common...), Required: []string{"run-id", "ref"}, Risk: "write", Example: "mobile tap --run-id run-... --ref obs-...:e1 --json"},
-		"type":          {Description: "Type text into a unique element resolved from a latest-observation ref without echoing sensitive inputs.", Flags: append([]string{"run-id", "ref", "text", "text-env", "text-stdin"}, common...), Required: []string{"run-id", "ref", "text|text-env|text-stdin"}, Risk: "write", Example: "mobile type --run-id run-... --ref obs-...:e2 --text-env TEST_PASSWORD --json"},
-		"run.handoff":   {Description: "Capture an observation, transfer control to the human, and start bounded keepalive.", Flags: append([]string{"run-id", "hold-for"}, common...), Required: []string{"run-id"}, Risk: "write", Example: "mobile run handoff --run-id run-... --hold-for 10m --json"},
-		"run.resume":    {Description: "Stop keepalive, return control to the agent, invalidate old observations, and capture a fresh observation.", Flags: append([]string{"run-id"}, common...), Required: []string{"run-id"}, Risk: "write", Example: "mobile run resume --run-id run-... --json"},
-		"run.finish":    {Description: "Mark, collect artifacts, delete the Appium session, stop managed Local, and finish the run idempotently.", Flags: append([]string{"run-id", "status", "reason", "collect-artifacts"}, common...), Required: []string{"run-id"}, Risk: "write", Example: "mobile run finish --run-id run-... --status passed --collect-artifacts --json"},
-		"app.upload":    {Description: "Upload an app file or public app URL to BrowserStack App Automate.", Flags: append([]string{"file", "url", "custom-id", "ios-keychain-support", "dry-run"}, common...), Required: []string{"file|url"}, Risk: "write", Example: "mobile app upload --file ./app.apk --custom-id smoke --json"},
-		"app.delete":    {Description: "Delete a BrowserStack uploaded app after explicit confirmation.", Flags: append([]string{"app-id", "app-url", "yes", "dry-run"}, common...), Required: []string{"app-id|app-url", "yes"}, Risk: "delete", Example: "mobile app delete --app-url bs://... --yes --dry-run --json"},
-		"capacity.wait": {Description: "Wait in a bounded polling loop for BrowserStack parallel capacity.", Flags: append([]string{"required", "timeout", "poll-interval"}, common...), Required: []string{"required"}, Risk: "read", Example: "mobile capacity wait --required 1 --timeout 5m --json"},
+		"commands":      {Description: "List mobile-auto commands with JSON-friendly metadata.", Flags: common, Risk: "read", Example: "mobile-auto commands --json"},
+		"schema":        {Description: "Describe one mobile-auto command schema.", Flags: common, Required: []string{"command"}, Risk: "read", Example: "mobile-auto schema run.start --json"},
+		"help.llm":      {Description: "Return concise agent guidance for BrowserStack device-cloud workflows.", Flags: common, Risk: "read", Example: "mobile-auto help llm --json"},
+		"version":       {Description: "Print mobile-auto version metadata.", Flags: common, Risk: "read", Example: "mobile-auto version --json"},
+		"doctor":        {Description: "Inspect mobile-auto config, credential presence, BrowserStack endpoints, state/artifact directories, and Local binary availability.", Flags: common, Risk: "read", Example: "mobile-auto doctor --json"},
+		"auth.login":    {Description: "Save BrowserStack credentials into the shared EFP config; environment variables still take precedence.", Flags: append([]string{"username", "access-key", "access-key-stdin"}, common...), Required: []string{"username", "access-key|access-key-stdin"}, Risk: "write", Example: "printf '%s\\n' \"$BROWSERSTACK_ACCESS_KEY\" | mobile-auto auth login --username \"$BROWSERSTACK_USERNAME\" --access-key-stdin --json"},
+		"auth.logout":   {Description: "Remove stored BrowserStack credentials from the shared EFP config after confirmation.", Flags: append([]string{"yes"}, common...), Required: []string{"yes"}, Risk: "write_requires_confirmation", Example: "mobile-auto auth logout --yes --json"},
+		"auth.test":     {Description: "Verify BrowserStack credentials through the configured App Automate control API.", Flags: common, Risk: "read", Example: "mobile-auto auth test --json"},
+		"run.start":     {Description: "Resolve or upload an app, choose a BrowserStack device, optionally ensure Local, create an Appium session, and save run state.", Flags: append([]string{"app", "file", "url", "custom-id", "platform", "device", "os-version", "min-os-version", "network", "local-identifier", "project", "build", "name", "wait-capacity", "timeout", "poll-interval"}, common...), Required: []string{"app|file|url|custom-id"}, Risk: "write", Example: "mobile-auto run start --file ./app.apk --platform android --network public --json"},
+		"observe":       {Description: "Capture source and screenshot for a run and return bounded element candidates.", Flags: append([]string{"run-id", "limit"}, common...), Required: []string{"run-id"}, Risk: "read", Example: "mobile-auto observe --run-id run-... --json"},
+		"locate":        {Description: "Deterministically rank candidates from the latest observation using semantic criteria.", Flags: append([]string{"run-id", "name", "text", "role", "resource-id", "accessibility-id", "parent-text", "nearby-text", "actionable", "visible", "enabled", "require-visible", "require-enabled", "limit"}, common...), Required: []string{"run-id"}, Risk: "read", Example: "mobile-auto locate --run-id run-... --role button --name Login --json"},
+		"tap":           {Description: "Tap a unique element resolved from a latest-observation ref.", Flags: append([]string{"run-id", "ref"}, common...), Required: []string{"run-id", "ref"}, Risk: "write", Example: "mobile-auto tap --run-id run-... --ref obs-...:e1 --json"},
+		"type":          {Description: "Type text into a unique element resolved from a latest-observation ref without echoing sensitive inputs.", Flags: append([]string{"run-id", "ref", "text", "text-env", "text-stdin"}, common...), Required: []string{"run-id", "ref", "text|text-env|text-stdin"}, Risk: "write", Example: "mobile-auto type --run-id run-... --ref obs-...:e2 --text-env TEST_PASSWORD --json"},
+		"run.handoff":   {Description: "Capture an observation, transfer control to the human, and start bounded keepalive.", Flags: append([]string{"run-id", "hold-for"}, common...), Required: []string{"run-id"}, Risk: "write", Example: "mobile-auto run handoff --run-id run-... --hold-for 10m --json"},
+		"run.resume":    {Description: "Stop keepalive, return control to the agent, invalidate old observations, and capture a fresh observation.", Flags: append([]string{"run-id"}, common...), Required: []string{"run-id"}, Risk: "write", Example: "mobile-auto run resume --run-id run-... --json"},
+		"run.finish":    {Description: "Mark, collect artifacts, delete the Appium session, stop managed Local, and finish the run idempotently.", Flags: append([]string{"run-id", "status", "reason", "collect-artifacts"}, common...), Required: []string{"run-id"}, Risk: "write", Example: "mobile-auto run finish --run-id run-... --status passed --collect-artifacts --json"},
+		"app.upload":    {Description: "Upload an app file or public app URL to BrowserStack App Automate.", Flags: append([]string{"file", "url", "custom-id", "ios-keychain-support", "dry-run"}, common...), Required: []string{"file|url"}, Risk: "write", Example: "mobile-auto app upload --file ./app.apk --custom-id smoke --json"},
+		"app.delete":    {Description: "Delete a BrowserStack uploaded app after explicit confirmation.", Flags: append([]string{"app-id", "app-url", "yes", "dry-run"}, common...), Required: []string{"app-id|app-url", "yes"}, Risk: "delete", Example: "mobile-auto app delete --app-url bs://... --yes --dry-run --json"},
+		"capacity.wait": {Description: "Wait in a bounded polling loop for BrowserStack parallel capacity.", Flags: append([]string{"required", "timeout", "poll-interval"}, common...), Required: []string{"required"}, Risk: "read", Example: "mobile-auto capacity wait --required 1 --timeout 5m --json"},
 	}
 	item, ok := items[name]
 	return item, ok
@@ -1087,7 +1087,7 @@ func defaultFlags(product, r string) []string {
 	if product == "browser" {
 		return []string{"json", "format", "verbose"}
 	}
-	if product == "mobile" {
+	if product == "mobile-auto" {
 		return []string{"config", "json", "format", "verbose"}
 	}
 	if product == "inspect-image" {
@@ -1147,8 +1147,8 @@ func productName(product string) string {
 		return "Confluence"
 	case "browser":
 		return "Browser"
-	case "mobile":
-		return "Mobile"
+	case "mobile-auto":
+		return "Mobile Auto"
 	case "inspect-image":
 		return "Inspect Image"
 	default:

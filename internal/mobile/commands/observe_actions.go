@@ -107,7 +107,7 @@ func locateCmd(o *Opts) *cobra.Command {
 			return renderErr(cmd, o, err)
 		}
 		if st.LatestObservationID == "" {
-			return print(cmd, o, output.Failure("stale_observation", "no current observation is available", "Run mobile observe --run-id ... --json first.", 409))
+			return print(cmd, o, output.Failure("stale_observation", "no current observation is available", "Run mobile-auto observe --run-id ... --json first.", 409))
 		}
 		obs, err := svc.Store.LoadObservation(runID, st.LatestObservationID)
 		if err != nil {
@@ -519,10 +519,10 @@ func resolveRefElement(ctx context.Context, svc *services, runID, ref string) (m
 		return st, mobile.Observation{}, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, err
 	}
 	if st.ControlOwner == "human" {
-		return st, mobile.Observation{}, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
+		return st, mobile.Observation{}, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobile.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
 	}
 	if st.LatestObservationID == "" || mobile.RefObservationID(ref) != st.LatestObservationID {
-		return st, mobile.Observation{}, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobile.RetryableError("stale_observation", "ref does not belong to the latest observation", "Run mobile observe again and use a fresh ref.", "observe", 409)
+		return st, mobile.Observation{}, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobile.RetryableError("stale_observation", "ref does not belong to the latest observation", "Run mobile-auto observe again and use a fresh ref.", "observe", 409)
 	}
 	obs, err := svc.Store.LoadObservation(runID, st.LatestObservationID)
 	if err != nil {
@@ -530,7 +530,7 @@ func resolveRefElement(ctx context.Context, svc *services, runID, ref string) (m
 	}
 	candidate, ok := mobile.CandidateByRef(obs, ref)
 	if !ok {
-		return st, obs, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobile.NewError("element_not_found", "ref was not found in the observation", "Run mobile observe again.", 404)
+		return st, obs, mobile.Candidate{}, appium.RemoteElement{}, appium.Locator{}, mobile.NewError("element_not_found", "ref was not found in the observation", "Run mobile-auto observe again.", 404)
 	}
 	var last appium.Locator
 	for _, hint := range mobile.LocatorsForCandidate(st.Platform, candidate) {
@@ -547,7 +547,7 @@ func resolveRefElement(ctx context.Context, svc *services, runID, ref string) (m
 			return st, obs, candidate, appium.RemoteElement{}, locator, mobile.NewError("ambiguous_element", "locator matched multiple elements", "Observe again or locate with more specific semantic criteria.", 409)
 		}
 	}
-	return st, obs, candidate, appium.RemoteElement{}, last, mobile.RetryableError("element_not_found", "no generated locator matched the element", "Run mobile observe again or use locate with stable criteria.", "observe", 404)
+	return st, obs, candidate, appium.RemoteElement{}, last, mobile.RetryableError("element_not_found", "no generated locator matched the element", "Run mobile-auto observe again or use locate with stable criteria.", "observe", 404)
 }
 
 func resolveRefElementWithRecovery(ctx context.Context, svc *services, runID, ref string, opts actionOptions) (mobile.RunState, mobile.Observation, mobile.Candidate, appium.RemoteElement, appium.Locator, string, bool, error) {
@@ -725,7 +725,7 @@ func scrollToCmd(o *Opts) *cobra.Command {
 				return err
 			}
 			if st.ControlOwner == "human" {
-				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
+				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
 			}
 			loopOpts := scrollLoopOptions{
 				RunID:        opts.RunID,
@@ -1054,7 +1054,7 @@ func swipeUntilStop(cmd *cobra.Command, o *Opts, opts swipeCommandOptions, actio
 			return err
 		}
 		if st.ControlOwner == "human" {
-			return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
+			return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
 		}
 		result, err = runScrollLoop(cmd.Context(), svc, &st, scrollLoopOptions{
 			RunID:        opts.RunID,
@@ -1181,7 +1181,7 @@ func runGesture(cmd *cobra.Command, o *Opts, runID, action string, opts actionOp
 			return err
 		}
 		if st.ControlOwner == "human" {
-			return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
+			return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume before mutating actions.", 423)
 		}
 		beforeHash := latestObservationHash(svc, st)
 		if beforeHash == "" && opts.WaitChange {
@@ -1622,7 +1622,7 @@ func contextCmd(o *Opts) *cobra.Command {
 				return err
 			}
 			if st.ControlOwner == "human" {
-				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume first.", 423)
+				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile-auto run resume first.", 423)
 			}
 			if err := svc.Appium.SwitchContext(cmd.Context(), st.SessionID, name); err != nil {
 				markRunLostIfSessionGone(svc, &st, err)

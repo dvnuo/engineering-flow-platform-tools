@@ -10,12 +10,12 @@ import (
 	"engineering-flow-platform-tools/internal/httpclient"
 )
 
-const EnvStateDir = "MOBILE_STATE_DIR"
-const EnvArtifactsDir = "MOBILE_ARTIFACTS_DIR"
+const EnvStateDir = "MOBILE_AUTO_STATE_DIR"
+const EnvArtifactsDir = "MOBILE_AUTO_ARTIFACTS_DIR"
 
 type RuntimeConfig struct {
 	Path        string                   `json:"path,omitempty"`
-	Mobile      config.MobileConfig      `json:"mobile"`
+	Mobile      config.MobileConfig      `json:"mobile-auto"`
 	Username    bool                     `json:"username_present,omitempty"`
 	AccessKey   bool                     `json:"access_key_present,omitempty"`
 	Credentials Credentials              `json:"-"`
@@ -41,7 +41,7 @@ func LoadRuntimeConfig(flagPath string) (RuntimeConfig, error) {
 		}
 		root = config.RootConfig{}
 		root.Normalize()
-		warnings = append(warnings, "config file not found; using mobile defaults and environment credentials")
+		warnings = append(warnings, "config file not found; using mobile-auto defaults and environment credentials")
 	}
 	m := root.Mobile
 	m.Normalize()
@@ -99,14 +99,14 @@ func loadHTTPProxy(cfg config.MobileHTTPProxy) (httpclient.ProxySettings, error)
 	if strings.TrimSpace(cfg.ProxyUserEnv) != "" {
 		value, ok := os.LookupEnv(strings.TrimSpace(cfg.ProxyUserEnv))
 		if !ok || strings.TrimSpace(value) == "" {
-			return proxy, NewError("config_error", "BrowserStack HTTP proxy username env var is not set", "Set "+strings.TrimSpace(cfg.ProxyUserEnv)+" or remove mobile.browserstack.http_proxy.proxy_user_env.", 400)
+			return proxy, NewError("config_error", "BrowserStack HTTP proxy username env var is not set", "Set "+strings.TrimSpace(cfg.ProxyUserEnv)+" or remove mobile-auto.browserstack.http_proxy.proxy_user_env.", 400)
 		}
 		proxy.ProxyUser = value
 	}
 	if strings.TrimSpace(cfg.ProxyPassEnv) != "" {
 		value, ok := os.LookupEnv(strings.TrimSpace(cfg.ProxyPassEnv))
 		if !ok || strings.TrimSpace(value) == "" {
-			return proxy, NewError("config_error", "BrowserStack HTTP proxy password env var is not set", "Set "+strings.TrimSpace(cfg.ProxyPassEnv)+" or remove mobile.browserstack.http_proxy.proxy_pass_env.", 400)
+			return proxy, NewError("config_error", "BrowserStack HTTP proxy password env var is not set", "Set "+strings.TrimSpace(cfg.ProxyPassEnv)+" or remove mobile-auto.browserstack.http_proxy.proxy_pass_env.", 400)
 		}
 		proxy.ProxyPass = value
 	}
@@ -115,7 +115,7 @@ func loadHTTPProxy(cfg config.MobileHTTPProxy) (httpclient.ProxySettings, error)
 
 func RequireCredentials(c RuntimeConfig) error {
 	if strings.TrimSpace(c.Credentials.Username) == "" || strings.TrimSpace(c.Credentials.AccessKey) == "" {
-		return NewError("auth_error", "BrowserStack credentials are missing", "Set BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY or configure mobile.browserstack username/access_key.", 401)
+		return NewError("auth_error", "BrowserStack credentials are missing", "Set BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY or configure mobile-auto.browserstack username/access_key.", 401)
 	}
 	return nil
 }

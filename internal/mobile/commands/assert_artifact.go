@@ -180,7 +180,7 @@ func runObservationAssertion(cmd *cobra.Command, o *Opts, runID string, q mobile
 		return renderErr(cmd, o, err)
 	}
 	if st.LatestObservationID == "" {
-		return print(cmd, o, output.Failure("stale_observation", "no current observation is available", "Run mobile observe first.", 409))
+		return print(cmd, o, output.Failure("stale_observation", "no current observation is available", "Run mobile-auto observe first.", 409))
 	}
 	obs, err := svc.Store.LoadObservation(runID, st.LatestObservationID)
 	if err != nil {
@@ -191,7 +191,7 @@ func runObservationAssertion(cmd *cobra.Command, o *Opts, runID string, q mobile
 	data := map[string]any{"passed": ok, "run_id": runID, "evidence": evidence}
 	appendTimelineBestEffort(svc, runID, "assert", cmd.CalledAs(), obs.ID, st.Status, data)
 	if !ok {
-		env := output.Failure("assertion_failed", "mobile assertion failed", "Inspect evidence and observe the page again if needed.", 412)
+		env := output.Failure("assertion_failed", "mobile-auto assertion failed", "Inspect evidence and observe the page again if needed.", 412)
 		env.Data = data
 		return print(cmd, o, env)
 	}
@@ -222,7 +222,7 @@ func runAssertion(cmd *cobra.Command, o *Opts, runID, ref, name, role string, fn
 		locator = loc
 	} else {
 		if st.LatestObservationID == "" {
-			return print(cmd, o, output.Failure("stale_observation", "no current observation is available", "Run mobile observe first or pass --ref.", 409))
+			return print(cmd, o, output.Failure("stale_observation", "no current observation is available", "Run mobile-auto observe first or pass --ref.", 409))
 		}
 		obs, err := svc.Store.LoadObservation(runID, st.LatestObservationID)
 		if err != nil {
@@ -230,7 +230,7 @@ func runAssertion(cmd *cobra.Command, o *Opts, runID, ref, name, role string, fn
 		}
 		res := mobile.Locate(obs, mobile.LocateQuery{Name: name, Role: role, Actionable: false, Limit: 2})
 		if res.RecommendedRef == "" {
-			return print(cmd, o, output.Failure("ambiguous_element", "semantic assertion target was not unique", "Use mobile locate, then assert with --ref.", 409))
+			return print(cmd, o, output.Failure("ambiguous_element", "semantic assertion target was not unique", "Use mobile-auto locate, then assert with --ref.", 409))
 		}
 		_, _, _, element, loc, err := resolveRefElement(cmd.Context(), svc, runID, res.RecommendedRef)
 		if err != nil {
@@ -249,7 +249,7 @@ func runAssertion(cmd *cobra.Command, o *Opts, runID, ref, name, role string, fn
 	data := map[string]any{"passed": ok, "run_id": runID, "ref": ref, "locator": locator, "evidence": evidence}
 	appendTimelineBestEffort(svc, runID, "assert", cmd.CalledAs(), "", st.Status, data)
 	if !ok {
-		env := output.Failure("assertion_failed", "mobile assertion failed", "Inspect evidence and observe the page again if needed.", 412)
+		env := output.Failure("assertion_failed", "mobile-auto assertion failed", "Inspect evidence and observe the page again if needed.", 412)
 		env.Data = data
 		return print(cmd, o, env)
 	}

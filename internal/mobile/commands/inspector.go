@@ -120,7 +120,7 @@ func inspectorAttachCmd(o *Opts) *cobra.Command {
 			"current_context": currentContext,
 			"contexts":        classifyContexts(contexts),
 			"warnings":        warnings,
-			"handoff_hint":    "Use mobile run handoff --run-id " + runID + " --mode inspector --json before manual Inspector work, then mobile run resume.",
+			"handoff_hint":    "Use mobile-auto run handoff --run-id " + runID + " --mode inspector --json before manual Inspector work, then mobile-auto run resume.",
 		}
 		return print(cmd, o, output.Success("", data))
 	}}
@@ -145,7 +145,7 @@ func inspectorExportCmd(o *Opts) *cobra.Command {
 			return renderErr(cmd, o, err)
 		}
 		if st.LatestObservationID == "" {
-			return print(cmd, o, output.Failure("stale_observation", "no current observation is available", "Run mobile observe first, then export.", 409))
+			return print(cmd, o, output.Failure("stale_observation", "no current observation is available", "Run mobile-auto observe first, then export.", 409))
 		}
 		obs, err := svc.Store.LoadObservation(runID, st.LatestObservationID)
 		if err != nil {

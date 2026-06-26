@@ -33,7 +33,7 @@ func TestLoadRuntimeConfigDefaultsAndEnvCredentials(t *testing.T) {
 func TestLoadRuntimeConfigRejectsOffProviderURL(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")
-	if err := os.WriteFile(path, []byte("version: 1\nmobile:\n  browserstack:\n    api_base_url: https://evil.example.test\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("version: 1\nmobile-auto:\n  browserstack:\n    api_base_url: https://evil.example.test\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	_, err := LoadRuntimeConfig(path)
@@ -49,7 +49,7 @@ func TestLoadRuntimeConfigResolvesHTTPProxyCredentials(t *testing.T) {
 	t.Setenv("BS_PROXY_PASS", "proxy-pass")
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	if err := os.WriteFile(path, []byte(`version: 1
-mobile:
+mobile-auto:
   browserstack:
     http_proxy:
       proxy_host: proxy.internal

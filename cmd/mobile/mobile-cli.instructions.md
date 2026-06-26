@@ -31,6 +31,9 @@ Rules for agents:
 - Use only refs returned by the latest `mobile observe`.
 - Re-observe after every mutating command unless you used `--post-observe`: `tap`, `tap-point`, `long-press`, `double-tap`, `drag`, `type`, `clear`, `scroll`, `scroll-to`, `swipe`, `back`, `keyboard`, or `context switch`.
 - Prefer action-level waits such as `--wait-change`, `--wait-visible`, and `--wait-gone` when the next step depends on the previous action taking effect.
+- Use `scroll-to --edge bottom|top` when the goal is to reach a boundary without a known target. Use `swipe` or `scroll --until-stable --max-swipes N` when repeating a gesture until the page stops changing.
+- Inspect scroll results for `scrolls`, `stopped_reason`, `repeated_source`, `source_hash_before`, `source_hash_after`, `last_observation_id`, and `visible_text_after` before deciding whether another observe is needed.
+- Percent flags accept either `50` or `0.5` for fifty percent. Prefer `--profile fast-page-down`, `--profile fine-scroll`, or `--profile page-up` over hand-tuned percentages when possible.
 - Use `mobile inspector config/attach/export` when switching from CLI automation to Appium Inspector debugging.
 - Use `mobile test run --file suite.yaml --junit-out junit.xml --evidence-dir evidence --json` for CI-style suite execution.
 - Never act on ambiguous `locate` results.
@@ -50,6 +53,8 @@ mobile tap --run-id run-... --ref obs-...:e17 --json
 mobile observe --run-id run-... --json
 mobile type --run-id run-... --ref obs-...:e21 --text-env TEST_PASSWORD --json
 mobile scroll-to --run-id run-... --text Checkout --max-scrolls 4 --json
+mobile scroll-to --run-id run-... --edge bottom --profile fast-page-down --json
+mobile swipe --run-id run-... --direction up --until-stable --max-swipes 8 --json
 mobile swipe --run-id run-... --direction up --json
 mobile tap --run-id run-... --ref obs-...:e30 --wait-change --post-observe --json
 mobile keyboard enter --run-id run-... --json

@@ -615,6 +615,65 @@ func TestSwipeUsesViewportRelativeCoordinates(t *testing.T) {
 	}
 }
 
+func TestSwipePercentFractionsMeanPercent(t *testing.T) {
+	startX, startY, endX, endY, err := swipePercents(swipeCommandOptions{
+		StartXPercent: 0.5,
+		StartYPercent: 0.8,
+		EndXPercent:   0.5,
+		EndYPercent:   0.2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if startX != 50 || startY != 80 || endX != 50 || endY != 20 {
+		t.Fatalf("fractional percentages were not normalized: %v %v %v %v", startX, startY, endX, endY)
+	}
+}
+
+func TestSwipeContainerRefUsesObservationBounds(t *testing.T) {
+	actions := make(chan map[string]any, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/session/session-container/actions":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			actions <- body
+			_, _ = w.Write([]byte(`{"value":null}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path, stateDir, artifactsDir := writeMobileMockConfig(t, srv.URL)
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	obs, err := mobile.BuildObservationStrict("run-container", "session-container", "obs-container", `<hierarchy><node class="android.widget.ScrollView" scrollable="true" bounds="[100,200][900,1200]" /></hierarchy>`, []byte("png"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveObservation("run-container", obs); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-container", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-container", Platform: "android", LatestObservationID: obs.ID, StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "swipe", "--config", path, "--run-id", "run-container", "--container-ref", "obs-container:e1", "--direction", "up", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	body := <-actions
+	steps := body["actions"].([]any)[0].(map[string]any)["actions"].([]any)
+	start := steps[0].(map[string]any)
+	move := steps[2].(map[string]any)
+	if start["x"] != float64(500) || start["y"] != float64(1000) || move["x"] != float64(500) || move["y"] != float64(400) {
+		t.Fatalf("unexpected container-relative swipe actions: %#v", steps)
+	}
+}
+
 func TestScrollToFindsElementAfterViewportScroll(t *testing.T) {
 	actions := make(chan map[string]any, 4)
 	var sourceCalls int32
@@ -674,6 +733,104 @@ func TestScrollToFindsElementAfterViewportScroll(t *testing.T) {
 	<-actions
 	if got := atomic.LoadInt32(&sourceCalls); got != 2 {
 		t.Fatalf("expected two observations, got %d", got)
+	}
+}
+
+func TestScrollToEdgeBottomStopsOnRepeatedSource(t *testing.T) {
+	actions := make(chan map[string]any, 2)
+	var sourceCalls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/session/session-edge/source":
+			atomic.AddInt32(&sourceCalls, 1)
+			_, _ = w.Write([]byte(`{"value":"<hierarchy><node class=\"android.widget.TextView\" text=\"Terms\" bounds=\"[0,0][100,100]\" /></hierarchy>"}`))
+		case "/session/session-edge/screenshot":
+			_, _ = w.Write([]byte(`{"value":"c2NyZWVu"}`))
+		case "/session/session-edge/window/rect":
+			_, _ = w.Write([]byte(`{"value":{"x":0,"y":0,"width":1000,"height":2000}}`))
+		case "/session/session-edge/actions":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			actions <- body
+			_, _ = w.Write([]byte(`{"value":null}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path, stateDir, artifactsDir := writeMobileMockConfig(t, srv.URL)
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-edge", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-edge", StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "scroll-to", "--config", path, "--run-id", "run-edge", "--edge", "bottom", "--max-scrolls", "3", "--stable-count", "2", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if data["scrolls"] != float64(1) || data["stopped_reason"] != "repeated_source" || data["repeated_source"] != true {
+		t.Fatalf("unexpected edge result: %#v", data)
+	}
+	<-actions
+	if got := atomic.LoadInt32(&sourceCalls); got != 2 {
+		t.Fatalf("expected two observations, got %d", got)
+	}
+}
+
+func TestSwipeUntilStableMaxSwipesReturnsStructuredFailure(t *testing.T) {
+	var sourceCalls int32
+	var actionCalls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/session/session-stable/source":
+			call := atomic.AddInt32(&sourceCalls, 1)
+			text := "Page A"
+			if call == 2 {
+				text = "Page B"
+			}
+			if call >= 3 {
+				text = "Page C"
+			}
+			_, _ = w.Write([]byte(`{"value":"<hierarchy><node class=\"android.widget.TextView\" text=\"` + text + `\" bounds=\"[0,0][100,100]\" /></hierarchy>"}`))
+		case "/session/session-stable/screenshot":
+			_, _ = w.Write([]byte(`{"value":"c2NyZWVu"}`))
+		case "/session/session-stable/window/rect":
+			_, _ = w.Write([]byte(`{"value":{"x":0,"y":0,"width":1000,"height":2000}}`))
+		case "/session/session-stable/actions":
+			atomic.AddInt32(&actionCalls, 1)
+			_, _ = w.Write([]byte(`{"value":null}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path, stateDir, artifactsDir := writeMobileMockConfig(t, srv.URL)
+	store := mobile.NewStateStore(stateDir, artifactsDir)
+	if err := store.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveRun(mobile.RunState{RunID: "run-stable", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-stable", StartedAt: mobileTestNow()}); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "swipe", "--config", path, "--run-id", "run-stable", "--until-stable", "--max-swipes", "2", "--json")
+	if out["ok"] != false {
+		t.Fatalf("expected failure: %#v", out)
+	}
+	errObj := out["error"].(map[string]any)
+	if errObj["code"] != "scroll_still_changing" || errObj["recommended_action"] != "observe" {
+		t.Fatalf("unexpected error: %#v", errObj)
+	}
+	data := out["data"].(map[string]any)
+	if data["scrolls"] != float64(2) || data["stopped_reason"] != "max_scrolls" || data["last_observation_id"] == "" {
+		t.Fatalf("unexpected scroll data: %#v", data)
+	}
+	if got := atomic.LoadInt32(&actionCalls); got != 2 {
+		t.Fatalf("expected two swipes, got %d", got)
 	}
 }
 
@@ -1203,6 +1360,25 @@ func TestAppResolveInvalidAppURLFailsBeforeServiceSetup(t *testing.T) {
 
 func mobileTestNow() time.Time {
 	return time.Date(2026, 6, 23, 12, 0, 0, 0, time.UTC)
+}
+
+func writeMobileMockConfig(t *testing.T, baseURL string) (string, string, string) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = baseURL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = baseURL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	return path, stateDir, artifactsDir
 }
 
 func readRunStates(t *testing.T, stateDir string) []mobile.RunState {

@@ -438,8 +438,14 @@ func resolveCoordinateTarget(ctx context.Context, svc *services, st *mobile.RunS
 		return gestureTarget{Point: gesturePoint{X: x, Y: y}, Source: source + "_absolute"}, nil, nil
 	}
 	if hasPercent {
-		if xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100 {
-			return gestureTarget{}, nil, mobile.NewError("invalid_args", "percent point requires x/y percent between 0 and 100", "Pass both --x-percent and --y-percent.", 400)
+		var err error
+		xPercent, err = normalizePercentInput(xPercent)
+		if err != nil {
+			return gestureTarget{}, nil, mobile.NewError("invalid_args", "percent point requires x/y percent between 0 and 100, or 0.0 and 1.0 as fractions", "Use 50 or 0.5 for fifty percent, and pass both --x-percent and --y-percent.", 400)
+		}
+		yPercent, err = normalizePercentInput(yPercent)
+		if err != nil {
+			return gestureTarget{}, nil, mobile.NewError("invalid_args", "percent point requires x/y percent between 0 and 100, or 0.0 and 1.0 as fractions", "Use 50 or 0.5 for fifty percent, and pass both --x-percent and --y-percent.", 400)
 		}
 		rect, err := svc.Appium.WindowRect(ctx, st.SessionID)
 		if err != nil {
@@ -626,11 +632,17 @@ type swipeCommandOptions struct {
 	RunID         string
 	Direction     string
 	ContainerRef  string
+	Profile       string
 	DurationMS    int
 	StartXPercent float64
 	StartYPercent float64
 	EndXPercent   float64
 	EndYPercent   float64
+	UntilStable   bool
+	UntilVisible  string
+	UntilGone     string
+	MaxSwipes     int
+	StableCount   int
 }
 
 type gesturePoint struct {
@@ -646,42 +658,55 @@ type gestureTarget struct {
 }
 
 func scrollCmd(o *Opts) *cobra.Command {
-	opts := swipeCommandOptions{Direction: "down", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1}
+	opts := swipeCommandOptions{Direction: "down", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1, MaxSwipes: 8, StableCount: 1}
 	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "scroll", RunE: func(cmd *cobra.Command, args []string) error {
 		return swipeLike(cmd, o, opts, "scroll", actionOpts)
 	}}
 	bindSwipeCommandFlags(c, &opts)
+	bindContinuousSwipeFlags(c, &opts)
 	bindActionOptions(c, &actionOpts, false)
 	return c
 }
 
 func swipeCmd(o *Opts) *cobra.Command {
-	opts := swipeCommandOptions{Direction: "up", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1}
+	opts := swipeCommandOptions{Direction: "up", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1, MaxSwipes: 8, StableCount: 1}
 	actionOpts := defaultActionOptions()
 	c := &cobra.Command{Use: "swipe", RunE: func(cmd *cobra.Command, args []string) error {
 		return swipeLike(cmd, o, opts, "swipe", actionOpts)
 	}}
 	bindSwipeCommandFlags(c, &opts)
+	bindContinuousSwipeFlags(c, &opts)
 	bindActionOptions(c, &actionOpts, false)
 	return c
 }
 
 func scrollToCmd(o *Opts) *cobra.Command {
-	opts := swipeCommandOptions{Direction: "down", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1}
+	opts := swipeCommandOptions{Direction: "down", DurationMS: 500, StartXPercent: -1, StartYPercent: -1, EndXPercent: -1, EndYPercent: -1, StableCount: 1}
 	q := mobile.LocateQuery{}
 	var limit, maxScrolls int
+	var edge, untilVisible, untilGone string
 	var visible, enabled bool
 	var useVisible, useEnabled bool
 	c := &cobra.Command{Use: "scroll-to", RunE: func(cmd *cobra.Command, args []string) error {
 		if opts.RunID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 		}
-		if !locateQueryHasCriteria(q) {
-			return print(cmd, o, output.Failure("invalid_args", "at least one locate criterion is required", "Pass --text, --name, --role, --resource-id, --accessibility-id, or --parent-text.", 400))
+		hasTarget := locateQueryHasCriteria(q)
+		if !hasTarget && strings.TrimSpace(edge) == "" && strings.TrimSpace(untilVisible) == "" && strings.TrimSpace(untilGone) == "" {
+			return print(cmd, o, output.Failure("invalid_args", "a locate criterion, --edge, --until-visible, or --until-gone is required", "Pass --text, --name, --role, --resource-id, --accessibility-id, --edge bottom, or an until condition.", 400))
 		}
 		if maxScrolls < 0 {
 			return print(cmd, o, output.Failure("invalid_args", "--max-scrolls cannot be negative", "Use 0 to only observe and locate without scrolling.", 400))
+		}
+		if opts.StableCount <= 0 {
+			return print(cmd, o, output.Failure("invalid_args", "--stable-count must be greater than zero", "Pass a positive consecutive no-change count.", 400))
+		}
+		if normalizedEdge, ok := normalizeScrollEdge(edge); strings.TrimSpace(edge) != "" && !ok {
+			return print(cmd, o, output.Failure("invalid_args", "--edge must be top or bottom", "Use --edge bottom to scroll down the page or --edge top to scroll back up.", 400))
+		} else if normalizedEdge != "" {
+			edge = normalizedEdge
+			opts.Direction = directionForEdge(edge)
 		}
 		if useVisible {
 			q.Visible = &visible
@@ -693,7 +718,7 @@ func scrollToCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		var data map[string]any
+		var result scrollLoopResult
 		err = svc.Store.WithRunLock(opts.RunID, func() error {
 			st, err := svc.Store.LoadRun(opts.RunID)
 			if err != nil {
@@ -702,51 +727,50 @@ func scrollToCmd(o *Opts) *cobra.Command {
 			if st.ControlOwner == "human" {
 				return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
 			}
-			seenSources := map[string]int{}
-			for scrolls := 0; scrolls <= maxScrolls; scrolls++ {
-				obs, err := captureObservation(cmd.Context(), svc, &st, limit)
-				if err != nil {
-					return err
-				}
-				seenSources[obs.SourceHash]++
-				located := mobile.Locate(obs, q)
-				if ref := scrollToResolvedRef(located); ref != "" {
-					data = map[string]any{"found": true, "run_id": opts.RunID, "scrolls": scrolls, "recommended_ref": ref, "locate": located, "observation": obs, "repeated_source": seenSources[obs.SourceHash] > 1}
-					return nil
-				}
-				if scrolls == maxScrolls {
-					return mobile.RetryableError("element_not_found", "target was not found after scrolling", "Try another direction, increase --max-scrolls, or broaden the locate query.", "observe", 404)
-				}
-				rect, err := gestureViewport(cmd.Context(), svc, &st, opts)
-				if err != nil {
-					markRunLostIfSessionGone(svc, &st, err)
-					return err
-				}
-				start, end, err := swipePointsForViewport(rect, opts)
-				if err != nil {
-					return err
-				}
-				if err := svc.Appium.PerformActions(cmd.Context(), st.SessionID, pointerSwipeActions(start, end, opts.DurationMS)); err != nil {
-					markRunLostIfSessionGone(svc, &st, err)
-					return err
-				}
-				st.LatestObservationID = ""
-				if err := svc.Store.SaveRun(st); err != nil {
-					return err
-				}
-				if seenSources[obs.SourceHash] > 1 {
-					return mobile.RetryableError("element_not_found", "target was not found and the screen stopped changing", "Try another direction, a container ref, or a broader locate query.", "observe", 404)
-				}
+			loopOpts := scrollLoopOptions{
+				RunID:        opts.RunID,
+				Swipe:        opts,
+				Limit:        limit,
+				MaxScrolls:   maxScrolls,
+				StableCount:  opts.StableCount,
+				Edge:         edge,
+				UntilVisible: untilVisible,
+				UntilGone:    untilGone,
 			}
-			return nil
+			if hasTarget {
+				target := q
+				loopOpts.Target = &target
+			}
+			result, err = runScrollLoop(cmd.Context(), svc, &st, loopOpts)
+			return err
 		})
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		return print(cmd, o, output.Success("", data))
+		if result.successForScrollTo(hasTarget) {
+			return print(cmd, o, output.Success("", result.Data))
+		}
+		env := output.Failure("element_not_found", "target was not found before scrolling stopped", "Try another direction, increase --max-scrolls, add --container-ref, or broaden the locate query.", 404)
+		if result.StoppedReason == "max_scrolls" {
+			env.Error.Code = "scroll_still_changing"
+			env.Error.Message = "target was not found before --max-scrolls was reached"
+			env.Error.Hint = "Increase --max-scrolls, use --edge when the boundary is acceptable, or refine the query."
+			env.Error.Status = 408
+			env.Error.Retryable = true
+			env.Error.RecommendedAction = "observe"
+		} else {
+			env.Error.Retryable = true
+			env.Error.RecommendedAction = "observe"
+		}
+		env.Data = result.Data
+		return print(cmd, o, env)
 	}}
 	c.Flags().IntVar(&limit, "limit", 100, "")
 	c.Flags().IntVar(&maxScrolls, "max-scrolls", 8, "")
+	c.Flags().StringVar(&edge, "edge", "", "")
+	c.Flags().StringVar(&untilVisible, "until-visible", "", "")
+	c.Flags().StringVar(&untilGone, "until-gone", "", "")
+	c.Flags().IntVar(&opts.StableCount, "stable-count", 1, "")
 	c.Flags().StringVar(&q.Name, "name", "", "")
 	c.Flags().StringVar(&q.Text, "text", "", "")
 	c.Flags().StringVar(&q.Role, "role", "", "")
@@ -782,10 +806,291 @@ func scrollToResolvedRef(res mobile.LocateResult) string {
 	return ""
 }
 
+type scrollLoopOptions struct {
+	RunID        string
+	Swipe        swipeCommandOptions
+	Limit        int
+	MaxScrolls   int
+	StableCount  int
+	Edge         string
+	Target       *mobile.LocateQuery
+	UntilVisible string
+	UntilGone    string
+}
+
+type scrollLoopResult struct {
+	Data          map[string]any
+	Found         bool
+	StoppedReason string
+}
+
+func (r scrollLoopResult) successForScrollTo(hasTarget bool) bool {
+	if r.Found || r.StoppedReason == "visible" || r.StoppedReason == "gone" {
+		return true
+	}
+	return !hasTarget && r.StoppedReason != "max_scrolls"
+}
+
+type scrollObservationSummary struct {
+	ID              string                 `json:"id"`
+	SourceHash      string                 `json:"source_hash"`
+	ScreenshotHash  string                 `json:"screenshot_hash,omitempty"`
+	CandidateCount  int                    `json:"candidate_count"`
+	TotalCandidates int                    `json:"total_candidates"`
+	VisibleText     []string               `json:"visible_text,omitempty"`
+	Controls        []scrollControlSummary `json:"controls,omitempty"`
+}
+
+type scrollControlSummary struct {
+	Ref       string `json:"ref"`
+	Role      string `json:"role,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Text      string `json:"text,omitempty"`
+	Enabled   bool   `json:"enabled"`
+	Visible   bool   `json:"visible"`
+	Clickable bool   `json:"clickable,omitempty"`
+}
+
+func runScrollLoop(ctx context.Context, svc *services, st *mobile.RunState, opts scrollLoopOptions) (scrollLoopResult, error) {
+	if opts.MaxScrolls < 0 {
+		return scrollLoopResult{}, mobile.NewError("invalid_args", "--max-scrolls cannot be negative", "Pass zero or a positive scroll limit.", 400)
+	}
+	if opts.StableCount <= 0 {
+		opts.StableCount = 1
+	}
+	if strings.TrimSpace(opts.Swipe.Profile) != "" {
+		if _, err := resolveSwipeProfile(opts.Swipe); err != nil {
+			return scrollLoopResult{}, err
+		}
+	}
+	data := map[string]any{
+		"run_id":          opts.RunID,
+		"direction":       swipeOutputDirection(opts.Swipe),
+		"duration_ms":     swipeOutputDuration(opts.Swipe),
+		"scrolls":         0,
+		"max_scrolls":     opts.MaxScrolls,
+		"stable_count":    opts.StableCount,
+		"found":           false,
+		"repeated_source": false,
+		"no_change_count": 0,
+	}
+	if opts.Edge != "" {
+		data["edge"] = opts.Edge
+	}
+	if opts.Swipe.ContainerRef != "" {
+		data["container_ref"] = opts.Swipe.ContainerRef
+	}
+	if opts.UntilVisible != "" {
+		data["until_visible"] = opts.UntilVisible
+	}
+	if opts.UntilGone != "" {
+		data["until_gone"] = opts.UntilGone
+	}
+
+	seenSources := map[string]int{}
+	scrolls := 0
+	noChangeCount := 0
+	lastBeforeSwipeHash := ""
+	for {
+		obs, err := captureObservation(ctx, svc, st, opts.Limit)
+		if err != nil {
+			return scrollLoopResult{}, err
+		}
+		if scrolls == 0 {
+			data["before_observation"] = summarizeScrollObservation(obs)
+			data["source_hash_before"] = obs.SourceHash
+		}
+		updateScrollObservationData(data, obs)
+		seenSources[obs.SourceHash]++
+		repeatedSource := seenSources[obs.SourceHash] > 1
+		if repeatedSource {
+			data["repeated_source"] = true
+		}
+
+		if opts.Target != nil {
+			located := mobile.Locate(obs, *opts.Target)
+			data["locate"] = located
+			if ref := scrollToResolvedRef(located); ref != "" {
+				data["found"] = true
+				data["recommended_ref"] = ref
+				data["stopped_reason"] = "target_found"
+				return scrollLoopResult{Data: data, Found: true, StoppedReason: "target_found"}, nil
+			}
+		}
+		if opts.UntilVisible != "" && observationContainsVisibleText(obs, opts.UntilVisible) {
+			data["stopped_reason"] = "visible"
+			return scrollLoopResult{Data: data, StoppedReason: "visible"}, nil
+		}
+		if opts.UntilGone != "" && !observationContainsVisibleText(obs, opts.UntilGone) {
+			data["stopped_reason"] = "gone"
+			return scrollLoopResult{Data: data, StoppedReason: "gone"}, nil
+		}
+		if lastBeforeSwipeHash != "" {
+			if obs.SourceHash == lastBeforeSwipeHash {
+				noChangeCount++
+			} else {
+				noChangeCount = 0
+			}
+			data["no_change_count"] = noChangeCount
+			if noChangeCount >= opts.StableCount {
+				data["stopped_reason"] = "stable"
+				return scrollLoopResult{Data: data, StoppedReason: "stable"}, nil
+			}
+			if repeatedSource {
+				data["stopped_reason"] = "repeated_source"
+				return scrollLoopResult{Data: data, StoppedReason: "repeated_source"}, nil
+			}
+		}
+		if scrolls >= opts.MaxScrolls {
+			data["stopped_reason"] = "max_scrolls"
+			return scrollLoopResult{Data: data, StoppedReason: "max_scrolls"}, nil
+		}
+
+		rect, err := gestureViewport(ctx, svc, st, opts.Swipe)
+		if err != nil {
+			markRunLostIfSessionGone(svc, st, err)
+			return scrollLoopResult{}, err
+		}
+		start, end, err := swipePointsForViewport(rect, opts.Swipe)
+		if err != nil {
+			return scrollLoopResult{}, err
+		}
+		lastBeforeSwipeHash = obs.SourceHash
+		if err := svc.Appium.PerformActions(ctx, st.SessionID, pointerSwipeActions(start, end, swipeOutputDuration(opts.Swipe))); err != nil {
+			markRunLostIfSessionGone(svc, st, err)
+			return scrollLoopResult{}, err
+		}
+		scrolls++
+		data["scrolls"] = scrolls
+		data["viewport"] = rect
+		data["start"] = start
+		data["end"] = end
+		st.LatestObservationID = ""
+		if err := svc.Store.SaveRun(*st); err != nil {
+			return scrollLoopResult{}, err
+		}
+	}
+}
+
+func updateScrollObservationData(data map[string]any, obs mobile.Observation) {
+	summary := summarizeScrollObservation(obs)
+	data["observation"] = obs
+	data["after_observation"] = summary
+	data["last_observation_id"] = obs.ID
+	data["source_hash_after"] = obs.SourceHash
+	data["visible_text_after"] = summary.VisibleText
+	data["final_controls"] = summary.Controls
+}
+
+func summarizeScrollObservation(obs mobile.Observation) scrollObservationSummary {
+	return scrollObservationSummary{
+		ID:              obs.ID,
+		SourceHash:      obs.SourceHash,
+		ScreenshotHash:  obs.ScreenshotHash,
+		CandidateCount:  len(obs.Candidates),
+		TotalCandidates: obs.TotalCandidates,
+		VisibleText:     visibleTextSummary(obs, 8),
+		Controls:        visibleControlSummary(obs, 8),
+	}
+}
+
+func visibleTextSummary(obs mobile.Observation, limit int) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, c := range obs.Candidates {
+		if !c.Visible {
+			continue
+		}
+		value := strings.TrimSpace(firstNonEmpty(c.Text, c.Name, c.AccessibilityID))
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		out = append(out, value)
+		if len(out) >= limit {
+			return out
+		}
+	}
+	return out
+}
+
+func visibleControlSummary(obs mobile.Observation, limit int) []scrollControlSummary {
+	out := []scrollControlSummary{}
+	for _, c := range obs.Candidates {
+		if !c.Visible || !(c.Clickable || c.Role == "button" || c.Enabled && c.Focusable) {
+			continue
+		}
+		out = append(out, scrollControlSummary{
+			Ref:       c.Ref,
+			Role:      c.Role,
+			Name:      c.Name,
+			Text:      c.Text,
+			Enabled:   c.Enabled,
+			Visible:   c.Visible,
+			Clickable: c.Clickable,
+		})
+		if len(out) >= limit {
+			return out
+		}
+	}
+	return out
+}
+
+func swipeUntilStop(cmd *cobra.Command, o *Opts, opts swipeCommandOptions, action string) error {
+	if opts.MaxSwipes < 0 {
+		return print(cmd, o, output.Failure("invalid_args", "--max-swipes cannot be negative", "Pass zero or a positive swipe limit.", 400))
+	}
+	if opts.StableCount <= 0 {
+		return print(cmd, o, output.Failure("invalid_args", "--stable-count must be greater than zero", "Pass a positive consecutive no-change count.", 400))
+	}
+	svc, err := newServices(o, true)
+	if err != nil {
+		return renderErr(cmd, o, err)
+	}
+	var result scrollLoopResult
+	err = svc.Store.WithRunLock(opts.RunID, func() error {
+		st, err := svc.Store.LoadRun(opts.RunID)
+		if err != nil {
+			return err
+		}
+		if st.ControlOwner == "human" {
+			return mobile.NewError("control_locked", "run control belongs to the human", "Run mobile run resume before mutating actions.", 423)
+		}
+		result, err = runScrollLoop(cmd.Context(), svc, &st, scrollLoopOptions{
+			RunID:        opts.RunID,
+			Swipe:        opts,
+			Limit:        100,
+			MaxScrolls:   opts.MaxSwipes,
+			StableCount:  opts.StableCount,
+			UntilVisible: opts.UntilVisible,
+			UntilGone:    opts.UntilGone,
+		})
+		if result.Data != nil {
+			result.Data["action"] = action
+			result.Data["max_swipes"] = opts.MaxSwipes
+			result.Data["observation_invalidated"] = false
+		}
+		appendTimelineBestEffort(svc, opts.RunID, "action", action, "", st.Status, result.Data)
+		return err
+	})
+	if err != nil {
+		return renderErr(cmd, o, err)
+	}
+	if result.StoppedReason == "max_scrolls" {
+		env := output.Failure("scroll_still_changing", "screen did not become stable before --max-swipes was reached", "Increase --max-swipes, change direction, add --container-ref, or inspect the final observation.", 408)
+		env.Error.Retryable = true
+		env.Error.RecommendedAction = "observe"
+		env.Data = result.Data
+		return print(cmd, o, env)
+	}
+	return print(cmd, o, output.Success("", result.Data))
+}
+
 func bindSwipeCommandFlags(c *cobra.Command, opts *swipeCommandOptions) {
 	c.Flags().StringVar(&opts.RunID, "run-id", "", "")
 	c.Flags().StringVar(&opts.Direction, "direction", opts.Direction, "")
 	c.Flags().StringVar(&opts.ContainerRef, "container-ref", "", "")
+	c.Flags().StringVar(&opts.Profile, "profile", "", "")
 	c.Flags().IntVar(&opts.DurationMS, "duration-ms", opts.DurationMS, "")
 	c.Flags().Float64Var(&opts.StartXPercent, "start-x-percent", -1, "")
 	c.Flags().Float64Var(&opts.StartYPercent, "start-y-percent", -1, "")
@@ -793,9 +1098,20 @@ func bindSwipeCommandFlags(c *cobra.Command, opts *swipeCommandOptions) {
 	c.Flags().Float64Var(&opts.EndYPercent, "end-y-percent", -1, "")
 }
 
+func bindContinuousSwipeFlags(c *cobra.Command, opts *swipeCommandOptions) {
+	c.Flags().BoolVar(&opts.UntilStable, "until-stable", false, "")
+	c.Flags().StringVar(&opts.UntilVisible, "until-visible", "", "")
+	c.Flags().StringVar(&opts.UntilGone, "until-gone", "", "")
+	c.Flags().IntVar(&opts.MaxSwipes, "max-swipes", opts.MaxSwipes, "")
+	c.Flags().IntVar(&opts.StableCount, "stable-count", opts.StableCount, "")
+}
+
 func swipeLike(cmd *cobra.Command, o *Opts, opts swipeCommandOptions, action string, actionOpts actionOptions) error {
 	if opts.RunID == "" {
 		return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
+	}
+	if opts.UntilStable || strings.TrimSpace(opts.UntilVisible) != "" || strings.TrimSpace(opts.UntilGone) != "" {
+		return swipeUntilStop(cmd, o, opts, action)
 	}
 	err := runGesture(cmd, o, opts.RunID, action, actionOpts, func(ctx context.Context, svc *services, st *mobile.RunState) (map[string]any, error) {
 		rect, err := gestureViewport(ctx, svc, st, opts)
@@ -806,11 +1122,11 @@ func swipeLike(cmd *cobra.Command, o *Opts, opts swipeCommandOptions, action str
 		if err != nil {
 			return nil, err
 		}
-		actions := pointerSwipeActions(start, end, opts.DurationMS)
+		actions := pointerSwipeActions(start, end, swipeOutputDuration(opts))
 		if err := svc.Appium.PerformActions(ctx, st.SessionID, actions); err != nil {
 			return nil, err
 		}
-		return map[string]any{"direction": opts.Direction, "duration_ms": normalizeDuration(opts.DurationMS, 500), "viewport": rect, "start": start, "end": end}, nil
+		return map[string]any{"direction": swipeOutputDirection(opts), "duration_ms": swipeOutputDuration(opts), "profile": strings.TrimSpace(opts.Profile), "viewport": rect, "start": start, "end": end}, nil
 	})
 	return err
 }
@@ -819,11 +1135,38 @@ func gestureViewport(ctx context.Context, svc *services, st *mobile.RunState, op
 	if opts.ContainerRef == "" {
 		return svc.Appium.WindowRect(ctx, st.SessionID)
 	}
+	if rect, ok := containerRectFromObservation(svc, st, opts.ContainerRef); ok {
+		return rect, nil
+	}
 	_, _, _, element, _, _, _, err := resolveRefElementWithRecovery(ctx, svc, st.RunID, opts.ContainerRef, defaultActionOptions())
 	if err != nil {
 		return appium.Rect{}, err
 	}
 	return svc.Appium.ElementRect(ctx, st.SessionID, element.ID)
+}
+
+func containerRectFromObservation(svc *services, st *mobile.RunState, ref string) (appium.Rect, bool) {
+	if svc == nil || svc.Store == nil || st == nil || strings.TrimSpace(ref) == "" || st.LatestObservationID == "" {
+		return appium.Rect{}, false
+	}
+	obsID := mobile.RefObservationID(ref)
+	if obsID != "" && obsID != st.LatestObservationID {
+		return appium.Rect{}, false
+	}
+	obs, err := svc.Store.LoadObservation(st.RunID, st.LatestObservationID)
+	if err != nil {
+		return appium.Rect{}, false
+	}
+	candidate, ok := mobile.CandidateByRef(obs, ref)
+	if !ok || candidate.Bounds.Width <= 0 || candidate.Bounds.Height <= 0 {
+		return appium.Rect{}, false
+	}
+	return appium.Rect{
+		X:      float64(candidate.Bounds.X),
+		Y:      float64(candidate.Bounds.Y),
+		Width:  float64(candidate.Bounds.Width),
+		Height: float64(candidate.Bounds.Height),
+	}, true
 }
 
 func runGesture(cmd *cobra.Command, o *Opts, runID, action string, opts actionOptions, fn func(context.Context, *services, *mobile.RunState) (map[string]any, error)) error {
@@ -969,7 +1312,11 @@ func swipePointsForViewport(rect appium.Rect, opts swipeCommandOptions) (gesture
 	if err := validateViewport(rect); err != nil {
 		return gesturePoint{}, gesturePoint{}, err
 	}
-	startX, startY, endX, endY, err := swipePercents(opts)
+	resolved, err := resolveSwipeProfile(opts)
+	if err != nil {
+		return gesturePoint{}, gesturePoint{}, err
+	}
+	startX, startY, endX, endY, err := swipePercents(resolved)
 	if err != nil {
 		return gesturePoint{}, gesturePoint{}, err
 	}
@@ -980,12 +1327,15 @@ func swipePercents(opts swipeCommandOptions) (float64, float64, float64, float64
 	custom := opts.StartXPercent >= 0 || opts.StartYPercent >= 0 || opts.EndXPercent >= 0 || opts.EndYPercent >= 0
 	if custom {
 		values := []float64{opts.StartXPercent, opts.StartYPercent, opts.EndXPercent, opts.EndYPercent}
+		normalized := make([]float64, 0, len(values))
 		for _, v := range values {
-			if v < 0 || v > 100 {
-				return 0, 0, 0, 0, mobile.NewError("invalid_args", "custom swipe percentages must all be between 0 and 100", "Pass all of --start-x-percent, --start-y-percent, --end-x-percent, and --end-y-percent.", 400)
+			n, err := normalizePercentInput(v)
+			if err != nil {
+				return 0, 0, 0, 0, mobile.NewError("invalid_args", "custom swipe percentages must all be between 0 and 100, or 0.0 and 1.0 as fractions", "Use 50 or 0.5 for fifty percent, and pass all four start/end percentage flags.", 400)
 			}
+			normalized = append(normalized, n)
 		}
-		return opts.StartXPercent, opts.StartYPercent, opts.EndXPercent, opts.EndYPercent, nil
+		return normalized[0], normalized[1], normalized[2], normalized[3], nil
 	}
 	switch strings.ToLower(strings.TrimSpace(opts.Direction)) {
 	case "up":
@@ -998,6 +1348,94 @@ func swipePercents(opts swipeCommandOptions) (float64, float64, float64, float64
 		return 20, 50, 80, 50, nil
 	default:
 		return 0, 0, 0, 0, mobile.NewError("invalid_args", "--direction must be up, down, left, or right", "Use a bounded direction or pass explicit start/end percentages.", 400)
+	}
+}
+
+func resolveSwipeProfile(opts swipeCommandOptions) (swipeCommandOptions, error) {
+	profile := strings.ToLower(strings.TrimSpace(opts.Profile))
+	if profile == "" {
+		return opts, nil
+	}
+	if hasCustomSwipePercents(opts) {
+		return opts, mobile.NewError("invalid_args", "--profile cannot be combined with explicit swipe percentages", "Choose a profile or pass all four custom percentage flags.", 400)
+	}
+	switch profile {
+	case "fast-page-down":
+		opts.Direction = "up"
+		opts.DurationMS = 260
+		opts.StartXPercent, opts.StartYPercent, opts.EndXPercent, opts.EndYPercent = 50, 88, 50, 12
+	case "page-up":
+		opts.Direction = "down"
+		opts.DurationMS = 260
+		opts.StartXPercent, opts.StartYPercent, opts.EndXPercent, opts.EndYPercent = 50, 12, 50, 88
+	case "fine-scroll":
+		opts.DurationMS = 450
+		switch strings.ToLower(strings.TrimSpace(opts.Direction)) {
+		case "up":
+			opts.StartXPercent, opts.StartYPercent, opts.EndXPercent, opts.EndYPercent = 50, 62, 50, 42
+		case "down":
+			opts.StartXPercent, opts.StartYPercent, opts.EndXPercent, opts.EndYPercent = 50, 38, 50, 58
+		case "left":
+			opts.StartXPercent, opts.StartYPercent, opts.EndXPercent, opts.EndYPercent = 62, 50, 42, 50
+		case "right":
+			opts.StartXPercent, opts.StartYPercent, opts.EndXPercent, opts.EndYPercent = 38, 50, 58, 50
+		default:
+			return opts, mobile.NewError("invalid_args", "--direction must be up, down, left, or right", "Use a supported direction with --profile fine-scroll.", 400)
+		}
+	default:
+		return opts, mobile.NewError("invalid_args", "--profile must be fast-page-down, fine-scroll, or page-up", "Use a supported scroll profile or pass explicit percentages.", 400)
+	}
+	opts.Profile = ""
+	return opts, nil
+}
+
+func hasCustomSwipePercents(opts swipeCommandOptions) bool {
+	return opts.StartXPercent >= 0 || opts.StartYPercent >= 0 || opts.EndXPercent >= 0 || opts.EndYPercent >= 0
+}
+
+func normalizePercentInput(value float64) (float64, error) {
+	if value < 0 || value > 100 {
+		return 0, fmt.Errorf("percent out of range")
+	}
+	if value > 0 && value <= 1 {
+		return value * 100, nil
+	}
+	return value, nil
+}
+
+func swipeOutputDirection(opts swipeCommandOptions) string {
+	resolved, err := resolveSwipeProfile(opts)
+	if err != nil {
+		return strings.ToLower(strings.TrimSpace(opts.Direction))
+	}
+	return strings.ToLower(strings.TrimSpace(resolved.Direction))
+}
+
+func swipeOutputDuration(opts swipeCommandOptions) int {
+	resolved, err := resolveSwipeProfile(opts)
+	if err != nil {
+		return normalizeDuration(opts.DurationMS, 500)
+	}
+	return normalizeDuration(resolved.DurationMS, 500)
+}
+
+func normalizeScrollEdge(edge string) (string, bool) {
+	edge = strings.ToLower(strings.TrimSpace(edge))
+	if edge == "" {
+		return "", true
+	}
+	if edge == "top" || edge == "bottom" {
+		return edge, true
+	}
+	return edge, false
+}
+
+func directionForEdge(edge string) string {
+	switch strings.ToLower(strings.TrimSpace(edge)) {
+	case "top":
+		return "down"
+	default:
+		return "up"
 	}
 }
 

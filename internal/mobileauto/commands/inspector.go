@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -42,7 +42,7 @@ func inspectorConfigCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		var st *mobile.RunState
+		var st *mobileauto.RunState
 		if opts.RunID != "" {
 			loaded, err := svc.Store.LoadRun(opts.RunID)
 			if err != nil {
@@ -215,7 +215,7 @@ func bindInspectorConfigFlags(c *cobra.Command, opts *inspectorConfigOptions) {
 	c.Flags().StringVar(&opts.Out, "out", "", "")
 }
 
-func inspectorConfigData(svc *services, opts inspectorConfigOptions, st *mobile.RunState) map[string]any {
+func inspectorConfigData(svc *services, opts inspectorConfigOptions, st *mobileauto.RunState) map[string]any {
 	appiumURL := svc.Runtime.Mobile.BrowserStack.AppiumBaseURL
 	parts := appiumURLParts(appiumURL)
 	platform := firstNonEmpty(opts.Platform, valueFromRun(st, "platform"), svc.Runtime.Mobile.Defaults.Platform)
@@ -360,7 +360,7 @@ func appendStringValues(existing any, values ...string) []string {
 	return out
 }
 
-func valueFromRun(st *mobile.RunState, key string) string {
+func valueFromRun(st *mobileauto.RunState, key string) string {
 	if st == nil {
 		return ""
 	}
@@ -372,70 +372,70 @@ func valueFromRun(st *mobile.RunState, key string) string {
 	}
 }
 
-func runDeviceName(st *mobile.RunState) string {
+func runDeviceName(st *mobileauto.RunState) string {
 	if st == nil {
 		return ""
 	}
 	return st.Device.Name
 }
 
-func runOSVersion(st *mobile.RunState) string {
+func runOSVersion(st *mobileauto.RunState) string {
 	if st == nil {
 		return ""
 	}
 	return st.Device.OSVersion
 }
 
-func runAppURL(st *mobile.RunState) string {
+func runAppURL(st *mobileauto.RunState) string {
 	if st == nil {
 		return ""
 	}
 	return st.App.AppURL
 }
 
-func runBuildName(st *mobile.RunState) string {
+func runBuildName(st *mobileauto.RunState) string {
 	if st == nil {
 		return ""
 	}
 	return st.BuildName
 }
 
-func runSessionName(st *mobile.RunState) string {
+func runSessionName(st *mobileauto.RunState) string {
 	if st == nil {
 		return ""
 	}
 	return st.SessionName
 }
 
-func runProjectName(st *mobile.RunState) string {
+func runProjectName(st *mobileauto.RunState) string {
 	if st == nil {
 		return ""
 	}
 	return st.ProjectName
 }
 
-func runNetworkMode(st *mobile.RunState) string {
+func runNetworkMode(st *mobileauto.RunState) string {
 	if st == nil {
 		return ""
 	}
 	return st.Network.Mode
 }
 
-func runLocalIdentifier(st *mobile.RunState) string {
+func runLocalIdentifier(st *mobileauto.RunState) string {
 	if st == nil {
 		return ""
 	}
 	return st.Network.LocalIdentifier
 }
 
-func runSessionID(st *mobile.RunState) string {
+func runSessionID(st *mobileauto.RunState) string {
 	if st == nil {
 		return ""
 	}
 	return st.SessionID
 }
 
-func runDashboardURL(st *mobile.RunState) string {
+func runDashboardURL(st *mobileauto.RunState) string {
 	if st == nil {
 		return ""
 	}

@@ -15,7 +15,7 @@ import (
 	"engineering-flow-platform-tools/internal/catalog"
 	"engineering-flow-platform-tools/internal/clihelp"
 	"engineering-flow-platform-tools/internal/config"
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 	"engineering-flow-platform-tools/internal/version"
 	"github.com/spf13/cobra"
@@ -29,11 +29,11 @@ type Opts struct {
 }
 
 type services struct {
-	Runtime mobile.RuntimeConfig
-	Store   *mobile.StateStore
+	Runtime mobileauto.RuntimeConfig
+	Store   *mobileauto.StateStore
 	Control *browserstack.Client
 	Appium  *appium.Client
-	Tunnel  *mobile.TunnelManager
+	Tunnel  *mobileauto.TunnelManager
 }
 
 func NewRoot() *cobra.Command {
@@ -86,18 +86,18 @@ It is not an MCP server, not BrowserStack AI, and not an arbitrary Appium pass-t
 }
 
 func newServices(o *Opts, requireAuth bool) (*services, error) {
-	rt, err := mobile.LoadRuntimeConfig(o.ConfigPath)
+	rt, err := mobileauto.LoadRuntimeConfig(o.ConfigPath)
 	if err != nil {
 		return nil, err
 	}
 	if requireAuth {
-		if err := mobile.RequireCredentials(rt); err != nil {
+		if err := mobileauto.RequireCredentials(rt); err != nil {
 			return nil, err
 		}
 	}
-	store := mobile.NewStateStore(rt.Mobile.StateDir, rt.Mobile.ArtifactsDir)
+	store := mobileauto.NewStateStore(rt.Mobile.StateDir, rt.Mobile.ArtifactsDir)
 	if err := store.Ensure(); err != nil {
-		return nil, mobile.NewError("config_error", "state/artifact directories are not writable", "Check mobile.state_dir and mobile.artifacts_dir permissions.", 400)
+		return nil, mobileauto.NewError("config_error", "state/artifact directories are not writable", "Check mobile-auto.state_dir and mobile-auto.artifacts_dir permissions.", 400)
 	}
 	verify := true
 	if rt.Mobile.BrowserStack.VerifySSL != nil {
@@ -112,7 +112,7 @@ func newServices(o *Opts, requireAuth bool) (*services, error) {
 	if err != nil {
 		return nil, err
 	}
-	tunnel := &mobile.TunnelManager{Store: store, Config: rt.Mobile.BrowserStack.Local, Credentials: rt.Credentials}
+	tunnel := &mobileauto.TunnelManager{Store: store, Config: rt.Mobile.BrowserStack.Local, Credentials: rt.Credentials}
 	return &services{Runtime: rt, Store: store, Control: control, Appium: appiumClient, Tunnel: tunnel}, nil
 }
 
@@ -299,7 +299,7 @@ func print(cmd *cobra.Command, o *Opts, env output.Envelope) error {
 }
 
 func renderErr(cmd *cobra.Command, o *Opts, err error) error {
-	var me *mobile.Error
+	var me *mobileauto.Error
 	if errors.As(err, &me) {
 		env := output.Failure(me.Code, me.Message, me.Hint, me.Status)
 		env.Error.Retryable = me.Retryable

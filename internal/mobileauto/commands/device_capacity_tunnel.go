@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"engineering-flow-platform-tools/internal/browserstack"
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -47,7 +47,7 @@ func deviceListCmd(o *Opts) *cobra.Command {
 }
 
 func deviceResolveCmd(o *Opts) *cobra.Command {
-	q := mobile.DeviceQuery{}
+	q := mobileauto.DeviceQuery{}
 	c := &cobra.Command{Use: "resolve", RunE: func(cmd *cobra.Command, args []string) error {
 		svc, err := newServices(o, true)
 		if err != nil {
@@ -57,7 +57,7 @@ func deviceResolveCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		res, err := mobile.ResolveDevice(deviceInfos(devices), q)
+		res, err := mobileauto.ResolveDevice(deviceInfos(devices), q)
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
@@ -149,7 +149,7 @@ func capacityWaitCmd(o *Opts) *cobra.Command {
 			}
 			select {
 			case <-ctx.Done():
-				err := mobile.RetryableError("capacity_wait_timeout", "timed out waiting for BrowserStack capacity", "Retry later or lower --required.", "retry", 408)
+				err := mobileauto.RetryableError("capacity_wait_timeout", "timed out waiting for BrowserStack capacity", "Retry later or lower --required.", "retry", 408)
 				return renderErr(cmd, o, err)
 			case <-ticker.C:
 			}
@@ -178,7 +178,7 @@ func tunnelStartCmd(o *Opts) *cobra.Command {
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		st, err := svc.Tunnel.Start(mobile.TunnelStartRequest{RunID: runID, NetworkMode: mode, LocalIdentifier: localID, HoldFor: d})
+		st, err := svc.Tunnel.Start(mobileauto.TunnelStartRequest{RunID: runID, NetworkMode: mode, LocalIdentifier: localID, HoldFor: d})
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
@@ -203,11 +203,11 @@ func tunnelEnsureCmd(o *Opts) *cobra.Command {
 			return renderErr(cmd, o, err)
 		}
 		if runID != "" && localID != "" {
-			if st, err := svc.Tunnel.Status(runID, localID); err == nil && mobile.TunnelReusable(st, time.Now().UTC()) {
+			if st, err := svc.Tunnel.Status(runID, localID); err == nil && mobileauto.TunnelReusable(st, time.Now().UTC()) {
 				return print(cmd, o, output.Success("", st))
 			}
 		}
-		st, err := svc.Tunnel.Start(mobile.TunnelStartRequest{RunID: runID, NetworkMode: mode, LocalIdentifier: localID, HoldFor: d})
+		st, err := svc.Tunnel.Start(mobileauto.TunnelStartRequest{RunID: runID, NetworkMode: mode, LocalIdentifier: localID, HoldFor: d})
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
@@ -295,10 +295,10 @@ func equalFold(a, b string) bool {
 	return strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(b))
 }
 
-func deviceInfos(devices []browserstack.Device) []mobile.DeviceInfo {
-	out := make([]mobile.DeviceInfo, 0, len(devices))
+func deviceInfos(devices []browserstack.Device) []mobileauto.DeviceInfo {
+	out := make([]mobileauto.DeviceInfo, 0, len(devices))
 	for _, d := range devices {
-		out = append(out, mobile.DeviceInfo{
+		out = append(out, mobileauto.DeviceInfo{
 			OS:         d.OS,
 			OSVersion:  d.OSVersion,
 			Name:       d.Name,

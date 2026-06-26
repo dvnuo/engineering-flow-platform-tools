@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"engineering-flow-platform-tools/internal/config"
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 )
 
@@ -304,7 +304,7 @@ func TestRunStartFailureSettlesStartingState(t *testing.T) {
 		t.Fatalf("expected one run state, got %d: %#v", len(states), states)
 	}
 	st := states[0]
-	if st.Status != mobile.StatusFailed || st.FinishedAt == nil || st.LastErrorCode == "" || st.LastErrorMessage == "" {
+	if st.Status != mobileauto.StatusFailed || st.FinishedAt == nil || st.LastErrorCode == "" || st.LastErrorMessage == "" {
 		t.Fatalf("run did not settle failed with diagnostics: %#v", st)
 	}
 }
@@ -388,19 +388,19 @@ func TestRunStatusRecoversStaleStartingRun(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
 	started := time.Now().UTC().Add(-20 * time.Minute)
-	if err := store.SaveRun(mobile.RunState{
+	if err := store.SaveRun(mobileauto.RunState{
 		RunID:                  "run-stale",
 		Provider:               "browserstack",
-		Status:                 mobile.StatusStarting,
+		Status:                 mobileauto.StatusStarting,
 		ControlOwner:           "agent",
 		Platform:               "android",
-		Device:                 mobile.DeviceSelection{Name: "Pixel 8", OS: "android"},
-		Network:                mobile.NetworkState{Mode: "public", LocalMode: "none"},
+		Device:                 mobileauto.DeviceSelection{Name: "Pixel 8", OS: "android"},
+		Network:                mobileauto.NetworkState{Mode: "public", LocalMode: "none"},
 		BuildName:              "build-stale",
 		SessionName:            "session-stale",
 		SessionCreateStartedAt: &started,
@@ -416,7 +416,7 @@ func TestRunStatusRecoversStaleStartingRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st.Status != mobile.StatusRunning || st.SessionID != "session-stale-id" || st.BuildID != "build-stale-id" || !st.RecoveredSession {
+	if st.Status != mobileauto.StatusRunning || st.SessionID != "session-stale-id" || st.BuildID != "build-stale-id" || !st.RecoveredSession {
 		t.Fatalf("stale starting was not recovered: %#v", st)
 	}
 	if st.RemoteBuildDetectedAt == nil || st.RemoteSessionDetectedAt == nil || st.RunningAt == nil {
@@ -437,17 +437,17 @@ func TestRunStatusSettlesStaleStartingWithoutRemoteClues(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
 	started := time.Now().UTC().Add(-20 * time.Minute)
-	if err := store.SaveRun(mobile.RunState{
+	if err := store.SaveRun(mobileauto.RunState{
 		RunID:                  "run-stale-empty",
 		Provider:               "browserstack",
-		Status:                 mobile.StatusStarting,
+		Status:                 mobileauto.StatusStarting,
 		ControlOwner:           "agent",
-		Network:                mobile.NetworkState{Mode: "public", LocalMode: "none"},
+		Network:                mobileauto.NetworkState{Mode: "public", LocalMode: "none"},
 		SessionCreateStartedAt: &started,
 		StartedAt:              started,
 	}); err != nil {
@@ -461,7 +461,7 @@ func TestRunStatusSettlesStaleStartingWithoutRemoteClues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st.Status != mobile.StatusFailed || st.FinishedAt == nil || st.LastErrorCode != "run_start_stale" {
+	if st.Status != mobileauto.StatusFailed || st.FinishedAt == nil || st.LastErrorCode != "run_start_stale" {
 		t.Fatalf("stale starting was not settled: %#v", st)
 	}
 }
@@ -539,11 +539,11 @@ func TestObserveSessionLostMarksRunLost(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-lost", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-lost", StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-lost", Provider: "browserstack", Status: mobileauto.StatusRunning, ControlOwner: "agent", SessionID: "session-lost", StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	out := runMobile(t, "observe", "--config", path, "--run-id", "run-lost", "--json")
@@ -558,7 +558,7 @@ func TestObserveSessionLostMarksRunLost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st.Status != mobile.StatusLost || st.FinishedAt == nil {
+	if st.Status != mobileauto.StatusLost || st.FinishedAt == nil {
 		t.Fatalf("run was not marked lost: %#v", st)
 	}
 }
@@ -595,11 +595,11 @@ func TestSwipeUsesViewportRelativeCoordinates(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-gesture", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-gesture", StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-gesture", Provider: "browserstack", Status: mobileauto.StatusRunning, ControlOwner: "agent", SessionID: "session-gesture", StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	out := runMobile(t, "swipe", "--config", path, "--run-id", "run-gesture", "--direction", "up", "--json")
@@ -647,18 +647,18 @@ func TestSwipeContainerRefUsesObservationBounds(t *testing.T) {
 	}))
 	defer srv.Close()
 	path, stateDir, artifactsDir := writeMobileMockConfig(t, srv.URL)
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	obs, err := mobile.BuildObservationStrict("run-container", "session-container", "obs-container", `<hierarchy><node class="android.widget.ScrollView" scrollable="true" bounds="[100,200][900,1200]" /></hierarchy>`, []byte("png"))
+	obs, err := mobileauto.BuildObservationStrict("run-container", "session-container", "obs-container", `<hierarchy><node class="android.widget.ScrollView" scrollable="true" bounds="[100,200][900,1200]" /></hierarchy>`, []byte("png"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := store.SaveObservation("run-container", obs); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-container", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-container", Platform: "android", LatestObservationID: obs.ID, StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-container", Provider: "browserstack", Status: mobileauto.StatusRunning, ControlOwner: "agent", SessionID: "session-container", Platform: "android", LatestObservationID: obs.ID, StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	out := runMobile(t, "swipe", "--config", path, "--run-id", "run-container", "--container-ref", "obs-container:e1", "--direction", "up", "--json")
@@ -715,11 +715,11 @@ func TestScrollToFindsElementAfterViewportScroll(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-scroll", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-scroll", StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-scroll", Provider: "browserstack", Status: mobileauto.StatusRunning, ControlOwner: "agent", SessionID: "session-scroll", StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	out := runMobile(t, "scroll-to", "--config", path, "--run-id", "run-scroll", "--text", "Checkout", "--max-scrolls", "2", "--json")
@@ -761,11 +761,11 @@ func TestScrollToEdgeBottomStopsOnRepeatedSource(t *testing.T) {
 	}))
 	defer srv.Close()
 	path, stateDir, artifactsDir := writeMobileMockConfig(t, srv.URL)
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-edge", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-edge", StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-edge", Provider: "browserstack", Status: mobileauto.StatusRunning, ControlOwner: "agent", SessionID: "session-edge", StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	out := runMobile(t, "scroll-to", "--config", path, "--run-id", "run-edge", "--edge", "bottom", "--max-scrolls", "3", "--stable-count", "2", "--json")
@@ -810,11 +810,11 @@ func TestSwipeUntilStableMaxSwipesReturnsStructuredFailure(t *testing.T) {
 	}))
 	defer srv.Close()
 	path, stateDir, artifactsDir := writeMobileMockConfig(t, srv.URL)
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-stable", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-stable", StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-stable", Provider: "browserstack", Status: mobileauto.StatusRunning, ControlOwner: "agent", SessionID: "session-stable", StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	out := runMobile(t, "swipe", "--config", path, "--run-id", "run-stable", "--until-stable", "--max-swipes", "2", "--json")
@@ -866,18 +866,18 @@ func TestTapWaitChangeCapturesPostObservation(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	oldObs, err := mobile.BuildObservationStrict("run-post", "session-post", "obs-old", `<hierarchy><node class="android.widget.Button" text="Login" content-desc="Login" clickable="true" bounds="[0,0][100,100]" /></hierarchy>`, []byte("old"))
+	oldObs, err := mobileauto.BuildObservationStrict("run-post", "session-post", "obs-old", `<hierarchy><node class="android.widget.Button" text="Login" content-desc="Login" clickable="true" bounds="[0,0][100,100]" /></hierarchy>`, []byte("old"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := store.SaveObservation("run-post", oldObs); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-post", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-post", Platform: "android", LatestObservationID: oldObs.ID, ObservationVersion: 1, StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-post", Provider: "browserstack", Status: mobileauto.StatusRunning, ControlOwner: "agent", SessionID: "session-post", Platform: "android", LatestObservationID: oldObs.ID, ObservationVersion: 1, StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	out := runMobile(t, "tap", "--config", path, "--run-id", "run-post", "--ref", "obs-old:e1", "--wait-change", "--json")
@@ -930,11 +930,11 @@ func TestKeyboardKeycodePostsAndroidKeycode(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-key", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-key", Platform: "android", StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-key", Provider: "browserstack", Status: mobileauto.StatusRunning, ControlOwner: "agent", SessionID: "session-key", Platform: "android", StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	out := runMobile(t, "keyboard", "keycode", "--config", path, "--run-id", "run-key", "--keycode", "66", "--json")
@@ -1000,19 +1000,19 @@ func TestInspectorConfigFromRunRedactsAccessKey(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{
+	if err := store.SaveRun(mobileauto.RunState{
 		RunID:       "run-inspector",
 		Provider:    "browserstack",
-		Status:      mobile.StatusRunning,
+		Status:      mobileauto.StatusRunning,
 		SessionID:   "session-inspector",
 		Platform:    "android",
-		Device:      mobile.DeviceSelection{Name: "Pixel 8", OSVersion: "14.0"},
-		App:         mobile.AppRef{AppURL: "bs://app"},
-		Network:     mobile.NetworkState{Mode: "private-external", LocalIdentifier: "local-1"},
+		Device:      mobileauto.DeviceSelection{Name: "Pixel 8", OSVersion: "14.0"},
+		App:         mobileauto.AppRef{AppURL: "bs://app"},
+		Network:     mobileauto.NetworkState{Mode: "private-external", LocalIdentifier: "local-1"},
 		BuildName:   "build-1",
 		SessionName: "session-1",
 		StartedAt:   mobileTestNow(),
@@ -1094,11 +1094,11 @@ func TestInspectorAttachWarningsMarkRunLost(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-lost", Provider: "browserstack", Status: mobile.StatusRunning, SessionID: "session-lost", Platform: "android", StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-lost", Provider: "browserstack", Status: mobileauto.StatusRunning, SessionID: "session-lost", Platform: "android", StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	out := runMobile(t, "inspector", "attach", "--config", path, "--run-id", "run-lost", "--json")
@@ -1114,7 +1114,7 @@ func TestInspectorAttachWarningsMarkRunLost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st.Status != mobile.StatusLost || st.FinishedAt == nil {
+	if st.Status != mobileauto.StatusLost || st.FinishedAt == nil {
 		t.Fatalf("run was not marked lost: %#v", st)
 	}
 }
@@ -1145,11 +1145,11 @@ func TestAppLaunchPostsAppiumLifecycleEndpoint(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-app", Provider: "browserstack", Status: mobile.StatusRunning, ControlOwner: "agent", SessionID: "session-app", Platform: "android", StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-app", Provider: "browserstack", Status: mobileauto.StatusRunning, ControlOwner: "agent", SessionID: "session-app", Platform: "android", StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	out := runMobile(t, "app", "launch", "--config", path, "--run-id", "run-app", "--json")
@@ -1174,18 +1174,18 @@ func TestObservationAssertionsNotExistsAndCount(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	obs, err := mobile.BuildObservationStrict("run-assert", "session-assert", "obs-assert", `<hierarchy><node class="android.widget.Button" text="Login" clickable="true" bounds="[0,0][100,100]" /></hierarchy>`, nil)
+	obs, err := mobileauto.BuildObservationStrict("run-assert", "session-assert", "obs-assert", `<hierarchy><node class="android.widget.Button" text="Login" clickable="true" bounds="[0,0][100,100]" /></hierarchy>`, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := store.SaveObservation("run-assert", obs); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-assert", Provider: "browserstack", Status: mobile.StatusRunning, LatestObservationID: obs.ID, StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-assert", Provider: "browserstack", Status: mobileauto.StatusRunning, LatestObservationID: obs.ID, StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	out := runMobile(t, "assert", "not-exists", "--config", path, "--run-id", "run-assert", "--text", "Missing", "--json")
@@ -1274,11 +1274,11 @@ func TestMobileTestRunExecutesAfterAndWritesEvidenceOnFailure(t *testing.T) {
 	if err := config.Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, artifactsDir)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
 	if err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
-	obs, err := mobile.BuildObservationStrict("run-after", "session-after", "obs-after", `<hierarchy><node class="android.widget.Button" text="Login" clickable="true" bounds="[0,0][100,100]" /></hierarchy>`, []byte("png"))
+	obs, err := mobileauto.BuildObservationStrict("run-after", "session-after", "obs-after", `<hierarchy><node class="android.widget.Button" text="Login" clickable="true" bounds="[0,0][100,100]" /></hierarchy>`, []byte("png"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1289,7 +1289,7 @@ func TestMobileTestRunExecutesAfterAndWritesEvidenceOnFailure(t *testing.T) {
 	if err := store.SaveObservation("run-after", obs); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.SaveRun(mobile.RunState{RunID: "run-after", Provider: "browserstack", Status: mobile.StatusRunning, SessionID: "session-after", Platform: "android", LatestObservationID: obs.ID, StartedAt: mobileTestNow()}); err != nil {
+	if err := store.SaveRun(mobileauto.RunState{RunID: "run-after", Provider: "browserstack", Status: mobileauto.StatusRunning, SessionID: "session-after", Platform: "android", LatestObservationID: obs.ID, StartedAt: mobileTestNow()}); err != nil {
 		t.Fatal(err)
 	}
 	suitePath := filepath.Join(tmp, "suite.yaml")
@@ -1381,14 +1381,14 @@ func writeMobileMockConfig(t *testing.T, baseURL string) (string, string, string
 	return path, stateDir, artifactsDir
 }
 
-func readRunStates(t *testing.T, stateDir string) []mobile.RunState {
+func readRunStates(t *testing.T, stateDir string) []mobileauto.RunState {
 	t.Helper()
 	entries, err := os.ReadDir(filepath.Join(stateDir, "runs"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := mobile.NewStateStore(stateDir, "")
-	out := make([]mobile.RunState, 0, len(entries))
+	store := mobileauto.NewStateStore(stateDir, "")
+	out := make([]mobileauto.RunState, 0, len(entries))
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue

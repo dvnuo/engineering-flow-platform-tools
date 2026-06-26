@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"engineering-flow-platform-tools/internal/httpclient"
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 )
 
 const maxErrorSnippet = 2048
@@ -56,7 +56,7 @@ func New(baseURL string, creds Credentials, verifySSL bool, caCert string, proxi
 		Proxy:                 proxy,
 	})
 	if err != nil {
-		return nil, mobile.NewError("config_error", "invalid BrowserStack HTTP transport configuration: "+err.Error(), "Check mobile-auto.browserstack.http_proxy, verify_ssl, and ca_cert.", 400)
+		return nil, mobileauto.NewError("config_error", "invalid BrowserStack HTTP transport configuration: "+err.Error(), "Check mobile-auto.browserstack.http_proxy, verify_ssl, and ca_cert.", 400)
 	}
 	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultHTTPTimeout, Transport: tr}, creds: creds, proxy: diag}, nil
 }
@@ -68,13 +68,13 @@ func (c *Client) ProxyDiagnostic() httpclient.ProxyDiagnostic {
 func validateBrowserStackURL(raw, host string) error {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme == "" || u.Host == "" {
-		return mobile.NewError("config_error", "invalid BrowserStack URL", "Use an absolute https:// BrowserStack URL.", 400)
+		return mobileauto.NewError("config_error", "invalid BrowserStack URL", "Use an absolute https:// BrowserStack URL.", 400)
 	}
 	if u.Scheme != "https" && !isLoopbackHost(u.Hostname()) {
-		return mobile.NewError("config_error", "BrowserStack URLs must use https", "Only loopback HTTP is allowed for tests.", 400)
+		return mobileauto.NewError("config_error", "BrowserStack URLs must use https", "Only loopback HTTP is allowed for tests.", 400)
 	}
 	if !strings.EqualFold(u.Hostname(), host) && !strings.HasSuffix(strings.ToLower(u.Hostname()), ".browserstack.com") && !isLoopbackHost(u.Hostname()) {
-		return mobile.NewError("config_error", "off-provider BrowserStack URL rejected", "Use api-cloud.browserstack.com or a BrowserStack-owned host.", 400)
+		return mobileauto.NewError("config_error", "off-provider BrowserStack URL rejected", "Use api-cloud.browserstack.com or a BrowserStack-owned host.", 400)
 	}
 	return nil
 }
@@ -91,7 +91,7 @@ func (c *Client) AuthTest(ctx context.Context) error {
 
 func (c *Client) UploadApp(ctx context.Context, req UploadAppRequest) (UploadedApp, error) {
 	if (strings.TrimSpace(req.FilePath) == "") == (strings.TrimSpace(req.URL) == "") {
-		return UploadedApp{}, mobile.NewError("invalid_args", "exactly one of --file or --url is required", "Pass a local app file or a public app URL.", 400)
+		return UploadedApp{}, mobileauto.NewError("invalid_args", "exactly one of --file or --url is required", "Pass a local app file or a public app URL.", 400)
 	}
 	body, contentType, err := uploadAppBody(req)
 	if err != nil {
@@ -124,7 +124,7 @@ func uploadAppBody(req UploadAppRequest) (io.ReadCloser, string, error) {
 func streamingUploadAppBody(req UploadAppRequest) (io.ReadCloser, string, error) {
 	f, err := os.Open(req.FilePath)
 	if err != nil {
-		return nil, "", mobile.NewError("invalid_args", "app file could not be opened", "Check --file points to a readable .apk, .aab, .xapk, or .ipa file.", 400)
+		return nil, "", mobileauto.NewError("invalid_args", "app file could not be opened", "Check --file points to a readable .apk, .aab, .xapk, or .ipa file.", 400)
 	}
 	pr, pw := io.Pipe()
 	mw := multipart.NewWriter(pw)
@@ -347,7 +347,7 @@ func (c *Client) DownloadArtifact(ctx context.Context, buildID, sessionID, kind 
 	}
 	path, ok := allowed[kind]
 	if !ok {
-		return nil, "", mobile.NewError("invalid_args", "unsupported artifact kind", "Use appiumlogs, devicelogs, crashlogs, or networklogs.", 400)
+		return nil, "", mobileauto.NewError("invalid_args", "unsupported artifact kind", "Use appiumlogs, devicelogs, crashlogs, or networklogs.", 400)
 	}
 	resp, err := c.do(ctx, http.MethodGet, "/app-automate/builds/"+url.PathEscape(buildID)+"/sessions/"+url.PathEscape(sessionID)+"/"+path, nil, "", nil)
 	if err != nil {
@@ -376,7 +376,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query url.Valu
 	}
 	dec := json.NewDecoder(resp.Body)
 	if err := dec.Decode(out); err != nil {
-		return mobile.NewError("server_error", "BrowserStack returned invalid JSON", "Retry or inspect BrowserStack status.", 502)
+		return mobileauto.NewError("server_error", "BrowserStack returned invalid JSON", "Retry or inspect BrowserStack status.", 502)
 	}
 	return nil
 }
@@ -396,7 +396,7 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	resp, err := c.http.Do(req)
 	if err != nil {
 		context := httpclient.ProxyDiagnosticText(c.baseURL, c.proxy)
-		return nil, mobile.RetryableError("network_error", "BrowserStack request failed: "+redact(err.Error(), c.creds)+" ("+context+")", "Check DNS, proxy, TLS, mobile-auto.browserstack.http_proxy, and BrowserStack availability.", "retry", 503)
+		return nil, mobileauto.RetryableError("network_error", "BrowserStack request failed: "+redact(err.Error(), c.creds)+" ("+context+")", "Check DNS, proxy, TLS, mobile-auto.browserstack.http_proxy, and BrowserStack availability.", "retry", 503)
 	}
 	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()
@@ -405,7 +405,7 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	return resp, nil
 }
 
-func statusError(resp *http.Response, creds Credentials) *mobile.Error {
+func statusError(resp *http.Response, creds Credentials) *mobileauto.Error {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorSnippet+1))
 	msg := fmt.Sprintf("BrowserStack request failed with HTTP %d", resp.StatusCode)
 	if snippet := sanitizeSnippet(body, creds); snippet != "" {
@@ -426,7 +426,7 @@ func statusError(resp *http.Response, creds Credentials) *mobile.Error {
 			retryable = true
 		}
 	}
-	return &mobile.Error{Code: code, Message: msg, Hint: "Inspect BrowserStack credentials, resource IDs, and service status.", Status: resp.StatusCode, Retryable: retryable, RecommendedAction: "retry"}
+	return &mobileauto.Error{Code: code, Message: msg, Hint: "Inspect BrowserStack credentials, resource IDs, and service status.", Status: resp.StatusCode, Retryable: retryable, RecommendedAction: "retry"}
 }
 
 func sanitizeSnippet(body []byte, creds Credentials) string {

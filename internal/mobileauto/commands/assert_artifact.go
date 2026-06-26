@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -24,7 +24,7 @@ func assertCmd(o *Opts) *cobra.Command {
 func assertExistsCmd(o *Opts) *cobra.Command {
 	var runID, ref, name, role string
 	c := &cobra.Command{Use: "exists", RunE: func(cmd *cobra.Command, args []string) error {
-		return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobile.RunState, elementID string) (bool, any, error) {
+		return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobileauto.RunState, elementID string) (bool, any, error) {
 			return true, map[string]any{"element_id": elementID}, nil
 		})
 	}}
@@ -34,9 +34,9 @@ func assertExistsCmd(o *Opts) *cobra.Command {
 
 func assertNotExistsCmd(o *Opts) *cobra.Command {
 	var runID string
-	q := mobile.LocateQuery{}
+	q := mobileauto.LocateQuery{}
 	c := &cobra.Command{Use: "not-exists", RunE: func(cmd *cobra.Command, args []string) error {
-		return runObservationAssertion(cmd, o, runID, q, func(obs mobile.Observation, res mobile.LocateResult) (bool, any) {
+		return runObservationAssertion(cmd, o, runID, q, func(obs mobileauto.Observation, res mobileauto.LocateResult) (bool, any) {
 			return len(res.Matches) == 0, map[string]any{"matches": len(res.Matches), "locate": res, "observation_id": obs.ID}
 		})
 	}}
@@ -47,7 +47,7 @@ func assertNotExistsCmd(o *Opts) *cobra.Command {
 func assertVisibleCmd(o *Opts) *cobra.Command {
 	var runID, ref, name, role string
 	c := &cobra.Command{Use: "visible", RunE: func(cmd *cobra.Command, args []string) error {
-		return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobile.RunState, elementID string) (bool, any, error) {
+		return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobileauto.RunState, elementID string) (bool, any, error) {
 			ok, err := svc.Appium.ElementDisplayed(ctx, st.SessionID, elementID)
 			return ok, map[string]any{"visible": ok}, err
 		})
@@ -60,13 +60,13 @@ func assertNotVisibleCmd(o *Opts) *cobra.Command {
 	var runID, ref, name, role string
 	c := &cobra.Command{Use: "not-visible", RunE: func(cmd *cobra.Command, args []string) error {
 		if ref != "" {
-			return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobile.RunState, elementID string) (bool, any, error) {
+			return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobileauto.RunState, elementID string) (bool, any, error) {
 				ok, err := svc.Appium.ElementDisplayed(ctx, st.SessionID, elementID)
 				return !ok, map[string]any{"visible": ok}, err
 			})
 		}
-		q := mobile.LocateQuery{Name: name, Role: role, Visible: boolPtr(true), Limit: 1000}
-		return runObservationAssertion(cmd, o, runID, q, func(obs mobile.Observation, res mobile.LocateResult) (bool, any) {
+		q := mobileauto.LocateQuery{Name: name, Role: role, Visible: boolPtr(true), Limit: 1000}
+		return runObservationAssertion(cmd, o, runID, q, func(obs mobileauto.Observation, res mobileauto.LocateResult) (bool, any) {
 			return len(res.Matches) == 0, map[string]any{"visible_matches": len(res.Matches), "locate": res, "observation_id": obs.ID}
 		})
 	}}
@@ -77,7 +77,7 @@ func assertNotVisibleCmd(o *Opts) *cobra.Command {
 func assertEnabledCmd(o *Opts) *cobra.Command {
 	var runID, ref, name, role string
 	c := &cobra.Command{Use: "enabled", RunE: func(cmd *cobra.Command, args []string) error {
-		return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobile.RunState, elementID string) (bool, any, error) {
+		return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobileauto.RunState, elementID string) (bool, any, error) {
 			ok, err := svc.Appium.ElementEnabled(ctx, st.SessionID, elementID)
 			return ok, map[string]any{"enabled": ok}, err
 		})
@@ -89,7 +89,7 @@ func assertEnabledCmd(o *Opts) *cobra.Command {
 func assertSelectedCmd(o *Opts) *cobra.Command {
 	var runID, ref, name, role string
 	c := &cobra.Command{Use: "selected", RunE: func(cmd *cobra.Command, args []string) error {
-		return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobile.RunState, elementID string) (bool, any, error) {
+		return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobileauto.RunState, elementID string) (bool, any, error) {
 			ok, err := svc.Appium.ElementSelected(ctx, st.SessionID, elementID)
 			return ok, map[string]any{"selected": ok}, err
 		})
@@ -104,7 +104,7 @@ func assertTextCmd(o *Opts) *cobra.Command {
 		if (equals == "") == (contains == "") {
 			return print(cmd, o, output.Failure("invalid_args", "exactly one of --equals or --contains is required", "Pass a text assertion mode.", 400))
 		}
-		return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobile.RunState, elementID string) (bool, any, error) {
+		return runAssertion(cmd, o, runID, ref, name, role, func(ctx context.Context, svc *services, st mobileauto.RunState, elementID string) (bool, any, error) {
 			text, err := svc.Appium.ElementText(ctx, st.SessionID, elementID)
 			if err != nil {
 				return false, nil, err
@@ -131,12 +131,12 @@ func assertTextCmd(o *Opts) *cobra.Command {
 func assertCountCmd(o *Opts) *cobra.Command {
 	var runID string
 	var expected int
-	q := mobile.LocateQuery{Limit: 1000}
+	q := mobileauto.LocateQuery{Limit: 1000}
 	c := &cobra.Command{Use: "count", RunE: func(cmd *cobra.Command, args []string) error {
 		if expected < 0 {
 			return print(cmd, o, output.Failure("invalid_args", "--expected cannot be negative", "Pass the expected match count.", 400))
 		}
-		return runObservationAssertion(cmd, o, runID, q, func(obs mobile.Observation, res mobile.LocateResult) (bool, any) {
+		return runObservationAssertion(cmd, o, runID, q, func(obs mobileauto.Observation, res mobileauto.LocateResult) (bool, any) {
 			return len(res.Matches) == expected, map[string]any{"expected": expected, "actual": len(res.Matches), "locate": res, "observation_id": obs.ID}
 		})
 	}}
@@ -152,7 +152,7 @@ func bindAssertFlags(c *cobra.Command, runID, ref, name, role *string) {
 	c.Flags().StringVar(role, "role", "", "")
 }
 
-func bindLocateAssertionFlags(c *cobra.Command, runID *string, q *mobile.LocateQuery) {
+func bindLocateAssertionFlags(c *cobra.Command, runID *string, q *mobileauto.LocateQuery) {
 	c.Flags().StringVar(runID, "run-id", "", "")
 	c.Flags().StringVar(&q.Name, "name", "", "")
 	c.Flags().StringVar(&q.Text, "text", "", "")
@@ -164,7 +164,7 @@ func bindLocateAssertionFlags(c *cobra.Command, runID *string, q *mobile.LocateQ
 	c.Flags().StringVar(&q.WithinText, "within-text", "", "")
 }
 
-func runObservationAssertion(cmd *cobra.Command, o *Opts, runID string, q mobile.LocateQuery, fn func(mobile.Observation, mobile.LocateResult) (bool, any)) error {
+func runObservationAssertion(cmd *cobra.Command, o *Opts, runID string, q mobileauto.LocateQuery, fn func(mobileauto.Observation, mobileauto.LocateResult) (bool, any)) error {
 	if runID == "" {
 		return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 	}
@@ -186,7 +186,7 @@ func runObservationAssertion(cmd *cobra.Command, o *Opts, runID string, q mobile
 	if err != nil {
 		return renderErr(cmd, o, err)
 	}
-	res := mobile.Locate(obs, q)
+	res := mobileauto.Locate(obs, q)
 	ok, evidence := fn(obs, res)
 	data := map[string]any{"passed": ok, "run_id": runID, "evidence": evidence}
 	appendTimelineBestEffort(svc, runID, "assert", cmd.CalledAs(), obs.ID, st.Status, data)
@@ -198,7 +198,7 @@ func runObservationAssertion(cmd *cobra.Command, o *Opts, runID string, q mobile
 	return print(cmd, o, output.Success("", data))
 }
 
-func runAssertion(cmd *cobra.Command, o *Opts, runID, ref, name, role string, fn func(context.Context, *services, mobile.RunState, string) (bool, any, error)) error {
+func runAssertion(cmd *cobra.Command, o *Opts, runID, ref, name, role string, fn func(context.Context, *services, mobileauto.RunState, string) (bool, any, error)) error {
 	if runID == "" {
 		return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
 	}
@@ -228,7 +228,7 @@ func runAssertion(cmd *cobra.Command, o *Opts, runID, ref, name, role string, fn
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
-		res := mobile.Locate(obs, mobile.LocateQuery{Name: name, Role: role, Actionable: false, Limit: 2})
+		res := mobileauto.Locate(obs, mobileauto.LocateQuery{Name: name, Role: role, Actionable: false, Limit: 2})
 		if res.RecommendedRef == "" {
 			return print(cmd, o, output.Failure("ambiguous_element", "semantic assertion target was not unique", "Use mobile-auto locate, then assert with --ref.", 409))
 		}
@@ -285,7 +285,7 @@ func waitCmd(o *Opts) *cobra.Command {
 		defer t.Stop()
 		var lastHash string
 		same := 0
-		var latest mobile.Observation
+		var latest mobileauto.Observation
 		for {
 			err := svc.Store.WithRunLock(runID, func() error {
 				st, err := svc.Store.LoadRun(runID)
@@ -306,12 +306,12 @@ func waitCmd(o *Opts) *cobra.Command {
 			}
 			if same >= stableCount {
 				data := map[string]any{"stable": true, "observation": latest, "stable_count": same}
-				appendTimelineBestEffort(svc, runID, "wait", "stable", latest.ID, mobile.StatusRunning, data)
+				appendTimelineBestEffort(svc, runID, "wait", "stable", latest.ID, mobileauto.StatusRunning, data)
 				return print(cmd, o, output.Success("", data))
 			}
 			select {
 			case <-ctx.Done():
-				return renderErr(cmd, o, mobile.RetryableError("assertion_failed", "page did not become stable before timeout", "Retry or inspect observations.", "observe", 408))
+				return renderErr(cmd, o, mobileauto.RetryableError("assertion_failed", "page did not become stable before timeout", "Retry or inspect observations.", "observe", 408))
 			case <-t.C:
 			}
 		}
@@ -325,32 +325,32 @@ func waitCmd(o *Opts) *cobra.Command {
 }
 
 func waitVisibleCmd(o *Opts) *cobra.Command {
-	return waitLocateCmd(o, "visible", func(q *mobile.LocateQuery) {
+	return waitLocateCmd(o, "visible", func(q *mobileauto.LocateQuery) {
 		q.Visible = boolPtr(true)
 	})
 }
 
 func waitGoneCmd(o *Opts) *cobra.Command {
-	return waitLocateCmd(o, "gone", func(q *mobile.LocateQuery) {
+	return waitLocateCmd(o, "gone", func(q *mobileauto.LocateQuery) {
 		q.Visible = boolPtr(true)
 	})
 }
 
 func waitTextCmd(o *Opts) *cobra.Command {
-	return waitLocateCmd(o, "text", func(q *mobile.LocateQuery) {
+	return waitLocateCmd(o, "text", func(q *mobileauto.LocateQuery) {
 		q.Visible = boolPtr(true)
 	})
 }
 
 func waitEnabledCmd(o *Opts) *cobra.Command {
-	return waitLocateCmd(o, "enabled", func(q *mobile.LocateQuery) {
+	return waitLocateCmd(o, "enabled", func(q *mobileauto.LocateQuery) {
 		q.Enabled = boolPtr(true)
 	})
 }
 
-func waitLocateCmd(o *Opts, mode string, configure func(*mobile.LocateQuery)) *cobra.Command {
+func waitLocateCmd(o *Opts, mode string, configure func(*mobileauto.LocateQuery)) *cobra.Command {
 	var runID, timeoutText, pollText string
-	q := mobile.LocateQuery{Limit: 1000}
+	q := mobileauto.LocateQuery{Limit: 1000}
 	c := &cobra.Command{Use: mode, RunE: func(cmd *cobra.Command, args []string) error {
 		if runID == "" {
 			return print(cmd, o, output.Failure("invalid_args", "--run-id is required", "Pass the active run id.", 400))
@@ -378,7 +378,7 @@ func waitLocateCmd(o *Opts, mode string, configure func(*mobile.LocateQuery)) *c
 		attempts := 0
 		for {
 			attempts++
-			var obs mobile.Observation
+			var obs mobileauto.Observation
 			err := svc.Store.WithRunLock(runID, func() error {
 				st, err := svc.Store.LoadRun(runID)
 				if err != nil {
@@ -390,19 +390,19 @@ func waitLocateCmd(o *Opts, mode string, configure func(*mobile.LocateQuery)) *c
 			if err != nil {
 				return renderErr(cmd, o, err)
 			}
-			res := mobile.Locate(obs, q)
+			res := mobileauto.Locate(obs, q)
 			matched := len(res.Matches) > 0
 			if mode == "gone" {
 				matched = !matched
 			}
 			if matched {
 				data := map[string]any{"matched": true, "mode": mode, "attempts": attempts, "locate": res, "observation": obs}
-				appendTimelineBestEffort(svc, runID, "wait", mode, obs.ID, mobile.StatusRunning, data)
+				appendTimelineBestEffort(svc, runID, "wait", mode, obs.ID, mobileauto.StatusRunning, data)
 				return print(cmd, o, output.Success("", data))
 			}
 			select {
 			case <-ctx.Done():
-				return renderErr(cmd, o, mobile.RetryableError("assertion_failed", "wait condition was not satisfied before timeout", "Retry or inspect observations.", "observe", 408))
+				return renderErr(cmd, o, mobileauto.RetryableError("assertion_failed", "wait condition was not satisfied before timeout", "Retry or inspect observations.", "observe", 408))
 			case <-t.C:
 			}
 		}
@@ -481,7 +481,7 @@ func artifactDownloadCmd(o *Opts) *cobra.Command {
 		if outDir == "" {
 			outDir = svc.Runtime.Mobile.ArtifactsDir
 		}
-		art, err := mobile.WriteArtifact(outDir, kind, sessionID+".log", b, contentType)
+		art, err := mobileauto.WriteArtifact(outDir, kind, sessionID+".log", b, contentType)
 		if err != nil {
 			return renderErr(cmd, o, err)
 		}
@@ -494,7 +494,7 @@ func artifactDownloadCmd(o *Opts) *cobra.Command {
 	return c
 }
 
-func collectArtifacts(ctx context.Context, svc *services, st mobile.RunState, outDir string) (map[string]any, error) {
+func collectArtifacts(ctx context.Context, svc *services, st mobileauto.RunState, outDir string) (map[string]any, error) {
 	if outDir == "" {
 		outDir = filepath.Join(svc.Store.RunDir(st.RunID), "artifacts")
 	}
@@ -502,7 +502,7 @@ func collectArtifacts(ctx context.Context, svc *services, st mobile.RunState, ou
 		return nil, err
 	}
 	files, _ := listRunArtifacts(svc, st.RunID)
-	var remote []mobile.FileArtifact
+	var remote []mobileauto.FileArtifact
 	var warnings []string
 	if st.BuildID != "" && st.SessionID != "" {
 		for _, kind := range []string{"appiumlogs", "devicelogs", "crashlogs", "networklogs"} {
@@ -511,7 +511,7 @@ func collectArtifacts(ctx context.Context, svc *services, st mobile.RunState, ou
 				warnings = append(warnings, kind+": "+err.Error())
 				continue
 			}
-			art, err := mobile.WriteArtifact(outDir, kind, st.SessionID+".log", b, contentType)
+			art, err := mobileauto.WriteArtifact(outDir, kind, st.SessionID+".log", b, contentType)
 			if err != nil {
 				warnings = append(warnings, kind+": "+err.Error())
 				continue
@@ -522,9 +522,9 @@ func collectArtifacts(ctx context.Context, svc *services, st mobile.RunState, ou
 	return map[string]any{"run_id": st.RunID, "out_dir": outDir, "local_files": files, "remote_files": remote, "warnings": warnings, "sensitive": true}, nil
 }
 
-func listRunArtifacts(svc *services, runID string) ([]mobile.FileArtifact, error) {
+func listRunArtifacts(svc *services, runID string) ([]mobileauto.FileArtifact, error) {
 	root := svc.Store.RunDir(runID)
-	var files []mobile.FileArtifact
+	var files []mobileauto.FileArtifact
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
@@ -542,7 +542,7 @@ func listRunArtifacts(svc *services, runID string) ([]mobile.FileArtifact, error
 		case strings.HasSuffix(name, ".log"):
 			kind = "log"
 		}
-		art, err := mobile.InspectArtifact(kind, path, "")
+		art, err := mobileauto.InspectArtifact(kind, path, "")
 		if err == nil {
 			files = append(files, art)
 		}

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -395,7 +395,7 @@ func runIDFromEnvelope(env output.Envelope) string {
 	return ""
 }
 
-func workflowStepFromTimeline(event mobile.TimelineEvent) (workflowStep, bool) {
+func workflowStepFromTimeline(event mobileauto.TimelineEvent) (workflowStep, bool) {
 	switch event.Type {
 	case "observe":
 		return workflowStep{Action: "observe", RunID: event.RunID}, true
@@ -508,5 +508,5 @@ func floatString(v float64) string {
 }
 
 func mobileError(code, message, hint string, status int) error {
-	return mobile.NewError(code, message, hint, status)
+	return mobileauto.NewError(code, message, hint, status)
 }

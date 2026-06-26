@@ -12,7 +12,7 @@ import (
 
 	"engineering-flow-platform-tools/internal/appium"
 	"engineering-flow-platform-tools/internal/browserstack"
-	"engineering-flow-platform-tools/internal/mobile"
+	"engineering-flow-platform-tools/internal/mobileauto"
 	"engineering-flow-platform-tools/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -239,7 +239,7 @@ func sessionStopCmd(o *Opts) *cobra.Command {
 					return err
 				}
 				now := time.Now().UTC()
-				st.Status = mobile.StatusFinished
+				st.Status = mobileauto.StatusFinished
 				st.FinishedAt = &now
 				st.LatestObservationID = ""
 				return svc.Store.SaveRun(st)
@@ -331,7 +331,7 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 	defer cancel()
 	var runID string
-	var st mobile.RunState
+	var st mobileauto.RunState
 	var startingPersisted bool
 	var runStartCause error
 	fail := func(err error) error {
@@ -351,7 +351,7 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 	if err != nil {
 		return fail(err)
 	}
-	dev, err := mobile.ResolveDevice(deviceInfos(devices), mobile.DeviceQuery{Platform: opts.Platform, Name: opts.Device, OSVersion: opts.OSVersion, MinOSVersion: opts.MinOS, RealOnly: true, Strategy: "latest-compatible"})
+	dev, err := mobileauto.ResolveDevice(deviceInfos(devices), mobileauto.DeviceQuery{Platform: opts.Platform, Name: opts.Device, OSVersion: opts.OSVersion, MinOSVersion: opts.MinOS, RealOnly: true, Strategy: "latest-compatible"})
 	if err != nil {
 		return fail(err)
 	}
@@ -360,11 +360,11 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 			return fail(err)
 		}
 	}
-	runID = mobile.NewRunID()
-	var tunnel mobile.TunnelState
+	runID = mobileauto.NewRunID()
+	var tunnel mobileauto.TunnelState
 	if opts.Network != "public" {
 		hold := time.Duration(cfg.BrowserStack.Local.DefaultHoldMinutes) * time.Minute
-		tunnel, err = svc.Tunnel.Start(mobile.TunnelStartRequest{RunID: runID, NetworkMode: opts.Network, LocalIdentifier: opts.LocalID, HoldFor: hold})
+		tunnel, err = svc.Tunnel.Start(mobileauto.TunnelStartRequest{RunID: runID, NetworkMode: opts.Network, LocalIdentifier: opts.LocalID, HoldFor: hold})
 		if err != nil {
 			return fail(err)
 		}
@@ -372,16 +372,16 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 	}
 	startedAt := time.Now().UTC()
 	sessionCreateStarted := time.Now().UTC()
-	st = mobile.RunState{
+	st = mobileauto.RunState{
 		Version:                1,
 		RunID:                  runID,
 		Provider:               "browserstack",
-		Status:                 mobile.StatusStarting,
+		Status:                 mobileauto.StatusStarting,
 		ControlOwner:           "agent",
 		Platform:               opts.Platform,
 		Device:                 dev.Recommended,
 		App:                    appRef,
-		Network:                mobile.NetworkState{Mode: opts.Network, LocalMode: localModeForNetwork(opts.Network), LocalIdentifier: opts.LocalID, TunnelID: tunnel.TunnelID},
+		Network:                mobileauto.NetworkState{Mode: opts.Network, LocalMode: localModeForNetwork(opts.Network), LocalIdentifier: opts.LocalID, TunnelID: tunnel.TunnelID},
 		ProjectName:            opts.Project,
 		BuildName:              opts.Build,
 		SessionName:            opts.Name,
@@ -394,7 +394,7 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 		if tunnel.Managed {
 			_, _ = svc.Tunnel.Stop(tunnel)
 		}
-		return fail(mobile.NewError("state_persist_failed", "failed to persist initial run state", "Check mobile.state_dir permissions and free disk space.", 500))
+		return fail(mobileauto.NewError("state_persist_failed", "failed to persist initial run state", "Check mobile-auto.state_dir permissions and free disk space.", 500))
 	}
 	appendTimelineBestEffort(svc, runID, "run", "start", "", st.Status, map[string]any{
 		"phase":         "starting",
@@ -465,7 +465,7 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 	if session.ID != "" {
 		noteAppiumSessionIDBestEffort(svc, &st, session.ID, "Appium session id received; promoting run state")
 	}
-	st.Status = mobile.StatusRunning
+	st.Status = mobileauto.StatusRunning
 	st.SessionID = session.ID
 	st.BuildID = buildID
 	st.DashboardURL = dashboardURLFromSession(session)
@@ -477,7 +477,7 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 		noteRemoteSessionDetected(&st, remoteSession, buildID, recoveredSession, "")
 	}
 	if err := svc.Store.SaveRun(st); err != nil {
-		return fail(mobile.NewError("state_persist_failed", "failed to persist running run state after session creation", "The remote session may be active; check mobile.state_dir and use run recover if needed.", 500))
+		return fail(mobileauto.NewError("state_persist_failed", "failed to persist running run state after session creation", "The remote session may be active; check mobile-auto.state_dir and use run recover if needed.", 500))
 	}
 	appendTimelineBestEffort(svc, runID, "run", "running", "", st.Status, map[string]any{
 		"session_id":         st.SessionID,
@@ -500,7 +500,7 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 		"remote_session_created":  st.SessionID != "",
 		"remote_build_detected":   st.BuildID != "",
 		"remote_session_detected": st.SessionID != "" || st.BrowserStackSessionID != "",
-		"state_promoted_running":  st.Status == mobile.StatusRunning,
+		"state_promoted_running":  st.Status == mobileauto.StatusRunning,
 		"recovery_attempted":      recoveryAttempted,
 		"recovered_session":       recoveredSession,
 		"enrich_warnings":         warnings,
@@ -508,8 +508,8 @@ func runStart(cmd *cobra.Command, o *Opts, opts runStartOptions) error {
 	}))
 }
 
-func markRunFailedBestEffort(svc *services, st *mobile.RunState, err error) {
-	markRunTerminal(st, mobile.StatusFailed, "run start failed before a usable session was saved", err)
+func markRunFailedBestEffort(svc *services, st *mobileauto.RunState, err error) {
+	markRunTerminal(st, mobileauto.StatusFailed, "run start failed before a usable session was saved", err)
 	_ = svc.Store.SaveRun(*st)
 	appendTimelineBestEffort(svc, st.RunID, "run", "failed", "", st.Status, map[string]any{
 		"reason":             st.StatusReason,
@@ -518,7 +518,7 @@ func markRunFailedBestEffort(svc *services, st *mobile.RunState, err error) {
 	})
 }
 
-func noteAppiumSessionIDBestEffort(svc *services, st *mobile.RunState, sessionID, message string) {
+func noteAppiumSessionIDBestEffort(svc *services, st *mobileauto.RunState, sessionID, message string) {
 	if strings.TrimSpace(sessionID) == "" {
 		return
 	}
@@ -531,12 +531,12 @@ func noteAppiumSessionIDBestEffort(svc *services, st *mobile.RunState, sessionID
 	_ = svc.Store.SaveRun(*st)
 }
 
-func noteRemoteSessionDetectedBestEffort(svc *services, st *mobile.RunState, remote browserstack.Session, buildID string, recovered bool, message string) {
+func noteRemoteSessionDetectedBestEffort(svc *services, st *mobileauto.RunState, remote browserstack.Session, buildID string, recovered bool, message string) {
 	noteRemoteSessionDetected(st, remote, buildID, recovered, message)
 	_ = svc.Store.SaveRun(*st)
 }
 
-func noteRemoteSessionDetected(st *mobile.RunState, remote browserstack.Session, buildID string, recovered bool, message string) {
+func noteRemoteSessionDetected(st *mobileauto.RunState, remote browserstack.Session, buildID string, recovered bool, message string) {
 	now := time.Now().UTC()
 	if strings.TrimSpace(buildID) != "" {
 		st.BuildID = buildID
@@ -560,23 +560,23 @@ func noteRemoteSessionDetected(st *mobile.RunState, remote browserstack.Session,
 	enrichRunStateFromRemote(st, remote)
 }
 
-func settleStartingRunBestEffort(svc *services, runID string, fallback mobile.RunState, cause error) {
+func settleStartingRunBestEffort(svc *services, runID string, fallback mobileauto.RunState, cause error) {
 	if strings.TrimSpace(runID) == "" {
 		return
 	}
 	current, err := svc.Store.LoadRun(runID)
-	if err != nil || current.Status != mobile.StatusStarting {
+	if err != nil || current.Status != mobileauto.StatusStarting {
 		return
 	}
 	mergeKnownRunState(&current, fallback)
-	status := mobile.StatusFailed
+	status := mobileauto.StatusFailed
 	reason := "run start exited before a usable remote session was identified"
 	if strings.TrimSpace(current.SessionID) != "" || strings.TrimSpace(current.BrowserStackSessionID) != "" {
-		status = mobile.StatusLost
+		status = mobileauto.StatusLost
 		reason = "remote session was identified but run start exited before local control became usable"
 	}
 	if cause == nil {
-		cause = mobile.NewError("run_start_incomplete", "run start exited while local state was still starting", "Inspect the command output and retry or use mobile-auto run recover.", 500)
+		cause = mobileauto.NewError("run_start_incomplete", "run start exited while local state was still starting", "Inspect the command output and retry or use mobile-auto run recover.", 500)
 	}
 	markRunTerminal(&current, status, reason, cause)
 	_ = svc.Store.SaveRun(current)
@@ -587,7 +587,7 @@ func settleStartingRunBestEffort(svc *services, runID string, fallback mobile.Ru
 	})
 }
 
-func mergeKnownRunState(dst *mobile.RunState, src mobile.RunState) {
+func mergeKnownRunState(dst *mobileauto.RunState, src mobileauto.RunState) {
 	dst.SessionID = firstNonEmpty(dst.SessionID, src.SessionID)
 	dst.BrowserStackSessionID = firstNonEmpty(dst.BrowserStackSessionID, src.BrowserStackSessionID)
 	dst.BuildID = firstNonEmpty(dst.BuildID, src.BuildID)
@@ -621,7 +621,7 @@ func shouldRecoverCreateSessionError(err error) bool {
 	if errors.Is(err, context.DeadlineExceeded) {
 		return true
 	}
-	var me *mobile.Error
+	var me *mobileauto.Error
 	if !errors.As(err, &me) {
 		return false
 	}
@@ -642,10 +642,10 @@ func sessionRecoveryFailedError(createErr, recoverErr error) error {
 	if createCode != "" || recoverCode != "" {
 		message += ": create=" + createCode + " " + createMessage + "; recovery=" + recoverCode + " " + recoverMessage
 	}
-	return mobile.NewError("session_recovery_failed", message, "Use unique --build and --name values, inspect BrowserStack builds/sessions, or run mobile-auto run recover with the BrowserStack session id.", 502)
+	return mobileauto.NewError("session_recovery_failed", message, "Use unique --build and --name values, inspect BrowserStack builds/sessions, or run mobile-auto run recover with the BrowserStack session id.", 502)
 }
 
-func enrichRunStateBestEffort(svc *services, st *mobile.RunState, sessionID, buildName string, since time.Time, alreadyHaveRemote bool) []string {
+func enrichRunStateBestEffort(svc *services, st *mobileauto.RunState, sessionID, buildName string, since time.Time, alreadyHaveRemote bool) []string {
 	warnings := []string{}
 	changed := false
 	enrichCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -697,9 +697,9 @@ type recoveredSessionCandidate struct {
 	BuildID string
 }
 
-func recoverCreatedSession(ctx context.Context, svc *services, opts runStartOptions, dev mobile.DeviceSelection, since time.Time) (browserstack.Session, string, error) {
+func recoverCreatedSession(ctx context.Context, svc *services, opts runStartOptions, dev mobileauto.DeviceSelection, since time.Time) (browserstack.Session, string, error) {
 	if strings.TrimSpace(opts.Build) == "" && strings.TrimSpace(opts.Name) == "" {
-		return browserstack.Session{}, "", mobile.NewError("session_recovery_not_possible", "Appium response did not include a session id and no build/session name is available for recovery", "Pass --build and --name so BrowserStack control-plane recovery can uniquely identify the session.", 502)
+		return browserstack.Session{}, "", mobileauto.NewError("session_recovery_not_possible", "Appium response did not include a session id and no build/session name is available for recovery", "Pass --build and --name so BrowserStack control-plane recovery can uniquely identify the session.", 502)
 	}
 	builds, err := svc.Control.ListBuilds(ctx, 20, 0, "", "")
 	if err != nil {
@@ -727,12 +727,12 @@ func recoverCreatedSession(ctx context.Context, svc *services, opts runStartOpti
 		return candidates[0].Session, candidates[0].BuildID, nil
 	}
 	if len(candidates) > 1 {
-		return browserstack.Session{}, "", mobile.NewError("session_recovery_ambiguous", "BrowserStack control-plane recovery found multiple matching sessions", "Use unique --build and --name values, then retry.", 409)
+		return browserstack.Session{}, "", mobileauto.NewError("session_recovery_ambiguous", "BrowserStack control-plane recovery found multiple matching sessions", "Use unique --build and --name values, then retry.", 409)
 	}
-	return browserstack.Session{}, "", mobile.NewError("session_recovery_not_found", "BrowserStack control-plane recovery did not find the created session", "Inspect BrowserStack Appium logs and dashboard for the attempted run.", 502)
+	return browserstack.Session{}, "", mobileauto.NewError("session_recovery_not_found", "BrowserStack control-plane recovery did not find the created session", "Inspect BrowserStack Appium logs and dashboard for the attempted run.", 502)
 }
 
-func browserStackSessionMatches(session browserstack.Session, opts runStartOptions, dev mobile.DeviceSelection, since time.Time) bool {
+func browserStackSessionMatches(session browserstack.Session, opts runStartOptions, dev mobileauto.DeviceSelection, since time.Time) bool {
 	if session.HashedID == "" {
 		return false
 	}
@@ -817,7 +817,7 @@ func buildRecentEnough(raw any, since time.Time) bool {
 	return true
 }
 
-func enrichRunStateFromRemote(st *mobile.RunState, remote browserstack.Session) {
+func enrichRunStateFromRemote(st *mobileauto.RunState, remote browserstack.Session) {
 	if remote.HashedID != "" {
 		st.BrowserStackSessionID = remote.HashedID
 	}
@@ -840,7 +840,7 @@ func localModeForNetwork(network string) string {
 	}
 }
 
-func effectiveRunStart(st mobile.RunState, dev mobile.DeviceResolveResult) map[string]any {
+func effectiveRunStart(st mobileauto.RunState, dev mobileauto.DeviceResolveResult) map[string]any {
 	return map[string]any{
 		"network_mode":       st.Network.Mode,
 		"local_mode":         st.Network.LocalMode,
@@ -852,27 +852,27 @@ func effectiveRunStart(st mobile.RunState, dev mobile.DeviceResolveResult) map[s
 	}
 }
 
-func resolveApp(ctx context.Context, svc *services, opts runStartOptions) (mobile.AppRef, error) {
+func resolveApp(ctx context.Context, svc *services, opts runStartOptions) (mobileauto.AppRef, error) {
 	if strings.HasPrefix(opts.AppURL, "bs://") {
-		return mobile.AppRef{AppURL: opts.AppURL, CustomID: opts.CustomID}, nil
+		return mobileauto.AppRef{AppURL: opts.AppURL, CustomID: opts.CustomID}, nil
 	}
 	if opts.File == "" && opts.URL == "" && opts.CustomID == "" {
-		return mobile.AppRef{}, mobile.NewError("invalid_args", "--app, --file, --url, or --custom-id is required", "Pass an existing bs:// app or app source.", 400)
+		return mobileauto.AppRef{}, mobileauto.NewError("invalid_args", "--app, --file, --url, or --custom-id is required", "Pass an existing bs:// app or app source.", 400)
 	}
 	var sha string
 	var err error
 	if opts.File != "" {
 		if !browserstack.ValidAppExtension(opts.File) {
-			return mobile.AppRef{}, mobile.NewError("invalid_args", "unsupported app extension", "Use .apk, .aab, .xapk, or .ipa.", 400)
+			return mobileauto.AppRef{}, mobileauto.NewError("invalid_args", "unsupported app extension", "Use .apk, .aab, .xapk, or .ipa.", 400)
 		}
 		sha, err = browserstack.SHA256File(opts.File)
 		if err != nil {
-			return mobile.AppRef{}, err
+			return mobileauto.AppRef{}, err
 		}
 		var cachedURL string
 		if cached, err := svc.Store.LoadAppCache(sha); err == nil && cached.AppURL != "" {
 			cachedURL = cached.AppURL
-			if mobile.AppCacheReusable(cached, time.Now().UTC()) {
+			if mobileauto.AppCacheReusable(cached, time.Now().UTC()) {
 				return cached, nil
 			}
 		}
@@ -889,7 +889,7 @@ func resolveApp(ctx context.Context, svc *services, opts runStartOptions) (mobil
 	}
 	app, err := svc.Control.UploadApp(ctx, browserstack.UploadAppRequest{FilePath: opts.File, URL: opts.URL, CustomID: opts.CustomID, SHA256: sha})
 	if err != nil {
-		return mobile.AppRef{}, err
+		return mobileauto.AppRef{}, err
 	}
 	ref := appRefFromUploaded(app, opts.CustomID, sha, app.AppName)
 	_ = svc.Store.SaveAppCache(ref)
@@ -917,7 +917,7 @@ func waitCapacity(ctx context.Context, svc *services, required int, pollText str
 		}
 		select {
 		case <-ctx.Done():
-			return mobile.RetryableError("capacity_wait_timeout", "timed out waiting for BrowserStack capacity", "Retry later or lower required parallel sessions.", "retry", 408)
+			return mobileauto.RetryableError("capacity_wait_timeout", "timed out waiting for BrowserStack capacity", "Retry later or lower required parallel sessions.", "retry", 408)
 		case <-t.C:
 		}
 	}
@@ -990,7 +990,7 @@ func runRecover(cmd *cobra.Command, o *Opts, opts runRecoverOptions) error {
 		return renderErr(cmd, o, err)
 	}
 	if opts.RunID == "" {
-		opts.RunID = mobile.NewRunID()
+		opts.RunID = mobileauto.NewRunID()
 	}
 	network := opts.Network
 	if network == "" {
@@ -1005,18 +1005,18 @@ func runRecover(cmd *cobra.Command, o *Opts, opts runRecoverOptions) error {
 	}
 	sessionID := firstNonEmpty(remote.HashedID, opts.SessionID)
 	now := time.Now().UTC()
-	st := mobile.RunState{
+	st := mobileauto.RunState{
 		Version:               1,
 		RunID:                 opts.RunID,
 		Provider:              "browserstack",
-		Status:                mobile.StatusRunning,
+		Status:                mobileauto.StatusRunning,
 		ControlOwner:          "agent",
 		SessionID:             sessionID,
 		BrowserStackSessionID: sessionID,
 		Platform:              firstNonEmpty(opts.Platform, remote.OS),
 		Device:                remoteDeviceSelection(remote),
 		App:                   remoteAppRef(remote, opts.App),
-		Network:               mobile.NetworkState{Mode: network, LocalMode: localModeForNetwork(network), LocalIdentifier: opts.LocalIdentifier},
+		Network:               mobileauto.NetworkState{Mode: network, LocalMode: localModeForNetwork(network), LocalIdentifier: opts.LocalIdentifier},
 		BuildID:               buildID,
 		ProjectName:           remote.ProjectName,
 		BuildName:             firstNonEmpty(remote.BuildName, opts.BuildName),
@@ -1070,7 +1070,7 @@ func recoverRemoteSession(ctx context.Context, svc *services, opts runRecoverOpt
 			}
 		}
 		if len(matches) != 1 {
-			return browserstack.Session{}, "", mobile.NewError("session_recovery_ambiguous", "BrowserStack build recovery did not find exactly one matching build", "Pass --build-id for the build you want to attach.", 409)
+			return browserstack.Session{}, "", mobileauto.NewError("session_recovery_ambiguous", "BrowserStack build recovery did not find exactly one matching build", "Pass --build-id for the build you want to attach.", 409)
 		}
 		buildID = matches[0].HashedID
 	}
@@ -1086,17 +1086,17 @@ func recoverRemoteSession(ctx context.Context, svc *services, opts runRecoverOpt
 		matches = append(matches, session)
 	}
 	if len(matches) != 1 || matches[0].HashedID == "" {
-		return browserstack.Session{}, "", mobile.NewError("session_recovery_ambiguous", "BrowserStack session recovery did not find exactly one matching session", "Pass --session-id or add --name to uniquely identify the session.", 409)
+		return browserstack.Session{}, "", mobileauto.NewError("session_recovery_ambiguous", "BrowserStack session recovery did not find exactly one matching session", "Pass --session-id or add --name to uniquely identify the session.", 409)
 	}
 	return matches[0], buildID, nil
 }
 
-func remoteDeviceSelection(remote browserstack.Session) mobile.DeviceSelection {
-	return mobile.DeviceSelection{Name: remote.Device, OS: remote.OS, OSVersion: remote.OSVersion, Reason: "recovered"}
+func remoteDeviceSelection(remote browserstack.Session) mobileauto.DeviceSelection {
+	return mobileauto.DeviceSelection{Name: remote.Device, OS: remote.OS, OSVersion: remote.OSVersion, Reason: "recovered"}
 }
 
-func remoteAppRef(remote browserstack.Session, app string) mobile.AppRef {
-	ref := mobile.AppRef{AppURL: app}
+func remoteAppRef(remote browserstack.Session, app string) mobileauto.AppRef {
+	ref := mobileauto.AppRef{AppURL: app}
 	if remote.AppDetails == nil {
 		return ref
 	}
@@ -1111,8 +1111,8 @@ func stringMapValue(m map[string]any, key string) string {
 	return strings.TrimSpace(v)
 }
 
-func reconcileRunStatusBestEffort(ctx context.Context, svc *services, st mobile.RunState) (mobile.RunState, []string) {
-	if st.Status == mobile.StatusStarting {
+func reconcileRunStatusBestEffort(ctx context.Context, svc *services, st mobileauto.RunState) (mobileauto.RunState, []string) {
+	if st.Status == mobileauto.StatusStarting {
 		return reconcileStartingRunBestEffort(ctx, svc, st)
 	}
 	if st.SessionID == "" || !localRunStatusMayBeRemoteActive(st.Status) {
@@ -1144,7 +1144,7 @@ func reconcileRunStatusBestEffort(ctx context.Context, svc *services, st mobile.
 	return st, nil
 }
 
-func reconcileStartingRunBestEffort(ctx context.Context, svc *services, st mobile.RunState) (mobile.RunState, []string) {
+func reconcileStartingRunBestEffort(ctx context.Context, svc *services, st mobileauto.RunState) (mobileauto.RunState, []string) {
 	if strings.TrimSpace(st.SessionID) == "" && strings.TrimSpace(st.BrowserStackSessionID) != "" {
 		st.SessionID = st.BrowserStackSessionID
 	}
@@ -1153,7 +1153,7 @@ func reconcileStartingRunBestEffort(ctx context.Context, svc *services, st mobil
 		if st.RemoteSessionDetectedAt == nil {
 			st.RemoteSessionDetectedAt = &now
 		}
-		st.Status = mobile.StatusRunning
+		st.Status = mobileauto.StatusRunning
 		st.RunningAt = &now
 		st.ProgressMessage = "run status promoted from starting using persisted remote session id"
 		_ = svc.Store.SaveRun(st)
@@ -1167,13 +1167,13 @@ func reconcileStartingRunBestEffort(ctx context.Context, svc *services, st mobil
 		if err == nil {
 			noteRemoteSessionDetected(&st, remote, buildID, true, "stale starting run recovered from BrowserStack control plane")
 			now := time.Now().UTC()
-			st.Status = mobile.StatusRunning
+			st.Status = mobileauto.StatusRunning
 			st.RunningAt = &now
 			_ = svc.Store.SaveRun(st)
 			return st, nil
 		}
 		if stale {
-			markRunTerminal(&st, mobile.StatusFailed, "starting run exceeded recovery window and no unique BrowserStack session was found", err)
+			markRunTerminal(&st, mobileauto.StatusFailed, "starting run exceeded recovery window and no unique BrowserStack session was found", err)
 			_ = svc.Store.SaveRun(st)
 			return st, []string{err.Error()}
 		}
@@ -1182,8 +1182,8 @@ func reconcileStartingRunBestEffort(ctx context.Context, svc *services, st mobil
 		return st, []string{err.Error()}
 	}
 	if stale {
-		err := mobile.NewError("run_start_stale", "starting run exceeded recovery window without a local or remote session id", "Retry run start or use mobile-auto run recover if BrowserStack has a matching session.", 408)
-		markRunTerminal(&st, mobile.StatusFailed, "starting run exceeded recovery window without remote session clues", err)
+		err := mobileauto.NewError("run_start_stale", "starting run exceeded recovery window without a local or remote session id", "Retry run start or use mobile-auto run recover if BrowserStack has a matching session.", 408)
+		markRunTerminal(&st, mobileauto.StatusFailed, "starting run exceeded recovery window without remote session clues", err)
 		_ = svc.Store.SaveRun(st)
 		return st, []string{err.Error()}
 	}
@@ -1194,7 +1194,7 @@ func reconcileStartingRunBestEffort(ctx context.Context, svc *services, st mobil
 	return st, nil
 }
 
-func runStartOptionsFromState(st mobile.RunState) runStartOptions {
+func runStartOptionsFromState(st mobileauto.RunState) runStartOptions {
 	return runStartOptions{
 		AppURL:    st.App.AppURL,
 		Platform:  st.Platform,
@@ -1208,7 +1208,7 @@ func runStartOptionsFromState(st mobile.RunState) runStartOptions {
 	}
 }
 
-func startingRecoverySince(st mobile.RunState) time.Time {
+func startingRecoverySince(st mobileauto.RunState) time.Time {
 	if st.SessionCreateStartedAt != nil && !st.SessionCreateStartedAt.IsZero() {
 		return *st.SessionCreateStartedAt
 	}
@@ -1218,25 +1218,25 @@ func startingRecoverySince(st mobile.RunState) time.Time {
 	return time.Now().UTC().Add(-startingStaleAfter)
 }
 
-func startingRunStale(st mobile.RunState, now time.Time) bool {
+func startingRunStale(st mobileauto.RunState, now time.Time) bool {
 	started := startingRecoverySince(st)
 	return !started.IsZero() && now.Sub(started) > startingStaleAfter
 }
 
-func localRunStatusMayBeRemoteActive(status mobile.RunStatus) bool {
-	return status == mobile.StatusStarting || status == mobile.StatusRunning || status == mobile.StatusWaitingForHuman || status == mobile.StatusResuming
+func localRunStatusMayBeRemoteActive(status mobileauto.RunStatus) bool {
+	return status == mobileauto.StatusStarting || status == mobileauto.StatusRunning || status == mobileauto.StatusWaitingForHuman || status == mobileauto.StatusResuming
 }
 
-func runStatusForRemoteSession(status string) (mobile.RunStatus, bool) {
+func runStatusForRemoteSession(status string) (mobileauto.RunStatus, bool) {
 	switch strings.ToLower(strings.TrimSpace(status)) {
 	case "", "running", "queued", "created":
 		return "", false
 	case "passed", "completed", "done":
-		return mobile.StatusFinished, true
+		return mobileauto.StatusFinished, true
 	case "failed", "error", "errored":
-		return mobile.StatusFailed, true
+		return mobileauto.StatusFailed, true
 	case "timeout", "timed_out", "stopped", "aborted":
-		return mobile.StatusLost, true
+		return mobileauto.StatusLost, true
 	default:
 		return "", false
 	}
@@ -1274,7 +1274,7 @@ func runHandoffCmd(o *Opts) *cobra.Command {
 			}
 			deadline := time.Now().UTC().Add(boundHold(holdDur, svc.Runtime.Mobile.BrowserStack.Local.MaxHoldMinutes))
 			st.ControlOwner = "human"
-			st.Status = mobile.StatusWaitingForHuman
+			st.Status = mobileauto.StatusWaitingForHuman
 			if st.Metadata == nil {
 				st.Metadata = map[string]string{}
 			}
@@ -1285,9 +1285,9 @@ func runHandoffCmd(o *Opts) *cobra.Command {
 			keeper, err := startKeeper(o, svc, st.RunID, deadline)
 			if err != nil {
 				st.ControlOwner = "agent"
-				st.Status = mobile.StatusRunning
+				st.Status = mobileauto.StatusRunning
 				_ = svc.Store.SaveRun(st)
-				return mobile.NewError("keepalive_start_failed", "failed to start keepalive helper", "Retry handoff or finish the run to avoid idle timeout.", 500)
+				return mobileauto.NewError("keepalive_start_failed", "failed to start keepalive helper", "Retry handoff or finish the run to avoid idle timeout.", 500)
 			}
 			result = map[string]any{
 				"run":              st,
@@ -1329,11 +1329,11 @@ func runResumeCmd(o *Opts) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if st.Status != mobile.StatusWaitingForHuman || st.ControlOwner != "human" {
-				return mobile.NewError("invalid_args", "run is not waiting for human control", "Only waiting_for_human runs can resume.", 400)
+			if st.Status != mobileauto.StatusWaitingForHuman || st.ControlOwner != "human" {
+				return mobileauto.NewError("invalid_args", "run is not waiting for human control", "Only waiting_for_human runs can resume.", 400)
 			}
 			_ = stopKeeper(svc, runID)
-			st.Status = mobile.StatusResuming
+			st.Status = mobileauto.StatusResuming
 			st.ControlOwner = "agent"
 			st.LatestObservationID = ""
 			st.ObservationVersion++
@@ -1342,11 +1342,11 @@ func runResumeCmd(o *Opts) *cobra.Command {
 			}
 			obs, err := captureObservation(cmd.Context(), svc, &st, 100)
 			if err != nil {
-				st.Status = mobile.StatusLost
+				st.Status = mobileauto.StatusLost
 				_ = svc.Store.SaveRun(st)
 				return err
 			}
-			st.Status = mobile.StatusRunning
+			st.Status = mobileauto.StatusRunning
 			if err := svc.Store.SaveRun(st); err != nil {
 				return err
 			}
@@ -1410,9 +1410,9 @@ func runFinishCmd(o *Opts) *cobra.Command {
 			}
 			now := time.Now().UTC()
 			if status == "failed" {
-				st.Status = mobile.StatusFailed
+				st.Status = mobileauto.StatusFailed
 			} else {
-				st.Status = mobile.StatusFinished
+				st.Status = mobileauto.StatusFinished
 			}
 			st.ControlOwner = "agent"
 			st.FinishedAt = &now
@@ -1541,7 +1541,7 @@ func keepaliveCmd(o *Opts) *cobra.Command {
 		defer t.Stop()
 		for time.Now().Before(deadline) {
 			st, err := svc.Store.LoadRun(runID)
-			if err != nil || st.ControlOwner != "human" || st.Status != mobile.StatusWaitingForHuman {
+			if err != nil || st.ControlOwner != "human" || st.Status != mobileauto.StatusWaitingForHuman {
 				return nil
 			}
 			_, _ = svc.Appium.GetSource(cmd.Context(), st.SessionID)

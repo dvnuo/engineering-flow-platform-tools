@@ -1,4 +1,4 @@
-package mobile
+package mobileauto
 
 import (
 	"strings"

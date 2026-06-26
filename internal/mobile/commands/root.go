@@ -39,7 +39,7 @@ type services struct {
 func NewRoot() *cobra.Command {
 	cobra.EnableCommandSorting = false
 	o := &Opts{Format: "table"}
-	c := &cobra.Command{Use: "mobile", SilenceErrors: true, SilenceUsage: true}
+	c := &cobra.Command{Use: "mobile-auto", SilenceErrors: true, SilenceUsage: true}
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
 	c.PersistentFlags().StringVar(&o.Format, "format", "table", "")
 	c.PersistentFlags().StringVar(&o.ConfigPath, "config", "", "")
@@ -53,23 +53,23 @@ func NewRoot() *cobra.Command {
 		commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o),
 	)
 	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
-		Product: "mobile",
-		Binary:  "mobile",
+		Product: "mobile-auto",
+		Binary:  "mobile-auto",
 		Short:   "Operate BrowserStack App Automate real devices through a governed Appium CLI",
-		Long: strings.TrimSpace(`mobile is a terminal-invoked CLI for Engineering Flow Platform agents that need to upload apps, resolve BrowserStack real devices, manage capacity and Local tunnels, run Appium sessions, observe mobile UI state, and perform bounded ref-based actions.
+		Long: strings.TrimSpace(`mobile-auto is a terminal-invoked CLI for Engineering Flow Platform agents that need to upload apps, resolve BrowserStack real devices, manage capacity and Local tunnels, run Appium sessions, observe mobile UI state, and perform bounded ref-based actions.
 
 It is not an MCP server, not BrowserStack AI, and not an arbitrary Appium pass-through. For agents, use --json on every command and inspect command schemas before complex calls.`),
 		Examples: []string{
-			`mobile run start --file ./app.apk --platform android --network public --json`,
-			`mobile observe --run-id run-... --json`,
-			`mobile locate --run-id run-... --role button --name Login --json`,
-			`mobile tap --run-id run-... --ref obs-...:e1 --json`,
-			`mobile run handoff --run-id run-... --hold-for 10m --json`,
-			`mobile run finish --run-id run-... --status passed --collect-artifacts --json`,
-			`mobile commands --json`,
-			`mobile schema run.start --json`,
+			`mobile-auto run start --file ./app.apk --platform android --network public --json`,
+			`mobile-auto observe --run-id run-... --json`,
+			`mobile-auto locate --run-id run-... --role button --name Login --json`,
+			`mobile-auto tap --run-id run-... --ref obs-...:e1 --json`,
+			`mobile-auto run handoff --run-id run-... --hold-for 10m --json`,
+			`mobile-auto run finish --run-id run-... --status passed --collect-artifacts --json`,
+			`mobile-auto commands --json`,
+			`mobile-auto schema run.start --json`,
 		},
-		Instructions: "copy cmd/mobile/mobile-cli.instructions.md to ~/.copilot/instructions/mobile-cli.instructions.md.",
+		Instructions: "copy cmd/mobile-auto/mobile-auto-cli.instructions.md to ~/.copilot/instructions/mobile-auto-cli.instructions.md.",
 		Groups: map[string]string{
 			"app":       "Manage BrowserStack App Automate app uploads and app references.",
 			"device":    "List and deterministically resolve BrowserStack real devices.",
@@ -118,15 +118,15 @@ func newServices(o *Opts, requireAuth bool) (*services, error) {
 
 func commandsCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "commands", RunE: func(cmd *cobra.Command, args []string) error {
-		return print(cmd, o, output.Success("", map[string]any{"commands": catalog.CommandsFromCobra("mobile", cmd.Root())}))
+		return print(cmd, o, output.Success("", map[string]any{"commands": catalog.CommandsFromCobra("mobile-auto", cmd.Root())}))
 	}}
 }
 
 func schemaCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "schema <command>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		schema, ok := catalog.SchemaFromCobra("mobile", args[0], cmd.Root())
+		schema, ok := catalog.SchemaFromCobra("mobile-auto", args[0], cmd.Root())
 		if !ok {
-			return print(cmd, o, output.Failure("not_found", "command not found", "Run mobile commands --json to list command names.", 404))
+			return print(cmd, o, output.Failure("not_found", "command not found", "Run mobile-auto commands --json to list command names.", 404))
 		}
 		return print(cmd, o, output.Success("", schema))
 	}}
@@ -142,18 +142,18 @@ func helpLLMCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "help llm", RunE: func(cmd *cobra.Command, args []string) error {
 		tips := mobileLLMTips()
 		if fmtOut(o) == "json" {
-			return print(cmd, o, output.Success("", map[string]any{"tips": tips, "commands": catalog.CommandsFromCobra("mobile", cmd.Root())}))
+			return print(cmd, o, output.Success("", map[string]any{"tips": tips, "commands": catalog.CommandsFromCobra("mobile-auto", cmd.Root())}))
 		}
-		_, err := fmt.Fprintln(cmd.OutOrStdout(), "# mobile CLI usage for agents\n\n- "+strings.Join(tips, "\n- "))
+		_, err := fmt.Fprintln(cmd.OutOrStdout(), "# mobile-auto CLI usage for agents\n\n- "+strings.Join(tips, "\n- "))
 		return err
 	}}
 }
 
 func mobileLLMTips() []string {
 	return []string{
-		"mobile is a terminal CLI, not MCP and not a BrowserStack AI integration.",
+		"mobile-auto is a terminal CLI, not MCP and not a BrowserStack AI integration.",
 		"Always use --json for agent workflows.",
-		"Run mobile commands --json and mobile schema <command> --json before complex calls.",
+		"Run mobile-auto commands --json and mobile-auto schema <command> --json before complex calls.",
 		"Recommended flow: run start, observe, locate, action, observe, assert, run finish.",
 		"Never invent refs, selectors, XPath, resource IDs, or coordinates.",
 		"Use only refs from the latest observation; re-observe after every mutating action.",

@@ -156,7 +156,7 @@ go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\aws-auth!EXE_VALUE!" ./cmd/aws-auth
 if errorlevel 1 exit /b 1
 go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\browser!EXE_VALUE!" ./cmd/browser
 if errorlevel 1 exit /b 1
-go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\mobile!EXE_VALUE!" ./cmd/mobile
+go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\mobile-auto!EXE_VALUE!" ./cmd/mobile-auto
 if errorlevel 1 exit /b 1
 go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\inspect-image!EXE_VALUE!" ./cmd/inspect-image
 if errorlevel 1 exit /b 1

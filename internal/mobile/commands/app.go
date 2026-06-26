@@ -89,7 +89,7 @@ func appGetCmd(o *Opts) *cobra.Command {
 	var appURL, appID, customID string
 	c := &cobra.Command{Use: "get", RunE: func(cmd *cobra.Command, args []string) error {
 		if appURL == "" && appID == "" && customID == "" {
-			return print(cmd, o, output.Failure("invalid_args", "one of --app-url, --app-id, or --custom-id is required", "Run mobile app list --json to discover app references.", 400))
+			return print(cmd, o, output.Failure("invalid_args", "one of --app-url, --app-id, or --custom-id is required", "Run mobile-auto app list --json to discover app references.", 400))
 		}
 		svc, err := newServices(o, true)
 		if err != nil {

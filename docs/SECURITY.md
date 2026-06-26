@@ -11,12 +11,12 @@
 - Tests: use mock servers and fake credentials only.
 - Vulnerability reports: report suspected credential leaks or unsafe URL handling through the repository security reporting process.
 
-## Mobile
+## Mobile Auto
 
 - BrowserStack credentials come from `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` by default and are never printed.
-- `mobile type --text-env` and `--text-stdin` do not echo typed values and do not save them in run state.
+- `mobile-auto type --text-env` and `--text-stdin` do not echo typed values and do not save them in run state.
 - Screenshots, source XML, videos, logs, HAR/network logs, and crash logs may contain PII. Envelopes return paths, sizes, hashes, and content types rather than raw binary or large log content.
-- Public mobile runs must not start BrowserStack Local or set `local=true`.
+- Public mobile-auto runs must not start BrowserStack Local or set `local=true`.
 - BrowserStack Local is only for private/internal network access. The CLI never auto-downloads the binary and only stops managed tunnel processes recorded in EFP state.
 - The Appium plane exposes bounded routes only; it does not expose arbitrary `execute_script`, arbitrary `mobile:*`, arbitrary ADB shell, or raw BrowserStack REST pass-through commands.
 

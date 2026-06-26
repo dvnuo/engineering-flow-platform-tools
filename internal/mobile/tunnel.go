@@ -67,7 +67,7 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 	bin := firstNonEmpty(os.Getenv(m.Config.BinaryEnv), m.Config.Binary)
 	resolved, err := exec.LookPath(bin)
 	if err != nil {
-		return TunnelState{}, NewError("local_binary_not_found", "BrowserStack Local binary was not found", "Set BROWSERSTACK_LOCAL_BINARY or mobile.browserstack.local.binary, or put BrowserStackLocal on PATH.", 404)
+		return TunnelState{}, NewError("local_binary_not_found", "BrowserStack Local binary was not found", "Set BROWSERSTACK_LOCAL_BINARY or mobile-auto.browserstack.local.binary, or put BrowserStackLocal on PATH.", 404)
 	}
 	identifier := req.LocalIdentifier
 	if identifier == "" {
@@ -115,7 +115,7 @@ func (m *TunnelManager) Start(req TunnelStartRequest) (TunnelState, error) {
 		LogPath:         logPath,
 		StartedAt:       time.Now().UTC(),
 		Deadline:        time.Now().UTC().Add(req.HoldFor),
-		Owner:           "efp-mobile",
+		Owner:           "efp-mobile-auto",
 		Status:          "starting",
 	}
 	if err := m.Save(state); err != nil {
@@ -295,14 +295,14 @@ func localBinaryArgs(configPath, identifier string, cfg config.MobileLocalConfig
 	if strings.TrimSpace(cfg.ProxyUserEnv) != "" {
 		value, ok := os.LookupEnv(strings.TrimSpace(cfg.ProxyUserEnv))
 		if !ok || strings.TrimSpace(value) == "" {
-			return nil, NewError("config_error", "BrowserStack Local proxy username env var is not set", "Set "+strings.TrimSpace(cfg.ProxyUserEnv)+" or remove mobile.browserstack.local.proxy_user_env.", 400)
+			return nil, NewError("config_error", "BrowserStack Local proxy username env var is not set", "Set "+strings.TrimSpace(cfg.ProxyUserEnv)+" or remove mobile-auto.browserstack.local.proxy_user_env.", 400)
 		}
 		args = append(args, "--proxy-user", value)
 	}
 	if strings.TrimSpace(cfg.ProxyPassEnv) != "" {
 		value, ok := os.LookupEnv(strings.TrimSpace(cfg.ProxyPassEnv))
 		if !ok || strings.TrimSpace(value) == "" {
-			return nil, NewError("config_error", "BrowserStack Local proxy password env var is not set", "Set "+strings.TrimSpace(cfg.ProxyPassEnv)+" or remove mobile.browserstack.local.proxy_pass_env.", 400)
+			return nil, NewError("config_error", "BrowserStack Local proxy password env var is not set", "Set "+strings.TrimSpace(cfg.ProxyPassEnv)+" or remove mobile-auto.browserstack.local.proxy_pass_env.", 400)
 		}
 		args = append(args, "--proxy-pass", value)
 	}
@@ -473,7 +473,7 @@ func (m *TunnelManager) listTunnels() ([]TunnelState, error) {
 }
 
 func (m *TunnelManager) orphanedTunnel(st TunnelState) bool {
-	if !st.Managed || st.Owner != "efp-mobile" || st.Status == "stopped" || st.Status == "exited" {
+	if !st.Managed || st.Owner != "efp-mobile-auto" || st.Status == "stopped" || st.Status == "exited" {
 		return false
 	}
 	if tunnelDeadlineExpired(st, time.Now().UTC()) {

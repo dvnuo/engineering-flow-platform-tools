@@ -36,7 +36,7 @@ func TestTunnelStatusDoesNotOverwriteTerminalState(t *testing.T) {
 		Managed:         true,
 		PID:             os.Getpid(),
 		LocalIdentifier: "local-1",
-		Owner:           "efp-mobile",
+		Owner:           "efp-mobile-auto",
 		Status:          "stopped",
 	}
 	if err := mgr.Save(state); err != nil {
@@ -63,7 +63,7 @@ func TestTunnelStatusMarksExpiredRunningTunnel(t *testing.T) {
 		Managed:         true,
 		PID:             os.Getpid(),
 		LocalIdentifier: "local-1",
-		Owner:           "efp-mobile",
+		Owner:           "efp-mobile-auto",
 		Status:          "running",
 		Deadline:        time.Now().UTC().Add(-time.Minute),
 	}
@@ -94,7 +94,7 @@ func TestTunnelStatusMarksDeadManagedProcessExited(t *testing.T) {
 		Managed:         true,
 		PID:             99999999,
 		LocalIdentifier: "local-1",
-		Owner:           "efp-mobile",
+		Owner:           "efp-mobile-auto",
 		Status:          "running",
 		Deadline:        time.Now().UTC().Add(time.Hour),
 	}
@@ -126,7 +126,7 @@ func TestTunnelStatusMarksOwnershipUnverifiedForMismatchedPID(t *testing.T) {
 		PID:             os.Getpid(),
 		BinaryPath:      filepath.Join(t.TempDir(), "not-browserstack-local"),
 		LocalIdentifier: "local-1",
-		Owner:           "efp-mobile",
+		Owner:           "efp-mobile-auto",
 		Status:          "running",
 		Deadline:        time.Now().UTC().Add(time.Hour),
 	}
@@ -199,7 +199,7 @@ func TestMarkExitedOnlyWhenTunnelStillRunning(t *testing.T) {
 		t.Fatal(err)
 	}
 	mgr := &TunnelManager{Store: store}
-	running := TunnelState{Version: 1, RunID: "run-1", Managed: true, PID: os.Getpid(), LocalIdentifier: "local-1", Owner: "efp-mobile", Status: "running"}
+	running := TunnelState{Version: 1, RunID: "run-1", Managed: true, PID: os.Getpid(), LocalIdentifier: "local-1", Owner: "efp-mobile-auto", Status: "running"}
 	if err := mgr.Save(running); err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +240,7 @@ func TestCleanupOrphansStopsStandaloneManagedTunnel(t *testing.T) {
 		Managed:         true,
 		PID:             99999999,
 		LocalIdentifier: "local-1",
-		Owner:           "efp-mobile",
+		Owner:           "efp-mobile-auto",
 		Status:          "running",
 		Deadline:        time.Now().UTC().Add(-time.Minute),
 	}
@@ -338,7 +338,7 @@ func TestTunnelStopRefusesUnverifiedRunningPID(t *testing.T) {
 		PID:             os.Getpid(),
 		BinaryPath:      filepath.Join(t.TempDir(), "not-browserstack-local"),
 		LocalIdentifier: "local-1",
-		Owner:           "efp-mobile",
+		Owner:           "efp-mobile-auto",
 		Status:          "running",
 	}
 	if err := mgr.Save(state); err != nil {
@@ -364,7 +364,7 @@ func TestCleanupOrphansMarksUnverifiedRunningPID(t *testing.T) {
 		PID:             os.Getpid(),
 		BinaryPath:      filepath.Join(t.TempDir(), "not-browserstack-local"),
 		LocalIdentifier: "local-1",
-		Owner:           "efp-mobile",
+		Owner:           "efp-mobile-auto",
 		Status:          "running",
 		Deadline:        time.Now().UTC().Add(-time.Minute),
 	}

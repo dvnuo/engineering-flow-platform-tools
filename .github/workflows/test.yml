@@ -32,7 +32,7 @@ jobs:
       - run: go build ./cmd/jenkins
       - run: go build ./cmd/aws-auth
       - run: go build ./cmd/browser
-      - run: go build ./cmd/mobile
+      - run: go build ./cmd/mobile-auto
       - run: go build ./cmd/inspect-image
       - run: go build ./cmd/visual
       - name: smoke unix

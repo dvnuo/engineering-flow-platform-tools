@@ -56,7 +56,7 @@ func TestMobileBrowserStackLivePublicSessionSmoke(t *testing.T) {
 		App:                      appURL,
 		DeviceName:               device,
 		PlatformVersion:          version,
-		SessionName:              "efp-mobile-live-smoke",
+		SessionName:              "efp-mobile-auto-live-smoke",
 		NetworkMode:              "public",
 		InteractiveDebugging:     true,
 		Video:                    true,

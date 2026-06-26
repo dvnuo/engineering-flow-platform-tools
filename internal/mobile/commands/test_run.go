@@ -64,7 +64,7 @@ func testRunCmd(o *Opts) *cobra.Command {
 	var dryRun, continueOnFailure bool
 	c := &cobra.Command{Use: "run", RunE: func(cmd *cobra.Command, args []string) error {
 		if filePath == "" {
-			return print(cmd, o, output.Failure("invalid_args", "--file is required", "Pass a mobile test suite YAML file.", 400))
+			return print(cmd, o, output.Failure("invalid_args", "--file is required", "Pass a mobile-auto test suite YAML file.", 400))
 		}
 		suite, err := readMobileTestSuite(filePath)
 		if err != nil {
@@ -114,7 +114,7 @@ func testRunCmd(o *Opts) *cobra.Command {
 			data["junit_path"] = junitOut
 		}
 		if failed > 0 {
-			env := output.Failure("test_failed", "one or more mobile test cases failed", "Inspect results, JUnit, and evidence artifacts.", 412)
+			env := output.Failure("test_failed", "one or more mobile-auto test cases failed", "Inspect results, JUnit, and evidence artifacts.", 412)
 			env.Data = data
 			return print(cmd, o, env)
 		}
@@ -494,7 +494,7 @@ func writeJUnitReport(path, suiteName string, results []mobileTestCaseResult) er
 		if !result.Passed {
 			out.Failures++
 			body, _ := json.Marshal(output.RedactValue(result.Error))
-			tc.Failure = &junitFailure{Message: "mobile test failed", Body: string(body)}
+			tc.Failure = &junitFailure{Message: "mobile-auto test failed", Body: string(body)}
 		}
 		out.Cases = append(out.Cases, tc)
 	}

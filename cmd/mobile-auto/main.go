@@ -7,5 +7,5 @@ import (
 )
 
 func main() {
-	os.Exit(clihelp.Execute(commands.NewRoot(), "mobile", os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(clihelp.Execute(commands.NewRoot(), "mobile-auto", os.Args[1:], os.Stdout, os.Stderr))
 }

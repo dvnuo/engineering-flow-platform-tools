@@ -67,7 +67,7 @@ func workflowRunCmd(o *Opts) *cobra.Command {
 	var dryRun bool
 	c := &cobra.Command{Use: "run", RunE: func(cmd *cobra.Command, args []string) error {
 		if filePath == "" {
-			return print(cmd, o, output.Failure("invalid_args", "--file is required", "Pass a mobile workflow YAML file.", 400))
+			return print(cmd, o, output.Failure("invalid_args", "--file is required", "Pass a mobile-auto workflow YAML file.", 400))
 		}
 		spec, err := readWorkflowSpec(filePath)
 		if err != nil {
@@ -333,7 +333,7 @@ func workflowStepArgs(step workflowStep) ([]string, error) {
 	case "permissions.deny":
 		return appendRunID([]string{"permissions", "deny"}, step.RunID), nil
 	default:
-		return nil, mobileError("invalid_args", "workflow action is not whitelisted: "+action, "Use structured mobile workflow actions such as observe, tap, assert.visible, or run.finish.", 400)
+		return nil, mobileError("invalid_args", "workflow action is not whitelisted: "+action, "Use structured mobile-auto workflow actions such as observe, tap, assert.visible, or run.finish.", 400)
 	}
 }
 

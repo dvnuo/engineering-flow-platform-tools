@@ -73,7 +73,7 @@ func New(baseURL string, creds browserstack.Credentials, verifySSL bool, caCert 
 		Proxy:                 proxy,
 	})
 	if err != nil {
-		return nil, mobile.NewError("config_error", "invalid Appium HTTP transport configuration: "+err.Error(), "Check mobile.browserstack.http_proxy, verify_ssl, and ca_cert.", 400)
+		return nil, mobile.NewError("config_error", "invalid Appium HTTP transport configuration: "+err.Error(), "Check mobile-auto.browserstack.http_proxy, verify_ssl, and ca_cert.", 400)
 	}
 	return &Client{baseURL: baseURL, http: &http.Client{Timeout: defaultHTTPTimeout, Transport: tr}, creds: creds, proxy: diag}, nil
 }
@@ -181,10 +181,10 @@ func (c *Client) CreateSession(ctx context.Context, req CreateSessionRequest) (S
 
 func validateCreateSessionRequest(req CreateSessionRequest) error {
 	if req.IdleTimeoutSeconds < 0 || req.IdleTimeoutSeconds > 300 {
-		return mobile.NewError("invalid_args", "idle timeout must be between 1 and 300 seconds", "Set mobile.defaults.idle_timeout_seconds to a BrowserStack-supported value.", 400)
+		return mobile.NewError("invalid_args", "idle timeout must be between 1 and 300 seconds", "Set mobile-auto.defaults.idle_timeout_seconds to a BrowserStack-supported value.", 400)
 	}
 	if req.NewCommandTimeoutSeconds < 0 {
-		return mobile.NewError("invalid_args", "new command timeout cannot be negative", "Set mobile.defaults.new_command_timeout_seconds to a positive value.", 400)
+		return mobile.NewError("invalid_args", "new command timeout cannot be negative", "Set mobile-auto.defaults.new_command_timeout_seconds to a positive value.", 400)
 	}
 	return nil
 }
@@ -397,7 +397,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, body any, out 
 	resp, err := c.http.Do(req)
 	if err != nil {
 		context := httpclient.ProxyDiagnosticText(c.baseURL, c.proxy)
-		return mobile.RetryableError("network_error", "Appium request failed: "+sanitize(err.Error(), c.creds)+" ("+context+")", "Check BrowserStack Appium hub connectivity and mobile.browserstack.http_proxy.", "retry", 503)
+		return mobile.RetryableError("network_error", "Appium request failed: "+sanitize(err.Error(), c.creds)+" ("+context+")", "Check BrowserStack Appium hub connectivity and mobile-auto.browserstack.http_proxy.", "retry", 503)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {

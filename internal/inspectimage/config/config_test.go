@@ -35,6 +35,16 @@ func TestEnvConfigOverridesPath(t *testing.T) {
 	}
 }
 
+func TestDefaultProviderUsesAIPlatform(t *testing.T) {
+	cfg := Default()
+	if cfg.Provider != ProviderAIPlatform {
+		t.Fatalf("provider=%q want %q", cfg.Provider, ProviderAIPlatform)
+	}
+	if NormalizeProvider("") != ProviderAIPlatform {
+		t.Fatalf("empty provider should normalize to the default AI Platform provider")
+	}
+}
+
 func TestDefaultPathUsesHomeCopilot(t *testing.T) {
 	t.Setenv(EnvConfigPath, "")
 	t.Setenv(EnvLegacyConfigPath, "")
@@ -185,13 +195,14 @@ func TestSaveMigratesLegacyInspectJSONWithoutTopLevelAuth(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "inspect-image.json")
 	tokenPath := filepath.Join(dir, "tmp", "copilot_token")
+	tokenPathJSON := strings.ReplaceAll(tokenPath, `\`, `\\`)
 	legacy := []byte(`{
   "version": 1,
   "provider": "github_copilot_plugin",
   "api": {"endpoint_kind": "responses", "base_url": "https://api.githubcopilot.com", "timeout_seconds": 90, "use_system_proxy": true},
   "defaults": {"model": "gpt-5.4", "reasoning": "medium", "output": "text"},
   "limits": {"max_image_bytes": 3145728, "max_images_per_call": 1, "allowed_mime_types": ["image/png"]},
-  "auth": {"method": "device_code", "github_host": "github.com", "github_access_token": "gh-secret", "copilot_token": "cp-secret", "copilot_token_expires_at": "2099-01-01T00:00:00Z"},
+  "auth": {"method": "device_code", "github_host": "github.com", "github_access_token": "gh-secret", "copilot_token": "cp-secret", "copilot_token_expires_at": "2099-01-01T00:00:00Z", "copilot_token_file": "` + tokenPathJSON + `"},
   "privacy": {"redact_tokens_in_logs": true}
 }`)
 	if err := os.WriteFile(cfgPath, legacy, 0o600); err != nil {

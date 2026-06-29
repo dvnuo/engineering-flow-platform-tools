@@ -14,20 +14,20 @@ import (
 	"time"
 
 	"engineering-flow-platform-tools/internal/inspectimage/config"
-	"engineering-flow-platform-tools/internal/inspectimage/copilot"
+	"engineering-flow-platform-tools/internal/inspectimage/vision"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
 type fakeClient struct{}
 
-func (f *fakeClient) Responses(ctx context.Context, req copilot.ResponsesRequest) (map[string]any, error) {
+func (f *fakeClient) Responses(ctx context.Context, req vision.Request) (map[string]any, error) {
 	return map[string]any{"output_text": `{"answer":"ok"}`}, nil
 }
 
 type secretClient struct{}
 
-func (f *secretClient) Responses(ctx context.Context, req copilot.ResponsesRequest) (map[string]any, error) {
+func (f *secretClient) Responses(ctx context.Context, req vision.Request) (map[string]any, error) {
 	return map[string]any{"output_text": `{"answer":"Authorization: Bearer secret-token-should-not-appear","temporaryCredentials":"secret-password-should-not-appear"}`}, nil
 }
 
@@ -141,7 +141,7 @@ func TestHelpIncludesDetailedCommandGuidance(t *testing.T) {
 		{
 			name: "root",
 			args: []string{"--help"},
-			want: []string{"text-only agents", "GitHub Copilot /responses", "AI Platform /chat/completions", "EFP_CONFIG"},
+			want: []string{"text-only agents", "AI Platform /chat/completions is the default", "GitHub Copilot /responses", "EFP_CONFIG"},
 		},
 		{
 			name: "inspect",
@@ -156,7 +156,7 @@ func TestHelpIncludesDetailedCommandGuidance(t *testing.T) {
 		{
 			name: "auth login",
 			args: []string{"auth", "login", "--help"},
-			want: []string{"verification URL", "copilot_token_expires_at"},
+			want: []string{"verification URL", "token_state"},
 		},
 		{
 			name: "doctor",
@@ -235,6 +235,7 @@ func TestAuthStatusInvalidConfigReturnsParseDetail(t *testing.T) {
 func TestAuthStatusRefreshableGitHubTokenIsOK(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
 	cfg := config.Default()
+	cfg.Provider = config.ProviderGitHubCopilot
 	cfg.Auth.GitHubAccessToken = "github-token"
 	cfg.Auth.CopilotToken = "stale-copilot-token"
 	cfg.Auth.CopilotTokenExpiresAt = time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
@@ -254,6 +255,7 @@ func TestAuthStatusRefreshableGitHubTokenIsOK(t *testing.T) {
 func TestDoctorAcceptsRefreshableGitHubToken(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
 	cfg := config.Default()
+	cfg.Provider = config.ProviderGitHubCopilot
 	cfg.Auth.GitHubAccessToken = "github-token"
 	cfg.Auth.CopilotToken = "stale-copilot-token"
 	cfg.Auth.CopilotTokenExpiresAt = time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
@@ -279,6 +281,7 @@ func TestAuthTestRefreshesExpiredCopilotToken(t *testing.T) {
 	}
 	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
 	cfg := config.Default()
+	cfg.Provider = config.ProviderGitHubCopilot
 	cfg.Auth.GitHubAccessToken = "github-token"
 	cfg.Auth.CopilotToken = "stale-copilot-token"
 	cfg.Auth.CopilotTokenExpiresAt = time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
@@ -329,6 +332,7 @@ func TestInspectRefreshesAfterResponsesAuthError(t *testing.T) {
 	path := writePNG(t)
 	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
 	cfg := config.Default()
+	cfg.Provider = config.ProviderGitHubCopilot
 	cfg.API.BaseURL = s.URL
 	cfg.Auth.GitHubAccessToken = "github-token"
 	cfg.Auth.CopilotToken = "old-copilot-token"
@@ -582,7 +586,7 @@ func TestExecutePrintsFallbackForBadFormat(t *testing.T) {
 }
 
 func run(t *testing.T, client interface {
-	Responses(context.Context, copilot.ResponsesRequest) (map[string]any, error)
+	Responses(context.Context, vision.Request) (map[string]any, error)
 }, args ...string) map[string]any {
 	t.Helper()
 	isolateInspectImageConfig(t, args)
@@ -600,7 +604,7 @@ func run(t *testing.T, client interface {
 }
 
 func runSplit(t *testing.T, client interface {
-	Responses(context.Context, copilot.ResponsesRequest) (map[string]any, error)
+	Responses(context.Context, vision.Request) (map[string]any, error)
 }, args ...string) (string, string) {
 	t.Helper()
 	isolateInspectImageConfig(t, args)
@@ -616,7 +620,7 @@ func runSplit(t *testing.T, client interface {
 }
 
 func runText(t *testing.T, client interface {
-	Responses(context.Context, copilot.ResponsesRequest) (map[string]any, error)
+	Responses(context.Context, vision.Request) (map[string]any, error)
 }, args ...string) string {
 	t.Helper()
 	isolateInspectImageConfig(t, args)

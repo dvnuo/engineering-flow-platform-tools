@@ -43,7 +43,7 @@ copilot:
     updated_at: ""
 
 inspect_image:
-  provider: github_copilot_plugin # github_copilot_plugin | ai_platform
+  provider: ai_platform # ai_platform | github_copilot_plugin
   defaults:
     model: gpt-5.4-mini
     reasoning: medium
@@ -122,7 +122,7 @@ ai_platform:
 
 ## Copilot Auth
 
-`copilot.auth` stores shared GitHub/Copilot authentication metadata for commands that use Copilot-backed APIs. The short-lived `copilot_token` is not stored in `config.yaml`; it is stored in the file named by `copilot.auth.copilot_token_file`, which defaults to `~/.efp/tmp/copilot_token`.
+`copilot.auth` stores GitHub/Copilot authentication metadata only when `inspect_image.provider=github_copilot_plugin`. The short-lived `copilot_token` is not stored in `config.yaml`; it is stored in the file named by `copilot.auth.copilot_token_file`, which defaults to `~/.efp/tmp/copilot_token`.
 
 The token file uses YAML:
 
@@ -136,12 +136,12 @@ updated_at: ""
 
 `inspect_image.provider` selects the image-inspection backend:
 
-- `github_copilot_plugin`: uses the GitHub Copilot plugin `/responses` endpoint.
-- `ai_platform`: uses the enterprise AI Platform `/chat/completions` endpoint after exchanging an iB2B JWT.
+- `ai_platform`: default; uses the enterprise AI Platform `/chat/completions` endpoint after exchanging an iB2B JWT.
+- `github_copilot_plugin`: optional; uses the GitHub Copilot plugin `/responses` endpoint.
 
 Model names are not locally restricted. `inspect_image.defaults.model` defaults to `gpt-5.4-mini`, and `--model <name>` is passed through to the selected provider.
 
-Provider-specific endpoint settings live at the root provider nodes. `copilot.api` configures the GitHub Copilot `/responses` endpoint, while `ai_platform.chat` and `ai_platform.ib2b` configure AI Platform.
+Provider-specific endpoint settings live at the root provider nodes. `ai_platform.chat` and `ai_platform.ib2b` configure the default AI Platform path, while `copilot.api` configures the optional GitHub Copilot `/responses` endpoint.
 
 ## AI Platform Auth
 

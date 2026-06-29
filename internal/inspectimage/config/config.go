@@ -5,7 +5,7 @@ import "strings"
 const (
 	ProviderGitHubCopilot             = "github_copilot_plugin"
 	ProviderAIPlatform                = "ai_platform"
-	Provider                          = ProviderGitHubCopilot
+	Provider                          = ProviderAIPlatform
 	EndpointKind                      = "responses"
 	DefaultBaseURL                    = "https://api.githubcopilot.com"
 	DefaultTimeoutSeconds             = 90
@@ -185,7 +185,9 @@ func (c *Config) FillDefaults() {
 func NormalizeProvider(provider string) string {
 	normalized := strings.ToLower(strings.TrimSpace(provider))
 	switch normalized {
-	case "", ProviderGitHubCopilot, "github", "copilot":
+	case "":
+		return Provider
+	case ProviderGitHubCopilot, "github", "copilot":
 		return ProviderGitHubCopilot
 	case ProviderAIPlatform, "ai-platform", "ai platform":
 		return ProviderAIPlatform

@@ -19,6 +19,7 @@ import (
 	"engineering-flow-platform-tools/internal/inspectimage/copilot"
 	"engineering-flow-platform-tools/internal/inspectimage/imagecheck"
 	"engineering-flow-platform-tools/internal/inspectimage/inspect"
+	"engineering-flow-platform-tools/internal/inspectimage/vision"
 	"engineering-flow-platform-tools/internal/output"
 	"engineering-flow-platform-tools/internal/version"
 	"github.com/spf13/cobra"
@@ -62,7 +63,7 @@ func NewRootWithClient(client inspect.ResponsesClient) *cobra.Command {
 
 It is invoked from Bash or a terminal. It is not a Portal tool, runtime built-in tool, or MCP server.
 
-The inspect command validates the local image first, then sends the image bytes to the configured provider endpoint. Supported providers are GitHub Copilot /responses and AI Platform /chat/completions. For agent workflows, default every command and subcommand to --json so callers can read ok, data.result.answer, data.result.visible_text, error.code, and error.hint.
+The inspect command validates the local image first, then sends the image bytes to the configured provider endpoint. AI Platform /chat/completions is the default provider; GitHub Copilot /responses remains available when explicitly configured. For agent workflows, default every command and subcommand to --json so callers can read ok, data.result.answer, data.result.visible_text, error.code, and error.hint.
 
 Configuration is stored in ~/.efp/config.yaml by default. Set EFP_CONFIG or pass --config to use a different file.`),
 		Example: strings.TrimSpace(`inspect-image auth status --json
@@ -311,16 +312,15 @@ func authLoginCmd(o *Opts) *cobra.Command {
 	var providerFlag, username, password, usercase string
 	var passwordStdin bool
 	c := &cobra.Command{Use: "login",
-		Short: "Sign in with GitHub device flow",
+		Short: "Sign in with the configured provider",
 		Long: strings.TrimSpace(`Create the config file if needed.
 
 For GitHub Copilot, start GitHub device authentication, print the verification URL and user code in human mode, then exchange the GitHub token for a Copilot plugin token.
 
 For AI Platform, save username, password, and usercase credentials from flags or stdin, then validate them by exchanging an iB2B token.
 
-JSON mode prints only non-secret status fields such as auth_configured, github_host, github_user, and copilot_token_expires_at.`),
-		Example: strings.TrimSpace(`inspect-image auth login
-inspect-image auth login --json
+JSON mode prints only non-secret status fields such as auth_configured, provider, token_state, github_user, and token expiry timestamps.`),
+		Example: strings.TrimSpace(`inspect-image auth login --provider github_copilot_plugin
 inspect-image auth login --provider ai_platform --username <user> --usercase <case> --password-stdin --json`),
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -407,7 +407,7 @@ This command never prints github_access_token, copilot_token, AI Platform passwo
 				if !errors.Is(err, os.ErrNotExist) {
 					return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix ~/.efp/config.yaml or pass --config.", 400))
 				}
-				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
+				return print(cmd, o, authRequiredFailure(config.Provider))
 			}
 			now := time.Now()
 			if cfg.Provider == config.ProviderAIPlatform {
@@ -443,7 +443,7 @@ If the short-lived provider token is expired but stored credentials are still us
 				if !errors.Is(err, os.ErrNotExist) {
 					return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix ~/.efp/config.yaml or pass --config.", 400))
 				}
-				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
+				return print(cmd, o, authRequiredFailure(config.Provider))
 			}
 			refreshed := false
 			if cfg.Provider == config.ProviderAIPlatform {
@@ -499,7 +499,7 @@ This command requires --yes so agents do not accidentally remove credentials dur
 				cfg = iauth.Logout(cfg)
 			}
 			if err := config.Save(path, cfg); err != nil {
-				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be saved.", err), "Check permissions for ~/.efp/config.yaml and ~/.efp/tmp/copilot_token.", 500))
+				return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be saved.", err), tokenSaveHint(cfg.Provider), 500))
 			}
 			return print(cmd, o, output.Success("", map[string]any{"auth_configured": false, "provider": cfg.Provider, "github_host": cfg.Auth.GitHubHost}))
 		}}
@@ -525,7 +525,7 @@ Doctor does not print tokens. An expired short-lived token is ok when it is refr
 				if !errors.Is(err, os.ErrNotExist) {
 					return print(cmd, o, fail("config_error", messageWithDetail("Config file could not be loaded.", err), "Fix ~/.efp/config.yaml or pass --config.", 400))
 				}
-				return print(cmd, o, fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login.", 401))
+				return print(cmd, o, authRequiredFailure(config.Provider))
 			}
 			now := time.Now()
 			if cfg.Provider == config.ProviderAIPlatform {
@@ -718,6 +718,10 @@ func errEnvelope(err error) output.Envelope {
 	if errors.As(err, &ai) {
 		return fail(ai.Code, ai.Message, ai.Hint, ai.Status)
 	}
+	var le *vision.Error
+	if errors.As(err, &le) {
+		return fail(le.Code, le.Message, le.Hint, le.Status)
+	}
 	var ae *iauth.APIError
 	if errors.As(err, &ae) {
 		return fail(ae.Code, ae.Message, ae.Hint, ae.Status)
@@ -732,6 +736,28 @@ func errEnvelope(err error) output.Envelope {
 
 func fail(code, message, hint string, status int) output.Envelope {
 	return output.Failure(code, message, hint, status)
+}
+
+func authRequiredFailure(provider string) output.Envelope {
+	switch config.NormalizeProvider(provider) {
+	case config.ProviderAIPlatform:
+		return fail("auth_required", "AI Platform authentication is required.", "Configure ai_platform auth and endpoints, then run inspect-image auth test --json.", 401)
+	case config.ProviderGitHubCopilot:
+		return fail("auth_required", "GitHub Copilot authentication is required.", "Run inspect-image auth login --provider github_copilot_plugin.", 401)
+	default:
+		return fail("auth_required", "Provider authentication is required.", "Set inspect_image.provider to ai_platform or github_copilot_plugin, then run inspect-image auth test --json.", 401)
+	}
+}
+
+func tokenSaveHint(provider string) string {
+	switch config.NormalizeProvider(provider) {
+	case config.ProviderAIPlatform:
+		return "Check permissions for ~/.efp/config.yaml and ~/.efp/tmp/ai_platform_token."
+	case config.ProviderGitHubCopilot:
+		return "Check permissions for ~/.efp/config.yaml and ~/.efp/tmp/copilot_token."
+	default:
+		return "Check permissions for ~/.efp/config.yaml and provider token files under ~/.efp/tmp."
+	}
 }
 
 func messageWithDetail(message string, err error) string {
@@ -807,7 +833,7 @@ func wrapVerboseClient(cmd *cobra.Command, o *Opts, client inspect.ResponsesClie
 	return &verboseResponsesClient{cmd: cmd, opts: o, inner: client}
 }
 
-func (v *verboseResponsesClient) Responses(ctx context.Context, req copilot.ResponsesRequest) (map[string]any, error) {
+func (v *verboseResponsesClient) Responses(ctx context.Context, req vision.Request) (map[string]any, error) {
 	debugf(v.cmd, v.opts, "sending provider image request model=%s reasoning=%s content_items=%d", req.Model, req.Reasoning.Effort, countInputContent(req))
 	raw, err := v.inner.Responses(ctx, req)
 	if err != nil {
@@ -818,7 +844,7 @@ func (v *verboseResponsesClient) Responses(ctx context.Context, req copilot.Resp
 	return raw, nil
 }
 
-func countInputContent(req copilot.ResponsesRequest) int {
+func countInputContent(req vision.Request) int {
 	n := 0
 	for _, input := range req.Input {
 		n += len(input.Content)

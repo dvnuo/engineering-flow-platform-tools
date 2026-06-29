@@ -1,4 +1,4 @@
-package copilot
+package vision
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ type Parsed struct {
 
 func ParseResponse(raw map[string]any) (Parsed, error) {
 	if isRefusal(raw) {
-		return Parsed{}, &APIError{Code: "safety_refusal", Message: "The model refused to inspect the image.", Hint: "Try a narrower prompt that asks for visible, non-sensitive details only.", Status: 400}
+		return Parsed{}, &Error{Code: "safety_refusal", Message: "The model refused to inspect the image.", Hint: "Try a narrower prompt that asks for visible, non-sensitive details only.", Status: 400}
 	}
 	text := outputText(raw)
 	if strings.TrimSpace(text) == "" {

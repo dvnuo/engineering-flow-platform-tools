@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"engineering-flow-platform-tools/internal/inspectimage/config"
-	"engineering-flow-platform-tools/internal/inspectimage/copilot"
+	"engineering-flow-platform-tools/internal/inspectimage/vision"
 )
 
 const tokenTTL = 30 * time.Second
@@ -81,7 +81,7 @@ func NewHTTPClient(timeout time.Duration) *http.Client {
 	return &http.Client{Timeout: timeout, Transport: tr}
 }
 
-func (c *Client) Responses(ctx context.Context, req copilot.ResponsesRequest) (map[string]any, error) {
+func (c *Client) Responses(ctx context.Context, req vision.Request) (map[string]any, error) {
 	if strings.TrimSpace(c.Token) == "" {
 		return nil, &APIError{Code: "auth_required", Message: "AI Platform authentication is required.", Hint: "Configure ai_platform.auth.username, password, and usercase, then run inspect-image auth test --json.", Status: 401}
 	}
@@ -221,7 +221,7 @@ func (c *Client) now() time.Time {
 	return time.Now()
 }
 
-func buildChatRequest(req copilot.ResponsesRequest, user string) map[string]any {
+func buildChatRequest(req vision.Request, user string) map[string]any {
 	messages := []map[string]any{}
 	if strings.TrimSpace(req.Instructions) != "" {
 		messages = append(messages, map[string]any{"role": "developer", "content": req.Instructions})

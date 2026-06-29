@@ -10,7 +10,7 @@
 - `internal/httpclient`: REST client, pagination helpers, URL guarding, and HTTP error normalization.
 - `internal/output`: table, JSON, and YAML envelope rendering.
 - `internal/catalog`: command metadata used by `commands --json` and `schema <command> --json`.
-- `internal/inspectimage`: standalone image inspection CLI packages for GitHub Copilot auth, AI Platform iB2B auth, one-file image validation, provider calls, and agent-facing command metadata. It does not use the Atlassian `internal/config` schema.
+- `internal/inspectimage`: standalone image inspection CLI packages for AI Platform iB2B auth, optional GitHub Copilot auth, one-file image validation, provider calls, and agent-facing command metadata. It does not use the Atlassian `internal/config` schema.
 - `internal/mobileauto/commands`: Cobra command tree for the BrowserStack App Automate controller.
 - `internal/browserstack`: BrowserStack App Automate control-plane REST client for apps, devices, capacity, projects, builds, sessions, and artifacts.
 - `internal/appium`: small W3C/Appium HTTP client for remote BrowserStack sessions.

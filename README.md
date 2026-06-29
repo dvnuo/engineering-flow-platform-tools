@@ -82,12 +82,12 @@ All CLI binaries return a stable JSON `invalid_args` envelope for command parsin
 
 ### Inspect Image
 
-`inspect-image` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It lets text-only agents inspect exactly one local image using a GitHub Copilot plugin backed vision model through `/responses`.
+`inspect-image` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It lets text-only agents inspect exactly one local image using AI Platform `/chat/completions` by default.
 
 Examples:
 
 ```bash
-inspect-image auth login
+printf '%s\n' "$AI_PLATFORM_PASSWORD" | inspect-image auth login --provider ai_platform --username "$AI_PLATFORM_USERNAME" --usercase "$AI_PLATFORM_USERCASE" --password-stdin --json
 inspect-image auth test --json
 inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --json
 inspect-image inspect --image ./screenshot.png --prompt "Read the visible error and explain what is happening." --out ./inspect-image-result.json --json
@@ -129,7 +129,7 @@ visual version --json
 - Environment override: `EFP_CONFIG`
 - Default path: `~/.efp/config.yaml`
 - Legacy overrides still work: `ATLASSIAN_CONFIG` for Jira/Confluence and `INSPECT_IMAGE_CONFIG` for inspect-image.
-- Short-lived Copilot tokens are stored outside the main config at `~/.efp/tmp/copilot_token`.
+- Short-lived AI Platform tokens are stored outside the main config at `~/.efp/tmp/ai_platform_token`; GitHub Copilot provider tokens, when explicitly configured, use `~/.efp/tmp/copilot_token`.
 
 Complete example:
 
@@ -217,7 +217,7 @@ copilot:
     updated_at: ""
 
 inspect_image:
-  provider: github_copilot_plugin
+  provider: ai_platform
   defaults:
     model: gpt-5.4-mini
     reasoning: medium
@@ -262,8 +262,9 @@ Config node ownership:
 - `jira`: Jira instances, defaults, auth, TLS, and Zephyr settings.
 - `confluence`: Confluence instances, defaults, auth, and TLS settings.
 - `jenkins`: Jenkins instances, defaults, auth, TLS, and crumb behavior.
-- `copilot`: GitHub/Copilot authentication shared by commands that use Copilot-backed APIs.
+- `copilot`: optional GitHub/Copilot authentication for inspect-image when `inspect_image.provider=github_copilot_plugin`.
 - `inspect_image`: inspect-image API defaults, model defaults, image limits, and privacy settings.
+- `ai_platform`: AI Platform chat endpoint, iB2B token translator endpoint, and provider auth settings.
 - `aws`: AWS authorization settings used by `aws-auth login`.
 - `visual`: offline artifact template directory and default render behavior.
 

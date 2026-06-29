@@ -29,8 +29,8 @@
 
 ## Inspect Image
 
-- `inspect-image` sends local image bytes to the configured provider endpoint: GitHub Copilot `/responses` or AI Platform `/chat/completions`.
+- `inspect-image` sends local image bytes to the configured provider endpoint: AI Platform `/chat/completions` by default, or GitHub Copilot `/responses` when explicitly configured.
 - It accepts exactly one local image path and rejects remote URLs.
 - It does not store raw images or raw responses.
-- Shared config is stored in `~/.efp/config.yaml`; short-lived Copilot tokens are stored in `~/.efp/tmp/copilot_token`, and short-lived AI Platform tokens are stored in `~/.efp/tmp/ai_platform_token`. Files are written with `0600` permissions where supported.
+- Shared config is stored in `~/.efp/config.yaml`; short-lived AI Platform tokens are stored in `~/.efp/tmp/ai_platform_token`, and optional GitHub Copilot provider tokens are stored in `~/.efp/tmp/copilot_token`. Files are written with `0600` permissions where supported.
 - `github_access_token`, `copilot_token`, AI Platform passwords, iB2B `issued_token` values, trust-token headers, Authorization headers, and base64 image data must never appear in stdout, stderr, verbose output, dry-run output, or test snapshots.

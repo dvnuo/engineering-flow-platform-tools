@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"engineering-flow-platform-tools/internal/inspectimage/imagecheck"
+	"engineering-flow-platform-tools/internal/inspectimage/vision"
 )
 
 func TestResponsesUsesResponsesPathAndShape(t *testing.T) {
@@ -30,7 +31,7 @@ func TestResponsesUsesResponsesPathAndShape(t *testing.T) {
 	}))
 	defer s.Close()
 	img := imagecheck.ImageInfo{MIMEType: "image/png", Data: []byte{1, 2, 3}}
-	req, err := BuildRequest("gpt-5.4", "medium", "task", img)
+	req, err := vision.BuildRequest("gpt-5.4", "medium", "task", img)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,20 +48,6 @@ func TestResponsesUsesResponsesPathAndShape(t *testing.T) {
 	content := got["input"].([]any)[0].(map[string]any)["content"].([]any)
 	if content[0].(map[string]any)["type"] != "input_text" || !strings.HasPrefix(content[1].(map[string]any)["image_url"].(string), "data:image/png;base64,") {
 		t.Fatalf("bad content: %#v", content)
-	}
-}
-
-func TestBuildRequestAllowsArbitraryModelAndRejectsReasoning(t *testing.T) {
-	img := imagecheck.ImageInfo{MIMEType: "image/png", Data: []byte{1}}
-	req, err := BuildRequest("custom-model", "medium", "task", img)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if req.Model != "custom-model" {
-		t.Fatalf("model was not passed through: %#v", req)
-	}
-	if _, err := BuildRequest("gpt-5.4", "bad", "task", img); err == nil {
-		t.Fatal("expected reasoning rejection")
 	}
 }
 

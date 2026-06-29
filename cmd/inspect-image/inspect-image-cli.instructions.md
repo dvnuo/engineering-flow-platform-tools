@@ -18,13 +18,13 @@ When the task requires image analysis, image recognition, screenshot understandi
 
 Do not use OCR tools as the primary path. Do not write Python, Go, shell scripts, OpenCV/Tesseract snippets, image parsers, or ad hoc automation to recognize or interpret image content. Do not attempt to infer image content from filenames, metadata, dimensions, thumbnails, or surrounding text.
 
-If `inspect-image` is not authenticated, first check whether the stored GitHub access token can refresh the short-lived Copilot token:
+If `inspect-image` is not authenticated, first check whether stored provider credentials can refresh the short-lived provider token:
 
 ```bash
 inspect-image auth status --json
 ```
 
-If `data.token_state` is `refreshable`, `data.copilot_token_refreshable` is `true`, or `data.token_refreshable` is `true`, do not ask the user to log in again. Run:
+If `data.token_state` is `refreshable`, `data.token_refreshable` is `true`, or `data.copilot_token_refreshable` is `true` for an explicitly configured Copilot provider, do not ask the user to log in again. Run:
 
 ```bash
 inspect-image auth test --json
@@ -48,7 +48,7 @@ For agents, `--json` is the default way to use every `inspect-image` command and
 inspect-image inspect --image <local-path> --prompt "<task>" --json
 ```
 
-Only omit `--json` for human-facing interactive output such as asking the user to run GitHub Copilot `inspect-image auth login` and read the device-code prompt.
+Only omit `--json` for documented human-facing interactive output such as asking the user to run `inspect-image auth login` and complete a provider login prompt.
 
 The CLI writes the JSON envelope to stdout by default. `--out <file>` is only a diagnostic fallback or a second copy for terminal-capture issues; it is not required for normal use.
 
@@ -197,8 +197,10 @@ Common errors:
 - `reasoning_not_allowed`: use `low`, `medium`, `high`, or `xhigh`.
 - `invalid_args`: command parsing failed; call `inspect-image schema inspect --json` and rebuild the command.
 - `rate_limited`: wait and retry the same request.
-- `responses_api_error`: read `error.message` for the sanitized upstream detail, then retry or report the visible detail.
-- `responses_api_unavailable`: retry later or check network/proxy/Copilot availability.
+- `ai_platform_api_error`: read `error.message` for the sanitized upstream detail, then retry or report the visible detail.
+- `ai_platform_api_unavailable`: retry later or check network/proxy/AI Platform availability.
+- `responses_api_error`: Copilot provider only; read `error.message` for the sanitized upstream detail, then retry or report the visible detail.
+- `responses_api_unavailable`: Copilot provider only; retry later or check network/proxy/Copilot availability.
 - `proxy_error`: check `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, and `NO_PROXY`.
 - `response_parse_failed`: use `data.result.raw_text` when present, or report the sanitized parse error.
 - `safety_refusal`: report that the model refused and do not invent missing image details.
@@ -207,7 +209,7 @@ Common errors:
 
 ## Security Rules
 
-Image bytes are sent to the configured provider endpoint: GitHub Copilot `/responses` or AI Platform `/chat/completions`. Treat this as data egress.
+Image bytes are sent to the configured provider endpoint: AI Platform `/chat/completions` by default, or GitHub Copilot `/responses` when explicitly configured. Treat this as data egress.
 
 Never print, paste, log, or store:
 

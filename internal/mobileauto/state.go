@@ -63,6 +63,10 @@ type RunState struct {
 	ImportedSession         bool              `json:"imported_session,omitempty"`
 	ImportedAt              *time.Time        `json:"imported_at,omitempty"`
 	ImportProbe             string            `json:"import_probe,omitempty"`
+	ControlLeaseOwner       string            `json:"control_lease_owner,omitempty"`
+	ControlLeaseExpiresAt   *time.Time        `json:"control_lease_expires_at,omitempty"`
+	KeepaliveDeadline       *time.Time        `json:"keepalive_deadline,omitempty"`
+	LastProbeAt             *time.Time        `json:"last_probe_at,omitempty"`
 	ProgressMessage         string            `json:"progress_message,omitempty"`
 	StartedAt               time.Time         `json:"started_at"`
 	UpdatedAt               time.Time         `json:"updated_at"`

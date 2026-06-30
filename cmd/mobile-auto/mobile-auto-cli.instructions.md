@@ -35,7 +35,9 @@ Rules for agents:
 - Inspect scroll results for `scrolls`, `stopped_reason`, `repeated_source`, `source_hash_before`, `source_hash_after`, `last_observation_id`, and `visible_text_after` before deciding whether another observe is needed.
 - Percent flags accept either `50` or `0.5` for fifty percent. Prefer `--profile fast-page-down`, `--profile fine-scroll`, or `--profile page-up` over hand-tuned percentages when possible.
 - Use `mobile-auto inspector config/attach/export` when switching from CLI automation to Appium Inspector debugging.
-- Use `mobile-auto session search --status running --json` and `mobile-auto run import --session-id ... --probe --json` when an existing BrowserStack App Automate session was not started by mobile-auto but should be brought under local run state.
+- Use `mobile-auto session candidates --status running --json` or `mobile-auto session probe --session-id ... --json` before importing an existing BrowserStack App Automate session that was not started by mobile-auto. Import with `mobile-auto run import --session-id ... --probe --json` or `mobile-auto run import --from-url ... --json`.
+- After importing a session, use `mobile-auto run guard --run-id ... --hold-for 10m --json` when the session may sit idle, and `mobile-auto run diagnose --run-id ... --out evidence --json` when collecting evidence for handoff or failure analysis.
+- Use `mobile-auto run claim/release` only as a local coordination lease. BrowserStack does not enforce exclusive remote control, so treat concurrent original runners as still possible.
 - Use `mobile-auto test run --file suite.yaml --junit-out junit.xml --evidence-dir evidence --json` for CI-style suite execution.
 - Never act on ambiguous `locate` results.
 - Use `--text-env` or `--text-stdin` for secrets.
@@ -48,8 +50,11 @@ Examples:
 
 ```bash
 mobile-auto run start --file ./app.apk --platform android --network public --json
-mobile-auto session search --status running --json
+mobile-auto session candidates --status running --json
+mobile-auto session probe --session-id session-... --json
 mobile-auto run import --session-id session-... --build-id build-... --json
+mobile-auto run guard --run-id run-... --hold-for 10m --json
+mobile-auto run diagnose --run-id run-... --out evidence --json
 mobile-auto observe --run-id run-... --json
 mobile-auto locate --run-id run-... --role button --name Login --json
 mobile-auto tap --run-id run-... --ref obs-...:e17 --json

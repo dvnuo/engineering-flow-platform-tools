@@ -96,7 +96,7 @@ func buildCmd(o *Opts) *cobra.Command {
 
 func sessionCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "session"}
-	c.AddCommand(sessionStartCmd(o), sessionStatusCmd(o), sessionListCmd(o), sessionSearchCmd(o), sessionGetCmd(o), sessionMarkCmd(o), sessionStopCmd(o))
+	c.AddCommand(sessionStartCmd(o), sessionStatusCmd(o), sessionListCmd(o), sessionSearchCmd(o), sessionProbeCmd(o), sessionCandidatesCmd(o), sessionGetCmd(o), sessionMarkCmd(o), sessionStopCmd(o))
 	return c
 }
 
@@ -303,7 +303,7 @@ func sessionStopCmd(o *Opts) *cobra.Command {
 
 func runCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "run"}
-	c.AddCommand(runStartCmd(o), runStatusCmd(o), runRecoverCmd(o), runImportCmd(o), runReportCmd(o), runHandoffCmd(o), runResumeCmd(o), runFinishCmd(o))
+	c.AddCommand(runStartCmd(o), runStatusCmd(o), runRecoverCmd(o), runImportCmd(o), runGuardCmd(o), runDiagnoseCmd(o), runClaimCmd(o), runReleaseCmd(o), runMonitorCmd(o), runReportCmd(o), runHandoffCmd(o), runResumeCmd(o), runFinishCmd(o))
 	return c
 }
 
@@ -1105,6 +1105,7 @@ type runImportOptions struct {
 	Platform        string
 	Device          string
 	App             string
+	FromURL         string
 	Probe           bool
 	DryRun          bool
 }
@@ -1126,14 +1127,20 @@ func runImportCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&opts.Platform, "platform", "", "Mobile platform to match or record, for example android or ios.")
 	c.Flags().StringVar(&opts.Device, "device", "", "BrowserStack device name to match or record.")
 	c.Flags().StringVar(&opts.App, "app", "", "Known app reference to record when BrowserStack session app details are incomplete.")
+	c.Flags().StringVar(&opts.FromURL, "from-url", "", "BrowserStack dashboard/session URL to parse for session and build identifiers.")
 	c.Flags().BoolVar(&opts.Probe, "probe", true, "Verify the Appium hub accepts /session/{session-id} before writing run state.")
 	c.Flags().BoolVar(&opts.DryRun, "dry-run", false, "Resolve and optionally probe the session without writing local run state.")
 	return c
 }
 
 func runImport(cmd *cobra.Command, o *Opts, opts runImportOptions) error {
+	if strings.TrimSpace(opts.FromURL) != "" {
+		parsed := parseBrowserStackSessionURL(opts.FromURL)
+		opts.SessionID = firstNonEmpty(opts.SessionID, parsed.SessionID)
+		opts.BuildID = firstNonEmpty(opts.BuildID, parsed.BuildID)
+	}
 	if strings.TrimSpace(opts.SessionID) == "" && strings.TrimSpace(opts.BuildID) == "" && strings.TrimSpace(opts.BuildName) == "" {
-		return print(cmd, o, output.Failure("invalid_args", "--session-id, --build-id, or --build is required", "Pass a BrowserStack session id or enough build/session filters to import exactly one session.", 400))
+		return print(cmd, o, output.Failure("invalid_args", "--session-id, --build-id, --build, or --from-url is required", "Pass a BrowserStack session id, BrowserStack URL, or enough build/session filters to import exactly one session.", 400))
 	}
 	network := strings.TrimSpace(opts.Network)
 	if network == "" {
@@ -1196,6 +1203,7 @@ func runImport(cmd *cobra.Command, o *Opts, opts runImportOptions) error {
 		ImportedSession:       true,
 		ImportedAt:            &now,
 		ImportProbe:           probeStatus,
+		LastProbeAt:           &now,
 		ProgressMessage:       "run imported from BrowserStack control plane",
 		RunningAt:             &now,
 		StartedAt:             now,
@@ -1795,6 +1803,10 @@ type keeperInfo struct {
 }
 
 func startKeeper(o *Opts, svc *services, runID string, deadline time.Time) (keeperInfo, error) {
+	return startKeeperMode(o, svc, runID, deadline, "human")
+}
+
+func startKeeperMode(o *Opts, svc *services, runID string, deadline time.Time, mode string) (keeperInfo, error) {
 	exe, err := os.Executable()
 	if err != nil {
 		return keeperInfo{}, err
@@ -1804,7 +1816,7 @@ func startKeeper(o *Opts, svc *services, runID string, deadline time.Time) (keep
 	if err != nil {
 		return keeperInfo{}, err
 	}
-	args := []string{"_keepalive", "--run-id", runID, "--deadline", deadline.Format(time.RFC3339)}
+	args := []string{"_keepalive", "--run-id", runID, "--deadline", deadline.Format(time.RFC3339), "--mode", mode}
 	if o.ConfigPath != "" {
 		args = append(args, "--config", o.ConfigPath)
 	}
@@ -1841,7 +1853,7 @@ func stopKeeper(svc *services, runID string) error {
 }
 
 func keepaliveCmd(o *Opts) *cobra.Command {
-	var runID, deadlineText string
+	var runID, deadlineText, mode string
 	c := &cobra.Command{Use: "_keepalive", Hidden: true, RunE: func(cmd *cobra.Command, args []string) error {
 		deadline, err := time.Parse(time.RFC3339, deadlineText)
 		if err != nil || runID == "" {
@@ -1859,8 +1871,18 @@ func keepaliveCmd(o *Opts) *cobra.Command {
 		defer t.Stop()
 		for time.Now().Before(deadline) {
 			st, err := svc.Store.LoadRun(runID)
-			if err != nil || st.ControlOwner != "human" || st.Status != mobileauto.StatusWaitingForHuman {
+			if err != nil {
 				return nil
+			}
+			switch mode {
+			case "guard":
+				if !localRunStatusMayBeRemoteActive(st.Status) {
+					return nil
+				}
+			default:
+				if st.ControlOwner != "human" || st.Status != mobileauto.StatusWaitingForHuman {
+					return nil
+				}
 			}
 			_, _ = svc.Appium.GetSource(cmd.Context(), st.SessionID)
 			select {
@@ -1873,6 +1895,7 @@ func keepaliveCmd(o *Opts) *cobra.Command {
 	}}
 	c.Flags().StringVar(&runID, "run-id", "", "")
 	c.Flags().StringVar(&deadlineText, "deadline", "", "")
+	c.Flags().StringVar(&mode, "mode", "human", "")
 	return c
 }
 

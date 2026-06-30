@@ -96,7 +96,7 @@ func buildCmd(o *Opts) *cobra.Command {
 
 func sessionCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "session"}
-	c.AddCommand(sessionStartCmd(o), sessionStatusCmd(o), sessionListCmd(o), sessionGetCmd(o), sessionMarkCmd(o), sessionStopCmd(o))
+	c.AddCommand(sessionStartCmd(o), sessionStatusCmd(o), sessionListCmd(o), sessionSearchCmd(o), sessionGetCmd(o), sessionMarkCmd(o), sessionStopCmd(o))
 	return c
 }
 
@@ -159,6 +159,53 @@ func sessionListCmd(o *Opts) *cobra.Command {
 	c.Flags().IntVar(&limit, "limit", 20, "")
 	c.Flags().IntVar(&offset, "offset", 0, "")
 	c.Flags().StringVar(&status, "status", "", "")
+	return c
+}
+
+type sessionSearchOptions struct {
+	BuildID   string
+	BuildName string
+	Name      string
+	Status    string
+	ProjectID string
+	Platform  string
+	Device    string
+	Limit     int
+	Offset    int
+}
+
+type remoteSessionSearchResult struct {
+	BuildID   string               `json:"build_id,omitempty"`
+	BuildName string               `json:"build_name,omitempty"`
+	Session   browserstack.Session `json:"session"`
+}
+
+func sessionSearchCmd(o *Opts) *cobra.Command {
+	opts := sessionSearchOptions{Status: "running", Limit: 20}
+	c := &cobra.Command{Use: "search", RunE: func(cmd *cobra.Command, args []string) error {
+		svc, err := newServices(o, true)
+		if err != nil {
+			return renderErr(cmd, o, err)
+		}
+		matches, err := searchRemoteSessions(cmd.Context(), svc, opts)
+		if err != nil {
+			return renderErr(cmd, o, err)
+		}
+		return print(cmd, o, output.Success("", map[string]any{
+			"sessions":   matches,
+			"count":      len(matches),
+			"auth_scope": "current_credentials",
+		}))
+	}}
+	c.Flags().StringVar(&opts.BuildID, "build-id", "", "BrowserStack build hashed id to search within.")
+	c.Flags().StringVar(&opts.BuildName, "build", "", "BrowserStack build name to match exactly, case-insensitively.")
+	c.Flags().StringVar(&opts.Name, "name", "", "BrowserStack session name to match exactly, case-insensitively.")
+	c.Flags().StringVar(&opts.Status, "status", "running", "BrowserStack session/build status filter such as running, done, failed, or timeout.")
+	c.Flags().StringVar(&opts.ProjectID, "project-id", "", "BrowserStack project id used to constrain build search.")
+	c.Flags().StringVar(&opts.Platform, "platform", "", "Mobile platform to match, for example android or ios.")
+	c.Flags().StringVar(&opts.Device, "device", "", "BrowserStack device name to match exactly, case-insensitively.")
+	c.Flags().IntVar(&opts.Limit, "limit", 20, "Maximum number of builds to scan when --build-id is not supplied.")
+	c.Flags().IntVar(&opts.Offset, "offset", 0, "Build list offset when --build-id is not supplied.")
 	return c
 }
 
@@ -256,7 +303,7 @@ func sessionStopCmd(o *Opts) *cobra.Command {
 
 func runCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "run"}
-	c.AddCommand(runStartCmd(o), runStatusCmd(o), runRecoverCmd(o), runReportCmd(o), runHandoffCmd(o), runResumeCmd(o), runFinishCmd(o))
+	c.AddCommand(runStartCmd(o), runStatusCmd(o), runRecoverCmd(o), runImportCmd(o), runReportCmd(o), runHandoffCmd(o), runResumeCmd(o), runFinishCmd(o))
 	return c
 }
 
@@ -1043,6 +1090,277 @@ func runRecover(cmd *cobra.Command, o *Opts, opts runRecoverOptions) error {
 		"local_identifier": st.Network.LocalIdentifier,
 	})
 	return print(cmd, o, output.Success("", map[string]any{"run": st, "recovered": true, "remote_status": remote.Status}))
+}
+
+type runImportOptions struct {
+	RunID           string
+	SessionID       string
+	BuildID         string
+	BuildName       string
+	SessionName     string
+	Status          string
+	ProjectID       string
+	Network         string
+	LocalIdentifier string
+	Platform        string
+	Device          string
+	App             string
+	Probe           bool
+	DryRun          bool
+}
+
+func runImportCmd(o *Opts) *cobra.Command {
+	opts := runImportOptions{Status: "running", Network: "public", Probe: true}
+	c := &cobra.Command{Use: "import", RunE: func(cmd *cobra.Command, args []string) error {
+		return runImport(cmd, o, opts)
+	}}
+	c.Flags().StringVar(&opts.RunID, "run-id", "", "Local run id to create; defaults to a generated run id.")
+	c.Flags().StringVar(&opts.SessionID, "session-id", "", "BrowserStack session hashed id to import.")
+	c.Flags().StringVar(&opts.BuildID, "build-id", "", "BrowserStack build hashed id that contains the imported session.")
+	c.Flags().StringVar(&opts.BuildName, "build", "", "BrowserStack build name to resolve before importing.")
+	c.Flags().StringVar(&opts.SessionName, "name", "", "BrowserStack session name to match exactly, case-insensitively.")
+	c.Flags().StringVar(&opts.Status, "status", "running", "Required BrowserStack session status before import; empty disables status filtering.")
+	c.Flags().StringVar(&opts.ProjectID, "project-id", "", "BrowserStack project id used to constrain build search.")
+	c.Flags().StringVar(&opts.Network, "network", "public", "Network mode for the imported run: public or private-external.")
+	c.Flags().StringVar(&opts.LocalIdentifier, "local-identifier", "", "Existing BrowserStack Local identifier for private-external imported sessions.")
+	c.Flags().StringVar(&opts.Platform, "platform", "", "Mobile platform to match or record, for example android or ios.")
+	c.Flags().StringVar(&opts.Device, "device", "", "BrowserStack device name to match or record.")
+	c.Flags().StringVar(&opts.App, "app", "", "Known app reference to record when BrowserStack session app details are incomplete.")
+	c.Flags().BoolVar(&opts.Probe, "probe", true, "Verify the Appium hub accepts /session/{session-id} before writing run state.")
+	c.Flags().BoolVar(&opts.DryRun, "dry-run", false, "Resolve and optionally probe the session without writing local run state.")
+	return c
+}
+
+func runImport(cmd *cobra.Command, o *Opts, opts runImportOptions) error {
+	if strings.TrimSpace(opts.SessionID) == "" && strings.TrimSpace(opts.BuildID) == "" && strings.TrimSpace(opts.BuildName) == "" {
+		return print(cmd, o, output.Failure("invalid_args", "--session-id, --build-id, or --build is required", "Pass a BrowserStack session id or enough build/session filters to import exactly one session.", 400))
+	}
+	network := strings.TrimSpace(opts.Network)
+	if network == "" {
+		network = "public"
+	}
+	if network != "public" && network != "private-external" {
+		return print(cmd, o, output.Failure("invalid_args", "--network must be public or private-external for run import", "Use private-external only when a BrowserStack Local tunnel is already running outside mobile-auto.", 400))
+	}
+	svc, err := newServices(o, true)
+	if err != nil {
+		return renderErr(cmd, o, err)
+	}
+	remote, buildID, err := resolveImportedRemoteSession(cmd.Context(), svc, opts)
+	if err != nil {
+		return renderErr(cmd, o, err)
+	}
+	sessionID := firstNonEmpty(remote.HashedID, opts.SessionID)
+	if strings.TrimSpace(sessionID) == "" {
+		return renderErr(cmd, o, mobileauto.NewError("session_import_not_found", "BrowserStack session response did not include a usable session id", "Pass --session-id explicitly or inspect the session details.", 404))
+	}
+	probe := map[string]any{"attempted": opts.Probe}
+	probeStatus := "skipped"
+	if opts.Probe {
+		probe["attempted"] = true
+		if _, err := svc.Appium.SessionStatus(cmd.Context(), sessionID); err != nil {
+			return renderErr(cmd, o, sessionNotControllableError(err))
+		}
+		probeStatus = "passed"
+		probe["status"] = probeStatus
+		probe["accepted"] = true
+	} else {
+		probe["status"] = probeStatus
+		probe["accepted"] = false
+	}
+	if opts.RunID == "" {
+		opts.RunID = mobileauto.NewRunID()
+	}
+	if !opts.DryRun {
+		if err := ensureRunIDAvailable(svc, opts.RunID); err != nil {
+			return renderErr(cmd, o, err)
+		}
+	}
+	now := time.Now().UTC()
+	st := mobileauto.RunState{
+		Version:               1,
+		RunID:                 opts.RunID,
+		Provider:              "browserstack",
+		Status:                mobileauto.StatusRunning,
+		ControlOwner:          "agent",
+		SessionID:             sessionID,
+		BrowserStackSessionID: sessionID,
+		Platform:              firstNonEmpty(opts.Platform, remote.OS),
+		Device:                remoteDeviceSelection(remote),
+		App:                   remoteAppRef(remote, opts.App),
+		Network:               mobileauto.NetworkState{Mode: network, LocalMode: localModeForNetwork(network), LocalIdentifier: opts.LocalIdentifier},
+		BuildID:               buildID,
+		ProjectName:           remote.ProjectName,
+		BuildName:             firstNonEmpty(remote.BuildName, opts.BuildName),
+		SessionName:           firstNonEmpty(remote.Name, opts.SessionName),
+		ImportedSession:       true,
+		ImportedAt:            &now,
+		ImportProbe:           probeStatus,
+		ProgressMessage:       "run imported from BrowserStack control plane",
+		RunningAt:             &now,
+		StartedAt:             now,
+		UpdatedAt:             now,
+	}
+	if st.Device.Name == "" {
+		st.Device = mobileauto.DeviceSelection{Name: opts.Device, OS: st.Platform, Reason: "imported"}
+	}
+	noteRemoteSessionDetected(&st, remote, buildID, false, "run imported from BrowserStack control plane")
+	if opts.DryRun {
+		return print(cmd, o, output.Success("", map[string]any{"run": st, "imported": false, "dry_run": true, "remote_status": remote.Status, "probe": probe}))
+	}
+	if err := svc.Store.SaveRun(st); err != nil {
+		return renderErr(cmd, o, mobileauto.NewError("state_persist_failed", "failed to persist imported run state", "Check mobile-auto.state_dir permissions and free disk space.", 500))
+	}
+	appendTimelineBestEffort(svc, st.RunID, "run", "import", "", st.Status, map[string]any{
+		"session_id":       st.SessionID,
+		"build_id":         st.BuildID,
+		"remote_status":    remote.Status,
+		"network_mode":     st.Network.Mode,
+		"local_identifier": st.Network.LocalIdentifier,
+		"probe":            probeStatus,
+	})
+	return print(cmd, o, output.Success("", map[string]any{"run": st, "imported": true, "remote_status": remote.Status, "probe": probe}))
+}
+
+func resolveImportedRemoteSession(ctx context.Context, svc *services, opts runImportOptions) (browserstack.Session, string, error) {
+	if strings.TrimSpace(opts.SessionID) != "" {
+		remote, err := svc.Control.GetSession(ctx, opts.SessionID)
+		if err != nil {
+			return browserstack.Session{}, "", err
+		}
+		if !importRemoteSessionMatches(remote, opts) {
+			return browserstack.Session{}, "", mobileauto.NewError("session_import_filter_mismatch", "BrowserStack session did not match the requested import filters", "Relax --status, --name, --platform, or --device, then retry.", 409)
+		}
+		buildID := opts.BuildID
+		if buildID == "" {
+			buildID = findBuildIDByName(ctx, svc, firstNonEmpty(remote.BuildName, opts.BuildName), time.Now().UTC().Add(-24*time.Hour))
+		}
+		return remote, buildID, nil
+	}
+	matches, err := searchRemoteSessions(ctx, svc, sessionSearchOptions{
+		BuildID:   opts.BuildID,
+		BuildName: opts.BuildName,
+		Name:      opts.SessionName,
+		Status:    opts.Status,
+		ProjectID: opts.ProjectID,
+		Platform:  opts.Platform,
+		Device:    opts.Device,
+		Limit:     20,
+	})
+	if err != nil {
+		return browserstack.Session{}, "", err
+	}
+	if len(matches) == 1 && strings.TrimSpace(matches[0].Session.HashedID) != "" {
+		return matches[0].Session, matches[0].BuildID, nil
+	}
+	if len(matches) > 1 {
+		return browserstack.Session{}, "", mobileauto.NewError("session_import_ambiguous", "BrowserStack session import found multiple matching sessions", "Pass --session-id, or add --build-id and --name to uniquely identify one running session.", 409)
+	}
+	return browserstack.Session{}, "", mobileauto.NewError("session_import_not_found", "BrowserStack session import did not find a matching session", "Use mobile-auto session search --status running --json to inspect importable sessions.", 404)
+}
+
+func searchRemoteSessions(ctx context.Context, svc *services, opts sessionSearchOptions) ([]remoteSessionSearchResult, error) {
+	if opts.Limit <= 0 {
+		opts.Limit = 20
+	}
+	if opts.Offset < 0 {
+		return nil, mobileauto.NewError("invalid_args", "--offset cannot be negative", "Use a non-negative BrowserStack build list offset.", 400)
+	}
+	if strings.TrimSpace(opts.BuildID) != "" {
+		sessions, err := svc.Control.ListBuildSessions(ctx, opts.BuildID, 100, 0, opts.Status)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]remoteSessionSearchResult, 0, len(sessions))
+		for _, session := range sessions {
+			if !searchSessionMatches(session, opts) {
+				continue
+			}
+			out = append(out, remoteSessionSearchResult{BuildID: opts.BuildID, BuildName: firstNonEmpty(session.BuildName, opts.BuildName), Session: session})
+		}
+		return out, nil
+	}
+	builds, err := svc.Control.ListBuilds(ctx, opts.Limit, opts.Offset, opts.Status, opts.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	out := []remoteSessionSearchResult{}
+	for _, build := range builds {
+		if strings.TrimSpace(build.HashedID) == "" {
+			continue
+		}
+		if strings.TrimSpace(opts.BuildName) != "" && !equalFold(build.Name, opts.BuildName) {
+			continue
+		}
+		sessions, err := svc.Control.ListBuildSessions(ctx, build.HashedID, 100, 0, opts.Status)
+		if err != nil {
+			continue
+		}
+		for _, session := range sessions {
+			if !searchSessionMatches(session, opts) {
+				continue
+			}
+			out = append(out, remoteSessionSearchResult{BuildID: build.HashedID, BuildName: firstNonEmpty(build.Name, session.BuildName), Session: session})
+		}
+	}
+	return out, nil
+}
+
+func importRemoteSessionMatches(remote browserstack.Session, opts runImportOptions) bool {
+	return searchSessionMatches(remote, sessionSearchOptions{
+		BuildName: opts.BuildName,
+		Name:      opts.SessionName,
+		Status:    opts.Status,
+		Platform:  opts.Platform,
+		Device:    opts.Device,
+	})
+}
+
+func searchSessionMatches(session browserstack.Session, opts sessionSearchOptions) bool {
+	if strings.TrimSpace(opts.Name) != "" && !equalFold(session.Name, opts.Name) {
+		return false
+	}
+	if strings.TrimSpace(opts.BuildName) != "" && strings.TrimSpace(session.BuildName) != "" && !equalFold(session.BuildName, opts.BuildName) {
+		return false
+	}
+	if strings.TrimSpace(opts.Status) != "" && !equalFold(session.Status, opts.Status) {
+		return false
+	}
+	if strings.TrimSpace(opts.Platform) != "" && !equalFold(session.OS, opts.Platform) {
+		return false
+	}
+	if strings.TrimSpace(opts.Device) != "" && !equalFold(session.Device, opts.Device) {
+		return false
+	}
+	return true
+}
+
+func ensureRunIDAvailable(svc *services, runID string) error {
+	if strings.TrimSpace(runID) == "" {
+		return mobileauto.NewError("invalid_args", "--run-id cannot be empty", "Omit --run-id to generate one, or pass a non-empty run id.", 400)
+	}
+	if _, err := os.Stat(svc.Store.StatePath(runID)); err == nil {
+		return mobileauto.NewError("run_exists", "run id already exists", "Choose a different --run-id or inspect the existing local run.", 409)
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+func sessionNotControllableError(err error) error {
+	code, message := errorCodeAndMessage(err)
+	parts := []string{}
+	if strings.TrimSpace(code) != "" {
+		parts = append(parts, strings.TrimSpace(code))
+	}
+	if strings.TrimSpace(message) != "" {
+		parts = append(parts, strings.TrimSpace(message))
+	}
+	summary := strings.TrimSpace(strings.Join(parts, ": "))
+	if summary == "" {
+		summary = "Appium hub rejected the session id"
+	}
+	return mobileauto.NewError("session_not_controllable", "BrowserStack session is visible but Appium control probe failed: "+summary, "Confirm the session is an active App Automate/Appium session and that no other runner has already quit it.", 409)
 }
 
 func recoverRemoteSession(ctx context.Context, svc *services, opts runRecoverOptions) (browserstack.Session, string, error) {

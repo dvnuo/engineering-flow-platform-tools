@@ -60,6 +60,9 @@ type RunState struct {
 	RemoteSessionDetectedAt *time.Time        `json:"remote_session_detected_at,omitempty"`
 	RunningAt               *time.Time        `json:"running_at,omitempty"`
 	RecoveredSession        bool              `json:"recovered_session,omitempty"`
+	ImportedSession         bool              `json:"imported_session,omitempty"`
+	ImportedAt              *time.Time        `json:"imported_at,omitempty"`
+	ImportProbe             string            `json:"import_probe,omitempty"`
 	ProgressMessage         string            `json:"progress_message,omitempty"`
 	StartedAt               time.Time         `json:"started_at"`
 	UpdatedAt               time.Time         `json:"updated_at"`

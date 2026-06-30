@@ -515,6 +515,201 @@ func TestRunRecoverAttachesExistingBrowserStackSession(t *testing.T) {
 	}
 }
 
+func TestRunImportExistingBrowserStackSessionProbesAndSaves(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/app-automate/sessions/session-import.json":
+			_, _ = w.Write([]byte(`{"automation_session":{"name":"session-import","hashed_id":"session-import","build_name":"build-import","project_name":"proj","os":"android","os_version":"14.0","device":"Pixel 8","status":"running","browser_url":"https://dashboard.example/session-import","appium_logs_url":"https://logs.example/appium","app_details":{"app_url":"bs://app-import","app_name":"Demo"}}}`))
+		case "/session/session-import":
+			_, _ = w.Write([]byte(`{"value":{"sessionId":"session-import","capabilities":{"platformName":"Android"}}}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "run", "import", "--config", path, "--session-id", "session-import", "--build-id", "build-import-id", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if data["imported"] != true {
+		t.Fatalf("expected imported=true: %#v", data)
+	}
+	run := data["run"].(map[string]any)
+	runID := run["run_id"].(string)
+	store := mobileauto.NewStateStore(stateDir, artifactsDir)
+	st, err := store.LoadRun(runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.SessionID != "session-import" || st.BuildID != "build-import-id" || st.Status != mobileauto.StatusRunning {
+		t.Fatalf("unexpected imported run: %#v", st)
+	}
+	if !st.ImportedSession || st.RecoveredSession || st.ImportProbe != "passed" || st.ImportedAt == nil {
+		t.Fatalf("import markers were not saved correctly: %#v", st)
+	}
+	if st.App.AppURL != "bs://app-import" || st.DashboardURL == "" || st.AppiumLogsURL == "" {
+		t.Fatalf("remote metadata was not copied: %#v", st)
+	}
+}
+
+func TestRunImportRejectsUncontrollableSession(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/app-automate/sessions/session-dead.json":
+			_, _ = w.Write([]byte(`{"automation_session":{"name":"session-dead","hashed_id":"session-dead","build_name":"build-dead","os":"android","device":"Pixel 8","status":"running"}}`))
+		case "/session/session-dead":
+			http.Error(w, "Session not started or terminated", http.StatusNotFound)
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "run", "import", "--config", path, "--session-id", "session-dead", "--build-id", "build-dead-id", "--json")
+	if out["ok"] != false {
+		t.Fatalf("expected failure: %#v", out)
+	}
+	errObj := out["error"].(map[string]any)
+	if errObj["code"] != "session_not_controllable" {
+		t.Fatalf("unexpected error: %#v", errObj)
+	}
+	entries, err := os.ReadDir(filepath.Join(stateDir, "runs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("failed import should not write runs: %#v", entries)
+	}
+}
+
+func TestRunImportDryRunDoesNotPersist(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/app-automate/sessions/session-dry.json":
+			_, _ = w.Write([]byte(`{"automation_session":{"name":"session-dry","hashed_id":"session-dry","build_name":"build-dry","os":"android","device":"Pixel 8","status":"running"}}`))
+		case "/session/session-dry":
+			_, _ = w.Write([]byte(`{"value":{"sessionId":"session-dry","capabilities":{}}}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "run", "import", "--config", path, "--session-id", "session-dry", "--build-id", "build-dry-id", "--dry-run", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if data["imported"] != false || data["dry_run"] != true {
+		t.Fatalf("expected dry-run import response: %#v", data)
+	}
+	entries, err := os.ReadDir(filepath.Join(stateDir, "runs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("dry-run should not write runs: %#v", entries)
+	}
+}
+
+func TestSessionSearchFiltersRunningSessions(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/app-automate/builds.json":
+			if r.URL.Query().Get("status") != "running" || r.URL.Query().Get("projectId") != "proj" {
+				t.Fatalf("unexpected build query: %s", r.URL.RawQuery)
+			}
+			_, _ = w.Write([]byte(`[
+				{"automation_build":{"name":"alpha","hashed_id":"build-alpha"}},
+				{"automation_build":{"name":"beta","hashed_id":"build-beta"}}
+			]`))
+		case "/app-automate/builds/build-alpha/sessions.json":
+			if r.URL.Query().Get("status") != "running" {
+				t.Fatalf("unexpected session query: %s", r.URL.RawQuery)
+			}
+			_, _ = w.Write([]byte(`[
+				{"automation_session":{"name":"target","hashed_id":"session-target","build_name":"alpha","os":"android","device":"Pixel 8","status":"running"}},
+				{"automation_session":{"name":"other","hashed_id":"session-other","build_name":"alpha","os":"android","device":"Pixel 8","status":"running"}}
+			]`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	stateDir := filepath.Join(t.TempDir(), "state")
+	artifactsDir := filepath.Join(t.TempDir(), "artifacts")
+	cfg := config.RootConfig{}
+	cfg.Normalize()
+	cfg.Mobile.StateDir = stateDir
+	cfg.Mobile.ArtifactsDir = artifactsDir
+	cfg.Mobile.BrowserStack.APIBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.AppiumBaseURL = srv.URL
+	cfg.Mobile.BrowserStack.Username = "user"
+	cfg.Mobile.BrowserStack.AccessKey = "key"
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := runMobile(t, "session", "search", "--config", path, "--project-id", "proj", "--build", "alpha", "--name", "target", "--platform", "android", "--status", "running", "--json")
+	if out["ok"] != true {
+		t.Fatalf("expected success: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if data["count"] != float64(1) || data["auth_scope"] != "current_credentials" {
+		t.Fatalf("unexpected search data: %#v", data)
+	}
+	sessions := data["sessions"].([]any)
+	got := sessions[0].(map[string]any)
+	if got["build_id"] != "build-alpha" || got["build_name"] != "alpha" {
+		t.Fatalf("unexpected search result: %#v", got)
+	}
+	session := got["session"].(map[string]any)
+	if session["hashed_id"] != "session-target" {
+		t.Fatalf("unexpected session result: %#v", session)
+	}
+}
+
 func TestObserveSessionLostMarksRunLost(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {

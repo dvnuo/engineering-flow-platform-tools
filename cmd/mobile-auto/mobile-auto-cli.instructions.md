@@ -35,6 +35,7 @@ Rules for agents:
 - Inspect scroll results for `scrolls`, `stopped_reason`, `repeated_source`, `source_hash_before`, `source_hash_after`, `last_observation_id`, and `visible_text_after` before deciding whether another observe is needed.
 - Percent flags accept either `50` or `0.5` for fifty percent. Prefer `--profile fast-page-down`, `--profile fine-scroll`, or `--profile page-up` over hand-tuned percentages when possible.
 - Use `mobile-auto inspector config/attach/export` when switching from CLI automation to Appium Inspector debugging.
+- Use `mobile-auto session search --status running --json` and `mobile-auto run import --session-id ... --probe --json` when an existing BrowserStack App Automate session was not started by mobile-auto but should be brought under local run state.
 - Use `mobile-auto test run --file suite.yaml --junit-out junit.xml --evidence-dir evidence --json` for CI-style suite execution.
 - Never act on ambiguous `locate` results.
 - Use `--text-env` or `--text-stdin` for secrets.
@@ -47,6 +48,8 @@ Examples:
 
 ```bash
 mobile-auto run start --file ./app.apk --platform android --network public --json
+mobile-auto session search --status running --json
+mobile-auto run import --session-id session-... --build-id build-... --json
 mobile-auto observe --run-id run-... --json
 mobile-auto locate --run-id run-... --role button --name Login --json
 mobile-auto tap --run-id run-... --ref obs-...:e17 --json

@@ -63,6 +63,16 @@ jenkins pipeline stages folder/app-main 42 --json
 jenkins pipeline node-log folder/app-main 42 6 --json
 ```
 
+Test reports (JUnit) via the raw API — nested folders need `/job/` between each
+path segment (`folder/app-main` → `/job/folder/job/app-main`):
+
+```bash
+jenkins api get /job/folder/job/app-main/42/testReport/api/json --query "tree=suites[cases[className,name,status,errorDetails,errorStackTrace]]" --json
+```
+
+Cucumber JSON/HTML reports and screenshots are typically archived artifacts; list
+with `jenkins build artifacts` and fetch with `jenkins artifact download`.
+
 Raw API fallback:
 
 ```bash

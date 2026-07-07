@@ -600,6 +600,8 @@ func buildCmd(o *Opts) *cobra.Command {
 	c.AddCommand(&cobra.Command{Use: "artifacts <job> <build>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
 		return getJSON(o, cmd, jenkins.BuildPath(args[0], args[1])+"/api/json", map[string]string{"tree": "artifacts[fileName,relativePath],number,url,result,building"})
 	}})
+	c.AddCommand(buildTestReportCmd(o))
+	c.AddCommand(buildWaitCmd(o))
 	return c
 }
 

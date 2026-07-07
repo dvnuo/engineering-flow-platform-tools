@@ -59,6 +59,19 @@ func (m *MockJenkins) handle(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"authenticated":true,"name":"agent"}`))
 	case r.URL.Path == "/api/json":
 		_, _ = w.Write([]byte(`{"mode":"NORMAL","jobs":[{"name":"app-main","url":"` + m.Server.URL + `/job/app-main/"}],"views":[{"name":"All"}]}`))
+	case strings.HasSuffix(r.URL.Path, "/testReport/api/json"):
+		if strings.Contains(r.URL.Path, "/job/no-report/") {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"message":"No test report exists"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"failCount":1,"passCount":2,"skipCount":0,"suites":[{"name":"LoginFeature","cases":[` +
+			`{"className":"steps.LoginSteps","name":"Successful login with valid credentials","status":"PASSED","duration":3.1},` +
+			`{"className":"steps.LoginSteps","name":"Login button moved after redesign","status":"FAILED","age":1,"errorDetails":"element not found: login-button","errorStackTrace":"NoSuchElementException: ...","duration":12.3},` +
+			`{"className":"steps.LoginSteps","name":"Guest checkout skipped","status":"SKIPPED","skipped":true,"duration":0}` +
+			`]}]}`))
+	case strings.Contains(r.URL.Path, "/job/still-building/") && strings.HasSuffix(r.URL.Path, "/api/json"):
+		_, _ = w.Write([]byte(`{"name":"still-building","fullName":"folder/still-building","number":7,"building":true,"result":null}`))
 	case strings.HasSuffix(r.URL.Path, "/build") || strings.HasSuffix(r.URL.Path, "/buildWithParameters"):
 		values, _ := url.ParseQuery(m.LastBody)
 		m.LastParamRef = values.Get("BRANCH")

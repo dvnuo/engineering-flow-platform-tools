@@ -478,6 +478,8 @@ confluence page get --url <page-url>
 - jenkins build log-follow <job> <build>
 - jenkins build stop <job> <build>
 - jenkins build artifacts <job> <build>
+- jenkins build test-report <job> <build>
+- jenkins build wait <job> <build>
 
 ### Artifact
 - jenkins artifact download <job> <build> <path>

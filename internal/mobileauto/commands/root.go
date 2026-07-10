@@ -231,7 +231,7 @@ func authCmd(o *Opts) *cobra.Command {
 		cfg.Mobile.Normalize()
 		cfg.Mobile.BrowserStack.Username = username
 		cfg.Mobile.BrowserStack.AccessKey = accessKey
-		if err := config.Save(path, cfg); err != nil {
+		if err := config.SaveShared(o.ConfigPath, cfg); err != nil {
 			return print(cmd, o, output.Failure("config_error", err.Error(), "Check config file permissions.", 500))
 		}
 		return print(cmd, o, output.Success("", map[string]any{
@@ -256,7 +256,7 @@ func authCmd(o *Opts) *cobra.Command {
 		}
 		cfg.Mobile.BrowserStack.Username = ""
 		cfg.Mobile.BrowserStack.AccessKey = ""
-		if err := config.Save(path, cfg); err != nil {
+		if err := config.SaveShared(o.ConfigPath, cfg); err != nil {
 			return print(cmd, o, output.Failure("config_error", err.Error(), "Check config file permissions.", 500))
 		}
 		return print(cmd, o, output.Success("", map[string]any{"logged_out": true, "config_path": path}))
@@ -279,19 +279,15 @@ func authCmd(o *Opts) *cobra.Command {
 }
 
 func loadMobileRootConfig(flagPath string) (string, config.RootConfig, error) {
-	path, err := config.ResolvePath(flagPath)
+	cfg, source, err := config.LoadShared(flagPath)
 	if err != nil {
-		return "", config.RootConfig{}, err
-	}
-	cfg, err := config.Load(path)
-	if err != nil {
-		if !os.IsNotExist(err) {
+		if source == "" || source == config.EnvSourceConfigJSON || !os.IsNotExist(err) {
 			return "", config.RootConfig{}, err
 		}
 		cfg = config.RootConfig{}
 		cfg.Normalize()
 	}
-	return path, cfg, nil
+	return source, cfg, nil
 }
 
 func print(cmd *cobra.Command, o *Opts, env output.Envelope) error {

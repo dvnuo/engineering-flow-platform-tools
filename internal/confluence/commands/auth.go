@@ -9,8 +9,7 @@ import (
 func authCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "auth"}
 	c.AddCommand(&cobra.Command{Use: "login", RunE: func(cmd *cobra.Command, args []string) error {
-		p, _ := config.ResolvePath(o.Config)
-		cfg, err := config.Load(p)
+		cfg, _, err := config.LoadShared(o.Config)
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
 		}
@@ -27,7 +26,7 @@ func authCmd(o *Opts) *cobra.Command {
 				cfg.Confluence.Instances[i].Auth = auth
 			}
 		}
-		_ = config.Save(p, cfg)
+		_ = config.SaveShared(o.Config, cfg)
 		return print(cmd, o, output.Success(target, map[string]any{"logged_in": true}))
 	}})
 	addAuthFlags(c.Commands()[0])
@@ -35,8 +34,7 @@ func authCmd(o *Opts) *cobra.Command {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
 		}
-		p, _ := config.ResolvePath(o.Config)
-		cfg, err := config.Load(p)
+		cfg, _, err := config.LoadShared(o.Config)
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
 		}
@@ -49,7 +47,7 @@ func authCmd(o *Opts) *cobra.Command {
 				cfg.Confluence.Instances[i].Auth = config.AuthConfig{}
 			}
 		}
-		_ = config.Save(p, cfg)
+		_ = config.SaveShared(o.Config, cfg)
 		return print(cmd, o, output.Success(target, map[string]any{"logged_out": true}))
 	}})
 	c.AddCommand(&cobra.Command{Use: "test", RunE: func(cmd *cobra.Command, args []string) error { return do(o, cmd, "GET", "user/current", nil, nil) }})

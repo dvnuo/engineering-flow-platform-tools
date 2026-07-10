@@ -4,7 +4,33 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"engineering-flow-platform-tools/internal/config"
 )
+
+func TestLoadRuntimeConfigFromEnvConfigJSON(t *testing.T) {
+	t.Setenv("BROWSERSTACK_USERNAME", "")
+	t.Setenv("BROWSERSTACK_ACCESS_KEY", "")
+	t.Setenv(config.EnvConfigPath, "")
+	t.Setenv(config.EnvLegacyConfigPath, "")
+	t.Setenv(EnvStateDir, filepath.Join(t.TempDir(), "state"))
+	t.Setenv(EnvArtifactsDir, filepath.Join(t.TempDir(), "artifacts"))
+	t.Setenv(config.EnvConfigJSON, `{"mobile-auto":{"browserstack":{"username":"blob-user","access_key":"blob-key"}}}`)
+
+	cfg, err := LoadRuntimeConfig("")
+	if err != nil {
+		t.Fatalf("LoadRuntimeConfig from env blob: %v", err)
+	}
+	if cfg.Path != config.EnvSourceConfigJSON {
+		t.Fatalf("path should report the env source: %q", cfg.Path)
+	}
+	if cfg.Credentials.Username != "blob-user" || cfg.Credentials.AccessKey != "blob-key" {
+		t.Fatalf("credentials not taken from env blob: %#v", cfg.Credentials)
+	}
+	if len(cfg.Warnings) != 0 {
+		t.Fatalf("env blob load must not warn about missing file: %v", cfg.Warnings)
+	}
+}
 
 func TestLoadRuntimeConfigDefaultsAndEnvCredentials(t *testing.T) {
 	t.Setenv("BROWSERSTACK_USERNAME", "user")

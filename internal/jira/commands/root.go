@@ -51,7 +51,7 @@ func NewRoot() *cobra.Command {
 
 Use it for issues, search, transitions, comments, attachments, projects, users, groups, metadata, filters, dashboards, Agile boards and sprints, and Zephyr test-management resources. For agent workflows, default every command and subcommand to --json. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
 
-Configuration uses the shared EFP config file, normally ~/.efp/config.yaml.`),
+Configuration uses the shared EFP config from EFP_CONFIG_JSON (managed runtimes) or the config file, normally ~/.efp/config.yaml (local).`),
 		Examples: []string{
 			`jira issue get PROJ-123 --json`,
 			`jira issue search --jql "project = PROJ ORDER BY updated DESC" --json`,
@@ -120,8 +120,8 @@ func fmtOut(o *Opts) string {
 	return "table"
 }
 func loadCfg(o *Opts) (config.RootConfig, error) {
-	p, _ := config.ResolvePath(o.Config)
-	return config.Load(p)
+	cfg, _, err := config.LoadShared(o.Config)
+	return cfg, err
 }
 func print(cmd *cobra.Command, o *Opts, env output.Envelope) error {
 	return output.Print(cmd.OutOrStdout(), fmtOut(o), env)
@@ -273,8 +273,7 @@ func instanceCmd(o *Opts) *cobra.Command {
 		if mustB(cmd, "default") {
 			cfg.Jira.DefaultInstance = args[0]
 		}
-		p, _ := config.ResolvePath(o.Config)
-		if err := config.Save(p, cfg); err != nil {
+		if err := config.SaveShared(o.Config, cfg); err != nil {
 			return print(cmd, o, output.Failure("config_error", err.Error(), "", 500))
 		}
 		return print(cmd, o, output.Success(args[0], map[string]interface{}{"added": true}))
@@ -297,8 +296,7 @@ func instanceCmd(o *Opts) *cobra.Command {
 				}
 			}
 		}
-		p, _ := config.ResolvePath(o.Config)
-		if err := config.Save(p, cfg); err != nil {
+		if err := config.SaveShared(o.Config, cfg); err != nil {
 			return print(cmd, o, output.Failure("config_error", err.Error(), "", 500))
 		}
 		return print(cmd, o, output.Success(args[0], map[string]interface{}{"updated": true}))
@@ -322,8 +320,7 @@ func instanceCmd(o *Opts) *cobra.Command {
 		if cfg.Jira.DefaultInstance == args[0] {
 			cfg.Jira.DefaultInstance = ""
 		}
-		p, _ := config.ResolvePath(o.Config)
-		if err := config.Save(p, cfg); err != nil {
+		if err := config.SaveShared(o.Config, cfg); err != nil {
 			return print(cmd, o, output.Failure("config_error", err.Error(), "", 500))
 		}
 		return print(cmd, o, output.Success(args[0], map[string]interface{}{"removed": true}))
@@ -337,8 +334,7 @@ func instanceCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", map[string]interface{}{"default_instance": cfg.Jira.DefaultInstance}))
 		}
 		cfg.Jira.DefaultInstance = args[0]
-		p, _ := config.ResolvePath(o.Config)
-		if err := config.Save(p, cfg); err != nil {
+		if err := config.SaveShared(o.Config, cfg); err != nil {
 			return print(cmd, o, output.Failure("config_error", err.Error(), "", 500))
 		}
 		return print(cmd, o, output.Success(args[0], map[string]interface{}{"default_instance": args[0]}))
@@ -362,8 +358,7 @@ func authCmd(o *Opts) *cobra.Command {
 				cfg.Jira.Instances[i].Auth = auth
 			}
 		}
-		p, _ := config.ResolvePath(o.Config)
-		if err := config.Save(p, cfg); err != nil {
+		if err := config.SaveShared(o.Config, cfg); err != nil {
 			return print(cmd, o, output.Failure("config_error", err.Error(), "", 500))
 		}
 		return print(cmd, o, output.Success("", map[string]interface{}{"logged_in": true}))
@@ -382,8 +377,7 @@ func authCmd(o *Opts) *cobra.Command {
 				cfg.Jira.Instances[i].Auth = config.AuthConfig{}
 			}
 		}
-		p, _ := config.ResolvePath(o.Config)
-		if err := config.Save(p, cfg); err != nil {
+		if err := config.SaveShared(o.Config, cfg); err != nil {
 			return print(cmd, o, output.Failure("config_error", err.Error(), "", 500))
 		}
 		return print(cmd, o, output.Success("", map[string]interface{}{"logged_out": true}))

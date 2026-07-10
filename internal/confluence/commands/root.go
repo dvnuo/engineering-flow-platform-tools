@@ -63,7 +63,7 @@ func NewRoot() *cobra.Command {
 
 Use it for pages, spaces, content, blogs, attachments, comments, labels, restrictions, users, groups, long tasks, webhooks, and raw REST calls. For agent workflows, default every command and subcommand to --json. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
 
-Configuration uses the shared EFP config file, normally ~/.efp/config.yaml.`),
+Configuration uses the shared EFP config from EFP_CONFIG_JSON (managed runtimes) or the config file, normally ~/.efp/config.yaml (local).`),
 		Examples: []string{
 			`confluence page get --id 123 --json`,
 			`confluence page update --id 123 --title "Runbook" --body-file page.html --dry-run --json`,
@@ -180,8 +180,7 @@ func cliVersionCmd(o *Opts) *cobra.Command {
 	}}
 }
 func loadCtx(o *Opts, entity string) (*ctx, error) {
-	p, _ := config.ResolvePath(o.Config)
-	cfg, err := config.Load(p)
+	cfg, _, err := config.LoadShared(o.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -382,8 +381,7 @@ func resolvePageRef(cmd *cobra.Command, o *Opts) (*PageRef, error) {
 }
 
 func loadCtxForPageURL(o *Opts, entityURL string) (*ctx, instance.ResolvedEntity, error) {
-	p, _ := config.ResolvePath(o.Config)
-	cfg, err := config.Load(p)
+	cfg, _, err := config.LoadShared(o.Config)
 	if err != nil {
 		return nil, instance.ResolvedEntity{}, err
 	}
@@ -402,8 +400,7 @@ func loadCtxForConfluencePathOrURL(o *Opts, pathOrURL string) (*ctx, error) {
 	if !isAbsoluteURL(pathOrURL) {
 		return loadCtx(o, "")
 	}
-	p, _ := config.ResolvePath(o.Config)
-	cfg, err := config.Load(p)
+	cfg, _, err := config.LoadShared(o.Config)
 	if err != nil {
 		return nil, err
 	}

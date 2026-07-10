@@ -3,11 +3,64 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
+
+// EnvSourceConfigJSON is the source LoadShared reports when config came from EFP_CONFIG_JSON.
+const EnvSourceConfigJSON = "env:" + EnvConfigJSON
+
+// LoadShared resolves the shared EFP config with precedence:
+// explicit flag path > EFP_CONFIG_JSON env blob > EFP_CONFIG/ATLASSIAN_CONFIG file path > default path.
+// An invalid EFP_CONFIG_JSON is a hard error, never a silent fallback to file sources.
+func LoadShared(flagPath string) (RootConfig, string, error) {
+	if flagPath != "" {
+		c, err := Load(flagPath)
+		return c, flagPath, err
+	}
+	if blob := strings.TrimSpace(os.Getenv(EnvConfigJSON)); blob != "" {
+		var c RootConfig
+		if err := json.Unmarshal([]byte(blob), &c); err != nil {
+			return RootConfig{}, EnvSourceConfigJSON, fmt.Errorf("config_env_json_invalid: %w", err)
+		}
+		c.Normalize()
+		return c, EnvSourceConfigJSON, nil
+	}
+	p, err := ResolvePath("")
+	if err != nil {
+		return RootConfig{}, "", err
+	}
+	c, err := Load(p)
+	return c, p, err
+}
+
+// EnvManaged reports whether reads resolve from EFP_CONFIG_JSON instead of a
+// file, i.e. no explicit path was given and the env blob is set.
+func EnvManaged(flagPath string) bool {
+	return flagPath == "" && strings.TrimSpace(os.Getenv(EnvConfigJSON)) != ""
+}
+
+// ErrEnvManaged is returned when a file write is refused because readers
+// resolve config from EFP_CONFIG_JSON and would never see the written file.
+var ErrEnvManaged = errors.New("config_env_managed: config comes from EFP_CONFIG_JSON; pass --config to write a file")
+
+// SaveShared persists cfg to the file the shared loaders would read. When
+// EFP_CONFIG_JSON manages the config and no explicit path is given, a file
+// write would be invisible to every reader, so it is refused.
+func SaveShared(flagPath string, c RootConfig) error {
+	if EnvManaged(flagPath) {
+		return ErrEnvManaged
+	}
+	p, err := ResolvePath(flagPath)
+	if err != nil {
+		return err
+	}
+	return Save(p, c)
+}
 
 func Load(path string) (RootConfig, error) {
 	var c RootConfig

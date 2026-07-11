@@ -86,6 +86,25 @@ func TestSchemaBrowserDefaultsToChrome(t *testing.T) {
 	}
 }
 
+func TestSessionStartURLIsDocumentedAsCompatibilityOnly(t *testing.T) {
+	out := run(t, &fakeRunner{}, "schema", "session.start", "--json")
+	data := out["data"].(map[string]any)
+	for _, raw := range data["flags"].([]any) {
+		flag := raw.(map[string]any)
+		if flag["name"] != "url" {
+			continue
+		}
+		description, _ := flag["description"].(string)
+		for _, want := range []string{"Deprecated compatibility", "browser open", "do not use in new workflows"} {
+			if !strings.Contains(description, want) {
+				t.Fatalf("session.start --url description missing %q: %q", want, description)
+			}
+		}
+		return
+	}
+	t.Fatal("session.start schema missing compatibility --url flag")
+}
+
 func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
 	cases := map[string][]string{
 		"session.start":       {"download-dir"},
@@ -215,6 +234,19 @@ func TestHelpIsAnnotatedForVisibleCommands(t *testing.T) {
 			t.Fatalf("open help missing %q\n%s", want, help)
 		}
 	}
+	help = runText(t, &fakeRunner{}, "session", "start", "--help")
+	for _, want := range []string{"lower-level lifecycle", "browser open", "Deprecated compatibility"} {
+		if !strings.Contains(help, want) {
+			t.Fatalf("session start help missing %q\n%s", want, help)
+		}
+	}
+	rootHelp := runText(t, &fakeRunner{}, "--help")
+	if strings.Contains(rootHelp, "session start --name default --url") {
+		t.Fatalf("root help must not recommend deprecated session start --url\n%s", rootHelp)
+	}
+	if !strings.Contains(rootHelp, "session start --name default --browser chrome") {
+		t.Fatalf("root help missing lifecycle-only session start example\n%s", rootHelp)
+	}
 }
 
 func TestHelpLLMIncludesWindowsAndFallbackGuidance(t *testing.T) {
@@ -247,6 +279,9 @@ func TestHelpLLMExplainsPersistentRoutingAndHumanHandoff(t *testing.T) {
 		"report the session name",
 		"do not stop the session",
 		"reacquire state",
+		"only recommended user-level page-open entry point",
+		"Do not generate browser session start --url",
+		"explicitly configure or ensure the browser lifecycle without opening a page",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("help llm missing %q\n%s", want, joined)

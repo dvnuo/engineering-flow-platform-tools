@@ -27,15 +27,19 @@ func sessionStartCmd(o *Opts) *cobra.Command {
 	opts := automation.StartOptions{Name: "default", Browser: "chrome"}
 	c := &cobra.Command{
 		Use:   "start",
-		Short: "Start a persistent browser automation session",
-		Long:  "Start a visible Edge/Chrome/Chromium process with a dedicated profile and a DevTools endpoint bound to 127.0.0.1. The browser process is detached from the short-lived CLI caller when the platform allows it.",
+		Short: "Ensure a persistent browser automation session is running",
+		Long:  "Ensure a visible Edge/Chrome/Chromium process is running with a dedicated profile and a DevTools endpoint bound to 127.0.0.1. This is a lower-level lifecycle and configuration command; use browser open to open a page for manual login or later-turn work. The --url flag remains only as deprecated compatibility and delegates to browser open behavior.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Verbose = o.Verbose
 			mgr, err := automation.DefaultManager()
 			if err != nil {
 				return printAutomationError(cmd, o, err)
 			}
-			ctx, cancel := context.WithTimeout(cmd.Context(), 45*time.Second)
+			timeout := 45 * time.Second
+			if strings.TrimSpace(opts.URL) != "" {
+				timeout = 75 * time.Second
+			}
+			ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 			defer cancel()
 			session, err := mgr.Start(ctx, opts)
 			if err != nil {
@@ -52,7 +56,7 @@ func sessionStartCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&opts.DownloadDir, "download-dir", "", "Dedicated download directory; defaults to ~/.efp/browser/downloads/<session-name>.")
 	c.Flags().BoolVar(&opts.CleanProfile, "clean-profile", false, "Delete the dedicated profile directory before launching the session.")
 	c.Flags().IntVar(&opts.Port, "port", 0, "Local DevTools port on 127.0.0.1; 0 picks a free port.")
-	c.Flags().StringVar(&opts.URL, "url", "", "Optional initial HTTP or HTTPS URL to open in the session.")
+	c.Flags().StringVar(&opts.URL, "url", "", "Deprecated compatibility only: open this HTTP or HTTPS URL through the canonical browser open behavior; do not use in new workflows.")
 	return c
 }
 

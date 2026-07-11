@@ -37,49 +37,57 @@ func NewManager(store *Store, client *DevToolsClient) *Manager {
 }
 
 func (m *Manager) Start(ctx context.Context, opts StartOptions) (Session, error) {
+	// URL-bearing calls are kept for backward compatibility only. Persistent
+	// page opening has one implementation in OpenPersistent so start-or-reuse,
+	// exact-target selection, and later-turn handoff cannot drift apart.
+	if strings.TrimSpace(opts.URL) != "" {
+		result, err := m.OpenPersistent(ctx, opts)
+		if err != nil {
+			return Session{}, err
+		}
+		return result.Session, nil
+	}
+	session, _, err := m.ensureSession(ctx, opts)
+	return session, err
+}
+
+func (m *Manager) ensureSession(ctx context.Context, opts StartOptions) (Session, bool, error) {
 	if err := m.ensureStore(); err != nil {
-		return Session{}, err
+		return Session{}, false, err
 	}
 	name := defaultSessionName(opts.Name)
 	if err := ValidateSessionName(name); err != nil {
-		return Session{}, err
+		return Session{}, false, err
 	}
 	release, err := m.acquireSessionLock(ctx, name, 45*time.Second)
 	if err != nil {
-		return Session{}, err
+		return Session{}, false, err
 	}
 	defer release()
-	return m.startUnlocked(ctx, opts)
+	opts.Name = name
+	opts.URL = ""
+	return m.ensureSessionUnlocked(ctx, opts)
 }
 
-func (m *Manager) startUnlocked(ctx context.Context, opts StartOptions) (Session, error) {
+func (m *Manager) ensureSessionUnlocked(ctx context.Context, opts StartOptions) (Session, bool, error) {
 	if err := m.ensureStore(); err != nil {
-		return Session{}, err
+		return Session{}, false, err
 	}
 	name := defaultSessionName(opts.Name)
 	if err := ValidateSessionName(name); err != nil {
-		return Session{}, err
-	}
-	if strings.TrimSpace(opts.URL) != "" {
-		if err := validateHTTPURL(opts.URL, "--url"); err != nil {
-			return Session{}, err
-		}
+		return Session{}, false, err
 	}
 	if opts.Port < 0 || opts.Port > 65535 {
-		return Session{}, invalidArgs("--port must be between 0 and 65535", "Use --port 0 to pick a free local DevTools port.")
+		return Session{}, false, invalidArgs("--port must be between 0 and 65535", "Use --port 0 to pick a free local DevTools port.")
 	}
-	if existing, err := m.Store.Load(name); err == nil {
+	existing, loadErr := m.Store.Load(name)
+	if loadErr == nil {
 		refreshed := m.refreshUnlocked(ctx, existing)
 		if refreshed.Alive {
-			if strings.TrimSpace(opts.URL) != "" {
-				tab, err := m.openTabUnlocked(ctx, name, opts.URL)
-				if err != nil {
-					return Session{}, err
-				}
-				refreshed.ActiveTargetID = tab.Tab.ID
-			}
-			return refreshed, nil
+			return refreshed, true, nil
 		}
+	} else if !isSessionNotFound(loadErr) {
+		return Session{}, false, loadErr
 	}
 
 	profileDir := strings.TrimSpace(opts.ProfileDir)
@@ -87,63 +95,63 @@ func (m *Manager) startUnlocked(ctx context.Context, opts StartOptions) (Session
 		var err error
 		profileDir, err = DefaultProfileDir(name)
 		if err != nil {
-			return Session{}, err
+			return Session{}, false, err
 		}
 	}
 	profileDir, err := ValidateProfileDir(profileDir)
 	if err != nil {
-		return Session{}, err
+		return Session{}, false, err
 	}
 	if opts.CleanProfile {
 		if err := os.RemoveAll(profileDir); err != nil {
-			return Session{}, NewError("artifact_write_failed", err.Error(), "Dedicated browser profile could not be cleaned.", 500)
+			return Session{}, false, NewError("artifact_write_failed", err.Error(), "Dedicated browser profile could not be cleaned.", 500)
 		}
 	}
 	if err := os.MkdirAll(profileDir, 0o700); err != nil {
-		return Session{}, NewError("artifact_write_failed", err.Error(), "Dedicated browser profile could not be created.", 500)
+		return Session{}, false, NewError("artifact_write_failed", err.Error(), "Dedicated browser profile could not be created.", 500)
 	}
 	downloadDir := strings.TrimSpace(opts.DownloadDir)
 	if downloadDir == "" {
 		downloadDir, err = DefaultDownloadDir(name)
 		if err != nil {
-			return Session{}, err
+			return Session{}, false, err
 		}
 	}
 	downloadDir, err = ValidateDownloadDir(downloadDir)
 	if err != nil {
-		return Session{}, err
+		return Session{}, false, err
 	}
 	if err := os.MkdirAll(downloadDir, 0o700); err != nil {
-		return Session{}, NewError("artifact_write_failed", err.Error(), "Dedicated browser download directory could not be created.", 500)
+		return Session{}, false, NewError("artifact_write_failed", err.Error(), "Dedicated browser download directory could not be created.", 500)
 	}
 	if err := ensureDownloadPreferences(profileDir, downloadDir); err != nil {
-		return Session{}, err
+		return Session{}, false, err
 	}
 
 	browserPath, err := probe.FindBrowser(defaultBrowserName(opts.Browser), opts.BrowserExe)
 	if err != nil {
-		return Session{}, mapProbeError(err)
+		return Session{}, false, mapProbeError(err)
 	}
 	port := opts.Port
 	if port == 0 {
 		port, err = freeLocalPort()
 		if err != nil {
-			return Session{}, NewError("devtools_unavailable", err.Error(), "Choose a DevTools port with --port.", 500)
+			return Session{}, false, NewError("devtools_unavailable", err.Error(), "Choose a DevTools port with --port.", 500)
 		}
 	}
 
 	devNull, closeNull := openDevNull()
 	defer closeNull()
-	cmd, err := startBrowserProcess(browserPath, browserArgs(profileDir, port, opts.Headless, opts.URL), devNull)
+	cmd, err := startBrowserProcess(browserPath, browserArgs(profileDir, port, opts.Headless, ""), devNull)
 	if err != nil {
-		return Session{}, NewError("browser_launch_failed", err.Error(), "Check --browser-exe and whether the browser can be launched.", 500)
+		return Session{}, false, NewError("browser_launch_failed", err.Error(), "Check --browser-exe and whether the browser can be launched.", 500)
 	}
 	client := NewDevToolsClient(LocalDebugAddr, port)
 	version, err := waitForDevTools(ctx, client, 20*time.Second)
 	if err != nil {
 		_ = cmd.Process.Kill()
 		_, _ = cmd.Process.Wait()
-		return Session{}, err
+		return Session{}, false, err
 	}
 	_ = configureBrowserDownloadBehavior(ctx, version.WebSocketDebuggerURL, downloadDir)
 	_ = cmd.Process.Release()
@@ -163,10 +171,10 @@ func (m *Manager) startUnlocked(ctx context.Context, opts StartOptions) (Session
 		Alive:               true,
 	}
 	if err := m.Store.Save(session); err != nil {
-		return Session{}, err
+		return Session{}, false, err
 	}
 	session.MetadataPath, _ = m.Store.MetadataPath(session.Name)
-	return session, nil
+	return session, false, nil
 }
 
 func (m *Manager) List(ctx context.Context) ([]Session, error) {

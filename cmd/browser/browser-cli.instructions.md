@@ -8,7 +8,7 @@ Copy this file into `~/.copilot/instructions/browser-cli.instructions.md` so VS 
 
 ## Choose Persistent vs One-Shot First
 
-Default to a persistent managed browser. Use `browser open --session <name> --url <url> --json` when the user asks to open, visit, go to, or navigate to a page, especially when any of these are true:
+`browser open --session <name> --url <url> --json` is the only recommended user-level entry point for opening a page and keeping it available. Use it whenever the user asks to open, visit, go to, or navigate to a page, especially when any of these are true:
 
 - The user needs to log in, complete MFA, solve a challenge, or satisfy Conditional Access.
 - The user wants to operate the page first and have the agent continue afterward.
@@ -18,7 +18,7 @@ Default to a persistent managed browser. Use `browser open --session <name> --ur
 
 Do not use `browser probe` for those cases. `probe` is only for an explicitly one-shot SSO/connectivity/selector/screenshot/HTML/network diagnostic. Its browser context is closed when the command returns, so it cannot support manual login or later page actions.
 
-`browser open` is the high-level persistent entry point. It starts the named managed session when needed and opens the requested URL in a new tab when that session is already running. Prefer it for normal open/navigation requests so start and reuse have one contract; reserve lower-level `browser session start` and `browser tab open` for explicit lifecycle or tab control.
+`browser open` starts the named managed session when needed and opens the requested URL in a new tab when that session is already running. It is the sole recommended entry point for page-opening requests so start, reuse, and cross-turn continuation have one contract. `browser session start` is a lower-level lifecycle/configuration command, and its `--url` flag is a deprecated compatibility entry point. Do not generate new `browser session start --url ...` commands or examples; use `browser open` instead. Reserve `browser tab open` for explicit tab control.
 
 `browser session discover` and `browser session attach` are an alternative path only for a browser that the user explicitly launched with a known `127.0.0.1` DevTools port. They are not the default way to open a managed browser.
 
@@ -68,7 +68,7 @@ browser open --session default --url https://intranet.example.test --json
 
 If the user must log in, complete MFA, or navigate manually, use this conversational handoff protocol:
 
-1. Run `browser open` and keep the named session running.
+1. Run `browser open --session <name> --url <url> --json` and keep the named session running. Do not substitute `browser session start --url`.
 2. Tell the user that the browser remains open, include the session name, and ask them to reply when the manual step is complete.
 3. Stop issuing page actions while the user has control. Never ask the user to paste credentials or MFA codes into chat.
 4. After the user replies, reacquire current state before acting:
@@ -267,7 +267,7 @@ Common errors:
 - `page_timeout`: increase `--timeout`, increase `--wait`, or verify the URL is reachable.
 - `selector_not_found`: inspect `data.files.screenshot`, `data.files.html`, and `data.files.summary`, then adjust `--selector`.
 - `network_error`: check proxy, DNS, certificates, and whether the browser can reach the URL.
-- `session_not_running`: use `browser open --session <name> --url <url> --json` for normal open-or-reuse recovery, or `browser session start` for explicit lower-level session configuration.
+- `session_not_running`: use `browser open --session <name> --url <url> --json` for normal open-or-reuse recovery. Use `browser session start` only for explicit lower-level lifecycle/configuration, without its deprecated `--url` compatibility path.
 - `target_not_found`: run `browser tab list --json`, then pass a current `--target-id`.
 - `assertion_failed`: inspect `data` for sanitized assertion details, add a wait if needed, then retry or adjust the assertion.
 - `workflow_failed`: inspect `data.steps` for the failing whitelisted step; use `--dry-run` to validate before executing.

@@ -45,7 +45,7 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 ### Browser
 
-`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. `browser open` opens an internal URL in a persistent managed Chrome session by default so login, MFA, human navigation, and later agent actions can share the same browser. `browser probe` remains the explicitly one-shot diagnostic path and closes its browser context when it returns. Edge/Chromium remain available with `--browser`. Persistent sessions can also inspect redacted page structure, semantic locators, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, redacted fetch/XHR body previews, performance metadata, HAR-lite recorder/export metadata, tables/lists, data exports, scroll collection, page-state diffs, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
+`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. `browser open` is the only recommended user-level entry point for opening an internal URL in a persistent managed Chrome session so login, MFA, human navigation, and later agent actions can share the same browser. `browser probe` remains the explicitly one-shot diagnostic path and closes its browser context when it returns. Edge/Chromium remain available with `--browser`. Persistent sessions can also inspect redacted page structure, semantic locators, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, redacted fetch/XHR body previews, performance metadata, HAR-lite recorder/export metadata, tables/lists, data exports, scroll collection, page-state diffs, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable browser routing and automation guidance.
 
@@ -336,19 +336,19 @@ confluence version --json
 
 ## Browser Examples
 
-Default to a persistent managed browser when the user asks to open, visit, go to, or navigate to a page. This includes human login/MFA, user-first interaction, multi-step work, later continuation, and any ambiguous "open" request:
+Use `browser open` as the only recommended entry point when the user asks to open, visit, go to, or navigate to a page and keep it available. This includes human login/MFA, user-first interaction, multi-step work, later continuation, and any ambiguous "open" request:
 
 ```bash
 browser open --session default --url "https://intranet.example.test/app" --json
 ```
 
-When a human step is needed, tell the user that session `default` remains open and pause page actions. After the user replies that login or navigation is complete, reacquire state with `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax`. Stop the session only when the user asks to close it or no later continuation is expected.
+When a human step is needed, open the page with `browser open`, tell the user that session `default` remains open, and pause all page actions while they log in, complete MFA, or navigate. Never ask them to send credentials or MFA codes through chat. After the user replies that the manual step is complete, reacquire state with `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax`; do not reuse stale target ids or refs. Stop the session only when the user asks to close it or no later continuation is expected.
 
-If the named session is already running, `browser open` reuses it and opens the requested URL in a new tab. Prefer it for normal open/navigation requests so start and reuse have one contract; use lower-level `session start` or `tab open` only for explicit lifecycle or tab control. `session discover/attach` is only an alternative for an external browser explicitly launched with a known local DevTools port.
+If the named session is already running, `browser open` reuses it and opens the requested URL in a new tab. It is the recommended page-opening contract for both new and existing sessions. `browser session start` is only a lower-level lifecycle/configuration command; its `--url` flag is a deprecated compatibility entry point and must not be used in new automation or examples. Use `tab open` only for explicit tab control. `session discover/attach` is only an alternative for an external browser explicitly launched with a known local DevTools port.
 
 Use `browser probe` only for an explicitly one-shot diagnostic. Its browser context closes when the command returns.
 
-Windows:
+Explicitly one-shot Windows diagnostic:
 
 ```powershell
 browser probe --url "https://intranet.example.test/app" --selector ".user-avatar" --wait 10 --out result --json

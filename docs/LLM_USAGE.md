@@ -104,14 +104,14 @@ Recommended public templates:
 
 ## Browser Routing and Automation
 
-- Route open-ended browser requests to persistence first. If the user asks to open, visit, go to, or navigate to a page, default to `browser open --session default --url <url> --json`. This is mandatory when the user must log in, complete MFA, operate the page before the agent continues, preserve the window for later, or perform a multi-step workflow. An ambiguous request to "open" a page is persistent by default.
+- Treat `browser open --session default --url <url> --json` as the only recommended user-level entry point for opening a page. Use it whenever the user asks to open, visit, go to, or navigate to a page, and always when they must log in, complete MFA, operate the page before the agent continues, preserve the window for later, or perform a multi-step workflow. An ambiguous request to "open" a page is persistent by default.
 - Do not use `browser probe` for manual login, human-first navigation, later continuation, or any task that needs the browser to remain open. A probe is an explicitly one-shot SSO/connectivity/selector/screenshot/HTML/network diagnostic, and its browser context closes when the command returns.
 - Inspect `browser schema open --json` before constructing a persistent open command. Inspect the exact `browser schema page.<command> --json` or `browser schema workflow.run --json` before acting.
 - Call `browser schema probe --json` only when constructing an explicitly requested one-shot diagnostic.
 - Always use `--json`.
 - `browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd, not an OpenCode built-in browser tool, MCP tool, or Web UI component.
-- `browser open` starts the named managed session when needed and opens the requested URL in a new tab when that session is already running. Prefer it for normal open/navigation requests so start and reuse have one contract; use `browser session start` or `browser tab open` only for explicit low-level lifecycle or tab control.
-- For a human handoff, run `browser open`, tell the user the browser remains open and provide the session name, then pause page actions until they reply that login/MFA/manual navigation is complete. Never ask for credentials or MFA codes in chat. After the reply, run `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax` before continuing. Stop the session only when explicitly requested or when no later handoff is expected.
+- `browser open` starts the named managed session when needed and opens the requested URL in a new tab when that session is already running. Use it for every new page-opening workflow so start and reuse have one contract. `browser session start` is only a low-level lifecycle/configuration command; its `--url` flag is a deprecated compatibility entry point and must not be generated for new automation or examples. Use `browser tab open` only for explicit tab control.
+- For a human handoff, run `browser open --session <name> --url <url> --json`, tell the user the browser remains open and provide the session name, then pause page actions until they reply that login/MFA/manual navigation is complete. Never ask for credentials or MFA codes in chat. Do not replace this with `browser session start --url`. After the reply, run `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax` before continuing. Stop the session only when explicitly requested or when no later handoff is expected.
 - Use `browser session discover` and `browser session attach` only as an alternative for a browser the user explicitly launched with a supplied local DevTools port, for example Chrome launched with `--remote-debugging-port=9222`. They do not inspect arbitrary browsers, default profiles, cookies, or tokens.
 - Use `browser page snapshot`, `browser page extract`, and `browser frame snapshot` for redacted page/frame reads.
 - Use `browser page extract-schema --file schema.yaml` when the agent needs stable structured JSON fields from selector-declared YAML instead of raw page text.
@@ -232,6 +232,7 @@ jira schema zephyr.api.catalog --json
 jira schema zephyr.execution.bulk-update-status --json
 confluence schema page.create --json
 confluence schema page.update --json
+browser schema open --json
 browser schema probe --json
 browser schema page.network --json
 browser schema page.outline --json

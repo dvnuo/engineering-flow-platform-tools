@@ -32,8 +32,11 @@ type StartOptions struct {
 	DownloadDir  string
 	CleanProfile bool
 	Port         int
-	URL          string
-	Verbose      bool
+	// URL is a compatibility option for Manager.Start. New page-open workflows
+	// should call Manager.OpenPersistent so start/reuse and target selection use
+	// the canonical persistent-open contract.
+	URL     string
+	Verbose bool
 }
 
 type StopOptions struct {

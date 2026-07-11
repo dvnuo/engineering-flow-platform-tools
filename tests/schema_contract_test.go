@@ -261,9 +261,9 @@ func TestBrowserLifecycleRoutingMetadata(t *testing.T) {
 		{
 			name:              "session.start",
 			lifecycle:         "persistent",
-			descriptionParts:  []string{"persistent", "manual login", "later turns"},
-			whenToUseParts:    []string{"persistent", "manual login"},
-			whenNotToUseParts: []string{"open-or-reuse", "browser open"},
+			descriptionParts:  []string{"persistent", "lifecycle", "deprecated --url"},
+			whenToUseParts:    []string{"lower-level", "lifecycle", "no page"},
+			whenNotToUseParts: []string{"manual login", "browser open", "deprecated compatibility"},
 		},
 	}
 	for _, tc := range tests {

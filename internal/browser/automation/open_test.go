@@ -2,36 +2,35 @@ package automation
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
 type fakePersistentSessionManager struct {
-	statusSession Session
-	statusErr     error
-	startSession  Session
-	startErr      error
+	ensureSession Session
+	ensureReused  bool
+	ensureErr     error
 	tabResult     TabResult
 	tabErr        error
 
-	statusCalls int
-	startCalls  int
+	ensureCalls int
 	openCalls   int
-	startOpts   StartOptions
+	ensureOpts  StartOptions
 	openSession string
 	openURL     string
 }
 
-func (f *fakePersistentSessionManager) Status(context.Context, string) (Session, error) {
-	f.statusCalls++
-	return f.statusSession, f.statusErr
-}
-
-func (f *fakePersistentSessionManager) Start(_ context.Context, opts StartOptions) (Session, error) {
-	f.startCalls++
-	f.startOpts = opts
-	return f.startSession, f.startErr
+func (f *fakePersistentSessionManager) EnsureSession(_ context.Context, opts StartOptions) (Session, bool, error) {
+	f.ensureCalls++
+	f.ensureOpts = opts
+	return f.ensureSession, f.ensureReused, f.ensureErr
 }
 
 func (f *fakePersistentSessionManager) OpenTab(_ context.Context, sessionName, rawURL string) (TabResult, error) {
@@ -43,8 +42,7 @@ func (f *fakePersistentSessionManager) OpenTab(_ context.Context, sessionName, r
 
 func TestOpenPersistentStartsSessionThenOpensRequestedURL(t *testing.T) {
 	fake := &fakePersistentSessionManager{
-		statusErr: NewError("session_not_found", "missing", "", 404),
-		startSession: Session{
+		ensureSession: Session{
 			Name:                "demo",
 			Alive:               true,
 			BrowserWebSocketURL: "ws://127.0.0.1/devtools/browser/new",
@@ -63,11 +61,11 @@ func TestOpenPersistentStartsSessionThenOpensRequestedURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fake.statusCalls != 1 || fake.startCalls != 1 || fake.openCalls != 1 {
-		t.Fatalf("calls status=%d start=%d open=%d", fake.statusCalls, fake.startCalls, fake.openCalls)
+	if fake.ensureCalls != 1 || fake.openCalls != 1 {
+		t.Fatalf("calls ensure=%d open=%d", fake.ensureCalls, fake.openCalls)
 	}
-	if fake.startOpts.URL != "" || fake.startOpts.Name != "demo" || fake.startOpts.Browser != "edge" {
-		t.Fatalf("start options = %#v", fake.startOpts)
+	if fake.ensureOpts.URL != "" || fake.ensureOpts.Name != "demo" || fake.ensureOpts.Browser != "edge" {
+		t.Fatalf("ensure options = %#v", fake.ensureOpts)
 	}
 	if fake.openURL != "https://example.test/login" || fake.openSession != "demo" {
 		t.Fatalf("open session=%q URL=%q", fake.openSession, fake.openURL)
@@ -88,22 +86,19 @@ func TestOpenPersistentStartsSessionThenOpensRequestedURL(t *testing.T) {
 	}
 }
 
-func TestOpenPersistentReportsRecoveredStoredSessionAsReused(t *testing.T) {
-	created := time.Now().UTC().Add(-time.Minute)
-	stored := Session{
-		Name:      "default",
-		DebugAddr: "127.0.0.1",
-		DebugPort: 9222,
-		PID:       1234,
-		CreatedAt: created,
-		Alive:     false,
+func TestOpenPersistentPropagatesEnsureReusedState(t *testing.T) {
+	recovered := Session{
+		Name:                "default",
+		DebugAddr:           "127.0.0.1",
+		DebugPort:           9222,
+		PID:                 1234,
+		CreatedAt:           time.Now().UTC().Add(-time.Minute),
+		Alive:               true,
+		BrowserWebSocketURL: "ws://127.0.0.1/devtools/browser/recovered",
 	}
-	recovered := stored
-	recovered.Alive = true
-	recovered.BrowserWebSocketURL = "ws://127.0.0.1/devtools/browser/recovered"
 	fake := &fakePersistentSessionManager{
-		statusSession: stored,
-		startSession:  recovered,
+		ensureSession: recovered,
+		ensureReused:  true,
 		tabResult: TabResult{
 			Session: "default",
 			Tab:     Target{ID: "page-new", Type: "page", URL: "https://example.test", Active: true},
@@ -119,14 +114,94 @@ func TestOpenPersistentReportsRecoveredStoredSessionAsReused(t *testing.T) {
 	}
 }
 
+func TestManagerOpenPersistentReportsRecoveredStoredSessionAsReused(t *testing.T) {
+	var newTabCalls atomic.Int32
+	var openedURL string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/json/version":
+			_, _ = w.Write([]byte(`{"webSocketDebuggerUrl":"ws://127.0.0.1/devtools/browser/recovered"}`))
+		case "/json/new":
+			newTabCalls.Add(1)
+			openedURL, _ = url.QueryUnescape(r.URL.RawQuery)
+			_, _ = w.Write([]byte(`{"id":"page-recovered","type":"page","title":"Login","url":"https://example.test/login","webSocketDebuggerUrl":"ws://127.0.0.1/devtools/page/page-recovered"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	host, port := splitHostPort(t, srv.Listener.Addr().String())
+
+	store := NewStore(t.TempDir())
+	created := time.Now().UTC().Add(-time.Minute)
+	if err := store.Save(Session{
+		Name:                "default",
+		DebugAddr:           host,
+		DebugPort:           port,
+		BrowserWebSocketURL: "",
+		PID:                 1234,
+		CreatedAt:           created,
+		Alive:               false,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	result, err := NewManager(store, nil).OpenPersistent(ctx, StartOptions{
+		Name: "default",
+		URL:  "https://example.test/login",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Reused || !result.BrowserAlive || result.Target.ID != "page-recovered" {
+		t.Fatalf("recovered result = %#v", result)
+	}
+	if !result.Session.CreatedAt.Equal(created) || result.Session.PID != 1234 {
+		t.Fatalf("recovered session identity changed: %#v", result.Session)
+	}
+	if newTabCalls.Load() != 1 || openedURL != "https://example.test/login" {
+		t.Fatalf("new tab calls=%d opened URL=%q", newTabCalls.Load(), openedURL)
+	}
+}
+
+func TestManagerOpenPersistentRejectsCorruptSessionMetadata(t *testing.T) {
+	store := NewStore(t.TempDir())
+	metadataPath, err := store.MetadataPath("default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(metadataPath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(metadataPath, []byte("{not-json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = NewManager(store, nil).OpenPersistent(context.Background(), StartOptions{
+		Name:       "default",
+		URL:        "https://example.test/login",
+		BrowserExe: filepath.Join(t.TempDir(), "browser-that-must-not-be-resolved"),
+	})
+	if err == nil {
+		t.Fatal("expected corrupt session metadata error")
+	}
+	automationErr, ok := err.(*Error)
+	if !ok || automationErr.Code != "automation_failed" || !strings.Contains(automationErr.Hint, "not valid JSON") {
+		t.Fatalf("error = %#v", err)
+	}
+}
+
 func TestOpenPersistentReusesRunningSessionAndAlwaysOpensNewTab(t *testing.T) {
 	fake := &fakePersistentSessionManager{
-		statusSession: Session{
+		ensureSession: Session{
 			Name:                "default",
 			Alive:               true,
 			BrowserWebSocketURL: "ws://127.0.0.1/devtools/browser/existing",
 			ActiveTargetID:      "page-old",
 		},
+		ensureReused: true,
 		tabResult: TabResult{
 			Session: "default",
 			Tab:     Target{ID: "page-new", Type: "page", URL: "https://example.test/next", Active: true},
@@ -140,8 +215,8 @@ func TestOpenPersistentReusesRunningSessionAndAlwaysOpensNewTab(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fake.startCalls != 0 || fake.openCalls != 1 {
-		t.Fatalf("start calls=%d open calls=%d", fake.startCalls, fake.openCalls)
+	if fake.ensureCalls != 1 || fake.openCalls != 1 {
+		t.Fatalf("ensure calls=%d open calls=%d", fake.ensureCalls, fake.openCalls)
 	}
 	if !result.Reused || result.Target.ID != "page-new" || result.Session.ActiveTargetID != "page-new" {
 		t.Fatalf("result = %#v", result)
@@ -161,7 +236,7 @@ func TestOpenPersistentRejectsInvalidURLBeforeSessionLookup(t *testing.T) {
 	if !ok || automationErr.Code != "invalid_args" {
 		t.Fatalf("error = %#v", err)
 	}
-	if fake.statusCalls != 0 || fake.startCalls != 0 || fake.openCalls != 0 {
+	if fake.ensureCalls != 0 || fake.openCalls != 0 {
 		t.Fatalf("manager was called: %#v", fake)
 	}
 }

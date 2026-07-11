@@ -518,7 +518,7 @@ confluence page get --url <page-url>
 
 ### Routing
 
-Default to `browser open` whenever the user asks to open, visit, go to, or navigate to a page. This is required for login/MFA, human-first interaction, later continuation, preserving the window, and multi-step work; an ambiguous "open" request is persistent. `browser probe` is only an explicitly one-shot diagnostic, and its browser context closes when the command returns.
+`browser open` is the only recommended user-level entry point whenever the user asks to open, visit, go to, or navigate to a page. This is required for login/MFA, human-first interaction, later continuation, preserving the window, and multi-step work; an ambiguous "open" request is persistent. `browser probe` is only an explicitly one-shot diagnostic, and its browser context closes when the command returns. `browser session start` is a lower-level lifecycle/configuration command; `session start --url` is retained only as a deprecated compatibility entry point and must not appear in new workflows or examples.
 
 ### Basic
 - browser open
@@ -587,7 +587,7 @@ Default to `browser open` whenever the user asks to open, visit, go to, or navig
 
 ### Persistent Workflow
 
-`browser open` starts a dedicated Chrome session with DevTools bound to `127.0.0.1` when needed, then opens the requested URL. If the named session is already running, it reuses the session and opens a new tab. Prefer it for normal open/navigation requests so start and reuse have one contract; use lower-level `browser session start` or `browser tab open` only for explicit lifecycle or tab control. Use `--browser edge`, `--browser chromium`, or `--browser auto` to override the managed browser. Managed sessions attempt to detach the browser process from the short-lived CLI or agent command process so later agent turns can reuse the same endpoint:
+`browser open` starts a dedicated Chrome session with DevTools bound to `127.0.0.1` when needed, then opens the requested URL. If the named session is already running, it reuses the session and opens a new tab. It is the recommended page-opening contract for both cases. Use lower-level `browser session start` only for explicit lifecycle/configuration, without its deprecated `--url` compatibility path, and use `browser tab open` only for explicit tab control. Use `--browser edge`, `--browser chromium`, or `--browser auto` to override the managed browser. Managed sessions attempt to detach the browser process from the short-lived CLI or agent command process so later agent turns can reuse the same endpoint:
 
 ```bash
 browser open --session default --url https://intranet.example.test --json
@@ -615,7 +615,7 @@ browser network list --session default --filter /api/ --json
 browser network export --session default --out result/network.har-lite.json --format har-lite --json
 ```
 
-For a human handoff, run `browser open`, tell the user that the named session remains open, and pause actions while they complete login, MFA, or manual navigation. After they reply, run `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax` before continuing. Stop the session only when explicitly asked or when no later continuation is expected. This is a conversational handoff, not a separate browser command.
+For a human handoff, run `browser open --session <name> --url <url> --json`, tell the user that the named session remains open, and pause actions while they complete login, MFA, or manual navigation. Do not substitute the deprecated `browser session start --url` compatibility path. After they reply, run `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax` before continuing. Stop the session only when explicitly asked or when no later continuation is expected. This is a conversational handoff, not a separate browser command.
 
 Use discovery and attach only for an external browser the user explicitly launched with a known `127.0.0.1` DevTools port:
 
@@ -664,7 +664,7 @@ browser session attach --name user-demo --debug-port 9222 --json
 - `--session <name>`: browser automation session name.
 - `--target-id <id>`: optional DevTools page target id; defaults to the active tab.
 - `--timeout <seconds>`: maximum seconds for page commands.
-- `--download-dir <dir>`: dedicated session download directory for `browser session start`.
+- `--download-dir <dir>`: dedicated download directory when `browser open` creates a managed session, or when the lower-level `browser session start` command is used for lifecycle/configuration.
 - `--json`: return the stable JSON envelope.
 
 ## Mobile Auto

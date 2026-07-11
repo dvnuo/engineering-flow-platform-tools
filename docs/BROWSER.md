@@ -6,17 +6,17 @@
 
 ## Routing Decision (Read First)
 
-Use the persistent path by default:
+Use the sole recommended user-level page-opening path:
 
 ```bash
 browser open --session default --url "https://intranet.example.test/app" --json
 ```
 
-Choose `browser open` when the user asks to open, visit, go to, or navigate to a page. It is required when the user needs to log in, complete MFA, interact with the page before the agent continues, keep the window open for later, or perform a multi-step workflow. If "open" is ambiguous, choose persistence.
+Choose `browser open` whenever the user asks to open, visit, go to, or navigate to a page. It is the only recommended entry point when the page must remain available, including login, MFA, human-first interaction, later agent continuation, or a multi-step workflow. If "open" is ambiguous, choose persistence.
 
 Do not use `browser probe` for those requests. A probe is only for an explicitly one-shot SSO/connectivity/selector/screenshot/HTML/network diagnostic. The probe-owned browser context closes when the command returns and cannot be resumed for manual login or later actions.
 
-`browser open` starts the named managed session when it is absent and opens the URL in a new tab when the session is already running. Prefer it for normal open/navigation requests so start and reuse have one contract; reserve lower-level `browser session start` and `browser tab open` for explicit lifecycle or tab control.
+`browser open` starts the named managed session when it is absent and opens the URL in a new tab when the session is already running. It is the recommended page-opening contract for both cases. `browser session start` is a lower-level lifecycle/configuration command; its `--url` flag is a deprecated compatibility entry point and must not be used for new workflows or examples. Reserve `browser tab open` for explicit tab control.
 
 `browser session discover` and `browser session attach` are a separate alternative for an external browser the user explicitly launched with a known `127.0.0.1` DevTools port. They are not the normal managed-browser open flow.
 
@@ -46,7 +46,7 @@ Do not use `browser probe` for those requests. A probe is only for an explicitly
 - It does not expose typed text, selected option values, console object previews, raw console stacks without redaction, frame URLs/titles without redaction, or closed shadow roots.
 - It does not treat `negotiate_401_seen` as proof of Kerberos or Windows Integrated Authentication success. It is only an indicator.
 
-## Windows Manual Test
+## One-Shot Windows Diagnostic
 
 ```powershell
 .\dist\windows-amd64\browser.exe probe `
@@ -93,7 +93,7 @@ browser session attach --name user-demo --debug-port 9222 --json
 
 When the user needs control of the visible browser:
 
-1. Run `browser open --session <name> --url <url> --json`.
+1. Run `browser open --session <name> --url <url> --json`. Do not substitute the deprecated `browser session start --url` compatibility path.
 2. Tell the user that the window will remain open, state the session name, and ask them to reply when login, MFA, or navigation is complete.
 3. Pause agent page actions. Do not ask the user to send credentials or MFA codes through chat.
 4. After the user replies, reacquire the current tab and page state:

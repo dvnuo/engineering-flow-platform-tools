@@ -20,20 +20,15 @@ type PersistentOpenResult struct {
 	NextCommands      []string `json:"next_commands"`
 }
 
-type persistentSessionManager interface {
-	Status(context.Context, string) (Session, error)
-	Start(context.Context, StartOptions) (Session, error)
+type persistentOpenOps interface {
+	EnsureSession(context.Context, StartOptions) (Session, bool, error)
 	OpenTab(context.Context, string, string) (TabResult, error)
 }
 
 type lockedPersistentSessionManager struct{ manager *Manager }
 
-func (m lockedPersistentSessionManager) Status(ctx context.Context, name string) (Session, error) {
-	return m.manager.statusUnlocked(ctx, name)
-}
-
-func (m lockedPersistentSessionManager) Start(ctx context.Context, opts StartOptions) (Session, error) {
-	return m.manager.startUnlocked(ctx, opts)
+func (m lockedPersistentSessionManager) EnsureSession(ctx context.Context, opts StartOptions) (Session, bool, error) {
+	return m.manager.ensureSessionUnlocked(ctx, opts)
 }
 
 func (m lockedPersistentSessionManager) OpenTab(ctx context.Context, name, rawURL string) (TabResult, error) {
@@ -66,7 +61,7 @@ func (m *Manager) OpenPersistent(ctx context.Context, opts StartOptions) (Persis
 	return openPersistent(ctx, lockedPersistentSessionManager{manager: m}, opts)
 }
 
-func openPersistent(ctx context.Context, manager persistentSessionManager, opts StartOptions) (PersistentOpenResult, error) {
+func openPersistent(ctx context.Context, manager persistentOpenOps, opts StartOptions) (PersistentOpenResult, error) {
 	name := defaultSessionName(opts.Name)
 	if err := ValidateSessionName(name); err != nil {
 		return PersistentOpenResult{}, err
@@ -79,27 +74,15 @@ func openPersistent(ctx context.Context, manager persistentSessionManager, opts 
 		return PersistentOpenResult{}, err
 	}
 
-	session, err := manager.Status(ctx, name)
-	observedSession := session
-	reused := err == nil && session.Alive && strings.TrimSpace(session.BrowserWebSocketURL) != ""
-	if err != nil && !isSessionNotFound(err) {
+	// Session creation is lifecycle-only. The requested URL is always opened
+	// here through DevTools so browser open owns the exact-target contract.
+	opts.Name = name
+	opts.URL = ""
+	session, reused, err := manager.EnsureSession(ctx, opts)
+	if err != nil {
 		return PersistentOpenResult{}, err
 	}
-	var tab TabResult
-	if reused {
-		tab, err = manager.OpenTab(ctx, name, rawURL)
-	} else {
-		// Open through DevTools after startup so the returned target is always the
-		// exact page created for this request, even when target creation or profile
-		// restoration order differs across browsers.
-		opts.Name = name
-		opts.URL = ""
-		session, err = manager.Start(ctx, opts)
-		if err == nil {
-			reused = sameSessionIdentity(observedSession, session)
-			tab, err = manager.OpenTab(ctx, name, rawURL)
-		}
-	}
+	tab, err := manager.OpenTab(ctx, name, rawURL)
 	if err != nil {
 		return PersistentOpenResult{}, err
 	}
@@ -114,16 +97,6 @@ func openPersistent(ctx context.Context, manager persistentSessionManager, opts 
 		Target:            tab.Tab,
 		NextCommands:      persistentOpenNextCommands(name),
 	}, nil
-}
-
-func sameSessionIdentity(before, after Session) bool {
-	if before.Name == "" || after.Name == "" || before.Name != after.Name {
-		return false
-	}
-	return before.PID == after.PID &&
-		before.DebugAddr == after.DebugAddr &&
-		before.DebugPort == after.DebugPort &&
-		before.CreatedAt.Equal(after.CreatedAt)
 }
 
 func isSessionNotFound(err error) bool {

@@ -147,7 +147,7 @@ func TestStatusRetriesTransientDevToolsVersionFailure(t *testing.T) {
 	}
 }
 
-func TestStartExistingSessionOpensSuppliedURLInsteadOfIgnoringIt(t *testing.T) {
+func TestStartURLCompatibilityDelegatesToPersistentOpen(t *testing.T) {
 	var newTabCalls atomic.Int32
 	var openedURL string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -179,7 +179,9 @@ func TestStartExistingSessionOpensSuppliedURLInsteadOfIgnoringIt(t *testing.T) {
 	}
 
 	mgr := NewManager(store, nil)
-	session, err := mgr.Start(context.Background(), StartOptions{
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	session, err := mgr.Start(ctx, StartOptions{
 		Name: "default",
 		URL:  "https://example.test/next",
 	})
@@ -198,6 +200,55 @@ func TestStartExistingSessionOpensSuppliedURLInsteadOfIgnoringIt(t *testing.T) {
 	}
 	if reloaded.ActiveTargetID != "page-new" {
 		t.Fatalf("active target was not persisted: %#v", reloaded)
+	}
+}
+
+func TestStartWithoutURLOnlyEnsuresExistingSession(t *testing.T) {
+	for _, rawURL := range []string{"", "   "} {
+		t.Run("url="+strconv.Quote(rawURL), func(t *testing.T) {
+			var newTabCalls atomic.Int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/json/version":
+					_, _ = w.Write([]byte(`{"webSocketDebuggerUrl":"ws://127.0.0.1/devtools/browser/existing"}`))
+				case "/json/new":
+					newTabCalls.Add(1)
+					_, _ = w.Write([]byte(`{"id":"unexpected","type":"page","url":"https://example.test"}`))
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer srv.Close()
+			host, port := splitHostPort(t, srv.Listener.Addr().String())
+
+			store := NewStore(t.TempDir())
+			created := time.Now().UTC().Add(-time.Minute)
+			if err := store.Save(Session{
+				Name:                "default",
+				DebugAddr:           host,
+				DebugPort:           port,
+				BrowserWebSocketURL: "ws://127.0.0.1/devtools/browser/existing",
+				PID:                 1234,
+				CreatedAt:           created,
+				Alive:               true,
+				ActiveTargetID:      "page-old",
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			session, err := NewManager(store, nil).Start(ctx, StartOptions{Name: "default", URL: rawURL})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if newTabCalls.Load() != 0 {
+				t.Fatalf("session lifecycle start unexpectedly opened %d tabs", newTabCalls.Load())
+			}
+			if session.PID != 1234 || !session.CreatedAt.Equal(created) || session.ActiveTargetID != "page-old" {
+				t.Fatalf("session identity changed: %#v", session)
+			}
+		})
 	}
 }
 
@@ -257,6 +308,10 @@ func TestSessionLifecycleMutationsUseSharedLock(t *testing.T) {
 	}{
 		{name: "start", run: func(ctx context.Context, mgr *Manager) error {
 			_, err := mgr.Start(ctx, StartOptions{Name: "default"})
+			return err
+		}},
+		{name: "start-with-url", run: func(ctx context.Context, mgr *Manager) error {
+			_, err := mgr.Start(ctx, StartOptions{Name: "default", URL: "https://example.test"})
 			return err
 		}},
 		{name: "stop", run: func(ctx context.Context, mgr *Manager) error {

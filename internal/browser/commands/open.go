@@ -14,7 +14,7 @@ func openCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "open",
 		Short: "Open a URL in a persistent browser session",
-		Long:  "Open an HTTP or HTTPS URL in a visible persistent browser for manual login and page operations in later turns. Start the named managed session when none is running; otherwise reuse it and always open the URL in a new tab.",
+		Long:  "Open an HTTP or HTTPS URL in a visible persistent browser for manual login and page operations in later turns. This is the canonical user-level page-open command: start the named managed session when none is running; otherwise reuse it and always open the URL in a new tab.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Verbose = o.Verbose
 			mgr, err := automation.DefaultManager()

@@ -53,7 +53,7 @@ func NewRoot() *cobra.Command {
 
 Use it for jobs, builds, queues, console logs, artifacts, Pipeline REST data, views, nodes, plugins, selected controller actions, and raw Jenkins API calls. For agent workflows, default every command and subcommand to --json. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive or service-affecting operations.
 
-Configuration uses the shared EFP config file, normally ~/.efp/config.yaml, under the jenkins node.`),
+Configuration uses the shared EFP config from EFP_CONFIG_JSON (managed runtimes) or the config file, normally ~/.efp/config.yaml (local), under the jenkins node.`),
 		Examples: []string{
 			`jenkins job build app/main --json`,
 			`jenkins build status app/main lastBuild --json`,
@@ -96,13 +96,12 @@ func print(cmd *cobra.Command, o *Opts, e output.Envelope) error {
 }
 
 func loadCfg(o *Opts) (config.RootConfig, error) {
-	p, _ := config.ResolvePath(o.Config)
-	return config.Load(p)
+	cfg, _, err := config.LoadShared(o.Config)
+	return cfg, err
 }
 
 func saveCfg(o *Opts, cfg config.RootConfig) error {
-	p, _ := config.ResolvePath(o.Config)
-	return config.Save(p, cfg)
+	return config.SaveShared(o.Config, cfg)
 }
 
 func loadCtx(o *Opts, entity string) (*ctx, error) {

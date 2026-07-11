@@ -93,7 +93,7 @@ func NewRootWithRunner(r commandRunner) *cobra.Command {
 		Short:   "Authorize AWS credentials from the shared EFP config",
 		Long: strings.TrimSpace(`aws-auth is a terminal-invoked CLI for agents and runtimes that need AWS authorization from the shared EFP config file.
 
-Configuration uses the shared EFP config file, normally ~/.efp/config.yaml, under the aws node. The auth login command stores the configured domain, username, and password. The login command reads that config and invokes the installed authorization provider with the account and role supplied for that login.`),
+Configuration uses the shared EFP config from EFP_CONFIG_JSON (managed runtimes) or the config file, normally ~/.efp/config.yaml (local), under the aws node. The auth login command stores the configured domain, username, and password into the config file; when EFP_CONFIG_JSON manages the config, auth login requires an explicit --config path. The login command reads that config and invokes the installed authorization provider with the account and role supplied for that login.`),
 		Examples: []string{
 			`printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`,
 			`aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json`,
@@ -213,6 +213,9 @@ func authCmd(o *Opts) *cobra.Command {
 			Username: username,
 			Password: password,
 		}
+		if config.EnvManaged(o.Config) {
+			return print(cmd, o, output.Failure("config_env_managed", "config comes from EFP_CONFIG_JSON; pass --config to write a file", "", 400))
+		}
 		if err := config.Save(path, cfg); err != nil {
 			return print(cmd, o, output.Failure("config_error", output.RedactString(err.Error()), "", 500))
 		}
@@ -309,6 +312,13 @@ func resolveAWSConfigPath(flagPath string) (string, error) {
 }
 
 func loadAWSConfigForRead(flagPath string) (string, config.RootConfig, error) {
+	if flagPath == "" && strings.TrimSpace(os.Getenv(config.EnvConfigJSON)) != "" {
+		cfg, source, err := config.LoadShared("")
+		if err != nil {
+			return source, config.RootConfig{}, err
+		}
+		return source, cfg, nil
+	}
 	path, err := resolveAWSConfigPath(flagPath)
 	if err != nil {
 		return "", config.RootConfig{}, err

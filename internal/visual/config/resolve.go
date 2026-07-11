@@ -57,24 +57,7 @@ func DefaultTemplateDir() (string, error) {
 }
 
 func configTemplateDir(flagConfig string) string {
-	cfgPath := strings.TrimSpace(flagConfig)
-	if cfgPath == "" {
-		cfgPath = strings.TrimSpace(os.Getenv(sharedconfig.EnvConfigPath))
-	}
-	if cfgPath == "" {
-		p, err := sharedconfig.DefaultPath()
-		if err != nil {
-			return ""
-		}
-		cfgPath = p
-	}
-	if cfgPath == "" {
-		return ""
-	}
-	if _, err := os.Stat(cfgPath); err != nil {
-		return ""
-	}
-	cfg, err := sharedconfig.Load(cfgPath)
+	cfg, _, err := sharedconfig.LoadShared(strings.TrimSpace(flagConfig))
 	if err != nil {
 		return ""
 	}

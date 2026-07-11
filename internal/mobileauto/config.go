@@ -29,15 +29,14 @@ type Credentials struct {
 }
 
 func LoadRuntimeConfig(flagPath string) (RuntimeConfig, error) {
-	path, err := config.ResolvePath(flagPath)
-	if err != nil {
-		return RuntimeConfig{}, NewError("config_error", "could not resolve config path", "Set EFP_CONFIG or pass --config.", 400)
-	}
-	root, err := config.Load(path)
+	root, path, err := config.LoadShared(flagPath)
 	warnings := []string{}
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return RuntimeConfig{}, NewError("config_error", "could not read config file", "Check EFP_CONFIG, file permissions, and YAML syntax.", 400)
+		if path == "" {
+			return RuntimeConfig{}, NewError("config_error", "could not resolve config path", "Set EFP_CONFIG or pass --config.", 400)
+		}
+		if path == config.EnvSourceConfigJSON || !os.IsNotExist(err) {
+			return RuntimeConfig{}, NewError("config_error", "could not read config", "Check EFP_CONFIG_JSON, EFP_CONFIG, file permissions, and YAML syntax.", 400)
 		}
 		root = config.RootConfig{}
 		root.Normalize()

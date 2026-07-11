@@ -9,8 +9,7 @@ import (
 func instanceCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "instance"}
 	c.AddCommand(&cobra.Command{Use: "list", RunE: func(cmd *cobra.Command, args []string) error {
-		p, _ := config.ResolvePath(o.Config)
-		cfg, err := config.Load(p)
+		cfg, _, err := config.LoadShared(o.Config)
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
 		}
@@ -20,8 +19,7 @@ func instanceCmd(o *Opts) *cobra.Command {
 		return print(cmd, o, output.Success("", map[string]any{"instances": cfg.Confluence.Instances, "default_instance": cfg.Confluence.DefaultInstance}))
 	}})
 	c.AddCommand(&cobra.Command{Use: "get <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		p, _ := config.ResolvePath(o.Config)
-		cfg, err := config.Load(p)
+		cfg, _, err := config.LoadShared(o.Config)
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
 		}
@@ -34,8 +32,7 @@ func instanceCmd(o *Opts) *cobra.Command {
 		return print(cmd, o, output.Failure("not_found", "instance not found", "", 404))
 	}})
 	c.AddCommand(&cobra.Command{Use: "add <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		p, _ := config.ResolvePath(o.Config)
-		cfg, _ := config.Load(p)
+		cfg, _, _ := config.LoadShared(o.Config)
 		v := true
 		base, _ := cmd.Flags().GetString("base-url")
 		rest, _ := cmd.Flags().GetString("rest-path")
@@ -50,7 +47,7 @@ func instanceCmd(o *Opts) *cobra.Command {
 		if d, _ := cmd.Flags().GetBool("default"); d {
 			cfg.Confluence.DefaultInstance = args[0]
 		}
-		if err := config.Save(p, cfg); err != nil {
+		if err := config.SaveShared(o.Config, cfg); err != nil {
 			return print(cmd, o, output.Failure("config_error", err.Error(), "", 500))
 		}
 		return print(cmd, o, output.Success(args[0], map[string]any{"added": true}))
@@ -60,8 +57,7 @@ func instanceCmd(o *Opts) *cobra.Command {
 	addAuthFlags(c.Commands()[2])
 	c.Commands()[2].Flags().Bool("default", false, "")
 	c.AddCommand(&cobra.Command{Use: "update <name>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		p, _ := config.ResolvePath(o.Config)
-		cfg, err := config.Load(p)
+		cfg, _, err := config.LoadShared(o.Config)
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
 		}
@@ -77,7 +73,7 @@ func instanceCmd(o *Opts) *cobra.Command {
 				}
 			}
 		}
-		_ = config.Save(p, cfg)
+		_ = config.SaveShared(o.Config, cfg)
 		return print(cmd, o, output.Success(args[0], map[string]any{"updated": true}))
 	}})
 	c.Commands()[3].Flags().String("base-url", "", "")
@@ -86,8 +82,7 @@ func instanceCmd(o *Opts) *cobra.Command {
 		if !o.Yes {
 			return print(cmd, o, output.Failure("invalid_args", "--yes required", "", 400))
 		}
-		p, _ := config.ResolvePath(o.Config)
-		cfg, err := config.Load(p)
+		cfg, _, err := config.LoadShared(o.Config)
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
 		}
@@ -101,12 +96,11 @@ func instanceCmd(o *Opts) *cobra.Command {
 		if cfg.Confluence.DefaultInstance == args[0] {
 			cfg.Confluence.DefaultInstance = ""
 		}
-		_ = config.Save(p, cfg)
+		_ = config.SaveShared(o.Config, cfg)
 		return print(cmd, o, output.Success(args[0], map[string]any{"removed": true}))
 	}})
 	c.AddCommand(&cobra.Command{Use: "default [name]", Args: cobra.MaximumNArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		p, _ := config.ResolvePath(o.Config)
-		cfg, err := config.Load(p)
+		cfg, _, err := config.LoadShared(o.Config)
 		if err != nil {
 			return print(cmd, o, output.Failure("config_missing", err.Error(), "", 404))
 		}
@@ -114,7 +108,7 @@ func instanceCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", map[string]any{"default_instance": cfg.Confluence.DefaultInstance}))
 		}
 		cfg.Confluence.DefaultInstance = args[0]
-		_ = config.Save(p, cfg)
+		_ = config.SaveShared(o.Config, cfg)
 		return print(cmd, o, output.Success(args[0], map[string]any{"default_instance": args[0]}))
 	}})
 	return c

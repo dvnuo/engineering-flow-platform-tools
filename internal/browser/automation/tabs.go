@@ -3,6 +3,7 @@ package automation
 import (
 	"context"
 	"strings"
+	"time"
 )
 
 type TabListResult struct {
@@ -16,7 +17,20 @@ type TabResult struct {
 }
 
 func (m *Manager) TabList(ctx context.Context, sessionName string) (TabListResult, error) {
-	session, err := m.RunningSession(ctx, sessionName)
+	name := defaultSessionName(sessionName)
+	if err := ValidateSessionName(name); err != nil {
+		return TabListResult{}, err
+	}
+	release, err := m.acquireSessionLock(ctx, name, 8*time.Second)
+	if err != nil {
+		return TabListResult{}, err
+	}
+	defer release()
+	return m.tabListUnlocked(ctx, name)
+}
+
+func (m *Manager) tabListUnlocked(ctx context.Context, sessionName string) (TabListResult, error) {
+	session, err := m.runningSessionUnlocked(ctx, sessionName)
 	if err != nil {
 		return TabListResult{}, err
 	}
@@ -28,7 +42,16 @@ func (m *Manager) TabList(ctx context.Context, sessionName string) (TabListResul
 }
 
 func (m *Manager) CurrentTab(ctx context.Context, sessionName string) (TabResult, error) {
-	session, target, err := m.currentTarget(ctx, sessionName)
+	name := defaultSessionName(sessionName)
+	if err := ValidateSessionName(name); err != nil {
+		return TabResult{}, err
+	}
+	release, err := m.acquireSessionLock(ctx, name, 8*time.Second)
+	if err != nil {
+		return TabResult{}, err
+	}
+	defer release()
+	session, target, err := m.currentTargetUnlocked(ctx, name)
 	if err != nil {
 		return TabResult{}, err
 	}
@@ -39,7 +62,20 @@ func (m *Manager) ActivateTab(ctx context.Context, sessionName, targetID string)
 	if strings.TrimSpace(targetID) == "" {
 		return TabResult{}, invalidArgs("--target-id is required", "Run browser tab list --json and pass the page target id.")
 	}
-	session, err := m.RunningSession(ctx, sessionName)
+	name := defaultSessionName(sessionName)
+	if err := ValidateSessionName(name); err != nil {
+		return TabResult{}, err
+	}
+	release, err := m.acquireSessionLock(ctx, name, 8*time.Second)
+	if err != nil {
+		return TabResult{}, err
+	}
+	defer release()
+	return m.activateTabUnlocked(ctx, name, targetID)
+}
+
+func (m *Manager) activateTabUnlocked(ctx context.Context, sessionName, targetID string) (TabResult, error) {
+	session, err := m.runningSessionUnlocked(ctx, sessionName)
 	if err != nil {
 		return TabResult{}, err
 	}
@@ -64,7 +100,20 @@ func (m *Manager) OpenTab(ctx context.Context, sessionName, rawURL string) (TabR
 	if err := validateHTTPURL(rawURL, "--url"); err != nil {
 		return TabResult{}, err
 	}
-	session, err := m.RunningSession(ctx, sessionName)
+	name := defaultSessionName(sessionName)
+	if err := ValidateSessionName(name); err != nil {
+		return TabResult{}, err
+	}
+	release, err := m.acquireSessionLock(ctx, name, 8*time.Second)
+	if err != nil {
+		return TabResult{}, err
+	}
+	defer release()
+	return m.openTabUnlocked(ctx, name, rawURL)
+}
+
+func (m *Manager) openTabUnlocked(ctx context.Context, sessionName, rawURL string) (TabResult, error) {
+	session, err := m.runningSessionUnlocked(ctx, sessionName)
 	if err != nil {
 		return TabResult{}, err
 	}
@@ -80,10 +129,23 @@ func (m *Manager) OpenTab(ctx context.Context, sessionName, rawURL string) (TabR
 }
 
 func (m *Manager) ResolveTarget(ctx context.Context, sessionName, targetID string) (Session, Target, error) {
-	if strings.TrimSpace(targetID) == "" {
-		return m.currentTarget(ctx, sessionName)
+	name := defaultSessionName(sessionName)
+	if err := ValidateSessionName(name); err != nil {
+		return Session{}, Target{}, err
 	}
-	session, err := m.RunningSession(ctx, sessionName)
+	release, err := m.acquireSessionLock(ctx, name, 8*time.Second)
+	if err != nil {
+		return Session{}, Target{}, err
+	}
+	defer release()
+	return m.resolveTargetUnlocked(ctx, name, targetID)
+}
+
+func (m *Manager) resolveTargetUnlocked(ctx context.Context, sessionName, targetID string) (Session, Target, error) {
+	if strings.TrimSpace(targetID) == "" {
+		return m.currentTargetUnlocked(ctx, sessionName)
+	}
+	session, err := m.runningSessionUnlocked(ctx, sessionName)
 	if err != nil {
 		return Session{}, Target{}, err
 	}
@@ -94,8 +156,8 @@ func (m *Manager) ResolveTarget(ctx context.Context, sessionName, targetID strin
 	return session, target, nil
 }
 
-func (m *Manager) currentTarget(ctx context.Context, sessionName string) (Session, Target, error) {
-	session, err := m.RunningSession(ctx, sessionName)
+func (m *Manager) currentTargetUnlocked(ctx context.Context, sessionName string) (Session, Target, error) {
+	session, err := m.runningSessionUnlocked(ctx, sessionName)
 	if err != nil {
 		return Session{}, Target{}, err
 	}

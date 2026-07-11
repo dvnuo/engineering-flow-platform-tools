@@ -25,17 +25,29 @@ func (f *fakeRunner) Probe(ctx context.Context, opts probe.ProbeOptions) (probe.
 	return f.result, f.err
 }
 
-func TestCommandsJSONIncludesProbe(t *testing.T) {
+func TestCommandsJSONIncludesPersistentOpenAndProbe(t *testing.T) {
 	out := run(t, &fakeRunner{}, "commands", "--json")
 	data := out["data"].(map[string]any)
 	commands := data["commands"].([]any)
-	for _, item := range commands {
+	found := map[string]bool{}
+	positions := map[string]int{}
+	for index, item := range commands {
 		m := item.(map[string]any)
-		if m["name"] == "probe" || strings.Contains(m["usage"].(string), "browser probe") {
-			return
+		for _, name := range []string{"open", "probe"} {
+			if m["name"] == name || strings.Contains(m["usage"].(string), "browser "+name) {
+				found[name] = true
+				positions[name] = index
+			}
 		}
 	}
-	t.Fatalf("commands did not contain probe: %#v", commands)
+	for _, name := range []string{"open", "probe"} {
+		if !found[name] {
+			t.Fatalf("commands did not contain %s: %#v", name, commands)
+		}
+	}
+	if positions["open"] != 0 || positions["open"] >= positions["probe"] {
+		t.Fatalf("persistent open must precede probe: positions=%#v commands=%#v", positions, commands)
+	}
 }
 
 func TestSchemaProbeRequiresURL(t *testing.T) {
@@ -51,7 +63,7 @@ func TestSchemaProbeRequiresURL(t *testing.T) {
 }
 
 func TestSchemaBrowserDefaultsToChrome(t *testing.T) {
-	for _, command := range []string{"probe", "session.start"} {
+	for _, command := range []string{"open", "probe", "session.start"} {
 		out := run(t, &fakeRunner{}, "schema", command, "--json")
 		data := out["data"].(map[string]any)
 		flags := data["flags"].([]any)
@@ -63,12 +75,34 @@ func TestSchemaBrowserDefaultsToChrome(t *testing.T) {
 				if flag["default"] != "chrome" {
 					t.Fatalf("%s --browser default = %v want chrome", command, flag["default"])
 				}
+				if description, _ := flag["description"].(string); strings.Contains(description, "REDACTED") {
+					t.Fatalf("%s --browser description was unexpectedly redacted: %q", command, description)
+				}
 			}
 		}
 		if !found {
 			t.Fatalf("%s missing --browser flag in %#v", command, data)
 		}
 	}
+}
+
+func TestSessionStartURLIsDocumentedAsCompatibilityOnly(t *testing.T) {
+	out := run(t, &fakeRunner{}, "schema", "session.start", "--json")
+	data := out["data"].(map[string]any)
+	for _, raw := range data["flags"].([]any) {
+		flag := raw.(map[string]any)
+		if flag["name"] != "url" {
+			continue
+		}
+		description, _ := flag["description"].(string)
+		for _, want := range []string{"Deprecated compatibility", "browser open", "do not use in new workflows"} {
+			if !strings.Contains(description, want) {
+				t.Fatalf("session.start --url description missing %q: %q", want, description)
+			}
+		}
+		return
+	}
+	t.Fatal("session.start schema missing compatibility --url flag")
 }
 
 func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
@@ -189,10 +223,29 @@ func TestHelpIsAnnotatedForVisibleCommands(t *testing.T) {
 	cmd := NewRootWithRunner(&fakeRunner{})
 	assertHelpAnnotated(t, cmd)
 	help := runText(t, &fakeRunner{}, "probe", "--help")
-	for _, want := range []string{"Open an internal URL", "--url", "CSS selector"} {
+	for _, want := range []string{"one-shot", "closes", "--url", "CSS selector"} {
 		if !strings.Contains(help, want) {
 			t.Fatalf("probe help missing %q\n%s", want, help)
 		}
+	}
+	help = runText(t, &fakeRunner{}, "open", "--help")
+	for _, want := range []string{"persistent", "manual login", "--url", "--session"} {
+		if !strings.Contains(help, want) {
+			t.Fatalf("open help missing %q\n%s", want, help)
+		}
+	}
+	help = runText(t, &fakeRunner{}, "session", "start", "--help")
+	for _, want := range []string{"lower-level lifecycle", "browser open", "Deprecated compatibility"} {
+		if !strings.Contains(help, want) {
+			t.Fatalf("session start help missing %q\n%s", want, help)
+		}
+	}
+	rootHelp := runText(t, &fakeRunner{}, "--help")
+	if strings.Contains(rootHelp, "session start --name default --url") {
+		t.Fatalf("root help must not recommend deprecated session start --url\n%s", rootHelp)
+	}
+	if !strings.Contains(rootHelp, "session start --name default --browser chrome") {
+		t.Fatalf("root help missing lifecycle-only session start example\n%s", rootHelp)
 	}
 }
 
@@ -204,6 +257,32 @@ func TestHelpLLMIncludesWindowsAndFallbackGuidance(t *testing.T) {
 		joined += tip.(string) + "\n"
 	}
 	for _, want := range []string{"default way to use every browser command", "Command parsing failures", "Windows cmd", "where browser", "file-read tool"} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("help llm missing %q\n%s", want, joined)
+		}
+	}
+}
+
+func TestHelpLLMExplainsPersistentRoutingAndHumanHandoff(t *testing.T) {
+	out := run(t, &fakeRunner{}, "help", "llm", "--json")
+	tips := out["data"].(map[string]any)["tips"].([]any)
+	joined := ""
+	for _, tip := range tips {
+		joined += tip.(string) + "\n"
+	}
+	for _, want := range []string{
+		"Default requests to open",
+		"Manual login",
+		"must not use browser probe",
+		"one-shot diagnostic",
+		"closes when the command returns",
+		"report the session name",
+		"do not stop the session",
+		"reacquire state",
+		"only recommended user-level page-open entry point",
+		"Do not generate browser session start --url",
+		"explicitly configure or ensure the browser lifecycle without opening a page",
+	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("help llm missing %q\n%s", want, joined)
 		}

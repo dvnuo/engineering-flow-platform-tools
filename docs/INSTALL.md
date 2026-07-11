@@ -15,7 +15,7 @@ inspect-image version --json
 visual version --json
 ```
 
-`browser probe` uses Chrome by default and requires Chrome, Edge, or Chromium to be installed on the machine where it runs. Inside OpenCode runtime containers, a separate runtime image change is required to install a browser executable and place the `browser` binary on PATH.
+`browser open` and `browser probe` use Chrome by default and require Chrome, Edge, or Chromium to be installed on the machine where they run. Inside OpenCode runtime containers, a separate runtime image change is required to install a browser executable and place the `browser` binary on PATH.
 
 `mobile-auto` requires BrowserStack credentials for live calls. Set `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY`, or persist them with `mobile-auto auth login --access-key-stdin --json`. Private managed runs also require the BrowserStack Local binary on PATH or configured through `BROWSERSTACK_LOCAL_BINARY`; the CLI does not download it automatically.
 

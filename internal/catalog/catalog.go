@@ -27,11 +27,14 @@ type ArgumentSpec struct {
 }
 
 type explicitMeta struct {
-	Description string
-	Flags       []string
-	Required    []string
-	Risk        string
-	Example     string
+	Description  string
+	Flags        []string
+	Required     []string
+	Risk         string
+	Example      string
+	Lifecycle    string
+	WhenToUse    string
+	WhenNotToUse string
 }
 
 var jiraCommands = []string{
@@ -89,6 +92,7 @@ var jenkinsCommands = []string{
 }
 
 var browserCommands = []string{
+	"browser open",
 	"browser probe",
 	"browser session start",
 	"browser session list",
@@ -231,7 +235,7 @@ func Schema(product, name string) map[string]any {
 	if !ok {
 		item = meta(product, product+" "+strings.ReplaceAll(name, ".", " "))
 	}
-	return map[string]any{
+	schema := map[string]any{
 		"command":   name,
 		"usage":     item.Usage,
 		"risk":      item.Risk,
@@ -240,6 +244,8 @@ func Schema(product, name string) map[string]any {
 		"examples":  item.Examples,
 		"required":  item.Required,
 	}
+	addRoutingMetadata(schema, item)
+	return schema
 }
 
 func CommandsFromCobra(product string, root *cobra.Command) []llm.CommandMeta {
@@ -262,7 +268,7 @@ func SchemaFromCobra(product, name string, root *cobra.Command) (map[string]any,
 	item := meta(product, binding.Usage)
 	item.Examples = examplesForCobra(item, binding.Command)
 	args := argumentSpecs(binding.Usage)
-	return map[string]any{
+	schema := map[string]any{
 		"command":          item.Name,
 		"usage":            binding.Usage,
 		"description":      item.Description,
@@ -272,7 +278,21 @@ func SchemaFromCobra(product, name string, root *cobra.Command) (map[string]any,
 		"flags":            cobraFlagSpecs(item.Name, binding.Command, item.Required),
 		"examples":         item.Examples,
 		"required":         item.Required,
-	}, true
+	}
+	addRoutingMetadata(schema, item)
+	return schema, true
+}
+
+func addRoutingMetadata(schema map[string]any, item llm.CommandMeta) {
+	if item.Lifecycle != "" {
+		schema["lifecycle"] = item.Lifecycle
+	}
+	if item.WhenToUse != "" {
+		schema["when_to_use"] = item.WhenToUse
+	}
+	if item.WhenNotToUse != "" {
+		schema["when_not_to_use"] = item.WhenNotToUse
+	}
 }
 
 type cobraBinding struct {
@@ -690,14 +710,17 @@ func meta(product, usage string) llm.CommandMeta {
 		}
 	}
 	return llm.CommandMeta{
-		Name:        name,
-		Usage:       usage,
-		Product:     product,
-		Risk:        r,
-		Description: desc,
-		Examples:    []string{example},
-		Flags:       flags,
-		Required:    req,
+		Name:         name,
+		Usage:        usage,
+		Product:      product,
+		Risk:         r,
+		Description:  desc,
+		Examples:     []string{example},
+		Flags:        flags,
+		Required:     req,
+		Lifecycle:    ex.Lifecycle,
+		WhenToUse:    ex.WhenToUse,
+		WhenNotToUse: ex.WhenNotToUse,
 	}
 }
 
@@ -804,8 +827,15 @@ func browserExplicit(name string) (explicitMeta, bool) {
 	sessionFlag := append([]string{"session"}, common...)
 	pageFlags := append([]string{"session", "target-id", "timeout"}, common...)
 	items := map[string]explicitMeta{
-		"session.start": {Description: "Start a persistent Edge/Chrome/Chromium automation session with DevTools bound to 127.0.0.1.",
-			Flags: []string{"name", "browser", "browser-exe", "headless", "profile", "download-dir", "clean-profile", "port", "url", "json", "format", "verbose"}, Risk: "write", Example: "browser session start --name default --url https://intranet.example.test --json"},
+		"open": {Description: "Open an HTTP or HTTPS URL in a persistent Edge/Chrome/Chromium session that remains available for manual login and page operations in later turns.",
+			Flags: []string{"url", "session", "browser", "browser-exe", "headless", "profile", "download-dir", "clean-profile", "port", "json", "format", "verbose"}, Required: []string{"url"}, Risk: "write", Example: "browser open --session default --url https://intranet.example.test --json",
+			Lifecycle: "persistent", WhenToUse: "Use when the browser must remain open for manual login, MFA, human navigation, or page operations in later turns.", WhenNotToUse: "Do not use when a one-shot SSO or connectivity diagnostic with captured artifacts is the complete task; use browser probe instead."},
+		"probe": {Description: "Capture a one-shot Edge/Chrome/Chromium SSO diagnostic with screenshot, HTML, and network artifacts; the launched browser closes when the command returns.",
+			Flags: []string{"url", "selector", "require-selector", "wait", "timeout", "out", "profile", "clean-profile", "browser-exe", "browser", "headless", "ignore-cert-errors", "fetch-api", "network-filter", "max-network-events", "save-html", "save-screenshot", "json", "format", "verbose"}, Required: []string{"url"}, Risk: "read", Example: "browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json",
+			Lifecycle: "one_shot", WhenToUse: "Use only for a self-contained SSO or connectivity diagnostic and artifact capture that finishes in this command.", WhenNotToUse: "Do not use for manual login, MFA, human navigation, or any page operation that must continue after this command returns or in a later turn."},
+		"session.start": {Description: "Ensure a persistent Edge/Chrome/Chromium automation session is running with explicit browser, profile, and DevTools lifecycle configuration; it does not open a page unless the deprecated --url compatibility flag is supplied.",
+			Flags: []string{"name", "browser", "browser-exe", "headless", "profile", "download-dir", "clean-profile", "port", "url", "json", "format", "verbose"}, Risk: "write", Example: "browser session start --name default --browser chrome --json",
+			Lifecycle: "persistent", WhenToUse: "Use only for explicit lower-level session lifecycle or launch configuration when no page needs to be opened.", WhenNotToUse: "Do not use to open, visit, show, or navigate to a page for manual login or later-turn work; use browser open. The --url flag is deprecated compatibility only."},
 		"session.list": {Description: "List stored browser automation sessions and refresh their local DevTools status.",
 			Flags: common, Risk: "read", Example: "browser session list --json"},
 		"session.status": {Description: "Show one browser automation session and refresh whether its local DevTools endpoint is alive.",
@@ -822,8 +852,9 @@ func browserExplicit(name string) (explicitMeta, bool) {
 			Flags: sessionFlag, Risk: "read", Example: "browser tab current --session default --json"},
 		"tab.activate": {Description: "Activate a page tab and persist it as the session's active target.",
 			Flags: append([]string{"session", "target-id"}, common...), Required: []string{"target-id"}, Risk: "write", Example: "browser tab activate --session default --target-id page-1 --json"},
-		"tab.open": {Description: "Open an HTTP or HTTPS URL in a new tab for a running browser automation session.",
-			Flags: append([]string{"session", "url"}, common...), Required: []string{"url"}, Risk: "write", Example: "browser tab open --session default --url https://intranet.example.test --json"},
+		"tab.open": {Description: "Open an HTTP or HTTPS URL in a new tab of a running persistent browser session that remains available for page operations in later turns.",
+			Flags: append([]string{"session", "url"}, common...), Required: []string{"url"}, Risk: "write", Example: "browser tab open --session default --url https://intranet.example.test --json",
+			Lifecycle: "persistent", WhenToUse: "Use when the persistent session is already running and the URL should open in a new tab for this or a later turn.", WhenNotToUse: "Do not use when no persistent session exists; use browser open to create or reuse one automatically."},
 		"page.snapshot": {Description: "Return redacted URL, title, body text preview, and optional HTML preview from the selected page target.",
 			Flags: append([]string{"include-html", "max-text-bytes", "max-html-bytes"}, pageFlags...), Risk: "read", Example: "browser page snapshot --session default --json"},
 		"page.extract": {Description: "Extract redacted text, values, links, labels, and optional HTML from elements matching a CSS selector.",
@@ -2038,7 +2069,6 @@ var explicit = map[string]explicitMeta{
 	"inspect":              {Description: "Inspect exactly one local image using the configured vision provider.", Flags: []string{"image", "prompt", "prompt-file", "model", "reasoning", "preset", "timeout", "config", "json", "format", "verbose"}, Required: []string{"image", "prompt"}, Risk: "external_network_data_egress", Example: "inspect-image inspect --image ./screenshot.png --prompt \"Read the error message\" --json"},
 	"doctor":               {Description: "Check inspect-image config, auth, proxy mode, provider endpoint, and model defaults.", Flags: []string{"config", "json", "format", "verbose"}, Risk: "read", Example: "inspect-image doctor --json"},
 	"models":               {Description: "Show inspect-image model default and allowed reasoning efforts.", Flags: []string{"json", "format", "verbose"}, Risk: "read", Example: "inspect-image models --json"},
-	"probe":                {Description: "Open an internal URL in Edge/Chrome/Chromium, capture screenshot/HTML/network summary, and report browser SSO indicators.", Flags: []string{"url", "selector", "require-selector", "wait", "timeout", "out", "profile", "clean-profile", "browser-exe", "browser", "headless", "ignore-cert-errors", "fetch-api", "network-filter", "max-network-events", "save-html", "save-screenshot", "json", "format", "verbose"}, Required: []string{"url"}, Risk: "read", Example: "browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json"},
 	"version":              {Description: "Print CLI version, commit, and build date.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira version --json"},
 	"auth.test":            {Description: "Verify configured credentials against the current user endpoint.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira auth test --json"},
 	"server-info":          {Description: "Read server metadata from the selected instance.", Flags: []string{"instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jira server-info --json"},

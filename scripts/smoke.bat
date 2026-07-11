@@ -37,6 +37,8 @@ if errorlevel 1 exit /b 1
 go run ./cmd/visual commands --json >nul
 if errorlevel 1 exit /b 1
 
+go run ./cmd/browser schema open --json >nul
+if errorlevel 1 exit /b 1
 go run ./cmd/browser schema probe --json >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/mobile-auto schema run.start --json >nul

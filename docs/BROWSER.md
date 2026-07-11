@@ -4,6 +4,22 @@
 
 `browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It can run one-shot probes, or keep a dedicated Chrome automation session open by default for tab selection, semantic element finding, redacted page reads, structured extraction/export, form automation, bounded page actions, assertions, workflows, screenshots, network exports, and performance metadata through DevTools. Edge/Chromium remain available with `--browser`.
 
+## Routing Decision (Read First)
+
+Use the sole recommended user-level page-opening path:
+
+```bash
+browser open --session default --url "https://intranet.example.test/app" --json
+```
+
+Choose `browser open` whenever the user asks to open, visit, go to, or navigate to a page. It is the only recommended entry point when the page must remain available, including login, MFA, human-first interaction, later agent continuation, or a multi-step workflow. If "open" is ambiguous, choose persistence.
+
+Do not use `browser probe` for those requests. A probe is only for an explicitly one-shot SSO/connectivity/selector/screenshot/HTML/network diagnostic. The probe-owned browser context closes when the command returns and cannot be resumed for manual login or later actions.
+
+`browser open` starts the named managed session when it is absent and opens the URL in a new tab when the session is already running. It is the recommended page-opening contract for both cases. `browser session start` is a lower-level lifecycle/configuration command; its `--url` flag is a deprecated compatibility entry point and must not be used for new workflows or examples. Reserve `browser tab open` for explicit tab control.
+
+`browser session discover` and `browser session attach` are a separate alternative for an external browser the user explicitly launched with a known `127.0.0.1` DevTools port. They are not the normal managed-browser open flow.
+
 ## What It Verifies
 
 - The local browser can launch for the current user or runtime environment.
@@ -30,7 +46,7 @@
 - It does not expose typed text, selected option values, console object previews, raw console stacks without redaction, frame URLs/titles without redaction, or closed shadow roots.
 - It does not treat `negotiate_401_seen` as proof of Kerberos or Windows Integrated Authentication success. It is only an indicator.
 
-## Windows Manual Test
+## One-Shot Windows Diagnostic
 
 ```powershell
 .\dist\windows-amd64\browser.exe probe `
@@ -57,16 +73,43 @@ If a clean profile still reaches the business page, OS/enterprise SSO is more li
 
 ## Persistent Session Workflow
 
-Start or reuse a dedicated browser session, or attach metadata to a browser the user explicitly launched with a local DevTools port:
+Start or reuse a dedicated managed browser session:
 
 ```bash
-browser session start --name default --url "https://intranet.example.test/app" --json
+browser open --session default --url "https://intranet.example.test/app" --json
 browser session status default --json
+```
+
+For a browser the user explicitly launched with a local DevTools port, use the external attach alternative:
+
+```bash
 browser session discover --ports 9222,9223 --json
 browser session attach --name user-demo --debug-port 9222 --json
 ```
 
-`session start` launches the managed browser with a dedicated profile and attempts to detach the browser process from the short-lived CLI or agent command process. This is meant for VS Code/Copilot-style workflows where the agent runs one CLI command, returns to chat, and later runs another command against the same DevTools endpoint.
+`browser open` launches the managed browser with a dedicated profile when necessary and attempts to detach the browser process from the short-lived CLI or agent command process. This is meant for VS Code/Copilot-style workflows where the agent runs one CLI command, returns to chat, and later runs another command against the same DevTools endpoint.
+
+### Human Login / Navigation Handoff
+
+When the user needs control of the visible browser:
+
+1. Run `browser open --session <name> --url <url> --json`. Do not substitute the deprecated `browser session start --url` compatibility path.
+2. Tell the user that the window will remain open, state the session name, and ask them to reply when login, MFA, or navigation is complete.
+3. Pause agent page actions. Do not ask the user to send credentials or MFA codes through chat.
+4. After the user replies, reacquire the current tab and page state:
+
+   ```bash
+   browser session status default --json
+   browser tab list --session default --json
+   browser tab current --session default --json
+   browser page snapshot --session default --json
+   browser page ax --session default --json
+   ```
+
+5. Continue using the newly observed target and refs. Do not assume target ids or refs captured before the handoff are still current.
+6. Stop the session only when the user asks to close it or when the entire workflow is complete and no later continuation is expected.
+
+This is a conversational handoff; there is no separate browser handoff/resume command.
 
 Select a page target:
 
@@ -236,4 +279,4 @@ This tools repo only builds the binary.
 
 The current OpenCode runtime image consumes prebuilt binaries from `runtime-tools/`. A separate runtime repo change is required to copy `runtime-tools/browser` into `/usr/local/bin/browser`.
 
-A separate runtime repo change is also required to install Edge/Chrome/Chromium if `browser probe` should run inside the runtime container. Without a browser executable, `browser` returns `browser_not_found`.
+A separate runtime repo change is also required to install Edge/Chrome/Chromium when `browser open` or `browser probe` runs inside the runtime container. Without a browser executable, `browser` returns `browser_not_found`.

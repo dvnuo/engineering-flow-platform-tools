@@ -45,9 +45,9 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 ### Browser
 
-`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. It opens an internal URL with Chrome by default through DevTools, captures screenshot/HTML/network summary, and reports whether browser SSO appeared to complete. Edge/Chromium remain available with `--browser`. Persistent sessions can also inspect redacted page structure, semantic locators, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, redacted fetch/XHR body previews, performance metadata, HAR-lite recorder/export metadata, tables/lists, data exports, scroll collection, page-state diffs, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
+`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. `browser open` is the only recommended user-level entry point for opening an internal URL in a persistent managed Chrome session so login, MFA, human navigation, and later agent actions can share the same browser. `browser probe` remains the explicitly one-shot diagnostic path and closes its browser context when it returns. Edge/Chromium remain available with `--browser`. Persistent sessions can also inspect redacted page structure, semantic locators, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, redacted fetch/XHR body previews, performance metadata, HAR-lite recorder/export metadata, tables/lists, data exports, scroll collection, page-state diffs, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
 
-For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable guidance for browser probes.
+For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable browser routing and automation guidance.
 
 ### Mobile Auto
 
@@ -336,7 +336,19 @@ confluence version --json
 
 ## Browser Examples
 
-Windows:
+Use `browser open` as the only recommended entry point when the user asks to open, visit, go to, or navigate to a page and keep it available. This includes human login/MFA, user-first interaction, multi-step work, later continuation, and any ambiguous "open" request:
+
+```bash
+browser open --session default --url "https://intranet.example.test/app" --json
+```
+
+When a human step is needed, open the page with `browser open`, tell the user that session `default` remains open, and pause all page actions while they log in, complete MFA, or navigate. Never ask them to send credentials or MFA codes through chat. After the user replies that the manual step is complete, reacquire state with `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax`; do not reuse stale target ids or refs. Stop the session only when the user asks to close it or no later continuation is expected.
+
+If the named session is already running, `browser open` reuses it and opens the requested URL in a new tab. It is the recommended page-opening contract for both new and existing sessions. `browser session start` is only a lower-level lifecycle/configuration command; its `--url` flag is a deprecated compatibility entry point and must not be used in new automation or examples. Use `tab open` only for explicit tab control. `session discover/attach` is only an alternative for an external browser explicitly launched with a known local DevTools port.
+
+Use `browser probe` only for an explicitly one-shot diagnostic. Its browser context closes when the command returns.
+
+Explicitly one-shot Windows diagnostic:
 
 ```powershell
 browser probe --url "https://intranet.example.test/app" --selector ".user-avatar" --wait 10 --out result --json
@@ -354,12 +366,10 @@ Optional page-context API fetch:
 browser probe --url "https://intranet.example.test/app" --fetch-api "/api/me" --json
 ```
 
-Persistent browser automation session. Managed sessions attempt to detach the browser process from the short-lived CLI or agent command process, so later agent turns can reuse the same DevTools endpoint:
+Continue with the persistent browser automation session. Managed sessions attempt to detach the browser process from the short-lived CLI or agent command process, so later agent turns can reuse the same DevTools endpoint:
 
 ```bash
-browser session start --name default --url "https://intranet.example.test/app" --json
-browser session discover --ports 9222,9223 --json
-browser session attach --name user-demo --debug-port 9222 --json
+browser open --session default --url "https://intranet.example.test/app" --json
 browser tab current --session default --json
 browser page snapshot --session default --json
 browser page extract --session default --selector ".user-avatar" --json
@@ -390,6 +400,13 @@ browser network list --session default --filter "/api/" --json
 browser network export --session default --out result/network.har-lite.json --format har-lite --json
 ```
 
+Attach to an explicitly user-launched browser instead:
+
+```bash
+browser session discover --ports 9222,9223 --json
+browser session attach --name user-demo --debug-port 9222 --json
+```
+
 Bounded page actions:
 
 ```bash
@@ -407,7 +424,7 @@ browser download wait --session default --filename-contains "report" --json
 browser download list --session default --json
 ```
 
-The current OpenCode runtime image consumes prebuilt binaries copied into `runtime-tools/` by an external pipeline. A future runtime change must place `browser` on `PATH`, and probe execution inside a runtime container also requires Edge/Chrome/Chromium in that image.
+The current OpenCode runtime image consumes prebuilt binaries copied into `runtime-tools/` by an external pipeline. A future runtime change must place `browser` on `PATH`, and `browser open` or `browser probe` execution inside a runtime container also requires Edge/Chrome/Chromium in that image.
 
 ## Visual Examples
 

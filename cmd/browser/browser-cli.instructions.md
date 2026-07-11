@@ -6,6 +6,22 @@ applyTo: "**"
 
 Copy this file into `~/.copilot/instructions/browser-cli.instructions.md` so VS Code GitHub Copilot has durable guidance for using the local `browser` CLI.
 
+## Choose Persistent vs One-Shot First
+
+`browser open --session <name> --url <url> --json` is the only recommended user-level entry point for opening a page and keeping it available. Use it whenever the user asks to open, visit, go to, or navigate to a page, especially when any of these are true:
+
+- The user needs to log in, complete MFA, solve a challenge, or satisfy Conditional Access.
+- The user wants to operate the page first and have the agent continue afterward.
+- The browser must remain open across commands or chat turns.
+- The task is multi-step, exploratory, or likely to require follow-up page actions.
+- The request only says "open" and does not explicitly ask for a one-shot diagnostic.
+
+Do not use `browser probe` for those cases. `probe` is only for an explicitly one-shot SSO/connectivity/selector/screenshot/HTML/network diagnostic. Its browser context is closed when the command returns, so it cannot support manual login or later page actions.
+
+`browser open` starts the named managed session when needed and opens the requested URL in a new tab when that session is already running. It is the sole recommended entry point for page-opening requests so start, reuse, and cross-turn continuation have one contract. `browser session start` is a lower-level lifecycle/configuration command, and its `--url` flag is a deprecated compatibility entry point. Do not generate new `browser session start --url ...` commands or examples; use `browser open` instead. Reserve `browser tab open` for explicit tab control.
+
+`browser session discover` and `browser session attach` are an alternative path only for a browser that the user explicitly launched with a known `127.0.0.1` DevTools port. They are not the default way to open a managed browser.
+
 ## What This Tool Is
 
 `browser` is a terminal-invoked CLI for agents that need to open an internal URL in Chrome by default through DevTools and collect page diagnostics or run bounded actions in a persistent dedicated browser session. Edge/Chromium remain available with `--browser`.
@@ -17,7 +33,7 @@ Use it for browser SSO checks, login-success probes, screenshots, HTML snapshots
 For agents, `--json` is the default way to use every `browser` command and subcommand. Always add `--json` so results and failures use the stable envelope:
 
 ```bash
-browser probe --url <url> --json
+browser open --session default --url <url> --json
 ```
 
 Only omit `--json` when intentionally reading human-oriented `--help` text.
@@ -25,6 +41,13 @@ Only omit `--json` when intentionally reading human-oriented `--help` text.
 Read these fields first:
 
 - `ok`
+- `data.persistent`
+- `data.keep_open_requested`
+- `data.browser_alive`
+- `data.session`
+- `data.reused`
+- `data.target`
+- `data.next_commands`
 - `data.files.summary`
 - `data.files.screenshot`
 - `data.files.html`
@@ -35,12 +58,41 @@ Read these fields first:
 
 If `ok=false`, inspect `error.code`, `error.message`, and `error.hint` before retrying.
 
-## Basic Workflow
+## Persistent Open and Human Handoff
+
+Open a persistent browser first:
+
+```bash
+browser open --session default --url https://intranet.example.test --json
+```
+
+If the user must log in, complete MFA, or navigate manually, use this conversational handoff protocol:
+
+1. Run `browser open --session <name> --url <url> --json` and keep the named session running. Do not substitute `browser session start --url`.
+2. Tell the user that the browser remains open, include the session name, and ask them to reply when the manual step is complete.
+3. Stop issuing page actions while the user has control. Never ask the user to paste credentials or MFA codes into chat.
+4. After the user replies, reacquire current state before acting:
+
+   ```bash
+   browser session status default --json
+   browser tab list --session default --json
+   browser tab current --session default --json
+   browser page snapshot --session default --json
+   browser page ax --session default --json
+   ```
+
+5. Continue against the current target or a target selected from `tab list`. Do not assume a previously captured target id or accessibility ref is still current.
+6. Run `browser session stop default --json` only when the user explicitly asks to close the browser or the requested workflow is complete and no later handoff is expected.
+
+The handoff is a chat-level pause; the browser CLI does not require a separate handoff/resume command.
+
+## Command Discovery
 
 Discover the command shape:
 
 ```bash
 browser commands --json
+browser schema open --json
 browser schema probe --json
 browser schema session.start --json
 browser schema session.attach --json
@@ -69,6 +121,17 @@ browser schema frame.list --json
 browser help llm --json
 ```
 
+For an already running managed session, prefer another `browser open` command to open a requested URL. Use lower-level `browser tab open` only when the task specifically needs explicit tab control:
+
+```bash
+browser open --session default --url https://intranet.example.test/reports --json
+browser tab open --session default --url https://intranet.example.test/reports --json
+```
+
+## One-Shot Diagnostics
+
+Use the following probe commands only when the user explicitly wants an operation that ends with the command.
+
 Probe a page:
 
 ```bash
@@ -93,12 +156,10 @@ Fetch an API from the loaded page context:
 browser probe --url https://intranet.example.test --fetch-api /api/me --network-filter /api/ --json
 ```
 
-Use a persistent session for multi-step page automation. `session start` attempts to detach the managed browser from the short-lived CLI or agent command process so later chat turns can keep using the same DevTools endpoint:
+Use a persistent session for multi-step page automation. `browser open` starts or reuses the managed browser and attempts to detach it from the short-lived CLI or agent command process so later chat turns can keep using the same DevTools endpoint:
 
 ```bash
-browser session start --name default --url https://intranet.example.test --json
-browser session discover --ports 9222,9223 --json
-browser session attach --name user-demo --debug-port 9222 --json
+browser open --session default --url https://intranet.example.test --json
 browser tab current --session default --json
 browser page snapshot --session default --json
 browser page extract --session default --selector .user-avatar --json
@@ -131,6 +192,13 @@ browser network list --session default --filter /api/ --json
 browser network export --session default --out result/network.har-lite.json --format har-lite --json
 ```
 
+For an explicitly user-launched browser with a known local DevTools port, use the external attach path instead:
+
+```bash
+browser session discover --ports 9222,9223 --json
+browser session attach --name user-demo --debug-port 9222 --json
+```
+
 Bounded page actions:
 
 ```bash
@@ -160,13 +228,20 @@ cd
 dir
 browser version --json
 browser commands --json
+browser schema open --json
 browser schema probe --json
 browser schema page.screenshot --json
 browser schema page.wait --json
 browser schema download.wait --json
 ```
 
-Normal probe command:
+Normal persistent open command:
+
+```cmd
+browser.exe open --session default --url "https://intranet.example.test" --json
+```
+
+Explicitly one-shot probe command:
 
 ```cmd
 browser.exe probe --url "https://intranet.example.test" --selector ".user-avatar" --out "%CD%\browser-probe" --json
@@ -177,22 +252,22 @@ If PATH lookup is unstable or `browser is not recognized` appears after it worke
 If command output capture is unreliable, redirect the JSON envelope to a workspace file and read it with the file-read tool. Use `type` only when no file-read tool is available:
 
 ```cmd
-browser.exe probe --url "https://intranet.example.test" --selector ".user-avatar" --out "%CD%\browser-probe" --json > "%CD%\browser-result.json"
+browser.exe open --session default --url "https://intranet.example.test" --json > "%CD%\browser-open-result.json"
 ```
 
-Also inspect the artifact files under `--out`, especially `summary.json`, `network.json`, `page.html`, and `screenshot.png`.
+For an explicitly one-shot probe, also inspect the artifact files under `--out`, especially `summary.json`, `network.json`, `page.html`, and `screenshot.png`.
 
 ## Error Recovery
 
 Common errors:
 
-- `invalid_args`: call `browser schema probe --json` and rebuild the command.
+- `invalid_args`: call `browser schema <attempted-command> --json` and rebuild that command; use `browser schema open --json` for the normal persistent entry point.
 - Command parsing errors also return `invalid_args` JSON when `--json` is present.
 - `browser_not_found`: install Edge, Chrome, or Chromium, or pass `--browser-exe <path>`.
 - `page_timeout`: increase `--timeout`, increase `--wait`, or verify the URL is reachable.
 - `selector_not_found`: inspect `data.files.screenshot`, `data.files.html`, and `data.files.summary`, then adjust `--selector`.
 - `network_error`: check proxy, DNS, certificates, and whether the browser can reach the URL.
-- `session_not_running`: run `browser session start --json` or restart the stored session.
+- `session_not_running`: use `browser open --session <name> --url <url> --json` for normal open-or-reuse recovery. Use `browser session start` only for explicit lower-level lifecycle/configuration, without its deprecated `--url` compatibility path.
 - `target_not_found`: run `browser tab list --json`, then pass a current `--target-id`.
 - `assertion_failed`: inspect `data` for sanitized assertion details, add a wait if needed, then retry or adjust the assertion.
 - `workflow_failed`: inspect `data.steps` for the failing whitelisted step; use `--dry-run` to validate before executing.

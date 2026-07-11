@@ -557,7 +557,7 @@ func (m *Manager) attachPage(ctx context.Context, opts PageOptions) (context.Con
 		cancelTimeout()
 		return nil, nil, Session{}, Target{}, err
 	}
-	session, target, err := m.ResolveTarget(timeoutCtx, opts.SessionName, opts.TargetID)
+	session, target, err := m.resolveTargetUnlocked(timeoutCtx, opts.SessionName, opts.TargetID)
 	if err != nil {
 		releaseLock()
 		cancelTimeout()

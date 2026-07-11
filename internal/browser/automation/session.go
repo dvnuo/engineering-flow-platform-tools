@@ -44,6 +44,22 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (Session, error)
 	if err := ValidateSessionName(name); err != nil {
 		return Session{}, err
 	}
+	release, err := m.acquireSessionLock(ctx, name, 45*time.Second)
+	if err != nil {
+		return Session{}, err
+	}
+	defer release()
+	return m.startUnlocked(ctx, opts)
+}
+
+func (m *Manager) startUnlocked(ctx context.Context, opts StartOptions) (Session, error) {
+	if err := m.ensureStore(); err != nil {
+		return Session{}, err
+	}
+	name := defaultSessionName(opts.Name)
+	if err := ValidateSessionName(name); err != nil {
+		return Session{}, err
+	}
 	if strings.TrimSpace(opts.URL) != "" {
 		if err := validateHTTPURL(opts.URL, "--url"); err != nil {
 			return Session{}, err
@@ -53,8 +69,15 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (Session, error)
 		return Session{}, invalidArgs("--port must be between 0 and 65535", "Use --port 0 to pick a free local DevTools port.")
 	}
 	if existing, err := m.Store.Load(name); err == nil {
-		refreshed := m.Refresh(ctx, existing)
+		refreshed := m.refreshUnlocked(ctx, existing)
 		if refreshed.Alive {
+			if strings.TrimSpace(opts.URL) != "" {
+				tab, err := m.openTabUnlocked(ctx, name, opts.URL)
+				if err != nil {
+					return Session{}, err
+				}
+				refreshed.ActiveTargetID = tab.Tab.ID
+			}
 			return refreshed, nil
 		}
 	}
@@ -150,12 +173,24 @@ func (m *Manager) List(ctx context.Context) ([]Session, error) {
 	if err := m.ensureStore(); err != nil {
 		return nil, err
 	}
-	sessions, err := m.Store.List()
+	names, err := m.Store.sessionNames()
 	if err != nil {
 		return nil, err
 	}
-	for i := range sessions {
-		sessions[i] = m.Refresh(ctx, sessions[i])
+	sessions := make([]Session, 0, len(names))
+	for _, name := range names {
+		release, err := m.acquireSessionLock(ctx, name, 8*time.Second)
+		if err != nil {
+			return nil, err
+		}
+		current, loadErr := m.Store.Load(name)
+		if loadErr == nil {
+			sessions = append(sessions, m.refreshUnlocked(ctx, current))
+		}
+		release()
+		if loadErr != nil && !isSessionNotFound(loadErr) {
+			return nil, loadErr
+		}
 	}
 	return sessions, nil
 }
@@ -164,11 +199,21 @@ func (m *Manager) Status(ctx context.Context, name string) (Session, error) {
 	if err := m.ensureStore(); err != nil {
 		return Session{}, err
 	}
+	name = defaultSessionName(name)
+	release, err := m.acquireSessionLock(ctx, name, 8*time.Second)
+	if err != nil {
+		return Session{}, err
+	}
+	defer release()
+	return m.statusUnlocked(ctx, name)
+}
+
+func (m *Manager) statusUnlocked(ctx context.Context, name string) (Session, error) {
 	session, err := m.Store.Load(defaultSessionName(name))
 	if err != nil {
 		return Session{}, err
 	}
-	return m.Refresh(ctx, session), nil
+	return m.refreshUnlocked(ctx, session), nil
 }
 
 func (m *Manager) Stop(ctx context.Context, opts StopOptions) (Session, error) {
@@ -176,11 +221,16 @@ func (m *Manager) Stop(ctx context.Context, opts StopOptions) (Session, error) {
 		return Session{}, err
 	}
 	name := defaultSessionName(opts.Name)
+	release, err := m.acquireSessionLock(ctx, name, 10*time.Second)
+	if err != nil {
+		return Session{}, err
+	}
+	defer release()
 	session, err := m.Store.Load(name)
 	if err != nil {
 		return Session{}, err
 	}
-	session = m.Refresh(ctx, session)
+	session = m.refreshUnlocked(ctx, session)
 	if !session.Alive {
 		if !opts.KeepMetadata {
 			if err := m.Store.Remove(name); err != nil {
@@ -241,6 +291,11 @@ func (m *Manager) Attach(ctx context.Context, opts AttachOptions) (Session, erro
 	if opts.DebugPort <= 0 || opts.DebugPort > 65535 {
 		return Session{}, invalidArgs("--debug-port must be between 1 and 65535", "Launch Chrome/Edge with --remote-debugging-port=<port>, then pass that port explicitly.")
 	}
+	release, err := m.acquireSessionLock(ctx, name, 8*time.Second)
+	if err != nil {
+		return Session{}, err
+	}
+	defer release()
 	client := NewDevToolsClient(addr, opts.DebugPort)
 	version, err := client.Version(ctx)
 	if err != nil {
@@ -297,7 +352,7 @@ func (m *Manager) Discover(ctx context.Context, opts DiscoverOptions) ([]Discove
 	return out, nil
 }
 
-func (m *Manager) Refresh(ctx context.Context, session Session) Session {
+func (m *Manager) refreshUnlocked(ctx context.Context, session Session) Session {
 	client := NewDevToolsClient(session.DebugAddr, session.DebugPort)
 	version, err := refreshDevToolsVersion(ctx, client)
 	if err != nil {
@@ -338,7 +393,17 @@ func refreshDevToolsVersion(ctx context.Context, client *DevToolsClient) (Versio
 }
 
 func (m *Manager) RunningSession(ctx context.Context, name string) (Session, error) {
-	session, err := m.Status(ctx, name)
+	name = defaultSessionName(name)
+	release, err := m.acquireSessionLock(ctx, name, 8*time.Second)
+	if err != nil {
+		return Session{}, err
+	}
+	defer release()
+	return m.runningSessionUnlocked(ctx, name)
+}
+
+func (m *Manager) runningSessionUnlocked(ctx context.Context, name string) (Session, error) {
+	session, err := m.statusUnlocked(ctx, name)
 	if err != nil {
 		return Session{}, err
 	}

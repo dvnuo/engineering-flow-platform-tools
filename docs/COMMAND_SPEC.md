@@ -516,7 +516,12 @@ confluence page get --url <page-url>
 
 ## Browser
 
+### Routing
+
+Default to `browser open` whenever the user asks to open, visit, go to, or navigate to a page. This is required for login/MFA, human-first interaction, later continuation, preserving the window, and multi-step work; an ambiguous "open" request is persistent. `browser probe` is only an explicitly one-shot diagnostic, and its browser context closes when the command returns.
+
 ### Basic
+- browser open
 - browser probe
 - browser session start
 - browser session list
@@ -582,12 +587,10 @@ confluence page get --url <page-url>
 
 ### Persistent Workflow
 
-Start a dedicated browser session with Chrome by default and DevTools bound to `127.0.0.1`, then select a tab and run page commands against the active target. Use `--browser edge`, `--browser chromium`, or `--browser auto` to override. Managed sessions attempt to detach the browser process from the short-lived CLI or agent command process so later agent turns can reuse the same endpoint:
+`browser open` starts a dedicated Chrome session with DevTools bound to `127.0.0.1` when needed, then opens the requested URL. If the named session is already running, it reuses the session and opens a new tab. Prefer it for normal open/navigation requests so start and reuse have one contract; use lower-level `browser session start` or `browser tab open` only for explicit lifecycle or tab control. Use `--browser edge`, `--browser chromium`, or `--browser auto` to override the managed browser. Managed sessions attempt to detach the browser process from the short-lived CLI or agent command process so later agent turns can reuse the same endpoint:
 
 ```bash
-browser session start --name default --url https://intranet.example.test --json
-browser session discover --ports 9222,9223 --json
-browser session attach --name user-demo --debug-port 9222 --json
+browser open --session default --url https://intranet.example.test --json
 browser tab list --session default --json
 browser tab activate --session default --target-id <target-id> --json
 browser page snapshot --session default --json
@@ -610,6 +613,15 @@ browser form fill --session default --file values.yaml --json
 browser network start --session default --limit 500 --json
 browser network list --session default --filter /api/ --json
 browser network export --session default --out result/network.har-lite.json --format har-lite --json
+```
+
+For a human handoff, run `browser open`, tell the user that the named session remains open, and pause actions while they complete login, MFA, or manual navigation. After they reply, run `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax` before continuing. Stop the session only when explicitly asked or when no later continuation is expected. This is a conversational handoff, not a separate browser command.
+
+Use discovery and attach only for an external browser the user explicitly launched with a known `127.0.0.1` DevTools port:
+
+```bash
+browser session discover --ports 9222,9223 --json
+browser session attach --name user-demo --debug-port 9222 --json
 ```
 
 ### Page Actions
@@ -734,8 +746,8 @@ Optional future/P1:
 
 ## Contract Notes
 
-- `commands --json` returns command metadata objects.
-- `schema <command> --json` returns usage, risk, arguments, flags, examples, and required fields.
+- `commands --json` returns command metadata objects. Route-sensitive Browser commands also expose optional `lifecycle`, `when_to_use`, and `when_not_to_use` fields.
+- `schema <command> --json` returns usage, risk, arguments, flags, examples, and required fields, plus the same optional Browser lifecycle-routing fields when applicable.
 - Destructive commands require `--yes`.
 - Write commands support `--dry-run`.
 

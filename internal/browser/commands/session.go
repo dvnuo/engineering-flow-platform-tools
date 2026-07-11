@@ -35,7 +35,7 @@ func sessionStartCmd(o *Opts) *cobra.Command {
 			if err != nil {
 				return printAutomationError(cmd, o, err)
 			}
-			ctx, cancel := context.WithTimeout(cmd.Context(), 20*time.Second)
+			ctx, cancel := context.WithTimeout(cmd.Context(), 45*time.Second)
 			defer cancel()
 			session, err := mgr.Start(ctx, opts)
 			if err != nil {

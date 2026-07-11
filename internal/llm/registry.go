@@ -1,14 +1,17 @@
 package llm
 
 type CommandMeta struct {
-	Name        string   `json:"name"`
-	Usage       string   `json:"usage"`
-	Product     string   `json:"product"`
-	Risk        string   `json:"risk"`
-	Description string   `json:"description"`
-	Examples    []string `json:"examples"`
-	Flags       []string `json:"flags"`
-	Required    []string `json:"required"`
+	Name         string   `json:"name"`
+	Usage        string   `json:"usage"`
+	Product      string   `json:"product"`
+	Risk         string   `json:"risk"`
+	Description  string   `json:"description"`
+	Examples     []string `json:"examples"`
+	Flags        []string `json:"flags"`
+	Required     []string `json:"required"`
+	Lifecycle    string   `json:"lifecycle,omitempty"`
+	WhenToUse    string   `json:"when_to_use,omitempty"`
+	WhenNotToUse string   `json:"when_not_to_use,omitempty"`
 }
 
 type Registry struct{ items map[string]CommandMeta }

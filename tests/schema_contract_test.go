@@ -41,6 +41,26 @@ func schemaData(t *testing.T, product, command string) map[string]any {
 	return data
 }
 
+func browserCommandMetadata(t *testing.T) map[string]map[string]any {
+	t.Helper()
+	var b bytes.Buffer
+	c := bcmd.NewRoot()
+	c.SetOut(&b)
+	c.SetErr(&b)
+	c.SetArgs([]string{"commands", "--json"})
+	_ = c.Execute()
+	obj := testutil.AssertOKEnvelope(t, b.Bytes())
+	data, _ := obj["data"].(map[string]any)
+	commands, _ := data["commands"].([]any)
+	out := make(map[string]map[string]any, len(commands))
+	for _, raw := range commands {
+		command, _ := raw.(map[string]any)
+		name, _ := command["name"].(string)
+		out[name] = command
+	}
+	return out
+}
+
 func requireFlags(t *testing.T, data map[string]any, names ...string) {
 	t.Helper()
 	have := map[string]bool{}
@@ -125,6 +145,8 @@ func TestSchemaConcreteFlags(t *testing.T) {
 	requireFlags(t, schemaData(t, "confluence", "content.update"), "type", "title", "version", "body", "body-file", "body-stdin", "body-format")
 	requireRequired(t, schemaData(t, "confluence", "page.get-by-title"), "space", "title")
 	requireFlags(t, schemaData(t, "confluence", "search"), "cql", "limit", "start", "expand")
+	requireFlags(t, schemaData(t, "browser", "open"), "url", "session", "browser", "browser-exe", "headless", "profile", "download-dir", "clean-profile", "port", "json")
+	requireRequired(t, schemaData(t, "browser", "open"), "url")
 	requireFlags(t, schemaData(t, "browser", "probe"), "url", "selector", "wait", "timeout", "out", "browser", "json")
 	requireFlags(t, schemaData(t, "browser", "session.start"), "name", "url", "profile", "download-dir", "port", "browser", "headless", "json")
 	requireFlags(t, schemaData(t, "browser", "session.attach"), "name", "debug-addr", "debug-port", "json")
@@ -211,6 +233,75 @@ func TestSchemaConcreteFlags(t *testing.T) {
 	requireFlags(t, schemaData(t, "jenkins", "build.log-follow"), "start", "max-rounds", "wait-ms")
 	requireFlags(t, schemaData(t, "jenkins", "artifact.download"), "output")
 	requireRequired(t, schemaData(t, "jenkins", "api.delete"), "path", "yes")
+}
+
+func TestBrowserLifecycleRoutingMetadata(t *testing.T) {
+	commands := browserCommandMetadata(t)
+	tests := []struct {
+		name              string
+		lifecycle         string
+		descriptionParts  []string
+		whenToUseParts    []string
+		whenNotToUseParts []string
+	}{
+		{
+			name:              "probe",
+			lifecycle:         "one_shot",
+			descriptionParts:  []string{"one-shot", "closes", "returns"},
+			whenToUseParts:    []string{"diagnostic", "artifact"},
+			whenNotToUseParts: []string{"manual login", "later turn"},
+		},
+		{
+			name:              "open",
+			lifecycle:         "persistent",
+			descriptionParts:  []string{"persistent", "manual login", "later turns"},
+			whenToUseParts:    []string{"manual login", "later turns"},
+			whenNotToUseParts: []string{"one-shot", "browser probe"},
+		},
+		{
+			name:              "session.start",
+			lifecycle:         "persistent",
+			descriptionParts:  []string{"persistent", "manual login", "later turns"},
+			whenToUseParts:    []string{"persistent", "manual login"},
+			whenNotToUseParts: []string{"open-or-reuse", "browser open"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			command, ok := commands[tc.name]
+			if !ok {
+				t.Fatalf("browser commands missing %s", tc.name)
+			}
+			schema := schemaData(t, "browser", tc.name)
+			for source, metadata := range map[string]map[string]any{"commands": command, "schema": schema} {
+				if got, _ := metadata["lifecycle"].(string); got != tc.lifecycle {
+					t.Fatalf("%s %s lifecycle = %q, want %q", source, tc.name, got, tc.lifecycle)
+				}
+				for field, parts := range map[string][]string{
+					"description":     tc.descriptionParts,
+					"when_to_use":     tc.whenToUseParts,
+					"when_not_to_use": tc.whenNotToUseParts,
+				} {
+					value, _ := metadata[field].(string)
+					for _, part := range parts {
+						if !strings.Contains(strings.ToLower(value), strings.ToLower(part)) {
+							t.Fatalf("%s %s %s = %q, want substring %q", source, tc.name, field, value, part)
+						}
+					}
+				}
+			}
+		})
+	}
+
+	pageSnapshot, ok := commands["page.snapshot"]
+	if !ok {
+		t.Fatal("browser commands missing page.snapshot")
+	}
+	for _, field := range []string{"lifecycle", "when_to_use", "when_not_to_use"} {
+		if _, ok := pageSnapshot[field]; ok {
+			t.Fatalf("page.snapshot unexpectedly emits optional routing field %s", field)
+		}
+	}
 }
 
 func TestSchemaMatchesCobraFlags(t *testing.T) {

@@ -25,17 +25,29 @@ func (f *fakeRunner) Probe(ctx context.Context, opts probe.ProbeOptions) (probe.
 	return f.result, f.err
 }
 
-func TestCommandsJSONIncludesProbe(t *testing.T) {
+func TestCommandsJSONIncludesPersistentOpenAndProbe(t *testing.T) {
 	out := run(t, &fakeRunner{}, "commands", "--json")
 	data := out["data"].(map[string]any)
 	commands := data["commands"].([]any)
-	for _, item := range commands {
+	found := map[string]bool{}
+	positions := map[string]int{}
+	for index, item := range commands {
 		m := item.(map[string]any)
-		if m["name"] == "probe" || strings.Contains(m["usage"].(string), "browser probe") {
-			return
+		for _, name := range []string{"open", "probe"} {
+			if m["name"] == name || strings.Contains(m["usage"].(string), "browser "+name) {
+				found[name] = true
+				positions[name] = index
+			}
 		}
 	}
-	t.Fatalf("commands did not contain probe: %#v", commands)
+	for _, name := range []string{"open", "probe"} {
+		if !found[name] {
+			t.Fatalf("commands did not contain %s: %#v", name, commands)
+		}
+	}
+	if positions["open"] != 0 || positions["open"] >= positions["probe"] {
+		t.Fatalf("persistent open must precede probe: positions=%#v commands=%#v", positions, commands)
+	}
 }
 
 func TestSchemaProbeRequiresURL(t *testing.T) {
@@ -51,7 +63,7 @@ func TestSchemaProbeRequiresURL(t *testing.T) {
 }
 
 func TestSchemaBrowserDefaultsToChrome(t *testing.T) {
-	for _, command := range []string{"probe", "session.start"} {
+	for _, command := range []string{"open", "probe", "session.start"} {
 		out := run(t, &fakeRunner{}, "schema", command, "--json")
 		data := out["data"].(map[string]any)
 		flags := data["flags"].([]any)
@@ -62,6 +74,9 @@ func TestSchemaBrowserDefaultsToChrome(t *testing.T) {
 				found = true
 				if flag["default"] != "chrome" {
 					t.Fatalf("%s --browser default = %v want chrome", command, flag["default"])
+				}
+				if description, _ := flag["description"].(string); strings.Contains(description, "REDACTED") {
+					t.Fatalf("%s --browser description was unexpectedly redacted: %q", command, description)
 				}
 			}
 		}
@@ -189,9 +204,15 @@ func TestHelpIsAnnotatedForVisibleCommands(t *testing.T) {
 	cmd := NewRootWithRunner(&fakeRunner{})
 	assertHelpAnnotated(t, cmd)
 	help := runText(t, &fakeRunner{}, "probe", "--help")
-	for _, want := range []string{"Open an internal URL", "--url", "CSS selector"} {
+	for _, want := range []string{"one-shot", "closes", "--url", "CSS selector"} {
 		if !strings.Contains(help, want) {
 			t.Fatalf("probe help missing %q\n%s", want, help)
+		}
+	}
+	help = runText(t, &fakeRunner{}, "open", "--help")
+	for _, want := range []string{"persistent", "manual login", "--url", "--session"} {
+		if !strings.Contains(help, want) {
+			t.Fatalf("open help missing %q\n%s", want, help)
 		}
 	}
 }
@@ -204,6 +225,29 @@ func TestHelpLLMIncludesWindowsAndFallbackGuidance(t *testing.T) {
 		joined += tip.(string) + "\n"
 	}
 	for _, want := range []string{"default way to use every browser command", "Command parsing failures", "Windows cmd", "where browser", "file-read tool"} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("help llm missing %q\n%s", want, joined)
+		}
+	}
+}
+
+func TestHelpLLMExplainsPersistentRoutingAndHumanHandoff(t *testing.T) {
+	out := run(t, &fakeRunner{}, "help", "llm", "--json")
+	tips := out["data"].(map[string]any)["tips"].([]any)
+	joined := ""
+	for _, tip := range tips {
+		joined += tip.(string) + "\n"
+	}
+	for _, want := range []string{
+		"Default requests to open",
+		"Manual login",
+		"must not use browser probe",
+		"one-shot diagnostic",
+		"closes when the command returns",
+		"report the session name",
+		"do not stop the session",
+		"reacquire state",
+	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("help llm missing %q\n%s", want, joined)
 		}

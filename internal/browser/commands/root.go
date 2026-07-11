@@ -31,17 +31,18 @@ func NewRootWithRunner(r probe.Runner) *cobra.Command {
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
 	c.PersistentFlags().StringVar(&o.Format, "format", "table", "")
 	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "")
-	c.AddCommand(probeCmd(o, r), sessionCmd(o), tabCmd(o), pageCmd(o), assertCmd(o), workflowCmd(o), formCmd(o), frameCmd(o), networkCmd(o), downloadCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	c.AddCommand(openCmd(o), probeCmd(o, r), sessionCmd(o), tabCmd(o), pageCmd(o), assertCmd(o), workflowCmd(o), formCmd(o), frameCmd(o), networkCmd(o), downloadCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
 	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
 		Product: "browser",
 		Binary:  "browser",
-		Short:   "Probe browser SSO and page state through Chrome/Edge/Chromium",
-		Long: strings.TrimSpace(`browser is a terminal-invoked CLI for agents that need to open an internal URL, capture page artifacts, and inspect browser SSO indicators through Chrome DevTools by default, with Edge/Chromium available via --browser.
+		Short:   "Open persistent browser sessions or run one-shot diagnostics",
+		Long: strings.TrimSpace(`browser is a terminal-invoked CLI for agents that need a visible persistent browser for manual login and page operations in later turns, plus an explicit one-shot diagnostic path through Chrome DevTools by default, with Edge/Chromium available via --browser.
 
-It writes non-secret diagnostics such as summary.json, network.json, page.html, and screenshot.png. It does not export cookies or tokens. For agent workflows, default every command and subcommand to --json so callers can read ok, data.files, error.code, and error.hint.`),
+Default an ambiguous request to open, visit, or navigate to browser open so the named session remains available. Use browser probe only for a self-contained diagnostic; its launched browser closes when the command returns. The CLI writes non-secret diagnostics such as summary.json, network.json, page.html, and screenshot.png and does not export cookies or tokens. For agent workflows, default every command and subcommand to --json so callers can read ok, data.files, error.code, and error.hint.`),
 		Examples: []string{
-			`browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json`,
+			`browser open --session default --url https://intranet.example.test --json`,
 			`browser session start --name default --url https://intranet.example.test --json`,
+			`browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json`,
 			`browser session discover --ports 9222,9223 --json`,
 			`browser session attach --name user-demo --debug-port 9222 --json`,
 			`browser session status default --json`,
@@ -184,13 +185,19 @@ func helpLLMCmd(o *Opts) *cobra.Command {
 
 func browserLLMTips() []string {
 	return []string{
+		"Default requests to open, visit, go to, show, or navigate to a page to browser open so the named persistent session remains available.",
+		"Manual login, MFA, human-first navigation, multi-step work, keeping the browser open, or continuing in a later chat turn must use browser open and must not use browser probe.",
+		"When an open request is ambiguous, choose the persistent browser open path.",
+		"browser probe is a one-shot diagnostic whose launched browser closes when the command returns; use it only when the requested SSO, connectivity, selector, screenshot, HTML, or network diagnosis is complete in that command.",
+		"After browser open for a human login or navigation step, report the session name, pause page actions, and do not stop the session while waiting for the user.",
+		"After the user finishes a manual step, reacquire state with browser session status, browser tab list/current, and a fresh browser page snapshot or browser page ax before continuing.",
 		"For agents, --json is the default way to use every browser command and subcommand.",
 		"Always add --json so results and failures use the stable ok/data/error envelope; omit it only when intentionally reading human-oriented --help text.",
 		"browser is a terminal-invoked CLI binary.",
 		"It opens Chrome through DevTools by default; pass --browser edge, --browser chromium, or --browser auto when needed.",
 		"It uses a dedicated browser profile by default.",
 		"It does not export cookies or tokens.",
-		"Use browser session start to keep a dedicated browser open for multi-step agent workflows.",
+		"Use browser open as the high-level start-or-reuse entry point; use browser session start and browser tab open only when explicit lower-level session or tab control is needed.",
 		"Use browser session discover and browser session attach only with explicit local DevTools ports; they do not inspect default browser profiles or export cookies.",
 		"Use browser tab list/current/activate/open to inspect and select page targets in a persistent session.",
 		"Use browser page snapshot and browser page extract for redacted page reads.",

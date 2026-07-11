@@ -104,27 +104,37 @@ func (s *Store) Load(name string) (Session, error) {
 }
 
 func (s *Store) List() ([]Session, error) {
-	entries, err := os.ReadDir(s.SessionsDir())
-	if errors.Is(err, os.ErrNotExist) {
-		return []Session{}, nil
-	}
+	names, err := s.sessionNames()
 	if err != nil {
-		return nil, NewError("automation_failed", err.Error(), "Session metadata directory could not be read.", 500)
+		return nil, err
 	}
-	out := make([]Session, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
-			continue
-		}
-		session, err := s.Load(strings.TrimSuffix(entry.Name(), ".json"))
+	out := make([]Session, 0, len(names))
+	for _, name := range names {
+		session, err := s.Load(name)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, session)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].Name < out[j].Name
-	})
+	return out, nil
+}
+
+func (s *Store) sessionNames() ([]string, error) {
+	entries, err := os.ReadDir(s.SessionsDir())
+	if errors.Is(err, os.ErrNotExist) {
+		return []string{}, nil
+	}
+	if err != nil {
+		return nil, NewError("automation_failed", err.Error(), "Session metadata directory could not be read.", 500)
+	}
+	out := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+		out = append(out, strings.TrimSuffix(entry.Name(), ".json"))
+	}
+	sort.Strings(out)
 	return out, nil
 }
 

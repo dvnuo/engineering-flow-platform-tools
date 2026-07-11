@@ -2,9 +2,11 @@ package automation
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -145,6 +147,60 @@ func TestStatusRetriesTransientDevToolsVersionFailure(t *testing.T) {
 	}
 }
 
+func TestStartExistingSessionOpensSuppliedURLInsteadOfIgnoringIt(t *testing.T) {
+	var newTabCalls atomic.Int32
+	var openedURL string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/json/version":
+			_, _ = w.Write([]byte(`{"webSocketDebuggerUrl":"ws://127.0.0.1/devtools/browser/existing"}`))
+		case "/json/new":
+			newTabCalls.Add(1)
+			openedURL, _ = url.QueryUnescape(r.URL.RawQuery)
+			_, _ = w.Write([]byte(`{"id":"page-new","type":"page","title":"Next","url":"https://example.test/next","webSocketDebuggerUrl":"ws://127.0.0.1/devtools/page/page-new"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	host, port := splitHostPort(t, srv.Listener.Addr().String())
+
+	store := NewStore(t.TempDir())
+	if err := store.Save(Session{
+		Name:                "default",
+		DebugAddr:           host,
+		DebugPort:           port,
+		BrowserWebSocketURL: "ws://127.0.0.1/devtools/browser/existing",
+		CreatedAt:           time.Now().UTC(),
+		Alive:               true,
+		ActiveTargetID:      "page-old",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	mgr := NewManager(store, nil)
+	session, err := mgr.Start(context.Background(), StartOptions{
+		Name: "default",
+		URL:  "https://example.test/next",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newTabCalls.Load() != 1 || openedURL != "https://example.test/next" {
+		t.Fatalf("new tab calls=%d opened URL=%q", newTabCalls.Load(), openedURL)
+	}
+	if session.ActiveTargetID != "page-new" {
+		t.Fatalf("session = %#v", session)
+	}
+	reloaded, err := store.Load("default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.ActiveTargetID != "page-new" {
+		t.Fatalf("active target was not persisted: %#v", reloaded)
+	}
+}
+
 func TestSessionLockTimesOutAndReleases(t *testing.T) {
 	store := NewStore(t.TempDir())
 	mgr := NewManager(store, nil)
@@ -192,6 +248,86 @@ func TestSessionLockRemovesStaleFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	release()
+}
+
+func TestSessionLifecycleMutationsUseSharedLock(t *testing.T) {
+	tests := []struct {
+		name string
+		run  func(context.Context, *Manager) error
+	}{
+		{name: "start", run: func(ctx context.Context, mgr *Manager) error {
+			_, err := mgr.Start(ctx, StartOptions{Name: "default"})
+			return err
+		}},
+		{name: "stop", run: func(ctx context.Context, mgr *Manager) error {
+			_, err := mgr.Stop(ctx, StopOptions{Name: "default"})
+			return err
+		}},
+		{name: "attach", run: func(ctx context.Context, mgr *Manager) error {
+			_, err := mgr.Attach(ctx, AttachOptions{Name: "default", DebugAddr: LocalDebugAddr, DebugPort: 9222})
+			return err
+		}},
+		{name: "list", run: func(ctx context.Context, mgr *Manager) error {
+			_, err := mgr.List(ctx)
+			return err
+		}},
+		{name: "status", run: func(ctx context.Context, mgr *Manager) error {
+			_, err := mgr.Status(ctx, "default")
+			return err
+		}},
+		{name: "running-session", run: func(ctx context.Context, mgr *Manager) error {
+			_, err := mgr.RunningSession(ctx, "default")
+			return err
+		}},
+		{name: "tab-list", run: func(ctx context.Context, mgr *Manager) error {
+			_, err := mgr.TabList(ctx, "default")
+			return err
+		}},
+		{name: "tab-current", run: func(ctx context.Context, mgr *Manager) error {
+			_, err := mgr.CurrentTab(ctx, "default")
+			return err
+		}},
+		{name: "resolve-target", run: func(ctx context.Context, mgr *Manager) error {
+			_, _, err := mgr.ResolveTarget(ctx, "default", "page-1")
+			return err
+		}},
+		{name: "tab-open", run: func(ctx context.Context, mgr *Manager) error {
+			_, err := mgr.OpenTab(ctx, "default", "https://example.test")
+			return err
+		}},
+		{name: "tab-activate", run: func(ctx context.Context, mgr *Manager) error {
+			_, err := mgr.ActivateTab(ctx, "default", "page-1")
+			return err
+		}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mgr := NewManager(NewStore(t.TempDir()), nil)
+			if err := mgr.Store.Save(Session{
+				Name:      "default",
+				DebugAddr: LocalDebugAddr,
+				DebugPort: 9222,
+				CreatedAt: time.Now().UTC(),
+				Alive:     true,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			release, err := mgr.acquireSessionLock(context.Background(), "default", time.Second)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer release()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+			defer cancel()
+			err = tc.run(ctx, mgr)
+			var automationErr *Error
+			if !errors.As(err, &automationErr) || automationErr.Code != "session_busy" {
+				t.Fatalf("error = %#v", err)
+			}
+		})
+	}
 }
 
 func TestValidateProfileDirRejectsRootsAndDefaultProfiles(t *testing.T) {

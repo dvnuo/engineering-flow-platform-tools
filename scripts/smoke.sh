@@ -20,6 +20,7 @@ go run ./cmd/browser commands --json >/dev/null
 go run ./cmd/mobile-auto commands --json >/dev/null
 go run ./cmd/inspect-image commands --json >/dev/null
 go run ./cmd/visual commands --json >/dev/null
+go run ./cmd/browser schema open --json >/dev/null
 go run ./cmd/browser schema probe --json >/dev/null
 go run ./cmd/mobile-auto schema run.start --json >/dev/null
 go run ./cmd/mobile-auto schema observe --json >/dev/null

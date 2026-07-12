@@ -106,7 +106,7 @@ The shared EFP config is used:
 
 - Default: `~/.efp/config.yaml`
 - Override: `--config <path>` or `EFP_CONFIG`
-- Managed runtimes: `EFP_CONFIG_JSON` (whole config as a JSON env var; read-only — write commands then require an explicit `--config` path)
+- Managed runtimes: bare-name environment variables derived from the config shape (for example `CONFLUENCE_DEFAULT_INSTANCE`, `CONFLUENCE_INSTANCES_0_BASE_URL`, `CONFLUENCE_INSTANCES_0_AUTH_TOKEN`); read-only — write commands then require an explicit `--config` path
 
 Use `--instance <name>` when multiple instances are configured. Auth secrets should be provided through stdin flags such as `--token-stdin`, `--password-stdin`, or `--api-key-stdin`; do not paste secrets into prompts.
 

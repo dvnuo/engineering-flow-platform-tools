@@ -299,19 +299,22 @@ func TestAuthLoginWritesDefaultEFPConfigNotAtlassianConfig(t *testing.T) {
 	}
 }
 
-func TestLoadAWSConfigForReadPrefersEnvConfigJSON(t *testing.T) {
+func TestLoadAWSConfigForReadPrefersEnv(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 	t.Setenv(config.EnvConfigPath, "")
 	t.Setenv(config.EnvLegacyConfigPath, "")
-	t.Setenv(config.EnvConfigJSON, `{"aws":{"enabled":true,"domain":"HBEU","username":"env-user","password":"env-pass"}}`)
+	t.Setenv("AWS_ENABLED", "true")
+	t.Setenv("AWS_DOMAIN", "HBEU")
+	t.Setenv("AWS_USERNAME", "env-user")
+	t.Setenv("AWS_PASSWORD", "env-pass")
 
 	source, cfg, err := loadAWSConfigForRead("")
 	if err != nil {
-		t.Fatalf("env blob read failed: %v", err)
+		t.Fatalf("env read failed: %v", err)
 	}
-	if source != config.EnvSourceConfigJSON {
+	if source != config.EnvSource {
 		t.Fatalf("expected env source, got %q", source)
 	}
 	if cfg.AWS.Domain != "HBEU" || cfg.AWS.Username != "env-user" || cfg.AWS.Password != "env-pass" {
@@ -325,7 +328,10 @@ func TestAuthLoginRefusedWhenEnvManaged(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 	t.Setenv(config.EnvConfigPath, "")
 	t.Setenv(config.EnvLegacyConfigPath, "")
-	t.Setenv(config.EnvConfigJSON, `{"aws":{"enabled":true,"domain":"HBEU","username":"env-user","password":"env-pass"}}`)
+	t.Setenv("AWS_ENABLED", "true")
+	t.Setenv("AWS_DOMAIN", "HBEU")
+	t.Setenv("AWS_USERNAME", "env-user")
+	t.Setenv("AWS_PASSWORD", "env-pass")
 
 	obj := runJSONInput(
 		t,
@@ -338,7 +344,7 @@ func TestAuthLoginRefusedWhenEnvManaged(t *testing.T) {
 		"--json",
 	)
 	if obj["ok"] == true {
-		t.Fatalf("auth login must be refused under EFP_CONFIG_JSON management: %#v", obj)
+		t.Fatalf("auth login must be refused under env-managed config: %#v", obj)
 	}
 	errObj, _ := obj["error"].(map[string]any)
 	if errObj == nil || errObj["code"] != "config_env_managed" {

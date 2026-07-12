@@ -25,17 +25,22 @@ func runEnvJSON(t *testing.T, stdin string, args ...string) map[string]any {
 	return out
 }
 
-func TestInstanceListReadsEnvConfigJSONWithoutFile(t *testing.T) {
+func TestInstanceListReadsEnvWithoutFile(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 	t.Setenv(config.EnvConfigPath, "")
 	t.Setenv(config.EnvLegacyConfigPath, "")
-	t.Setenv(config.EnvConfigJSON, `{"jira":{"default_instance":"env-jira","instances":[{"name":"env-jira","base_url":"https://jira.example.test","rest_path":"/rest/api/2","auth":{"type":"bearer_token","token":"secret-token"}}]}}`)
+	t.Setenv("JIRA_DEFAULT_INSTANCE", "env-jira")
+	t.Setenv("JIRA_INSTANCES_0_NAME", "env-jira")
+	t.Setenv("JIRA_INSTANCES_0_BASE_URL", "https://jira.example.test")
+	t.Setenv("JIRA_INSTANCES_0_REST_PATH", "/rest/api/2")
+	t.Setenv("JIRA_INSTANCES_0_AUTH_TYPE", "bearer_token")
+	t.Setenv("JIRA_INSTANCES_0_AUTH_TOKEN", "secret-token")
 
 	out := runEnvJSON(t, "", "instance", "list")
 	if out["ok"] != true {
-		t.Fatalf("instance list must resolve from EFP_CONFIG_JSON with no file: %#v", out)
+		t.Fatalf("instance list must resolve from env vars with no file: %#v", out)
 	}
 	raw, _ := json.Marshal(out)
 	if !strings.Contains(string(raw), "env-jira") {
@@ -52,11 +57,11 @@ func TestInstanceAddRefusedWhenEnvManaged(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 	t.Setenv(config.EnvConfigPath, "")
 	t.Setenv(config.EnvLegacyConfigPath, "")
-	t.Setenv(config.EnvConfigJSON, `{"jira":{"instances":[]}}`)
+	t.Setenv("JIRA_DEFAULT_INSTANCE", "env-jira")
 
 	out := runEnvJSON(t, "tok\n", "instance", "add", "new-jira", "--base-url", "https://jira.example.test", "--token-stdin")
 	if out["ok"] == true {
-		t.Fatalf("instance add must be refused under EFP_CONFIG_JSON management: %#v", out)
+		t.Fatalf("instance add must be refused under env-managed config: %#v", out)
 	}
 	raw, _ := json.Marshal(out)
 	if !strings.Contains(string(raw), "config_env_managed") {

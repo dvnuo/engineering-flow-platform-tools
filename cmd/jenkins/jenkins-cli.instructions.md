@@ -8,7 +8,7 @@ Configuration uses the shared EFP config file:
 
 - Default: `~/.efp/config.yaml`
 - Override: `--config <path>` or `EFP_CONFIG`
-- Managed runtimes: `EFP_CONFIG_JSON` (whole config as a JSON env var; read-only — write commands then require an explicit `--config` path)
+- Managed runtimes: bare-name environment variables derived from the config shape (for example `JENKINS_DEFAULT_INSTANCE`, `JENKINS_INSTANCES_0_BASE_URL`, `JENKINS_INSTANCES_0_AUTH_TOKEN`); read-only — write commands then require an explicit `--config` path
 - Node: `jenkins.default_instance` and `jenkins.instances`
 
 Use `--instance <name>` when multiple Jenkins controllers are configured.

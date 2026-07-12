@@ -8,27 +8,28 @@ import (
 	"engineering-flow-platform-tools/internal/config"
 )
 
-func TestLoadRuntimeConfigFromEnvConfigJSON(t *testing.T) {
+func TestLoadRuntimeConfigFromEnv(t *testing.T) {
 	t.Setenv("BROWSERSTACK_USERNAME", "")
 	t.Setenv("BROWSERSTACK_ACCESS_KEY", "")
 	t.Setenv(config.EnvConfigPath, "")
 	t.Setenv(config.EnvLegacyConfigPath, "")
 	t.Setenv(EnvStateDir, filepath.Join(t.TempDir(), "state"))
 	t.Setenv(EnvArtifactsDir, filepath.Join(t.TempDir(), "artifacts"))
-	t.Setenv(config.EnvConfigJSON, `{"mobile-auto":{"browserstack":{"username":"blob-user","access_key":"blob-key"}}}`)
+	t.Setenv("MOBILE_AUTO_BROWSERSTACK_USERNAME", "env-user")
+	t.Setenv("MOBILE_AUTO_BROWSERSTACK_ACCESS_KEY", "env-key")
 
 	cfg, err := LoadRuntimeConfig("")
 	if err != nil {
-		t.Fatalf("LoadRuntimeConfig from env blob: %v", err)
+		t.Fatalf("LoadRuntimeConfig from env: %v", err)
 	}
-	if cfg.Path != config.EnvSourceConfigJSON {
+	if cfg.Path != config.EnvSource {
 		t.Fatalf("path should report the env source: %q", cfg.Path)
 	}
-	if cfg.Credentials.Username != "blob-user" || cfg.Credentials.AccessKey != "blob-key" {
-		t.Fatalf("credentials not taken from env blob: %#v", cfg.Credentials)
+	if cfg.Credentials.Username != "env-user" || cfg.Credentials.AccessKey != "env-key" {
+		t.Fatalf("credentials not taken from env: %#v", cfg.Credentials)
 	}
 	if len(cfg.Warnings) != 0 {
-		t.Fatalf("env blob load must not warn about missing file: %v", cfg.Warnings)
+		t.Fatalf("env load must not warn about missing file: %v", cfg.Warnings)
 	}
 }
 

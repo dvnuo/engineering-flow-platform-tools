@@ -59,49 +59,40 @@ func TestLoadSharedPrecedence(t *testing.T) {
 	}
 	t.Setenv(EnvConfigPath, envPath)
 	t.Setenv(EnvLegacyConfigPath, "")
-	t.Setenv(EnvConfigJSON, `{"jira":{"default_instance":"from-env-json"}}`)
+	// VERSION is a recognized bare-name var; clear it so a host value cannot
+	// make the file-fallback phase look env-managed.
+	t.Setenv("VERSION", "")
+	t.Setenv("JIRA_DEFAULT_INSTANCE", "from-env")
 
 	cfg, source, err := LoadShared(flagPath)
 	if err != nil || cfg.Jira.DefaultInstance != "from-flag" || source != flagPath {
 		t.Fatalf("flag must win: got=%q source=%q err=%v", cfg.Jira.DefaultInstance, source, err)
 	}
 	cfg, source, err = LoadShared("")
-	if err != nil || cfg.Jira.DefaultInstance != "from-env-json" || source != EnvSourceConfigJSON {
-		t.Fatalf("env json must beat file: got=%q source=%q err=%v", cfg.Jira.DefaultInstance, source, err)
+	if err != nil || cfg.Jira.DefaultInstance != "from-env" || source != EnvSource {
+		t.Fatalf("env must beat file: got=%q source=%q err=%v", cfg.Jira.DefaultInstance, source, err)
 	}
-	t.Setenv(EnvConfigJSON, "")
+	t.Setenv("JIRA_DEFAULT_INSTANCE", "")
 	cfg, source, err = LoadShared("")
 	if err != nil || cfg.Jira.DefaultInstance != "from-file" || source != envPath {
 		t.Fatalf("file fallback: got=%q source=%q err=%v", cfg.Jira.DefaultInstance, source, err)
 	}
 }
 
-func TestLoadSharedInvalidEnvJSONIsHardError(t *testing.T) {
-	dir := t.TempDir()
-	envPath := filepath.Join(dir, "envfile.yaml")
-	if err := os.WriteFile(envPath, []byte("jira:\n  default_instance: from-file\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv(EnvConfigPath, envPath)
-	t.Setenv(EnvLegacyConfigPath, "")
-	t.Setenv(EnvConfigJSON, "{not json")
-	_, source, err := LoadShared("")
-	if err == nil || source != EnvSourceConfigJSON {
-		t.Fatalf("invalid env json must be a hard error with no file fallback: source=%q err=%v", source, err)
-	}
-	if !strings.Contains(err.Error(), "config_env_json_invalid") {
-		t.Fatalf("missing error code: %v", err)
-	}
-}
-
-func TestLoadSharedNormalizesEnvJSON(t *testing.T) {
-	t.Setenv(EnvConfigJSON, `{"jira":{"instances":[{"name":"a","auth":{"username":"u","token":"tok"}}]}}`)
-	cfg, _, err := LoadShared("")
+func TestLoadSharedNormalizesEnv(t *testing.T) {
+	t.Setenv("VERSION", "")
+	t.Setenv("JIRA_INSTANCES_0_NAME", "a")
+	t.Setenv("JIRA_INSTANCES_0_AUTH_USERNAME", "u")
+	t.Setenv("JIRA_INSTANCES_0_AUTH_TOKEN", "tok")
+	cfg, source, err := LoadShared("")
 	if err != nil {
 		t.Fatal(err)
 	}
+	if source != EnvSource {
+		t.Fatalf("source=%q", source)
+	}
 	if len(cfg.Jira.Instances) != 1 || cfg.Jira.Instances[0].Auth.Type != "basic_api_key" {
-		t.Fatalf("env json config must be normalized: %#v", cfg.Jira.Instances)
+		t.Fatalf("env config must be normalized: %#v", cfg.Jira.Instances)
 	}
 }
 
@@ -109,7 +100,8 @@ func TestSaveSharedRefusesWhenEnvManaged(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(EnvConfigPath, filepath.Join(dir, "config.yaml"))
 	t.Setenv(EnvLegacyConfigPath, "")
-	t.Setenv(EnvConfigJSON, `{"version":1}`)
+	t.Setenv("VERSION", "")
+	t.Setenv("JIRA_DEFAULT_INSTANCE", "env-managed")
 	if err := SaveShared("", RootConfig{Version: 1}); !errors.Is(err, ErrEnvManaged) {
 		t.Fatalf("want ErrEnvManaged, got %v", err)
 	}
@@ -120,9 +112,9 @@ func TestSaveSharedRefusesWhenEnvManaged(t *testing.T) {
 	if _, err := os.Stat(explicit); err != nil {
 		t.Fatalf("explicit file not written: %v", err)
 	}
-	t.Setenv(EnvConfigJSON, "")
+	t.Setenv("JIRA_DEFAULT_INSTANCE", "")
 	if err := SaveShared("", RootConfig{Version: 1}); err != nil {
-		t.Fatalf("file save must work without env blob: %v", err)
+		t.Fatalf("file save must work without env vars: %v", err)
 	}
 }
 

@@ -281,7 +281,7 @@ func authCmd(o *Opts) *cobra.Command {
 func loadMobileRootConfig(flagPath string) (string, config.RootConfig, error) {
 	cfg, source, err := config.LoadShared(flagPath)
 	if err != nil {
-		if source == "" || source == config.EnvSourceConfigJSON || !os.IsNotExist(err) {
+		if source == "" || source == config.EnvSource || !os.IsNotExist(err) {
 			return "", config.RootConfig{}, err
 		}
 		cfg = config.RootConfig{}

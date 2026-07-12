@@ -3,32 +3,28 @@ package config
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
-// EnvSourceConfigJSON is the source LoadShared reports when config came from EFP_CONFIG_JSON.
-const EnvSourceConfigJSON = "env:" + EnvConfigJSON
+// EnvSource is the source LoadShared reports when config was decoded from the
+// bare-name indexed environment variable convention.
+const EnvSource = "env"
 
 // LoadShared resolves the shared EFP config with precedence:
-// explicit flag path > EFP_CONFIG_JSON env blob > EFP_CONFIG/ATLASSIAN_CONFIG file path > default path.
-// An invalid EFP_CONFIG_JSON is a hard error, never a silent fallback to file sources.
+// explicit flag path > environment variables > EFP_CONFIG/ATLASSIAN_CONFIG file path > default path.
+// The environment source is the flat, bare-named indexed convention derived
+// from the RootConfig json tags (e.g. JIRA_DEFAULT_INSTANCE,
+// JIRA_INSTANCES_0_BASE_URL); it is active iff at least one recognized var is set.
 func LoadShared(flagPath string) (RootConfig, string, error) {
 	if flagPath != "" {
 		c, err := Load(flagPath)
 		return c, flagPath, err
 	}
-	if blob := strings.TrimSpace(os.Getenv(EnvConfigJSON)); blob != "" {
-		var c RootConfig
-		if err := json.Unmarshal([]byte(blob), &c); err != nil {
-			return RootConfig{}, EnvSourceConfigJSON, fmt.Errorf("config_env_json_invalid: %w", err)
-		}
-		c.Normalize()
-		return c, EnvSourceConfigJSON, nil
+	if cfg, managed := LoadFromOSEnv(); managed {
+		return cfg, EnvSource, nil
 	}
 	p, err := ResolvePath("")
 	if err != nil {
@@ -38,18 +34,22 @@ func LoadShared(flagPath string) (RootConfig, string, error) {
 	return c, p, err
 }
 
-// EnvManaged reports whether reads resolve from EFP_CONFIG_JSON instead of a
-// file, i.e. no explicit path was given and the env blob is set.
+// EnvManaged reports whether reads resolve from environment variables instead of
+// a file, i.e. no explicit path was given and the env convention yields config.
 func EnvManaged(flagPath string) bool {
-	return flagPath == "" && strings.TrimSpace(os.Getenv(EnvConfigJSON)) != ""
+	if flagPath != "" {
+		return false
+	}
+	_, managed := LoadFromOSEnv()
+	return managed
 }
 
 // ErrEnvManaged is returned when a file write is refused because readers
-// resolve config from EFP_CONFIG_JSON and would never see the written file.
-var ErrEnvManaged = errors.New("config_env_managed: config comes from EFP_CONFIG_JSON; pass --config to write a file")
+// resolve config from environment variables and would never see the written file.
+var ErrEnvManaged = errors.New("config_env_managed: config comes from environment variables; pass --config to write a file")
 
 // SaveShared persists cfg to the file the shared loaders would read. When
-// EFP_CONFIG_JSON manages the config and no explicit path is given, a file
+// environment variables manage the config and no explicit path is given, a file
 // write would be invisible to every reader, so it is refused.
 func SaveShared(flagPath string, c RootConfig) error {
 	if EnvManaged(flagPath) {

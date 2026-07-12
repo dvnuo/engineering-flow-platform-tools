@@ -59,10 +59,10 @@ func TestLoadSharedPrecedence(t *testing.T) {
 	}
 	t.Setenv(EnvConfigPath, envPath)
 	t.Setenv(EnvLegacyConfigPath, "")
-	// VERSION is a recognized bare-name var; clear it so a host value cannot
-	// make the file-fallback phase look env-managed.
-	t.Setenv("VERSION", "")
-	t.Setenv("JIRA_DEFAULT_INSTANCE", "from-env")
+	// EFP_VERSION is a recognized EFP_-prefixed var; clear it so a host value
+	// cannot make the file-fallback phase look env-managed.
+	t.Setenv("EFP_VERSION", "")
+	t.Setenv("EFP_JIRA_DEFAULT_INSTANCE", "from-env")
 
 	cfg, source, err := LoadShared(flagPath)
 	if err != nil || cfg.Jira.DefaultInstance != "from-flag" || source != flagPath {
@@ -72,7 +72,7 @@ func TestLoadSharedPrecedence(t *testing.T) {
 	if err != nil || cfg.Jira.DefaultInstance != "from-env" || source != EnvSource {
 		t.Fatalf("env must beat file: got=%q source=%q err=%v", cfg.Jira.DefaultInstance, source, err)
 	}
-	t.Setenv("JIRA_DEFAULT_INSTANCE", "")
+	t.Setenv("EFP_JIRA_DEFAULT_INSTANCE", "")
 	cfg, source, err = LoadShared("")
 	if err != nil || cfg.Jira.DefaultInstance != "from-file" || source != envPath {
 		t.Fatalf("file fallback: got=%q source=%q err=%v", cfg.Jira.DefaultInstance, source, err)
@@ -80,10 +80,10 @@ func TestLoadSharedPrecedence(t *testing.T) {
 }
 
 func TestLoadSharedNormalizesEnv(t *testing.T) {
-	t.Setenv("VERSION", "")
-	t.Setenv("JIRA_INSTANCES_0_NAME", "a")
-	t.Setenv("JIRA_INSTANCES_0_AUTH_USERNAME", "u")
-	t.Setenv("JIRA_INSTANCES_0_AUTH_TOKEN", "tok")
+	t.Setenv("EFP_VERSION", "")
+	t.Setenv("EFP_JIRA_INSTANCES_0_NAME", "a")
+	t.Setenv("EFP_JIRA_INSTANCES_0_AUTH_USERNAME", "u")
+	t.Setenv("EFP_JIRA_INSTANCES_0_AUTH_TOKEN", "tok")
 	cfg, source, err := LoadShared("")
 	if err != nil {
 		t.Fatal(err)
@@ -100,8 +100,8 @@ func TestSaveSharedRefusesWhenEnvManaged(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(EnvConfigPath, filepath.Join(dir, "config.yaml"))
 	t.Setenv(EnvLegacyConfigPath, "")
-	t.Setenv("VERSION", "")
-	t.Setenv("JIRA_DEFAULT_INSTANCE", "env-managed")
+	t.Setenv("EFP_VERSION", "")
+	t.Setenv("EFP_JIRA_DEFAULT_INSTANCE", "env-managed")
 	if err := SaveShared("", RootConfig{Version: 1}); !errors.Is(err, ErrEnvManaged) {
 		t.Fatalf("want ErrEnvManaged, got %v", err)
 	}
@@ -112,7 +112,7 @@ func TestSaveSharedRefusesWhenEnvManaged(t *testing.T) {
 	if _, err := os.Stat(explicit); err != nil {
 		t.Fatalf("explicit file not written: %v", err)
 	}
-	t.Setenv("JIRA_DEFAULT_INSTANCE", "")
+	t.Setenv("EFP_JIRA_DEFAULT_INSTANCE", "")
 	if err := SaveShared("", RootConfig{Version: 1}); err != nil {
 		t.Fatalf("file save must work without env vars: %v", err)
 	}

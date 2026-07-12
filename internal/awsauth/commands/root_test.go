@@ -305,10 +305,10 @@ func TestLoadAWSConfigForReadPrefersEnv(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 	t.Setenv(config.EnvConfigPath, "")
 	t.Setenv(config.EnvLegacyConfigPath, "")
-	t.Setenv("AWS_ENABLED", "true")
-	t.Setenv("AWS_DOMAIN", "HBEU")
-	t.Setenv("AWS_USERNAME", "env-user")
-	t.Setenv("AWS_PASSWORD", "env-pass")
+	t.Setenv("EFP_AWS_ENABLED", "true")
+	t.Setenv("EFP_AWS_DOMAIN", "HBEU")
+	t.Setenv("EFP_AWS_USERNAME", "env-user")
+	t.Setenv("EFP_AWS_PASSWORD", "env-pass")
 
 	source, cfg, err := loadAWSConfigForRead("")
 	if err != nil {
@@ -328,10 +328,10 @@ func TestAuthLoginRefusedWhenEnvManaged(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 	t.Setenv(config.EnvConfigPath, "")
 	t.Setenv(config.EnvLegacyConfigPath, "")
-	t.Setenv("AWS_ENABLED", "true")
-	t.Setenv("AWS_DOMAIN", "HBEU")
-	t.Setenv("AWS_USERNAME", "env-user")
-	t.Setenv("AWS_PASSWORD", "env-pass")
+	t.Setenv("EFP_AWS_ENABLED", "true")
+	t.Setenv("EFP_AWS_DOMAIN", "HBEU")
+	t.Setenv("EFP_AWS_USERNAME", "env-user")
+	t.Setenv("EFP_AWS_PASSWORD", "env-pass")
 
 	obj := runJSONInput(
 		t,

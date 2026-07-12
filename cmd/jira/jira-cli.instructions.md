@@ -135,7 +135,7 @@ The shared EFP config is used:
 
 - Default: `~/.efp/config.yaml`
 - Override: `--config <path>` or `EFP_CONFIG`
-- Managed runtimes: bare-name environment variables derived from the config shape (for example `JIRA_DEFAULT_INSTANCE`, `JIRA_INSTANCES_0_BASE_URL`, `JIRA_INSTANCES_0_AUTH_TOKEN`); read-only — write commands then require an explicit `--config` path
+- Managed runtimes: EFP_-prefixed environment variables derived from the config shape (for example `EFP_JIRA_DEFAULT_INSTANCE`, `EFP_JIRA_INSTANCES_0_BASE_URL`, `EFP_JIRA_INSTANCES_0_AUTH_TOKEN`); read-only — write commands then require an explicit `--config` path
 
 Use `--instance <name>` when multiple instances are configured. Auth secrets should be provided through stdin flags such as `--token-stdin`, `--password-stdin`, or `--api-key-stdin`; do not paste secrets into prompts.
 

@@ -7,15 +7,16 @@ import (
 	"strings"
 )
 
-// LoadFromEnv decodes the shared EFP config from flat, bare-named environment
+// LoadFromEnv decodes the shared EFP config from flat, EFP_-prefixed environment
 // variables using the json tags of RootConfig. The env var name for any scalar
-// is the json-tag path from the root joined with "_", uppercased, with every
-// "-" replaced by "_"; slice elements insert their 0-based index as its own
-// path segment (e.g. JIRA_INSTANCES_0_AUTH_TOKEN). Only present, non-empty
-// values are applied. It returns (cfg, managed) where managed is true iff at
-// least one recognized env var was found and applied. Unsupported kinds (maps,
-// etc.) are skipped without error. c.Normalize() is applied before returning,
-// matching Load().
+// is the literal prefix "EFP_" plus the json-tag path from the root joined with
+// "_", uppercased, with every "-" replaced by "_"; slice elements insert their
+// 0-based index as its own path segment (e.g. EFP_JIRA_INSTANCES_0_AUTH_TOKEN).
+// The EFP_ prefix keeps these names out of other tools' namespaces (AWS_*,
+// JIRA_*, JENKINS_*). Only present, non-empty values are applied. It returns
+// (cfg, managed) where managed is true iff at least one recognized env var was
+// found and applied. Unsupported kinds (maps, etc.) are skipped without error.
+// c.Normalize() is applied before returning, matching Load().
 func LoadFromEnv(lookup func(string) (string, bool)) (RootConfig, bool) {
 	var c RootConfig
 	count := decodeStruct(reflect.ValueOf(&c).Elem(), nil, lookup)
@@ -29,9 +30,10 @@ func LoadFromOSEnv() (RootConfig, bool) {
 }
 
 // envName builds the environment variable name from a slice of json-tag path
-// segments: join with "_", replace "-" with "_", uppercase.
+// segments: the literal "EFP_" prefix plus the segments joined with "_", with
+// "-" replaced by "_", uppercased.
 func envName(segs []string) string {
-	return strings.ToUpper(strings.ReplaceAll(strings.Join(segs, "_"), "-", "_"))
+	return "EFP_" + strings.ToUpper(strings.ReplaceAll(strings.Join(segs, "_"), "-", "_"))
 }
 
 // jsonName returns the json tag name of a struct field (without options such as

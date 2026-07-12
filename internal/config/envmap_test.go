@@ -11,7 +11,7 @@ func mapLookup(m map[string]string) func(string) (string, bool) {
 
 func TestLoadFromEnvSingleScalar(t *testing.T) {
 	cfg, managed := LoadFromEnv(mapLookup(map[string]string{
-		"JIRA_DEFAULT_INSTANCE": "main",
+		"EFP_JIRA_DEFAULT_INSTANCE": "main",
 	}))
 	if !managed {
 		t.Fatal("expected managed=true for a single recognized var")
@@ -23,18 +23,18 @@ func TestLoadFromEnvSingleScalar(t *testing.T) {
 
 func TestLoadFromEnvTwoJiraInstances(t *testing.T) {
 	cfg, managed := LoadFromEnv(mapLookup(map[string]string{
-		"JIRA_DEFAULT_INSTANCE":          "one",
-		"JIRA_INSTANCES_0_NAME":          "one",
-		"JIRA_INSTANCES_0_BASE_URL":      "https://one.example.test",
-		"JIRA_INSTANCES_0_REST_PATH":     "/rest/api/2",
-		"JIRA_INSTANCES_0_API_VERSION":   "2",
-		"JIRA_INSTANCES_0_AUTH_TYPE":     "bearer_token",
-		"JIRA_INSTANCES_0_AUTH_TOKEN":    "tok0",
-		"JIRA_INSTANCES_1_NAME":          "two",
-		"JIRA_INSTANCES_1_BASE_URL":      "https://two.example.test",
-		"JIRA_INSTANCES_1_AUTH_TYPE":     "basic_password",
-		"JIRA_INSTANCES_1_AUTH_USERNAME": "u2",
-		"JIRA_INSTANCES_1_AUTH_PASSWORD": "p2",
+		"EFP_JIRA_DEFAULT_INSTANCE":          "one",
+		"EFP_JIRA_INSTANCES_0_NAME":          "one",
+		"EFP_JIRA_INSTANCES_0_BASE_URL":      "https://one.example.test",
+		"EFP_JIRA_INSTANCES_0_REST_PATH":     "/rest/api/2",
+		"EFP_JIRA_INSTANCES_0_API_VERSION":   "2",
+		"EFP_JIRA_INSTANCES_0_AUTH_TYPE":     "bearer_token",
+		"EFP_JIRA_INSTANCES_0_AUTH_TOKEN":    "tok0",
+		"EFP_JIRA_INSTANCES_1_NAME":          "two",
+		"EFP_JIRA_INSTANCES_1_BASE_URL":      "https://two.example.test",
+		"EFP_JIRA_INSTANCES_1_AUTH_TYPE":     "basic_password",
+		"EFP_JIRA_INSTANCES_1_AUTH_USERNAME": "u2",
+		"EFP_JIRA_INSTANCES_1_AUTH_PASSWORD": "p2",
 	}))
 	if !managed {
 		t.Fatal("expected managed=true")
@@ -57,8 +57,8 @@ func TestLoadFromEnvTwoJiraInstances(t *testing.T) {
 
 func TestLoadFromEnvStructSliceStopsAtGap(t *testing.T) {
 	cfg, _ := LoadFromEnv(mapLookup(map[string]string{
-		"JIRA_INSTANCES_0_NAME": "zero",
-		"JIRA_INSTANCES_2_NAME": "two",
+		"EFP_JIRA_INSTANCES_0_NAME": "zero",
+		"EFP_JIRA_INSTANCES_2_NAME": "two",
 	}))
 	if len(cfg.Jira.Instances) != 1 || cfg.Jira.Instances[0].Name != "zero" {
 		t.Fatalf("a gap at index 1 must stop enumeration: %#v", cfg.Jira.Instances)
@@ -66,21 +66,21 @@ func TestLoadFromEnvStructSliceStopsAtGap(t *testing.T) {
 }
 
 func TestLoadFromEnvBoolPointer(t *testing.T) {
-	cfg, managed := LoadFromEnv(mapLookup(map[string]string{"AWS_ENABLED": "true"}))
+	cfg, managed := LoadFromEnv(mapLookup(map[string]string{"EFP_AWS_ENABLED": "true"}))
 	if !managed {
 		t.Fatal("expected managed=true")
 	}
 	if cfg.AWS.Enabled == nil || *cfg.AWS.Enabled != true {
 		t.Fatalf("aws.enabled=%v", cfg.AWS.Enabled)
 	}
-	cfgFalse, _ := LoadFromEnv(mapLookup(map[string]string{"AWS_ENABLED": "false"}))
+	cfgFalse, _ := LoadFromEnv(mapLookup(map[string]string{"EFP_AWS_ENABLED": "false"}))
 	if cfgFalse.AWS.Enabled == nil || *cfgFalse.AWS.Enabled != false {
 		t.Fatalf("aws.enabled(false)=%v", cfgFalse.AWS.Enabled)
 	}
 }
 
 func TestLoadFromEnvIntField(t *testing.T) {
-	cfg, _ := LoadFromEnv(mapLookup(map[string]string{"MOBILE_AUTO_RETENTION_HOURS": "5"}))
+	cfg, _ := LoadFromEnv(mapLookup(map[string]string{"EFP_MOBILE_AUTO_RETENTION_HOURS": "5"}))
 	if cfg.Mobile.RetentionHours != 5 {
 		t.Fatalf("retention_hours=%d", cfg.Mobile.RetentionHours)
 	}
@@ -88,8 +88,8 @@ func TestLoadFromEnvIntField(t *testing.T) {
 
 func TestLoadFromEnvStringSlice(t *testing.T) {
 	cfg, managed := LoadFromEnv(mapLookup(map[string]string{
-		"MOBILE_AUTO_BROWSERSTACK_HTTP_PROXY_NO_PROXY_HOSTS_0": "a.internal",
-		"MOBILE_AUTO_BROWSERSTACK_HTTP_PROXY_NO_PROXY_HOSTS_1": "b.internal",
+		"EFP_MOBILE_AUTO_BROWSERSTACK_HTTP_PROXY_NO_PROXY_HOSTS_0": "a.internal",
+		"EFP_MOBILE_AUTO_BROWSERSTACK_HTTP_PROXY_NO_PROXY_HOSTS_1": "b.internal",
 	}))
 	if !managed {
 		t.Fatal("expected managed=true")
@@ -113,7 +113,7 @@ func TestLoadFromEnvNotManagedWhenNoVars(t *testing.T) {
 func TestLoadFromEnvEmptyValueIsAbsent(t *testing.T) {
 	// A recognized var set to empty string must be treated as absent so that
 	// tests clearing vars (and empty native output) do not look env-managed.
-	_, managed := LoadFromEnv(mapLookup(map[string]string{"JIRA_DEFAULT_INSTANCE": ""}))
+	_, managed := LoadFromEnv(mapLookup(map[string]string{"EFP_JIRA_DEFAULT_INSTANCE": ""}))
 	if managed {
 		t.Fatal("an empty value must not count as env-managed")
 	}
@@ -123,9 +123,9 @@ func TestLoadFromEnvSkipsMapField(t *testing.T) {
 	// ZephyrConfig.StatusMap is a map kind and is not env-decodable; the
 	// decoder must skip it and still apply the sibling scalar without crashing.
 	cfg, managed := LoadFromEnv(mapLookup(map[string]string{
-		"JIRA_INSTANCES_0_NAME":                 "z",
-		"JIRA_INSTANCES_0_ZEPHYR_API_FAMILY":    "squad",
-		"JIRA_INSTANCES_0_ZEPHYR_STATUS_MAP":    "ignored",
+		"EFP_JIRA_INSTANCES_0_NAME":              "z",
+		"EFP_JIRA_INSTANCES_0_ZEPHYR_API_FAMILY": "squad",
+		"EFP_JIRA_INSTANCES_0_ZEPHYR_STATUS_MAP": "ignored",
 	}))
 	if !managed || len(cfg.Jira.Instances) != 1 {
 		t.Fatalf("expected one instance: %#v", cfg.Jira.Instances)

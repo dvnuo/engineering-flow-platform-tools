@@ -63,7 +63,7 @@ func NewRoot() *cobra.Command {
 
 Use it for pages, spaces, content, blogs, attachments, comments, labels, restrictions, users, groups, long tasks, webhooks, and raw REST calls. For agent workflows, default every command and subcommand to --json. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
 
-Configuration uses the shared EFP config from environment variables injected by managed runtimes (for example CONFLUENCE_DEFAULT_INSTANCE, CONFLUENCE_INSTANCES_0_BASE_URL) or the config file, normally ~/.efp/config.yaml (local).`),
+Configuration uses the shared EFP config from environment variables injected by managed runtimes (for example EFP_CONFLUENCE_DEFAULT_INSTANCE, EFP_CONFLUENCE_INSTANCES_0_BASE_URL) or the config file, normally ~/.efp/config.yaml (local).`),
 		Examples: []string{
 			`confluence page get --id 123 --json`,
 			`confluence page update --id 123 --title "Runbook" --body-file page.html --dry-run --json`,

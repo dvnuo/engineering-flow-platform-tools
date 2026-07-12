@@ -93,7 +93,7 @@ func NewRootWithRunner(r commandRunner) *cobra.Command {
 		Short:   "Authorize AWS credentials from the shared EFP config",
 		Long: strings.TrimSpace(`aws-auth is a terminal-invoked CLI for agents and runtimes that need AWS authorization from the shared EFP config file.
 
-Configuration uses the shared EFP config from environment variables injected by managed runtimes (for example AWS_DOMAIN, AWS_USERNAME, AWS_ENABLED) or the config file, normally ~/.efp/config.yaml (local), under the aws node. The auth login command stores the configured domain, username, and password into the config file; when environment variables manage the config, auth login requires an explicit --config path. The login command reads that config and invokes the installed authorization provider with the account and role supplied for that login.`),
+Configuration uses the shared EFP config from environment variables injected by managed runtimes (for example EFP_AWS_DOMAIN, EFP_AWS_USERNAME, EFP_AWS_ENABLED) or the config file, normally ~/.efp/config.yaml (local), under the aws node. The auth login command stores the configured domain, username, and password into the config file; when environment variables manage the config, auth login requires an explicit --config path. The login command reads that config and invokes the installed authorization provider with the account and role supplied for that login.`),
 		Examples: []string{
 			`printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`,
 			`aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json`,

@@ -10,14 +10,14 @@ import (
 )
 
 // EnvSource is the source LoadShared reports when config was decoded from the
-// bare-name indexed environment variable convention.
+// EFP_-prefixed indexed environment variable convention.
 const EnvSource = "env"
 
 // LoadShared resolves the shared EFP config with precedence:
 // explicit flag path > environment variables > EFP_CONFIG/ATLASSIAN_CONFIG file path > default path.
-// The environment source is the flat, bare-named indexed convention derived
-// from the RootConfig json tags (e.g. JIRA_DEFAULT_INSTANCE,
-// JIRA_INSTANCES_0_BASE_URL); it is active iff at least one recognized var is set.
+// The environment source is the flat, EFP_-prefixed indexed convention derived
+// from the RootConfig json tags (e.g. EFP_JIRA_DEFAULT_INSTANCE,
+// EFP_JIRA_INSTANCES_0_BASE_URL); it is active iff at least one recognized var is set.
 func LoadShared(flagPath string) (RootConfig, string, error) {
 	if flagPath != "" {
 		c, err := Load(flagPath)

@@ -15,8 +15,8 @@ func TestLoadRuntimeConfigFromEnv(t *testing.T) {
 	t.Setenv(config.EnvLegacyConfigPath, "")
 	t.Setenv(EnvStateDir, filepath.Join(t.TempDir(), "state"))
 	t.Setenv(EnvArtifactsDir, filepath.Join(t.TempDir(), "artifacts"))
-	t.Setenv("MOBILE_AUTO_BROWSERSTACK_USERNAME", "env-user")
-	t.Setenv("MOBILE_AUTO_BROWSERSTACK_ACCESS_KEY", "env-key")
+	t.Setenv("EFP_MOBILE_AUTO_BROWSERSTACK_USERNAME", "env-user")
+	t.Setenv("EFP_MOBILE_AUTO_BROWSERSTACK_ACCESS_KEY", "env-key")
 
 	cfg, err := LoadRuntimeConfig("")
 	if err != nil {

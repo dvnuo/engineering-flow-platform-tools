@@ -31,12 +31,12 @@ func TestInstanceListReadsEnvWithoutFile(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 	t.Setenv(config.EnvConfigPath, "")
 	t.Setenv(config.EnvLegacyConfigPath, "")
-	t.Setenv("JIRA_DEFAULT_INSTANCE", "env-jira")
-	t.Setenv("JIRA_INSTANCES_0_NAME", "env-jira")
-	t.Setenv("JIRA_INSTANCES_0_BASE_URL", "https://jira.example.test")
-	t.Setenv("JIRA_INSTANCES_0_REST_PATH", "/rest/api/2")
-	t.Setenv("JIRA_INSTANCES_0_AUTH_TYPE", "bearer_token")
-	t.Setenv("JIRA_INSTANCES_0_AUTH_TOKEN", "secret-token")
+	t.Setenv("EFP_JIRA_DEFAULT_INSTANCE", "env-jira")
+	t.Setenv("EFP_JIRA_INSTANCES_0_NAME", "env-jira")
+	t.Setenv("EFP_JIRA_INSTANCES_0_BASE_URL", "https://jira.example.test")
+	t.Setenv("EFP_JIRA_INSTANCES_0_REST_PATH", "/rest/api/2")
+	t.Setenv("EFP_JIRA_INSTANCES_0_AUTH_TYPE", "bearer_token")
+	t.Setenv("EFP_JIRA_INSTANCES_0_AUTH_TOKEN", "secret-token")
 
 	out := runEnvJSON(t, "", "instance", "list")
 	if out["ok"] != true {
@@ -57,7 +57,7 @@ func TestInstanceAddRefusedWhenEnvManaged(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 	t.Setenv(config.EnvConfigPath, "")
 	t.Setenv(config.EnvLegacyConfigPath, "")
-	t.Setenv("JIRA_DEFAULT_INSTANCE", "env-jira")
+	t.Setenv("EFP_JIRA_DEFAULT_INSTANCE", "env-jira")
 
 	out := runEnvJSON(t, "tok\n", "instance", "add", "new-jira", "--base-url", "https://jira.example.test", "--token-stdin")
 	if out["ok"] == true {

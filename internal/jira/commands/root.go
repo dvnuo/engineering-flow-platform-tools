@@ -51,7 +51,7 @@ func NewRoot() *cobra.Command {
 
 Use it for issues, search, transitions, comments, attachments, projects, users, groups, metadata, filters, dashboards, Agile boards and sprints, and Zephyr test-management resources. For agent workflows, default every command and subcommand to --json. Use --dry-run before write operations and --yes only after explicit user confirmation for destructive operations.
 
-Configuration uses the shared EFP config from environment variables injected by managed runtimes (for example JIRA_DEFAULT_INSTANCE, JIRA_INSTANCES_0_BASE_URL) or the config file, normally ~/.efp/config.yaml (local).`),
+Configuration uses the shared EFP config from environment variables injected by managed runtimes (for example EFP_JIRA_DEFAULT_INSTANCE, EFP_JIRA_INSTANCES_0_BASE_URL) or the config file, normally ~/.efp/config.yaml (local).`),
 		Examples: []string{
 			`jira issue get PROJ-123 --json`,
 			`jira issue search --jql "project = PROJ ORDER BY updated DESC" --json`,

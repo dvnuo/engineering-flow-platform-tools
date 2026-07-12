@@ -7,7 +7,6 @@ import (
 
 const EnvConfigPath = "EFP_CONFIG"
 const EnvLegacyConfigPath = "ATLASSIAN_CONFIG"
-const EnvConfigJSON = "EFP_CONFIG_JSON"
 
 func ResolvePath(flagPath string) (string, error) {
 	if flagPath != "" {

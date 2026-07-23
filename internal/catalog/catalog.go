@@ -93,6 +93,7 @@ var jenkinsCommands = []string{
 
 var browserCommands = []string{
 	"browser open",
+	"browser bookmark list",
 	"browser probe",
 	"browser session start",
 	"browser session list",
@@ -823,18 +824,21 @@ func visualExplicit(name string) (explicitMeta, bool) {
 }
 
 func browserExplicit(name string) (explicitMeta, bool) {
-	common := []string{"json", "format", "verbose"}
+	common := []string{"config", "json", "format", "verbose"}
 	sessionFlag := append([]string{"session"}, common...)
 	pageFlags := append([]string{"session", "target-id", "timeout"}, common...)
 	items := map[string]explicitMeta{
 		"open": {Description: "Open an HTTP or HTTPS URL in a persistent Edge/Chrome/Chromium session that remains available for manual login and page operations in later turns.",
-			Flags: []string{"url", "session", "browser", "browser-exe", "headless", "profile", "download-dir", "clean-profile", "port", "json", "format", "verbose"}, Required: []string{"url"}, Risk: "write", Example: "browser open --session default --url https://intranet.example.test --json",
+			Flags: []string{"url", "session", "browser", "browser-exe", "headless", "profile", "download-dir", "clean-profile", "port", "config", "json", "format", "verbose"}, Required: []string{"url"}, Risk: "write", Example: "browser open --session default --url https://intranet.example.test --json",
 			Lifecycle: "persistent", WhenToUse: "Use when the browser must remain open for manual login, MFA, human navigation, or page operations in later turns.", WhenNotToUse: "Do not use when a one-shot SSO or connectivity diagnostic with captured artifacts is the complete task; use browser probe instead."},
+		"bookmark.list": {Description: "Fetch configured external bookmark sources live, validate their strict manifests, and merge website names, aliases, required descriptions, URLs, and source names for agent routing.",
+			Flags: common, Risk: "read", Example: "browser bookmark list --json",
+			WhenToUse: "Use before browser open when the user names a website or service, uses an alias, or describes the desired website purpose without supplying an explicit URL.", WhenNotToUse: "Do not use when the user already supplied an explicit URL."},
 		"probe": {Description: "Capture a one-shot Edge/Chrome/Chromium SSO diagnostic with screenshot, HTML, and network artifacts; the launched browser closes when the command returns.",
-			Flags: []string{"url", "selector", "require-selector", "wait", "timeout", "out", "profile", "clean-profile", "browser-exe", "browser", "headless", "ignore-cert-errors", "fetch-api", "network-filter", "max-network-events", "save-html", "save-screenshot", "json", "format", "verbose"}, Required: []string{"url"}, Risk: "read", Example: "browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json",
+			Flags: []string{"url", "selector", "require-selector", "wait", "timeout", "out", "profile", "clean-profile", "browser-exe", "browser", "headless", "ignore-cert-errors", "fetch-api", "network-filter", "max-network-events", "save-html", "save-screenshot", "config", "json", "format", "verbose"}, Required: []string{"url"}, Risk: "read", Example: "browser probe --url https://intranet.example.test --selector .user-avatar --wait 10 --out result --json",
 			Lifecycle: "one_shot", WhenToUse: "Use only for a self-contained SSO or connectivity diagnostic and artifact capture that finishes in this command.", WhenNotToUse: "Do not use for manual login, MFA, human navigation, or any page operation that must continue after this command returns or in a later turn."},
 		"session.start": {Description: "Ensure a persistent Edge/Chrome/Chromium automation session is running with explicit browser, profile, and DevTools lifecycle configuration; it does not open a page unless the deprecated --url compatibility flag is supplied.",
-			Flags: []string{"name", "browser", "browser-exe", "headless", "profile", "download-dir", "clean-profile", "port", "url", "json", "format", "verbose"}, Risk: "write", Example: "browser session start --name default --browser chrome --json",
+			Flags: []string{"name", "browser", "browser-exe", "headless", "profile", "download-dir", "clean-profile", "port", "url", "config", "json", "format", "verbose"}, Risk: "write", Example: "browser session start --name default --browser chrome --json",
 			Lifecycle: "persistent", WhenToUse: "Use only for explicit lower-level session lifecycle or launch configuration when no page needs to be opened.", WhenNotToUse: "Do not use to open, visit, show, or navigate to a page for manual login or later-turn work; use browser open. The --url flag is deprecated compatibility only."},
 		"session.list": {Description: "List stored browser automation sessions and refresh their local DevTools status.",
 			Flags: common, Risk: "read", Example: "browser session list --json"},

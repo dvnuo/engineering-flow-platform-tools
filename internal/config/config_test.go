@@ -217,6 +217,29 @@ func TestSaveWritesJenkinsNode(t *testing.T) {
 	}
 }
 
+func TestLoadAndSaveBrowserBookmarkSources(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	cfg := RootConfig{
+		Version: 1,
+		Browser: BrowserConfig{Bookmarks: BrowserBookmarksConfig{Sources: []BrowserBookmarkSource{
+			{Name: "company", URL: "https://bookmarks.example.test/company.yaml"},
+			{Name: "public", URL: "https://bookmarks.example.test/public.json"},
+		}}},
+	}
+	if err := Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(loaded.Browser.Bookmarks.Sources) != 2 ||
+		loaded.Browser.Bookmarks.Sources[0].Name != "company" ||
+		loaded.Browser.Bookmarks.Sources[1].URL != "https://bookmarks.example.test/public.json" {
+		t.Fatalf("browser bookmark sources not preserved: %#v", loaded.Browser.Bookmarks.Sources)
+	}
+}
+
 func mustReadFile(t *testing.T, path string) []byte {
 	t.Helper()
 	b, err := os.ReadFile(path)

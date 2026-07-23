@@ -102,6 +102,9 @@ func Save(path string, c RootConfig) error {
 	if err := setMappingValue(root, "aws", c.AWS); err != nil {
 		return err
 	}
+	if err := setMappingValue(root, "browser", c.Browser); err != nil {
+		return err
+	}
 	if err := setMappingValue(root, "visual", c.Visual); err != nil {
 		return err
 	}

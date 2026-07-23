@@ -8,8 +8,22 @@ type RootConfig struct {
 	Confluence ProductConfig `json:"confluence" yaml:"confluence"`
 	Jenkins    ProductConfig `json:"jenkins" yaml:"jenkins"`
 	AWS        AWSConfig     `json:"aws" yaml:"aws"`
+	Browser    BrowserConfig `json:"browser" yaml:"browser"`
 	Visual     VisualConfig  `json:"visual" yaml:"visual"`
 	Mobile     MobileConfig  `json:"mobile-auto" yaml:"mobile-auto"`
+}
+
+type BrowserConfig struct {
+	Bookmarks BrowserBookmarksConfig `json:"bookmarks" yaml:"bookmarks"`
+}
+
+type BrowserBookmarksConfig struct {
+	Sources []BrowserBookmarkSource `json:"sources" yaml:"sources"`
+}
+
+type BrowserBookmarkSource struct {
+	Name string `json:"name" yaml:"name"`
+	URL  string `json:"url" yaml:"url"`
 }
 
 type AWSConfig struct {

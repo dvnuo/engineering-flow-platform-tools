@@ -26,6 +26,14 @@ jenkins:
   default_instance: ci
   instances: []
 
+browser:
+  bookmarks:
+    sources:
+      - name: company
+        url: https://portal.example.test/agent-bookmarks.yaml
+      - name: public
+        url: https://static.example.test/bookmarks.json
+
 copilot:
   provider: github_copilot_plugin
   api:
@@ -119,6 +127,33 @@ ai_platform:
 - `ca_cert`
 
 `crumb_mode=auto` fetches `/crumbIssuer/api/json` for state-changing requests and tolerates a missing crumb issuer. Use `always` when the controller requires crumbs and you want crumb failures to be explicit. Use `never` only for controllers where CSRF crumbs are disabled or handled outside this CLI.
+
+## Browser Bookmark Sources
+
+`browser.bookmarks.sources` contains external bookmark manifest locations, not individual bookmark entries:
+
+```yaml
+browser:
+  bookmarks:
+    sources:
+      - name: company
+        url: https://portal.example.test/agent-bookmarks.yaml
+```
+
+Source names are required and case-insensitively unique. Source URLs must be absolute HTTP or HTTPS URLs without embedded credentials. The equivalent indexed environment settings are `EFP_BROWSER_BOOKMARKS_SOURCES_0_NAME` and `EFP_BROWSER_BOOKMARKS_SOURCES_0_URL`.
+
+Each source can return JSON or YAML:
+
+```yaml
+version: 1
+bookmarks:
+  - name: Google
+    aliases: [谷歌, web search]
+    description: Search the public web.
+    url: https://www.google.com/
+```
+
+Each bookmark requires `name`, `description`, and an absolute HTTP/HTTPS `url`; `aliases` is optional. Unknown fields are rejected. `browser bookmark list --json` fetches every configured source on each invocation, merges healthy results in source order, and does not use or write a cache. The Agent opens the returned bookmark URL with the existing `browser open` command.
 
 ## Copilot Auth
 

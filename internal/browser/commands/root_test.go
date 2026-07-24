@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -33,20 +37,93 @@ func TestCommandsJSONIncludesPersistentOpenAndProbe(t *testing.T) {
 	positions := map[string]int{}
 	for index, item := range commands {
 		m := item.(map[string]any)
-		for _, name := range []string{"open", "probe"} {
+		for _, name := range []string{"open", "bookmark.list", "probe"} {
 			if m["name"] == name || strings.Contains(m["usage"].(string), "browser "+name) {
 				found[name] = true
 				positions[name] = index
 			}
 		}
 	}
-	for _, name := range []string{"open", "probe"} {
+	for _, name := range []string{"open", "bookmark.list", "probe"} {
 		if !found[name] {
 			t.Fatalf("commands did not contain %s: %#v", name, commands)
 		}
 	}
-	if positions["open"] != 0 || positions["open"] >= positions["probe"] {
-		t.Fatalf("persistent open must precede probe: positions=%#v commands=%#v", positions, commands)
+	if positions["open"] != 0 || positions["open"] >= positions["bookmark.list"] || positions["bookmark.list"] >= positions["probe"] {
+		t.Fatalf("open, bookmark.list, and probe order is wrong: positions=%#v commands=%#v", positions, commands)
+	}
+}
+
+func TestBookmarkListFetchesConfiguredExternalManifest(t *testing.T) {
+	var calls int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		_, _ = w.Write([]byte(`{"version":1,"bookmarks":[{"name":"Google","aliases":["谷歌"],"description":"Search the public web.","url":"https://www.google.com/"}]}`))
+	}))
+	defer server.Close()
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	configBody := "browser:\n  bookmarks:\n    sources:\n      - name: public\n        url: " + server.URL + "\n"
+	if err := os.WriteFile(configPath, []byte(configBody), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out := run(t, &fakeRunner{}, "bookmark", "list", "--config", configPath, "--json")
+	if out["ok"] != true {
+		t.Fatalf("bookmark list failed: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	items := data["bookmarks"].([]any)
+	if len(items) != 1 {
+		t.Fatalf("bookmarks = %#v", items)
+	}
+	item := items[0].(map[string]any)
+	if item["name"] != "Google" || item["description"] != "Search the public web." || item["url"] != "https://www.google.com/" {
+		t.Fatalf("bookmark metadata missing: %#v", item)
+	}
+	if calls != 1 {
+		t.Fatalf("source calls = %d want 1", calls)
+	}
+}
+
+func TestBookmarkListReturnsEmptyWhenDefaultConfigIsMissing(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("EFP_CONFIG", "")
+	t.Setenv("ATLASSIAN_CONFIG", "")
+	t.Setenv("EFP_VERSION", "")
+	out := run(t, &fakeRunner{}, "bookmark", "list", "--json")
+	if out["ok"] != true {
+		t.Fatalf("missing default config should return an empty list: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if len(data["bookmarks"].([]any)) != 0 {
+		t.Fatalf("bookmarks = %#v", data["bookmarks"])
+	}
+}
+
+func TestBookmarkListReportsAllSourceFailures(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "unavailable", http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	configBody := "browser:\n  bookmarks:\n    sources:\n      - name: broken\n        url: " + server.URL + "\n"
+	if err := os.WriteFile(configPath, []byte(configBody), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out := run(t, &fakeRunner{}, "bookmark", "list", "--config", configPath, "--json")
+	if out["ok"] != false {
+		t.Fatalf("all failures should fail: %#v", out)
+	}
+	errObj := out["error"].(map[string]any)
+	if errObj["code"] != "bookmark_sources_unavailable" {
+		t.Fatalf("error = %#v", errObj)
+	}
+	data := out["data"].(map[string]any)
+	if len(data["warnings"].([]any)) != 1 {
+		t.Fatalf("warnings = %#v", data["warnings"])
 	}
 }
 
@@ -271,6 +348,10 @@ func TestHelpLLMExplainsPersistentRoutingAndHumanHandoff(t *testing.T) {
 		joined += tip.(string) + "\n"
 	}
 	for _, want := range []string{
+		"browser bookmark list --json",
+		"name, aliases, and required description",
+		"returned URL unchanged",
+		"already supplied an explicit URL",
 		"Default requests to open",
 		"Manual login",
 		"must not use browser probe",

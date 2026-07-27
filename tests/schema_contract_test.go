@@ -96,6 +96,23 @@ func requireRequired(t *testing.T, data map[string]any, names ...string) {
 	}
 }
 
+func requireOptionalFlags(t *testing.T, data map[string]any, names ...string) {
+	t.Helper()
+	flags := schemaFlagMap(data)
+	for _, name := range names {
+		flag, ok := flags[name]
+		if !ok {
+			b, _ := json.Marshal(data)
+			t.Fatalf("missing flag %s in %s", name, string(b))
+		}
+		required, _ := flag["required"].(bool)
+		if required {
+			b, _ := json.Marshal(data)
+			t.Fatalf("flag %s must be optional in %s", name, string(b))
+		}
+	}
+}
+
 func schemaFlagMap(data map[string]any) map[string]map[string]any {
 	out := map[string]map[string]any{}
 	switch flags := data["flags"].(type) {
@@ -233,6 +250,11 @@ func TestSchemaConcreteFlags(t *testing.T) {
 	requireFlags(t, schemaData(t, "jenkins", "build.log-follow"), "start", "max-rounds", "wait-ms")
 	requireFlags(t, schemaData(t, "jenkins", "artifact.download"), "output")
 	requireRequired(t, schemaData(t, "jenkins", "api.delete"), "path", "yes")
+}
+
+func TestBookmarkUpdateFlagsOptional(t *testing.T) {
+	requireOptionalFlags(t, schemaData(t, "browser", "bookmark.update"), "name", "alias", "clear-aliases", "description", "url")
+	requireOptionalFlags(t, schemaData(t, "browser", "bookmark.source.update"), "name", "url")
 }
 
 func TestBrowserLifecycleRoutingMetadata(t *testing.T) {

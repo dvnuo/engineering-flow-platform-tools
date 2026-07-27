@@ -55,6 +55,7 @@ func TestCommandsJSONIncludesPersistentOpenAndProbe(t *testing.T) {
 }
 
 func TestBookmarkListFetchesConfiguredExternalManifest(t *testing.T) {
+	setBookmarkTestHome(t)
 	var calls int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
@@ -86,12 +87,7 @@ func TestBookmarkListFetchesConfiguredExternalManifest(t *testing.T) {
 }
 
 func TestBookmarkListReturnsEmptyWhenDefaultConfigIsMissing(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	t.Setenv("EFP_CONFIG", "")
-	t.Setenv("ATLASSIAN_CONFIG", "")
-	t.Setenv("EFP_VERSION", "")
+	setBookmarkTestHome(t)
 	out := run(t, &fakeRunner{}, "bookmark", "list", "--json")
 	if out["ok"] != true {
 		t.Fatalf("missing default config should return an empty list: %#v", out)
@@ -103,6 +99,7 @@ func TestBookmarkListReturnsEmptyWhenDefaultConfigIsMissing(t *testing.T) {
 }
 
 func TestBookmarkListReportsAllSourceFailures(t *testing.T) {
+	setBookmarkTestHome(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 	}))
@@ -124,6 +121,179 @@ func TestBookmarkListReportsAllSourceFailures(t *testing.T) {
 	data := out["data"].(map[string]any)
 	if len(data["warnings"].([]any)) != 1 {
 		t.Fatalf("warnings = %#v", data["warnings"])
+	}
+}
+
+func TestBookmarkLocalCRUDAndMergedList(t *testing.T) {
+	setBookmarkTestHome(t)
+
+	added := run(t, &fakeRunner{},
+		"bookmark", "add",
+		"--name", "Google",
+		"--alias", "谷歌",
+		"--alias", "web search",
+		"--description", "Search the public web.",
+		"--url", "https://www.google.com/",
+		"--json",
+	)
+	if added["ok"] != true {
+		t.Fatalf("bookmark add failed: %#v", added)
+	}
+	addedBookmark := added["data"].(map[string]any)["bookmark"].(map[string]any)
+	if addedBookmark["source"] != "local" || addedBookmark["description"] != "Search the public web." {
+		t.Fatalf("added bookmark = %#v", addedBookmark)
+	}
+
+	listed := run(t, &fakeRunner{}, "bookmark", "list", "--json")
+	if listed["ok"] != true {
+		t.Fatalf("bookmark list failed: %#v", listed)
+	}
+	listData := listed["data"].(map[string]any)
+	items := listData["bookmarks"].([]any)
+	if len(items) != 1 || items[0].(map[string]any)["source"] != "local" {
+		t.Fatalf("local bookmark not merged: %#v", listData)
+	}
+
+	updated := run(t, &fakeRunner{},
+		"bookmark", "update", "google",
+		"--description", "Search public websites.",
+		"--clear-aliases",
+		"--json",
+	)
+	if updated["ok"] != true {
+		t.Fatalf("bookmark update failed: %#v", updated)
+	}
+	updatedBookmark := updated["data"].(map[string]any)["bookmark"].(map[string]any)
+	if updatedBookmark["description"] != "Search public websites." {
+		t.Fatalf("updated bookmark = %#v", updatedBookmark)
+	}
+	if aliases, ok := updatedBookmark["aliases"]; ok && len(aliases.([]any)) != 0 {
+		t.Fatalf("aliases were not cleared: %#v", updatedBookmark)
+	}
+
+	unconfirmed := run(t, &fakeRunner{}, "bookmark", "remove", "Google", "--json")
+	if unconfirmed["ok"] != false || unconfirmed["error"].(map[string]any)["code"] != "invalid_args" {
+		t.Fatalf("unconfirmed remove = %#v", unconfirmed)
+	}
+	removed := run(t, &fakeRunner{}, "bookmark", "remove", "Google", "--yes", "--json")
+	if removed["ok"] != true {
+		t.Fatalf("bookmark remove failed: %#v", removed)
+	}
+}
+
+func TestBookmarkExternalSourcesAreReadOnly(t *testing.T) {
+	setBookmarkTestHome(t)
+	out := run(t, &fakeRunner{},
+		"bookmark", "update", "Google",
+		"--source", "company",
+		"--description", "Changed.",
+		"--json",
+	)
+	if out["ok"] != false || out["error"].(map[string]any)["code"] != "bookmark_source_read_only" {
+		t.Fatalf("external update = %#v", out)
+	}
+}
+
+func TestBookmarkListKeepsLocalResultsWhenExternalSourcesFail(t *testing.T) {
+	setBookmarkTestHome(t)
+	added := run(t, &fakeRunner{},
+		"bookmark", "add",
+		"--name", "Local docs",
+		"--description", "Read local team documentation.",
+		"--url", "https://docs.example.test/",
+		"--json",
+	)
+	if added["ok"] != true {
+		t.Fatalf("bookmark add failed: %#v", added)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "unavailable", http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	configBody := "browser:\n  bookmarks:\n    sources:\n      - name: broken\n        url: " + server.URL + "\n"
+	if err := os.WriteFile(configPath, []byte(configBody), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out := run(t, &fakeRunner{}, "bookmark", "list", "--config", configPath, "--json")
+	if out["ok"] != true {
+		t.Fatalf("valid local source should keep the merged list usable: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	items := data["bookmarks"].([]any)
+	if len(items) != 1 || items[0].(map[string]any)["source"] != "local" {
+		t.Fatalf("local bookmarks = %#v", items)
+	}
+	if len(data["warnings"].([]any)) != 1 {
+		t.Fatalf("external warning missing: %#v", data)
+	}
+}
+
+func TestBookmarkSourceCRUD(t *testing.T) {
+	setBookmarkTestHome(t)
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+
+	added := run(t, &fakeRunner{},
+		"bookmark", "source", "add",
+		"--name", "company",
+		"--url", "https://bookmarks.example.test/company.yaml",
+		"--config", configPath,
+		"--json",
+	)
+	if added["ok"] != true {
+		t.Fatalf("source add failed: %#v", added)
+	}
+	listed := run(t, &fakeRunner{}, "bookmark", "source", "list", "--config", configPath, "--json")
+	if listed["ok"] != true {
+		t.Fatalf("source list failed: %#v", listed)
+	}
+	sources := listed["data"].(map[string]any)["sources"].([]any)
+	if len(sources) != 1 || sources[0].(map[string]any)["name"] != "company" {
+		t.Fatalf("sources = %#v", sources)
+	}
+
+	updated := run(t, &fakeRunner{},
+		"bookmark", "source", "update", "company",
+		"--name", "engineering",
+		"--url", "https://bookmarks.example.test/engineering.yaml",
+		"--config", configPath,
+		"--json",
+	)
+	if updated["ok"] != true {
+		t.Fatalf("source update failed: %#v", updated)
+	}
+	source := updated["data"].(map[string]any)["source"].(map[string]any)
+	if source["name"] != "engineering" || source["url"] != "https://bookmarks.example.test/engineering.yaml" {
+		t.Fatalf("updated source = %#v", source)
+	}
+
+	unconfirmed := run(t, &fakeRunner{}, "bookmark", "source", "remove", "engineering", "--config", configPath, "--json")
+	if unconfirmed["ok"] != false || unconfirmed["error"].(map[string]any)["code"] != "invalid_args" {
+		t.Fatalf("unconfirmed source remove = %#v", unconfirmed)
+	}
+	removed := run(t, &fakeRunner{}, "bookmark", "source", "remove", "engineering", "--yes", "--config", configPath, "--json")
+	if removed["ok"] != true {
+		t.Fatalf("source remove failed: %#v", removed)
+	}
+	listed = run(t, &fakeRunner{}, "bookmark", "source", "list", "--config", configPath, "--json")
+	if len(listed["data"].(map[string]any)["sources"].([]any)) != 0 {
+		t.Fatalf("source was not removed: %#v", listed)
+	}
+}
+
+func TestBookmarkSourceWriteRefusesEnvironmentManagedConfig(t *testing.T) {
+	setBookmarkTestHome(t)
+	t.Setenv("EFP_BROWSER_BOOKMARKS_SOURCES_0_NAME", "company")
+	t.Setenv("EFP_BROWSER_BOOKMARKS_SOURCES_0_URL", "https://bookmarks.example.test/company.yaml")
+	out := run(t, &fakeRunner{},
+		"bookmark", "source", "add",
+		"--name", "public",
+		"--url", "https://bookmarks.example.test/public.yaml",
+		"--json",
+	)
+	if out["ok"] != false || out["error"].(map[string]any)["code"] != "config_env_managed" {
+		t.Fatalf("environment-managed source write = %#v", out)
 	}
 }
 
@@ -184,41 +354,47 @@ func TestSessionStartURLIsDocumentedAsCompatibilityOnly(t *testing.T) {
 
 func TestSchemaIncludesUploadAndDownloadFlags(t *testing.T) {
 	cases := map[string][]string{
-		"session.start":       {"download-dir"},
-		"page.ax":             {"limit", "include-hidden", "pierce", "session", "target-id", "timeout"},
-		"page.find":           {"selector", "role", "name", "text", "label", "placeholder", "near-text", "nth", "limit", "include-hidden", "session", "target-id", "timeout"},
-		"page.click":          {"selector", "ref", "yes", "session", "target-id", "timeout"},
-		"page.type":           {"selector", "ref", "text", "clear", "session", "target-id", "timeout"},
-		"page.select":         {"selector", "ref", "value", "label", "index", "session", "target-id", "timeout"},
-		"page.check":          {"selector", "ref", "session", "target-id", "timeout"},
-		"page.uncheck":        {"selector", "ref", "session", "target-id", "timeout"},
-		"page.press":          {"selector", "ref", "key", "session", "target-id", "timeout"},
-		"page.upload":         {"selector", "file", "clear", "session", "target-id", "timeout"},
-		"page.console":        {"level", "limit", "session", "target-id", "timeout"},
-		"page.errors":         {"limit", "session", "target-id", "timeout"},
-		"page.console-clear":  {"session", "target-id", "timeout"},
-		"page.extract":        {"selector", "limit", "include-html", "pierce", "max-html-bytes", "session", "target-id", "timeout"},
-		"page.outline":        {"limit", "include-hidden", "pierce", "session", "target-id", "timeout"},
-		"page.metrics":        {"limit-resources", "filter", "session", "target-id", "timeout"},
-		"page.table-export":   {"selector", "out", "format", "limit-rows", "limit-cells", "session", "target-id", "timeout"},
-		"page.list-export":    {"selector", "out", "format", "limit-items", "session", "target-id", "timeout"},
-		"page.scroll-collect": {"selector", "item-selector", "out", "format", "limit", "max-scrolls", "scroll-step", "interval-ms", "session", "target-id", "timeout"},
-		"page.diff":           {"before", "after", "out", "limit"},
-		"assert.visible":      {"selector", "ref", "not", "session", "target-id", "timeout"},
-		"assert.text":         {"contains", "selector", "ref", "not", "session", "target-id", "timeout"},
-		"assert.url":          {"contains", "not", "session", "target-id", "timeout"},
-		"assert.count":        {"selector", "equals", "min", "max", "session", "target-id", "timeout"},
-		"workflow.run":        {"file", "dry-run", "session", "target-id", "timeout", "continue-on-error", "var", "report-out", "evidence-dir", "allow-human", "yes"},
-		"frame.list":          {"session", "target-id", "timeout"},
-		"frame.snapshot":      {"frame-id", "include-html", "max-text-bytes", "max-html-bytes", "session", "target-id", "timeout"},
-		"network.start":       {"session", "target-id", "timeout", "limit", "filter", "body", "max-body-bytes"},
-		"network.stop":        {"session", "target-id", "timeout"},
-		"network.list":        {"session", "target-id", "timeout", "filter", "limit", "method", "status", "body", "max-body-bytes"},
-		"network.wait":        {"session", "target-id", "timeout", "url-contains", "method", "status", "limit", "body", "max-body-bytes"},
-		"network.export":      {"session", "target-id", "timeout", "out", "format", "filter", "limit"},
-		"network.clear":       {"session", "target-id", "timeout"},
-		"download.list":       {"session"},
-		"download.wait":       {"session", "filename-contains", "timeout"},
+		"bookmark.add":           {"source", "name", "alias", "description", "url"},
+		"bookmark.update":        {"source", "name", "alias", "clear-aliases", "description", "url"},
+		"bookmark.remove":        {"source", "yes"},
+		"bookmark.source.add":    {"name", "url"},
+		"bookmark.source.update": {"name", "url"},
+		"bookmark.source.remove": {"yes"},
+		"session.start":          {"download-dir"},
+		"page.ax":                {"limit", "include-hidden", "pierce", "session", "target-id", "timeout"},
+		"page.find":              {"selector", "role", "name", "text", "label", "placeholder", "near-text", "nth", "limit", "include-hidden", "session", "target-id", "timeout"},
+		"page.click":             {"selector", "ref", "yes", "session", "target-id", "timeout"},
+		"page.type":              {"selector", "ref", "text", "clear", "session", "target-id", "timeout"},
+		"page.select":            {"selector", "ref", "value", "label", "index", "session", "target-id", "timeout"},
+		"page.check":             {"selector", "ref", "session", "target-id", "timeout"},
+		"page.uncheck":           {"selector", "ref", "session", "target-id", "timeout"},
+		"page.press":             {"selector", "ref", "key", "session", "target-id", "timeout"},
+		"page.upload":            {"selector", "file", "clear", "session", "target-id", "timeout"},
+		"page.console":           {"level", "limit", "session", "target-id", "timeout"},
+		"page.errors":            {"limit", "session", "target-id", "timeout"},
+		"page.console-clear":     {"session", "target-id", "timeout"},
+		"page.extract":           {"selector", "limit", "include-html", "pierce", "max-html-bytes", "session", "target-id", "timeout"},
+		"page.outline":           {"limit", "include-hidden", "pierce", "session", "target-id", "timeout"},
+		"page.metrics":           {"limit-resources", "filter", "session", "target-id", "timeout"},
+		"page.table-export":      {"selector", "out", "format", "limit-rows", "limit-cells", "session", "target-id", "timeout"},
+		"page.list-export":       {"selector", "out", "format", "limit-items", "session", "target-id", "timeout"},
+		"page.scroll-collect":    {"selector", "item-selector", "out", "format", "limit", "max-scrolls", "scroll-step", "interval-ms", "session", "target-id", "timeout"},
+		"page.diff":              {"before", "after", "out", "limit"},
+		"assert.visible":         {"selector", "ref", "not", "session", "target-id", "timeout"},
+		"assert.text":            {"contains", "selector", "ref", "not", "session", "target-id", "timeout"},
+		"assert.url":             {"contains", "not", "session", "target-id", "timeout"},
+		"assert.count":           {"selector", "equals", "min", "max", "session", "target-id", "timeout"},
+		"workflow.run":           {"file", "dry-run", "session", "target-id", "timeout", "continue-on-error", "var", "report-out", "evidence-dir", "allow-human", "yes"},
+		"frame.list":             {"session", "target-id", "timeout"},
+		"frame.snapshot":         {"frame-id", "include-html", "max-text-bytes", "max-html-bytes", "session", "target-id", "timeout"},
+		"network.start":          {"session", "target-id", "timeout", "limit", "filter", "body", "max-body-bytes"},
+		"network.stop":           {"session", "target-id", "timeout"},
+		"network.list":           {"session", "target-id", "timeout", "filter", "limit", "method", "status", "body", "max-body-bytes"},
+		"network.wait":           {"session", "target-id", "timeout", "url-contains", "method", "status", "limit", "body", "max-body-bytes"},
+		"network.export":         {"session", "target-id", "timeout", "out", "format", "filter", "limit"},
+		"network.clear":          {"session", "target-id", "timeout"},
+		"download.list":          {"session"},
+		"download.wait":          {"session", "filename-contains", "timeout"},
 	}
 	for command, flags := range cases {
 		out := run(t, &fakeRunner{}, "schema", command, "--json")
@@ -352,6 +528,11 @@ func TestHelpLLMExplainsPersistentRoutingAndHumanHandoff(t *testing.T) {
 		"name, aliases, and required description",
 		"returned URL unchanged",
 		"already supplied an explicit URL",
+		"browser bookmark add/update/remove",
+		"~/.efp/bookmarks.yaml",
+		"browser bookmark source list/add/update/remove",
+		"External HTTP and HTTPS manifests are read-only",
+		"does not use or write a cache",
 		"Default requests to open",
 		"Manual login",
 		"must not use browser probe",
@@ -408,6 +589,16 @@ func runText(t *testing.T, r probe.Runner, args ...string) string {
 		t.Fatalf("execute failed: %v out=%s", err, b.String())
 	}
 	return b.String()
+}
+
+func setBookmarkTestHome(t *testing.T) {
+	t.Helper()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("EFP_CONFIG", "")
+	t.Setenv("ATLASSIAN_CONFIG", "")
+	t.Setenv("EFP_VERSION", "")
 }
 
 func assertHelpAnnotated(t *testing.T, cmd *cobra.Command) {

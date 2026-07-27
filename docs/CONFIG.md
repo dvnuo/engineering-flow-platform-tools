@@ -128,9 +128,20 @@ ai_platform:
 
 `crumb_mode=auto` fetches `/crumbIssuer/api/json` for state-changing requests and tolerates a missing crumb issuer. Use `always` when the controller requires crumbs and you want crumb failures to be explicit. Use `never` only for controllers where CSRF crumbs are disabled or handled outside this CLI.
 
-## Browser Bookmark Sources
+## Browser Bookmarks
 
-`browser.bookmarks.sources` contains external bookmark manifest locations, not individual bookmark entries:
+Personal bookmarks are stored in `~/.efp/bookmarks.yaml` and managed through `browser bookmark add/update/remove`. This file is authoritative local data, not a cache:
+
+```yaml
+version: 1
+bookmarks:
+  - name: Google
+    aliases: [谷歌, web search]
+    description: Search the public web.
+    url: https://www.google.com/
+```
+
+`browser.bookmarks.sources` contains external read-only bookmark manifest locations, not individual bookmark entries:
 
 ```yaml
 browser:
@@ -140,7 +151,7 @@ browser:
         url: https://portal.example.test/agent-bookmarks.yaml
 ```
 
-Source names are required and case-insensitively unique. Source URLs must be absolute HTTP or HTTPS URLs without embedded credentials. The equivalent indexed environment settings are `EFP_BROWSER_BOOKMARKS_SOURCES_0_NAME` and `EFP_BROWSER_BOOKMARKS_SOURCES_0_URL`.
+Source names are required and case-insensitively unique; `local` is reserved for `~/.efp/bookmarks.yaml`. Source URLs must be absolute HTTP or HTTPS URLs without embedded credentials. The equivalent indexed environment settings are `EFP_BROWSER_BOOKMARKS_SOURCES_0_NAME` and `EFP_BROWSER_BOOKMARKS_SOURCES_0_URL`.
 
 Each source can return JSON or YAML:
 
@@ -153,7 +164,9 @@ bookmarks:
     url: https://www.google.com/
 ```
 
-Each bookmark requires `name`, `description`, and an absolute HTTP/HTTPS `url`; `aliases` is optional. Unknown fields are rejected. `browser bookmark list --json` fetches every configured source on each invocation, merges healthy results in source order, and does not use or write a cache. The Agent opens the returned bookmark URL with the existing `browser open` command.
+Each bookmark requires `name`, `description`, and an absolute HTTP/HTTPS `url`; `aliases` is optional. Unknown fields are rejected. `browser bookmark list --json` reads local bookmarks first, fetches every configured external source on each invocation, merges healthy results in source order, and does not use or write a cache. The Agent opens the returned bookmark URL with the existing `browser open` command.
+
+Manage source registrations with `browser bookmark source list/add/update/remove`. Source removal requires `--yes` and removes only the registration; it never changes the remote manifest. When EFP configuration is supplied through indexed environment variables, source writes require an explicit `--config <path>`.
 
 ## Copilot Auth
 

@@ -525,6 +525,13 @@ When a user identifies a website by name, alias, or purpose without supplying an
 ### Basic
 - browser open
 - browser bookmark list
+- browser bookmark add
+- browser bookmark update <name>
+- browser bookmark remove <name>
+- browser bookmark source list
+- browser bookmark source add
+- browser bookmark source update <name>
+- browser bookmark source remove <name>
 - browser probe
 - browser session start
 - browser session list
@@ -661,7 +668,9 @@ browser session attach --name user-demo --debug-port 9222 --json
 - `browser page outline` returns a DOM-derived page outline with redacted names, labels, text, hrefs, roles, and selector hints.
 - `browser page table` and `browser page list` return structured table/list data that is easier to consume than generic extraction.
 - `browser download list` and `browser download wait` inspect completed files in the session download directory and return file metadata only.
-- `browser bookmark list` fetches every source in `browser.bookmarks.sources` live, validates strict version 1 JSON/YAML manifests, and merges healthy `name`, `aliases`, required `description`, `url`, and `source` fields in configured source order. It does not use or write a cache. Partial source failures appear in `data.warnings`; all-source failure returns `bookmark_sources_unavailable`.
+- `browser bookmark list` reads the authoritative local manifest at `~/.efp/bookmarks.yaml`, fetches every external source in `browser.bookmarks.sources` live, validates strict version 1 JSON/YAML manifests, and merges healthy `name`, `aliases`, required `description`, `url`, and `source` fields. Local entries appear first, followed by configured external source order. It does not use or write a cache.
+- `browser bookmark add/update/remove` writes only the `local` source. Add requires name, description, and an absolute HTTP/HTTPS URL; aliases are optional and repeatable. Update changes only selected fields and supports `--clear-aliases`. Remove requires explicit `--yes`. Passing a non-local `--source` returns `bookmark_source_read_only`.
+- `browser bookmark source list/add/update/remove` manages external source registrations in the shared EFP config without changing remote manifests. Source names are unique case-insensitively, `local` is reserved, URLs must be absolute HTTP/HTTPS, and removal requires `--yes`.
 
 ### Common Browser Flags
 

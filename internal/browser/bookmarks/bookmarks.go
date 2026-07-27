@@ -113,7 +113,7 @@ func (l *Lister) List(ctx context.Context, sources []Source) (Result, error) {
 		Sources:   []SourceStatus{},
 		Warnings:  []Warning{},
 	}
-	normalized, err := validateSources(sources)
+	normalized, err := ValidateSources(sources)
 	if err != nil {
 		return result, err
 	}
@@ -186,7 +186,7 @@ func (l *Lister) fetch(ctx context.Context, source Source) ([]Bookmark, *Warning
 	return items, nil
 }
 
-func validateSources(sources []Source) ([]Source, error) {
+func ValidateSources(sources []Source) ([]Source, error) {
 	if len(sources) > maxSources {
 		return nil, &Error{
 			Code:    "bookmark_config_invalid",
@@ -204,6 +204,9 @@ func validateSources(sources []Source) ([]Source, error) {
 			return nil, invalidSource(i, "name is required and must be at most 128 bytes")
 		}
 		key := strings.ToLower(source.Name)
+		if key == LocalSourceName {
+			return nil, invalidSource(i, `name "local" is reserved for the managed local bookmark file`)
+		}
 		if _, ok := seen[key]; ok {
 			return nil, invalidSource(i, "name must be unique (case-insensitive)")
 		}
@@ -256,50 +259,58 @@ func parseManifest(sourceName string, body []byte) ([]Bookmark, error) {
 	seen := map[string]struct{}{}
 	out := make([]Bookmark, 0, len(doc.Bookmarks))
 	for i, item := range doc.Bookmarks {
-		item.Name = strings.TrimSpace(item.Name)
-		item.Description = strings.TrimSpace(item.Description)
-		item.URL = strings.TrimSpace(item.URL)
-		if item.Name == "" || len(item.Name) > maxNameBytes {
-			return nil, manifestFieldError(i, "name", "is required and must be at most 128 bytes")
+		normalized, err := normalizeBookmark(sourceName, item, i)
+		if err != nil {
+			return nil, err
 		}
-		key := strings.ToLower(item.Name)
+		key := strings.ToLower(normalized.Name)
 		if _, ok := seen[key]; ok {
 			return nil, manifestFieldError(i, "name", "must be unique within its source (case-insensitive)")
 		}
 		seen[key] = struct{}{}
-		if item.Description == "" || len(item.Description) > maxDescriptionBytes {
-			return nil, manifestFieldError(i, "description", "is required and must be at most 1000 bytes")
-		}
-		u, err := url.Parse(item.URL)
-		if err != nil || validateHTTPURL(u) != nil {
-			return nil, manifestFieldError(i, "url", "must be an absolute HTTP or HTTPS URL without embedded credentials")
-		}
-		if len(item.Aliases) > maxAliases {
-			return nil, manifestFieldError(i, "aliases", "supports at most 20 entries")
-		}
-		aliasSeen := map[string]struct{}{}
-		aliases := make([]string, 0, len(item.Aliases))
-		for aliasIndex, alias := range item.Aliases {
-			alias = strings.TrimSpace(alias)
-			if alias == "" || len(alias) > maxAliasBytes {
-				return nil, manifestFieldError(i, fmt.Sprintf("aliases[%d]", aliasIndex), "must be non-empty and at most 128 bytes")
-			}
-			aliasKey := strings.ToLower(alias)
-			if _, ok := aliasSeen[aliasKey]; ok {
-				return nil, manifestFieldError(i, "aliases", "must not contain duplicates (case-insensitive)")
-			}
-			aliasSeen[aliasKey] = struct{}{}
-			aliases = append(aliases, alias)
-		}
-		out = append(out, Bookmark{
-			Source:      sourceName,
-			Name:        item.Name,
-			Aliases:     aliases,
-			Description: item.Description,
-			URL:         item.URL,
-		})
+		out = append(out, normalized)
 	}
 	return out, nil
+}
+
+func normalizeBookmark(sourceName string, item manifestBookmark, index int) (Bookmark, error) {
+	item.Name = strings.TrimSpace(item.Name)
+	item.Description = strings.TrimSpace(item.Description)
+	item.URL = strings.TrimSpace(item.URL)
+	if item.Name == "" || len(item.Name) > maxNameBytes {
+		return Bookmark{}, manifestFieldError(index, "name", "is required and must be at most 128 bytes")
+	}
+	if item.Description == "" || len(item.Description) > maxDescriptionBytes {
+		return Bookmark{}, manifestFieldError(index, "description", "is required and must be at most 1000 bytes")
+	}
+	u, err := url.Parse(item.URL)
+	if err != nil || validateHTTPURL(u) != nil {
+		return Bookmark{}, manifestFieldError(index, "url", "must be an absolute HTTP or HTTPS URL without embedded credentials")
+	}
+	if len(item.Aliases) > maxAliases {
+		return Bookmark{}, manifestFieldError(index, "aliases", "supports at most 20 entries")
+	}
+	aliasSeen := map[string]struct{}{}
+	aliases := make([]string, 0, len(item.Aliases))
+	for aliasIndex, alias := range item.Aliases {
+		alias = strings.TrimSpace(alias)
+		if alias == "" || len(alias) > maxAliasBytes {
+			return Bookmark{}, manifestFieldError(index, fmt.Sprintf("aliases[%d]", aliasIndex), "must be non-empty and at most 128 bytes")
+		}
+		aliasKey := strings.ToLower(alias)
+		if _, ok := aliasSeen[aliasKey]; ok {
+			return Bookmark{}, manifestFieldError(index, "aliases", "must not contain duplicates (case-insensitive)")
+		}
+		aliasSeen[aliasKey] = struct{}{}
+		aliases = append(aliases, alias)
+	}
+	return Bookmark{
+		Source:      sourceName,
+		Name:        item.Name,
+		Aliases:     aliases,
+		Description: item.Description,
+		URL:         item.URL,
+	}, nil
 }
 
 func manifestFieldError(index int, field, message string) error {

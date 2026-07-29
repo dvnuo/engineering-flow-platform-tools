@@ -141,7 +141,7 @@ bookmarks:
     url: https://www.google.com/
 ```
 
-`browser.bookmarks.sources` contains external read-only bookmark manifest locations, not individual bookmark entries:
+`browser.bookmarks.sources` contains read-only bookmark manifest locations, not individual bookmark entries:
 
 ```yaml
 browser:
@@ -149,9 +149,11 @@ browser:
     sources:
       - name: company
         url: https://portal.example.test/agent-bookmarks.yaml
+      - name: team
+        url: ~/.efp/team-bookmarks.yaml
 ```
 
-Source names are required and case-insensitively unique; `local` is reserved for `~/.efp/bookmarks.yaml`. Source URLs must be absolute HTTP or HTTPS URLs without embedded credentials. The equivalent indexed environment settings are `EFP_BROWSER_BOOKMARKS_SOURCES_0_NAME` and `EFP_BROWSER_BOOKMARKS_SOURCES_0_URL`.
+Source names are required and case-insensitively unique; `local` is reserved for `~/.efp/bookmarks.yaml`. The `url` field accepts an absolute HTTP/HTTPS URL without embedded credentials, a `file://` URL, an absolute local file path, or a `~/...` path. Relative paths are rejected. The equivalent indexed environment settings are `EFP_BROWSER_BOOKMARKS_SOURCES_0_NAME` and `EFP_BROWSER_BOOKMARKS_SOURCES_0_URL`.
 
 Each source can return JSON or YAML:
 
@@ -164,9 +166,9 @@ bookmarks:
     url: https://www.google.com/
 ```
 
-Each bookmark requires `name`, `description`, and an absolute HTTP/HTTPS `url`; `aliases` is optional. Unknown fields are rejected. `browser bookmark list --json` reads local bookmarks first, fetches every configured external source on each invocation, merges healthy results in source order, and does not use or write a cache. The Agent opens the returned bookmark URL with the existing `browser open` command.
+Each bookmark requires `name`, `description`, and an absolute HTTP/HTTPS `url`; `aliases` is optional. Unknown fields are rejected. `browser bookmark list --json` reads local bookmarks first, loads every configured remote or local file source on each invocation, merges healthy results in source order, and does not use or write a cache. The Agent opens the returned bookmark URL with the existing `browser open` command.
 
-Manage source registrations with `browser bookmark source list/add/update/remove`. Source removal requires `--yes` and removes only the registration; it never changes the remote manifest. When EFP configuration is supplied through indexed environment variables, source writes require an explicit `--config <path>`.
+Manage source registrations with `browser bookmark source list/add/update/remove`. Source removal requires `--yes` and removes only the registration; it never changes the remote or local manifest. When EFP configuration is supplied through indexed environment variables, source writes require an explicit `--config <path>`.
 
 ## Copilot Auth
 

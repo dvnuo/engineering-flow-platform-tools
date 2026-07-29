@@ -5,6 +5,10 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -55,6 +59,74 @@ func TestListFetchesEveryInvocationWithoutCache(t *testing.T) {
 	}
 	if calls.Load() != 2 {
 		t.Fatalf("source calls = %d, want 2", calls.Load())
+	}
+}
+
+func TestListReadsLocalFileEveryInvocationWithoutCache(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "bookmarks.yaml")
+	writeManifest := func(name, targetURL string) {
+		t.Helper()
+		body := "version: 1\nbookmarks:\n  - name: " + name + "\n    description: Read " + name + ".\n    url: " + targetURL + "\n"
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeManifest("Docs", "https://docs.example.test/")
+
+	lister := NewLister()
+	sources := []Source{{Name: "team", URL: path}}
+	first, err := lister.List(context.Background(), sources)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first.Bookmarks) != 1 || first.Bookmarks[0].Name != "Docs" {
+		t.Fatalf("first local result = %#v", first)
+	}
+
+	writeManifest("Runbooks", "https://runbooks.example.test/")
+	second, err := lister.List(context.Background(), sources)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second.Bookmarks) != 1 || second.Bookmarks[0].Name != "Runbooks" {
+		t.Fatalf("second local result = %#v", second)
+	}
+}
+
+func TestListReadsLocalFileURL(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "bookmarks.yaml")
+	if err := os.WriteFile(path, []byte("version: 1\nbookmarks:\n  - name: Docs\n    description: Read docs.\n    url: https://docs.example.test/\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	urlPath := filepath.ToSlash(path)
+	if runtime.GOOS == "windows" {
+		urlPath = "/" + urlPath
+	}
+	fileURL := (&url.URL{Scheme: "file", Path: urlPath}).String()
+
+	got, err := NewLister().List(context.Background(), []Source{{Name: "team", URL: fileURL}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Bookmarks) != 1 || got.Bookmarks[0].Source != "team" {
+		t.Fatalf("file URL result = %#v", got)
+	}
+}
+
+func TestSourceLocationExpandsHomePath(t *testing.T) {
+	home := t.TempDir()
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", home)
+	} else {
+		t.Setenv("HOME", home)
+	}
+	location, err := parseSourceLocation("~/bookmarks/team.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(home, "bookmarks", "team.yaml")
+	if location.filePath != want {
+		t.Fatalf("home-relative path = %q, want %q", location.filePath, want)
 	}
 }
 
@@ -109,7 +181,7 @@ func TestListRejectsUnknownManifestFields(t *testing.T) {
 }
 
 func TestListRejectsInvalidConfigBeforeFetching(t *testing.T) {
-	_, err := NewLister().List(context.Background(), []Source{{Name: "bad", URL: "file:///tmp/bookmarks.yaml"}})
+	_, err := NewLister().List(context.Background(), []Source{{Name: "bad", URL: "relative/bookmarks.yaml"}})
 	var bookmarkErr *Error
 	if !errors.As(err, &bookmarkErr) || bookmarkErr.Code != "bookmark_config_invalid" {
 		t.Fatalf("err = %#v", err)

@@ -169,7 +169,7 @@ func (s Store) write(items []Bookmark) error {
 		return &Error{
 			Code:    "bookmark_store_full",
 			Message: fmt.Sprintf("The local bookmark file supports at most %d bookmarks.", maxBookmarks),
-			Hint:    "Remove unused local bookmarks or move shared entries to an external source.",
+			Hint:    "Remove unused local bookmarks or move shared entries to a configured source manifest.",
 			Status:  409,
 		}
 	}

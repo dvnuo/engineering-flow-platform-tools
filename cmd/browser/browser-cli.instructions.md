@@ -36,16 +36,17 @@ browser bookmark remove Google --yes --json
 
 `name`, `description`, and `url` are required when adding a bookmark. Repeat `--alias` for multiple aliases. Update replaces only explicitly supplied fields; use `--clear-aliases` to remove all aliases. Removal requires explicit user confirmation and `--yes`.
 
-External source registrations remain in `~/.efp/config.yaml`:
+Read-only HTTP/HTTPS or local file source registrations remain in `~/.efp/config.yaml`:
 
 ```bash
 browser bookmark source list --json
 browser bookmark source add --name company --url https://portal.example.test/bookmarks.yaml --json
+browser bookmark source add --name team --url ~/.efp/team-bookmarks.yaml --json
 browser bookmark source update company --url https://portal.example.test/new-bookmarks.yaml --json
 browser bookmark source remove company --yes --json
 ```
 
-External HTTP and HTTPS manifests are read-only. Never use local CRUD commands to imply that the remote manifest was changed; modify external entries in their owning system. `browser bookmark list --json` merges the local authoritative file first and then live external results without reading or writing a cache.
+Source locations may be HTTP/HTTPS URLs, `file://` URLs, absolute local paths, or `~/...` paths; relative paths are rejected. Configured manifests are read-only through the CLI. Never use local CRUD commands to imply that a configured manifest was changed; modify the source file or remote manifest itself. `browser bookmark list --json` merges the local authoritative file first and then live configured results without reading or writing a cache.
 
 ## Choose Persistent vs One-Shot First
 

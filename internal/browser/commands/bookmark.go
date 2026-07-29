@@ -17,7 +17,7 @@ func bookmarkCmd(o *Opts) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bookmark",
 		Short: "Discover and manage websites for semantic routing",
-		Long:  "Manage authoritative local bookmarks and external read-only bookmark sources so agents can resolve a requested website before opening it.",
+		Long:  "Manage authoritative local bookmarks and configured read-only bookmark sources so agents can resolve a requested website before opening it.",
 	}
 	cmd.AddCommand(
 		bookmarkListCmd(o),
@@ -32,8 +32,8 @@ func bookmarkCmd(o *Opts) *cobra.Command {
 func bookmarkListCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
-		Short: "Merge local bookmarks and external bookmark sources",
-		Long:  "Read the managed local bookmark file, fetch every configured external source live, validate strict bookmark manifests, and merge name, aliases, description, URL, and source fields for agent routing. No cache is read or written.",
+		Short: "Merge local bookmarks and configured bookmark sources",
+		Long:  "Read the managed local bookmark file, load every configured HTTP/HTTPS or local file source live, validate strict bookmark manifests, and merge name, aliases, description, URL, and source fields for agent routing. No cache is read or written.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := loadBookmarkConfig(o, false)
@@ -91,7 +91,7 @@ func bookmarkAddCmd(o *Opts) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Add a bookmark to the managed local source",
-		Long:  "Add one bookmark to ~/.efp/bookmarks.yaml. External HTTP and HTTPS sources are read-only and cannot be modified by this command.",
+		Long:  "Add one bookmark to ~/.efp/bookmarks.yaml. Configured HTTP/HTTPS and local file sources are read-only and cannot be modified by this command.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireLocalBookmarkSource(source); err != nil {
@@ -125,7 +125,7 @@ func bookmarkUpdateCmd(o *Opts) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <name>",
 		Short: "Update a managed local bookmark",
-		Long:  "Update selected fields of a bookmark in ~/.efp/bookmarks.yaml. External HTTP and HTTPS sources are read-only.",
+		Long:  "Update selected fields of a bookmark in ~/.efp/bookmarks.yaml. Configured HTTP/HTTPS and local file sources are read-only.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireLocalBookmarkSource(source); err != nil {
@@ -181,7 +181,7 @@ func bookmarkRemoveCmd(o *Opts) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove <name>",
 		Short: "Remove a managed local bookmark",
-		Long:  "Remove one bookmark from ~/.efp/bookmarks.yaml after explicit confirmation. External HTTP and HTTPS sources are read-only.",
+		Long:  "Remove one bookmark from ~/.efp/bookmarks.yaml after explicit confirmation. Configured HTTP/HTTPS and local file sources are read-only.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !yes {
@@ -238,8 +238,8 @@ func requireLocalBookmarkSource(source string) error {
 	}
 	return &bookmarks.Error{
 		Code:    "bookmark_source_read_only",
-		Message: "External bookmark sources are read-only.",
-		Hint:    "Modify the source manifest in its owning system, or omit --source to write ~/.efp/bookmarks.yaml.",
+		Message: "Configured bookmark sources are read-only.",
+		Hint:    "Modify the source manifest at its configured URL or file path, or omit --source to write ~/.efp/bookmarks.yaml.",
 		Status:  409,
 	}
 }

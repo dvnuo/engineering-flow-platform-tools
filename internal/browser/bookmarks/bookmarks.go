@@ -8,6 +8,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -84,6 +87,11 @@ type sourceResult struct {
 	warning   *Warning
 }
 
+type sourceLocation struct {
+	remoteURL *url.URL
+	filePath  string
+}
+
 type Lister struct {
 	client *http.Client
 }
@@ -150,7 +158,7 @@ func (l *Lister) List(ctx context.Context, sources []Source) (Result, error) {
 		return result, &Error{
 			Code:    "bookmark_sources_unavailable",
 			Message: "No configured bookmark source could be loaded.",
-			Hint:    "Inspect data.warnings, verify the source URLs and manifest format, then retry.",
+			Hint:    "Inspect data.warnings, verify the source URLs or file paths and manifest format, then retry.",
 			Status:  502,
 		}
 	}
@@ -158,30 +166,74 @@ func (l *Lister) List(ctx context.Context, sources []Source) (Result, error) {
 }
 
 func (l *Lister) fetch(ctx context.Context, source Source) ([]Bookmark, *Warning) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, source.URL, nil)
+	location, err := parseSourceLocation(source.URL)
 	if err != nil {
-		return nil, sourceWarning(source.Name, "bookmark_source_request_failed", "The bookmark source request could not be created.")
+		return nil, sourceWarning(source.Name, "bookmark_source_location_invalid", "The bookmark source location is invalid.")
+	}
+	if location.filePath != "" {
+		return readLocalSource(ctx, source.Name, location.filePath)
+	}
+	return l.fetchRemote(ctx, source.Name, location.remoteURL)
+}
+
+func (l *Lister) fetchRemote(ctx context.Context, sourceName string, sourceURL *url.URL) ([]Bookmark, *Warning) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sourceURL.String(), nil)
+	if err != nil {
+		return nil, sourceWarning(sourceName, "bookmark_source_request_failed", "The bookmark source request could not be created.")
 	}
 	req.Header.Set("Accept", "application/json, application/yaml, text/yaml")
 	req.Header.Set("User-Agent", "efp-browser-bookmarks/1")
 	resp, err := l.client.Do(req)
 	if err != nil {
-		return nil, sourceWarning(source.Name, "bookmark_source_unavailable", "The bookmark source could not be fetched.")
+		return nil, sourceWarning(sourceName, "bookmark_source_unavailable", "The bookmark source could not be fetched.")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, sourceWarning(source.Name, "bookmark_source_http_error", fmt.Sprintf("The bookmark source returned HTTP %d.", resp.StatusCode))
+		return nil, sourceWarning(sourceName, "bookmark_source_http_error", fmt.Sprintf("The bookmark source returned HTTP %d.", resp.StatusCode))
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxSourceBytes+1))
 	if err != nil {
-		return nil, sourceWarning(source.Name, "bookmark_source_read_failed", "The bookmark source response could not be read.")
+		return nil, sourceWarning(sourceName, "bookmark_source_read_failed", "The bookmark source response could not be read.")
 	}
 	if len(body) > maxSourceBytes {
-		return nil, sourceWarning(source.Name, "bookmark_source_too_large", "The bookmark source response exceeds 1 MiB.")
+		return nil, sourceWarning(sourceName, "bookmark_source_too_large", "The bookmark source response exceeds 1 MiB.")
 	}
-	items, err := parseManifest(source.Name, body)
+	items, err := parseManifest(sourceName, body)
 	if err != nil {
-		return nil, sourceWarning(source.Name, "bookmark_manifest_invalid", err.Error())
+		return nil, sourceWarning(sourceName, "bookmark_manifest_invalid", err.Error())
+	}
+	return items, nil
+}
+
+func readLocalSource(ctx context.Context, sourceName, path string) ([]Bookmark, *Warning) {
+	if err := ctx.Err(); err != nil {
+		return nil, sourceWarning(sourceName, "bookmark_source_unavailable", "The bookmark source read was canceled.")
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, sourceWarning(sourceName, "bookmark_source_file_unavailable", "The local bookmark source file could not be opened.")
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return nil, sourceWarning(sourceName, "bookmark_source_read_failed", "The local bookmark source file could not be inspected.")
+	}
+	if !info.Mode().IsRegular() {
+		return nil, sourceWarning(sourceName, "bookmark_source_file_invalid", "The local bookmark source must be a regular file.")
+	}
+	body, err := io.ReadAll(io.LimitReader(file, maxSourceBytes+1))
+	if err != nil {
+		return nil, sourceWarning(sourceName, "bookmark_source_read_failed", "The local bookmark source file could not be read.")
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, sourceWarning(sourceName, "bookmark_source_unavailable", "The bookmark source read was canceled.")
+	}
+	if len(body) > maxSourceBytes {
+		return nil, sourceWarning(sourceName, "bookmark_source_too_large", "The bookmark source file exceeds 1 MiB.")
+	}
+	items, err := parseManifest(sourceName, body)
+	if err != nil {
+		return nil, sourceWarning(sourceName, "bookmark_manifest_invalid", err.Error())
 	}
 	return items, nil
 }
@@ -191,7 +243,7 @@ func ValidateSources(sources []Source) ([]Source, error) {
 		return nil, &Error{
 			Code:    "bookmark_config_invalid",
 			Message: fmt.Sprintf("browser.bookmarks.sources supports at most %d entries.", maxSources),
-			Hint:    "Reduce the number of configured external bookmark sources.",
+			Hint:    "Reduce the number of configured bookmark sources.",
 			Status:  400,
 		}
 	}
@@ -211,20 +263,58 @@ func ValidateSources(sources []Source) ([]Source, error) {
 			return nil, invalidSource(i, "name must be unique (case-insensitive)")
 		}
 		seen[key] = struct{}{}
-		u, err := url.Parse(source.URL)
-		if err != nil || validateHTTPURL(u) != nil {
-			return nil, invalidSource(i, "url must be an absolute HTTP or HTTPS URL without embedded credentials")
+		if _, err := parseSourceLocation(source.URL); err != nil {
+			return nil, invalidSource(i, "url must be an absolute HTTP/HTTPS URL, file:// URL, absolute local file path, or ~/ path")
 		}
 		out = append(out, source)
 	}
 	return out, nil
 }
 
+func parseSourceLocation(raw string) (sourceLocation, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || strings.ContainsRune(raw, '\x00') {
+		return sourceLocation{}, errors.New("empty or invalid source location")
+	}
+	if filepath.IsAbs(raw) {
+		return sourceLocation{filePath: filepath.Clean(raw)}, nil
+	}
+	if strings.HasPrefix(raw, "~/") || (os.PathSeparator == '\\' && strings.HasPrefix(raw, `~\`)) {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return sourceLocation{}, err
+		}
+		return sourceLocation{filePath: filepath.Join(home, filepath.FromSlash(raw[2:]))}, nil
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return sourceLocation{}, err
+	}
+	if validateHTTPURL(u) == nil {
+		return sourceLocation{remoteURL: u}, nil
+	}
+	if u.Scheme != "file" || u.User != nil || (u.Host != "" && !strings.EqualFold(u.Host, "localhost")) ||
+		u.RawQuery != "" || u.Fragment != "" || u.Opaque != "" {
+		return sourceLocation{}, errors.New("invalid source location")
+	}
+	// net/url stores URL.Path in decoded form. Using it directly supports escaped
+	// file names while avoiding a second unescape of literal percent sequences.
+	path := u.Path
+	if runtime.GOOS == "windows" && len(path) >= 3 && path[0] == '/' && path[2] == ':' {
+		path = path[1:]
+	}
+	path = filepath.FromSlash(path)
+	if !filepath.IsAbs(path) {
+		return sourceLocation{}, errors.New("file URL must contain an absolute path")
+	}
+	return sourceLocation{filePath: filepath.Clean(path)}, nil
+}
+
 func invalidSource(index int, message string) error {
 	return &Error{
 		Code:    "bookmark_config_invalid",
 		Message: fmt.Sprintf("browser.bookmarks.sources[%d] %s.", index, message),
-		Hint:    "Fix the bookmark source entry in ~/.efp/config.yaml or the file passed with --config.",
+		Hint:    "Fix the bookmark source location in ~/.efp/config.yaml or the file passed with --config.",
 		Status:  400,
 	}
 }

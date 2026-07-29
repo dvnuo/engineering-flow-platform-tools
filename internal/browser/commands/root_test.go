@@ -86,6 +86,41 @@ func TestBookmarkListFetchesConfiguredExternalManifest(t *testing.T) {
 	}
 }
 
+func TestBookmarkSourceAddLocalFileAndListBookmarks(t *testing.T) {
+	setBookmarkTestHome(t)
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	manifestPath := filepath.Join(dir, "team-bookmarks.yaml")
+	manifest := "version: 1\nbookmarks:\n  - name: Runbooks\n    description: Read team runbooks.\n    url: https://runbooks.example.test/\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	added := run(t, &fakeRunner{},
+		"bookmark", "source", "add",
+		"--name", "team",
+		"--url", manifestPath,
+		"--config", configPath,
+		"--json",
+	)
+	if added["ok"] != true {
+		t.Fatalf("local source add failed: %#v", added)
+	}
+	source := added["data"].(map[string]any)["source"].(map[string]any)
+	if source["url"] != manifestPath {
+		t.Fatalf("local source path was not preserved: %#v", source)
+	}
+
+	listed := run(t, &fakeRunner{}, "bookmark", "list", "--config", configPath, "--json")
+	if listed["ok"] != true {
+		t.Fatalf("bookmark list failed: %#v", listed)
+	}
+	items := listed["data"].(map[string]any)["bookmarks"].([]any)
+	if len(items) != 1 || items[0].(map[string]any)["name"] != "Runbooks" || items[0].(map[string]any)["source"] != "team" {
+		t.Fatalf("local source bookmarks = %#v", items)
+	}
+}
+
 func TestBookmarkListReturnsEmptyWhenDefaultConfigIsMissing(t *testing.T) {
 	setBookmarkTestHome(t)
 	out := run(t, &fakeRunner{}, "bookmark", "list", "--json")
@@ -531,7 +566,7 @@ func TestHelpLLMExplainsPersistentRoutingAndHumanHandoff(t *testing.T) {
 		"browser bookmark add/update/remove",
 		"~/.efp/bookmarks.yaml",
 		"browser bookmark source list/add/update/remove",
-		"External HTTP and HTTPS manifests are read-only",
+		"HTTP/HTTPS or local file source registrations",
 		"does not use or write a cache",
 		"Default requests to open",
 		"Manual login",

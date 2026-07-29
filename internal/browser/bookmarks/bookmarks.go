@@ -297,6 +297,8 @@ func parseSourceLocation(raw string) (sourceLocation, error) {
 		u.RawQuery != "" || u.Fragment != "" || u.Opaque != "" {
 		return sourceLocation{}, errors.New("invalid source location")
 	}
+	// net/url stores URL.Path in decoded form. Using it directly supports escaped
+	// file names while avoiding a second unescape of literal percent sequences.
 	path := u.Path
 	if runtime.GOOS == "windows" && len(path) >= 3 && path[0] == '/' && path[2] == ':' {
 		path = path[1:]

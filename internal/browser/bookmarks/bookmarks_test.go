@@ -94,7 +94,11 @@ func TestListReadsLocalFileEveryInvocationWithoutCache(t *testing.T) {
 }
 
 func TestListReadsLocalFileURL(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "bookmarks.yaml")
+	dir := filepath.Join(t.TempDir(), "bookmark sources")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "team bookmarks.yaml")
 	if err := os.WriteFile(path, []byte("version: 1\nbookmarks:\n  - name: Docs\n    description: Read docs.\n    url: https://docs.example.test/\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -103,6 +107,9 @@ func TestListReadsLocalFileURL(t *testing.T) {
 		urlPath = "/" + urlPath
 	}
 	fileURL := (&url.URL{Scheme: "file", Path: urlPath}).String()
+	if !strings.Contains(fileURL, "%20") {
+		t.Fatalf("file URL did not escape spaces: %q", fileURL)
+	}
 
 	got, err := NewLister().List(context.Background(), []Source{{Name: "team", URL: fileURL}})
 	if err != nil {

@@ -25,7 +25,7 @@ func TestListMergesSourcesInConfigOrder(t *testing.T) {
 	defer second.Close()
 
 	got, err := NewLister().List(context.Background(), []Source{
-		{Name: "public", URL: first.URL},
+		{Name: "public", Description: "Public websites.", URL: first.URL},
 		{Name: "engineering", URL: second.URL},
 	})
 	if err != nil {
@@ -39,6 +39,9 @@ func TestListMergesSourcesInConfigOrder(t *testing.T) {
 	}
 	if len(got.Sources) != 2 || !got.Sources[0].OK || got.Sources[0].Count != 1 {
 		t.Fatalf("source status missing: %#v", got.Sources)
+	}
+	if got.Sources[0].Description != "Public websites." {
+		t.Fatalf("source description missing: %#v", got.Sources)
 	}
 }
 

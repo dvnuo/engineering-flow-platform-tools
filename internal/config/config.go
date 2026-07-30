@@ -22,8 +22,9 @@ type BrowserBookmarksConfig struct {
 }
 
 type BrowserBookmarkSource struct {
-	Name string `json:"name" yaml:"name"`
-	URL  string `json:"url" yaml:"url"`
+	Name        string `json:"name" yaml:"name"`
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+	URL         string `json:"url" yaml:"url"`
 }
 
 type AWSConfig struct {

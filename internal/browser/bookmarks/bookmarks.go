@@ -29,8 +29,9 @@ const (
 )
 
 type Source struct {
-	Name string `json:"name" yaml:"name"`
-	URL  string `json:"url" yaml:"url"`
+	Name        string `json:"name" yaml:"name"`
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+	URL         string `json:"url" yaml:"url"`
 }
 
 type Bookmark struct {
@@ -42,9 +43,10 @@ type Bookmark struct {
 }
 
 type SourceStatus struct {
-	Name  string `json:"name" yaml:"name"`
-	OK    bool   `json:"ok" yaml:"ok"`
-	Count int    `json:"count" yaml:"count"`
+	Name        string `json:"name" yaml:"name"`
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+	OK          bool   `json:"ok" yaml:"ok"`
+	Count       int    `json:"count" yaml:"count"`
 }
 
 type Warning struct {
@@ -143,7 +145,7 @@ func (l *Lister) List(ctx context.Context, sources []Source) (Result, error) {
 
 	successes := 0
 	for i, fetched := range results {
-		status := SourceStatus{Name: normalized[i].Name}
+		status := SourceStatus{Name: normalized[i].Name, Description: normalized[i].Description}
 		if fetched.warning != nil {
 			result.Warnings = append(result.Warnings, *fetched.warning)
 		} else {
@@ -251,14 +253,15 @@ func ValidateSources(sources []Source) ([]Source, error) {
 	out := make([]Source, 0, len(sources))
 	for i, source := range sources {
 		source.Name = strings.TrimSpace(source.Name)
+		source.Description = strings.TrimSpace(source.Description)
 		source.URL = strings.TrimSpace(source.URL)
 		if source.Name == "" || len(source.Name) > maxNameBytes {
 			return nil, invalidSource(i, "name is required and must be at most 128 bytes")
 		}
-		key := strings.ToLower(source.Name)
-		if key == LocalSourceName {
-			return nil, invalidSource(i, `name "local" is reserved for the managed local bookmark file`)
+		if len(source.Description) > maxDescriptionBytes {
+			return nil, invalidSource(i, "description must be at most 1000 bytes")
 		}
+		key := strings.ToLower(source.Name)
 		if _, ok := seen[key]; ok {
 			return nil, invalidSource(i, "name must be unique (case-insensitive)")
 		}
@@ -269,6 +272,17 @@ func ValidateSources(sources []Source) ([]Source, error) {
 		out = append(out, source)
 	}
 	return out, nil
+}
+
+func LocalSourcePath(source Source) (string, bool, error) {
+	location, err := parseSourceLocation(source.URL)
+	if err != nil {
+		return "", false, err
+	}
+	if location.filePath == "" {
+		return "", false, nil
+	}
+	return location.filePath, true, nil
 }
 
 func parseSourceLocation(raw string) (sourceLocation, error) {

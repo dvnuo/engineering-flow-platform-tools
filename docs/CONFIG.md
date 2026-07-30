@@ -130,30 +130,21 @@ ai_platform:
 
 ## Browser Bookmarks
 
-Personal bookmarks are stored in `~/.efp/bookmarks.yaml` and managed through `browser bookmark add/update/remove`. This file is authoritative local data, not a cache:
-
-```yaml
-version: 1
-bookmarks:
-  - name: Google
-    aliases: [谷歌, web search]
-    description: Search the public web.
-    url: https://www.google.com/
-```
-
-`browser.bookmarks.sources` contains read-only bookmark manifest locations, not individual bookmark entries:
+`browser.bookmarks.sources` contains bookmark manifest locations, not individual bookmark entries. The optional source `description` helps agents choose a relevant collection:
 
 ```yaml
 browser:
   bookmarks:
     sources:
       - name: company
+        description: Internal company services.
         url: https://portal.example.test/agent-bookmarks.yaml
-      - name: team
-        url: ~/.efp/team-bookmarks.yaml
+      - name: personal
+        description: Personal search and productivity websites.
+        url: ~/.efp/browser/bookmarks/personal.yaml
 ```
 
-Source names are required and case-insensitively unique; `local` is reserved for `~/.efp/bookmarks.yaml`. The `url` field accepts an absolute HTTP/HTTPS URL without embedded credentials, a `file://` URL, an absolute local file path, or a `~/...` path. Relative paths are rejected. The equivalent indexed environment settings are `EFP_BROWSER_BOOKMARKS_SOURCES_0_NAME` and `EFP_BROWSER_BOOKMARKS_SOURCES_0_URL`.
+Source names are required and case-insensitively unique. Descriptions are optional. The `url` field accepts an absolute HTTP/HTTPS URL without embedded credentials, a `file://` URL, an absolute local file path, or a `~/...` path. Relative paths are rejected. The equivalent indexed environment settings are `EFP_BROWSER_BOOKMARKS_SOURCES_0_NAME`, `EFP_BROWSER_BOOKMARKS_SOURCES_0_DESCRIPTION`, and `EFP_BROWSER_BOOKMARKS_SOURCES_0_URL`.
 
 Each source can return JSON or YAML:
 
@@ -166,9 +157,11 @@ bookmarks:
     url: https://www.google.com/
 ```
 
-Each bookmark requires `name`, `description`, and an absolute HTTP/HTTPS `url`; `aliases` is optional. Unknown fields are rejected. `browser bookmark list --json` reads local bookmarks first, loads every configured remote or local file source on each invocation, merges healthy results in source order, and does not use or write a cache. The Agent opens the returned bookmark URL with the existing `browser open` command.
+Each bookmark requires `name`, `description`, and an absolute HTTP/HTTPS `url`; `aliases` is optional. Unknown fields are rejected. `browser bookmark list --json` loads every configured source on each invocation, merges healthy results in source order, and does not use or write a cache. Repeat `--source <name>` to select one or more sources by case-insensitive name. The Agent opens the returned bookmark URL with the existing `browser open` command.
 
-Manage source registrations with `browser bookmark source list/add/update/remove`. Source removal requires `--yes` and removes only the registration; it never changes the remote or local manifest. When EFP configuration is supplied through indexed environment variables, source writes require an explicit `--config <path>`.
+Manage source registrations and their optional descriptions with `browser bookmark source list/add/update/remove`. Source removal requires `--yes` and removes only the registration; it never changes the remote or local manifest. When EFP configuration is supplied through indexed environment variables, source writes require an explicit `--config <path>`.
+
+Manage entries in configured local file sources with `browser bookmark add/update/remove --source <name>`. HTTP/HTTPS sources are read-only. For personal data, the recommended explicitly registered location is `~/.efp/browser/bookmarks/<name>.yaml`; the CLI does not scan that directory and does not implicitly load `~/.efp/bookmarks.yaml`. A first `bookmark add` creates a missing local manifest and parent directory.
 
 ## Copilot Auth
 

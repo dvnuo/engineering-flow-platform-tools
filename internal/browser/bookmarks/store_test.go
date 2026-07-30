@@ -1,6 +1,7 @@
 package bookmarks
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -10,7 +11,7 @@ import (
 
 func TestStoreAddUpdateRemove(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bookmarks.yaml")
-	store := Store{Path: path}
+	store := Store{Path: path, Source: "personal"}
 
 	added, err := store.Add(Bookmark{
 		Name: "Google", Aliases: []string{"谷歌"}, Description: "Search the public web.", URL: "https://www.google.com/",
@@ -18,7 +19,7 @@ func TestStoreAddUpdateRemove(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if added.Source != LocalSourceName {
+	if added.Source != "personal" {
 		t.Fatalf("source = %q", added.Source)
 	}
 	aliases := []string{"web search"}
@@ -63,7 +64,7 @@ func TestStoreAddUpdateRemove(t *testing.T) {
 }
 
 func TestStoreRejectsDuplicateAndInvalidBookmarks(t *testing.T) {
-	store := Store{Path: filepath.Join(t.TempDir(), "bookmarks.yaml")}
+	store := Store{Path: filepath.Join(t.TempDir(), "bookmarks.yaml"), Source: "personal"}
 	input := Bookmark{Name: "Docs", Description: "Read docs.", URL: "https://docs.example.test/"}
 	if _, err := store.Add(input); err != nil {
 		t.Fatal(err)
@@ -76,7 +77,7 @@ func TestStoreRejectsDuplicateAndInvalidBookmarks(t *testing.T) {
 
 func TestStoreMissingAndMalformedFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bookmarks.yaml")
-	store := Store{Path: path}
+	store := Store{Path: path, Source: "personal"}
 	items, exists, err := store.Load()
 	if err != nil || exists || len(items) != 0 {
 		t.Fatalf("missing load = %#v exists=%v err=%v", items, exists, err)
@@ -91,9 +92,29 @@ func TestStoreMissingAndMalformedFile(t *testing.T) {
 	assertBookmarkErrorCode(t, err, "bookmark_store_invalid")
 }
 
+func TestStoreRejectsNonRegularAndOversizedFiles(t *testing.T) {
+	store := Store{Path: t.TempDir(), Source: "personal"}
+	_, exists, err := store.Load()
+	if !exists {
+		t.Fatal("directory source should be reported as existing")
+	}
+	assertBookmarkErrorCode(t, err, "bookmark_store_invalid")
+
+	path := filepath.Join(t.TempDir(), "bookmarks.yaml")
+	if err := os.WriteFile(path, bytes.Repeat([]byte("x"), maxSourceBytes+1), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store.Path = path
+	_, exists, err = store.Load()
+	if !exists {
+		t.Fatal("oversized source should be reported as existing")
+	}
+	assertBookmarkErrorCode(t, err, "bookmark_store_invalid")
+}
+
 func TestStoreReplacesFileWithoutLeavingTemporaryFiles(t *testing.T) {
 	dir := t.TempDir()
-	store := Store{Path: filepath.Join(dir, "bookmarks.yaml")}
+	store := Store{Path: filepath.Join(dir, "bookmarks.yaml"), Source: "personal"}
 	if _, err := store.Add(Bookmark{Name: "One", Description: "First.", URL: "https://one.example.test/"}); err != nil {
 		t.Fatal(err)
 	}
@@ -110,8 +131,22 @@ func TestStoreReplacesFileWithoutLeavingTemporaryFiles(t *testing.T) {
 	}
 }
 
-func TestValidateSourcesRejectsReservedLocalName(t *testing.T) {
-	_, err := ValidateSources([]Source{{Name: "LOCAL", URL: "https://bookmarks.example.test/"}})
+func TestValidateSourcesAcceptsLocalNameAndDescription(t *testing.T) {
+	sources, err := ValidateSources([]Source{{
+		Name: "LOCAL", Description: "Personal websites.", URL: "https://bookmarks.example.test/",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sources[0].Description != "Personal websites." {
+		t.Fatalf("sources = %#v", sources)
+	}
+}
+
+func TestValidateSourcesRejectsLongDescription(t *testing.T) {
+	_, err := ValidateSources([]Source{{
+		Name: "personal", Description: strings.Repeat("x", maxDescriptionBytes+1), URL: "https://bookmarks.example.test/",
+	}})
 	assertBookmarkErrorCode(t, err, "bookmark_config_invalid")
 }
 

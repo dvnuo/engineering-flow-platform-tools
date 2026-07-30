@@ -31,7 +31,7 @@ func openCmd(o *Opts) *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&opts.URL, "url", "", "HTTP or HTTPS URL to open and leave available for later actions.")
-	c.Flags().StringVar(&opts.Name, "session", "default", "Persistent browser session name to start or reuse.")
+	c.Flags().StringVar(&opts.Name, "session", "default", defaultSessionFlagUsage)
 	c.Flags().StringVar(&opts.Browser, "browser", "chrome", "Browser family for a new session (chrome, edge, chromium, or auto).")
 	c.Flags().StringVar(&opts.BrowserExe, "browser-exe", "", "Explicit Edge/Chrome/Chromium executable path for a new session.")
 	c.Flags().BoolVar(&opts.Headless, "headless", false, "Run a newly started persistent browser without a visible UI.")

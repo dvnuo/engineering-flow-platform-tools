@@ -340,7 +340,7 @@ If the user names a website or describes its purpose without giving a URL, list 
 
 ```bash
 browser bookmark list --json
-browser open --session default --url "https://www.google.com/" --json
+browser open --url "https://search.example.test/" --json
 ```
 
 Configure source locations under `browser.bookmarks.sources` in `~/.efp/config.yaml`. Each source has a unique name, an optional description, and an HTTP/HTTPS URL, `file://` URL, absolute local path, or `~/...` path. Each version 1 JSON/YAML manifest supplies bookmark `name`, optional `aliases`, required `description`, and `url`. The list command loads sources live on every call without a cache; repeat `--source <name>` to filter by source.
@@ -349,9 +349,9 @@ Manage source registrations and entries in a configured local file source withou
 
 ```bash
 browser bookmark source add --name personal --description "Personal websites." --url ~/.efp/browser/bookmarks/personal.yaml --json
-browser bookmark add --source personal --name Google --alias 谷歌 --description "Search the public web." --url https://www.google.com/ --json
-browser bookmark update Google --source personal --description "Search public websites." --json
-browser bookmark remove Google --source personal --yes --json
+browser bookmark add --source personal --name "Example Search" --alias "web search" --description "Search example content." --url https://search.example.test/ --json
+browser bookmark update "Example Search" --source personal --description "Search example websites." --json
+browser bookmark remove "Example Search" --source personal --yes --json
 browser bookmark source add --name company --description "Internal company services." --url https://portal.example.test/bookmarks.yaml --json
 browser bookmark source update company --description "Internal services and documentation." --url https://portal.example.test/new-bookmarks.yaml --json
 browser bookmark source remove company --yes --json
@@ -362,10 +362,12 @@ Bookmark CRUD requires `--source` and supports only configured local file source
 Use `browser open` as the only recommended entry point when the user asks to open, visit, go to, or navigate to a page and keep it available. This includes human login/MFA, user-first interaction, multi-step work, later continuation, and any ambiguous "open" request:
 
 ```bash
-browser open --session default --url "https://intranet.example.test/app" --json
+browser open --url "https://intranet.example.test/app" --json
 ```
 
-When a human step is needed, open the page with `browser open`, tell the user that session `default` remains open, and pause all page actions while they log in, complete MFA, or navigate. Never ask them to send credentials or MFA codes through chat. After the user replies that the manual step is complete, reacquire state with `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax`; do not reuse stale target ids or refs. Stop the session only when the user asks to close it or no later continuation is expected.
+`--session` defaults to `default`, so normal agent workflows should omit it. Agents must not invent a session name from the task, website, project, URL, or action. Use a non-default session only when the user names it, a prior successful browser command established it, or the user explicitly requests isolated concurrent sessions. When login state may be needed, start with `default`.
+
+When a human step is needed, open the page with `browser open`, tell the user that the returned session remains open, and pause all page actions while they log in, complete MFA, or navigate. Never ask them to send credentials or MFA codes through chat. After the user replies that the manual step is complete, reacquire state with `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax`; do not reuse stale target ids or refs. Stop the session only when the user asks to close it or no later continuation is expected.
 
 If the named session is already running, `browser open` reuses it and opens the requested URL in a new tab. It is the recommended page-opening contract for both new and existing sessions. `browser session start` is only a lower-level lifecycle/configuration command; its `--url` flag is a deprecated compatibility entry point and must not be used in new automation or examples. Use `tab open` only for explicit tab control. `session discover/attach` is only an alternative for an external browser explicitly launched with a known local DevTools port.
 

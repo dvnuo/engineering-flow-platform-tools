@@ -48,7 +48,7 @@ func sessionStartCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", session))
 		},
 	}
-	c.Flags().StringVar(&opts.Name, "name", "default", "Session name used for metadata and the default profile directory.")
+	c.Flags().StringVar(&opts.Name, "name", "default", defaultSessionNameUsage+" It is used for metadata and the default profile directory.")
 	c.Flags().StringVar(&opts.Browser, "browser", "chrome", "Browser family to launch: chrome, edge, chromium, or auto.")
 	c.Flags().StringVar(&opts.BrowserExe, "browser-exe", "", "Explicit Edge/Chrome/Chromium executable path to launch.")
 	c.Flags().BoolVar(&opts.Headless, "headless", false, "Run the persistent browser without a visible UI.")
@@ -80,7 +80,7 @@ func sessionAttachCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", session))
 		},
 	}
-	c.Flags().StringVar(&opts.Name, "name", "default", "Session name used for metadata.")
+	c.Flags().StringVar(&opts.Name, "name", "default", defaultSessionNameUsage+" It is used for metadata.")
 	c.Flags().StringVar(&opts.DebugAddr, "debug-addr", automation.LocalDebugAddr, "Explicit local DevTools address; only 127.0.0.1 is allowed.")
 	c.Flags().IntVar(&opts.DebugPort, "debug-port", 0, "Explicit local DevTools port exposed by a browser launched by the user.")
 	return c

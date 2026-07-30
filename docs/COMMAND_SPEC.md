@@ -600,10 +600,10 @@ When a user identifies a website by name, alias, or purpose without supplying an
 `browser open` starts a dedicated Chrome session with DevTools bound to `127.0.0.1` when needed, then opens the requested URL. If the named session is already running, it reuses the session and opens a new tab. It is the recommended page-opening contract for both cases. Use lower-level `browser session start` only for explicit lifecycle/configuration, without its deprecated `--url` compatibility path, and use `browser tab open` only for explicit tab control. Use `--browser edge`, `--browser chromium`, or `--browser auto` to override the managed browser. Managed sessions attempt to detach the browser process from the short-lived CLI or agent command process so later agent turns can reuse the same endpoint:
 
 ```bash
-browser open --session default --url https://intranet.example.test --json
-browser tab list --session default --json
+browser open --url https://intranet.example.test --json
+browser tab list --json
 browser tab activate --session default --target-id <target-id> --json
-browser page snapshot --session default --json
+browser page snapshot --json
 browser page extract --session default --selector .user-avatar --json
 browser page extract-schema --session default --file schema.yaml --json
 browser page find --session default --role button --name Save --json
@@ -625,7 +625,9 @@ browser network list --session default --filter /api/ --json
 browser network export --session default --out result/network.har-lite.json --format har-lite --json
 ```
 
-For a human handoff, run `browser open --session <name> --url <url> --json`, tell the user that the named session remains open, and pause actions while they complete login, MFA, or manual navigation. Do not substitute the deprecated `browser session start --url` compatibility path. After they reply, run `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax` before continuing. Stop the session only when explicitly asked or when no later continuation is expected. This is a conversational handoff, not a separate browser command.
+The `--session` flag defaults to `default`; normal agent workflows should omit it. Agents must not invent session names from a task, website, project, URL, or requested action. A non-default session is appropriate only when the user explicitly names it, a prior successful browser command established it, or the user explicitly requests an isolated concurrent session. When login state may be needed, use `default` from the first command instead of falling back to it after a task-specific session reaches a login page.
+
+For a human handoff, run `browser open --url <url> --json`, tell the user that the returned session remains open, and pause actions while they complete login, MFA, or manual navigation. Do not substitute the deprecated `browser session start --url` compatibility path. After they reply, run `browser session status`, `browser tab list/current`, and a fresh `browser page snapshot` or `browser page ax` before continuing. Stop the session only when explicitly asked or when no later continuation is expected. This is a conversational handoff, not a separate browser command.
 
 Use discovery and attach only for an external browser the user explicitly launched with a known `127.0.0.1` DevTools port:
 
@@ -675,7 +677,7 @@ browser session attach --name user-demo --debug-port 9222 --json
 ### Common Browser Flags
 
 - `--config <path>`: EFP config file containing `browser.bookmarks.sources`; defaults to `~/.efp/config.yaml`.
-- `--session <name>`: browser automation session name.
+- `--session <name>`: optional browser automation session name; defaults to `default`. Omit it for normal workflows, and do not invent a name from the task or website.
 - `--target-id <id>`: optional DevTools page target id; defaults to the active tab.
 - `--timeout <seconds>`: maximum seconds for page commands.
 - `--download-dir <dir>`: dedicated download directory when `browser open` creates a managed session, or when the lower-level `browser session start` command is used for lifecycle/configuration.

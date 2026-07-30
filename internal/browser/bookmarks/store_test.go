@@ -14,7 +14,7 @@ func TestStoreAddUpdateRemove(t *testing.T) {
 	store := Store{Path: path, Source: "personal"}
 
 	added, err := store.Add(Bookmark{
-		Name: "Google", Aliases: []string{"谷歌"}, Description: "Search the public web.", URL: "https://www.google.com/",
+		Name: "Example Search", Aliases: []string{"web search"}, Description: "Search example content.", URL: "https://search.example.test/",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -23,8 +23,8 @@ func TestStoreAddUpdateRemove(t *testing.T) {
 		t.Fatalf("source = %q", added.Source)
 	}
 	aliases := []string{"web search"}
-	description := "Search public websites."
-	updated, err := store.Update("google", Update{Aliases: &aliases, Description: &description})
+	description := "Search example websites."
+	updated, err := store.Update("example search", Update{Aliases: &aliases, Description: &description})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,11 +47,11 @@ func TestStoreAddUpdateRemove(t *testing.T) {
 		t.Fatalf("local manifest must not persist output provenance: %s", body)
 	}
 
-	removed, err := store.Remove("GOOGLE")
+	removed, err := store.Remove("EXAMPLE SEARCH")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if removed.Name != "Google" {
+	if removed.Name != "Example Search" {
 		t.Fatalf("removed = %#v", removed)
 	}
 	reloaded, exists, err = store.Load()

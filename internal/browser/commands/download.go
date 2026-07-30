@@ -39,7 +39,7 @@ func downloadListCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", result))
 		},
 	}
-	c.Flags().StringVar(&opts.SessionName, "session", automation.DefaultSessionName, "Browser session name whose download directory should be listed.")
+	c.Flags().StringVar(&opts.SessionName, "session", automation.DefaultSessionName, defaultSessionFlagUsage)
 	return c
 }
 
@@ -63,7 +63,7 @@ func downloadWaitCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", result))
 		},
 	}
-	c.Flags().StringVar(&opts.SessionName, "session", automation.DefaultSessionName, "Browser session name whose download directory should be watched.")
+	c.Flags().StringVar(&opts.SessionName, "session", automation.DefaultSessionName, defaultSessionFlagUsage)
 	c.Flags().StringVar(&opts.FilenameContains, "filename-contains", "", "Optional case-insensitive substring that the completed filename must contain.")
 	c.Flags().IntVar(&opts.TimeoutSeconds, "timeout", 30, "Maximum seconds to wait for a completed matching download.")
 	return c

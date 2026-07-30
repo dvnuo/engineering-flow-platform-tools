@@ -60,7 +60,7 @@ func workflowRunCmd(o *Opts) *cobra.Command {
 	}
 	c.Flags().StringVar(&opts.File, "file", "", "Workflow YAML file to parse and run.")
 	c.Flags().BoolVar(&opts.DryRun, "dry-run", false, "Parse and validate the workflow, returning a sanitized plan without attaching to a browser or executing steps.")
-	c.Flags().StringVar(&session, "session", automation.DefaultSessionName, "Browser session name to use unless the workflow file sets one.")
+	c.Flags().StringVar(&session, "session", automation.DefaultSessionName, defaultSessionFlagUsage+" A workflow file may set another session.")
 	c.Flags().StringVar(&targetID, "target-id", "", "Optional DevTools page target id to use for page, assert, network, and console steps.")
 	c.Flags().IntVar(&timeout, "timeout", 30, "Maximum seconds per browser page action/assertion step.")
 	c.Flags().BoolVar(&opts.ContinueOnError, "continue-on-error", false, "Continue running later steps after a step fails; the final workflow result still fails.")

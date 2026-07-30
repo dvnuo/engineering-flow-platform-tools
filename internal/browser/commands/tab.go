@@ -39,7 +39,7 @@ func tabListCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", result))
 		},
 	}
-	c.Flags().StringVar(&session, "session", "default", "Browser automation session name to connect to.")
+	c.Flags().StringVar(&session, "session", "default", defaultSessionFlagUsage)
 	return c
 }
 
@@ -63,7 +63,7 @@ func tabCurrentCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", result))
 		},
 	}
-	c.Flags().StringVar(&session, "session", "default", "Browser automation session name to connect to.")
+	c.Flags().StringVar(&session, "session", "default", defaultSessionFlagUsage)
 	return c
 }
 
@@ -88,7 +88,7 @@ func tabActivateCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", result))
 		},
 	}
-	c.Flags().StringVar(&session, "session", "default", "Browser automation session name to connect to.")
+	c.Flags().StringVar(&session, "session", "default", defaultSessionFlagUsage)
 	c.Flags().StringVar(&targetID, "target-id", "", "DevTools page target id from browser tab list.")
 	return c
 }
@@ -114,7 +114,7 @@ func tabOpenCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", result))
 		},
 	}
-	c.Flags().StringVar(&session, "session", "default", "Browser automation session name to connect to.")
+	c.Flags().StringVar(&session, "session", "default", defaultSessionFlagUsage)
 	c.Flags().StringVar(&rawURL, "url", "", "HTTP or HTTPS URL to open in a new tab.")
 	return c
 }

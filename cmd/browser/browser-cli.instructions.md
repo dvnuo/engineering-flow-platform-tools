@@ -39,9 +39,9 @@ browser bookmark source remove company --yes --json
 Manage bookmark entries inside an explicitly selected configured local file source:
 
 ```bash
-browser bookmark add --source personal --name Google --alias 谷歌 --description "Search the public web." --url https://www.google.com/ --json
-browser bookmark update Google --source personal --description "Search public websites." --json
-browser bookmark remove Google --source personal --yes --json
+browser bookmark add --source personal --name "Example Search" --alias "web search" --description "Search example content." --url https://search.example.test/ --json
+browser bookmark update "Example Search" --source personal --description "Search example websites." --json
+browser bookmark remove "Example Search" --source personal --yes --json
 ```
 
 `--source` is required for bookmark add, update, and remove. `name`, `description`, and `url` are required when adding a bookmark. Repeat `--alias` for multiple aliases. Update replaces only explicitly supplied fields; use `--clear-aliases` to remove all aliases. Removal requires explicit user confirmation and `--yes`.
@@ -57,7 +57,7 @@ browser bookmark list --source personal --source company --json
 
 ## Choose Persistent vs One-Shot First
 
-`browser open --session <name> --url <url> --json` is the only recommended user-level entry point for opening a page and keeping it available. Use it whenever the user asks to open, visit, go to, or navigate to a page, especially when any of these are true:
+`browser open --url <url> --json` is the only recommended user-level entry point for opening a page and keeping it available. It uses the `default` session when `--session` is omitted. Use it whenever the user asks to open, visit, go to, or navigate to a page, especially when any of these are true:
 
 - The user needs to log in, complete MFA, solve a challenge, or satisfy Conditional Access.
 - The user wants to operate the page first and have the agent continue afterward.
@@ -71,6 +71,18 @@ Do not use `browser probe` for those cases. `probe` is only for an explicitly on
 
 `browser session discover` and `browser session attach` are an alternative path only for a browser that the user explicitly launched with a known `127.0.0.1` DevTools port. They are not the default way to open a managed browser.
 
+## Default Session Selection
+
+Use the `default` session for normal agent workflows and omit `--session`:
+
+```bash
+browser open --url https://intranet.example.test --json
+browser page snapshot --json
+browser page ax --json
+```
+
+Do not derive or invent a session name from the task, website, project, URL, or requested action. Use a non-default session only when the user explicitly names it, a prior successful browser command established it for the current workflow, or the user explicitly requests an isolated concurrent session. When login state may be required, use `default` from the first command; do not start with a task-specific session and fall back to `default` only after finding a login page.
+
 ## What This Tool Is
 
 `browser` is a terminal-invoked CLI for agents that need to open an internal URL in Chrome by default through DevTools and collect page diagnostics or run bounded actions in a persistent dedicated browser session. Edge/Chromium remain available with `--browser`.
@@ -82,7 +94,7 @@ Use it for browser SSO checks, login-success probes, screenshots, HTML snapshots
 For agents, `--json` is the default way to use every `browser` command and subcommand. Always add `--json` so results and failures use the stable envelope:
 
 ```bash
-browser open --session default --url <url> --json
+browser open --url <url> --json
 ```
 
 Only omit `--json` when intentionally reading human-oriented `--help` text.
@@ -112,22 +124,22 @@ If `ok=false`, inspect `error.code`, `error.message`, and `error.hint` before re
 Open a persistent browser first:
 
 ```bash
-browser open --session default --url https://intranet.example.test --json
+browser open --url https://intranet.example.test --json
 ```
 
 If the user must log in, complete MFA, or navigate manually, use this conversational handoff protocol:
 
-1. Run `browser open --session <name> --url <url> --json` and keep the named session running. Do not substitute `browser session start --url`.
-2. Tell the user that the browser remains open, include the session name, and ask them to reply when the manual step is complete.
+1. Run `browser open --url <url> --json` so the `default` session remains running. Use `--session` only under the non-default selection rules above. Do not substitute `browser session start --url`.
+2. Tell the user that the browser remains open, include the returned session name, and ask them to reply when the manual step is complete.
 3. Stop issuing page actions while the user has control. Never ask the user to paste credentials or MFA codes into chat.
 4. After the user replies, reacquire current state before acting:
 
    ```bash
    browser session status default --json
-   browser tab list --session default --json
-   browser tab current --session default --json
-   browser page snapshot --session default --json
-   browser page ax --session default --json
+   browser tab list --json
+   browser tab current --json
+   browser page snapshot --json
+   browser page ax --json
    ```
 
 5. Continue against the current target or a target selected from `tab list`. Do not assume a previously captured target id or accessibility ref is still current.
@@ -324,7 +336,7 @@ Common errors:
 - `page_timeout`: increase `--timeout`, increase `--wait`, or verify the URL is reachable.
 - `selector_not_found`: inspect `data.files.screenshot`, `data.files.html`, and `data.files.summary`, then adjust `--selector`.
 - `network_error`: check proxy, DNS, certificates, and whether the browser can reach the URL.
-- `session_not_running`: use `browser open --session <name> --url <url> --json` for normal open-or-reuse recovery. Use `browser session start` only for explicit lower-level lifecycle/configuration, without its deprecated `--url` compatibility path.
+- `session_not_running`: use `browser open --url <url> --json` to start or reuse the `default` session. Reuse a non-default name only when it was explicitly selected under the rules above. Use `browser session start` only for explicit lower-level lifecycle/configuration, without its deprecated `--url` compatibility path.
 - `target_not_found`: run `browser tab list --json`, then pass a current `--target-id`.
 - `assertion_failed`: inspect `data` for sanitized assertion details, add a wait if needed, then retry or adjust the assertion.
 - `workflow_failed`: inspect `data.steps` for the failing whitelisted step; use `--dry-run` to validate before executing.

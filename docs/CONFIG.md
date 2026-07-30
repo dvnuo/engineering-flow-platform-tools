@@ -151,10 +151,10 @@ Each source can return JSON or YAML:
 ```yaml
 version: 1
 bookmarks:
-  - name: Google
-    aliases: [谷歌, web search]
-    description: Search the public web.
-    url: https://www.google.com/
+  - name: Example Search
+    aliases: [search portal, web search]
+    description: Search example content.
+    url: https://search.example.test/
 ```
 
 Each bookmark requires `name`, `description`, and an absolute HTTP/HTTPS `url`; `aliases` is optional. Unknown fields are rejected. `browser bookmark list --json` loads every configured source on each invocation, merges healthy results in source order, and does not use or write a cache. Repeat `--source <name>` to select one or more sources by case-insensitive name. The Agent opens the returned bookmark URL with the existing `browser open` command.

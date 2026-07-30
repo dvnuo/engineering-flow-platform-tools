@@ -806,7 +806,7 @@ func defaultPageOptions() automation.PageOptions {
 }
 
 func addPageCommonFlags(c *cobra.Command, opts *automation.PageOptions) {
-	c.Flags().StringVar(&opts.SessionName, "session", automation.DefaultSessionName, "Browser session name to connect to.")
+	c.Flags().StringVar(&opts.SessionName, "session", automation.DefaultSessionName, defaultSessionFlagUsage)
 	c.Flags().StringVar(&opts.TargetID, "target-id", "", "Optional DevTools page target id; defaults to the session's active tab.")
 	c.Flags().IntVar(&opts.TimeoutSeconds, "timeout", 30, "Maximum seconds to wait for this page command.")
 }

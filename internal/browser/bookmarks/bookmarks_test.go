@@ -16,7 +16,7 @@ import (
 
 func TestListMergesSourcesInConfigOrder(t *testing.T) {
 	first := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{"version":1,"bookmarks":[{"name":"Google","aliases":["谷歌","web search"],"description":"Search the public web.","url":"https://www.google.com/"}]}`))
+		_, _ = w.Write([]byte(`{"version":1,"bookmarks":[{"name":"Example Search","aliases":["search portal","web search"],"description":"Search example content.","url":"https://search.example.test/"}]}`))
 	}))
 	defer first.Close()
 	second := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +31,7 @@ func TestListMergesSourcesInConfigOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Bookmarks) != 2 || got.Bookmarks[0].Name != "Google" || got.Bookmarks[1].Name != "GitHub" {
+	if len(got.Bookmarks) != 2 || got.Bookmarks[0].Name != "Example Search" || got.Bookmarks[1].Name != "GitHub" {
 		t.Fatalf("bookmarks were not merged in config order: %#v", got.Bookmarks)
 	}
 	if got.Bookmarks[0].Description == "" || got.Bookmarks[0].Source != "public" {
@@ -164,7 +164,7 @@ func TestListKeepsHealthySourcesAndWarnsOnFailure(t *testing.T) {
 
 func TestListRejectsManifestWithoutDescription(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{"version":1,"bookmarks":[{"name":"Google","url":"https://www.google.com/"}]}`))
+		_, _ = w.Write([]byte(`{"version":1,"bookmarks":[{"name":"Example Search","url":"https://search.example.test/"}]}`))
 	}))
 	defer server.Close()
 

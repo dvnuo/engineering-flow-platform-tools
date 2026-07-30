@@ -60,10 +60,10 @@ browser bookmark source remove company --yes --json
 Manage bookmark entries inside a configured local file source by selecting it explicitly:
 
 ```bash
-browser bookmark add --source personal --name Google --alias 谷歌 --description "Search the public web." --url https://www.google.com/ --json
-browser bookmark update Google --source personal --description "Search public websites." --json
-browser bookmark update Google --source personal --clear-aliases --json
-browser bookmark remove Google --source personal --yes --json
+browser bookmark add --source personal --name "Example Search" --alias "web search" --description "Search example content." --url https://search.example.test/ --json
+browser bookmark update "Example Search" --source personal --description "Search example websites." --json
+browser bookmark update "Example Search" --source personal --clear-aliases --json
+browser bookmark remove "Example Search" --source personal --yes --json
 ```
 
 Add requires `--source`, `name`, `description`, and an absolute HTTP/HTTPS `url`; aliases are optional and `--alias` may be repeated. Update changes only explicitly supplied fields. Names are unique case-insensitively within a source, and removal requires explicit confirmation with `--yes`. Local writes use a temporary file and replacement so a partially written manifest is not exposed. A missing local manifest and its parent directory are created on the first add.
@@ -73,12 +73,12 @@ Each source is a version 1 JSON or YAML manifest with this strict format:
 ```yaml
 version: 1
 bookmarks:
-  - name: Google
+  - name: Example Search
     aliases:
-      - 谷歌
+      - search portal
       - web search
-    description: Search the public web.
-    url: https://www.google.com/
+    description: Search example content.
+    url: https://search.example.test/
 ```
 
 `name`, `description`, and `url` are required; `aliases` is optional. Unknown manifest fields are rejected. Source locations may be absolute HTTP/HTTPS URLs without credentials, `file://` URLs, absolute local paths, or `~/...` paths. Relative paths are rejected so resolution does not depend on the current working directory. Remote manifests are read-only through bookmark CRUD; change their entries in the owning system.
@@ -146,9 +146,11 @@ If a clean profile still reaches the business page, OS/enterprise SSO is more li
 Start or reuse a dedicated managed browser session:
 
 ```bash
-browser open --session default --url "https://intranet.example.test/app" --json
+browser open --url "https://intranet.example.test/app" --json
 browser session status default --json
 ```
+
+The `--session` flag defaults to `default`. Normal agent workflows should omit it on `open`, `tab`, `page`, `assert`, `form`, `frame`, `network`, `download`, and `workflow` commands. Do not derive a session name from the task, website, project, URL, or requested action. Use a non-default session only when the user explicitly names it, a prior successful browser command established it, or the user requests an isolated concurrent session. When login state may be needed, use `default` from the first command.
 
 For a browser the user explicitly launched with a local DevTools port, use the external attach alternative:
 
@@ -163,17 +165,17 @@ browser session attach --name user-demo --debug-port 9222 --json
 
 When the user needs control of the visible browser:
 
-1. Run `browser open --session <name> --url <url> --json`. Do not substitute the deprecated `browser session start --url` compatibility path.
-2. Tell the user that the window will remain open, state the session name, and ask them to reply when login, MFA, or navigation is complete.
+1. Run `browser open --url <url> --json` so the `default` session remains available. Use `--session` only under the non-default selection rules above. Do not substitute the deprecated `browser session start --url` compatibility path.
+2. Tell the user that the window will remain open, state the returned session name, and ask them to reply when login, MFA, or navigation is complete.
 3. Pause agent page actions. Do not ask the user to send credentials or MFA codes through chat.
 4. After the user replies, reacquire the current tab and page state:
 
    ```bash
    browser session status default --json
-   browser tab list --session default --json
-   browser tab current --session default --json
-   browser page snapshot --session default --json
-   browser page ax --session default --json
+   browser tab list --json
+   browser tab current --json
+   browser page snapshot --json
+   browser page ax --json
    ```
 
 5. Continue using the newly observed target and refs. Do not assume target ids or refs captured before the handoff are still current.

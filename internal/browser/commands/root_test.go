@@ -59,7 +59,7 @@ func TestBookmarkListFetchesConfiguredExternalManifest(t *testing.T) {
 	var calls int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		_, _ = w.Write([]byte(`{"version":1,"bookmarks":[{"name":"Google","aliases":["谷歌"],"description":"Search the public web.","url":"https://www.google.com/"}]}`))
+		_, _ = w.Write([]byte(`{"version":1,"bookmarks":[{"name":"Example Search","aliases":["web search"],"description":"Search example content.","url":"https://search.example.test/"}]}`))
 	}))
 	defer server.Close()
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
@@ -78,7 +78,7 @@ func TestBookmarkListFetchesConfiguredExternalManifest(t *testing.T) {
 		t.Fatalf("bookmarks = %#v", items)
 	}
 	item := items[0].(map[string]any)
-	if item["name"] != "Google" || item["description"] != "Search the public web." || item["url"] != "https://www.google.com/" {
+	if item["name"] != "Example Search" || item["description"] != "Search example content." || item["url"] != "https://search.example.test/" {
 		t.Fatalf("bookmark metadata missing: %#v", item)
 	}
 	if calls != 1 {
@@ -283,11 +283,11 @@ func TestBookmarkLocalCRUDAndMergedList(t *testing.T) {
 	added := run(t, &fakeRunner{},
 		"bookmark", "add",
 		"--source", "personal",
-		"--name", "Google",
-		"--alias", "谷歌",
+		"--name", "Example Search",
+		"--alias", "search portal",
 		"--alias", "web search",
-		"--description", "Search the public web.",
-		"--url", "https://www.google.com/",
+		"--description", "Search example content.",
+		"--url", "https://search.example.test/",
 		"--config", configPath,
 		"--json",
 	)
@@ -295,7 +295,7 @@ func TestBookmarkLocalCRUDAndMergedList(t *testing.T) {
 		t.Fatalf("bookmark add failed: %#v", added)
 	}
 	addedBookmark := added["data"].(map[string]any)["bookmark"].(map[string]any)
-	if addedBookmark["source"] != "personal" || addedBookmark["description"] != "Search the public web." {
+	if addedBookmark["source"] != "personal" || addedBookmark["description"] != "Search example content." {
 		t.Fatalf("added bookmark = %#v", addedBookmark)
 	}
 	if _, err := os.Stat(manifestPath); err != nil {
@@ -313,9 +313,9 @@ func TestBookmarkLocalCRUDAndMergedList(t *testing.T) {
 	}
 
 	updated := run(t, &fakeRunner{},
-		"bookmark", "update", "google",
+		"bookmark", "update", "example search",
 		"--source", "personal",
-		"--description", "Search public websites.",
+		"--description", "Search example websites.",
 		"--clear-aliases",
 		"--config", configPath,
 		"--json",
@@ -324,18 +324,18 @@ func TestBookmarkLocalCRUDAndMergedList(t *testing.T) {
 		t.Fatalf("bookmark update failed: %#v", updated)
 	}
 	updatedBookmark := updated["data"].(map[string]any)["bookmark"].(map[string]any)
-	if updatedBookmark["description"] != "Search public websites." {
+	if updatedBookmark["description"] != "Search example websites." {
 		t.Fatalf("updated bookmark = %#v", updatedBookmark)
 	}
 	if aliases, ok := updatedBookmark["aliases"]; ok && len(aliases.([]any)) != 0 {
 		t.Fatalf("aliases were not cleared: %#v", updatedBookmark)
 	}
 
-	unconfirmed := run(t, &fakeRunner{}, "bookmark", "remove", "Google", "--source", "personal", "--config", configPath, "--json")
+	unconfirmed := run(t, &fakeRunner{}, "bookmark", "remove", "Example Search", "--source", "personal", "--config", configPath, "--json")
 	if unconfirmed["ok"] != false || unconfirmed["error"].(map[string]any)["code"] != "invalid_args" {
 		t.Fatalf("unconfirmed remove = %#v", unconfirmed)
 	}
-	removed := run(t, &fakeRunner{}, "bookmark", "remove", "Google", "--source", "personal", "--yes", "--config", configPath, "--json")
+	removed := run(t, &fakeRunner{}, "bookmark", "remove", "Example Search", "--source", "personal", "--yes", "--config", configPath, "--json")
 	if removed["ok"] != true {
 		t.Fatalf("bookmark remove failed: %#v", removed)
 	}
@@ -349,7 +349,7 @@ func TestBookmarkExternalSourcesAreReadOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := run(t, &fakeRunner{},
-		"bookmark", "update", "Google",
+		"bookmark", "update", "Example Search",
 		"--source", "company",
 		"--description", "Changed.",
 		"--config", configPath,
@@ -515,6 +515,33 @@ func TestSchemaBrowserDefaultsToChrome(t *testing.T) {
 		}
 		if !found {
 			t.Fatalf("%s missing --browser flag in %#v", command, data)
+		}
+	}
+}
+
+func TestSchemaDefaultsToDefaultSessionAndExplainsSelection(t *testing.T) {
+	for _, command := range []string{"open", "tab.current", "page.snapshot", "download.list", "workflow.run"} {
+		out := run(t, &fakeRunner{}, "schema", command, "--json")
+		data := out["data"].(map[string]any)
+		found := false
+		for _, raw := range data["flags"].([]any) {
+			flag := raw.(map[string]any)
+			if flag["name"] != "session" {
+				continue
+			}
+			found = true
+			if flag["default"] != "default" {
+				t.Fatalf("%s --session default = %v want default", command, flag["default"])
+			}
+			description, _ := flag["description"].(string)
+			for _, want := range []string{"defaults to default", "Omit --session", "do not invent"} {
+				if !strings.Contains(description, want) {
+					t.Fatalf("%s --session description missing %q: %q", command, want, description)
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("%s missing --session flag in %#v", command, data)
 		}
 	}
 }
@@ -722,6 +749,11 @@ func TestHelpLLMExplainsPersistentRoutingAndHumanHandoff(t *testing.T) {
 		"browser bookmark source list/add/update/remove",
 		"HTTP/HTTPS or local file source registrations",
 		"does not use or write a cache",
+		"Use the default session for normal workflows",
+		"Omit --session",
+		"Do not invent a session name",
+		"task, website, project, URL",
+		"do not try a task-specific session",
 		"Default requests to open",
 		"Manual login",
 		"must not use browser probe",

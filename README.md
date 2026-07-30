@@ -45,7 +45,7 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 ### Browser
 
-`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. `browser bookmark list --json` merges authoritative local bookmarks with live configured HTTP/HTTPS or local file manifests so an Agent can resolve a requested site by name, alias, or description before opening it. Personal bookmarks can be managed with `browser bookmark add/update/remove`, while `browser bookmark source list/add/update/remove` manages read-only source registrations. `browser open` is the only recommended user-level entry point for opening the resolved or explicit URL in a persistent managed Chrome session so login, MFA, human navigation, and later agent actions can share the same browser. `browser probe` remains the explicitly one-shot diagnostic path and closes its browser context when it returns. Edge/Chromium remain available with `--browser`. Persistent sessions can also inspect redacted page structure, semantic locators, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, redacted fetch/XHR body previews, performance metadata, HAR-lite recorder/export metadata, tables/lists, data exports, scroll collection, page-state diffs, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
+`browser` is a terminal-invoked CLI binary for Bash, PowerShell, or Windows cmd. `browser bookmark list --json` loads configured HTTP/HTTPS or local file manifests so an Agent can resolve a requested site by name, alias, or description before opening it. Source registrations and their descriptions are managed with `browser bookmark source list/add/update/remove`; entries in explicitly selected local file sources are managed with `browser bookmark add/update/remove --source <name>`. `browser open` is the only recommended user-level entry point for opening the resolved or explicit URL in a persistent managed Chrome session so login, MFA, human navigation, and later agent actions can share the same browser. `browser probe` remains the explicitly one-shot diagnostic path and closes its browser context when it returns. Edge/Chromium remain available with `--browser`. Persistent sessions can also inspect redacted page structure, semantic locators, accessibility-style refs, schema-based extraction, assertions, screenshot baseline checks, whitelisted workflow recording/running with locator fallback, optional workflow evidence bundles, form inspection/fill, frames, console/runtime errors, sanitized resource timing summaries, redacted fetch/XHR body previews, performance metadata, HAR-lite recorder/export metadata, tables/lists, data exports, scroll collection, page-state diffs, uploads, and download metadata. It uses dedicated browser profile and download directories by default and does not export cookies or tokens.
 
 For VS Code GitHub Copilot, copy `cmd/browser/browser-cli.instructions.md` to `~/.copilot/instructions/browser-cli.instructions.md` so Copilot has durable browser routing and automation guidance.
 
@@ -343,21 +343,21 @@ browser bookmark list --json
 browser open --session default --url "https://www.google.com/" --json
 ```
 
-Configure source locations under `browser.bookmarks.sources` in `~/.efp/config.yaml`. A location can be an HTTP/HTTPS URL, a `file://` URL, an absolute local path, or a `~/...` path. Each version 1 JSON/YAML manifest supplies bookmark `name`, optional `aliases`, required `description`, and `url`. The list command loads sources live on every call and does not use or write a cache.
+Configure source locations under `browser.bookmarks.sources` in `~/.efp/config.yaml`. Each source has a unique name, an optional description, and an HTTP/HTTPS URL, `file://` URL, absolute local path, or `~/...` path. Each version 1 JSON/YAML manifest supplies bookmark `name`, optional `aliases`, required `description`, and `url`. The list command loads sources live on every call without a cache; repeat `--source <name>` to filter by source.
 
-Manage personal bookmarks and read-only source registrations without editing YAML:
+Manage source registrations and entries in a configured local file source without editing YAML:
 
 ```bash
-browser bookmark add --name Google --alias 谷歌 --description "Search the public web." --url https://www.google.com/ --json
-browser bookmark update Google --description "Search public websites." --json
-browser bookmark remove Google --yes --json
-browser bookmark source add --name company --url https://portal.example.test/bookmarks.yaml --json
-browser bookmark source add --name team --url ~/.efp/team-bookmarks.yaml --json
-browser bookmark source update company --url https://portal.example.test/new-bookmarks.yaml --json
+browser bookmark source add --name personal --description "Personal websites." --url ~/.efp/browser/bookmarks/personal.yaml --json
+browser bookmark add --source personal --name Google --alias 谷歌 --description "Search the public web." --url https://www.google.com/ --json
+browser bookmark update Google --source personal --description "Search public websites." --json
+browser bookmark remove Google --source personal --yes --json
+browser bookmark source add --name company --description "Internal company services." --url https://portal.example.test/bookmarks.yaml --json
+browser bookmark source update company --description "Internal services and documentation." --url https://portal.example.test/new-bookmarks.yaml --json
 browser bookmark source remove company --yes --json
 ```
 
-Personal bookmarks are written to the authoritative `~/.efp/bookmarks.yaml` manifest. Configured HTTP/HTTPS and local file manifests remain read-only.
+Bookmark CRUD requires `--source` and supports only configured local file sources; HTTP/HTTPS sources are read-only. `~/.efp/browser/bookmarks/` is the recommended location for personal manifests, but sources must still be registered explicitly. The CLI does not scan the directory or implicitly read `~/.efp/bookmarks.yaml`.
 
 Use `browser open` as the only recommended entry point when the user asks to open, visit, go to, or navigate to a page and keep it available. This includes human login/MFA, user-first interaction, multi-step work, later continuation, and any ambiguous "open" request:
 

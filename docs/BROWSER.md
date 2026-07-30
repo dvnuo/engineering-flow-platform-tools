@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It can resolve websites from an authoritative local bookmark file plus configured HTTP/HTTPS or local file sources, run one-shot probes, or keep a dedicated Chrome automation session open by default for tab selection, semantic element finding, redacted page reads, structured extraction/export, form automation, bounded page actions, assertions, workflows, screenshots, network exports, and performance metadata through DevTools. Edge/Chromium remain available with `--browser`.
+`browser` is a cross-platform Go CLI binary invoked through Bash, PowerShell, or Windows cmd. It can resolve websites from configured HTTP/HTTPS or local file bookmark sources, run one-shot probes, or keep a dedicated Chrome automation session open by default for tab selection, semantic element finding, redacted page reads, structured extraction/export, form automation, bounded page actions, assertions, workflows, screenshots, network exports, and performance metadata through DevTools. Edge/Chromium remain available with `--browser`.
 
 ## Routing Decision (Read First)
 
@@ -28,42 +28,45 @@ Do not use `browser probe` for those requests. A probe is only for an explicitly
 
 `browser session discover` and `browser session attach` are a separate alternative for an external browser the user explicitly launched with a known `127.0.0.1` DevTools port. They are not the normal managed-browser open flow.
 
-## Local Bookmarks and Configured Sources
+## Bookmarks and Configured Sources
 
-Personal bookmarks are stored in the authoritative local manifest `~/.efp/bookmarks.yaml`, not as individual entries in `config.yaml`:
-
-```bash
-browser bookmark add --name Google --alias 谷歌 --description "Search the public web." --url https://www.google.com/ --json
-browser bookmark update Google --description "Search public websites." --json
-browser bookmark update Google --clear-aliases --json
-browser bookmark remove Google --yes --json
-```
-
-Add requires `name`, `description`, and an absolute HTTP/HTTPS `url`; aliases are optional and `--alias` may be repeated. Update changes only explicitly supplied fields. Local names are unique case-insensitively, and removal requires explicit confirmation with `--yes`. Writes use a temporary file and replacement so a partially written manifest is not exposed.
-
-Configure source locations, rather than individual bookmarks, under `browser.bookmarks.sources` in `~/.efp/config.yaml`:
+Configure source locations, rather than individual bookmarks, under `browser.bookmarks.sources` in `~/.efp/config.yaml`. Each source may include a description that helps agents understand its scope:
 
 ```yaml
 browser:
   bookmarks:
     sources:
       - name: company
+        description: Internal company services.
         url: https://portal.example.test/agent-bookmarks.yaml
       - name: public
+        description: Public reference websites.
         url: https://static.example.test/bookmarks.json
-      - name: team
-        url: ~/.efp/team-bookmarks.yaml
+      - name: personal
+        description: Personal search and productivity websites.
+        url: ~/.efp/browser/bookmarks/personal.yaml
 ```
 
 Source registrations can be managed without editing YAML:
 
 ```bash
 browser bookmark source list --json
-browser bookmark source add --name company --url https://portal.example.test/agent-bookmarks.yaml --json
-browser bookmark source add --name team --url ~/.efp/team-bookmarks.yaml --json
-browser bookmark source update company --url https://portal.example.test/new-bookmarks.yaml --json
+browser bookmark source add --name company --description "Internal company services." --url https://portal.example.test/agent-bookmarks.yaml --json
+browser bookmark source add --name personal --description "Personal websites." --url ~/.efp/browser/bookmarks/personal.yaml --json
+browser bookmark source update company --description "Internal services and documentation." --url https://portal.example.test/new-bookmarks.yaml --json
 browser bookmark source remove company --yes --json
 ```
+
+Manage bookmark entries inside a configured local file source by selecting it explicitly:
+
+```bash
+browser bookmark add --source personal --name Google --alias 谷歌 --description "Search the public web." --url https://www.google.com/ --json
+browser bookmark update Google --source personal --description "Search public websites." --json
+browser bookmark update Google --source personal --clear-aliases --json
+browser bookmark remove Google --source personal --yes --json
+```
+
+Add requires `--source`, `name`, `description`, and an absolute HTTP/HTTPS `url`; aliases are optional and `--alias` may be repeated. Update changes only explicitly supplied fields. Names are unique case-insensitively within a source, and removal requires explicit confirmation with `--yes`. Local writes use a temporary file and replacement so a partially written manifest is not exposed. A missing local manifest and its parent directory are created on the first add.
 
 Each source is a version 1 JSON or YAML manifest with this strict format:
 
@@ -78,7 +81,11 @@ bookmarks:
     url: https://www.google.com/
 ```
 
-`name`, `description`, and `url` are required; `aliases` is optional. Unknown manifest fields are rejected. Source locations may be absolute HTTP/HTTPS URLs without credentials, `file://` URLs, absolute local paths, or `~/...` paths. Relative paths are rejected so resolution does not depend on the current working directory. Configured manifests are read-only through the CLI; change their entries in the source file or owning system. Every `browser bookmark list --json` invocation reads the local authoritative manifest, then loads all configured sources live without writing a cache. Local bookmarks appear first, followed by available configured entries in source order. If one source fails, its warning is returned with bookmarks from healthy sources. A valid authoritative local manifest remains usable when all configured sources are unavailable.
+`name`, `description`, and `url` are required; `aliases` is optional. Unknown manifest fields are rejected. Source locations may be absolute HTTP/HTTPS URLs without credentials, `file://` URLs, absolute local paths, or `~/...` paths. Relative paths are rejected so resolution does not depend on the current working directory. Remote manifests are read-only through bookmark CRUD; change their entries in the owning system.
+
+Every `browser bookmark list --json` invocation loads configured sources live in configuration order without writing a cache. Repeat `--source <name>` to load only selected sources; matching is case-insensitive. If one selected source fails, its warning is returned with bookmarks from healthy selected sources.
+
+For personal bookmarks, use an explicitly registered path under `~/.efp/browser/bookmarks/`, such as `~/.efp/browser/bookmarks/personal.yaml`. The directory is a convention, not an auto-discovery location: the CLI only loads paths registered in `config.yaml`. It does not implicitly read `~/.efp/bookmarks.yaml`. To migrate an older file, move it to the recommended directory and register the new path with `browser bookmark source add`.
 
 The command does not read native Edge/Chrome/Chromium bookmarks or the user's default browser profile.
 

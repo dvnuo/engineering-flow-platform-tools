@@ -99,6 +99,7 @@ func TestBookmarkSourceAddLocalFileAndListBookmarks(t *testing.T) {
 	added := run(t, &fakeRunner{},
 		"bookmark", "source", "add",
 		"--name", "team",
+		"--description", "Engineering runbooks.",
 		"--url", manifestPath,
 		"--config", configPath,
 		"--json",
@@ -107,7 +108,7 @@ func TestBookmarkSourceAddLocalFileAndListBookmarks(t *testing.T) {
 		t.Fatalf("local source add failed: %#v", added)
 	}
 	source := added["data"].(map[string]any)["source"].(map[string]any)
-	if source["url"] != manifestPath {
+	if source["url"] != manifestPath || source["description"] != "Engineering runbooks." {
 		t.Fatalf("local source path was not preserved: %#v", source)
 	}
 
@@ -121,6 +122,49 @@ func TestBookmarkSourceAddLocalFileAndListBookmarks(t *testing.T) {
 	}
 }
 
+func TestBookmarkListFiltersConfiguredSources(t *testing.T) {
+	setBookmarkTestHome(t)
+	dir := t.TempDir()
+	firstPath := filepath.Join(dir, "first.yaml")
+	secondPath := filepath.Join(dir, "second.yaml")
+	for path, name := range map[string]string{firstPath: "First", secondPath: "Second"} {
+		manifest := "version: 1\nbookmarks:\n  - name: " + name + "\n    description: " + name + " website.\n    url: https://" + strings.ToLower(name) + ".example.test/\n"
+		if err := os.WriteFile(path, []byte(manifest), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	configPath := filepath.Join(dir, "config.yaml")
+	configBody := "browser:\n  bookmarks:\n    sources:\n      - name: first\n        url: " + firstPath + "\n      - name: second\n        description: Secondary websites.\n        url: " + secondPath + "\n"
+	if err := os.WriteFile(configPath, []byte(configBody), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	filtered := run(t, &fakeRunner{}, "bookmark", "list", "--source", "SECOND", "--config", configPath, "--json")
+	if filtered["ok"] != true {
+		t.Fatalf("filtered list failed: %#v", filtered)
+	}
+	data := filtered["data"].(map[string]any)
+	items := data["bookmarks"].([]any)
+	statuses := data["sources"].([]any)
+	if len(items) != 1 || items[0].(map[string]any)["source"] != "second" || len(statuses) != 1 {
+		t.Fatalf("filtered result = %#v", data)
+	}
+	if statuses[0].(map[string]any)["description"] != "Secondary websites." {
+		t.Fatalf("source description missing from list status: %#v", statuses)
+	}
+
+	both := run(t, &fakeRunner{}, "bookmark", "list", "--source", "second", "--source", "first", "--config", configPath, "--json")
+	bothItems := both["data"].(map[string]any)["bookmarks"].([]any)
+	if len(bothItems) != 2 || bothItems[0].(map[string]any)["source"] != "first" || bothItems[1].(map[string]any)["source"] != "second" {
+		t.Fatalf("repeatable filter did not preserve configured order: %#v", both)
+	}
+
+	missing := run(t, &fakeRunner{}, "bookmark", "list", "--source", "missing", "--config", configPath, "--json")
+	if missing["ok"] != false || missing["error"].(map[string]any)["code"] != "bookmark_source_not_found" {
+		t.Fatalf("unknown source filter = %#v", missing)
+	}
+}
+
 func TestBookmarkListReturnsEmptyWhenDefaultConfigIsMissing(t *testing.T) {
 	setBookmarkTestHome(t)
 	out := run(t, &fakeRunner{}, "bookmark", "list", "--json")
@@ -130,6 +174,56 @@ func TestBookmarkListReturnsEmptyWhenDefaultConfigIsMissing(t *testing.T) {
 	data := out["data"].(map[string]any)
 	if len(data["bookmarks"].([]any)) != 0 {
 		t.Fatalf("bookmarks = %#v", data["bookmarks"])
+	}
+}
+
+func TestBookmarkListDoesNotReadLegacyDefaultManifest(t *testing.T) {
+	setBookmarkTestHome(t)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacyPath := filepath.Join(home, ".efp", "bookmarks.yaml")
+	if err := os.MkdirAll(filepath.Dir(legacyPath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	manifest := "version: 1\nbookmarks:\n  - name: Legacy\n    description: Must not be loaded implicitly.\n    url: https://legacy.example.test/\n"
+	if err := os.WriteFile(legacyPath, []byte(manifest), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out := run(t, &fakeRunner{}, "bookmark", "list", "--json")
+	if out["ok"] != true {
+		t.Fatalf("bookmark list failed: %#v", out)
+	}
+	if len(out["data"].(map[string]any)["bookmarks"].([]any)) != 0 {
+		t.Fatalf("legacy manifest was loaded implicitly: %#v", out)
+	}
+}
+
+func TestBookmarkCRUDRequiresConfiguredSource(t *testing.T) {
+	setBookmarkTestHome(t)
+	missing := run(t, &fakeRunner{},
+		"bookmark", "add",
+		"--name", "Docs",
+		"--description", "Read documentation.",
+		"--url", "https://docs.example.test/",
+		"--json",
+	)
+	if missing["ok"] != false || missing["error"].(map[string]any)["code"] != "bookmark_source_required" {
+		t.Fatalf("missing source = %#v", missing)
+	}
+
+	unknown := run(t, &fakeRunner{},
+		"bookmark", "add",
+		"--source", "personal",
+		"--name", "Docs",
+		"--description", "Read documentation.",
+		"--url", "https://docs.example.test/",
+		"--json",
+	)
+	if unknown["ok"] != false || unknown["error"].(map[string]any)["code"] != "bookmark_source_not_found" {
+		t.Fatalf("unregistered source = %#v", unknown)
 	}
 }
 
@@ -161,38 +255,62 @@ func TestBookmarkListReportsAllSourceFailures(t *testing.T) {
 
 func TestBookmarkLocalCRUDAndMergedList(t *testing.T) {
 	setBookmarkTestHome(t)
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	manifestPath := filepath.Join(dir, "browser", "bookmarks", "personal.yaml")
+	sourceAdded := run(t, &fakeRunner{},
+		"bookmark", "source", "add",
+		"--name", "personal",
+		"--description", "Personal websites.",
+		"--url", manifestPath,
+		"--config", configPath,
+		"--json",
+	)
+	if sourceAdded["ok"] != true {
+		t.Fatalf("bookmark source add failed: %#v", sourceAdded)
+	}
+	if _, err := os.Stat(manifestPath); !os.IsNotExist(err) {
+		t.Fatalf("source registration unexpectedly created the manifest: %v", err)
+	}
 
 	added := run(t, &fakeRunner{},
 		"bookmark", "add",
+		"--source", "personal",
 		"--name", "Google",
 		"--alias", "谷歌",
 		"--alias", "web search",
 		"--description", "Search the public web.",
 		"--url", "https://www.google.com/",
+		"--config", configPath,
 		"--json",
 	)
 	if added["ok"] != true {
 		t.Fatalf("bookmark add failed: %#v", added)
 	}
 	addedBookmark := added["data"].(map[string]any)["bookmark"].(map[string]any)
-	if addedBookmark["source"] != "local" || addedBookmark["description"] != "Search the public web." {
+	if addedBookmark["source"] != "personal" || addedBookmark["description"] != "Search the public web." {
 		t.Fatalf("added bookmark = %#v", addedBookmark)
 	}
+	if _, err := os.Stat(manifestPath); err != nil {
+		t.Fatalf("bookmark add did not create the configured manifest: %v", err)
+	}
 
-	listed := run(t, &fakeRunner{}, "bookmark", "list", "--json")
+	listed := run(t, &fakeRunner{}, "bookmark", "list", "--source", "PERSONAL", "--config", configPath, "--json")
 	if listed["ok"] != true {
 		t.Fatalf("bookmark list failed: %#v", listed)
 	}
 	listData := listed["data"].(map[string]any)
 	items := listData["bookmarks"].([]any)
-	if len(items) != 1 || items[0].(map[string]any)["source"] != "local" {
+	if len(items) != 1 || items[0].(map[string]any)["source"] != "personal" {
 		t.Fatalf("local bookmark not merged: %#v", listData)
 	}
 
 	updated := run(t, &fakeRunner{},
 		"bookmark", "update", "google",
+		"--source", "personal",
 		"--description", "Search public websites.",
 		"--clear-aliases",
+		"--config", configPath,
 		"--json",
 	)
 	if updated["ok"] != true {
@@ -206,11 +324,11 @@ func TestBookmarkLocalCRUDAndMergedList(t *testing.T) {
 		t.Fatalf("aliases were not cleared: %#v", updatedBookmark)
 	}
 
-	unconfirmed := run(t, &fakeRunner{}, "bookmark", "remove", "Google", "--json")
+	unconfirmed := run(t, &fakeRunner{}, "bookmark", "remove", "Google", "--source", "personal", "--config", configPath, "--json")
 	if unconfirmed["ok"] != false || unconfirmed["error"].(map[string]any)["code"] != "invalid_args" {
 		t.Fatalf("unconfirmed remove = %#v", unconfirmed)
 	}
-	removed := run(t, &fakeRunner{}, "bookmark", "remove", "Google", "--yes", "--json")
+	removed := run(t, &fakeRunner{}, "bookmark", "remove", "Google", "--source", "personal", "--yes", "--config", configPath, "--json")
 	if removed["ok"] != true {
 		t.Fatalf("bookmark remove failed: %#v", removed)
 	}
@@ -218,10 +336,16 @@ func TestBookmarkLocalCRUDAndMergedList(t *testing.T) {
 
 func TestBookmarkExternalSourcesAreReadOnly(t *testing.T) {
 	setBookmarkTestHome(t)
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	configBody := "browser:\n  bookmarks:\n    sources:\n      - name: company\n        url: https://bookmarks.example.test/company.yaml\n"
+	if err := os.WriteFile(configPath, []byte(configBody), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	out := run(t, &fakeRunner{},
 		"bookmark", "update", "Google",
 		"--source", "company",
 		"--description", "Changed.",
+		"--config", configPath,
 		"--json",
 	)
 	if out["ok"] != false || out["error"].(map[string]any)["code"] != "bookmark_source_read_only" {
@@ -231,24 +355,28 @@ func TestBookmarkExternalSourcesAreReadOnly(t *testing.T) {
 
 func TestBookmarkListKeepsLocalResultsWhenExternalSourcesFail(t *testing.T) {
 	setBookmarkTestHome(t)
-	added := run(t, &fakeRunner{},
-		"bookmark", "add",
-		"--name", "Local docs",
-		"--description", "Read local team documentation.",
-		"--url", "https://docs.example.test/",
-		"--json",
-	)
-	if added["ok"] != true {
-		t.Fatalf("bookmark add failed: %#v", added)
-	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 	}))
 	defer server.Close()
-	configPath := filepath.Join(t.TempDir(), "config.yaml")
-	configBody := "browser:\n  bookmarks:\n    sources:\n      - name: broken\n        url: " + server.URL + "\n"
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	manifestPath := filepath.Join(dir, "personal.yaml")
+	configBody := "browser:\n  bookmarks:\n    sources:\n      - name: personal\n        url: " + manifestPath + "\n      - name: broken\n        url: " + server.URL + "\n"
 	if err := os.WriteFile(configPath, []byte(configBody), 0o600); err != nil {
 		t.Fatal(err)
+	}
+	added := run(t, &fakeRunner{},
+		"bookmark", "add",
+		"--source", "personal",
+		"--name", "Local docs",
+		"--description", "Read local team documentation.",
+		"--url", "https://docs.example.test/",
+		"--config", configPath,
+		"--json",
+	)
+	if added["ok"] != true {
+		t.Fatalf("bookmark add failed: %#v", added)
 	}
 
 	out := run(t, &fakeRunner{}, "bookmark", "list", "--config", configPath, "--json")
@@ -257,7 +385,7 @@ func TestBookmarkListKeepsLocalResultsWhenExternalSourcesFail(t *testing.T) {
 	}
 	data := out["data"].(map[string]any)
 	items := data["bookmarks"].([]any)
-	if len(items) != 1 || items[0].(map[string]any)["source"] != "local" {
+	if len(items) != 1 || items[0].(map[string]any)["source"] != "personal" {
 		t.Fatalf("local bookmarks = %#v", items)
 	}
 	if len(data["warnings"].([]any)) != 1 {
@@ -272,6 +400,7 @@ func TestBookmarkSourceCRUD(t *testing.T) {
 	added := run(t, &fakeRunner{},
 		"bookmark", "source", "add",
 		"--name", "company",
+		"--description", "Company websites.",
 		"--url", "https://bookmarks.example.test/company.yaml",
 		"--config", configPath,
 		"--json",
@@ -284,13 +413,15 @@ func TestBookmarkSourceCRUD(t *testing.T) {
 		t.Fatalf("source list failed: %#v", listed)
 	}
 	sources := listed["data"].(map[string]any)["sources"].([]any)
-	if len(sources) != 1 || sources[0].(map[string]any)["name"] != "company" {
+	if len(sources) != 1 || sources[0].(map[string]any)["name"] != "company" ||
+		sources[0].(map[string]any)["description"] != "Company websites." {
 		t.Fatalf("sources = %#v", sources)
 	}
 
 	updated := run(t, &fakeRunner{},
 		"bookmark", "source", "update", "company",
 		"--name", "engineering",
+		"--description", "Engineering websites.",
 		"--url", "https://bookmarks.example.test/engineering.yaml",
 		"--config", configPath,
 		"--json",
@@ -299,8 +430,21 @@ func TestBookmarkSourceCRUD(t *testing.T) {
 		t.Fatalf("source update failed: %#v", updated)
 	}
 	source := updated["data"].(map[string]any)["source"].(map[string]any)
-	if source["name"] != "engineering" || source["url"] != "https://bookmarks.example.test/engineering.yaml" {
+	if source["name"] != "engineering" || source["description"] != "Engineering websites." ||
+		source["url"] != "https://bookmarks.example.test/engineering.yaml" {
 		t.Fatalf("updated source = %#v", source)
+	}
+	cleared := run(t, &fakeRunner{},
+		"bookmark", "source", "update", "engineering",
+		"--description", "",
+		"--config", configPath,
+		"--json",
+	)
+	if cleared["ok"] != true {
+		t.Fatalf("source description clear failed: %#v", cleared)
+	}
+	if _, exists := cleared["data"].(map[string]any)["source"].(map[string]any)["description"]; exists {
+		t.Fatalf("source description was not cleared: %#v", cleared)
 	}
 
 	unconfirmed := run(t, &fakeRunner{}, "bookmark", "source", "remove", "engineering", "--config", configPath, "--json")
@@ -564,7 +708,10 @@ func TestHelpLLMExplainsPersistentRoutingAndHumanHandoff(t *testing.T) {
 		"returned URL unchanged",
 		"already supplied an explicit URL",
 		"browser bookmark add/update/remove",
-		"~/.efp/bookmarks.yaml",
+		"require an explicit source",
+		"~/.efp/browser/bookmarks/",
+		"not read implicitly",
+		"Repeat --source",
 		"browser bookmark source list/add/update/remove",
 		"HTTP/HTTPS or local file source registrations",
 		"does not use or write a cache",

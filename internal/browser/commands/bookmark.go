@@ -17,7 +17,7 @@ func bookmarkCmd(o *Opts) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bookmark",
 		Short: "Discover and manage websites for semantic routing",
-		Long:  "Manage authoritative local bookmarks and configured read-only bookmark sources so agents can resolve a requested website before opening it.",
+		Long:  "Manage configured bookmark sources and their bookmarks so agents can resolve a requested website before opening it. Remote sources are read-only; configured local file sources support bookmark CRUD.",
 	}
 	cmd.AddCommand(
 		bookmarkListCmd(o),
@@ -30,10 +30,11 @@ func bookmarkCmd(o *Opts) *cobra.Command {
 }
 
 func bookmarkListCmd(o *Opts) *cobra.Command {
-	return &cobra.Command{
+	var sourceNames []string
+	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Merge local bookmarks and configured bookmark sources",
-		Long:  "Read the managed local bookmark file, load every configured HTTP/HTTPS or local file source live, validate strict bookmark manifests, and merge name, aliases, description, URL, and source fields for agent routing. No cache is read or written.",
+		Short: "Merge bookmarks from configured sources",
+		Long:  "Load configured HTTP/HTTPS or local file sources live, validate strict bookmark manifests, and merge name, aliases, description, URL, and source fields for agent routing. Repeat --source to load only selected source names. No cache is read or written.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := loadBookmarkConfig(o, false)
@@ -45,31 +46,21 @@ func bookmarkListCmd(o *Opts) *cobra.Command {
 					400,
 				))
 			}
-			store, err := bookmarks.DefaultStore()
-			if err != nil {
-				return print(cmd, o, output.Failure("bookmark_store_error", "The local bookmark path could not be resolved.", "Check the current user's home directory.", 500))
-			}
-			localItems, localExists, err := store.Load()
+			sources, err := bookmarks.ValidateSources(bookmarkSources(cfg))
 			if err != nil {
 				return printBookmarkError(cmd, o, err)
 			}
-			sources := bookmarkSources(cfg)
+			sources, err = filterBookmarkSources(sources, sourceNames)
+			if err != nil {
+				return printBookmarkError(cmd, o, err)
+			}
 			ctx, cancel := context.WithTimeout(cmd.Context(), 10*time.Second)
 			defer cancel()
 			result, listErr := bookmarks.NewLister().List(ctx, sources)
-			if localExists {
-				result.Bookmarks = append(localItems, result.Bookmarks...)
-				result.Sources = append([]bookmarks.SourceStatus{{
-					Name: bookmarks.LocalSourceName, OK: true, Count: len(localItems),
-				}}, result.Sources...)
-			}
 			if listErr == nil {
 				return print(cmd, o, output.Success("", result))
 			}
 			var bookmarkErr *bookmarks.Error
-			if errors.As(listErr, &bookmarkErr) && bookmarkErr.Code == "bookmark_sources_unavailable" && localExists {
-				return print(cmd, o, output.Success("", result))
-			}
 			if errors.As(listErr, &bookmarkErr) {
 				env := output.Failure(bookmarkErr.Code, bookmarkErr.Message, bookmarkErr.Hint, bookmarkErr.Status)
 				env.Data = result
@@ -83,6 +74,8 @@ func bookmarkListCmd(o *Opts) *cobra.Command {
 			))
 		},
 	}
+	cmd.Flags().StringArrayVar(&sourceNames, "source", nil, "Configured source name to load; repeat for multiple sources.")
+	return cmd
 }
 
 func bookmarkAddCmd(o *Opts) *cobra.Command {
@@ -90,16 +83,13 @@ func bookmarkAddCmd(o *Opts) *cobra.Command {
 	var aliases []string
 	cmd := &cobra.Command{
 		Use:   "add",
-		Short: "Add a bookmark to the managed local source",
-		Long:  "Add one bookmark to ~/.efp/bookmarks.yaml. Configured HTTP/HTTPS and local file sources are read-only and cannot be modified by this command.",
+		Short: "Add a bookmark to a configured local source",
+		Long:  "Add one bookmark to the configured local file source selected by --source. The manifest and parent directory are created on first write. Remote sources are read-only.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := requireLocalBookmarkSource(source); err != nil {
-				return printBookmarkError(cmd, o, err)
-			}
-			store, err := bookmarks.DefaultStore()
+			store, err := bookmarkStoreForSource(o, source)
 			if err != nil {
-				return print(cmd, o, output.Failure("bookmark_store_error", "The local bookmark path could not be resolved.", "Check the current user's home directory.", 500))
+				return printBookmarkError(cmd, o, err)
 			}
 			item, err := store.Add(bookmarks.Bookmark{
 				Name: name, Aliases: aliases, Description: description, URL: targetURL,
@@ -110,8 +100,8 @@ func bookmarkAddCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", map[string]any{"bookmark": item, "file": store.Path}))
 		},
 	}
-	cmd.Flags().StringVar(&source, "source", bookmarks.LocalSourceName, "Bookmark source to modify; only local is writable.")
-	cmd.Flags().StringVar(&name, "name", "", "Unique local bookmark name.")
+	cmd.Flags().StringVar(&source, "source", "", "Required configured local source name to modify.")
+	cmd.Flags().StringVar(&name, "name", "", "Unique bookmark name within the selected source.")
 	cmd.Flags().StringArrayVar(&aliases, "alias", nil, "Optional bookmark alias; repeat this flag for multiple aliases.")
 	cmd.Flags().StringVar(&description, "description", "", "Required description used by agents for semantic website routing.")
 	cmd.Flags().StringVar(&targetURL, "url", "", "Absolute HTTP or HTTPS website URL.")
@@ -124,13 +114,10 @@ func bookmarkUpdateCmd(o *Opts) *cobra.Command {
 	var clearAliases bool
 	cmd := &cobra.Command{
 		Use:   "update <name>",
-		Short: "Update a managed local bookmark",
-		Long:  "Update selected fields of a bookmark in ~/.efp/bookmarks.yaml. Configured HTTP/HTTPS and local file sources are read-only.",
+		Short: "Update a bookmark in a configured local source",
+		Long:  "Update selected fields of a bookmark in the configured local file source selected by --source. Remote sources are read-only.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := requireLocalBookmarkSource(source); err != nil {
-				return printBookmarkError(cmd, o, err)
-			}
 			aliasChanged := cmd.Flags().Changed("alias")
 			if aliasChanged && clearAliases {
 				return print(cmd, o, output.Failure("invalid_args", "--alias and --clear-aliases cannot be used together.", "Use repeated --alias flags to replace aliases, or --clear-aliases to remove all aliases.", 400))
@@ -155,9 +142,9 @@ func bookmarkUpdateCmd(o *Opts) *cobra.Command {
 			if patch.Name == nil && patch.Aliases == nil && patch.Description == nil && patch.URL == nil {
 				return print(cmd, o, output.Failure("invalid_args", "No bookmark fields were selected for update.", "Pass --name, --alias, --clear-aliases, --description, or --url.", 400))
 			}
-			store, err := bookmarks.DefaultStore()
+			store, err := bookmarkStoreForSource(o, source)
 			if err != nil {
-				return print(cmd, o, output.Failure("bookmark_store_error", "The local bookmark path could not be resolved.", "Check the current user's home directory.", 500))
+				return printBookmarkError(cmd, o, err)
 			}
 			item, err := store.Update(args[0], patch)
 			if err != nil {
@@ -166,10 +153,10 @@ func bookmarkUpdateCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", map[string]any{"bookmark": item, "file": store.Path}))
 		},
 	}
-	cmd.Flags().StringVar(&source, "source", bookmarks.LocalSourceName, "Bookmark source to modify; only local is writable.")
-	cmd.Flags().StringVar(&newName, "name", "", "Replacement unique local bookmark name.")
+	cmd.Flags().StringVar(&source, "source", "", "Required configured local source name to modify.")
+	cmd.Flags().StringVar(&newName, "name", "", "Replacement unique bookmark name within the selected source.")
 	cmd.Flags().StringArrayVar(&aliases, "alias", nil, "Replacement bookmark alias; repeat this flag for multiple aliases.")
-	cmd.Flags().BoolVar(&clearAliases, "clear-aliases", false, "Remove every alias from the local bookmark.")
+	cmd.Flags().BoolVar(&clearAliases, "clear-aliases", false, "Remove every alias from the bookmark.")
 	cmd.Flags().StringVar(&description, "description", "", "Replacement description used by agents for semantic website routing.")
 	cmd.Flags().StringVar(&targetURL, "url", "", "Replacement absolute HTTP or HTTPS website URL.")
 	return cmd
@@ -180,19 +167,16 @@ func bookmarkRemoveCmd(o *Opts) *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
 		Use:   "remove <name>",
-		Short: "Remove a managed local bookmark",
-		Long:  "Remove one bookmark from ~/.efp/bookmarks.yaml after explicit confirmation. Configured HTTP/HTTPS and local file sources are read-only.",
+		Short: "Remove a bookmark from a configured local source",
+		Long:  "Remove one bookmark from the configured local file source selected by --source after explicit confirmation. Remote sources are read-only.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !yes {
-				return print(cmd, o, output.Failure("invalid_args", "--yes required", "Pass --yes after confirming the local bookmark removal.", 400))
+				return print(cmd, o, output.Failure("invalid_args", "--yes required", "Pass --yes after confirming the bookmark removal.", 400))
 			}
-			if err := requireLocalBookmarkSource(source); err != nil {
-				return printBookmarkError(cmd, o, err)
-			}
-			store, err := bookmarks.DefaultStore()
+			store, err := bookmarkStoreForSource(o, source)
 			if err != nil {
-				return print(cmd, o, output.Failure("bookmark_store_error", "The local bookmark path could not be resolved.", "Check the current user's home directory.", 500))
+				return printBookmarkError(cmd, o, err)
 			}
 			item, err := store.Remove(args[0])
 			if err != nil {
@@ -201,8 +185,8 @@ func bookmarkRemoveCmd(o *Opts) *cobra.Command {
 			return print(cmd, o, output.Success("", map[string]any{"removed": item, "file": store.Path}))
 		},
 	}
-	cmd.Flags().StringVar(&source, "source", bookmarks.LocalSourceName, "Bookmark source to modify; only local is writable.")
-	cmd.Flags().BoolVar(&yes, "yes", false, "Confirm removal of the local bookmark.")
+	cmd.Flags().StringVar(&source, "source", "", "Required configured local source name to modify.")
+	cmd.Flags().BoolVar(&yes, "yes", false, "Confirm removal of the bookmark.")
 	return cmd
 }
 
@@ -227,20 +211,100 @@ func defaultConfigMissing(flagPath string, err error) bool {
 func bookmarkSources(cfg config.RootConfig) []bookmarks.Source {
 	sources := make([]bookmarks.Source, 0, len(cfg.Browser.Bookmarks.Sources))
 	for _, source := range cfg.Browser.Bookmarks.Sources {
-		sources = append(sources, bookmarks.Source{Name: source.Name, URL: source.URL})
+		sources = append(sources, bookmarks.Source{Name: source.Name, Description: source.Description, URL: source.URL})
 	}
 	return sources
 }
 
-func requireLocalBookmarkSource(source string) error {
-	if strings.EqualFold(strings.TrimSpace(source), bookmarks.LocalSourceName) {
-		return nil
+func filterBookmarkSources(sources []bookmarks.Source, requested []string) ([]bookmarks.Source, error) {
+	if len(requested) == 0 {
+		return sources, nil
 	}
-	return &bookmarks.Error{
-		Code:    "bookmark_source_read_only",
-		Message: "Configured bookmark sources are read-only.",
-		Hint:    "Modify the source manifest at its configured URL or file path, or omit --source to write ~/.efp/bookmarks.yaml.",
-		Status:  409,
+	wanted := make(map[string]struct{}, len(requested))
+	for _, name := range requested {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return nil, &bookmarks.Error{
+				Code:    "bookmark_source_not_found",
+				Message: "The requested bookmark source name is empty.",
+				Hint:    "Run browser bookmark source list --json and pass an existing source name to --source.",
+				Status:  404,
+			}
+		}
+		wanted[strings.ToLower(name)] = struct{}{}
+	}
+	filtered := make([]bookmarks.Source, 0, len(wanted))
+	for _, source := range sources {
+		key := strings.ToLower(source.Name)
+		if _, ok := wanted[key]; ok {
+			filtered = append(filtered, source)
+			delete(wanted, key)
+		}
+	}
+	if len(wanted) > 0 {
+		var missing string
+		for _, name := range requested {
+			if _, ok := wanted[strings.ToLower(strings.TrimSpace(name))]; ok {
+				missing = strings.TrimSpace(name)
+				break
+			}
+		}
+		return nil, &bookmarks.Error{
+			Code:    "bookmark_source_not_found",
+			Message: "The bookmark source was not found: " + missing,
+			Hint:    "Run browser bookmark source list --json and choose an existing source name.",
+			Status:  404,
+		}
+	}
+	return filtered, nil
+}
+
+func bookmarkStoreForSource(o *Opts, sourceName string) (bookmarks.Store, error) {
+	sourceName = strings.TrimSpace(sourceName)
+	if sourceName == "" {
+		return bookmarks.Store{}, &bookmarks.Error{
+			Code:    "bookmark_source_required",
+			Message: "A bookmark source is required.",
+			Hint:    "Pass --source <name> for a configured local file source. List sources with browser bookmark source list --json.",
+			Status:  400,
+		}
+	}
+	cfg, err := loadBookmarkConfig(o, false)
+	if err != nil {
+		return bookmarks.Store{}, &bookmarks.Error{
+			Code:    "config_error",
+			Message: "The EFP config file could not be loaded.",
+			Hint:    "Check --config, EFP_CONFIG, or ~/.efp/config.yaml.",
+			Status:  400,
+		}
+	}
+	sources, err := bookmarks.ValidateSources(bookmarkSources(cfg))
+	if err != nil {
+		return bookmarks.Store{}, err
+	}
+	for _, source := range sources {
+		if !strings.EqualFold(source.Name, sourceName) {
+			continue
+		}
+		path, local, err := bookmarks.LocalSourcePath(source)
+		if err != nil {
+			return bookmarks.Store{}, err
+		}
+		if !local {
+			return bookmarks.Store{}, &bookmarks.Error{
+				Code:    "bookmark_source_read_only",
+				Message: "Remote bookmark sources are read-only: " + source.Name,
+				Hint:    "Choose a configured local file source, or modify the remote manifest at its origin.",
+				Status:  409,
+			}
+		}
+		return bookmarks.Store{Path: path, Source: source.Name}, nil
+	}
+	return bookmarks.Store{}, &bookmarks.Error{
+		Code:    "bookmark_source_not_found",
+		Message: "The bookmark source was not found: " + sourceName,
+		Hint:    "Run browser bookmark source list --json and choose an existing source name.",
+		Status:  404,
 	}
 }
 
@@ -249,5 +313,5 @@ func printBookmarkError(cmd *cobra.Command, o *Opts, err error) error {
 	if errors.As(err, &bookmarkErr) {
 		return print(cmd, o, output.Failure(bookmarkErr.Code, bookmarkErr.Message, bookmarkErr.Hint, bookmarkErr.Status))
 	}
-	return print(cmd, o, output.Failure("bookmark_error", "The bookmark operation failed.", "Inspect ~/.efp/bookmarks.yaml and retry.", 500))
+	return print(cmd, o, output.Failure("bookmark_error", "The bookmark operation failed.", "Inspect the configured bookmark source and retry.", 500))
 }

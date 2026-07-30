@@ -100,6 +100,22 @@ func TestLoadFromEnvStringSlice(t *testing.T) {
 	}
 }
 
+func TestLoadFromEnvBrowserBookmarkSourceDescription(t *testing.T) {
+	cfg, managed := LoadFromEnv(mapLookup(map[string]string{
+		"EFP_BROWSER_BOOKMARKS_SOURCES_0_NAME":        "personal",
+		"EFP_BROWSER_BOOKMARKS_SOURCES_0_DESCRIPTION": "Personal websites.",
+		"EFP_BROWSER_BOOKMARKS_SOURCES_0_URL":         "~/.efp/browser/bookmarks/personal.yaml",
+	}))
+	if !managed || len(cfg.Browser.Bookmarks.Sources) != 1 {
+		t.Fatalf("bookmark sources = %#v managed=%v", cfg.Browser.Bookmarks.Sources, managed)
+	}
+	source := cfg.Browser.Bookmarks.Sources[0]
+	if source.Name != "personal" || source.Description != "Personal websites." ||
+		source.URL != "~/.efp/browser/bookmarks/personal.yaml" {
+		t.Fatalf("bookmark source = %#v", source)
+	}
+}
+
 func TestLoadFromEnvNotManagedWhenNoVars(t *testing.T) {
 	cfg, managed := LoadFromEnv(mapLookup(map[string]string{}))
 	if managed {

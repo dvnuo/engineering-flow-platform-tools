@@ -3,6 +3,7 @@ package bookmarks
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,12 +34,37 @@ func (s Store) Load() ([]Bookmark, bool, error) {
 	if source == "" {
 		return nil, false, storeError("bookmark_store_error", "The bookmark source name is empty.", 500)
 	}
-	body, err := os.ReadFile(s.Path)
+	file, err := os.Open(s.Path)
 	if errors.Is(err, os.ErrNotExist) {
 		return []Bookmark{}, false, nil
 	}
 	if err != nil {
 		return nil, false, storeError("bookmark_store_error", "The bookmark source file could not be read.", 500)
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return nil, true, storeError("bookmark_store_error", "The bookmark source file could not be inspected.", 500)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, true, &Error{
+			Code:    "bookmark_store_invalid",
+			Message: "The bookmark source must be a regular file.",
+			Hint:    "Configure --source to use a regular JSON or YAML bookmark manifest.",
+			Status:  400,
+		}
+	}
+	body, err := io.ReadAll(io.LimitReader(file, maxSourceBytes+1))
+	if err != nil {
+		return nil, true, storeError("bookmark_store_error", "The bookmark source file could not be read.", 500)
+	}
+	if len(body) > maxSourceBytes {
+		return nil, true, &Error{
+			Code:    "bookmark_store_invalid",
+			Message: "The bookmark source file exceeds 1 MiB.",
+			Hint:    "Reduce the configured local manifest to 1 MiB or less.",
+			Status:  400,
+		}
 	}
 	items, err := parseManifest(source, body)
 	if err != nil {
@@ -71,7 +97,7 @@ func (s Store) Add(input Bookmark) (Bookmark, error) {
 			return Bookmark{}, &Error{
 				Code:    "bookmark_exists",
 				Message: "A bookmark with this name already exists in the selected source.",
-				Hint:    "Use browser bookmark update <name> --source <source> --json to change the existing bookmark.",
+				Hint:    fmt.Sprintf("Use browser bookmark update <name> --source %q --json to change the existing bookmark.", strings.TrimSpace(s.Source)),
 				Status:  409,
 			}
 		}

@@ -1,6 +1,7 @@
 package bookmarks
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -87,6 +88,26 @@ func TestStoreMissingAndMalformedFile(t *testing.T) {
 	_, exists, err = store.Load()
 	if !exists {
 		t.Fatal("malformed file should still be reported as existing")
+	}
+	assertBookmarkErrorCode(t, err, "bookmark_store_invalid")
+}
+
+func TestStoreRejectsNonRegularAndOversizedFiles(t *testing.T) {
+	store := Store{Path: t.TempDir(), Source: "personal"}
+	_, exists, err := store.Load()
+	if !exists {
+		t.Fatal("directory source should be reported as existing")
+	}
+	assertBookmarkErrorCode(t, err, "bookmark_store_invalid")
+
+	path := filepath.Join(t.TempDir(), "bookmarks.yaml")
+	if err := os.WriteFile(path, bytes.Repeat([]byte("x"), maxSourceBytes+1), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store.Path = path
+	_, exists, err = store.Load()
+	if !exists {
+		t.Fatal("oversized source should be reported as existing")
 	}
 	assertBookmarkErrorCode(t, err, "bookmark_store_invalid")
 }

@@ -50,10 +50,6 @@ func bookmarkListCmd(o *Opts) *cobra.Command {
 			if err != nil {
 				return printBookmarkError(cmd, o, err)
 			}
-			sources, err = bookmarks.ValidateSources(sources)
-			if err != nil {
-				return printBookmarkError(cmd, o, err)
-			}
 			ctx, cancel := context.WithTimeout(cmd.Context(), 10*time.Second)
 			defer cancel()
 			result, listErr := bookmarks.NewLister().List(ctx, sources)

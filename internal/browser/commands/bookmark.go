@@ -46,11 +46,11 @@ func bookmarkListCmd(o *Opts) *cobra.Command {
 					400,
 				))
 			}
-			sources, err := bookmarks.ValidateSources(bookmarkSources(cfg))
+			sources, err := filterBookmarkSources(bookmarkSources(cfg), sourceNames)
 			if err != nil {
 				return printBookmarkError(cmd, o, err)
 			}
-			sources, err = filterBookmarkSources(sources, sourceNames)
+			sources, err = bookmarks.ValidateSources(sources)
 			if err != nil {
 				return printBookmarkError(cmd, o, err)
 			}
@@ -225,26 +225,27 @@ func filterBookmarkSources(sources []bookmarks.Source, requested []string) ([]bo
 		name = strings.TrimSpace(name)
 		if name == "" {
 			return nil, &bookmarks.Error{
-				Code:    "bookmark_source_not_found",
-				Message: "The requested bookmark source name is empty.",
-				Hint:    "Run browser bookmark source list --json and pass an existing source name to --source.",
-				Status:  404,
+				Code:    "invalid_args",
+				Message: "The --source value cannot be empty.",
+				Hint:    "Pass a configured source name to --source, or omit the flag to load all sources.",
+				Status:  400,
 			}
 		}
 		wanted[strings.ToLower(name)] = struct{}{}
 	}
 	filtered := make([]bookmarks.Source, 0, len(wanted))
+	found := make(map[string]struct{}, len(wanted))
 	for _, source := range sources {
-		key := strings.ToLower(source.Name)
+		key := strings.ToLower(strings.TrimSpace(source.Name))
 		if _, ok := wanted[key]; ok {
 			filtered = append(filtered, source)
-			delete(wanted, key)
+			found[key] = struct{}{}
 		}
 	}
-	if len(wanted) > 0 {
+	if len(found) != len(wanted) {
 		var missing string
 		for _, name := range requested {
-			if _, ok := wanted[strings.ToLower(strings.TrimSpace(name))]; ok {
+			if _, ok := found[strings.ToLower(strings.TrimSpace(name))]; !ok {
 				missing = strings.TrimSpace(name)
 				break
 			}

@@ -134,7 +134,8 @@ func TestBookmarkListFiltersConfiguredSources(t *testing.T) {
 		}
 	}
 	configPath := filepath.Join(dir, "config.yaml")
-	configBody := "browser:\n  bookmarks:\n    sources:\n      - name: first\n        url: " + firstPath + "\n      - name: second\n        description: Secondary websites.\n        url: " + secondPath + "\n"
+	configBody := "browser:\n  bookmarks:\n    sources:\n      - name: first\n        url: " + firstPath + "\n      - name: \" second \"\n        description: Secondary websites.\n        url: " + secondPath + "\n"
+	configBody += "      - name: broken\n        url: relative-path.yaml\n"
 	if err := os.WriteFile(configPath, []byte(configBody), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -162,6 +163,12 @@ func TestBookmarkListFiltersConfiguredSources(t *testing.T) {
 	missing := run(t, &fakeRunner{}, "bookmark", "list", "--source", "missing", "--config", configPath, "--json")
 	if missing["ok"] != false || missing["error"].(map[string]any)["code"] != "bookmark_source_not_found" {
 		t.Fatalf("unknown source filter = %#v", missing)
+	}
+
+	empty := run(t, &fakeRunner{}, "bookmark", "list", "--source", "", "--config", configPath, "--json")
+	if empty["ok"] != false || empty["error"].(map[string]any)["code"] != "invalid_args" ||
+		empty["error"].(map[string]any)["status"] != float64(400) {
+		t.Fatalf("empty source filter = %#v", empty)
 	}
 }
 

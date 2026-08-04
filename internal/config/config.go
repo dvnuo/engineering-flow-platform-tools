@@ -1,6 +1,10 @@
 package config
 
-import "strings"
+import (
+	"strings"
+
+	"engineering-flow-platform-tools/internal/configenv"
+)
 
 type RootConfig struct {
 	Version    int           `json:"version" yaml:"version"`
@@ -11,6 +15,8 @@ type RootConfig struct {
 	Browser    BrowserConfig `json:"browser" yaml:"browser"`
 	Visual     VisualConfig  `json:"visual" yaml:"visual"`
 	Mobile     MobileConfig  `json:"mobile-auto" yaml:"mobile-auto"`
+
+	envSnapshot *configenv.Snapshot
 }
 
 type BrowserConfig struct {

@@ -176,7 +176,7 @@ aws:
 	}
 }
 
-func TestSaveWithOptionsReplacesReferencesOnlyInExplicitNode(t *testing.T) {
+func TestSaveReplacesOnlyChangedReferencedFields(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	t.Setenv("TOOLS_AWS_USERNAME", "resolved-aws-user")
 	t.Setenv("TOOLS_AWS_PASSWORD", "resolved-aws-password")
@@ -203,23 +203,107 @@ jira:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := SaveWithOptions(path, cfg, SaveOptions{ReplaceEnvReferencesIn: []string{"aws"}}); err != nil {
+	cfg.AWS.Username = "replacement-aws-user"
+	if err := Save(path, cfg); err != nil {
 		t.Fatal(err)
 	}
 
 	text := string(mustReadFile(t, path))
-	for _, oldReference := range []string{"${TOOLS_AWS_USERNAME}", "%TOOLS_AWS_PASSWORD%"} {
-		if strings.Contains(text, oldReference) {
-			t.Fatalf("explicit AWS update retained reference %q:\n%s", oldReference, text)
-		}
+	if strings.Contains(text, "${TOOLS_AWS_USERNAME}") || !strings.Contains(text, "replacement-aws-user") {
+		t.Fatalf("changed AWS username reference was not replaced:\n%s", text)
 	}
-	for _, literal := range []string{"resolved-aws-user", "resolved-aws-password"} {
-		if !strings.Contains(text, literal) {
-			t.Fatalf("explicit AWS update did not persist %q:\n%s", literal, text)
-		}
+	if !strings.Contains(text, "%TOOLS_AWS_PASSWORD%") || strings.Contains(text, "resolved-aws-password") {
+		t.Fatalf("unchanged AWS password reference was not preserved:\n%s", text)
 	}
 	if !strings.Contains(text, "${TOOLS_JIRA_USERNAME}") || strings.Contains(text, "resolved-jira-user") {
 		t.Fatalf("unrelated Jira reference was not preserved:\n%s", text)
+	}
+}
+
+func TestSaveMatchesReferencedSequenceItemsByName(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TOOLS_JIRA_USER_A", "resolved-user-a")
+	t.Setenv("TOOLS_JIRA_USER_B", "resolved-user-b")
+	if err := os.WriteFile(path, []byte(`version: 1
+jira:
+  default_instance: a
+  instances:
+    - name: a
+      base_url: https://a.example.test
+      auth:
+        username: "${TOOLS_JIRA_USER_A}"
+    - name: b
+      base_url: https://b.example.test
+      auth:
+        username: "%TOOLS_JIRA_USER_B%"
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Jira.Instances[1].BaseURL = "https://new-b.example.test"
+	cfg.Jira.Instances[0], cfg.Jira.Instances[1] = cfg.Jira.Instances[1], cfg.Jira.Instances[0]
+	t.Setenv("TOOLS_JIRA_USER_A", "")
+	t.Setenv("TOOLS_JIRA_USER_B", "rotated-user-b")
+	if err := Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	var raw RootConfig
+	if err := yaml.Unmarshal(mustReadFile(t, path), &raw); err != nil {
+		t.Fatal(err)
+	}
+	if len(raw.Jira.Instances) != 2 {
+		t.Fatalf("instances=%#v", raw.Jira.Instances)
+	}
+	first, second := raw.Jira.Instances[0], raw.Jira.Instances[1]
+	if first.Name != "b" || first.BaseURL != "https://new-b.example.test" || first.Auth.Username != "%TOOLS_JIRA_USER_B%" {
+		t.Fatalf("reference did not follow instance b: %#v", first)
+	}
+	if second.Name != "a" || second.Auth.Username != "${TOOLS_JIRA_USER_A}" {
+		t.Fatalf("reference did not follow instance a: %#v", second)
+	}
+}
+
+func TestSavePreservesReferenceThroughAuthTokenNormalization(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TOOLS_JENKINS_TOKEN", "resolved-jenkins-token")
+	if err := os.WriteFile(path, []byte(`version: 1
+jenkins:
+  default_instance: ci
+  instances:
+    - name: ci
+      base_url: https://jenkins.example.test
+      auth:
+        username: build-user
+        token: "${TOOLS_JENKINS_TOKEN}"
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Jenkins.Instances[0].Auth.APIKey != "resolved-jenkins-token" || cfg.Jenkins.Instances[0].Auth.Token != "" {
+		t.Fatalf("legacy token was not normalized: %#v", cfg.Jenkins.Instances[0].Auth)
+	}
+	cfg.Browser.Bookmarks.Sources = []BrowserBookmarkSource{{Name: "company", URL: "https://bookmarks.example.test"}}
+	t.Setenv("TOOLS_JENKINS_TOKEN", "")
+	if err := Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	var raw RootConfig
+	if err := yaml.Unmarshal(mustReadFile(t, path), &raw); err != nil {
+		t.Fatal(err)
+	}
+	auth := raw.Jenkins.Instances[0].Auth
+	if auth.Token != "${TOOLS_JENKINS_TOKEN}" || auth.APIKey != "" {
+		t.Fatalf("normalized auth materialized the referenced token: %#v", auth)
 	}
 }
 

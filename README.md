@@ -262,16 +262,21 @@ Config node ownership:
 - `jira`: Jira instances, defaults, auth, TLS, and Zephyr settings.
 - `confluence`: Confluence instances, defaults, auth, and TLS settings.
 - `jenkins`: Jenkins instances, defaults, auth, TLS, and crumb behavior.
+- `browser`: browser bookmark sources and related browser configuration.
 - `copilot`: GitHub/Copilot authentication shared by commands that use Copilot-backed APIs.
 - `inspect_image`: inspect-image API defaults, model defaults, image limits, and privacy settings.
+- `ai_platform`: AI Platform endpoints, authentication, and token-file settings.
 - `aws`: AWS authorization settings used by `aws-auth login`.
 - `visual`: offline artifact template directory and default render behavior.
+- `mobile-auto`: mobile provider, BrowserStack, proxy, and local tunnel settings.
 
-## AWS Auth Examples
+## Environment Variable References
 
-`config.yaml` string fields can reference environment variables with exact
-`${NAME}` or `%NAME%` placeholders. On Windows, credentials can stay in the
-process environment while the YAML contains only references:
+All tool-owned `config.yaml` string fields can reference environment variables
+with exact `${NAME}` or `%NAME%` placeholders, including Jira, Confluence,
+Jenkins, AWS Auth, Browser, Visual, Mobile Auto, Copilot, inspect-image, and AI
+Platform settings. On Windows, credentials can stay in the process environment
+while the YAML contains only references:
 
 ```yaml
 aws:
@@ -286,6 +291,8 @@ $env:AWS_AUTH_USERNAME = "GB-SVC-XXX-XXX"
 $env:AWS_AUTH_PASSWORD = "your-password"
 aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json
 ```
+
+## AWS Auth Examples
 
 ```bash
 printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json

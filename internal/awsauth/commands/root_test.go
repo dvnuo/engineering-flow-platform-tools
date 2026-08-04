@@ -192,11 +192,11 @@ jira:
 	obj := runJSONInput(
 		t,
 		&fakeRunner{},
-		"environment-password\n",
+		"replacement-password\n",
 		"--config", cfg,
 		"auth", "login",
 		"--domain", "HBEU",
-		"--username", "environment-user",
+		"--username", "replacement-user",
 		"--password-stdin",
 		"--json",
 	)
@@ -213,7 +213,7 @@ jira:
 			t.Fatalf("explicit AWS auth update retained reference %q:\n%s", oldReference, text)
 		}
 	}
-	for _, literal := range []string{"environment-user", "environment-password"} {
+	for _, literal := range []string{"replacement-user", "replacement-password"} {
 		if !strings.Contains(text, literal) {
 			t.Fatalf("explicit AWS auth update did not persist %q:\n%s", literal, text)
 		}

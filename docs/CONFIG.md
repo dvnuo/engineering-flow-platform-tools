@@ -11,12 +11,22 @@ Legacy environment overrides are still accepted for compatibility:
 
 ## Environment Variable References
 
-String values in the shared YAML config can reference an environment variable
+String values in the unified YAML config can reference an environment variable
 by using an exact `${NAME}` or `%NAME%` placeholder. The `${NAME}` form is
 portable; the quoted `%NAME%` form is also supported for Windows-authored
-configuration. References are resolved in memory and are preserved when an
-unrelated command writes `config.yaml`, so resolved credentials are not
-materialized into the file.
+configuration. This applies consistently to every tool-owned node, including
+`jira`, `confluence`, `jenkins`, `aws`, `browser`, `visual`, `mobile-auto`,
+`copilot`, `inspect_image`, and `ai_platform`.
+
+References are resolved only in memory. Config loaders retain a resolved
+baseline so later saves follow field-level behavior:
+
+- An unchanged field keeps its original placeholder even if the environment is
+  rotated or unset before the save.
+- Changing a referenced field replaces only that field with the new value.
+- Unrelated references in the same top-level node remain placeholders.
+- Named list entries, such as product instances and bookmark sources, retain
+  their own references when entries are reordered or removed.
 
 For example, `aws-auth` can read its username and password from Windows
 environment variables:
@@ -38,9 +48,10 @@ aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json
 ```
 
 The referenced variable must be set to a non-empty value or config loading
-fails with `config_env_missing`. Use names such as `AWS_AUTH_USERNAME` rather
-than recognized `EFP_*` config variables: any recognized `EFP_*` variable
-activates the separate whole-config environment mode.
+fails with `config_env_missing`. For nodes read through the shared product
+loader, use names such as `AWS_AUTH_USERNAME` rather than recognized `EFP_*`
+config variables: any recognized `EFP_*` variable activates the separate
+whole-config environment mode.
 
 ## YAML Structure
 

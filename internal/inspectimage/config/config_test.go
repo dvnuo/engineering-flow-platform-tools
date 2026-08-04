@@ -1,12 +1,14 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 
+	"engineering-flow-platform-tools/internal/configenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -156,6 +158,93 @@ inspect_image:
 	}
 }
 
+func TestUnifiedConfigResolvesAndPreservesEnvironmentReferences(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	copilotTokenPath := filepath.Join(dir, "copilot_token")
+	aiTokenPath := filepath.Join(dir, "ai_token")
+	t.Setenv("TOOLS_GITHUB_TOKEN", "resolved-github-token")
+	t.Setenv("TOOLS_AI_USERNAME", "resolved-ai-user")
+	t.Setenv("TOOLS_AI_PASSWORD", "resolved-ai-password")
+	body := []byte(`
+version: 1
+copilot:
+  provider: github_copilot_plugin
+  auth:
+    method: device_code
+    github_access_token: "${TOOLS_GITHUB_TOKEN}"
+    copilot_token_file: ` + copilotTokenPath + `
+inspect_image:
+  provider: ai_platform
+ai_platform:
+  auth:
+    username: "%TOOLS_AI_USERNAME%"
+    password: "${TOOLS_AI_PASSWORD}"
+    token_file: ` + aiTokenPath + `
+`)
+	if err := os.WriteFile(cfgPath, body, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Auth.GitHubAccessToken != "resolved-github-token" || cfg.AIPlatform.Auth.Username != "resolved-ai-user" || cfg.AIPlatform.Auth.Password != "resolved-ai-password" {
+		t.Fatalf("environment references were not resolved: %#v %#v", cfg.Auth, cfg.AIPlatform.Auth)
+	}
+	cfg.Defaults.Model = "updated-model"
+	t.Setenv("TOOLS_GITHUB_TOKEN", "")
+	t.Setenv("TOOLS_AI_USERNAME", "rotated-ai-user")
+	t.Setenv("TOOLS_AI_PASSWORD", "")
+	if err := Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	text := string(mustReadConfigFile(t, cfgPath))
+	for _, reference := range []string{"${TOOLS_GITHUB_TOKEN}", "%TOOLS_AI_USERNAME%", "${TOOLS_AI_PASSWORD}"} {
+		if !strings.Contains(text, reference) {
+			t.Fatalf("environment reference %q was not preserved:\n%s", reference, text)
+		}
+	}
+	for _, resolved := range []string{"resolved-github-token", "resolved-ai-user", "resolved-ai-password", "rotated-ai-user"} {
+		if strings.Contains(text, resolved) {
+			t.Fatalf("resolved value %q was materialized:\n%s", resolved, text)
+		}
+	}
+	if !strings.Contains(text, "model: updated-model") {
+		t.Fatalf("unrelated config update was not saved:\n%s", text)
+	}
+
+	cfg.AIPlatform.Auth.Username = "replacement-ai-user"
+	if err := Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	text = string(mustReadConfigFile(t, cfgPath))
+	if strings.Contains(text, "%TOOLS_AI_USERNAME%") || !strings.Contains(text, "replacement-ai-user") {
+		t.Fatalf("changed AI Platform username reference was not replaced:\n%s", text)
+	}
+	if !strings.Contains(text, "${TOOLS_AI_PASSWORD}") || !strings.Contains(text, "${TOOLS_GITHUB_TOKEN}") {
+		t.Fatalf("unchanged references were not preserved:\n%s", text)
+	}
+}
+
+func TestUnifiedConfigRejectsMissingEnvironmentReference(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TOOLS_MISSING_GITHUB_TOKEN", "")
+	if err := os.WriteFile(path, []byte(`copilot:
+  auth:
+    github_access_token: "${TOOLS_MISSING_GITHUB_TOKEN}"
+inspect_image: {}
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Load(path)
+	var missing *configenv.MissingEnvReferenceError
+	if !errors.As(err, &missing) || missing.Name != "TOOLS_MISSING_GITHUB_TOKEN" {
+		t.Fatalf("expected missing environment reference error, got %v", err)
+	}
+}
+
 func TestUnifiedConfigReportsInvalidCopilotTokenFile(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.yaml")
@@ -300,4 +389,13 @@ jira:
 	if !strings.Contains(string(b), "keep jira comment") || !strings.Contains(string(b), "keep default comment") {
 		t.Fatalf("comments were not preserved:\n%s", string(b))
 	}
+}
+
+func mustReadConfigFile(t *testing.T, path string) []byte {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"engineering-flow-platform-tools/internal/configenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -130,7 +131,7 @@ aws:
 	}
 
 	_, err := Load(path)
-	var missing *MissingEnvReferenceError
+	var missing *configenv.MissingEnvReferenceError
 	if !errors.As(err, &missing) || missing.Name != "TOOLS_AWS_MISSING_PASSWORD" {
 		t.Fatalf("expected missing environment reference error, got %v", err)
 	}

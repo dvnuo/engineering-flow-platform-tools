@@ -62,6 +62,15 @@ func SaveShared(flagPath string, c RootConfig) error {
 	return Save(p, c)
 }
 
+// SaveOptions controls how existing environment references are handled while
+// writing managed top-level config nodes.
+type SaveOptions struct {
+	// ReplaceEnvReferencesIn lists top-level YAML keys whose resolved values
+	// should be written literally. Other nodes preserve existing placeholders.
+	// Use this for an explicit update such as aws-auth auth login.
+	ReplaceEnvReferencesIn []string
+}
+
 func Load(path string) (RootConfig, error) {
 	var c RootConfig
 	b, err := os.ReadFile(path)
@@ -81,6 +90,10 @@ func Load(path string) (RootConfig, error) {
 }
 
 func Save(path string, c RootConfig) error {
+	return SaveWithOptions(path, c, SaveOptions{})
+}
+
+func SaveWithOptions(path string, c RootConfig, options SaveOptions) error {
 	if path == "" {
 		return errors.New("config_path_empty")
 	}
@@ -90,29 +103,29 @@ func Save(path string, c RootConfig) error {
 	if version == 0 {
 		version = 1
 	}
-	if err := setMappingValue(root, "version", version); err != nil {
+	if err := setMappingValue(root, "version", version, options.preserveEnvReferencesIn("version")); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "jira", c.Jira); err != nil {
+	if err := setMappingValue(root, "jira", c.Jira, options.preserveEnvReferencesIn("jira")); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "confluence", c.Confluence); err != nil {
+	if err := setMappingValue(root, "confluence", c.Confluence, options.preserveEnvReferencesIn("confluence")); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "jenkins", c.Jenkins); err != nil {
+	if err := setMappingValue(root, "jenkins", c.Jenkins, options.preserveEnvReferencesIn("jenkins")); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "aws", c.AWS); err != nil {
+	if err := setMappingValue(root, "aws", c.AWS, options.preserveEnvReferencesIn("aws")); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "browser", c.Browser); err != nil {
+	if err := setMappingValue(root, "browser", c.Browser, options.preserveEnvReferencesIn("browser")); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "visual", c.Visual); err != nil {
+	if err := setMappingValue(root, "visual", c.Visual, options.preserveEnvReferencesIn("visual")); err != nil {
 		return err
 	}
 	deleteMappingValue(root, "mobile")
-	if err := setMappingValue(root, "mobile-auto", c.Mobile); err != nil {
+	if err := setMappingValue(root, "mobile-auto", c.Mobile, options.preserveEnvReferencesIn("mobile-auto")); err != nil {
 		return err
 	}
 	b, err := yaml.Marshal(doc)
@@ -123,6 +136,15 @@ func Save(path string, c RootConfig) error {
 		return err
 	}
 	return nil
+}
+
+func (o SaveOptions) preserveEnvReferencesIn(key string) bool {
+	for _, replaceKey := range o.ReplaceEnvReferencesIn {
+		if replaceKey == key {
+			return false
+		}
+	}
+	return true
 }
 
 func loadYAMLDocument(path string) (*yaml.Node, *yaml.Node) {
@@ -140,14 +162,14 @@ func loadYAMLDocument(path string) (*yaml.Node, *yaml.Node) {
 	return &parsed, parsed.Content[0]
 }
 
-func setMappingValue(root *yaml.Node, key string, value any) error {
+func setMappingValue(root *yaml.Node, key string, value any, preserveEnvReferences bool) error {
 	newValue, err := yamlValueNode(value)
 	if err != nil {
 		return err
 	}
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		if root.Content[i].Value == key {
-			root.Content[i+1] = mergeNodeComments(root.Content[i+1], newValue)
+			root.Content[i+1] = mergeNodeComments(root.Content[i+1], newValue, preserveEnvReferences)
 			return nil
 		}
 	}
@@ -179,7 +201,7 @@ func yamlValueNode(value any) (*yaml.Node, error) {
 	return doc.Content[0], nil
 }
 
-func mergeNodeComments(old, new *yaml.Node) *yaml.Node {
+func mergeNodeComments(old, new *yaml.Node, preserveEnvReferences bool) *yaml.Node {
 	if old == nil || new == nil {
 		return new
 	}
@@ -187,7 +209,7 @@ func mergeNodeComments(old, new *yaml.Node) *yaml.Node {
 	if old.Kind == new.Kind && old.Kind == yaml.ScalarNode && old.Style != 0 {
 		new.Style = old.Style
 	}
-	if old.Kind == yaml.ScalarNode && new.Kind == yaml.ScalarNode && old.Tag == "!!str" && new.Tag == "!!str" {
+	if preserveEnvReferences && old.Kind == yaml.ScalarNode && new.Kind == yaml.ScalarNode && old.Tag == "!!str" && new.Tag == "!!str" {
 		if reference, ok := preserveEnvReference(old.Value, new.Value, os.LookupEnv); ok {
 			new.Value = reference
 			new.Style = old.Style
@@ -207,12 +229,12 @@ func mergeNodeComments(old, new *yaml.Node) *yaml.Node {
 				copyComments(oldKey, new.Content[i])
 			}
 			if oldValue := oldValues[key]; oldValue != nil {
-				new.Content[i+1] = mergeNodeComments(oldValue, new.Content[i+1])
+				new.Content[i+1] = mergeNodeComments(oldValue, new.Content[i+1], preserveEnvReferences)
 			}
 		}
 	case yaml.SequenceNode:
 		for i := 0; i < len(new.Content) && i < len(old.Content); i++ {
-			new.Content[i] = mergeNodeComments(old.Content[i], new.Content[i])
+			new.Content[i] = mergeNodeComments(old.Content[i], new.Content[i], preserveEnvReferences)
 		}
 	}
 	return new

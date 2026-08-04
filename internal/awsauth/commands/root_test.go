@@ -169,6 +169,60 @@ aws:
 	}
 }
 
+func TestAuthLoginExplicitlyReplacesAWSReferencesOnly(t *testing.T) {
+	t.Setenv("TOOLS_AWS_USERNAME", "environment-user")
+	t.Setenv("TOOLS_AWS_PASSWORD", "environment-password")
+	t.Setenv("TOOLS_JIRA_USERNAME", "jira-environment-user")
+	cfg := writeConfig(t, `
+version: 1
+aws:
+  enabled: true
+  domain: HBEU
+  username: "${TOOLS_AWS_USERNAME}"
+  password: "%TOOLS_AWS_PASSWORD%"
+jira:
+  default_instance: main
+  instances:
+    - name: main
+      base_url: https://jira.example.test
+      auth:
+        username: "${TOOLS_JIRA_USERNAME}"
+        password: jira-password
+`)
+	obj := runJSONInput(
+		t,
+		&fakeRunner{},
+		"environment-password\n",
+		"--config", cfg,
+		"auth", "login",
+		"--domain", "HBEU",
+		"--username", "environment-user",
+		"--password-stdin",
+		"--json",
+	)
+	if obj["ok"] != true {
+		t.Fatalf("expected ok: %#v", obj)
+	}
+	b, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, oldReference := range []string{"${TOOLS_AWS_USERNAME}", "%TOOLS_AWS_PASSWORD%"} {
+		if strings.Contains(text, oldReference) {
+			t.Fatalf("explicit AWS auth update retained reference %q:\n%s", oldReference, text)
+		}
+	}
+	for _, literal := range []string{"environment-user", "environment-password"} {
+		if !strings.Contains(text, literal) {
+			t.Fatalf("explicit AWS auth update did not persist %q:\n%s", literal, text)
+		}
+	}
+	if !strings.Contains(text, "${TOOLS_JIRA_USERNAME}") || strings.Contains(text, "jira-environment-user") {
+		t.Fatalf("unrelated Jira reference was not preserved:\n%s", text)
+	}
+}
+
 func TestLoginRunsAdfsAssumeWithCustomProfile(t *testing.T) {
 	cfg := writeConfig(t, `
 version: 1

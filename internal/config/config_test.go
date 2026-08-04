@@ -172,6 +172,53 @@ aws:
 	}
 }
 
+func TestSaveWithOptionsReplacesReferencesOnlyInExplicitNode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TOOLS_AWS_USERNAME", "resolved-aws-user")
+	t.Setenv("TOOLS_AWS_PASSWORD", "resolved-aws-password")
+	t.Setenv("TOOLS_JIRA_USERNAME", "resolved-jira-user")
+	if err := os.WriteFile(path, []byte(`version: 1
+aws:
+  enabled: true
+  domain: HBEU
+  username: "${TOOLS_AWS_USERNAME}"
+  password: "%TOOLS_AWS_PASSWORD%"
+jira:
+  default_instance: main
+  instances:
+    - name: main
+      base_url: https://jira.example.test
+      auth:
+        username: "${TOOLS_JIRA_USERNAME}"
+        password: jira-password
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveWithOptions(path, cfg, SaveOptions{ReplaceEnvReferencesIn: []string{"aws"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	text := string(mustReadFile(t, path))
+	for _, oldReference := range []string{"${TOOLS_AWS_USERNAME}", "%TOOLS_AWS_PASSWORD%"} {
+		if strings.Contains(text, oldReference) {
+			t.Fatalf("explicit AWS update retained reference %q:\n%s", oldReference, text)
+		}
+	}
+	for _, literal := range []string{"resolved-aws-user", "resolved-aws-password"} {
+		if !strings.Contains(text, literal) {
+			t.Fatalf("explicit AWS update did not persist %q:\n%s", literal, text)
+		}
+	}
+	if !strings.Contains(text, "${TOOLS_JIRA_USERNAME}") || strings.Contains(text, "resolved-jira-user") {
+		t.Fatalf("unrelated Jira reference was not preserved:\n%s", text)
+	}
+}
+
 func TestSaveSharedRefusesWhenEnvManaged(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(EnvConfigPath, filepath.Join(dir, "config.yaml"))

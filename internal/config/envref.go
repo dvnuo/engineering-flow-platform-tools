@@ -31,7 +31,7 @@ func resolveEnvValue(v reflect.Value, lookup func(string) (string, bool)) error 
 		return nil
 	}
 	switch v.Kind() {
-	case reflect.Interface, reflect.Pointer:
+	case reflect.Interface, reflect.Ptr:
 		if v.IsNil() {
 			return nil
 		}

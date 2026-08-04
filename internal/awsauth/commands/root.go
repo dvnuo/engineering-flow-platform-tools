@@ -216,7 +216,7 @@ func authCmd(o *Opts) *cobra.Command {
 		if config.EnvManaged(o.Config) {
 			return print(cmd, o, output.Failure("config_env_managed", "config comes from environment variables; pass --config to write a file", "", 400))
 		}
-		if err := config.Save(path, cfg); err != nil {
+		if err := config.SaveWithOptions(path, cfg, config.SaveOptions{ReplaceEnvReferencesIn: []string{"aws"}}); err != nil {
 			return print(cmd, o, output.Failure("config_error", output.RedactString(err.Error()), "", 500))
 		}
 		return print(cmd, o, output.Success("", map[string]any{

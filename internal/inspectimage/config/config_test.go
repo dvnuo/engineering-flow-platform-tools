@@ -272,6 +272,8 @@ inspect_image: {}
 
 func TestSaveMigratesLegacyInspectJSONWithoutTopLevelAuth(t *testing.T) {
 	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("USERPROFILE", dir)
 	cfgPath := filepath.Join(dir, "inspect-image.json")
 	tokenPath := filepath.Join(dir, "tmp", "copilot_token")
 	legacy := []byte(`{

@@ -4,6 +4,7 @@
 - Output boundary redaction: every CLI envelope is redacted in `internal/output` before JSON, YAML, or table output is written, so upstream tool responses are filtered even if a command forgets command-specific sanitization.
 - Artifact boundary: explicit downloads and rendered artifacts may contain raw user-requested content; command envelopes should return metadata only unless an artifact format has its own documented redaction pass.
 - Config permissions: saved config files use `0600` permissions where the platform supports it.
+- Config environment references: exact `${NAME}` and `%NAME%` string values are resolved only in memory and preserved during unrelated config writes. Referenced variables must be non-empty. Environment variables reduce secrets stored in YAML but are not a dedicated secret store and may be visible to processes running as the same user.
 - Bearer token handling: bearer tokens are sent as Authorization headers and should not appear in logs or dry-run output.
 - Basic auth risk: username/password and username/API key auth can expose long-lived credentials if copied into scripts. Prefer stdin-based login and scoped API keys.
 - Off-instance URL guard: absolute URLs must belong to the selected instance base URL.

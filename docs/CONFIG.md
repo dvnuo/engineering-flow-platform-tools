@@ -9,6 +9,39 @@ Legacy environment overrides are still accepted for compatibility:
 - Jira and Confluence: `ATLASSIAN_CONFIG`
 - inspect-image: `INSPECT_IMAGE_CONFIG`
 
+## Environment Variable References
+
+String values in the shared YAML config can reference an environment variable
+by using an exact `${NAME}` or `%NAME%` placeholder. The `${NAME}` form is
+portable; the quoted `%NAME%` form is also supported for Windows-authored
+configuration. References are resolved in memory and are preserved when an
+unrelated command writes `config.yaml`, so resolved credentials are not
+materialized into the file.
+
+For example, `aws-auth` can read its username and password from Windows
+environment variables:
+
+```yaml
+aws:
+  enabled: true
+  domain: HBEU
+  username: "${AWS_AUTH_USERNAME}"
+  password: "%AWS_AUTH_PASSWORD%"
+```
+
+Set them for the current PowerShell process before running `aws-auth`:
+
+```powershell
+$env:AWS_AUTH_USERNAME = "GB-SVC-XXX-XXX"
+$env:AWS_AUTH_PASSWORD = "your-password"
+aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json
+```
+
+The referenced variable must be set to a non-empty value or config loading
+fails with `config_env_missing`. Use names such as `AWS_AUTH_USERNAME` rather
+than recognized `EFP_*` config variables: any recognized `EFP_*` variable
+activates the separate whole-config environment mode.
+
 ## YAML Structure
 
 ```yaml

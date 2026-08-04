@@ -138,6 +138,37 @@ aws:
 	}
 }
 
+func TestLoginResolvesCredentialsReferencedFromEnvironment(t *testing.T) {
+	t.Setenv("TOOLS_AWS_USERNAME", "environment-user")
+	t.Setenv("TOOLS_AWS_PASSWORD", "environment-password")
+	cfg := writeConfig(t, `
+version: 1
+aws:
+  enabled: true
+  domain: HBEU
+  username: "${TOOLS_AWS_USERNAME}"
+  password: "%TOOLS_AWS_PASSWORD%"
+`)
+	runner := &fakeRunner{}
+	obj := runJSON(t, runner, "--config", cfg, "login", "--account", "123456", "--role", "ADFS-ReadOnly", "--json")
+	if obj["ok"] != true {
+		t.Fatalf("expected ok: %#v", obj)
+	}
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected one provider call, got %d", len(runner.calls))
+	}
+	call := runner.calls[0]
+	if !strings.Contains(strings.Join(call.args, " "), "--username environment-user") {
+		t.Fatalf("resolved username was not passed: %#v", call.args)
+	}
+	if got := envValue(call.env, "AD_PASS"); got != "environment-password" {
+		t.Fatalf("resolved password was not passed through AD_PASS: %q", got)
+	}
+	if strings.Contains(strings.Join(call.args, " "), "environment-password") {
+		t.Fatalf("password leaked into args: %#v", call.args)
+	}
+}
+
 func TestLoginRunsAdfsAssumeWithCustomProfile(t *testing.T) {
 	cfg := writeConfig(t, `
 version: 1

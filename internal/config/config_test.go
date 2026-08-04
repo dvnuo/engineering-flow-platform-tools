@@ -96,6 +96,82 @@ func TestLoadSharedNormalizesEnv(t *testing.T) {
 	}
 }
 
+func TestLoadResolvesPortableAndWindowsEnvReferences(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TOOLS_AWS_USERNAME", "windows-user")
+	t.Setenv("TOOLS_AWS_PASSWORD", "windows-password")
+	if err := os.WriteFile(path, []byte(`version: 1
+aws:
+  enabled: true
+  domain: HBEU
+  username: "${TOOLS_AWS_USERNAME}"
+  password: "%TOOLS_AWS_PASSWORD%"
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AWS.Username != "windows-user" || cfg.AWS.Password != "windows-password" {
+		t.Fatalf("environment references were not resolved: %#v", cfg.AWS)
+	}
+}
+
+func TestLoadRejectsMissingEnvReference(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TOOLS_AWS_MISSING_PASSWORD", "")
+	if err := os.WriteFile(path, []byte(`version: 1
+aws:
+  username: "${TOOLS_AWS_MISSING_PASSWORD}"
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Load(path)
+	var missing *MissingEnvReferenceError
+	if !errors.As(err, &missing) || missing.Name != "TOOLS_AWS_MISSING_PASSWORD" {
+		t.Fatalf("expected missing environment reference error, got %v", err)
+	}
+}
+
+func TestSavePreservesEnvReferencesInsteadOfMaterializingSecrets(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("TOOLS_AWS_USERNAME", "resolved-user")
+	t.Setenv("TOOLS_AWS_PASSWORD", "resolved-password")
+	if err := os.WriteFile(path, []byte(`version: 1
+aws:
+  enabled: true
+  domain: HBEU
+  username: "${TOOLS_AWS_USERNAME}"
+  password: "%TOOLS_AWS_PASSWORD%"
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Browser.Bookmarks.Sources = []BrowserBookmarkSource{{Name: "company", URL: "https://example.test/bookmarks.yaml"}}
+	if err := Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	text := string(mustReadFile(t, path))
+	for _, reference := range []string{"${TOOLS_AWS_USERNAME}", "%TOOLS_AWS_PASSWORD%"} {
+		if !strings.Contains(text, reference) {
+			t.Fatalf("environment reference %q was not preserved:\n%s", reference, text)
+		}
+	}
+	for _, secret := range []string{"resolved-user", "resolved-password"} {
+		if strings.Contains(text, secret) {
+			t.Fatalf("resolved value %q was materialized in config:\n%s", secret, text)
+		}
+	}
+}
+
 func TestSaveSharedRefusesWhenEnvManaged(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(EnvConfigPath, filepath.Join(dir, "config.yaml"))

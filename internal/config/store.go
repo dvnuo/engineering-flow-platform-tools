@@ -73,6 +73,9 @@ func Load(path string) (RootConfig, error) {
 			return c, err
 		}
 	}
+	if err := resolveEnvReferences(&c, os.LookupEnv); err != nil {
+		return c, err
+	}
 	c.Normalize()
 	return c, nil
 }
@@ -183,6 +186,12 @@ func mergeNodeComments(old, new *yaml.Node) *yaml.Node {
 	copyComments(old, new)
 	if old.Kind == new.Kind && old.Kind == yaml.ScalarNode && old.Style != 0 {
 		new.Style = old.Style
+	}
+	if old.Kind == yaml.ScalarNode && new.Kind == yaml.ScalarNode && old.Tag == "!!str" && new.Tag == "!!str" {
+		if reference, ok := preserveEnvReference(old.Value, new.Value, os.LookupEnv); ok {
+			new.Value = reference
+			new.Style = old.Style
+		}
 	}
 	switch new.Kind {
 	case yaml.MappingNode:

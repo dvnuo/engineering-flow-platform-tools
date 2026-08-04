@@ -269,6 +269,24 @@ Config node ownership:
 
 ## AWS Auth Examples
 
+`config.yaml` string fields can reference environment variables with exact
+`${NAME}` or `%NAME%` placeholders. On Windows, credentials can stay in the
+process environment while the YAML contains only references:
+
+```yaml
+aws:
+  enabled: true
+  domain: HBEU
+  username: "${AWS_AUTH_USERNAME}"
+  password: "%AWS_AUTH_PASSWORD%"
+```
+
+```powershell
+$env:AWS_AUTH_USERNAME = "GB-SVC-XXX-XXX"
+$env:AWS_AUTH_PASSWORD = "your-password"
+aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json
+```
+
 ```bash
 printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json
 aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json

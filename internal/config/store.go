@@ -210,8 +210,8 @@ func mergeNodeComments(old, new *yaml.Node, preserveEnvReferences bool) *yaml.No
 		new.Style = old.Style
 	}
 	if preserveEnvReferences && old.Kind == yaml.ScalarNode && new.Kind == yaml.ScalarNode && old.Tag == "!!str" && new.Tag == "!!str" {
-		if reference, ok := preserveEnvReference(old.Value, new.Value, os.LookupEnv); ok {
-			new.Value = reference
+		if _, ok := envReferenceName(old.Value); ok {
+			new.Value = old.Value
 			new.Style = old.Style
 		}
 	}

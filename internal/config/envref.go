@@ -106,18 +106,3 @@ func validEnvReferenceName(name string) bool {
 	}
 	return true
 }
-
-// preserveEnvReference keeps a placeholder in the persisted YAML when the
-// in-memory value is only its resolved form. This prevents unrelated config
-// writes from materializing credentials into config.yaml.
-func preserveEnvReference(reference, resolved string, lookup func(string) (string, bool)) (string, bool) {
-	name, ok := envReferenceName(reference)
-	if !ok {
-		return "", false
-	}
-	value, present := lookup(name)
-	if !present || value == "" || value != resolved {
-		return "", false
-	}
-	return reference, true
-}

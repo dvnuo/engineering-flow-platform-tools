@@ -154,6 +154,10 @@ aws:
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Preservation must not depend on save-time environment state. Credentials
+	// may be rotated or removed after the config was loaded.
+	t.Setenv("TOOLS_AWS_USERNAME", "rotated-user")
+	t.Setenv("TOOLS_AWS_PASSWORD", "")
 	cfg.Browser.Bookmarks.Sources = []BrowserBookmarkSource{{Name: "company", URL: "https://example.test/bookmarks.yaml"}}
 	if err := Save(path, cfg); err != nil {
 		t.Fatal(err)
@@ -165,7 +169,7 @@ aws:
 			t.Fatalf("environment reference %q was not preserved:\n%s", reference, text)
 		}
 	}
-	for _, secret := range []string{"resolved-user", "resolved-password"} {
+	for _, secret := range []string{"resolved-user", "resolved-password", "rotated-user"} {
 		if strings.Contains(text, secret) {
 			t.Fatalf("resolved value %q was materialized in config:\n%s", secret, text)
 		}

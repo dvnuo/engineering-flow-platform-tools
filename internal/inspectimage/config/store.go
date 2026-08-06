@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"engineering-flow-platform-tools/internal/configenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -56,6 +57,10 @@ func Load(path string) (Config, error) {
 	_, hasCopilot := raw["copilot"]
 	_, hasAIPlatform := raw["ai_platform"]
 	if err := yaml.Unmarshal(b, &root); err == nil && (hasInspectImage || hasCopilot || hasAIPlatform) {
+		resolution, err := configenv.Resolve(&root, os.LookupEnv)
+		if err != nil {
+			return c, err
+		}
 		c = Default()
 		if root.Version != 0 {
 			c.Version = root.Version
@@ -82,9 +87,16 @@ func Load(path string) (Config, error) {
 		if err := loadAIPlatformToken(&c); err != nil {
 			return c, err
 		}
+		if err := captureEnvSnapshot(&c, resolution); err != nil {
+			return c, err
+		}
 		return c, nil
 	}
 	if err := json.Unmarshal(b, &c); err != nil {
+		return c, err
+	}
+	resolution, err := configenv.Resolve(&c, os.LookupEnv)
+	if err != nil {
 		return c, err
 	}
 	c.FillDefaults()
@@ -92,6 +104,9 @@ func Load(path string) (Config, error) {
 		return c, err
 	}
 	if err := loadAIPlatformToken(&c); err != nil {
+		return c, err
+	}
+	if err := captureEnvSnapshot(&c, resolution); err != nil {
 		return c, err
 	}
 	return c, nil
@@ -124,21 +139,17 @@ func Save(path string, c Config) error {
 	}
 	doc, root := loadYAMLDocument(path)
 	removeMappingKeys(root, "provider", "api", "defaults", "limits", "auth", "privacy")
-	auth := c.Auth
-	auth.CopilotToken = ""
-	aiPlatform := c.AIPlatform
-	aiPlatform.Auth.Token = ""
-	api := c.API
-	if err := setMappingValue(root, "version", c.Version); err != nil {
+	persisted := persistedConfig(c)
+	if err := setMappingValue(root, "version", persisted.Version, c.envSnapshot); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "copilot", copilotConfig{Provider: ProviderGitHubCopilot, API: &api, Auth: auth}); err != nil {
+	if err := setMappingValue(root, "copilot", persisted.Copilot, c.envSnapshot); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "inspect_image", inspectImageConfig{Provider: c.Provider, Defaults: c.Defaults, Limits: c.Limits, Privacy: c.Privacy}); err != nil {
+	if err := setMappingValue(root, "inspect_image", persisted.InspectImage, c.envSnapshot); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "ai_platform", aiPlatform); err != nil {
+	if err := setMappingValue(root, "ai_platform", persisted.AIPlatform, c.envSnapshot); err != nil {
 		return err
 	}
 	b, err := yaml.Marshal(doc)
@@ -149,6 +160,29 @@ func Save(path string, c Config) error {
 		return err
 	}
 	_ = os.Chmod(path, 0o600)
+	return nil
+}
+
+func persistedConfig(c Config) unifiedConfig {
+	auth := c.Auth
+	auth.CopilotToken = ""
+	aiPlatform := c.AIPlatform
+	aiPlatform.Auth.Token = ""
+	api := c.API
+	return unifiedConfig{
+		Version:      c.Version,
+		Copilot:      copilotConfig{Provider: ProviderGitHubCopilot, API: &api, Auth: auth},
+		InspectImage: inspectImageConfig{Provider: c.Provider, Defaults: c.Defaults, Limits: c.Limits, Privacy: c.Privacy},
+		AIPlatform:   aiPlatform,
+	}
+}
+
+func captureEnvSnapshot(c *Config, resolution *configenv.Resolution) error {
+	snapshot, err := configenv.Capture(persistedConfig(*c), resolution)
+	if err != nil {
+		return err
+	}
+	c.envSnapshot = snapshot
 	return nil
 }
 
@@ -333,14 +367,14 @@ func removeMappingKeys(root *yaml.Node, keys ...string) {
 	root.Content = content
 }
 
-func setMappingValue(root *yaml.Node, key string, value any) error {
+func setMappingValue(root *yaml.Node, key string, value any, snapshot *configenv.Snapshot) error {
 	newValue, err := yamlValueNode(value)
 	if err != nil {
 		return err
 	}
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		if root.Content[i].Value == key {
-			root.Content[i+1] = mergeNodeComments(root.Content[i+1], newValue)
+			root.Content[i+1] = configenv.MergeTopLevel(root.Content[i+1], newValue, snapshot, key)
 			return nil
 		}
 	}
@@ -361,49 +395,4 @@ func yamlValueNode(value any) (*yaml.Node, error) {
 		return &yaml.Node{Kind: yaml.MappingNode}, nil
 	}
 	return doc.Content[0], nil
-}
-
-func mergeNodeComments(old, new *yaml.Node) *yaml.Node {
-	if old == nil || new == nil {
-		return new
-	}
-	copyComments(old, new)
-	if old.Kind == new.Kind && old.Style != 0 {
-		new.Style = old.Style
-	}
-	switch new.Kind {
-	case yaml.MappingNode:
-		oldValues := map[string]*yaml.Node{}
-		oldKeys := map[string]*yaml.Node{}
-		for i := 0; i+1 < len(old.Content); i += 2 {
-			oldKeys[old.Content[i].Value] = old.Content[i]
-			oldValues[old.Content[i].Value] = old.Content[i+1]
-		}
-		for i := 0; i+1 < len(new.Content); i += 2 {
-			key := new.Content[i].Value
-			if oldKey := oldKeys[key]; oldKey != nil {
-				copyComments(oldKey, new.Content[i])
-			}
-			if oldValue := oldValues[key]; oldValue != nil {
-				new.Content[i+1] = mergeNodeComments(oldValue, new.Content[i+1])
-			}
-		}
-	case yaml.SequenceNode:
-		for i := 0; i < len(new.Content) && i < len(old.Content); i++ {
-			new.Content[i] = mergeNodeComments(old.Content[i], new.Content[i])
-		}
-	}
-	return new
-}
-
-func copyComments(from, to *yaml.Node) {
-	if to.HeadComment == "" {
-		to.HeadComment = from.HeadComment
-	}
-	if to.LineComment == "" {
-		to.LineComment = from.LineComment
-	}
-	if to.FootComment == "" {
-		to.FootComment = from.FootComment
-	}
 }

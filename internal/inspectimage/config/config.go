@@ -1,6 +1,10 @@
 package config
 
-import "strings"
+import (
+	"strings"
+
+	"engineering-flow-platform-tools/internal/configenv"
+)
 
 const (
 	ProviderGitHubCopilot             = "github_copilot_plugin"
@@ -33,6 +37,8 @@ type Config struct {
 	Auth       AuthConfig       `json:"auth" yaml:"auth"`
 	AIPlatform AIPlatformConfig `json:"ai_platform" yaml:"ai_platform"`
 	Privacy    PrivacyConfig    `json:"privacy" yaml:"privacy"`
+
+	envSnapshot *configenv.Snapshot
 }
 
 type APIConfig struct {

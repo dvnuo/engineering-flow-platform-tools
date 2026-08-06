@@ -10,7 +10,7 @@ Copy this file into `~/.copilot/instructions/aws-auth-cli.instructions.md` so VS
 
 `aws-auth` is a terminal-invoked CLI for agents and runtimes that need AWS credentials through the enterprise ADFS flow.
 
-It reads the shared EFP config from environment variables injected by managed runtimes (EFP_-prefixed vars derived from the config shape, for example `EFP_AWS_DOMAIN`, `EFP_AWS_USERNAME`, `EFP_AWS_ENABLED`) or from `~/.efp/config.yaml` by default, or the path provided by `--config` / `EFP_CONFIG`. When environment variables manage the config, `auth login` requires an explicit `--config` path to write. It ignores `ATLASSIAN_CONFIG`; that legacy override is for Jira and Confluence only. It invokes `adfs-assume`; it is not AWS CLI itself, not a Portal API, not an MCP server, and not a browser SSO tool.
+It reads the shared EFP config from environment variables injected by managed runtimes (EFP_-prefixed vars derived from the config shape, for example `EFP_AWS_DOMAIN`, `EFP_AWS_USERNAME`, `EFP_AWS_ENABLED`) or from `~/.efp/config.yaml` by default, or the path provided by `--config` / `EFP_CONFIG`. String fields in the YAML file may be exact `${NAME}` or `%NAME%` environment references, so AWS credentials can remain outside the file. When environment variables manage the whole config, `auth login` requires an explicit `--config` path to write. It ignores `ATLASSIAN_CONFIG`; that legacy override is for Jira and Confluence only. It invokes `adfs-assume`; it is not AWS CLI itself, not a Portal API, not an MCP server, and not a browser SSO tool.
 
 ## Always Use JSON
 
@@ -36,6 +36,19 @@ Read these fields first:
 If `ok=false`, inspect `error.code`, `error.message`, and `error.hint` before retrying.
 
 ## Configure Auth
+
+Prefer environment references when the runtime supplies AWS credentials:
+
+```yaml
+aws:
+  enabled: true
+  domain: HBEU
+  username: "${AWS_AUTH_USERNAME}"
+  password: "%AWS_AUTH_PASSWORD%"
+```
+
+Both referenced variables must be non-empty. Resolved values are used only in
+memory and the placeholders remain in `config.yaml` during unrelated writes.
 
 Store the ADFS domain, username, and password in the shared EFP config:
 

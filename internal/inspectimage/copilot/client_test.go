@@ -19,7 +19,7 @@ func TestResponsesUsesResponsesPathAndShape(t *testing.T) {
 		if r.Header.Get("Authorization") != "Bearer token" {
 			t.Fatalf("missing auth")
 		}
-		if r.Header.Get("Accept") != "application/vnd.github.copilot-chat-preview+json" || r.Header.Get("Copilot-Integration-Id") != "vscode-chat" || r.Header.Get("Openai-Intent") != "conversation-edits" {
+		if r.Header.Get("Accept") != "application/vnd.github.copilot-chat-preview+json" || r.Header.Get("User-Agent") != "GitHubCopilotChat/0.41.0" || r.Header.Get("Editor-Version") != "vscode/1.133.0" || r.Header.Get("Editor-Plugin-Version") != "copilot-chat/0.41.0" || r.Header.Get("Copilot-Integration-Id") != "vscode-chat" || r.Header.Get("Openai-Intent") != "conversation-edits" {
 			t.Fatalf("missing copilot headers: %#v", r.Header)
 		}
 		if r.Header.Get("X-GitHub-Api-Version") != "" {

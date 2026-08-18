@@ -363,9 +363,9 @@ func limitDetail(s string, max int) string {
 }
 
 func setCopilotPluginHeaders(h http.Header) {
-	h.Set("User-Agent", "GitHubCopilotChat/0.35.0")
-	h.Set("Editor-Version", "vscode/1.107.0")
-	h.Set("Editor-Plugin-Version", "copilot-chat/0.35.0")
+	h.Set("User-Agent", "GitHubCopilotChat/0.41.0")
+	h.Set("Editor-Version", "vscode/1.133.0")
+	h.Set("Editor-Plugin-Version", "copilot-chat/0.41.0")
 	h.Set("Copilot-Integration-Id", "vscode-chat")
 }
 

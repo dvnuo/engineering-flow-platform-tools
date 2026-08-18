@@ -235,6 +235,7 @@ func TestAuthStatusInvalidConfigReturnsParseDetail(t *testing.T) {
 func TestAuthStatusRefreshableGitHubTokenIsOK(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
 	cfg := config.Default()
+	cfg.Auth.CopilotTokenFile = cfgPath + ".token"
 	cfg.Auth.GitHubAccessToken = "github-token"
 	cfg.Auth.CopilotToken = "stale-copilot-token"
 	cfg.Auth.CopilotTokenExpiresAt = time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
@@ -254,6 +255,7 @@ func TestAuthStatusRefreshableGitHubTokenIsOK(t *testing.T) {
 func TestDoctorAcceptsRefreshableGitHubToken(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
 	cfg := config.Default()
+	cfg.Auth.CopilotTokenFile = cfgPath + ".token"
 	cfg.Auth.GitHubAccessToken = "github-token"
 	cfg.Auth.CopilotToken = "stale-copilot-token"
 	cfg.Auth.CopilotTokenExpiresAt = time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
@@ -279,6 +281,7 @@ func TestAuthTestRefreshesExpiredCopilotToken(t *testing.T) {
 	}
 	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
 	cfg := config.Default()
+	cfg.Auth.CopilotTokenFile = cfgPath + ".token"
 	cfg.Auth.GitHubAccessToken = "github-token"
 	cfg.Auth.CopilotToken = "stale-copilot-token"
 	cfg.Auth.CopilotTokenExpiresAt = time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
@@ -329,6 +332,7 @@ func TestInspectRefreshesAfterResponsesAuthError(t *testing.T) {
 	path := writePNG(t)
 	cfgPath := filepath.Join(t.TempDir(), "inspect-image.json")
 	cfg := config.Default()
+	cfg.Auth.CopilotTokenFile = cfgPath + ".token"
 	cfg.API.BaseURL = s.URL
 	cfg.Auth.GitHubAccessToken = "github-token"
 	cfg.Auth.CopilotToken = "old-copilot-token"

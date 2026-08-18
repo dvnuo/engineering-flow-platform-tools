@@ -39,17 +39,17 @@ func TestDeviceFlowWithMockEndpoints(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/login/device/code":
-			if r.Header.Get("Content-Type") != "application/json" || r.Header.Get("User-Agent") != "GitHubCopilotChat/0.35.0" {
+			if r.Header.Get("Content-Type") != "application/json" || r.Header.Get("User-Agent") != "GitHubCopilotChat/0.41.0" {
 				t.Fatalf("device request did not match portal headers")
 			}
 			_, _ = w.Write([]byte(`{"device_code":"dev","user_code":"ABCD-EFGH","verification_uri":"https://github.com/login/device","expires_in":60,"interval":1}`))
 		case "/login/oauth/access_token":
-			if r.Header.Get("Content-Type") != "application/json" || r.Header.Get("User-Agent") != "GitHubCopilotChat/0.35.0" {
+			if r.Header.Get("Content-Type") != "application/json" || r.Header.Get("User-Agent") != "GitHubCopilotChat/0.41.0" {
 				t.Fatalf("poll request did not match portal headers")
 			}
 			_, _ = w.Write([]byte(`{"access_token":"github-token"}`))
 		case "/copilot_internal/v2/token":
-			if r.Header.Get("Authorization") != "Bearer github-token" || r.Header.Get("Editor-Version") != "vscode/1.107.0" || r.Header.Get("Copilot-Integration-Id") != "vscode-chat" {
+			if r.Header.Get("Authorization") != "Bearer github-token" || r.Header.Get("User-Agent") != "GitHubCopilotChat/0.41.0" || r.Header.Get("Editor-Version") != "vscode/1.133.0" || r.Header.Get("Editor-Plugin-Version") != "copilot-chat/0.41.0" || r.Header.Get("Copilot-Integration-Id") != "vscode-chat" {
 				t.Fatalf("exchange request did not match runtime headers")
 			}
 			_, _ = w.Write([]byte(`{"token":"tid=abc;proxy-ep=proxy.individual.githubcopilot.com;","expires_at":1780000000}`))

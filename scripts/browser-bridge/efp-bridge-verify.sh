@@ -43,8 +43,10 @@ RESULTS=()
 
 pass() { RESULTS+=("PASS | $1 | $2"); printf '\033[32m[PASS]\033[0m %s - %s\n' "$1" "$2"; }
 fail() { RESULTS+=("FAIL | $1 | $2"); printf '\033[31m[FAIL]\033[0m %s - %s\n' "$1" "$2"; }
-json_has() { printf '%s' "$1" | tr -d ' \n' | grep -q "$2"; }
-json_field() { printf '%s' "$1" | tr -d '\n' | sed -E "s/.*\"$2\":\"?([^\",}]*)\"?.*/\1/"; }
+# Minimal JSON helpers (no jq/python dependency): whitespace is stripped first so
+# both the CLI's indented envelopes and the bridge's compact JSON parse alike.
+json_has() { printf '%s' "$1" | tr -d ' \n\t' | grep -q "$2"; }
+json_field() { printf '%s' "$1" | tr -d ' \n\t' | sed -E "s/.*\"$2\":\"?([^\",}]*)\"?.*/\1/"; }
 
 cleanup() {
   if [ -n "$SERVE_PID" ] && kill -0 "$SERVE_PID" 2>/dev/null; then kill "$SERVE_PID" 2>/dev/null; fi

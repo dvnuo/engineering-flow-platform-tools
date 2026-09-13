@@ -153,3 +153,20 @@ func TestLoadFromEnvSkipsMapField(t *testing.T) {
 		t.Fatalf("status_map must stay nil (map kind skipped): %#v", cfg.Jira.Instances[0].Zephyr.StatusMap)
 	}
 }
+
+func TestLoadFromEnvBrowserServe(t *testing.T) {
+	cfg, managed := LoadFromEnv(mapLookup(map[string]string{
+		"EFP_BROWSER_SERVE_PORT":           "8766",
+		"EFP_BROWSER_SERVE_ALLOWED_ORIGIN": "https://portal.example.test",
+	}))
+	if !managed {
+		t.Fatal("expected managed=true")
+	}
+	if cfg.Browser.Serve.Port != 8766 || cfg.Browser.Serve.AllowedOrigin != "https://portal.example.test" {
+		t.Fatalf("browser serve env = %#v", cfg.Browser.Serve)
+	}
+	cfg, _ = LoadFromEnv(mapLookup(map[string]string{"EFP_BROWSER_SERVE_ALLOWED_ORIGIN": "https://portal.example.test"}))
+	if cfg.Browser.Serve.Port != DefaultBrowserServePort {
+		t.Fatalf("port default after env load = %d", cfg.Browser.Serve.Port)
+	}
+}

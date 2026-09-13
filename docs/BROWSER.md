@@ -374,7 +374,13 @@ browser.exe serve --register-protocol --origin https://portal.example.test --jso
 browser.exe serve --unregister-protocol --json
 ```
 
-`--register-protocol` writes `HKCU\Software\Classes\efp-bridge` (`(Default)="URL:EFP Bridge"`, `URL Protocol=""`, `shell\open\command\(Default)="<absolute path to browser.exe>" bridge-launch "%1"`) with `reg.exe`, stores the origin as `browser.serve.allowed_origin` in the shared config, and exits. It needs no administrator rights. `--unregister-protocol` deletes the key. On non-Windows platforms both flags return `unsupported_platform`.
+`--register-protocol` registers the `efp-bridge://` scheme for the current user, stores the origin as `browser.serve.allowed_origin` in the shared config, and exits; `--unregister-protocol` reverses it. No administrator rights are needed on any platform:
+
+- Windows: writes `HKCU\Software\Classes\efp-bridge` (`(Default)="URL:EFP Bridge"`, `URL Protocol=""`, `shell\open\command\(Default)="<absolute path to browser.exe>" bridge-launch "%1"`) with `reg.exe`.
+- macOS: compiles a small AppleScript applet `~/Applications/EFP Bridge.app` with `osacompile`, declares the scheme in its `Info.plist` (`CFBundleURLSchemes`, bundle id `com.efp.browser-bridge`, `LSUIElement`), and registers it with `lsregister`. The applet receives the URL as an Apple event and runs `browser bridge-launch "<url>"`.
+- Linux: writes `~/.local/share/applications/efp-bridge.desktop` (`Exec="<browser>" bridge-launch %u`, `MimeType=x-scheme-handler/efp-bridge;`) and runs `xdg-mime default efp-bridge.desktop x-scheme-handler/efp-bridge`.
+
+Other platforms return `unsupported_platform`. `scripts/browser-bridge/install-bridge.cmd` and `install-bridge.sh` wrap the command for the download package.
 
 The Portal page opens `efp-bridge://start?origin=<urlencoded Portal origin>&port=8765`; Windows then runs the hidden `browser.exe bridge-launch "<url>"`, which exits immediately when a bridge already answers `GET /ping` on `8765`-`8770` and otherwise starts `browser serve --origin <origin> --port <port>` as a detached background process (its output goes to `~/.efp/browser/logs/bridge-serve.log`).
 

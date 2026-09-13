@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	bridgeProtocolScheme      = "efp-bridge"
 	bridgeProtocolRegistryKey = `HKCU\Software\Classes\efp-bridge`
 	bridgeProtocolDisplayName = "URL:EFP Bridge"
 

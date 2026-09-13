@@ -75,8 +75,8 @@ func serveCmd(o *Opts) *cobra.Command {
 	c.Flags().StringVar(&opts.BrowserExe, "browser-exe", "", "Explicit Edge/Chrome/Chromium executable path for a new session.")
 	c.Flags().BoolVar(&opts.Headless, "headless", false, "Run a newly started persistent browser without a visible UI.")
 	c.Flags().StringVar(&opts.URL, "url", "", "HTTP or HTTPS URL opened as the first tab at startup; defaults to the configured origin.")
-	c.Flags().BoolVar(&opts.RegisterProtocol, "register-protocol", false, "Windows only: register the efp-bridge:// protocol handler for the current user so the Portal page can start this bridge, store --origin as the default, then exit.")
-	c.Flags().BoolVar(&opts.UnregisterProtocol, "unregister-protocol", false, "Windows only: remove the efp-bridge:// protocol handler for the current user, then exit.")
+	c.Flags().BoolVar(&opts.RegisterProtocol, "register-protocol", false, "Register the efp-bridge:// protocol handler for the current user (Windows registry, macOS launcher app, Linux desktop entry) so the Portal page can start this bridge, store --origin as the default, then exit.")
+	c.Flags().BoolVar(&opts.UnregisterProtocol, "unregister-protocol", false, "Remove the efp-bridge:// protocol handler for the current user, then exit.")
 	return c
 }
 

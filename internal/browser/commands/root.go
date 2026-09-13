@@ -257,7 +257,7 @@ func browserLLMTips() []string {
 		"On Windows cmd, use double quotes and cmd-native commands such as where/dir/cd/type; do not use Bash-only commands such as pwd, command -v, cat, ls, cd \"$PWD\", or single quotes.",
 		"If terminal output capture is unreliable, rerun the exact .exe path from where browser, redirect the JSON envelope to a workspace file, read it with the file-read tool, and inspect artifact files under --out.",
 		"In OpenCode runtime, this command requires a browser executable in the runtime image.",
-		"browser serve is the local bridge for the EFP Portal local browser connector: a Portal page calls it on 127.0.0.1, and it runs tab/page commands in-process against the managed session. It is started by install-bridge.cmd or the efp-bridge:// protocol link, not by agents; do not run browser serve, browser serve --register-protocol, or bridge-launch from an interactive agent session, and keep using browser open and the page commands directly.",
+		"browser serve is the local bridge for the EFP Portal local browser connector: a Portal page calls it on 127.0.0.1, and it runs tab/page commands in-process against the managed session. It is started by install-bridge.cmd / install-bridge.sh or the efp-bridge:// protocol link, not by agents; do not run browser serve, browser serve --register-protocol, or bridge-launch from an interactive agent session, and keep using browser open and the page commands directly.",
 	}
 }
 

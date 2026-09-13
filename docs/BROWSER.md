@@ -345,6 +345,41 @@ Persistent sessions default to `~/.efp/browser/profiles/<session-name>`, downloa
 
 The tool does not read browser cookie databases, decrypt cookies, export tokens, print request/response headers, print request bodies, echo typed text or selected option values, or read downloaded file contents. Probe `--fetch-api` records `ok`, `status`, redacted `url`, `contentType`, and a capped `bodyPreview`. Persistent `page fetch` records `ok`, `status`, redacted final URL, and a capped redacted `body_preview` with credentials omitted and no headers. The network recorder records redacted fetch/XHR response body previews by default and can disable them with `--body=false`. Persistent `page upload` validates local regular files and returns path/name/size metadata only. Workflow dry-runs and executed step results report typed-text byte counts, not typed text. Form filling and workflow recording preserve automation structure while suppressing user-entered values.
 
+## Serve (Portal local bridge)
+
+`browser serve` is the local bridge behind the EFP Portal **local browser connector**: the Portal page (running in the user's normal browser) calls `http://127.0.0.1:8765` on the user's own machine, and the bridge runs tab/page commands in-process against the managed `default` session (the same session, profile, and login state that `browser open` uses). It is not an interactive agent command; agents keep using `browser open` and the `page` commands directly. The wire contract is the Portal repository's `docs/CONNECTORS_CONTRACT.md` section 6.
+
+```bash
+browser serve --origin https://portal.example.test --json
+browser serve --origin https://portal.example.test --port 8765 --session default --url https://portal.example.test/app
+```
+
+- The listener binds `127.0.0.1` only. When the port is busy the next five ports are tried (`8765`-`8770`, the same range the Portal page probes); otherwise the command fails with `port_unavailable`.
+- `--port` and `--origin` default to `browser.serve.port` and `browser.serve.allowed_origin` in `~/.efp/config.yaml`, or `EFP_BROWSER_SERVE_PORT` / `EFP_BROWSER_SERVE_ALLOWED_ORIGIN`.
+- At startup the bridge runs the equivalent of `browser open --url <--url or origin>` so `/ping` can report `session.alive=true`. If Chrome cannot start, the bridge still serves and `/ping` reports `alive=false`; the reason is logged to stderr.
+- Every response carries `Access-Control-Allow-Origin: <origin>` and `Vary: Origin`. `OPTIONS` preflights answer `204` with `Access-Control-Allow-Methods: GET, POST, OPTIONS`, `Access-Control-Allow-Headers: Content-Type`, `Access-Control-Allow-Private-Network: true`, and `Access-Control-Max-Age: 600`. Requests whose `Origin` header does not equal the configured origin receive `403 origin_denied`. `--origin *` is accepted but not recommended.
+- `GET /ping` -> `{ "ok": true, "data": { "version": "0.1.0", "protocol_version": 1, "session": { "name": "default", "alive": true, "debug_port": 57848, "tab_count": 3 } } }` (`tab_count` is best-effort and `0` when the session is down; the ping never fails because of the session).
+- `GET /commands` -> `{ "ok": true, "data": { "commands": ["bookmark.list", "page.ax", ...] } }`.
+- `POST /run` with `{ "command": "page.snapshot", "params": { "target_id": "..." }, "session": "default", "timeout_seconds": 30 }` returns the same `ok/data/error` envelope the CLI prints; the HTTP status is `error.status` when present and `200` otherwise. Unknown or unexposed commands return `400 command_not_allowed`.
+- Allowed commands and their `params` keys (snake_case versions of the CLI flags): `tab.list`, `tab.current`, `tab.activate{target_id}`, `tab.open{url}` (http/https only), `page.snapshot{target_id?, include_html?, max_text_bytes?}`, `page.text{target_id?, selector?, max_text_bytes?}` (page body text up to 20000 bytes, or element text when `selector` is given), `page.outline{target_id?, limit?, include_hidden?, pierce?}`, `page.ax{target_id?, limit?, include_hidden?, pierce?}`, `page.find{role?, name?, text?, selector?, label?, placeholder?, near_text?, nth?, limit?, target_id?}`, `page.extract{selector, limit?, include_html?, pierce?, target_id?}`, `page.table{selector?, limit_rows?, limit_cells?, target_id?}`, `page.wait{selector?, text?, url_contains?, duration_ms?, network_idle_ms?, dom_stable_ms?, timeout_seconds?, target_id?}`, `page.click{ref|selector, yes?, target_id?}` (risky clicks need `yes: true` after user confirmation, exactly like `--yes`), `page.type{ref|selector, text, clear?, target_id?}`, `page.select{ref|selector, value|label|index, target_id?}`, `page.check{ref|selector}`, `page.uncheck{ref|selector}`, `page.press{key, ref?|selector?, target_id?}`, `page.screenshot{target_id?, full_page?, selector?, ref?}`, `bookmark.list{sources?}`, `session.status`. Session lifecycle (`session start/stop`), `page.eval`, `page.fetch`, uploads, and downloads are not exposed.
+- `page.screenshot` returns `{ "mime": "image/jpeg", "base64": "...", "width": 1280, "height": 720 }` plus the usual target metadata. The PNG the Manager writes is downscaled so the longest side is at most 1280 pixels, re-encoded as JPEG (quality 80), and deleted. `full_page` defaults to `false` (viewport).
+- Requests for the same `session` run one at a time; concurrent Portal calls queue instead of hitting the `409 session_busy` file lock. A request that cannot start within its `timeout_seconds` (default 30, maximum 120) receives `504 bridge_timeout`.
+- Request logs (`METHOD PATH COMMAND STATUS DURATION`) go to stderr only. With `--json`, stdout prints a single startup line `{"ok":true,"data":{"listening":"http://127.0.0.1:8765","origin":"...","session":"default",...}}`; otherwise a human-readable line.
+- `Ctrl+C`, `SIGINT`, or `SIGTERM` shuts the listener down within 2 seconds. The Chrome session is left running so a later `browser serve` or `browser open` reuses it; stop it explicitly with `browser session stop default --json`.
+
+### Windows protocol handler and install package
+
+```cmd
+browser.exe serve --register-protocol --origin https://portal.example.test --json
+browser.exe serve --unregister-protocol --json
+```
+
+`--register-protocol` writes `HKCU\Software\Classes\efp-bridge` (`(Default)="URL:EFP Bridge"`, `URL Protocol=""`, `shell\open\command\(Default)="<absolute path to browser.exe>" bridge-launch "%1"`) with `reg.exe`, stores the origin as `browser.serve.allowed_origin` in the shared config, and exits. It needs no administrator rights. `--unregister-protocol` deletes the key. On non-Windows platforms both flags return `unsupported_platform`.
+
+The Portal page opens `efp-bridge://start?origin=<urlencoded Portal origin>&port=8765`; Windows then runs the hidden `browser.exe bridge-launch "<url>"`, which exits immediately when a bridge already answers `GET /ping` on `8765`-`8770` and otherwise starts `browser serve --origin <origin> --port <port>` as a detached background process (its output goes to `~/.efp/browser/logs/bridge-serve.log`).
+
+`scripts/browser-bridge/` holds the install package pieces (`install-bridge.cmd`, `README.md`) and the acceptance scripts (`efp-bridge-verify.ps1`, `efp_bridge_probe.py`, `start-bridge.cmd`). The Portal download zip contains `browser.exe`, `install-bridge.cmd`, and `README.md`; running `install-bridge.cmd https://portal.example.test` registers the protocol handler from the zip's own directory.
+
 ## OpenCode Runtime Handoff
 
 This tools repo only builds the binary.

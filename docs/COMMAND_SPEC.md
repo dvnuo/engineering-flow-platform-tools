@@ -590,6 +590,7 @@ When a user identifies a website by name, alias, or purpose without supplying an
 - browser network clear
 - browser download list
 - browser download wait
+- browser serve
 - browser commands
 - browser schema <command>
 - browser help llm
@@ -673,6 +674,20 @@ browser session attach --name user-demo --debug-port 9222 --json
 - `browser bookmark list` loads configured HTTP/HTTPS or local file sources in `browser.bookmarks.sources` live, validates strict version 1 JSON/YAML manifests, and merges healthy `name`, `aliases`, required `description`, `url`, and `source` fields in configured source order. Repeat `--source <name>` to filter by one or more case-insensitive source names. It does not use or write a cache.
 - `browser bookmark add/update/remove --source <name>` modifies the explicitly selected configured local file source. Add requires source, name, description, and an absolute HTTP/HTTPS URL; aliases are optional and repeatable. Update changes only selected fields and supports `--clear-aliases`. Remove requires explicit `--yes`. A missing local manifest and parent directory are created on first add. HTTP/HTTPS sources return `bookmark_source_read_only`.
 - `browser bookmark source list/add/update/remove` manages source registrations and optional descriptions in the shared EFP config without changing remote or local manifests. Source names are unique case-insensitively, and locations may be absolute HTTP/HTTPS URLs without credentials, `file://` URLs, absolute local paths, or `~/...` paths. Relative paths are rejected, and removal requires `--yes`. The CLI does not implicitly load `~/.efp/bookmarks.yaml`; `~/.efp/browser/bookmarks/` is the recommended directory for explicitly registered personal manifests.
+
+### Serve (Portal local bridge)
+
+`browser serve --origin <portal-origin> [--port 8765] [--session default] [--url <first-tab-url>] [--json]` runs the loopback HTTP bridge that the EFP Portal local browser connector calls from the user's Portal tab (contract: Portal `docs/CONNECTORS_CONTRACT.md` section 6). It is started by `install-bridge.cmd` or the `efp-bridge://start?origin=<urlencoded>&port=<n>` protocol link, not by interactive agents.
+
+- Binds `127.0.0.1` only; when the port is busy it tries the next five ports (`8765`-`8770`) and otherwise fails with `port_unavailable`. `--port` and `--origin` default to `browser.serve.port` / `browser.serve.allowed_origin` (`EFP_BROWSER_SERVE_PORT` / `EFP_BROWSER_SERVE_ALLOWED_ORIGIN`).
+- At startup it opens the session with `--url` (or the origin) as the first tab. When Chrome cannot start it keeps serving and `/ping` reports `alive=false`.
+- `OPTIONS *` answers `204` with `Access-Control-Allow-Origin: <origin>`, `Access-Control-Allow-Methods: GET, POST, OPTIONS`, `Access-Control-Allow-Headers: Content-Type`, `Access-Control-Allow-Private-Network: true`, `Access-Control-Max-Age: 600`, and `Vary: Origin`. Every response carries `Access-Control-Allow-Origin` and `Vary: Origin`; a request whose `Origin` header differs from `--origin` receives `403 origin_denied`.
+- `GET /ping` returns `{ok, data:{version, protocol_version, session:{name, alive, debug_port, tab_count}}}`; `GET /commands` lists the allowed command names; `POST /run` takes `{command, params, session, timeout_seconds}` and answers with the CLI envelope, using `error.status` as the HTTP status.
+- Allowed commands: `tab.list`, `tab.current`, `tab.activate`, `tab.open`, `page.snapshot`, `page.text`, `page.outline`, `page.ax`, `page.find`, `page.extract`, `page.table`, `page.wait`, `page.click`, `page.type`, `page.select`, `page.check`, `page.uncheck`, `page.press`, `page.screenshot`, `bookmark.list`, `session.status`. Unknown names return `400 command_not_allowed`; session lifecycle, `page.eval`, `page.fetch`, uploads, and downloads are not exposed.
+- Requests for the same session run one at a time; a request that cannot start within its `timeout_seconds` (default 30, maximum 120) receives `504 bridge_timeout`.
+- `page.screenshot` returns `{mime:"image/jpeg", base64, width, height}` with the longest side at most 1280 pixels; the temporary PNG artifact is deleted.
+- Request logs go to stderr only. With `--json`, stdout prints one startup line `{ok:true, data:{listening, origin, session}}`. SIGINT/SIGTERM (Ctrl+C on Windows) shuts the listener down within 2 seconds and leaves the browser session running.
+- Windows: `browser serve --register-protocol --origin <portal-origin>` writes `HKCU\Software\Classes\efp-bridge` pointing at `browser.exe bridge-launch "%1"` and stores the origin as `browser.serve.allowed_origin`; `--unregister-protocol` removes the key. Other platforms return `unsupported_platform`. The hidden `bridge-launch <url>` entry point exits when a bridge already answers `/ping` and otherwise starts `browser serve` as a detached background process.
 
 ### Common Browser Flags
 

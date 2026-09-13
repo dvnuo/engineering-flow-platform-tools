@@ -33,7 +33,7 @@ func NewRootWithRunner(r probe.Runner) *cobra.Command {
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "")
 	c.PersistentFlags().StringVar(&o.Format, "format", "table", "")
 	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "")
-	c.AddCommand(openCmd(o), bookmarkCmd(o), probeCmd(o, r), sessionCmd(o), tabCmd(o), pageCmd(o), assertCmd(o), workflowCmd(o), formCmd(o), frameCmd(o), networkCmd(o), downloadCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	c.AddCommand(openCmd(o), bookmarkCmd(o), probeCmd(o, r), sessionCmd(o), tabCmd(o), pageCmd(o), assertCmd(o), workflowCmd(o), formCmd(o), frameCmd(o), networkCmd(o), downloadCmd(o), serveCmd(o), bridgeLaunchCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
 	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
 		Product: "browser",
 		Binary:  "browser",
@@ -86,6 +86,7 @@ When the user names a website or describes its purpose without supplying an expl
 			`browser page upload --selector input[type=file] --file ./report.pdf --json`,
 			`browser download wait --session default --filename-contains report --json`,
 			`browser page screenshot --out result/page-screenshot.png --json`,
+			`browser serve --origin https://portal.example.test --port 8765 --json`,
 			`browser schema probe --json`,
 			`browser help llm --json`,
 		},
@@ -256,6 +257,7 @@ func browserLLMTips() []string {
 		"On Windows cmd, use double quotes and cmd-native commands such as where/dir/cd/type; do not use Bash-only commands such as pwd, command -v, cat, ls, cd \"$PWD\", or single quotes.",
 		"If terminal output capture is unreliable, rerun the exact .exe path from where browser, redirect the JSON envelope to a workspace file, read it with the file-read tool, and inspect artifact files under --out.",
 		"In OpenCode runtime, this command requires a browser executable in the runtime image.",
+		"browser serve is the local bridge for the EFP Portal local browser connector: a Portal page calls it on 127.0.0.1, and it runs tab/page commands in-process against the managed session. It is started by install-bridge.cmd or the efp-bridge:// protocol link, not by agents; do not run browser serve, browser serve --register-protocol, or bridge-launch from an interactive agent session, and keep using browser open and the page commands directly.",
 	}
 }
 

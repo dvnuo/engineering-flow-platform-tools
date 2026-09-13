@@ -121,6 +121,7 @@ Recommended public templates:
 - Use `browser page find` before actions when CSS selectors are unknown or unstable; prefer returned refs or generated `locators:` in workflows.
 - Use `browser page ax` to get accessibility-style refs before ref-based actions; rerun it after navigation or DOM changes.
 - Use `browser page outline`, `table`, and `list` when an agent needs navigable page structure or structured data instead of raw text.
+- `browser serve` is the local bridge for the EFP Portal local browser connector and is started by `install-bridge.cmd` or the `efp-bridge://` protocol link, not by agents. Do not run `browser serve`, `browser serve --register-protocol`, or `bridge-launch` from an interactive agent session; keep using `browser open` and the page commands directly.
 - Use `browser page table-export`, `list-export`, and `scroll-collect` when the user asks to collect or export visible page data. Use `browser page diff` to compare before/after JSON page-state captures.
 - Use `browser form inspect` to discover form field metadata without current values, then `browser form fill --file values.yaml` to fill fields without echoing values.
 - Use `--pierce` on `page extract`, `page outline`, or `page ax` only when open shadow-root traversal is needed; closed shadow roots are not accessible.

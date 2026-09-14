@@ -13,7 +13,6 @@ type RootConfig struct {
 	Jenkins    ProductConfig `json:"jenkins" yaml:"jenkins"`
 	AWS        AWSConfig     `json:"aws" yaml:"aws"`
 	Browser    BrowserConfig `json:"browser" yaml:"browser"`
-	Visual     VisualConfig  `json:"visual" yaml:"visual"`
 	Mobile     MobileConfig  `json:"mobile-auto" yaml:"mobile-auto"`
 
 	envSnapshot *configenv.Snapshot
@@ -51,16 +50,6 @@ type AWSConfig struct {
 	Domain   string `json:"domain,omitempty" yaml:"domain,omitempty"`
 	Username string `json:"username,omitempty" yaml:"username,omitempty"`
 	Password string `json:"password,omitempty" yaml:"password,omitempty"`
-}
-
-type VisualConfig struct {
-	TemplateDir string         `json:"template_dir" yaml:"template_dir"`
-	Defaults    VisualDefaults `json:"defaults" yaml:"defaults"`
-}
-
-type VisualDefaults struct {
-	OfflineStrict *bool  `json:"offline_strict,omitempty" yaml:"offline_strict,omitempty"`
-	DataMode      string `json:"data_mode,omitempty" yaml:"data_mode,omitempty"`
 }
 
 type MobileConfig struct {

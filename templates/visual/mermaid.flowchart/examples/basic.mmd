@@ -1,8 +1,0 @@
----
-title: Mermaid Flowchart Example
----
-flowchart LR
-  User[User Browser] -->|request| Gateway[API Gateway]
-  Gateway -->|calls| Service[Order Service]
-  Service -->|writes| Database[(Order Database)]
-  Service -->|emits| Queue[[Order Events]]

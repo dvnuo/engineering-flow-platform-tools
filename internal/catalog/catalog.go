@@ -629,12 +629,6 @@ func meta(product, usage string) llm.CommandMeta {
 			explicitFound = true
 		}
 	}
-	if product == "visual" {
-		if local, ok := visualExplicit(name); ok {
-			ex = local
-			explicitFound = true
-		}
-	}
 	if product == "browser" {
 		if local, ok := browserExplicit(name); ok {
 			ex = local
@@ -670,9 +664,6 @@ func meta(product, usage string) llm.CommandMeta {
 	if product == "aws-auth" && len(ex.Flags) == 0 {
 		flags = []string{"config", "json", "format", "verbose", "dry-run"}
 	}
-	if product == "visual" && len(ex.Flags) == 0 {
-		flags = []string{"template-dir", "config", "json", "format", "verbose", "dry-run", "offline-strict"}
-	}
 	if product == "mobile-auto" && len(ex.Flags) == 0 {
 		flags = []string{"config", "json", "format", "verbose"}
 	}
@@ -703,16 +694,9 @@ func meta(product, usage string) llm.CommandMeta {
 			}
 		}
 	}
-	if product == "visual" {
-		for _, p := range []string{"jira ", "confluence ", "browser ", "inspect-image "} {
-			if strings.HasPrefix(example, p) {
-				example = strings.Replace(example, p, "visual ", 1)
-			}
-		}
-	}
 	req := ex.Required
 	if len(req) == 0 {
-		if (product == "inspect-image" || product == "jenkins" || product == "visual" || product == "aws-auth" || product == "mobile-auto") && explicitFound {
+		if (product == "inspect-image" || product == "jenkins" || product == "aws-auth" || product == "mobile-auto") && explicitFound {
 			req = []string{}
 		} else {
 			req = required(name)
@@ -788,44 +772,6 @@ func mobileAutoExplicit(name string) (explicitMeta, bool) {
 		"app.upload":    {Description: "Upload an app file or public app URL to BrowserStack App Automate.", Flags: append([]string{"file", "url", "custom-id", "ios-keychain-support", "dry-run"}, common...), Required: []string{"file|url"}, Risk: "write", Example: "mobile-auto app upload --file ./app.apk --custom-id smoke --json"},
 		"app.delete":    {Description: "Delete a BrowserStack uploaded app after explicit confirmation.", Flags: append([]string{"app-id", "app-url", "yes", "dry-run"}, common...), Required: []string{"app-id|app-url", "yes"}, Risk: "delete", Example: "mobile-auto app delete --app-url bs://... --yes --dry-run --json"},
 		"capacity.wait": {Description: "Wait in a bounded polling loop for BrowserStack parallel capacity.", Flags: append([]string{"required", "timeout", "poll-interval"}, common...), Required: []string{"required"}, Risk: "read", Example: "mobile-auto capacity wait --required 1 --timeout 5m --json"},
-	}
-	item, ok := items[name]
-	return item, ok
-}
-
-func visualExplicit(name string) (explicitMeta, bool) {
-	common := []string{"template-dir", "config", "json", "format", "verbose", "dry-run", "offline-strict"}
-	items := map[string]explicitMeta{
-		"render": {Description: "Render a complete offline static visualization artifact from a local template and JSON or Mermaid input.",
-			Flags: append([]string{"template", "input", "out", "title", "overwrite", "data-mode"}, common...), Required: []string{"input", "out"}, Risk: "write", Example: "visual render --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --out ./out/mermaid-architecture --json"},
-		"inspect-input": {Description: "Analyze visual input readability and return layout, grouping, and first-view recommendations before rendering.",
-			Flags: append([]string{"template", "input"}, common...), Required: []string{"input"}, Risk: "read", Example: "visual inspect-input --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --json"},
-		"inspect-plan": {Description: "Compile validated visual input into a normalized visual IR, first-view plan, disclosure plan, quality loop, and render command hints before rendering.",
-			Flags: append([]string{"template", "input", "out"}, common...), Required: []string{"input"}, Risk: "read", Example: "visual inspect-plan --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --out ./out/mermaid-architecture --json"},
-		"inspect-render": {Description: "Inspect a rendered visual artifact for offline safety, manifest/data consistency, and first-view readability.",
-			Flags: append([]string{"out", "screenshot"}, common...), Required: []string{"out"}, Risk: "read", Example: "visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json"},
-		"inspect-browser": {Description: "Open a rendered visual artifact through a local HTTP server, capture a headless browser screenshot, and inspect DOM readiness.",
-			Flags: append([]string{"out", "screenshot", "browser", "timeout"}, common...), Required: []string{"out"}, Risk: "read", Example: "visual inspect-browser --template-dir ./templates/visual --out ./out/isometric-asset-gallery --json"},
-		"validate": {Description: "Validate visual JSON or Mermaid input against the selected or inferred template input contract.",
-			Flags: append([]string{"template", "input"}, common...), Required: []string{"input"}, Risk: "read", Example: "visual validate --template-dir ./templates/visual --input ./templates/visual/architecture.isometric_overview/examples/microservice-architecture.mmd --json"},
-		"template.list": {Description: "List visual templates from templates/visual/registry.json.",
-			Flags: common, Risk: "read", Example: "visual template list --template-dir ./templates/visual --json"},
-		"template.get": {Description: "Show one visual template manifest and renderer contract.",
-			Flags: common, Required: []string{"template-id"}, Risk: "read", Example: "visual template get uml.sequence_3d --template-dir ./templates/visual --json"},
-		"template.schema": {Description: "Show one visual template input JSON schema and basic example.",
-			Flags: common, Required: []string{"template_id"}, Risk: "read", Example: "visual template schema uml.sequence_3d --template-dir ./templates/visual --json"},
-		"template.doctor": {Description: "Validate template registry, manifests, schemas, examples, rendered outputs, and offline safety.",
-			Flags: common, Risk: "read", Example: "visual template doctor --template-dir ./templates/visual --json"},
-		"inspect-output": {Description: "Inspect a generated visual output directory for required files and offline safety.",
-			Flags: append([]string{"out", "screenshot"}, common...), Required: []string{"out"}, Risk: "read", Example: "visual inspect-output --out ./out/run-trace --json"},
-		"commands": {Description: "List available visual commands with metadata.",
-			Flags: common, Risk: "read", Example: "visual commands --json"},
-		"schema": {Description: "Show visual command argument and flag schema.",
-			Flags: common, Required: []string{"command"}, Risk: "read", Example: "visual schema render --json"},
-		"help.llm": {Description: "Show visual CLI usage guidance for LLM agents.",
-			Flags: common, Risk: "read", Example: "visual help llm --json"},
-		"version": {Description: "Print visual CLI version, commit, and build date.",
-			Flags: common, Risk: "read", Example: "visual version --json"},
 	}
 	item, ok := items[name]
 	return item, ok
@@ -1337,10 +1283,6 @@ func argumentDescription(name string) string {
 		return "Jira issue key or full Jira issue URL."
 	case "jira-url":
 		return "Full Jira URL, especially a Zephyr project or test-management URL."
-	case "template_id":
-		return "Visual template id, such as agent.run_trace."
-	case "template-id":
-		return "Visual template id, such as agent.run_trace."
 	case "comment-id":
 		return "Comment id."
 	case "attachment-id":

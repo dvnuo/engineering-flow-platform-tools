@@ -15,7 +15,7 @@ String values in the unified YAML config can reference an environment variable
 by using an exact `${NAME}` or `%NAME%` placeholder. The `${NAME}` form is
 portable; the quoted `%NAME%` form is also supported for Windows-authored
 configuration. This applies consistently to every tool-owned node, including
-`jira`, `confluence`, `jenkins`, `aws`, `browser`, `visual`, `mobile-auto`,
+`jira`, `confluence`, `jenkins`, `aws`, `browser`, `mobile-auto`,
 `copilot`, `inspect_image`, and `ai_platform`.
 
 References are resolved only in memory. Config loaders retain a resolved

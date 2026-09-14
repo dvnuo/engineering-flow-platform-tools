@@ -160,8 +160,6 @@ go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\mobile-auto!EXE_VALUE!" ./cmd/mobile-
 if errorlevel 1 exit /b 1
 go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\inspect-image!EXE_VALUE!" ./cmd/inspect-image
 if errorlevel 1 exit /b 1
-go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\visual!EXE_VALUE!" ./cmd/visual
-if errorlevel 1 exit /b 1
 exit /b 0
 
 :usage

@@ -44,10 +44,8 @@ func RedactEnvelope(env Envelope) Envelope {
 		err.Message = RedactString(err.Message)
 		err.Hint = RedactString(err.Hint)
 		err.RecommendedAction = RedactString(err.RecommendedAction)
-		err.TemplateID = RedactString(err.TemplateID)
 		err.File = RedactString(err.File)
 		err.MissingFiles = redactStringSlice(err.MissingFiles)
-		err.OrphanTemplateDirs = redactStringSlice(err.OrphanTemplateDirs)
 		out.Error = &err
 	}
 	return out

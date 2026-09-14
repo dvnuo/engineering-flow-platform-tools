@@ -9,7 +9,6 @@ This repository hosts cross-platform Go-based CLI tools for agent, runtime, shel
 - `browser`
 - `mobile-auto`
 - `inspect-image`
-- `visual`
 
 Jira and Confluence are the first tool family in this repository. Future tools may be added as separate command binaries under `cmd/<tool-name>`.
 
@@ -103,15 +102,9 @@ For agents, `--json` is the default way to use `inspect-image`; human-facing int
 
 For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so Copilot has durable guidance for when and how to invoke this CLI.
 
-### Visual
-
-`visual` generates complete offline static visualization artifacts from 33 semantic local templates, including dedicated UML templates. Installed templates default to `~/.efp/template/visual`; source checkouts and release archives can still pass `--template-dir ./templates/visual`. It validates input JSON, copies local template assets, and writes `index.html`, `manifest.json`, `manifest.js`, `data.js`, and `assets/**` to `--out`. It does not call Portal, MCP, Node/npm, a server, a CDN, or any remote asset.
-
-For VS Code GitHub Copilot, copy `cmd/visual/visual-cli.instructions.md` to `~/.copilot/instructions/visual-cli.instructions.md` so Copilot uses `visual` as a terminal CLI and returns the generated `index.html` path.
-
 ## Quick Install
 
-Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `mobile-auto`, `inspect-image`, and `visual` on your `PATH`, then run:
+Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `mobile-auto`, and `inspect-image` on your `PATH`, then run:
 
 ```bash
 jira version --json
@@ -121,7 +114,6 @@ aws-auth version --json
 browser version --json
 mobile-auto version --json
 inspect-image version --json
-visual version --json
 ```
 
 ## Config File
@@ -194,12 +186,6 @@ aws:
   username: user@example.test
   password: redacted
 
-visual:
-  template_dir: ~/.efp/template/visual
-  defaults:
-    offline_strict: true
-    data_mode: js-file
-
 copilot:
   provider: github_copilot_plugin
   api:
@@ -267,14 +253,13 @@ Config node ownership:
 - `inspect_image`: inspect-image API defaults, model defaults, image limits, and privacy settings.
 - `ai_platform`: AI Platform endpoints, authentication, and token-file settings.
 - `aws`: AWS authorization settings used by `aws-auth login`.
-- `visual`: offline artifact template directory and default render behavior.
 - `mobile-auto`: mobile provider, BrowserStack, proxy, and local tunnel settings.
 
 ## Environment Variable References
 
 All tool-owned `config.yaml` string fields can reference environment variables
 with exact `${NAME}` or `%NAME%` placeholders, including Jira, Confluence,
-Jenkins, AWS Auth, Browser, Visual, Mobile Auto, Copilot, inspect-image, and AI
+Jenkins, AWS Auth, Browser, Mobile Auto, Copilot, inspect-image, and AI
 Platform settings. On Windows, credentials can stay in the process environment
 while the YAML contains only references:
 
@@ -476,19 +461,6 @@ browser download list --session default --json
 
 The current OpenCode runtime image consumes prebuilt binaries copied into `runtime-tools/` by an external pipeline. A future runtime change must place `browser` on `PATH`, and `browser open` or `browser probe` execution inside a runtime container also requires Edge/Chrome/Chromium in that image.
 
-## Visual Examples
-
-```bash
-visual template categories --template-dir ./templates/visual --json
-visual template list --template-dir ./templates/visual --json
-visual template list --template-dir ./templates/visual --category mermaid --json
-visual template schema mermaid.sequence --template-dir ./templates/visual --json
-visual inspect-input --template mermaid.sequence --template-dir ./templates/visual --input ./templates/visual/mermaid.sequence/examples/basic.mmd --json
-visual render --template mermaid.sequence --template-dir ./templates/visual --input ./templates/visual/mermaid.sequence/examples/basic.mmd --out ./out/sequence --title "Checkout Sequence" --json
-visual inspect-render --template-dir ./templates/visual --out ./out/sequence --json
-visual inspect-browser --template-dir ./templates/visual --out ./out/sequence --json
-```
-
 ## URL Instance Routing
 
 Commands that accept Jira issue URLs or Confluence page URLs can select the matching configured instance automatically. Use `--instance` when multiple configured instances could match the same URL.
@@ -504,7 +476,6 @@ jenkins commands --json
 aws-auth commands --json
 browser commands --json
 inspect-image commands --json
-visual commands --json
 ```
 
 Then inspect the exact schema before calling a command:
@@ -516,11 +487,9 @@ jenkins schema job.build-with-params --json
 aws-auth schema login --json
 browser schema page.fetch --json
 inspect-image schema inspect --json
-visual schema render --json
-visual schema inspect-input --json
 ```
 
-For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, and `visual` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. `aws-auth login` uses `adfs-assume --profile saml` by default. For `visual`, run `visual template categories --json`, `visual template list --category <category> --json`, `visual template get <template-id> --json`, and `visual template schema <template-id> --json` before render. Generate input JSON from the template schema and `visual_design`, inspect readability with `visual inspect-input`, revise low relation coverage, repetitive edge kinds, long labels, missing importance, or missing edge visibility before rendering, validate it, render to a new output directory, and return `data.artifact.entrypoint`. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
+For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. `aws-auth login` uses `adfs-assume --profile saml` by default. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.
 
 For Zephyr, treat a Test Cycle as a Zephyr execution container rather than a Jira issue. When a user asks to update case `X` in cycle `Y`, prefer `jira zephyr execution update-status --cycle-id Y --issue X --status PASSED --json`; use `execution resolve` or `cycle resolve` first when the target is ambiguous, and use `status list` rather than hard-coding numeric status ids.
 
@@ -589,4 +558,4 @@ scripts\smoke.bat
 
 Tags matching `v*` trigger the release workflow. Release archives are named `engineering-flow-platform-tools_<version>_<goos>_<goarch>`.
 
-Current archives include `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, `visual`, `templates/visual/**`, README, and docs.
+Current archives include `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `inspect-image`, README, and docs.

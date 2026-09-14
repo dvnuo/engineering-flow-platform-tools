@@ -5,6 +5,7 @@
 # platforms contains browser, install-bridge.sh, and README.md).
 #
 # Usage:  ./install-bridge.sh https://portal.example.com
+#         (without an argument it asks for the address)
 #
 # No administrator rights are needed. macOS gets a small "EFP Bridge.app" in
 # ~/Applications that owns the URL scheme; Linux gets
@@ -15,6 +16,12 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ORIGIN="${1:-}"
 BROWSER_BIN="$HERE/browser"
 
+if [ -z "$ORIGIN" ] && [ -t 0 ]; then
+  echo "This installer needs the address of your EFP Portal, for example https://portal.example.com"
+  echo "(the Portal's Connectors page shows the exact address)."
+  printf 'Portal address: '
+  read -r ORIGIN
+fi
 if [ -z "$ORIGIN" ]; then
   echo "Usage: install-bridge.sh <portal-origin>" >&2
   echo "Example: install-bridge.sh https://portal.example.com" >&2

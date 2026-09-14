@@ -8,16 +8,31 @@ here replaces it.
 
 ## Download package layout
 
-The Portal links to one package per platform (`LOCAL_BROWSER_CLI_DOWNLOAD_URL`
-in the Portal, falling back to `app/static/downloads/efp-browser-bridge.zip`).
-Each package contains the CLI binary, the installer for that platform, and this
-README:
+`package.sh` builds one zip per platform, `efp-browser-bridge-<os>-<arch>.zip`
+(`windows-amd64`, `windows-arm64`, `darwin-arm64`, `darwin-amd64`, `linux-amd64`,
+`linux-arm64`), holding only what a member needs to install the bridge:
 
-| Platform | Binary | Installer |
-|---|---|---|
-| Windows | `browser.exe` (`scripts/build.sh --os windows --arch amd64`) | `install-bridge.cmd` |
-| macOS | `browser` (`--os darwin --arch arm64` or `amd64`) | `install-bridge.sh` |
-| Linux | `browser` (`--os linux --arch amd64`) | `install-bridge.sh` |
+| Platform | Binary | Installer | Docs |
+|---|---|---|---|
+| Windows | `browser.exe` | `install-bridge.cmd` | `README.md` (`PACKAGE_README.md` here) |
+| macOS | `browser` | `install-bridge.sh` | `README.md` |
+| Linux | `browser` | `install-bridge.sh` | `README.md` |
+
+```bash
+scripts/browser-bridge/package.sh                       # all six, into dist/bridge/
+scripts/browser-bridge/package.sh --os darwin --arch arm64 --version 0.2.0
+```
+
+The release workflow runs it for every target, uploads the zips with the
+build artifacts, and attaches them to the GitHub release of the tag, so a
+Portal can point `LOCAL_BROWSER_CLI_DOWNLOAD_URL` at
+`https://github.com/<org>/engineering-flow-platform-tools/releases/download/<tag>/efp-browser-bridge-{platform}.zip`
+(`{platform}` is filled in per member) or copy the zips into its
+`app/static/downloads/`, the fallback location. The Portal panel offers the
+member's own system first and lists the others. The verify scripts below are
+not part of the packages; `zip(1)` is needed to keep the execute bits of the
+macOS and Linux packages (the script falls back to Python's `zipfile` where
+`zip` is missing, which is enough for the Windows package).
 
 The installer runs `browser serve --register-protocol --origin <portal-origin>`
 relative to its own directory, which registers the `efp-bridge://` link for

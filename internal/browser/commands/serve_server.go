@@ -165,7 +165,7 @@ type bridgeServer struct {
 	// opened or reopened. ensure is a test seam replacing that Manager call.
 	start    automation.StartOptions
 	startURL string
-	ensure   func(context.Context, string) (automation.EnsurePersistentResult, error)
+	ensure   func(ctx context.Context, sessionName, startURL string) (automation.EnsurePersistentResult, error)
 
 	mu     sync.Mutex
 	queues map[string]chan struct{}
@@ -537,7 +537,7 @@ func (s *bridgeServer) executeOnce(ctx context.Context, command, sessionName str
 	case "session.status":
 		result, err = mgr.Status(ctx, sessionName)
 	case "session.ensure":
-		result, err = s.ensureSession(ctx, sessionName)
+		result, err = s.ensureSession(ctx, sessionName, strings.TrimSpace(p.URL))
 	default:
 		return output.Failure("command_not_allowed", "Command is not exposed by the local bridge: "+command, "Run GET /commands for the allowed list.", http.StatusBadRequest), nil
 	}
@@ -666,14 +666,20 @@ func (s *bridgeServer) writeEnvelope(w http.ResponseWriter, status int, env outp
 
 // ensureSession reopens the managed browser when its window was closed (the
 // bridge outlives Chrome, so /ping keeps answering with session.alive=false)
-// and brings a tab at the Portal origin to the front without adding tabs.
-func (s *bridgeServer) ensureSession(ctx context.Context, sessionName string) (automation.EnsurePersistentResult, error) {
+// and brings a tab at the page's origin to the front without adding tabs.
+// startURL overrides the bridge's configured first tab for this call, so a
+// page whose start page setting changed after the bridge started still gets
+// the current one; empty keeps the bridge default.
+func (s *bridgeServer) ensureSession(ctx context.Context, sessionName, startURL string) (automation.EnsurePersistentResult, error) {
+	if startURL == "" {
+		startURL = s.startURL
+	}
 	if s.ensure != nil {
-		return s.ensure(ctx, sessionName)
+		return s.ensure(ctx, sessionName, startURL)
 	}
 	start := s.start
 	start.Name = sessionName
-	start.URL = s.startURL
+	start.URL = startURL
 	return s.manager.EnsurePersistent(ctx, start)
 }
 
@@ -687,7 +693,7 @@ func (s *bridgeServer) execute(ctx context.Context, command, sessionName string,
 	if env.OK || !sessionGone(env) || command == "session.status" || command == "session.ensure" {
 		return env, patch
 	}
-	if _, err := s.ensureSession(ctx, sessionName); err != nil {
+	if _, err := s.ensureSession(ctx, sessionName, ""); err != nil {
 		s.logger.Printf("%s: browser session %s could not be reopened: %v", command, sessionName, err)
 		return env, patch
 	}

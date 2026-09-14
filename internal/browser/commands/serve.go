@@ -229,7 +229,7 @@ func (s *bridgeServer) openStartupSession(ctx context.Context) {
 		return
 	}
 	defer release()
-	result, err := s.ensureSession(ctx, s.session)
+	result, err := s.ensureSession(ctx, s.session, "")
 	if err != nil {
 		s.logger.Printf("startup: browser session %s could not be opened: %v (serving anyway; /ping reports alive=false)", s.session, err)
 		return

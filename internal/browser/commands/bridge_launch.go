@@ -28,11 +28,14 @@ const (
 	bridgeLaunchEnsureTimeout = 60 * time.Second
 )
 
-// bridgeLaunchRequest is the parsed efp-bridge://start?origin=...&port=... link.
+// bridgeLaunchRequest is the parsed efp-bridge://start?origin=...&port=...
+// link. URL is the optional first-tab page (LOCAL_BROWSER_START_URL on the
+// Portal); the bridge opens the origin when it is absent.
 type bridgeLaunchRequest struct {
 	Origin  string
 	Port    int
 	Session string
+	URL     string
 }
 
 // bridgeLaunchCmd is the hidden protocol-handler entry point registered by
@@ -42,7 +45,7 @@ func bridgeLaunchCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{
 		Use:    "bridge-launch <url>",
 		Short:  "Start the Portal local bridge from an efp-bridge:// link",
-		Long:   "Hidden protocol-handler entry point: parse efp-bridge://start?origin=<urlencoded>&port=<n>, exit when a bridge already answers on the port, otherwise start browser serve as a detached background process.",
+		Long:   "Hidden protocol-handler entry point: parse efp-bridge://start?origin=<urlencoded>&port=<n>[&url=<urlencoded first-tab URL>], ask a bridge that already answers on the port to reopen its browser window when that is closed, otherwise start browser serve as a detached background process.",
 		Hidden: true,
 		Args:   cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -91,7 +94,28 @@ func parseBridgeLaunchURL(raw string) (bridgeLaunchRequest, error) {
 		}
 		req.Session = session
 	}
+	if rawURL := strings.TrimSpace(query.Get("url")); rawURL != "" {
+		u, err := url.Parse(rawURL)
+		if err != nil || u == nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+			return bridgeLaunchRequest{}, automation.NewError("invalid_args", "efp-bridge link url must be an absolute http or https URL", "Example: efp-bridge://start?origin=https%3A%2F%2Fportal.example.com&port=8765&url=https%3A%2F%2Fportal.example.com%2Fapp", 400)
+		}
+		req.URL = rawURL
+	}
 	return req, nil
+}
+
+// bridgeServeArgs is the command line of the detached browser serve. The
+// resolved first-tab URL is always passed so the child does not re-derive it.
+func bridgeServeArgs(settings serveSettings, configPath string) []string {
+	args := []string{"serve", "--origin", settings.Origin, "--port", strconv.Itoa(settings.Port), "--session", settings.Session}
+	if settings.URL != "" {
+		args = append(args, "--url", settings.URL)
+	}
+	args = append(args, "--json")
+	if strings.TrimSpace(configPath) != "" {
+		args = append(args, "--config", configPath)
+	}
+	return args
 }
 
 func runBridgeLaunch(cmd *cobra.Command, o *Opts, raw string) error {
@@ -104,7 +128,7 @@ func runBridgeLaunch(cmd *cobra.Command, o *Opts, raw string) error {
 		logBridgeLaunch("rejected %s: %v", raw, err)
 		return printAutomationError(cmd, o, err)
 	}
-	settings, err := resolveServeSettings(o, serveOptions{Origin: req.Origin, Port: req.Port, Session: req.Session}, req.Port > 0)
+	settings, err := resolveServeSettings(o, serveOptions{Origin: req.Origin, Port: req.Port, Session: req.Session, URL: req.URL}, req.Port > 0)
 	if err != nil {
 		logBridgeLaunch("could not resolve settings for %s: %v", req.Origin, err)
 		return printAutomationError(cmd, o, err)
@@ -143,7 +167,7 @@ func runBridgeLaunch(cmd *cobra.Command, o *Opts, raw string) error {
 		logBridgeLaunch("a bridge already answers on %s but its browser window is closed; asking it to reopen", bridgeListenURL(port))
 		reopenCtx, cancelReopen := context.WithTimeout(cmd.Context(), bridgeLaunchEnsureTimeout+bridgeLaunchPingTimeout)
 		defer cancelReopen()
-		ensured, err := ensureBridgeSession(reopenCtx, port, settings.Session)
+		ensured, err := ensureBridgeSession(reopenCtx, port, settings.Session, settings.URL)
 		if err != nil {
 			logBridgeLaunch("bridge on %s could not reopen its browser window: %v", bridgeListenURL(port), err)
 			return printAutomationError(cmd, o, err)
@@ -157,10 +181,7 @@ func runBridgeLaunch(cmd *cobra.Command, o *Opts, raw string) error {
 	if err != nil {
 		return printAutomationError(cmd, o, err)
 	}
-	args := []string{"serve", "--origin", settings.Origin, "--port", strconv.Itoa(settings.Port), "--session", settings.Session, "--json"}
-	if strings.TrimSpace(o.Config) != "" {
-		args = append(args, "--config", o.Config)
-	}
+	args := bridgeServeArgs(settings, o.Config)
 	logPath, logFile := openBridgeLog()
 	child, err := startDetachedBridgeProcess(executable, args, logFile)
 	if logFile != nil {
@@ -171,7 +192,7 @@ func runBridgeLaunch(cmd *cobra.Command, o *Opts, raw string) error {
 		return printAutomationError(cmd, o, automation.NewError("bridge_launch_failed", err.Error(), "Start the bridge manually with browser serve --origin <portal-origin>.", 500))
 	}
 	pid := child.Process.Pid
-	logBridgeLaunch("started %s serve --origin %s --port %d --session %s (pid %d)", executable, settings.Origin, settings.Port, settings.Session, pid)
+	logBridgeLaunch("started %s %s (pid %d)", executable, strings.Join(args, " "), pid)
 	_ = child.Process.Release()
 	port, ping, ready := waitForBridge(ctx, settings.Port, bridgePortAttempts, bridgeLaunchReadyTimeout)
 	data := map[string]any{
@@ -322,11 +343,17 @@ func bridgePingSessionAlive(ping map[string]any) bool {
 }
 
 // ensureBridgeSession asks a running bridge to reopen its managed browser
-// window (POST /run session.ensure) and returns the command's data.
-func ensureBridgeSession(ctx context.Context, port int, session string) (map[string]any, error) {
+// window (POST /run session.ensure) and returns the command's data. startURL,
+// when set, is the page the reopened window shows; the running bridge keeps
+// its own default otherwise.
+func ensureBridgeSession(ctx context.Context, port int, session, startURL string) (map[string]any, error) {
+	params := map[string]any{}
+	if startURL != "" {
+		params["url"] = startURL
+	}
 	body, err := json.Marshal(map[string]any{
 		"command":         "session.ensure",
-		"params":          map[string]any{},
+		"params":          params,
 		"session":         session,
 		"timeout_seconds": int(bridgeLaunchEnsureTimeout / time.Second),
 	})

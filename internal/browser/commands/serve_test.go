@@ -99,6 +99,9 @@ type bridgeFixture struct {
 	manager  *automation.Manager
 	server   *bridgeServer
 	http     *httptest.Server
+
+	// ensureURLs records the start URL each reopen hook call received.
+	ensureURLs []string
 }
 
 func newBridgeFixture(t *testing.T, origin string, listDelay time.Duration) *bridgeFixture {
@@ -512,6 +515,10 @@ func TestParseBridgeLaunchURL(t *testing.T) {
 		{name: "trailing slash from the browser", raw: "efp-bridge://start/?origin=https%3A%2F%2Fportal.example.test%3A8443&port=8766", want: bridgeLaunchRequest{Origin: "https://portal.example.test:8443", Port: 8766}},
 		{name: "opaque form without slashes", raw: "efp-bridge:start?origin=http%3A%2F%2Flocalhost%3A8000", want: bridgeLaunchRequest{Origin: "http://localhost:8000"}},
 		{name: "session parameter", raw: "efp-bridge://start?origin=https%3A%2F%2Fportal.example.test&session=portal", want: bridgeLaunchRequest{Origin: "https://portal.example.test", Session: "portal"}},
+		{name: "first-tab url", raw: "efp-bridge://start?origin=https%3A%2F%2Fportal.example.test&port=8765&url=https%3A%2F%2Fportal.example.test%2Fapp%23%2Fchat", want: bridgeLaunchRequest{Origin: "https://portal.example.test", Port: 8765, URL: "https://portal.example.test/app#/chat"}},
+		{name: "first-tab url on another host", raw: "efp-bridge://start?origin=https%3A%2F%2Fportal.example.test&url=https%3A%2F%2Fsso.example.test%2Flanding", want: bridgeLaunchRequest{Origin: "https://portal.example.test", URL: "https://sso.example.test/landing"}},
+		{name: "relative first-tab url", raw: "efp-bridge://start?origin=https%3A%2F%2Fportal.example.test&url=%2Fapp", wantErr: "invalid_args"},
+		{name: "non-http first-tab url", raw: "efp-bridge://start?origin=https%3A%2F%2Fportal.example.test&url=file%3A%2F%2F%2Fetc%2Fpasswd", wantErr: "invalid_args"},
 		{name: "uppercase scheme and default port stripped", raw: "EFP-BRIDGE://START?origin=HTTPS%3A%2F%2FPortal.Example.Test%3A443", want: bridgeLaunchRequest{Origin: "https://portal.example.test"}},
 		{name: "wrong scheme", raw: "https://portal.example.test/start?origin=x", wantErr: "invalid_args"},
 		{name: "unknown action", raw: "efp-bridge://stop?origin=https%3A%2F%2Fportal.example.test", wantErr: "invalid_args"},
@@ -752,8 +759,11 @@ func deadSessionFixture(t *testing.T) (*bridgeFixture, *int32) {
 	f := newBridgeFixture(t, testPortalOrigin, 0)
 	f.devtools.server.Close()
 	var calls int32
-	f.server.ensure = func(_ context.Context, name string) (automation.EnsurePersistentResult, error) {
+	f.server.ensure = func(_ context.Context, name, startURL string) (automation.EnsurePersistentResult, error) {
 		atomic.AddInt32(&calls, 1)
+		f.server.mu.Lock()
+		f.ensureURLs = append(f.ensureURLs, startURL)
+		f.server.mu.Unlock()
 		revived := newFakeDevTools(t, 0)
 		session := automation.Session{Name: name, DebugAddr: revived.host, DebugPort: revived.port, CreatedAt: time.Now().UTC(), Alive: true, BrowserWebSocketURL: "ws://127.0.0.1:1/devtools/browser/abc", ActiveTargetID: "page-1"}
 		if err := f.manager.Store.Save(session); err != nil {
@@ -792,6 +802,29 @@ func TestBridgeSessionEnsureReopensTheClosedWindow(t *testing.T) {
 	// /ping now sees the reopened window.
 	if session := pingSession(t, f); session["alive"] != true || session["tab_count"] != float64(2) {
 		t.Fatalf("session after reopen = %#v", session)
+	}
+	// Without a url param the bridge's own first-tab URL applies; with one,
+	// the page's current start page wins for that reopen.
+	f.server.startURL = "https://portal.example.test"
+	if resp, out := f.run(t, "session.ensure", nil, 60); resp.StatusCode != http.StatusOK || out["ok"] != true {
+		t.Fatalf("session.ensure default url: status=%d out=%#v", resp.StatusCode, out)
+	}
+	if resp, out := f.run(t, "session.ensure", map[string]any{"url": "https://portal.example.test/app#/chat"}, 60); resp.StatusCode != http.StatusOK || out["ok"] != true {
+		t.Fatalf("session.ensure with url: status=%d out=%#v", resp.StatusCode, out)
+	}
+	if want := []string{"", "https://portal.example.test", "https://portal.example.test/app#/chat"}; strings.Join(f.ensureURLs, "|") != strings.Join(want, "|") {
+		t.Fatalf("reopen start URLs = %q want %q", f.ensureURLs, want)
+	}
+}
+
+func TestBridgeServeArgsCarryTheResolvedFirstTab(t *testing.T) {
+	args := bridgeServeArgs(serveSettings{Origin: "https://portal.example.test", Port: 8765, Session: "default", URL: "https://portal.example.test/app#/chat"}, "")
+	if got, want := strings.Join(args, " "), "serve --origin https://portal.example.test --port 8765 --session default --url https://portal.example.test/app#/chat --json"; got != want {
+		t.Fatalf("args = %q want %q", got, want)
+	}
+	args = bridgeServeArgs(serveSettings{Origin: "https://portal.example.test", Port: 8766, Session: "portal"}, "C:\\efp\\config.yaml")
+	if got, want := strings.Join(args, " "), "serve --origin https://portal.example.test --port 8766 --session portal --json --config C:\\efp\\config.yaml"; got != want {
+		t.Fatalf("args without url = %q want %q", got, want)
 	}
 }
 
@@ -848,7 +881,7 @@ func TestBridgeReturnsTheOriginalErrorWhenTheWindowCannotReopen(t *testing.T) {
 	f := newBridgeFixture(t, testPortalOrigin, 0)
 	f.devtools.server.Close()
 	var calls int32
-	f.server.ensure = func(context.Context, string) (automation.EnsurePersistentResult, error) {
+	f.server.ensure = func(context.Context, string, string) (automation.EnsurePersistentResult, error) {
 		atomic.AddInt32(&calls, 1)
 		return automation.EnsurePersistentResult{}, automation.NewError("browser_not_found", "No Chrome, Edge, or Chromium executable was found.", "Install Chrome or pass --browser-exe.", 404)
 	}
@@ -873,7 +906,7 @@ func TestBridgeLaunchAsksARunningBridgeToReopenItsWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	link := "efp-bridge://start?origin=https%3A%2F%2Fportal.example.test&port=" + portText
+	link := "efp-bridge://start?origin=https%3A%2F%2Fportal.example.test&port=" + portText + "&url=https%3A%2F%2Fportal.example.test%2Fapp"
 	out := run(t, &fakeRunner{}, "bridge-launch", link, "--json")
 	if out["ok"] != true {
 		t.Fatalf("bridge-launch against a bridge with a closed window: %#v", out)
@@ -884,6 +917,11 @@ func TestBridgeLaunchAsksARunningBridgeToReopenItsWindow(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(calls); got != 1 {
 		t.Fatalf("reopen calls = %d", got)
+	}
+	// The link's first-tab URL reaches the reopen, so the window shows the
+	// page the Portal is configured for even when the bridge predates it.
+	if len(f.ensureURLs) != 1 || f.ensureURLs[0] != "https://portal.example.test/app" {
+		t.Fatalf("reopen start URLs = %q", f.ensureURLs)
 	}
 	// With the window open there is nothing to do, and no second bridge starts.
 	out = run(t, &fakeRunner{}, "bridge-launch", link, "--json")

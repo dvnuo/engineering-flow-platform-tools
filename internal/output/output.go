@@ -9,16 +9,14 @@ import (
 )
 
 type ErrorDetail struct {
-	Code               string   `json:"code" yaml:"code"`
-	Message            string   `json:"message" yaml:"message"`
-	Hint               string   `json:"hint,omitempty" yaml:"hint,omitempty"`
-	Status             int      `json:"status,omitempty" yaml:"status,omitempty"`
-	Retryable          bool     `json:"retryable,omitempty" yaml:"retryable,omitempty"`
-	RecommendedAction  string   `json:"recommended_action,omitempty" yaml:"recommended_action,omitempty"`
-	TemplateID         string   `json:"template_id,omitempty" yaml:"template_id,omitempty"`
-	File               string   `json:"file,omitempty" yaml:"file,omitempty"`
-	MissingFiles       []string `json:"missing_files,omitempty" yaml:"missing_files,omitempty"`
-	OrphanTemplateDirs []string `json:"orphan_template_dirs,omitempty" yaml:"orphan_template_dirs,omitempty"`
+	Code              string   `json:"code" yaml:"code"`
+	Message           string   `json:"message" yaml:"message"`
+	Hint              string   `json:"hint,omitempty" yaml:"hint,omitempty"`
+	Status            int      `json:"status,omitempty" yaml:"status,omitempty"`
+	Retryable         bool     `json:"retryable,omitempty" yaml:"retryable,omitempty"`
+	RecommendedAction string   `json:"recommended_action,omitempty" yaml:"recommended_action,omitempty"`
+	File              string   `json:"file,omitempty" yaml:"file,omitempty"`
+	MissingFiles      []string `json:"missing_files,omitempty" yaml:"missing_files,omitempty"`
 }
 
 type Envelope struct {

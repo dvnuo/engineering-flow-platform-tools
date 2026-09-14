@@ -1,6 +1,6 @@
 # Install
 
-Download the release archive for your operating system and CPU architecture, extract it, and place `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `mobile-auto`, `inspect-image`, and `visual` on your `PATH`.
+Download the release archive for your operating system and CPU architecture, extract it, and place `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `mobile-auto`, and `inspect-image` on your `PATH`.
 
 Verify the install:
 
@@ -12,7 +12,6 @@ aws-auth version --json
 browser version --json
 mobile-auto version --json
 inspect-image version --json
-visual version --json
 ```
 
 `browser open` and `browser probe` use Chrome by default and require Chrome, Edge, or Chromium to be installed on the machine where they run. Inside OpenCode runtime containers, a separate runtime image change is required to install a browser executable and place the `browser` binary on PATH.

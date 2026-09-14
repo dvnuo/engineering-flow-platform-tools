@@ -11,7 +11,6 @@ import (
 	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
 	"engineering-flow-platform-tools/internal/testutil"
-	vcmd "engineering-flow-platform-tools/internal/visual/commands"
 )
 
 func TestVersionJSONContract(t *testing.T) {
@@ -47,13 +46,6 @@ func TestVersionJSONContract(t *testing.T) {
 			cmd.SetArgs([]string{"version", "--json"})
 			return cmd.Execute()
 		}},
-		{name: "visual", run: func(b *bytes.Buffer) error {
-			cmd := vcmd.NewRoot()
-			cmd.SetOut(b)
-			cmd.SetErr(b)
-			cmd.SetArgs([]string{"version", "--json"})
-			return cmd.Execute()
-		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var b bytes.Buffer
@@ -80,7 +72,6 @@ func TestDocsAndScriptsExist(t *testing.T) {
 		"../docs/RELEASE.md",
 		"../docs/SECURITY.md",
 		"../docs/TROUBLESHOOTING.md",
-		"../docs/VISUAL.md",
 		"../scripts/smoke.sh",
 		"../scripts/smoke.bat",
 		"../.github/workflows/release.yml",
@@ -90,6 +81,8 @@ func TestDocsAndScriptsExist(t *testing.T) {
 		}
 	}
 }
+
+var buildTargets = []string{"./cmd/jira", "./cmd/confluence", "./cmd/jenkins", "./cmd/aws-auth", "./cmd/browser", "./cmd/mobile-auto", "./cmd/inspect-image"}
 
 func TestBuildScriptsListRequiredTargets(t *testing.T) {
 	for _, path := range []string{"../scripts/build.sh", "../scripts/build.bat"} {
@@ -106,7 +99,7 @@ func TestBuildScriptsListRequiredTargets(t *testing.T) {
 		if !strings.Contains(s, "-ldflags") || !strings.Contains(s, "internal/version.Version") {
 			t.Fatalf("%s does not inject version ldflags", path)
 		}
-		for _, target := range []string{"./cmd/aws-auth", "./cmd/visual"} {
+		for _, target := range buildTargets {
 			if !strings.Contains(s, target) {
 				t.Fatalf("%s missing build target %s", path, target)
 			}
@@ -114,13 +107,13 @@ func TestBuildScriptsListRequiredTargets(t *testing.T) {
 	}
 }
 
-func TestReleaseWorkflowIncludesVisualTemplates(t *testing.T) {
+func TestReleaseWorkflowIncludesBuildTargets(t *testing.T) {
 	b, err := os.ReadFile("../.github/workflows/release.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := string(b)
-	for _, token := range []string{"./cmd/aws-auth", "./cmd/visual", "templates/visual"} {
+	for _, token := range buildTargets {
 		if !strings.Contains(s, token) {
 			t.Fatalf("release workflow missing %s", token)
 		}

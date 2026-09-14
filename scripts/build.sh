@@ -75,7 +75,6 @@ build_one() {
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/browser$exe" ./cmd/browser
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/mobile-auto$exe" ./cmd/mobile-auto
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/inspect-image$exe" ./cmd/inspect-image
-  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/visual$exe" ./cmd/visual
 }
 
 TARGETS=(

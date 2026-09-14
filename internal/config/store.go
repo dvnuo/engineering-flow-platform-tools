@@ -115,9 +115,6 @@ func Save(path string, c RootConfig) error {
 	if err := setMappingValue(root, "browser", c.Browser, c.envSnapshot); err != nil {
 		return err
 	}
-	if err := setMappingValue(root, "visual", c.Visual, c.envSnapshot); err != nil {
-		return err
-	}
 	deleteMappingValue(root, "mobile")
 	if err := setMappingValue(root, "mobile-auto", c.Mobile, c.envSnapshot); err != nil {
 		return err

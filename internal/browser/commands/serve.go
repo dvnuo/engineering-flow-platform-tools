@@ -163,6 +163,10 @@ func runServe(cmd *cobra.Command, o *Opts, opts serveOptions) error {
 		return printAutomationError(cmd, o, err)
 	}
 	server := newBridgeServer(mgr, settings.Origin, settings.Session, o, logger)
+	// Set before the listener accepts anything: the first request may already
+	// be one that reopens the browser window, and that reads these.
+	server.start = automation.StartOptions{Name: settings.Session, Browser: opts.Browser, BrowserExe: opts.BrowserExe, Headless: opts.Headless, Verbose: o.Verbose}
+	server.startURL = settings.URL
 	httpServer := &http.Server{Handler: server.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	listening := fmt.Sprintf("http://%s:%d", automation.LocalDebugAddr, port)
 	serveErr := make(chan error, 1)
@@ -172,8 +176,6 @@ func runServe(cmd *cobra.Command, o *Opts, opts serveOptions) error {
 	}
 	logger.Printf("listening on %s origin=%s session=%s pid=%d", listening, settings.Origin, settings.Session, os.Getpid())
 
-	server.start = automation.StartOptions{Name: settings.Session, Browser: opts.Browser, BrowserExe: opts.BrowserExe, Headless: opts.Headless, Verbose: o.Verbose}
-	server.startURL = settings.URL
 	go server.openStartupSession(context.Background())
 
 	signals := make(chan os.Signal, 1)

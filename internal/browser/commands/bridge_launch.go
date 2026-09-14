@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,6 +23,9 @@ const (
 	bridgeLaunchPingTimeout  = 2 * time.Second
 	bridgeLaunchReadyTimeout = 5 * time.Second
 	bridgeLaunchPollInterval = 200 * time.Millisecond
+	// A reopen launches Chrome (up to 20 s) behind whatever command the bridge
+	// is running for the page, so it gets the bridge maximum.
+	bridgeLaunchEnsureTimeout = 60 * time.Second
 )
 
 // bridgeLaunchRequest is the parsed efp-bridge://start?origin=...&port=... link.
@@ -121,15 +125,33 @@ func runBridgeLaunch(cmd *cobra.Command, o *Opts, raw string) error {
 				409,
 			))
 		}
-		logBridgeLaunch("a bridge already answers on %s; nothing to start", bridgeListenURL(port))
-		return print(cmd, o, output.Success("", map[string]any{
+		data := map[string]any{
 			"already_running": true,
 			"started":         false,
 			"listening":       bridgeListenURL(port),
 			"origin":          settings.Origin,
 			"session":         settings.Session,
 			"ping":            ping,
-		}))
+		}
+		if bridgePingSessionAlive(ping) {
+			logBridgeLaunch("a bridge already answers on %s; nothing to start", bridgeListenURL(port))
+			return print(cmd, o, output.Success("", data))
+		}
+		// The bridge outlived its Chrome window: the member closed the window
+		// and clicked Start bridge again. A second bridge would not help (this
+		// one holds the port); asking it to reopen the window does.
+		logBridgeLaunch("a bridge already answers on %s but its browser window is closed; asking it to reopen", bridgeListenURL(port))
+		reopenCtx, cancelReopen := context.WithTimeout(cmd.Context(), bridgeLaunchEnsureTimeout+bridgeLaunchPingTimeout)
+		defer cancelReopen()
+		ensured, err := ensureBridgeSession(reopenCtx, port, settings.Session)
+		if err != nil {
+			logBridgeLaunch("bridge on %s could not reopen its browser window: %v", bridgeListenURL(port), err)
+			return printAutomationError(cmd, o, err)
+		}
+		logBridgeLaunch("bridge on %s reopened its browser window", bridgeListenURL(port))
+		data["session_reopened"] = true
+		data["ensure"] = ensured
+		return print(cmd, o, output.Success("", data))
 	}
 	executable, err := bridgeExecutablePath()
 	if err != nil {
@@ -285,4 +307,64 @@ func newDetachedCommand(executable string, args []string, logFile *os.File) *exe
 		cmd.Stderr = logFile
 	}
 	return cmd
+}
+
+// bridgePingSessionAlive reads session.alive from a /ping answer. A bridge
+// older than this build sends no session block; that reads as alive so the
+// launch never asks it for a command it does not have.
+func bridgePingSessionAlive(ping map[string]any) bool {
+	session, ok := ping["session"].(map[string]any)
+	if !ok {
+		return true
+	}
+	alive, ok := session["alive"].(bool)
+	return !ok || alive
+}
+
+// ensureBridgeSession asks a running bridge to reopen its managed browser
+// window (POST /run session.ensure) and returns the command's data.
+func ensureBridgeSession(ctx context.Context, port int, session string) (map[string]any, error) {
+	body, err := json.Marshal(map[string]any{
+		"command":         "session.ensure",
+		"params":          map[string]any{},
+		"session":         session,
+		"timeout_seconds": int(bridgeLaunchEnsureTimeout / time.Second),
+	})
+	if err != nil {
+		return nil, automation.NewError("automation_failed", err.Error(), "", 500)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, bridgeListenURL(port)+"/run", bytes.NewReader(body))
+	if err != nil {
+		return nil, automation.NewError("automation_failed", err.Error(), "", 500)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return nil, automation.NewError("bridge_unreachable", err.Error(), "The running bridge stopped answering; click Start bridge again.", 503)
+	}
+	defer resp.Body.Close()
+	var env struct {
+		OK    bool           `json:"ok"`
+		Data  map[string]any `json:"data"`
+		Error *struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+			Hint    string `json:"hint"`
+			Status  int    `json:"status"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&env); err != nil {
+		return nil, automation.NewError("bridge_bad_response", err.Error(), "The running bridge did not answer session.ensure with a JSON envelope.", 502)
+	}
+	if env.OK {
+		return env.Data, nil
+	}
+	if env.Error == nil {
+		return nil, automation.NewError("bridge_error", fmt.Sprintf("session.ensure returned HTTP %d.", resp.StatusCode), "", 502)
+	}
+	status := env.Error.Status
+	if status <= 0 {
+		status = 502
+	}
+	return nil, automation.NewError(env.Error.Code, env.Error.Message, env.Error.Hint, status)
 }

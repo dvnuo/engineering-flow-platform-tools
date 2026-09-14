@@ -172,13 +172,9 @@ func runServe(cmd *cobra.Command, o *Opts, opts serveOptions) error {
 	}
 	logger.Printf("listening on %s origin=%s session=%s pid=%d", listening, settings.Origin, settings.Session, os.Getpid())
 
-	go server.openStartupSession(context.Background(), automation.StartOptions{
-		Name:       settings.Session,
-		Browser:    opts.Browser,
-		BrowserExe: opts.BrowserExe,
-		Headless:   opts.Headless,
-		Verbose:    o.Verbose,
-	}, settings.URL)
+	server.start = automation.StartOptions{Name: settings.Session, Browser: opts.Browser, BrowserExe: opts.BrowserExe, Headless: opts.Headless, Verbose: o.Verbose}
+	server.startURL = settings.URL
+	go server.openStartupSession(context.Background())
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
@@ -220,34 +216,25 @@ func announceServe(cmd *cobra.Command, o *Opts, listening string, settings serve
 	return err
 }
 
-// openStartupSession ensures the managed session is running so /ping can
-// report alive=true, opening rawURL as the first tab when one is configured.
-// Failures are logged; the bridge keeps serving with alive=false.
-func (s *bridgeServer) openStartupSession(ctx context.Context, start automation.StartOptions, rawURL string) {
+// openStartupSession makes the managed session ready so /ping can report
+// alive=true: a stopped browser is launched on the configured first-tab URL
+// (that tab only, no New Tab page) and a running one is reused with its tabs
+// as they are. Failures are logged; the bridge keeps serving with alive=false.
+func (s *bridgeServer) openStartupSession(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, bridgeStartupTimeout)
 	defer cancel()
-	release, ok := s.acquire(ctx, start.Name)
+	release, ok := s.acquire(ctx, s.session)
 	if !ok {
-		s.logger.Printf("startup: session %s queue was busy; skipping startup open", start.Name)
+		s.logger.Printf("startup: session %s queue was busy; skipping startup open", s.session)
 		return
 	}
 	defer release()
-	if rawURL != "" {
-		start.URL = rawURL
-		result, err := s.manager.OpenPersistent(ctx, start)
-		if err != nil {
-			s.logger.Printf("startup: browser session %s could not be opened: %v (serving anyway; /ping reports alive=false)", start.Name, err)
-			return
-		}
-		s.logger.Printf("startup: session %s alive=%t debug_port=%d reused=%t target=%s", result.Session.Name, result.Session.Alive, result.Session.DebugPort, result.Reused, result.Target.ID)
-		return
-	}
-	session, err := s.manager.Start(ctx, start)
+	result, err := s.ensureSession(ctx, s.session)
 	if err != nil {
-		s.logger.Printf("startup: browser session %s could not be started: %v (serving anyway; /ping reports alive=false)", start.Name, err)
+		s.logger.Printf("startup: browser session %s could not be opened: %v (serving anyway; /ping reports alive=false)", s.session, err)
 		return
 	}
-	s.logger.Printf("startup: session %s alive=%t debug_port=%d", session.Name, session.Alive, session.DebugPort)
+	s.logger.Printf("startup: session %s alive=%t debug_port=%d reused=%t target=%s tab_opened=%t", result.Session.Name, result.Session.Alive, result.Session.DebugPort, result.Reused, result.Target.ID, result.TabOpened)
 }
 
 func runRegisterProtocol(cmd *cobra.Command, o *Opts, opts serveOptions) error {

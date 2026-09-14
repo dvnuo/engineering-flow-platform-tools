@@ -288,7 +288,7 @@ func TestBridgeCommandsListsAllowedNames(t *testing.T) {
 	for _, raw := range out["data"].(map[string]any)["commands"].([]any) {
 		names[raw.(string)] = true
 	}
-	for _, want := range []string{"tab.list", "tab.current", "tab.activate", "tab.open", "page.snapshot", "page.text", "page.outline", "page.ax", "page.find", "page.extract", "page.table", "page.wait", "page.click", "page.type", "page.select", "page.check", "page.uncheck", "page.press", "page.screenshot", "bookmark.list", "session.status"} {
+	for _, want := range []string{"tab.list", "tab.current", "tab.activate", "tab.open", "page.snapshot", "page.text", "page.outline", "page.ax", "page.find", "page.extract", "page.table", "page.wait", "page.click", "page.type", "page.select", "page.check", "page.uncheck", "page.press", "page.screenshot", "bookmark.list", "session.status", "session.ensure"} {
 		if !names[want] {
 			t.Fatalf("commands missing %s: %v", want, names)
 		}
@@ -741,5 +741,157 @@ func TestServeCommandIsVisibleAndBridgeLaunchHidden(t *testing.T) {
 		if !flags[name] {
 			t.Fatalf("schema serve missing flag %s: %v", name, flags)
 		}
+	}
+}
+
+// deadSessionFixture is a bridge whose stored session points at a DevTools
+// endpoint that no longer answers, the state after the member closed the
+// Chrome window, plus a reopen hook that revives it on a fresh fake DevTools.
+func deadSessionFixture(t *testing.T) (*bridgeFixture, *int32) {
+	t.Helper()
+	f := newBridgeFixture(t, testPortalOrigin, 0)
+	f.devtools.server.Close()
+	var calls int32
+	f.server.ensure = func(_ context.Context, name string) (automation.EnsurePersistentResult, error) {
+		atomic.AddInt32(&calls, 1)
+		revived := newFakeDevTools(t, 0)
+		session := automation.Session{Name: name, DebugAddr: revived.host, DebugPort: revived.port, CreatedAt: time.Now().UTC(), Alive: true, BrowserWebSocketURL: "ws://127.0.0.1:1/devtools/browser/abc", ActiveTargetID: "page-1"}
+		if err := f.manager.Store.Save(session); err != nil {
+			return automation.EnsurePersistentResult{}, err
+		}
+		return automation.EnsurePersistentResult{Session: session, Target: automation.Target{ID: "page-1", Type: "page", URL: "https://portal.example.test/app", Active: true}}, nil
+	}
+	return f, &calls
+}
+
+func pingSession(t *testing.T, f *bridgeFixture) map[string]any {
+	t.Helper()
+	resp, out := f.do(t, http.MethodGet, "/ping", testPortalOrigin, nil)
+	if resp.StatusCode != http.StatusOK || out["ok"] != true {
+		t.Fatalf("ping: status=%d out=%#v", resp.StatusCode, out)
+	}
+	return out["data"].(map[string]any)["session"].(map[string]any)
+}
+
+func TestBridgeSessionEnsureReopensTheClosedWindow(t *testing.T) {
+	f, calls := deadSessionFixture(t)
+	if session := pingSession(t, f); session["alive"] != false {
+		t.Fatalf("precondition: the session should read as closed: %#v", session)
+	}
+	resp, out := f.run(t, "session.ensure", nil, 60)
+	if resp.StatusCode != http.StatusOK || out["ok"] != true {
+		t.Fatalf("session.ensure: status=%d out=%#v", resp.StatusCode, out)
+	}
+	data := out["data"].(map[string]any)
+	if data["session"].(map[string]any)["alive"] != true || data["target"].(map[string]any)["id"] != "page-1" || data["tab_opened"] != false {
+		t.Fatalf("session.ensure data = %#v", data)
+	}
+	if got := atomic.LoadInt32(calls); got != 1 {
+		t.Fatalf("reopen calls = %d", got)
+	}
+	// /ping now sees the reopened window.
+	if session := pingSession(t, f); session["alive"] != true || session["tab_count"] != float64(2) {
+		t.Fatalf("session after reopen = %#v", session)
+	}
+}
+
+func TestBridgeReopensTheClosedWindowBeforeRunningACommand(t *testing.T) {
+	f, calls := deadSessionFixture(t)
+	resp, out := f.run(t, "tab.list", nil, 0)
+	if resp.StatusCode != http.StatusOK || out["ok"] != true {
+		t.Fatalf("tab.list after the window was closed: status=%d out=%#v", resp.StatusCode, out)
+	}
+	if tabs := out["data"].(map[string]any)["tabs"].([]any); len(tabs) != 2 {
+		t.Fatalf("tabs after reopen = %#v", tabs)
+	}
+	if got := atomic.LoadInt32(calls); got != 1 {
+		t.Fatalf("reopen calls = %d", got)
+	}
+	// The window stays open: the next command needs no reopen.
+	if resp, out := f.run(t, "tab.current", nil, 0); resp.StatusCode != http.StatusOK || out["ok"] != true {
+		t.Fatalf("tab.current: status=%d out=%#v", resp.StatusCode, out)
+	}
+	if got := atomic.LoadInt32(calls); got != 1 {
+		t.Fatalf("reopen calls after a healthy command = %d", got)
+	}
+	// Metadata removed by browser session stop heals the same way.
+	if err := f.manager.Store.Remove("default"); err != nil {
+		t.Fatal(err)
+	}
+	if resp, out := f.run(t, "tab.list", nil, 0); resp.StatusCode != http.StatusOK || out["ok"] != true {
+		t.Fatalf("tab.list without metadata: status=%d out=%#v", resp.StatusCode, out)
+	}
+	if got := atomic.LoadInt32(calls); got != 2 {
+		t.Fatalf("reopen calls after metadata removal = %d", got)
+	}
+}
+
+func TestBridgeStatusQueriesReportTheClosedWindowWithoutReopening(t *testing.T) {
+	f, calls := deadSessionFixture(t)
+	resp, out := f.run(t, "session.status", nil, 0)
+	if resp.StatusCode != http.StatusOK || out["ok"] != true || out["data"].(map[string]any)["alive"] != false {
+		t.Fatalf("session.status: status=%d out=%#v", resp.StatusCode, out)
+	}
+	if err := f.manager.Store.Remove("default"); err != nil {
+		t.Fatal(err)
+	}
+	resp, out = f.run(t, "session.status", nil, 0)
+	if resp.StatusCode < 400 || errorCode(t, out) != "session_not_found" {
+		t.Fatalf("session.status without metadata: status=%d out=%#v", resp.StatusCode, out)
+	}
+	if got := atomic.LoadInt32(calls); got != 0 {
+		t.Fatalf("status queries must not reopen the window; calls = %d", got)
+	}
+}
+
+func TestBridgeReturnsTheOriginalErrorWhenTheWindowCannotReopen(t *testing.T) {
+	f := newBridgeFixture(t, testPortalOrigin, 0)
+	f.devtools.server.Close()
+	var calls int32
+	f.server.ensure = func(context.Context, string) (automation.EnsurePersistentResult, error) {
+		atomic.AddInt32(&calls, 1)
+		return automation.EnsurePersistentResult{}, automation.NewError("browser_not_found", "No Chrome, Edge, or Chromium executable was found.", "Install Chrome or pass --browser-exe.", 404)
+	}
+	resp, out := f.run(t, "tab.list", nil, 0)
+	if resp.StatusCode != http.StatusConflict || errorCode(t, out) != "session_not_running" {
+		t.Fatalf("tab.list with a failed reopen: status=%d out=%#v", resp.StatusCode, out)
+	}
+	if got := atomic.LoadInt32(&calls); got != 1 {
+		t.Fatalf("reopen calls = %d", got)
+	}
+	// session.ensure itself reports why the window did not open.
+	resp, out = f.run(t, "session.ensure", nil, 0)
+	if resp.StatusCode != http.StatusNotFound || errorCode(t, out) != "browser_not_found" {
+		t.Fatalf("session.ensure failure: status=%d out=%#v", resp.StatusCode, out)
+	}
+}
+
+func TestBridgeLaunchAsksARunningBridgeToReopenItsWindow(t *testing.T) {
+	setBookmarkTestHome(t)
+	f, calls := deadSessionFixture(t)
+	_, portText, err := net.SplitHostPort(strings.TrimPrefix(f.http.URL, "http://"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	link := "efp-bridge://start?origin=https%3A%2F%2Fportal.example.test&port=" + portText
+	out := run(t, &fakeRunner{}, "bridge-launch", link, "--json")
+	if out["ok"] != true {
+		t.Fatalf("bridge-launch against a bridge with a closed window: %#v", out)
+	}
+	data := out["data"].(map[string]any)
+	if data["already_running"] != true || data["started"] != false || data["session_reopened"] != true {
+		t.Fatalf("bridge-launch data = %#v", data)
+	}
+	if got := atomic.LoadInt32(calls); got != 1 {
+		t.Fatalf("reopen calls = %d", got)
+	}
+	// With the window open there is nothing to do, and no second bridge starts.
+	out = run(t, &fakeRunner{}, "bridge-launch", link, "--json")
+	data = out["data"].(map[string]any)
+	if _, reopened := data["session_reopened"]; out["ok"] != true || data["already_running"] != true || reopened {
+		t.Fatalf("bridge-launch with an open window = %#v", out)
+	}
+	if got := atomic.LoadInt32(calls); got != 1 {
+		t.Fatalf("reopen calls after the window is open = %d", got)
 	}
 }

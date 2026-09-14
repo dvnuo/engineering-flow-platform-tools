@@ -43,8 +43,9 @@ const (
 )
 
 // bridgeCommands maps the connector action names (contract section 3) to the
-// in-process Manager calls. Session lifecycle, page.eval, page.fetch, uploads,
-// and downloads are intentionally absent.
+// in-process Manager calls. Session lifecycle other than session.ensure (which
+// only reopens the managed window), page.eval, page.fetch, uploads, and
+// downloads are intentionally absent.
 var bridgeCommands = map[string]bool{
 	"tab.list":        true,
 	"tab.current":     true,
@@ -67,6 +68,7 @@ var bridgeCommands = map[string]bool{
 	"page.screenshot": true,
 	"bookmark.list":   true,
 	"session.status":  true,
+	"session.ensure":  true,
 }
 
 func bridgeCommandNames() []string {
@@ -157,6 +159,13 @@ type bridgeServer struct {
 	logger  *log.Logger
 	now     func() time.Time
 	tempDir string
+
+	// start and startURL carry the browser and first-tab settings of browser
+	// serve; ensureSession applies them whenever the managed window has to be
+	// opened or reopened. ensure is a test seam replacing that Manager call.
+	start    automation.StartOptions
+	startURL string
+	ensure   func(context.Context, string) (automation.EnsurePersistentResult, error)
 
 	mu     sync.Mutex
 	queues map[string]chan struct{}
@@ -458,9 +467,9 @@ func (s *bridgeServer) pageOptions(sessionName string, timeoutSeconds int, param
 	return automation.PageOptions{SessionName: sessionName, TargetID: strings.TrimSpace(params.TargetID), TimeoutSeconds: automation.PageTimeoutSeconds(timeoutSeconds)}
 }
 
-// execute runs one bridge command against the Manager and returns the CLI
+// executeOnce runs one bridge command against the Manager and returns the CLI
 // envelope plus an optional patch applied after redaction.
-func (s *bridgeServer) execute(ctx context.Context, command, sessionName string, timeoutSeconds int, p bridgeParams) (output.Envelope, func(map[string]any)) {
+func (s *bridgeServer) executeOnce(ctx context.Context, command, sessionName string, timeoutSeconds int, p bridgeParams) (output.Envelope, func(map[string]any)) {
 	mgr := s.manager
 	page := s.pageOptions(sessionName, timeoutSeconds, p)
 	var result any
@@ -527,6 +536,8 @@ func (s *bridgeServer) execute(ctx context.Context, command, sessionName string,
 		return s.bookmarkList(ctx, p), nil
 	case "session.status":
 		result, err = mgr.Status(ctx, sessionName)
+	case "session.ensure":
+		result, err = s.ensureSession(ctx, sessionName)
 	default:
 		return output.Failure("command_not_allowed", "Command is not exposed by the local bridge: "+command, "Run GET /commands for the allowed list.", http.StatusBadRequest), nil
 	}
@@ -651,4 +662,41 @@ func (s *bridgeServer) writeEnvelope(w http.ResponseWriter, status int, env outp
 	if err := enc.Encode(env); err != nil {
 		s.logger.Printf("write response failed: %v", err)
 	}
+}
+
+// ensureSession reopens the managed browser when its window was closed (the
+// bridge outlives Chrome, so /ping keeps answering with session.alive=false)
+// and brings a tab at the Portal origin to the front without adding tabs.
+func (s *bridgeServer) ensureSession(ctx context.Context, sessionName string) (automation.EnsurePersistentResult, error) {
+	if s.ensure != nil {
+		return s.ensure(ctx, sessionName)
+	}
+	start := s.start
+	start.Name = sessionName
+	start.URL = s.startURL
+	return s.manager.EnsurePersistent(ctx, start)
+}
+
+// execute runs one bridge command, reopening the managed browser first when
+// the member closed its window: the composer shows the browser as switched
+// on, so a tab or page command is replayed after the reopen instead of
+// failing with session_not_running. Status queries report the closed window
+// as it is.
+func (s *bridgeServer) execute(ctx context.Context, command, sessionName string, timeoutSeconds int, p bridgeParams) (output.Envelope, func(map[string]any)) {
+	env, patch := s.executeOnce(ctx, command, sessionName, timeoutSeconds, p)
+	if env.OK || !sessionGone(env) || command == "session.status" || command == "session.ensure" {
+		return env, patch
+	}
+	if _, err := s.ensureSession(ctx, sessionName); err != nil {
+		s.logger.Printf("%s: browser session %s could not be reopened: %v", command, sessionName, err)
+		return env, patch
+	}
+	return s.executeOnce(ctx, command, sessionName, timeoutSeconds, p)
+}
+
+func sessionGone(env output.Envelope) bool {
+	if env.Error == nil {
+		return false
+	}
+	return env.Error.Code == "session_not_running" || env.Error.Code == "session_not_found"
 }

@@ -25,6 +25,13 @@ type fakePersistentSessionManager struct {
 	ensureOpts  StartOptions
 	openSession string
 	openURL     string
+
+	// tabLists holds successive ListTabs answers; the last one repeats.
+	tabLists    [][]Target
+	listErr     error
+	activateErr error
+	listCalls   int
+	activated   []string
 }
 
 func (f *fakePersistentSessionManager) EnsureSession(_ context.Context, opts StartOptions) (Session, bool, error) {

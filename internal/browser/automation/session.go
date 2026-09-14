@@ -140,9 +140,13 @@ func (m *Manager) ensureSessionUnlocked(ctx context.Context, opts StartOptions) 
 		}
 	}
 
+	// opts.URL reaches the launch only from EnsurePersistent: Start and
+	// OpenPersistent clear it so the tab they open through DevTools stays the
+	// page-open contract of the CLI. Passed here, the URL is the only tab the
+	// new browser shows instead of a New Tab page.
 	devNull, closeNull := openDevNull()
 	defer closeNull()
-	cmd, err := startBrowserProcess(browserPath, browserArgs(profileDir, port, opts.Headless, ""), devNull)
+	cmd, err := startBrowserProcess(browserPath, browserArgs(profileDir, port, opts.Headless, opts.URL), devNull)
 	if err != nil {
 		return Session{}, false, NewError("browser_launch_failed", err.Error(), "Check --browser-exe and whether the browser can be launched.", 500)
 	}

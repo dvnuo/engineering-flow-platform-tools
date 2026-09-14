@@ -317,7 +317,12 @@ func (s *bridgeServer) handlePing(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{
 		"version":          version.Version,
 		"protocol_version": bridgeProtocolVersion,
-		"session":          s.sessionStatus(ctx),
+		// The origin this bridge serves. /ping answers header-less callers too,
+		// so a page that gets 403 on every other call can read this and say
+		// which Portal the running bridge belongs to instead of reporting it as
+		// missing and asking the member to start one that will never bind.
+		"origin":  s.origin,
+		"session": s.sessionStatus(ctx),
 	}
 	s.writeEnvelope(w, http.StatusOK, output.Success("", data), nil)
 }

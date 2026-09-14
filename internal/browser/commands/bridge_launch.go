@@ -91,17 +91,37 @@ func parseBridgeLaunchURL(raw string) (bridgeLaunchRequest, error) {
 }
 
 func runBridgeLaunch(cmd *cobra.Command, o *Opts, raw string) error {
+	// Nobody reads this command's stdout: the shell started it for a clicked
+	// link and its console is hidden, so the outcome goes to the bridge log
+	// where the Connectors panel's troubleshooting steps point.
+	logBridgeLaunch("invoked (console hidden: %t)", consoleHidden)
 	req, err := parseBridgeLaunchURL(raw)
 	if err != nil {
+		logBridgeLaunch("rejected %s: %v", raw, err)
 		return printAutomationError(cmd, o, err)
 	}
 	settings, err := resolveServeSettings(o, serveOptions{Origin: req.Origin, Port: req.Port, Session: req.Session}, req.Port > 0)
 	if err != nil {
+		logBridgeLaunch("could not resolve settings for %s: %v", req.Origin, err)
 		return printAutomationError(cmd, o, err)
 	}
 	ctx, cancel := context.WithTimeout(cmd.Context(), bridgeLaunchReadyTimeout+bridgeLaunchPingTimeout)
 	defer cancel()
 	if port, ping, ok := findRunningBridge(ctx, settings.Port, bridgePortAttempts); ok {
+		// A bridge serving another Portal answers /ping (which is header-less)
+		// but rejects every call the page makes. Starting a second one would
+		// land on the next port and be found second, so say what is wrong
+		// instead of reporting success the member cannot act on.
+		if running := bridgePingOrigin(ping); running != "" && running != settings.Origin && running != "*" {
+			logBridgeLaunch("a bridge for %s already holds %s; refusing to start one for %s", running, bridgeListenURL(port), settings.Origin)
+			return printAutomationError(cmd, o, automation.NewError(
+				"bridge_origin_mismatch",
+				fmt.Sprintf("A local bridge on %s is serving %s, not %s.", bridgeListenURL(port), running, settings.Origin),
+				"Stop that bridge (close its window or end the browser serve process) and click Start bridge again.",
+				409,
+			))
+		}
+		logBridgeLaunch("a bridge already answers on %s; nothing to start", bridgeListenURL(port))
 		return print(cmd, o, output.Success("", map[string]any{
 			"already_running": true,
 			"started":         false,
@@ -125,9 +145,11 @@ func runBridgeLaunch(cmd *cobra.Command, o *Opts, raw string) error {
 		_ = logFile.Close()
 	}
 	if err != nil {
+		logBridgeLaunch("could not start %s: %v", executable, err)
 		return printAutomationError(cmd, o, automation.NewError("bridge_launch_failed", err.Error(), "Start the bridge manually with browser serve --origin <portal-origin>.", 500))
 	}
 	pid := child.Process.Pid
+	logBridgeLaunch("started %s serve --origin %s --port %d --session %s (pid %d)", executable, settings.Origin, settings.Port, settings.Session, pid)
 	_ = child.Process.Release()
 	port, ping, ready := waitForBridge(ctx, settings.Port, bridgePortAttempts, bridgeLaunchReadyTimeout)
 	data := map[string]any{
@@ -145,12 +167,32 @@ func runBridgeLaunch(cmd *cobra.Command, o *Opts, raw string) error {
 	} else {
 		data["listening"] = bridgeListenURL(settings.Port)
 		data["hint"] = "The bridge did not answer /ping within 5 seconds; check log_path."
+		logBridgeLaunch("pid %d did not answer /ping within %s", pid, bridgeLaunchReadyTimeout)
 	}
 	return print(cmd, o, output.Success("", data))
 }
 
+// logBridgeLaunch appends one line to the shared bridge log. It is best effort:
+// a launch must never fail because the log could not be written.
+func logBridgeLaunch(format string, args ...any) {
+	_, file := openBridgeLog()
+	if file == nil {
+		return
+	}
+	defer file.Close()
+	fmt.Fprintf(file, "bridge-launch: %s %s\n", time.Now().Format("2006/01/02 15:04:05"), fmt.Sprintf(format, args...))
+}
+
 func bridgeListenURL(port int) string {
 	return fmt.Sprintf("http://%s:%d", automation.LocalDebugAddr, port)
+}
+
+// bridgePingOrigin reads the origin a running bridge reports. Bridges older
+// than this build do not send one, which reads as "unknown" and is treated as
+// a match so an upgrade is never required to start one.
+func bridgePingOrigin(ping map[string]any) string {
+	origin, _ := ping["origin"].(string)
+	return strings.TrimSpace(origin)
 }
 
 // probeBridgePing reports whether a bridge answers GET /ping on port.

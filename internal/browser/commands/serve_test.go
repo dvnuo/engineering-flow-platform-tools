@@ -310,6 +310,11 @@ func TestBridgePingReportsSession(t *testing.T) {
 	if data["version"] == "" || data["protocol_version"] != float64(bridgeProtocolVersion) {
 		t.Fatalf("ping data = %#v", data)
 	}
+	// The page reads this to tell "no bridge" apart from "a bridge for another
+	// Portal", which rejects everything else it sends.
+	if data["origin"] != testPortalOrigin {
+		t.Fatalf("ping must report the origin it serves, got %#v", data["origin"])
+	}
 	session := data["session"].(map[string]any)
 	if session["name"] != "default" || session["alive"] != true || session["tab_count"] != float64(2) || session["debug_port"] != float64(f.devtools.port) {
 		t.Fatalf("ping session = %#v", session)

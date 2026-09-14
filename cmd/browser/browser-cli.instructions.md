@@ -342,6 +342,10 @@ Common errors:
 - `workflow_failed`: inspect `data.steps` for the failing whitelisted step; use `--dry-run` to validate before executing.
 - `server_error`: read `error.message` for the sanitized detail.
 
+## Portal Local Bridge (`browser serve`)
+
+`browser serve --origin <portal-origin>` runs the local bridge for the EFP Portal local browser connector: a Portal page calls `http://127.0.0.1:8765` on the user's machine, and the bridge executes tab/page commands in-process against the same managed `default` session that `browser open` uses. It is started by `install-bridge.cmd` / `install-bridge.sh` or the `efp-bridge://` protocol link (`browser serve --register-protocol --origin <portal-origin>` on Windows, macOS, or Linux), not by agents. Do not run `browser serve`, `browser serve --register-protocol`, or `bridge-launch` from an interactive agent session, and do not route page reads or actions through the bridge; keep using `browser open` and the `browser page ...` commands directly. If the user asks about the Portal connector, point them to `docs/BROWSER.md` ("Serve (Portal local bridge)") and the Portal Connectors page.
+
 ## Security Rules
 
 `browser` does not export cookies or tokens. Do not ask it to print cookies, browser storage, or Authorization headers.

@@ -21,6 +21,19 @@ type RootConfig struct {
 
 type BrowserConfig struct {
 	Bookmarks BrowserBookmarksConfig `json:"bookmarks" yaml:"bookmarks"`
+	Serve     BrowserServeConfig     `json:"serve" yaml:"serve"`
+}
+
+// DefaultBrowserServePort is the loopback port `browser serve` listens on when
+// neither --port, browser.serve.port, nor EFP_BROWSER_SERVE_PORT is set.
+const DefaultBrowserServePort = 8765
+
+// BrowserServeConfig holds defaults for `browser serve`, the local bridge used
+// by the EFP Portal local browser connector. The env equivalents derived from
+// the json tags are EFP_BROWSER_SERVE_PORT and EFP_BROWSER_SERVE_ALLOWED_ORIGIN.
+type BrowserServeConfig struct {
+	Port          int    `json:"port" yaml:"port"`
+	AllowedOrigin string `json:"allowed_origin,omitempty" yaml:"allowed_origin,omitempty"`
 }
 
 type BrowserBookmarksConfig struct {
@@ -157,7 +170,15 @@ func (c *RootConfig) Normalize() {
 	norm(&c.Jira)
 	norm(&c.Confluence)
 	norm(&c.Jenkins)
+	c.Browser.Normalize()
 	c.Mobile.Normalize()
+}
+
+func (b *BrowserConfig) Normalize() {
+	if b.Serve.Port == 0 {
+		b.Serve.Port = DefaultBrowserServePort
+	}
+	b.Serve.AllowedOrigin = strings.TrimSpace(b.Serve.AllowedOrigin)
 }
 
 func (m *MobileConfig) Normalize() {

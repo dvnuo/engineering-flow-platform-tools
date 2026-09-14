@@ -506,3 +506,31 @@ func hasFlowStyleNode(node *yaml.Node) bool {
 	}
 	return false
 }
+
+func TestNormalizeAppliesBrowserServeDefaults(t *testing.T) {
+	var c RootConfig
+	c.Normalize()
+	if c.Browser.Serve.Port != DefaultBrowserServePort || c.Browser.Serve.AllowedOrigin != "" {
+		t.Fatalf("browser serve defaults = %#v", c.Browser.Serve)
+	}
+	c.Browser.Serve = BrowserServeConfig{Port: 9001, AllowedOrigin: " https://portal.example.test "}
+	c.Normalize()
+	if c.Browser.Serve.Port != 9001 || c.Browser.Serve.AllowedOrigin != "https://portal.example.test" {
+		t.Fatalf("explicit browser serve values were not kept: %#v", c.Browser.Serve)
+	}
+}
+
+func TestLoadAndSaveBrowserServe(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	cfg := RootConfig{Version: 1, Browser: BrowserConfig{Serve: BrowserServeConfig{Port: 8766, AllowedOrigin: "https://portal.example.test"}}}
+	if err := Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Browser.Serve.Port != 8766 || loaded.Browser.Serve.AllowedOrigin != "https://portal.example.test" {
+		t.Fatalf("browser serve config not preserved: %#v", loaded.Browser.Serve)
+	}
+}

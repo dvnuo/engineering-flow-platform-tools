@@ -207,6 +207,19 @@ Manage source registrations and their optional descriptions with `browser bookma
 
 Manage entries in configured local file sources with `browser bookmark add/update/remove --source <name>`. HTTP/HTTPS sources are read-only. For personal data, the recommended explicitly registered location is `~/.efp/browser/bookmarks/<name>.yaml`; the CLI does not scan that directory and does not implicitly load `~/.efp/bookmarks.yaml`. A first `bookmark add` creates a missing local manifest and parent directory.
 
+## Browser Serve
+
+`browser.serve` holds the defaults for `browser serve`, the local bridge used by the EFP Portal local browser connector:
+
+```yaml
+browser:
+  serve:
+    port: 8765
+    allowed_origin: https://portal.example.test
+```
+
+`port` defaults to `8765` (the bridge tries `port` through `port+5` when the port is busy). `allowed_origin` is the single Portal origin echoed in `Access-Control-Allow-Origin`; it is empty by default and is written by `browser serve --register-protocol --origin <origin>`. The equivalent environment settings are `EFP_BROWSER_SERVE_PORT` and `EFP_BROWSER_SERVE_ALLOWED_ORIGIN`. Explicit `--port` and `--origin` flags override both.
+
 ## Copilot Auth
 
 `copilot.auth` stores shared GitHub/Copilot authentication metadata for commands that use Copilot-backed APIs. The short-lived `copilot_token` is not stored in `config.yaml`; it is stored in the file named by `copilot.auth.copilot_token_file`, which defaults to `~/.efp/tmp/copilot_token`.

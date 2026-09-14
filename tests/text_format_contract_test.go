@@ -37,8 +37,8 @@ func TestTextFormatContracts(t *testing.T) {
 	if !strings.HasPrefix(goMod, "module engineering-flow-platform-tools\n") {
 		t.Fatal("go.mod missing standalone module line")
 	}
-	if !strings.Contains(goMod, "\ngo 1.22\n") {
-		t.Fatal("go.mod missing standalone go 1.22 line")
+	if !strings.Contains(goMod, "\ngo 1.26.0\n") {
+		t.Fatal("go.mod missing standalone go 1.26.0 line")
 	}
 
 	for _, path := range []string{"../scripts/build.sh", "../scripts/smoke.sh"} {

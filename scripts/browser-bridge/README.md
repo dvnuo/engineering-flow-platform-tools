@@ -48,8 +48,9 @@ No administrator rights and no autostart entry are needed on any platform.
 
 Install steps for a user:
 
-1. Unpack the package into a folder that stays put (for example
-   `%LOCALAPPDATA%\efp\browser-bridge` on Windows or `~/efp/browser-bridge` elsewhere).
+1. Unpack the package into the `bin` folder of the home directory (`%USERPROFILE%\bin`
+   on Windows, `~/bin` elsewhere), creating it when missing and overwriting files
+   already there.
 2. Run `install-bridge.cmd https://portal.example.com` (Windows) or
    `./install-bridge.sh https://portal.example.com` (macOS, Linux) from that folder.
 3. On the Portal Connectors page click **Start bridge**. The page opens

@@ -13,8 +13,9 @@ install needs:
 
 ## Install
 
-1. Unzip into a folder that stays put, for example `%LOCALAPPDATA%\efp\browser-bridge`
-   on Windows or `~/efp/browser-bridge` on macOS and Linux.
+1. Unzip into the `bin` folder of your home directory: `%USERPROFILE%\bin` on Windows,
+   `~/bin` on macOS and Linux. Create the folder if it is missing and overwrite any
+   files already there.
 2. Run the installer from that folder with your Portal address (the Portal's
    Connectors page shows the exact command):
    - Windows: double-click `install-bridge.cmd` and enter the address when asked,

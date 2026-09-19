@@ -35,3 +35,7 @@ func NexusConfig(base string) string {
 func NexusAnonymousConfig(base string) string {
 	return fmt.Sprintf("nexus:\n  default_instance: public\n  instances:\n    - name: public\n      base_url: %s\n", base)
 }
+
+func SplunkConfig(base string) string {
+	return fmt.Sprintf("splunk:\n  default_instance: local\n  instances:\n    - name: local\n      base_url: %s\n      auth:\n        type: bearer_token\n        token: secret-token-should-not-appear\n", base)
+}

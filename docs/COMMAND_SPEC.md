@@ -675,11 +675,37 @@ browser session attach --name user-demo --debug-port 9222 --json
 
 ## Splunk
 
+`splunk` is read-only against Splunk Enterprise. Every search passes an SPL guard that refuses side-effect commands (`delete`, `outputlookup`, `outputcsv`, `outputtext`, `collect`, `mcollect`, `meventcollect`, `sendemail`, `sendalert`, `script`, `runshellscript`, `tscollect`, `summaryindex`) with `spl_blocked`, results are capped by the instance `max_results` (default 1000), and long field values are truncated unless `--output` writes them to a file. `search job cancel` is the only service-affecting command and requires `--yes`.
+
 ### Basic
+- splunk instance list
+- splunk instance get <name>
+- splunk instance add <name>
+- splunk instance update <name>
+- splunk instance remove <name>
+- splunk instance default [name]
+- splunk auth login
+- splunk auth logout
+- splunk auth test
 - splunk commands
 - splunk schema <command>
 - splunk help llm
 - splunk version
+
+### Search
+- splunk search run
+- splunk search oneshot
+- splunk search job get <sid>
+- splunk search job results <sid>
+- splunk search job cancel <sid>
+
+### Saved search / index
+- splunk saved list
+- splunk saved run <name>
+- splunk index list
+
+### Raw API
+- splunk api get <path>
 
 ## AppDynamics
 

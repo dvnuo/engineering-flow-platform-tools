@@ -10,6 +10,7 @@ This repository hosts cross-platform Go-based CLI tools for agent, runtime, shel
 - `browser`
 - `mobile-auto`
 - `inspect-image`
+- `splunk`
 
 Jira and Confluence are the first tool family in this repository. Future tools may be added as separate command binaries under `cmd/<tool-name>`.
 
@@ -44,6 +45,12 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 `nexus` provides read-only access to Sonatype Nexus Repository 3: repository discovery, component and asset search (including Maven coordinate and Docker image name/tag filters), component and asset metadata, raw read-only REST calls, and asset downloads that return metadata instead of file bytes. It supports multiple instances under the `nexus` YAML node, anonymous reads for instances without an `auth` block, and continuation-token paging through `--continuation` or `--all`. It never uploads, deletes, or administers anything on the repository manager.
 
 For VS Code GitHub Copilot, copy `cmd/nexus/nexus-cli.instructions.md` to `~/.copilot/instructions/nexus-cli.instructions.md`.
+
+### Splunk
+
+`splunk` gives agents read-only, JSON-first access to Splunk Enterprise through the management REST API (usually port 8089): bounded `search run` and `search oneshot` queries with explicit time ranges, result caps, and field truncation; `search job get/results/cancel` for existing jobs; `saved list/run`; `index list`; and raw `api get` under `/services/`. An SPL guard refuses side-effect commands such as `delete`, `outputlookup`, `collect`, `sendemail`, and `script` before any job is created. Instances live under the `splunk` YAML node with `bearer_token` (authentication token) or `basic_password` (session login; the session key stays in memory) auth plus `default_index`, `default_earliest`, and `max_results`.
+
+For VS Code GitHub Copilot, copy `cmd/splunk/splunk-cli.instructions.md` to `~/.copilot/instructions/splunk-cli.instructions.md`.
 
 ### AWS Auth
 
@@ -197,6 +204,18 @@ nexus:
         type: basic_password
         username: ci-reader
         password: redacted
+
+splunk:
+  default_instance: prod
+  instances:
+    - name: prod
+      base_url: https://splunk-api.example.test:8089
+      auth:
+        type: bearer_token
+        token: redacted
+      default_index: main
+      default_earliest: -1h
+      max_results: 1000
       verify_ssl: true
       ca_cert: ""
 
@@ -277,6 +296,8 @@ Config node ownership:
 - `confluence`: Confluence instances, defaults, auth, and TLS settings.
 - `jenkins`: Jenkins instances, defaults, auth, TLS, and crumb behavior.
 - `nexus`: Nexus Repository 3 instances, defaults, auth (or anonymous reads when `auth` is omitted), REST path, and TLS settings.
+
+- `splunk`: Splunk instances, auth (token or session login), default index and earliest time, result caps, and TLS settings.
 - `browser`: browser bookmark sources and related browser configuration.
 - `copilot`: GitHub/Copilot authentication shared by commands that use Copilot-backed APIs.
 - `inspect_image`: inspect-image API defaults, model defaults, image limits, and privacy settings.
@@ -362,6 +383,28 @@ nexus version --json
 ```
 
 Search and list results are paged: when `data.truncated` is true, pass `data.continuation_token` back with `--continuation`, or use `--all --max-pages <n>`. `nexus asset download` writes the file and returns `path`, `bytes`, `sha1`, `content_type`, and `name` only.
+
+## Splunk Examples
+
+```bash
+printf '%s\n' "$SPLUNK_TOKEN" | splunk instance add prod --base-url https://splunk-api.example.test:8089 --token-stdin --default-index main --default --json
+splunk auth test --json
+splunk index list --json
+splunk search run --query "index=main error | head 100" --earliest -1h --json
+splunk search run --query "index=main sourcetype=access_combined status=500 | stats count by host" --earliest -24h@h --latest now --json
+splunk search run --query "index=main error" --earliest -1h --count 1000 --output results.json --json
+splunk search oneshot --query "index=main | stats count by sourcetype" --earliest -15m --json
+splunk search job get 1700000000.123 --json
+splunk search job results 1700000000.123 --count 100 --offset 100 --fields _time,host,_raw --json
+splunk search job cancel 1700000000.123 --yes --json
+splunk saved list --filter errors --json
+splunk saved run "Errors last hour" --json
+splunk api get /services/server/info --json
+splunk schema search.run --json
+splunk help llm --json
+```
+
+`search run` creates a job, polls it until it finishes or `--timeout-sec` (default 60) elapses, cancels it on timeout (`wait_timeout`), and returns results capped by the instance `max_results` (default 1000). Every printed field value is cut at `--max-field-chars` (default 2000) unless `--output` writes the untruncated JSON to a file. SPL that writes data or triggers actions is refused with `spl_blocked`.
 
 ## Jira Examples
 
@@ -530,6 +573,7 @@ jenkins commands --json
 aws-auth commands --json
 browser commands --json
 inspect-image commands --json
+splunk commands --json
 ```
 
 Then inspect the exact schema before calling a command:
@@ -541,6 +585,7 @@ jenkins schema job.build-with-params --json
 aws-auth schema login --json
 browser schema page.fetch --json
 inspect-image schema inspect --json
+splunk schema search.run --json
 ```
 
 For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. `aws-auth login` uses `adfs-assume --profile saml` by default. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.

@@ -74,6 +74,20 @@ nexus:
   default_instance: repo
   instances: []
 
+splunk:
+  default_instance: prod
+  instances:
+    - name: prod
+      base_url: https://splunk-api.example.test:8089   # management REST port, not the web UI
+      auth:
+        type: bearer_token             # bearer_token | basic_password
+        token: "${SPLUNK_TOKEN}"
+      default_index: main              # prepended as index=main when a query names no index
+      default_earliest: -1h            # earliest_time when --earliest is omitted
+      max_results: 1000                # hard cap on results per search
+      verify_ssl: true
+      ca_cert: ""
+
 aws:
   enabled: true
   provider: adfs-assume          # adfs-assume | saml2aws | assume-role
@@ -232,6 +246,21 @@ nexus:
 - `ca_cert`
 
 Managed runtimes inject the same fields as `EFP_NEXUS_DEFAULT_INSTANCE`, `EFP_NEXUS_INSTANCES_0_NAME`, `EFP_NEXUS_INSTANCES_0_BASE_URL`, `EFP_NEXUS_INSTANCES_0_REST_PATH`, `EFP_NEXUS_INSTANCES_0_AUTH_TYPE`, `EFP_NEXUS_INSTANCES_0_AUTH_USERNAME`, `EFP_NEXUS_INSTANCES_0_AUTH_PASSWORD`, `EFP_NEXUS_INSTANCES_0_AUTH_API_KEY`, `EFP_NEXUS_INSTANCES_0_AUTH_TOKEN`, `EFP_NEXUS_INSTANCES_0_VERIFY_SSL`, and `EFP_NEXUS_INSTANCES_0_CA_CERT`. When they are set, `nexus instance` and `nexus auth` writes require an explicit `--config <path>`.
+
+## Splunk Instance Fields
+
+- `name`
+- `base_url`: the management REST URL, usually `https://<host>:8089` (not the web UI port)
+- `auth.type`: `bearer_token | basic_password`
+- `auth.token`: Splunk authentication token for `bearer_token`, sent as `Authorization: Bearer`
+- `auth.username` / `auth.password`: session login for `basic_password` through `/services/auth/login`; the session key is kept in memory for one process and never written or printed
+- `default_index`: prepended as `index=<name>` when a search does not constrain the index (queries starting with `|` are never rewritten)
+- `default_earliest`: `earliest_time` used when `--earliest` is omitted (default `-1h`)
+- `max_results`: hard cap on results one search may return (default `1000`); a `--count` above it is rejected with `invalid_args`
+- `verify_ssl`
+- `ca_cert`
+
+`rest_path` is not used by `splunk`; every command addresses absolute `/services/...` paths under `base_url`. Managed runtimes inject the same fields as `EFP_SPLUNK_DEFAULT_INSTANCE`, `EFP_SPLUNK_INSTANCES_0_NAME`, `EFP_SPLUNK_INSTANCES_0_BASE_URL`, `EFP_SPLUNK_INSTANCES_0_AUTH_TYPE`, `EFP_SPLUNK_INSTANCES_0_AUTH_TOKEN` (or `_AUTH_USERNAME` / `_AUTH_PASSWORD`), `EFP_SPLUNK_INSTANCES_0_DEFAULT_INDEX`, `EFP_SPLUNK_INSTANCES_0_DEFAULT_EARLIEST`, and `EFP_SPLUNK_INSTANCES_0_MAX_RESULTS`.
 
 ## Browser Bookmarks
 

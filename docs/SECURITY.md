@@ -36,6 +36,14 @@
 - Raw `nexus api get` calls use the same off-instance URL guard as other instance-backed tools.
 - Continuation tokens are opaque paging cursors, not credentials; they are returned as `continuation_token` so agents can page through results.
 
+## Splunk
+
+- Splunk credentials live under the `splunk` node in `~/.efp/config.yaml` (or `EFP_SPLUNK_*` variables) and are redacted in instance, dry-run, and error output; `auth login` reads tokens and passwords from stdin only.
+- `basic_password` instances log in through `/services/auth/login` once per process; the returned session key is held in memory, sent only as `Authorization: Splunk <key>`, and never written to disk or printed. Authentication tokens are sent only as `Authorization: Bearer`.
+- The CLI is read-only against Splunk: an SPL guard refuses `delete`, `outputlookup`, `outputcsv`, `outputtext`, `collect`, `mcollect`, `meventcollect`, `sendemail`, `sendalert`, `script`, `runshellscript`, `tscollect`, and `summaryindex` (also inside `map` searches and saved search definitions) before any job is created, saved searches are dispatched with `trigger_actions=0`, and `api` only supports GET under `/services/` or `/servicesNS/`.
+- Result caps: `--count` is bounded by the instance `max_results` (default 1000), jobs are created with `max_count` equal to that cap and a 600 second TTL, jobs that outlive `--timeout-sec` are cancelled, and printed field values are truncated at `--max-field-chars` (default 2000). `--output` writes the untruncated results to a `0600` file instead of stdout.
+- Error messages include Splunk's own message text with credentials and session keys redacted. Search results may contain PII from indexed events, so treat `--output` files like log data.
+
 ## Inspect Image
 
 - `inspect-image` sends local image bytes to the configured provider endpoint: GitHub Copilot `/responses` or AI Platform `/chat/completions`.

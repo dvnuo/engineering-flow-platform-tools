@@ -6,10 +6,14 @@ import (
 	"strings"
 	"testing"
 
+	appdcmd "engineering-flow-platform-tools/internal/appd/commands"
 	acmd "engineering-flow-platform-tools/internal/awsauth/commands"
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
 	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
+	nexuscmd "engineering-flow-platform-tools/internal/nexus/commands"
+	pgsqlcmd "engineering-flow-platform-tools/internal/pgsql/commands"
+	splunkcmd "engineering-flow-platform-tools/internal/splunk/commands"
 	"engineering-flow-platform-tools/internal/testutil"
 )
 
@@ -41,6 +45,34 @@ func TestVersionJSONContract(t *testing.T) {
 		}},
 		{name: "aws-auth", run: func(b *bytes.Buffer) error {
 			cmd := acmd.NewRoot()
+			cmd.SetOut(b)
+			cmd.SetErr(b)
+			cmd.SetArgs([]string{"version", "--json"})
+			return cmd.Execute()
+		}},
+		{name: "nexus", run: func(b *bytes.Buffer) error {
+			cmd := nexuscmd.NewRoot()
+			cmd.SetOut(b)
+			cmd.SetErr(b)
+			cmd.SetArgs([]string{"version", "--json"})
+			return cmd.Execute()
+		}},
+		{name: "splunk", run: func(b *bytes.Buffer) error {
+			cmd := splunkcmd.NewRoot()
+			cmd.SetOut(b)
+			cmd.SetErr(b)
+			cmd.SetArgs([]string{"version", "--json"})
+			return cmd.Execute()
+		}},
+		{name: "appd", run: func(b *bytes.Buffer) error {
+			cmd := appdcmd.NewRoot()
+			cmd.SetOut(b)
+			cmd.SetErr(b)
+			cmd.SetArgs([]string{"version", "--json"})
+			return cmd.Execute()
+		}},
+		{name: "pgsql", run: func(b *bytes.Buffer) error {
+			cmd := pgsqlcmd.NewRoot()
 			cmd.SetOut(b)
 			cmd.SetErr(b)
 			cmd.SetArgs([]string{"version", "--json"})
@@ -82,7 +114,7 @@ func TestDocsAndScriptsExist(t *testing.T) {
 	}
 }
 
-var buildTargets = []string{"./cmd/jira", "./cmd/confluence", "./cmd/jenkins", "./cmd/aws-auth", "./cmd/browser", "./cmd/mobile-auto", "./cmd/inspect-image"}
+var buildTargets = []string{"./cmd/jira", "./cmd/confluence", "./cmd/jenkins", "./cmd/aws-auth", "./cmd/browser", "./cmd/mobile-auto", "./cmd/inspect-image", "./cmd/nexus", "./cmd/splunk", "./cmd/appd", "./cmd/pgsql"}
 
 func TestBuildScriptsListRequiredTargets(t *testing.T) {
 	for _, path := range []string{"../scripts/build.sh", "../scripts/build.bat"} {

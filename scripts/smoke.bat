@@ -17,6 +17,14 @@ go run ./cmd/mobile-auto --help >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/inspect-image --help >nul
 if errorlevel 1 exit /b 1
+go run ./cmd/nexus --help >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/splunk --help >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/appd --help >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/pgsql --help >nul
+if errorlevel 1 exit /b 1
 
 go run ./cmd/jira commands --json >nul
 if errorlevel 1 exit /b 1
@@ -31,6 +39,14 @@ if errorlevel 1 exit /b 1
 go run ./cmd/mobile-auto commands --json >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/inspect-image commands --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/nexus commands --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/splunk commands --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/appd commands --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/pgsql commands --json >nul
 if errorlevel 1 exit /b 1
 
 go run ./cmd/browser schema open --json >nul
@@ -68,6 +84,14 @@ if errorlevel 1 exit /b 1
 go run ./cmd/mobile-auto version --json >nul
 if errorlevel 1 exit /b 1
 go run ./cmd/inspect-image version --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/nexus version --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/splunk version --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/appd version --json >nul
+if errorlevel 1 exit /b 1
+go run ./cmd/pgsql version --json >nul
 if errorlevel 1 exit /b 1
 
 exit /b 0

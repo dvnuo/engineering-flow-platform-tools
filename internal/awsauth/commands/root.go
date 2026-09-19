@@ -6,7 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,9 +25,16 @@ import (
 
 const (
 	adfsAssumeCommand     = "adfs-assume"
+	saml2awsCommand       = "saml2aws"
+	awsCLICommand         = "aws"
+	kubectlCommand        = "kubectl"
 	envAdapterStateDir    = "EFP_ADAPTER_STATE_DIR"
 	defaultAWSAuthProfile = "saml"
 )
+
+// secretEnvKeys are never inherited by provider or AWS CLI child processes;
+// the selected provider receives the password through exactly one of them.
+var secretEnvKeys = []string{"AD_PASS", "SAML2AWS_PASSWORD", "password"}
 
 var redactedSecretPlaceholders = map[string]struct{}{
 	"***redacted***": {},
@@ -34,10 +43,10 @@ var redactedSecretPlaceholders = map[string]struct{}{
 }
 
 type Opts struct {
-	Config, Format   string
-	JSON, Verbose    bool
-	DryRun           bool
-	adfsAssumeRunner commandRunner
+	Config, Format string
+	JSON, Verbose  bool
+	DryRun         bool
+	runner         commandRunner
 }
 
 type commandResult struct {
@@ -46,6 +55,9 @@ type commandResult struct {
 	ExitCode int
 }
 
+// commandRunner executes the external binaries aws-auth orchestrates
+// (adfs-assume, saml2aws, aws, kubectl). Tests inject a fake through
+// NewRootWithRunner so no real binary is needed.
 type commandRunner interface {
 	Run(ctx context.Context, command string, args []string, env []string) (commandResult, error)
 }
@@ -79,100 +91,42 @@ func NewRoot() *cobra.Command {
 
 func NewRootWithRunner(r commandRunner) *cobra.Command {
 	cobra.EnableCommandSorting = false
-	o := &Opts{Format: "table", adfsAssumeRunner: r}
+	o := &Opts{Format: "table", runner: r}
 	c := &cobra.Command{Use: "aws-auth", SilenceErrors: true, SilenceUsage: true}
 	c.PersistentFlags().StringVar(&o.Config, "config", "", "Path to EFP config file.")
 	c.PersistentFlags().BoolVar(&o.JSON, "json", false, "Print JSON envelope.")
 	c.PersistentFlags().StringVar(&o.Format, "format", "table", "Output format: table|json|yaml.")
 	c.PersistentFlags().BoolVar(&o.Verbose, "verbose", false, "Print non-secret diagnostics when available.")
-	c.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "Preview authorization without running the provider command.")
-	c.AddCommand(loginCmd(o), authCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
+	c.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "Preview the provider or AWS CLI commands without running them.")
+	c.AddCommand(loginCmd(o), accountCmd(o), statusCmd(o), eksCmd(o), authCmd(o), commandsCmd(o), schemaCmd(o), helpLLMCmd(o), versionCmd(o))
 	clihelp.ApplyCatalogHelp(c, clihelp.ProductHelp{
 		Product: "aws-auth",
 		Binary:  "aws-auth",
-		Short:   "Authorize AWS credentials from the shared EFP config",
-		Long: strings.TrimSpace(`aws-auth is a terminal-invoked CLI for agents and runtimes that need AWS authorization from the shared EFP config file.
+		Short:   "Authorize AWS credentials for configured accounts and prepare EKS access",
+		Long: strings.TrimSpace(`aws-auth is a terminal-invoked CLI for agents and runtimes that need AWS credentials from the shared EFP config.
 
-Configuration uses the shared EFP config from environment variables injected by managed runtimes (for example EFP_AWS_DOMAIN, EFP_AWS_USERNAME, EFP_AWS_ENABLED) or the config file, normally ~/.efp/config.yaml (local), under the aws node. The auth login command stores the configured domain, username, and password into the config file; when environment variables manage the config, auth login requires an explicit --config path. The login command reads that config and invokes the installed authorization provider with the account and role supplied for that login.`),
+Configuration uses the shared EFP config from environment variables injected by managed runtimes (for example EFP_AWS_DOMAIN, EFP_AWS_USERNAME, EFP_AWS_PROVIDER, EFP_AWS_ACCOUNTS_0_NAME) or the config file, normally ~/.efp/config.yaml (local), under the aws node. The node holds the directory credentials, the provider that exchanges them for AWS credentials (adfs-assume, saml2aws, or assume-role), and an account matrix: name, account id, role, regions.
+
+login writes each account's credentials to its own AWS CLI profile (the account name by default) so agents can query several accounts side by side with aws --profile <name>. eks kubeconfig turns an account and cluster into a kubectl context named <account>/<cluster>. status reports which profiles exist and whether their session expired.`),
 		Examples: []string{
-			`printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`,
+			`aws-auth account list --json`,
+			`aws-auth login --account cps-dev --json`,
+			`aws-auth login --all --json`,
 			`aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json`,
-			`aws-auth login`,
-			`aws-auth --config ~/.efp/config.yaml login --account 123456 --role ADFS-ReadOnly --profile saml --json`,
-			`aws-auth commands --json`,
-			`aws-auth schema login --json`,
+			`aws-auth status --verify --json`,
+			`aws-auth eks kubeconfig --account cps-dev --cluster cps-dev-eks --json`,
+			`printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`,
 			`aws-auth help llm --json`,
 		},
 		Instructions: "copy cmd/aws-auth/aws-auth-cli.instructions.md to ~/.copilot/instructions/aws-auth-cli.instructions.md.",
 		Groups: map[string]string{
-			"login": "Authorize AWS credentials.",
-			"auth":  "Manage AWS authorization config.",
+			"login":   "Authorize AWS credentials.",
+			"account": "Inspect the configured account matrix.",
+			"status":  "Inspect AWS CLI profiles and session expiry.",
+			"eks":     "Discover EKS clusters and write kubectl contexts.",
+			"auth":    "Manage AWS authorization config.",
 		},
 	})
-	return c
-}
-
-func loginCmd(o *Opts) *cobra.Command {
-	var account string
-	var role string
-	var profile string
-	c := &cobra.Command{
-		Use:   "login",
-		Short: "Authorize AWS credentials from saved auth config.",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			path, cfg, err := loadAWSConfigForRead(o.Config)
-			if err != nil {
-				return print(cmd, o, output.Failure("config_error", output.RedactString(err.Error()), "Check EFP_CONFIG or pass --config.", 400))
-			}
-			login, failure := buildLogin(cmd, cfg.AWS, loginOptions{Account: account, Role: role, Profile: profile, Prompt: !o.JSON})
-			if failure != nil {
-				return print(cmd, o, *failure)
-			}
-			if o.DryRun {
-				return print(cmd, o, output.Success("", map[string]any{
-					"authenticated": false,
-					"dry_run":       true,
-					"command":       formatCommand(login.command, login.args),
-				}))
-			}
-			result, err := o.adfsAssumeRunner.Run(cmd.Context(), login.command, login.args, login.env)
-			if err != nil {
-				return print(cmd, o, output.Failure(
-					"execution_failed",
-					redactWithSecrets(err.Error(), login.password),
-					"Ensure adfs-assume is installed and available on PATH.",
-					500,
-				))
-			}
-			if result.ExitCode != 0 {
-				message := strings.TrimSpace(result.Stderr)
-				if message == "" {
-					message = strings.TrimSpace(result.Stdout)
-				}
-				if message == "" {
-					message = fmt.Sprintf("authorization provider exited with %d", result.ExitCode)
-				}
-				return print(cmd, o, output.Failure(
-					"auth_failed",
-					redactWithSecrets(message, login.password),
-					"Verify the configured AWS domain, username, password, and the supplied account and role.",
-					401,
-				))
-			}
-			data := map[string]any{
-				"authenticated": true,
-				"command":       formatCommand(login.command, login.args),
-			}
-			if o.Verbose {
-				data["provider"] = adfsAssumeCommand
-				data["config_path"] = path
-			}
-			return print(cmd, o, output.Success("", data))
-		},
-	}
-	c.Flags().StringVar(&account, "account", "", "AWS account id to pass to adfs-assume.")
-	c.Flags().StringVar(&role, "role", "", "AWS role name to pass to adfs-assume.")
-	c.Flags().StringVar(&profile, "profile", defaultAWSAuthProfile, "AWS credentials profile name to create with adfs-assume.")
 	return c
 }
 
@@ -206,13 +160,13 @@ func authCmd(o *Opts) *cobra.Command {
 				"password_present": true,
 			}))
 		}
+		// Only the directory credentials are replaced; provider, account matrix
+		// and defaults already stored under the aws node are preserved.
 		enabled := true
-		cfg.AWS = config.AWSConfig{
-			Enabled:  &enabled,
-			Domain:   domain,
-			Username: username,
-			Password: password,
-		}
+		cfg.AWS.Enabled = &enabled
+		cfg.AWS.Domain = domain
+		cfg.AWS.Username = username
+		cfg.AWS.Password = password
 		if config.EnvManaged(o.Config) {
 			return print(cmd, o, output.Failure("config_env_managed", "config comes from environment variables; pass --config to write a file", "", 400))
 		}
@@ -239,66 +193,15 @@ func authCmd(o *Opts) *cobra.Command {
 		}
 		aws := config.RedactAWS(cfg.AWS)
 		return print(cmd, o, output.Success("", map[string]any{
-			"configured":  bool(aws.Enabled == nil || *aws.Enabled) && singleLine(cfg.AWS.Domain) != "" && singleLine(cfg.AWS.Username) != "" && cleanSecret(cfg.AWS.Password) != "",
-			"config_path": path,
-			"aws":         aws,
+			"configured":    awsAuthConfigured(cfg.AWS),
+			"provider":      cfg.AWS.EffectiveProvider(),
+			"account_count": len(cfg.AWS.EnabledAccounts()),
+			"config_path":   path,
+			"aws":           aws,
 		}))
 	}}
 	c.AddCommand(status)
 	return c
-}
-
-type loginSpec struct {
-	command  string
-	args     []string
-	env      []string
-	password string
-}
-
-type loginOptions struct {
-	Account string
-	Role    string
-	Profile string
-	Prompt  bool
-}
-
-func buildLogin(cmd *cobra.Command, aws config.AWSConfig, opts loginOptions) (loginSpec, *output.Envelope) {
-	if aws.Enabled != nil && !*aws.Enabled {
-		failure := output.Failure("config_missing", "AWS authorization is not configured.", "Set AWS domain, username, and password with aws-auth auth login.", 400)
-		return loginSpec{}, &failure
-	}
-	domain := singleLine(aws.Domain)
-	username := singleLine(aws.Username)
-	password := cleanSecret(aws.Password)
-	if domain == "" || username == "" || password == "" {
-		failure := output.Failure("config_missing", "AWS authorization is not configured.", "Set AWS domain, username, and password with aws-auth auth login.", 400)
-		return loginSpec{}, &failure
-	}
-	account := singleLine(opts.Account)
-	role := singleLine(opts.Role)
-	if opts.Prompt {
-		var err error
-		account, role, err = promptAccountRole(cmd, account, role)
-		if err != nil {
-			failure := output.Failure("invalid_args", output.RedactString(err.Error()), "Pass --account and --role when running aws-auth login.", 400)
-			return loginSpec{}, &failure
-		}
-	}
-	if account == "" || role == "" {
-		failure := output.Failure("invalid_args", "account and role are required for AWS login.", "Pass --account and --role when running aws-auth login.", 400)
-		return loginSpec{}, &failure
-	}
-	profile := singleLine(opts.Profile)
-	if profile == "" {
-		profile = defaultAWSAuthProfile
-	}
-	loginArgs := []string{"--domain", domain, "--username", username, "--role", role, "--account", account, "--profile", profile, "--no-warning", "--display-token", "--jenkins"}
-	return loginSpec{
-		command:  adfsAssumeCommand,
-		args:     loginArgs,
-		env:      withADPass(os.Environ(), password),
-		password: password,
-	}, nil
 }
 
 func resolveAWSConfigPath(flagPath string) (string, error) {
@@ -366,8 +269,16 @@ func adapterStateEFPConfigPath() string {
 	return filepath.Join(stateDir, "efp", "config.yaml")
 }
 
+// awsAuthConfigured reports whether the aws node can authorize something: the
+// ADFS providers need directory credentials, assume-role only needs accounts.
 func awsAuthConfigured(aws config.AWSConfig) bool {
-	return (aws.Enabled == nil || *aws.Enabled) && singleLine(aws.Domain) != "" && singleLine(aws.Username) != "" && cleanSecret(aws.Password) != ""
+	if aws.Enabled != nil && !*aws.Enabled {
+		return false
+	}
+	if aws.EffectiveProvider() == config.AWSProviderAssumeRole {
+		return len(aws.EnabledAccounts()) > 0
+	}
+	return singleLine(aws.Domain) != "" && singleLine(aws.Username) != "" && cleanSecret(aws.Password) != ""
 }
 
 func loadConfigForWrite(path string) (config.RootConfig, error) {
@@ -427,21 +338,47 @@ func promptLine(cmd *cobra.Command, reader *bufio.Reader, label string) (string,
 	return value, nil
 }
 
-func withADPass(env []string, password string) []string {
+// secretEnvSubstrings catch the credentials a managed runtime injects, which
+// carry a product prefix rather than a bare name: EFP_AWS_PASSWORD,
+// EFP_PGSQL_INSTANCES_0_PASSWORD, EFP_SPLUNK_INSTANCES_0_AUTH_TOKEN. The
+// provider and the AWS CLI have no use for any of them, and a child that
+// prints its environment on failure would otherwise leak every one.
+var secretEnvSubstrings = []string{"PASSWORD", "PASSWD", "SECRET", "TOKEN", "API_KEY", "APIKEY", "CREDENTIAL", "PASSPHRASE"}
+
+func isSecretEnvKey(key string) bool {
+	for _, candidate := range secretEnvKeys {
+		if key == candidate {
+			return true
+		}
+	}
+	upper := strings.ToUpper(key)
+	for _, candidate := range secretEnvSubstrings {
+		if strings.Contains(upper, candidate) {
+			return true
+		}
+	}
+	return false
+}
+
+// stripSecretEnv removes every secret-carrying variable so child processes
+// only ever see the one the caller adds back through withSecretEnv.
+func stripSecretEnv(env []string) []string {
 	out := make([]string, 0, len(env)+1)
 	for _, item := range env {
 		key, _, ok := strings.Cut(item, "=")
 		if !ok {
 			continue
 		}
-		switch key {
-		case "AD_PASS", "password":
+		if isSecretEnvKey(key) {
 			continue
-		default:
-			out = append(out, item)
 		}
+		out = append(out, item)
 	}
-	return append(out, "AD_PASS="+password)
+	return out
+}
+
+func withSecretEnv(env []string, key, value string) []string {
+	return append(stripSecretEnv(env), key+"="+value)
 }
 
 func cleanSecret(value string) string {
@@ -488,11 +425,49 @@ func formatCommand(command string, args []string) string {
 func redactWithSecrets(value string, secrets ...string) string {
 	text := value
 	for _, secret := range secrets {
-		if secret != "" {
-			text = strings.ReplaceAll(text, secret, output.Redacted)
+		if secret == "" {
+			continue
+		}
+		text = strings.ReplaceAll(text, secret, output.Redacted)
+		// A SAML provider echoes the password back inside a POST body or an
+		// HTML error page, where it is percent- or entity-encoded and a
+		// literal match would miss it.
+		if encoded := url.QueryEscape(secret); encoded != secret {
+			text = strings.ReplaceAll(text, encoded, output.Redacted)
+		}
+		if escaped := html.EscapeString(secret); escaped != secret {
+			text = strings.ReplaceAll(text, escaped, output.Redacted)
 		}
 	}
 	return output.RedactString(text)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func truncateText(value string, limit int) string {
+	if limit <= 0 || len(value) <= limit {
+		return value
+	}
+	return value[:limit] + "..."
+}
+
+func isDigits(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, r := range value {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func fmtOut(o *Opts) string {
@@ -529,9 +504,13 @@ func helpLLMCmd(o *Opts) *cobra.Command {
 	return &cobra.Command{Use: "help llm", RunE: func(cmd *cobra.Command, args []string) error {
 		tips := []string{
 			"For agents, --json is the default way to use every aws-auth command and subcommand.",
-			"Use aws-auth auth login --password-stdin --json to store AWS auth config without putting the password in shell history.",
-			"Use aws-auth login --account <account-id> --role <role-name> --profile saml --json to authorize AWS credentials from the shared EFP config.",
-			"aws-auth login invokes adfs-assume with --profile saml by default.",
+			"Run aws-auth account list --json first to see the configured account matrix (name, account id, role, regions).",
+			"Use aws-auth login --account <name> --json to authorize one configured account; its credentials land in the AWS CLI profile named after the account, so pass --profile <name> (or AWS_PROFILE=<name>) to aws and kubectl afterwards.",
+			"Use aws-auth login --all --json to authorize every configured account; partial=true means some accounts failed and results[] says which.",
+			"Use aws-auth login --account <account-id> --role <role-name> --json for an account outside the matrix; it writes the saml profile.",
+			"Use aws-auth status --json to see which profiles hold credentials and whether their session expired; re-run login for that account when aws reports ExpiredToken.",
+			"Use aws-auth eks kubeconfig --account <name> --cluster <cluster> --json, then kubectl --context <name>/<cluster> for read-only cluster inspection.",
+			"Use aws-auth auth login --password-stdin --json to store directory credentials without putting the password in shell history.",
 			"Use --config or EFP_CONFIG when the caller manages an isolated config file.",
 			"Inspect error.code and error.hint before retrying.",
 		}

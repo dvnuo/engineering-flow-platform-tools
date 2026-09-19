@@ -5,10 +5,13 @@ This repository hosts cross-platform Go-based CLI tools for agent, runtime, shel
 - `jira`
 - `confluence`
 - `jenkins`
+- `nexus`
 - `aws-auth`
+- `appd`
 - `browser`
 - `mobile-auto`
 - `inspect-image`
+- `splunk`
 
 Jira and Confluence are the first tool family in this repository. Future tools may be added as separate command binaries under `cmd/<tool-name>`.
 
@@ -38,9 +41,27 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 `jenkins` provides Jenkins controller automation for jobs, builds, queues, console logs, artifacts, Pipeline REST API resources, views, nodes, plugins, selected controller actions, and raw Jenkins API calls. It supports multiple Jenkins instances under the `jenkins` YAML node and handles Jenkins crumbs for state-changing requests.
 
+### Nexus
+
+`nexus` provides read-only access to Sonatype Nexus Repository 3: repository discovery, component and asset search (including Maven coordinate and Docker image name/tag filters), component and asset metadata, raw read-only REST calls, and asset downloads that return metadata instead of file bytes. It supports multiple instances under the `nexus` YAML node, anonymous reads for instances without an `auth` block, and continuation-token paging through `--continuation` or `--all`. It never uploads, deletes, or administers anything on the repository manager.
+
+For VS Code GitHub Copilot, copy `cmd/nexus/nexus-cli.instructions.md` to `~/.copilot/instructions/nexus-cli.instructions.md`.
+
+### Splunk
+
+`splunk` gives agents read-only, JSON-first access to Splunk Enterprise through the management REST API (usually port 8089): bounded `search run` and `search oneshot` queries with explicit time ranges, result caps, and field truncation; `search job get/results/cancel` for existing jobs; `saved list/run`; `index list`; and raw `api get` under `/services/`. An SPL guard refuses side-effect commands such as `delete`, `outputlookup`, `collect`, `sendemail`, and `script` before any job is created. Instances live under the `splunk` YAML node with `bearer_token` (authentication token) or `basic_password` (session login; the session key stays in memory) auth plus `default_index`, `default_earliest`, and `max_results`.
+
+For VS Code GitHub Copilot, copy `cmd/splunk/splunk-cli.instructions.md` to `~/.copilot/instructions/splunk-cli.instructions.md`.
+
+### AppDynamics
+
+`appd` provides read-only access to the AppDynamics Controller REST API for troubleshooting: applications, tiers, nodes, business transactions, backends, metric browsing and metric values (with presets for BT response time, calls, errors, tier CPU, and node heap), transaction snapshots with error and user-experience filters, health-rule violations, and events such as deployments and application errors. It supports multiple Controllers under the `appd` YAML node, authenticates with an AppDynamics API Client (OAuth client credentials exchanged for a short-lived in-memory bearer token) or a `user@account` basic login, and makes every time window explicit.
+
+For AppDynamics, copy `cmd/appd/appd-cli.instructions.md` into `~/.copilot/instructions/` so Copilot follows the triage order (`app list`, `bt list`, `snapshot list --errors-only`, `violation list`, `event list --event-types APPLICATION_DEPLOYMENT`) and the time-range conventions.
+
 ### AWS Auth
 
-`aws-auth` stores ADFS AWS auth settings under the `aws` YAML node and runs `adfs-assume` to authorize AWS credentials. Use `aws-auth auth login --password-stdin --json` to save domain, username, and password without putting the password in shell history. Use `aws-auth login --account <account-id> --role <role-name> --json` to run the authorization flow for a specific account and role.
+`aws-auth` stores ADFS AWS auth settings and an account matrix (name, account id, role, regions) under the `aws` YAML node and authorizes AWS credentials through a provider: `adfs-assume` (default), `saml2aws`, or `assume-role`. Use `aws-auth auth login --password-stdin --json` to save domain, username, and password without putting the password in shell history. Use `aws-auth account list --json` to see the accounts, `aws-auth login --account <name> --json` (or `--all`) to authorize them into per-account AWS CLI profiles, `aws-auth status --json` to check session expiry, and `aws-auth eks kubeconfig --account <name> --cluster <cluster> --json` to write a `<account>/<cluster>` kubectl context. `aws-auth login --account <account-id> --role <role-name> --json` still authorizes an account outside the matrix into the `saml` profile.
 
 ### Browser
 
@@ -101,6 +122,12 @@ Supported image formats: JPEG, PNG, WEBP, GIF. Max size: 3145728 bytes.
 For agents, `--json` is the default way to use `inspect-image`; human-facing interactive `auth login` prompts can omit it. Stdout is the primary output path. Use `--out <file>` only when terminal stdout capture is unreliable or you want a second JSON envelope copy, preferably inside the current workspace. Use `--verbose` for non-secret stage diagnostics on stderr.
 
 For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so Copilot has durable guidance for when and how to invoke this CLI.
+
+### PostgreSQL
+
+`pgsql` is a read-only PostgreSQL CLI for agents: bounded `query`/`explain` inside a `READ ONLY` transaction with a statement timeout, `schema tables/describe/indexes`, `stat activity/locks/slow/replication/tables`, and `db size`. A statement guard accepts a single `SELECT`-style statement and rejects writes, data-modifying CTEs, `SELECT INTO`, and side-effecting functions (`pg_terminate_backend`, `pg_sleep`, `pg_read_file`, `dblink`, ...); rows are capped by `--limit` and the instance `max_rows`, cells by `--max-cell-chars`, and `--output file.csv` writes a full extract to disk. Instances live under the `pgsql` YAML node (`host`, `port`, `database`, `username`, `password`, `sslmode`, `ca_cert`, `statement_timeout_seconds`, `max_rows`) or `EFP_PGSQL_*` environment variables; give the CLI a read-only database role, which is the real guarantee.
+
+For VS Code GitHub Copilot, copy `cmd/pgsql/pgsql-cli.instructions.md` to `~/.copilot/instructions/pgsql-cli.instructions.md`.
 
 ## Quick Install
 
@@ -180,11 +207,55 @@ jenkins:
       verify_ssl: true
       ca_cert: ""
 
+nexus:
+  default_instance: repo
+  instances:
+    - name: repo
+      base_url: https://nexus.example.test
+      rest_path: ""
+      auth:
+        type: basic_password
+        username: ci-reader
+        password: redacted
+
+splunk:
+  default_instance: prod
+  instances:
+    - name: prod
+      base_url: https://splunk-api.example.test:8089
+      auth:
+        type: bearer_token
+        token: redacted
+      default_index: main
+      default_earliest: -1h
+      max_results: 1000
+
+appd:
+  default_instance: prod
+  instances:
+    - name: prod
+      base_url: https://appd.example.test:8090
+      account: customer1
+      auth:
+        type: api_client
+        username: efp-reader
+        api_key: redacted
+      verify_ssl: true
+      ca_cert: ""
+
 aws:
   enabled: true
+  provider: adfs-assume
   domain: HBEU
   username: user@example.test
   password: redacted
+  default_account: cps-dev
+  default_region: ap-east-1
+  accounts:
+    - name: cps-dev
+      account_id: "818354133892"
+      role: ADFS-ReadOnly
+      regions: [ap-east-1, eu-west-1]
 
 copilot:
   provider: github_copilot_plugin
@@ -248,12 +319,18 @@ Config node ownership:
 - `jira`: Jira instances, defaults, auth, TLS, and Zephyr settings.
 - `confluence`: Confluence instances, defaults, auth, and TLS settings.
 - `jenkins`: Jenkins instances, defaults, auth, TLS, and crumb behavior.
+- `nexus`: Nexus Repository 3 instances, defaults, auth (or anonymous reads when `auth` is omitted), REST path, and TLS settings.
+
+- `splunk`: Splunk instances, auth (token or session login), default index and earliest time, result caps, and TLS settings.
+
+- `appd`: AppDynamics Controller instances, defaults, `account`, API client or basic auth, and TLS settings used by `appd`.
 - `browser`: browser bookmark sources and related browser configuration.
 - `copilot`: GitHub/Copilot authentication shared by commands that use Copilot-backed APIs.
 - `inspect_image`: inspect-image API defaults, model defaults, image limits, and privacy settings.
 - `ai_platform`: AI Platform endpoints, authentication, and token-file settings.
-- `aws`: AWS authorization settings used by `aws-auth login`.
+- `aws`: AWS directory credentials, provider, and account matrix used by `aws-auth login`, `status`, and `eks kubeconfig`.
 - `mobile-auto`: mobile provider, BrowserStack, proxy, and local tunnel settings.
+- `pgsql`: read-only PostgreSQL instances (host, port, database, read-only role and password, sslmode, CA bundle, statement timeout, row cap) used by `pgsql`.
 
 ## Environment Variable References
 
@@ -274,21 +351,28 @@ aws:
 ```powershell
 $env:AWS_AUTH_USERNAME = "GB-SVC-XXX-XXX"
 $env:AWS_AUTH_PASSWORD = "your-password"
-aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json
+aws-auth login --account cps-dev --json
 ```
 
 ## AWS Auth Examples
 
 ```bash
 printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json
+aws-auth account list --json
+aws-auth login --account cps-dev --json
+aws-auth login --all --json
 aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json
-aws-auth --config ~/.efp/config.yaml login --account 123456 --role ADFS-ReadOnly --profile saml --json
+aws-auth status --verify --json
+aws-auth eks list --account cps-dev --region ap-east-1 --json
+aws-auth eks kubeconfig --account cps-dev --cluster cps-dev-eks --json
+aws --profile cps-dev sts get-caller-identity --output json
+kubectl --context cps-dev/cps-dev-eks get pods -n payments
 aws-auth commands --json
 aws-auth schema login --json
 aws-auth help llm --json
 ```
 
-`aws-auth login` invokes `adfs-assume` with `--profile saml` by default and passes the configured password through `AD_PASS` instead of command arguments.
+`aws-auth login` writes each configured account's credentials to the AWS CLI profile named after the account (`saml` for an ad-hoc account id). With the default `adfs-assume` provider it runs `adfs-assume --domain ... --username ... --role ... --account ... --profile <account> --no-warning --display-token --jenkins` and passes the configured password through `AD_PASS` instead of command arguments; with `saml2aws` it runs `saml2aws login --idp-provider ADFS ...` with the password in `SAML2AWS_PASSWORD`; with `assume-role` it only writes `role_arn`/`source_profile` profiles into the AWS config file. Every login is verified with `aws sts get-caller-identity` unless `--verify=false` is passed.
 
 ## Jenkins Examples
 
@@ -296,6 +380,9 @@ aws-auth help llm --json
 jenkins auth test --instance ci --json
 jenkins job list --depth 2 --json
 jenkins job get folder/app-main --json
+jenkins job search --pattern "*deploy*" --max-depth 4 --json
+jenkins build list deploy/payments-api --param VERSION=1.4.2 --since 7d --json
+jenkins build params deploy/payments-api 42 --json
 jenkins job build folder/app-main --json
 jenkins job build-with-params folder/app-main --param BRANCH=main --json
 jenkins queue get 123 --json
@@ -307,6 +394,86 @@ jenkins artifact download folder/app-main 42 target/app.jar --output app.jar --j
 jenkins pipeline runs folder/app-main --json
 jenkins api get /api/json --query depth=1 --json
 jenkins version --json
+```
+
+## Nexus Examples
+
+```bash
+nexus auth test --instance repo --json
+nexus repo list --json
+nexus repo get maven-releases --json
+nexus component search --repository maven-releases --maven-group-id com.example --maven-artifact-id app --version 1.4.2 --json
+nexus component search --repo-format npm --group @example --name ui-kit --all --max-pages 3 --json
+nexus asset search --repository docker-hosted --docker-image-name payments/api --docker-image-tag 2.3.0 --json
+nexus component list --repository maven-releases --limit 50 --json
+nexus component get bWF2ZW4tcmVsZWFzZXM6ZDQ4MTE3NTQxZGNiODllYzYxM2IyMzk3MzIwMWQ3YmE --json
+nexus asset download bWF2ZW4tcmVsZWFzZXM6MTVkYWJmZDA1MTIzYWM1MTIzNGY1NjEyMzQ1Njc4OTA --output app-1.4.2.jar --json
+nexus api get /service/rest/v1/search --query repository=maven-releases --query name=app --json
+nexus version --json
+```
+
+Search and list results are paged: when `data.truncated` is true, pass `data.continuation_token` back with `--continuation`, or use `--all --max-pages <n>`. `nexus asset download` writes the file and returns `path`, `bytes`, `sha1`, `content_type`, and `name` only.
+
+## Splunk Examples
+
+```bash
+printf '%s\n' "$SPLUNK_TOKEN" | splunk instance add prod --base-url https://splunk-api.example.test:8089 --token-stdin --default-index main --default --json
+splunk auth test --json
+splunk index list --json
+splunk search run --query "index=main error | head 100" --earliest -1h --json
+splunk search run --query "index=main sourcetype=access_combined status=500 | stats count by host" --earliest -24h@h --latest now --json
+splunk search run --query "index=main error" --earliest -1h --count 1000 --output results.json --json
+splunk search oneshot --query "index=main | stats count by sourcetype" --earliest -15m --json
+splunk search job get 1700000000.123 --json
+splunk search job results 1700000000.123 --count 100 --offset 100 --fields _time,host,_raw --json
+splunk search job cancel 1700000000.123 --yes --json
+splunk saved list --filter errors --json
+splunk saved run "Errors last hour" --json
+splunk api get /services/server/info --json
+splunk schema search.run --json
+splunk help llm --json
+```
+
+`search run` creates a job, polls it until it finishes or `--timeout-sec` (default 60) elapses, cancels it on timeout (`wait_timeout`), and returns results capped by the instance `max_results` (default 1000). Every printed field value is cut at `--max-field-chars` (default 2000) unless `--output` writes the untruncated JSON to a file. SPL that writes data or triggers actions is refused with `spl_blocked`.
+
+## AppDynamics Examples
+
+```bash
+appd instance add prod --base-url https://appd.example.test:8090 --account customer1 --auth-type api_client --username efp-reader --api-key-stdin --default --json
+appd auth test --json
+appd app list --json
+appd tier list --app ecommerce --json
+appd node list --app ecommerce --tier web --json
+appd bt list --app ecommerce --tier web --json
+appd backend list --app ecommerce --json
+appd metric browse --app ecommerce --path "Overall Application Performance" --json
+appd metric get --app ecommerce --path "Overall Application Performance|Average Response Time (ms)" --duration-mins 60 --json
+appd metric preset --app ecommerce --preset bt-response-time --tier web --bt /checkout --duration-mins 60 --json
+appd snapshot list --app ecommerce --errors-only --duration-mins 60 --max-results 50 --json
+appd snapshot list --app ecommerce --user-experience VERY_SLOW,STALL --start-time 2026-09-19T08:00:00Z --end-time 2026-09-19T09:00:00Z --json
+appd snapshot get --app ecommerce --guid 4b9c6f2e-1d3a-4c7e-9f10-1a2b3c4d5e6f --json
+appd violation list --app ecommerce --duration-mins 120 --json
+appd event list --app ecommerce --event-types APPLICATION_DEPLOYMENT,APPLICATION_ERROR --duration-mins 1440 --json
+appd api get /controller/rest/applications/ecommerce/tiers --json
+appd version --json
+
+## PostgreSQL Examples
+
+```bash
+printf '%s\n' "$PGPASSWORD" | pgsql instance add analytics --host db.example.test --database analytics --username readonly --password-stdin --sslmode verify-full --default --json
+pgsql auth test --json
+pgsql schema tables --json
+pgsql schema describe public.orders --json
+pgsql query --sql "SELECT status, count(*) AS n FROM orders WHERE created_at > now() - interval '1 day' GROUP BY status" --limit 50 --json
+pgsql query --sql "SELECT id, status FROM orders WHERE customer_id = \$1" --param 42 --limit 20 --json
+pgsql query --sql-file ./report.sql --limit 1000 --output ./report.csv --json
+pgsql explain --sql "SELECT * FROM orders WHERE customer_id = \$1" --param 42 --analyze --json
+pgsql stat activity --state active --min-duration-sec 5 --json
+pgsql stat locks --blocked-only --json
+pgsql stat slow --limit 20 --json
+pgsql stat tables --sort n_dead_tup --json
+pgsql db size --json
+pgsql help llm --json
 ```
 
 ## Jira Examples
@@ -476,6 +643,7 @@ jenkins commands --json
 aws-auth commands --json
 browser commands --json
 inspect-image commands --json
+splunk commands --json
 ```
 
 Then inspect the exact schema before calling a command:
@@ -487,6 +655,7 @@ jenkins schema job.build-with-params --json
 aws-auth schema login --json
 browser schema page.fetch --json
 inspect-image schema inspect --json
+splunk schema search.run --json
 ```
 
 For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope. Only omit `--json` when intentionally reading human-oriented `--help` text or a documented interactive human prompt. `aws-auth login` uses `adfs-assume --profile saml` by default. Inspect `error.code` and `error.hint` before retrying, run write commands with `--dry-run` first, and pass `--yes` for destructive operations.

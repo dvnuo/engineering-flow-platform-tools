@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"engineering-flow-platform-tools/internal/config"
 )
@@ -38,6 +39,41 @@ func TestClientHTTPEndToEnd(t *testing.T) {
 	defer resp.Body.Close()
 	_, _ = io.ReadAll(resp.Body)
 }
+func TestNewAnonymousSendsNoAuthorizationAndWithTimeoutKeepsTransport(t *testing.T) {
+	var authHeader atomic.Value
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader.Store(r.Header.Get("Authorization"))
+		if r.URL.Path != "/service/rest/v1/repositories" {
+			t.Errorf("bad path %s", r.URL.Path)
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer s.Close()
+	v := true
+	c, err := NewAnonymous(config.InstanceConfig{Name: "x", BaseURL: s.URL, RESTPath: "/service/rest/v1", VerifySSL: &v})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, client := range []*Client{c, c.WithTimeout(time.Minute)} {
+		resp, err := client.Do(Request{Method: "GET", Path: "repositories"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if got, _ := authHeader.Load().(string); got != "" {
+			t.Fatalf("anonymous client sent Authorization %q", got)
+		}
+	}
+	if c.WithTimeout(0) != c {
+		t.Fatal("WithTimeout(0) should return the same client")
+	}
+	if c.WithTimeout(time.Minute).http.Transport != c.http.Transport {
+		t.Fatal("WithTimeout must share the transport")
+	}
+}
+
 func TestDisallowOtherDomain(t *testing.T) {
 	v := true
 	c, _ := New(config.InstanceConfig{BaseURL: "https://a.example.com", RESTPath: "/rest/api/2", VerifySSL: &v, Auth: config.AuthConfig{Type: "bearer_token", Token: "t"}})

@@ -11,6 +11,10 @@ go run ./cmd/aws-auth --help >/dev/null
 go run ./cmd/browser --help >/dev/null
 go run ./cmd/mobile-auto --help >/dev/null
 go run ./cmd/inspect-image --help >/dev/null
+go run ./cmd/nexus --help >/dev/null
+go run ./cmd/splunk --help >/dev/null
+go run ./cmd/appd --help >/dev/null
+go run ./cmd/pgsql --help >/dev/null
 go run ./cmd/jira commands --json >/dev/null
 go run ./cmd/confluence commands --json >/dev/null
 go run ./cmd/jenkins commands --json >/dev/null
@@ -18,6 +22,10 @@ go run ./cmd/aws-auth commands --json >/dev/null
 go run ./cmd/browser commands --json >/dev/null
 go run ./cmd/mobile-auto commands --json >/dev/null
 go run ./cmd/inspect-image commands --json >/dev/null
+go run ./cmd/nexus commands --json >/dev/null
+go run ./cmd/splunk commands --json >/dev/null
+go run ./cmd/appd commands --json >/dev/null
+go run ./cmd/pgsql commands --json >/dev/null
 go run ./cmd/browser schema open --json >/dev/null
 go run ./cmd/browser schema probe --json >/dev/null
 go run ./cmd/mobile-auto schema run.start --json >/dev/null
@@ -35,3 +43,7 @@ go run ./cmd/aws-auth version --json >/dev/null
 go run ./cmd/browser version --json >/dev/null
 go run ./cmd/mobile-auto version --json >/dev/null
 go run ./cmd/inspect-image version --json >/dev/null
+go run ./cmd/nexus version --json >/dev/null
+go run ./cmd/splunk version --json >/dev/null
+go run ./cmd/appd version --json >/dev/null
+go run ./cmd/pgsql version --json >/dev/null

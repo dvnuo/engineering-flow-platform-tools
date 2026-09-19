@@ -109,6 +109,26 @@ func Save(path string, c RootConfig) error {
 	if err := setMappingValue(root, "jenkins", c.Jenkins, c.envSnapshot); err != nil {
 		return err
 	}
+	// Troubleshooting nodes are written only when populated so a config file
+	// that never used them does not grow empty nodes on every save.
+	for _, node := range []struct {
+		key     string
+		value   any
+		present bool
+	}{
+		{"nexus", c.Nexus, len(c.Nexus.Instances) > 0 || c.Nexus.DefaultInstance != ""},
+		{"splunk", c.Splunk, len(c.Splunk.Instances) > 0 || c.Splunk.DefaultInstance != ""},
+		{"appd", c.AppD, len(c.AppD.Instances) > 0 || c.AppD.DefaultInstance != ""},
+		{"pgsql", c.Pgsql, len(c.Pgsql.Instances) > 0 || c.Pgsql.DefaultInstance != ""},
+	} {
+		if !node.present {
+			deleteMappingValue(root, node.key)
+			continue
+		}
+		if err := setMappingValue(root, node.key, node.value, c.envSnapshot); err != nil {
+			return err
+		}
+	}
 	if err := setMappingValue(root, "aws", c.AWS, c.envSnapshot); err != nil {
 		return err
 	}

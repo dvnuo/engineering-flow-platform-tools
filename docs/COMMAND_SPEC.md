@@ -2,8 +2,8 @@
 
 ## Common Conventions
 
-- For agent workflows, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, and `inspect-image` command and subcommand to `--json`.
-- `aws-auth login` invokes `adfs-assume` with `--profile saml` by default.
+- For agent workflows, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `nexus`, `splunk`, `appd`, `pgsql`, `browser`, and `inspect-image` command and subcommand to `--json`.
+- `aws-auth login` writes each configured account's credentials to the AWS CLI profile named after the account (`saml` for an ad-hoc account id) through the configured provider (`adfs-assume` by default, `saml2aws`, or `assume-role`).
 - `--json` returns the stable `ok/data/error` envelope.
 - Command parsing failures return `ok=false` with `error.code=invalid_args` when `--json` is present.
 - `--format table|json|yaml` selects output rendering where supported.
@@ -377,6 +377,7 @@ confluence page get --url <page-url>
 ### Job
 - jenkins job list
 - jenkins job get <job>
+- jenkins job search
 - jenkins job config get <job>
 - jenkins job config update <job>
 - jenkins job create <job>
@@ -393,8 +394,10 @@ confluence page get --url <page-url>
 - jenkins queue cancel <queue-id>
 
 ### Build
+- jenkins build list <job>
 - jenkins build get <job> <build>
 - jenkins build status <job> <build>
+- jenkins build params <job> <build>
 - jenkins build log <job> <build>
 - jenkins build log-follow <job> <build>
 - jenkins build stop <job> <build>
@@ -434,6 +437,23 @@ confluence page get --url <page-url>
 - jenkins api post <path>
 - jenkins api put <path>
 - jenkins api delete <path>
+
+## AWS Auth
+
+### Basic
+- aws-auth login
+- aws-auth account list
+- aws-auth status
+- aws-auth auth login
+- aws-auth auth status
+- aws-auth commands
+- aws-auth schema <command>
+- aws-auth help llm
+- aws-auth version
+
+### EKS
+- aws-auth eks list
+- aws-auth eks kubeconfig
 
 ## Browser
 
@@ -618,6 +638,190 @@ browser session attach --name user-demo --debug-port 9222 --json
 - `--timeout <seconds>`: maximum seconds for page commands.
 - `--download-dir <dir>`: dedicated download directory when `browser open` creates a managed session, or when the lower-level `browser session start` command is used for lifecycle/configuration.
 - `--json`: return the stable JSON envelope.
+
+## Nexus
+
+`nexus` is read-only against Sonatype Nexus Repository 3: every REST-backed command issues GET requests only. `instance` and `auth` commands edit the local EFP config; `instance remove` and `auth logout` require `--yes`. An instance without an `auth` block is queried anonymously, and `rest_path` defaults to `/service/rest/v1`. Search and list results are paged by continuation token (`--continuation`, `--limit`, `--all`, `--max-pages`).
+
+### Basic
+- nexus instance list
+- nexus instance get <name>
+- nexus instance add <name>
+- nexus instance update <name>
+- nexus instance remove <name>
+- nexus instance default [name]
+- nexus auth login
+- nexus auth logout
+- nexus auth test
+- nexus commands
+- nexus schema <command>
+- nexus help llm
+- nexus version
+
+### Repository
+- nexus repo list
+- nexus repo get <name>
+
+### Component
+- nexus component search
+- nexus component list
+- nexus component get <id>
+
+### Asset
+- nexus asset search
+- nexus asset list
+- nexus asset get <id>
+- nexus asset download <id>
+
+### Raw API
+- nexus api get <path>
+
+## Splunk
+
+`splunk` is read-only against Splunk Enterprise. Every search passes an SPL guard that refuses side-effect commands (`delete`, `outputlookup`, `outputcsv`, `outputtext`, `collect`, `mcollect`, `meventcollect`, `sendemail`, `sendalert`, `script`, `runshellscript`, `tscollect`, `summaryindex`, `dump`) with `spl_blocked`, results are capped by the instance `max_results` (default 1000), and long field values are truncated unless `--output` writes them to a file. `search job cancel` is the only service-affecting command and requires `--yes`.
+
+### Basic
+- splunk instance list
+- splunk instance get <name>
+- splunk instance add <name>
+- splunk instance update <name>
+- splunk instance remove <name>
+- splunk instance default [name]
+- splunk auth login
+- splunk auth logout
+- splunk auth test
+- splunk commands
+- splunk schema <command>
+- splunk help llm
+- splunk version
+
+### Search
+- splunk search run
+- splunk search oneshot
+- splunk search job get <sid>
+- splunk search job results <sid>
+- splunk search job cancel <sid>
+
+### Saved search / index
+- splunk saved list
+- splunk saved run <name>
+- splunk index list
+
+### Raw API
+- splunk api get <path>
+
+## AppDynamics
+
+`appd` is read-only against the AppDynamics Controller REST API. Credentials are an API Client (`auth.type: api_client`, exchanged for a short-lived bearer token kept in memory) or a `user@account` basic login; `account` on the instance qualifies bare names. Every request adds `output=JSON`; `--dry-run` previews the request without contacting the Controller.
+
+### Basic
+- appd instance list
+- appd instance get <name>
+- appd instance add <name>
+- appd instance update <name>
+- appd instance remove <name>
+- appd instance default [name]
+- appd auth login
+- appd auth logout
+- appd auth test
+- appd commands
+- appd schema <command>
+- appd help llm
+- appd version
+
+### Application model
+- appd app list
+- appd app get <app>
+- appd tier list
+- appd tier get <tier>
+- appd node list
+- appd node get <node>
+- appd bt list
+- appd backend list
+
+`--app <name-or-id>` selects the application for every command below `app`; `tier get` and `node get` take the tier or node name or id as the positional argument; `node list --tier` reads `/tiers/{tier}/nodes`; `bt list --tier` filters client-side by `tierName` or `tierId`.
+
+### Metrics
+- appd metric browse
+- appd metric get
+- appd metric preset
+
+`metric browse --path` walks the hierarchy one level at a time. `metric get --path` calls `metric-data-v2` (or `metric-data` with `--api v1`) with `--rollup` off by default. `metric preset --preset bt-response-time|bt-calls|bt-errors --tier <tier> --bt <bt>`, `tier-cpu --tier <tier>`, and `node-heap --tier <tier> --node <node>` expand to the documented metric paths.
+
+### Snapshots, violations, events
+- appd snapshot list
+- appd snapshot get
+- appd violation list
+- appd event list
+
+`snapshot list` filters with `--bt-ids`, `--tier-ids`, `--node-ids`, `--user-experience NORMAL,SLOW,VERY_SLOW,STALL,ERROR`, `--errors-only`, `--first-in-chain`, `--need-exit-calls`, `--need-props`, and `--max-results` (default 50); output keeps only `requestGUID`, `summary`, `userExperience`, `timeTakenInMilliSecs`, `businessTransactionId`, `applicationComponentId`, `applicationComponentNodeId`, `serverStartTime`, `exitCalls`, `errorDetails`, `URL`, and `snapshotExitSequence` and reports `count_returned` and `truncated`. `snapshot get --guid` returns the full snapshot with exit calls and properties (the call graph is not in the public REST API). `event list` requires `--event-types` and defaults `--severities` to `ERROR,WARN,INFO`.
+
+### Time-range flags
+Shared by `metric get`, `metric preset`, `snapshot list`, `snapshot get`, `violation list`, and `event list`; the resolved window is echoed as `data.time_range`:
+
+- `--duration-mins N` alone: `BEFORE_NOW` (default 60; `snapshot get` defaults to 20160)
+- `--start-time <t> --end-time <t>`: `BETWEEN_TIMES`
+- `--before-time <t> --duration-mins N`: `BEFORE_TIME`
+- `--after-time <t> --duration-mins N`: `AFTER_TIME`
+
+Timestamps are epoch milliseconds or RFC3339; epoch seconds are scaled to milliseconds.
+
+### Raw API
+- appd api get <path>
+
+Only paths under `/controller/rest/` are accepted (relative, or absolute on the selected instance); `--query key=value` adds parameters.
+
+## PostgreSQL
+
+`pgsql` is the read-only PostgreSQL CLI. Every database command runs one guarded statement inside `BEGIN READ ONLY` with `SET LOCAL statement_timeout`, `idle_in_transaction_session_timeout`, and `default_transaction_read_only = on`, then rolls back. The statement guard accepts a single `SELECT`, `WITH`, `EXPLAIN`, `SHOW`, `TABLE`, or `VALUES` statement, rejects a second statement, data-modifying CTEs, `SELECT INTO`, DDL, `COPY`, `LOCK`, and calls to side-effecting functions (`pg_terminate_backend`, `pg_cancel_backend`, `pg_read_file`, `pg_ls_dir`, `lo_import`, `dblink*`, `pg_sleep*`, `pg_reload_conf`, `set_config`, `pg_advisory_*`, `pg_notify`, `pg_switch_wal`, `pg_promote`, ...). The real guarantee is the read-only database role configured for the instance. `SELECT`-style statements are fetched through a `NO SCROLL` cursor so only `limit + 1` rows leave the server.
+
+### Instance and Auth
+- pgsql instance list
+- pgsql instance get <name>
+- pgsql instance add <name>
+- pgsql instance update <name>
+- pgsql instance remove <name>
+- pgsql instance default [name]
+- pgsql auth login
+- pgsql auth logout
+- pgsql auth test
+
+Instances live under the `pgsql` config node (`host`, `port`, `database`, `username`, `password`, `sslmode`, `ca_cert`, `statement_timeout_seconds`, `max_rows`, `enabled`). `add` requires `--host`, `--database`, and `--username`; the password comes only from `--password-stdin`. A PEM file passed as `--ca-cert-file` is stored inline and written to a `0600` temp file for `sslrootcert` during each connection. `remove` and `auth logout` require `--yes`. `auth test` returns `{authenticated, user, database, server_version, read_only, in_recovery}`.
+
+### Query
+- pgsql query
+- pgsql explain
+
+`query --sql "<statement>" | --sql-file <path> [--param v ...] [--limit 200] [--timeout-sec 30] [--output <file>] [--max-cell-chars 2000]` returns `{columns[{name,type}], rows[{column: value}], row_count, rows_truncated, cells_truncated, elapsed_ms, notices, limit, limit_capped, statement_timeout_seconds}`. `--limit` is capped by the instance `max_rows`, `--timeout-sec` by the instance `statement_timeout_seconds`, `--param` values are sent as text and coerced by the server. `bytea` cells become `{"bytes": n}`, times are RFC3339, `numeric` stays exact. `--output` writes the full result (CSV when the name ends in `.csv`, JSON otherwise) and returns only `{path, bytes, format, row_count, rows_truncated}`. `--dry-run` returns the guarded statement and the connection target without connecting. `explain [--analyze] [--plan-format text|json]` explains a guarded statement; `--analyze` executes it inside the READ ONLY transaction and rolls back.
+
+Error codes: `read_only_violation` (guard or server SQLSTATE 25006), `permission_denied` (42501), `query_timeout` (57014 or client deadline, status 408), `auth_failed` (28P01/28000), `network_error` (connection failures), `invalid_args` (undefined relation/column, syntax, bad parameter, with the server message), `not_supported` (0A000), `server_error` otherwise.
+
+### Schema
+- pgsql schema tables
+- pgsql schema describe <table>
+- pgsql schema indexes <table>
+
+`schema tables [--schema public | --all-schemas]` lists relations with kind, owner, estimated rows, and size. `schema describe <table>` returns `{table, columns[{position,name,type,nullable,default,primary_key,comment}], primary_key, indexes, constraints}`; `schema indexes <table>` returns the index list. Names may be schema-qualified and quoted (`public."MyTable"`); an unknown relation returns `not_found`.
+
+### Statistics
+- pgsql stat activity
+- pgsql stat locks
+- pgsql stat slow
+- pgsql stat replication
+- pgsql stat tables
+
+`stat activity [--state active] [--min-duration-sec 5]` lists sessions with `pid`, `user`, `db`, `state`, `wait_event`, `query_start`, `duration_sec`, `blocked_by` (from `pg_blocking_pids`), and a truncated `query`. `stat locks [--blocked-only]` joins `pg_locks` with sessions. `stat slow [--limit 20] [--sort total|mean|max|calls|rows]` reads `pg_stat_statements` and returns `has_report=false` when the extension is missing. `stat replication` returns recovery state, WAL positions, and `pg_stat_replication` rows with lag. `stat tables [--schema] [--sort n_dead_tup|seq_scan|...]` reads `pg_stat_user_tables`.
+
+### Database
+- pgsql db size
+
+`db size [--top 10]` returns `pg_database_size`, connection usage, server version, uptime, recovery state, and the largest relations.
+
+### Basic
+- pgsql commands
+- pgsql schema <command>
+- pgsql help llm
+- pgsql version
 
 ## Mobile Auto
 

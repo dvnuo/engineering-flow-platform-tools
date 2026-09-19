@@ -2,7 +2,7 @@
 
 - For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `mobile-auto`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
 - Only omit `--json` when intentionally reading human-oriented `--help` text or when a documented interactive human prompt requires text output.
-- Use `aws-auth login --account <account-id> --role <role-name> --json` for AWS authorization; it invokes `adfs-assume` with `--profile saml` by default.
+- Use `aws-auth account list --json` then `aws-auth login --account <name> --json` for AWS authorization; each configured account gets its own AWS CLI profile (the account name), so pass `--profile <name>` to `aws` afterwards.
 - Use --instance when multiple instances are configured.
 - Full Jira/Confluence URLs can auto-select the instance.
 - Use --dry-run before write operations.
@@ -11,7 +11,7 @@
 - Command parsing failures across `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `mobile-auto`, and `inspect-image` return a JSON `invalid_args` envelope when `--json` is present.
 - On Windows `cmd`, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`; avoid Bash-only quoting and commands.
 - If PATH lookup is unstable, run `where <binary>` and invoke the exact `.exe` path with double quotes.
-- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/mobile-auto/mobile-auto-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, `cmd/aws-auth/aws-auth-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
+- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/mobile-auto/mobile-auto-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, `cmd/aws-auth/aws-auth-cli.instructions.md`, `cmd/appd/appd-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
 
 ## Mobile Auto Device Cloud
 
@@ -32,15 +32,20 @@
 
 ## AWS Auth
 
-- Use `aws-auth` to store ADFS AWS auth config and run the `adfs-assume` authorization flow.
-- Configure it with `printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`.
+- Use `aws-auth` to authorize AWS credentials for the accounts configured under the `aws` node and to write kubectl contexts for EKS clusters in those accounts.
+- Run `aws-auth account list --json` first: `data.accounts[]` carries `name`, `account_id`, `role`, `regions`, `profile`, and `default`.
+- Run `aws-auth login --account <name> --json` to authorize one configured account. Its credentials land in the AWS CLI profile named after the account, so use `aws --profile <name> ...` (or `AWS_PROFILE=<name>`) afterwards. Without `--account` the default account, or the only configured account, is used; with several accounts and no default the CLI returns `account_required` with `data.candidates`.
+- Run `aws-auth login --all --json` to authorize every enabled account; `partial=true` means some failed and `data.results[]` says which.
+- `aws-auth login --account <account-id> --role <role-name> --json` still works for an account outside the matrix; it writes the `saml` profile.
+- `login` verifies the credentials with `aws sts get-caller-identity` and returns `data.verified` and `data.identity`; pass `--verify=false` to skip.
+- Run `aws-auth status --json` to see which profiles hold credentials and whether the session expired (`expires_at`, `expired`, `seconds_remaining`); add `--verify` to call STS for each. When `aws` reports `ExpiredToken`, log in to that account again.
+- Run `aws-auth eks list --account <name> --json` to discover clusters, then `aws-auth eks kubeconfig --account <name> --cluster <cluster> --json`; use `kubectl --context <name>/<cluster> ...` afterwards and keep kubectl read-only (get, describe, logs --tail, events, top, explain).
+- Providers: `adfs-assume` (default, password via `AD_PASS`), `saml2aws` (needs `aws.idp_url`, password via `SAML2AWS_PASSWORD`), `assume-role` (writes `role_arn`/`source_profile` profiles, no password).
+- Configure directory credentials with `printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`; the account matrix already stored under `aws` is preserved.
 - Do not pass passwords as command-line flags. Use `--password-stdin`.
 - Run `aws-auth auth status --json` to inspect configured state with the password redacted.
 - `aws-auth` ignores `ATLASSIAN_CONFIG`; use `--config` or `EFP_CONFIG` for an explicit AWS auth config path.
-- Run `aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json` to authorize AWS credentials for a specific account and role.
-- `--profile` defaults to `saml`.
-- Human interactive `aws-auth login` may omit `--json` so the CLI can prompt for a missing account or role.
-- If login fails with `execution_failed`, check that `adfs-assume` is installed and on `PATH`.
+- If login fails with `provider_missing`, the provider binary (`adfs-assume` or `saml2aws`) is not installed or not on `PATH`.
 
 ## Jenkins Automation
 
@@ -51,11 +56,41 @@
 - Trigger parameterized builds with `jenkins job build-with-params <job> --param NAME=value --json`.
 - After triggering, inspect `data.queue_id` and run `jenkins queue get <queue-id> --json` to find the executable build number.
 - Use `jenkins build status <job> <build> --json` for current state and result.
+- To find which build deployed a version (or what a deployment ran with): `jenkins job search --pattern "*deploy*" --json` locates jobs across nested folders by glob (`*` also spans folder separators; add `--max-depth` for deep trees), `jenkins build list <job> --param VERSION=1.4.2 --since 7d --json` lists the newest builds that carry exactly those parameters (`--result`, `--building`, and repeated `--param` narrow further), and `jenkins build params <job> <build> --json` returns that build's parameters, causes (user or upstream trigger), and SCM changes.
+- `build list` scans only `limit*4` (max 800) newest builds; when `truncated` is true, raise `--limit`, add `--since`, or tighten the filters instead of assuming no older build matches. Parameter values whose names look like secrets are returned as `***REDACTED***`.
 - Use `jenkins build log <job> <build> --json` for full console text, or `jenkins build log-follow <job> <build> --json` for progressive text.
 - Use `jenkins build artifacts <job> <build> --json` to list artifacts, then `jenkins artifact download <job> <build> <path> --output <file> --json` to download binary content.
 - Use Pipeline commands only when the Jenkins Pipeline REST API plugin is installed.
 - `build stop`, `queue cancel`, `job delete`, `view delete`, `system safe-restart`, and raw `api delete` require `--yes`.
 - Use `--dry-run` before Jenkins write operations.
+
+## Nexus Repository
+
+- Use `nexus` for read-only Sonatype Nexus Repository 3 access: repositories, component and asset search, component/asset metadata, raw read-only REST calls, and asset downloads. It never uploads, deletes, or administers anything on the repository manager.
+- Nexus instances are configured under `nexus.instances` in `~/.efp/config.yaml` or through `EFP_NEXUS_*` variables; an instance without an `auth` block is queried anonymously, and `rest_path` defaults to `/service/rest/v1`.
+- Start with `nexus repo list --json` to learn repository names and formats before filtering.
+- Search components with `nexus component search --repository <repo> --name <artifact> --version <version> --json`. Use `--maven-group-id`, `--maven-artifact-id`, `--maven-base-version`, `--maven-extension`, and `--maven-classifier` for Maven coordinates, `--group` for npm scopes, `--keyword` for free text, and `--docker-image-name` with `--docker-image-tag` for Docker images (`nexus asset search` takes the same filters and returns files).
+- `--repo-format` (maven2, npm, docker, raw, pypi, nuget, helm) filters by repository format; `--format` is the CLI output format.
+- Results are paged: when `data.truncated` is true, pass `data.continuation_token` back with `--continuation`, or add `--all --max-pages <n>`; `--limit` (1-500) caps the returned items, and `data.dropped` counts items of the last fetched page that the cap removed (the continuation token skips them, so keep the default limit for gap-free walks).
+- Use `nexus component get <id> --json` to see a component's assets, then `nexus asset download <asset-id> --output <file> --json`. The envelope returns `path`, `bytes`, `sha1`, `content_type`, and `name`, never the file bytes, and only follows download URLs that belong to the instance base URL.
+- `nexus api get <path> --json` is the raw GET fallback; relative paths resolve under `/service/rest/v1`, absolute URLs must belong to the selected instance.
+- `instance remove` and `auth logout` require `--yes`; when config comes from environment variables, instance and auth writes return `config_env_managed` unless `--config <path>` is passed.
+
+## Splunk
+
+- Use `splunk` for read-only Splunk Enterprise access through the management REST API (usually port 8089): bounded SPL searches, saved searches, and index metadata. It is a terminal CLI, not a Splunk app, MCP tool, or runtime built-in.
+- Splunk instances are configured under `splunk.instances` in `~/.efp/config.yaml`, or in managed runtimes through `EFP_SPLUNK_DEFAULT_INSTANCE`, `EFP_SPLUNK_INSTANCES_0_BASE_URL`, `EFP_SPLUNK_INSTANCES_0_AUTH_TOKEN`, and friends. `auth.type` is `bearer_token` (authentication token) or `basic_password` (session login; the session key stays in memory for one process).
+- Start with `splunk auth test --json` to confirm credentials and `splunk index list --json` to discover indexes and their event counts.
+- Always give an explicit time range: `--earliest -15m`, `-1h`, or `-24h@h` plus `--latest now`. Without `--earliest` the instance `default_earliest` (or `-1h`) applies; never search all time.
+- Start narrow: `splunk search run --query "index=main error | head 100" --earliest -1h --json`, or aggregate with `| stats count by host`; add `--fields _time,host,message` to keep results small.
+- Never dump raw events beyond the cap: `--count` is bounded by the instance `max_results` (default 1000) and a higher value returns `invalid_args`; every printed field value is cut at `--max-field-chars` (default 2000). Read `data.results_truncated` and `data.fields_truncated`, then page with `--offset` or aggregate instead of raising the cap.
+- Re-run with `--output results.json` when a result set is large or truncated: the untruncated results JSON is written to that file and only `path`, `bytes`, and counts are printed.
+- `search run` creates a job, polls until it is done, and returns results; `search oneshot` answers in one call; `search job get <sid>` and `search job results <sid>` inspect or page an existing job. `wait_timeout` (408) means the job was cancelled after `--timeout-sec`; narrow the search or raise the timeout.
+- When the query does not name an index and the instance sets `default_index`, `index=<default_index>` is prepended automatically; queries starting with `|` are never rewritten.
+- Results are read-only: SPL containing `delete`, `outputlookup`, `outputcsv`, `outputtext`, `collect`, `mcollect`, `meventcollect`, `sendemail`, `sendalert`, `script`, `runshellscript`, `tscollect`, `summaryindex`, `dump` is refused with `spl_blocked` before any job is created. Saved searches are checked the same way (`saved list` marks them with `blocked_command`), and `search job cancel` requires `--yes`.
+- Use `--dry-run` to see the exact SPL and job parameters without contacting Splunk, and `splunk api get /services/server/info --query count=1 --json` for raw read-only REST paths under `/services/` or `/servicesNS/`.
+- `auth_failed` means the token expired or the session is invalid; `search_failed` carries Splunk's messages in `data.messages`.
+- For VS Code GitHub Copilot, copy `cmd/splunk/splunk-cli.instructions.md` into `~/.copilot/instructions/`.
 
 ## Browser Routing and Automation
 
@@ -147,6 +182,29 @@
 - Zephyr delete commands and raw `jira zephyr api delete` require `--yes`; do not add it until the user has confirmed the destructive action.
 - Do not browser-scrape Jira Test pages unless the API is unavailable and the user explicitly asks for UI investigation.
 - For Jira Test page URLs, prefer `jira zephyr resolve-url`, `jira zephyr summary`, `jira zephyr cycle list`, and `jira zephyr execution list` instead of browser scraping.
+
+## AppDynamics
+
+- Use `appd` for read-only AppDynamics Controller queries: applications, tiers, nodes, business transactions, backends, metrics, transaction snapshots, health-rule violations, and events. Every command is read-only; `--dry-run` previews the request without contacting the Controller.
+- Controllers are configured under `appd.instances` in `~/.efp/config.yaml` (or `EFP_APPD_*` variables in managed runtimes) with `base_url`, `account`, and either an API Client (`auth.type: api_client`, `username` = client name, `api_key` = client secret) or a `user@account` basic login. Run `appd auth test --json` first when access is uncertain; `auth_failed` usually means a wrong client secret, a disabled API client, or a missing `account`.
+- Start with `appd app list --json`; every other command takes `--app <name-or-id>`.
+- Triage order: `appd bt list --app <app> --json`, then `appd snapshot list --app <app> --errors-only --duration-mins 60 --json` (or `--user-experience VERY_SLOW,STALL`), then `appd violation list --app <app> --duration-mins 120 --json`, then `appd event list --app <app> --event-types APPLICATION_DEPLOYMENT,APPLICATION_ERROR --duration-mins 1440 --json` to align the incident with deployments (compare `eventTime` with the Jenkins build timestamps).
+- Every time-ranged command takes an explicit window: `--duration-mins N` (default 60, before now), `--start-time`/`--end-time` (epoch milliseconds or RFC3339), or `--before-time`/`--after-time` plus `--duration-mins`. The resolved window is echoed as `data.time_range`; state it in the report.
+- `snapshot list` output is trimmed to summary fields and capped by `--max-results` (`truncated=true` when the cap was hit); fetch one snapshot with `appd snapshot get --app <app> --guid <requestGUID> --json`. The call graph is not available through the public REST API, so point the user to the Controller UI for drill-down.
+- Use `appd metric preset --app <app> --preset bt-response-time|bt-calls|bt-errors --tier <tier> --bt <bt>`, `--preset tier-cpu --tier <tier>`, or `--preset node-heap --tier <tier> --node <node>` for the common metrics; discover other paths with `appd metric browse --app <app> --path "<folder>"` and fetch them with `appd metric get --app <app> --path "<metric-path>"`. Add `--rollup` for one aggregated value instead of one value per minute.
+- `appd api get <path>` accepts only `/controller/rest/...` paths and adds `output=JSON`.
+
+## PostgreSQL
+
+- Use `pgsql` for read-only PostgreSQL access: bounded queries, schema description, and activity/lock/statistics views. It cannot write: every statement runs inside a `READ ONLY` transaction with a statement timeout behind a statement guard, and the instance role should itself be read-only.
+- Instances are configured under `pgsql.instances` in `~/.efp/config.yaml` or through `EFP_PGSQL_DEFAULT_INSTANCE` and `EFP_PGSQL_INSTANCES_0_HOST/_DATABASE/_USERNAME/_PASSWORD/_SSLMODE`. Run `pgsql auth test --json` first; `read_only` must be `true`.
+- Start with `pgsql schema tables --json` and `pgsql schema describe <table> --json`; never guess table or column names.
+- Always pass `--limit` to `pgsql query`; aggregate (`count`, `sum`, `GROUP BY`) and filter with `WHERE` instead of `SELECT *`. `rows_truncated:true` means more rows matched; `--output result.csv` writes a full extract to disk instead of the envelope.
+- Parameters (`--param`) are sent as text: cast them in SQL (`$1::int`). `--dry-run` shows the guarded statement and connection target without connecting.
+- Results may contain PII: summarize them, do not paste raw rows into reports or other systems.
+- For incidents use `pgsql stat activity --state active --min-duration-sec 5 --json` (follow `blocked_by` to the root blocker), `pgsql stat locks --blocked-only --json`, `pgsql stat slow --json` (`has_report:false` when `pg_stat_statements` is missing), `pgsql stat tables --sort n_dead_tup --json`, `pgsql stat replication --json`, and `pgsql db size --json`.
+- `read_only_violation` means the guard or server refused a write, a second statement, or a side-effecting function (`pg_terminate_backend`, `pg_sleep`, `pg_read_file`, `dblink`, ...): rewrite as a SELECT. `query_timeout` means narrow the query. `permission_denied` means the role lacks SELECT on that relation.
+- For VS Code GitHub Copilot, copy `cmd/pgsql/pgsql-cli.instructions.md` into `~/.copilot/instructions/`.
 
 ## How to recover from CLI errors
 

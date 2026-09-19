@@ -38,6 +38,29 @@ func New(instance config.InstanceConfig) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	return newClient(instance, h)
+}
+
+// NewAnonymous builds a client that sends no Authorization header, for
+// services that allow unauthenticated reads (for example a Nexus repository
+// with anonymous access enabled). TLS, CA, proxy, timeout, URL resolution and
+// error mapping behave exactly like New.
+func NewAnonymous(instance config.InstanceConfig) (*Client, error) {
+	return newClient(instance, map[string]string{})
+}
+
+// WithTimeout returns a copy of the client whose requests may take up to d for
+// the whole exchange, including reading the body. Use it for streaming
+// downloads that legitimately outlive the default 30s budget; the transport,
+// instance, and headers are shared with the original client.
+func (c *Client) WithTimeout(d time.Duration) *Client {
+	if c == nil || d <= 0 {
+		return c
+	}
+	return &Client{instance: c.instance, http: &http.Client{Timeout: d, Transport: c.http.Transport}, headers: c.headers}
+}
+
+func newClient(instance config.InstanceConfig, h map[string]string) (*Client, error) {
 	baseTransport, ok := http.DefaultTransport.(*http.Transport)
 	var tr *http.Transport
 	if ok && baseTransport != nil {

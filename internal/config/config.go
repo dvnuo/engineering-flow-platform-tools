@@ -11,11 +11,102 @@ type RootConfig struct {
 	Jira       ProductConfig `json:"jira" yaml:"jira"`
 	Confluence ProductConfig `json:"confluence" yaml:"confluence"`
 	Jenkins    ProductConfig `json:"jenkins" yaml:"jenkins"`
-	AWS        AWSConfig     `json:"aws" yaml:"aws"`
-	Browser    BrowserConfig `json:"browser" yaml:"browser"`
-	Mobile     MobileConfig  `json:"mobile-auto" yaml:"mobile-auto"`
+	// Troubleshooting integrations. nexus/splunk/appd reuse the multi-instance
+	// product shape (EFP_NEXUS_INSTANCES_0_BASE_URL, ...); pgsql has its own
+	// connection fields (EFP_PGSQL_INSTANCES_0_HOST, ...).
+	Nexus   ProductConfig `json:"nexus" yaml:"nexus"`
+	Splunk  ProductConfig `json:"splunk" yaml:"splunk"`
+	AppD    ProductConfig `json:"appd" yaml:"appd"`
+	Pgsql   PgsqlConfig   `json:"pgsql" yaml:"pgsql"`
+	AWS     AWSConfig     `json:"aws" yaml:"aws"`
+	Browser BrowserConfig `json:"browser" yaml:"browser"`
+	Mobile  MobileConfig  `json:"mobile-auto" yaml:"mobile-auto"`
 
 	envSnapshot *configenv.Snapshot
+}
+
+// PgsqlConfig is the `pgsql` node: named PostgreSQL connections the read-only
+// pgsql CLI may query. It mirrors the default_instance/instances shape so the
+// Portal's instance UI and the runtime projection can treat it like a product,
+// but an entry carries connection fields instead of a base URL.
+type PgsqlConfig struct {
+	DefaultInstance string                `json:"default_instance" yaml:"default_instance"`
+	Instances       []PgsqlInstanceConfig `json:"instances" yaml:"instances"`
+}
+
+// Defaults resolved by the Effective* accessors so saved files stay minimal.
+const (
+	DefaultPgsqlPort                    = 5432
+	DefaultPgsqlSSLMode                 = "require"
+	DefaultPgsqlStatementTimeoutSeconds = 30
+	DefaultPgsqlMaxRows                 = 5000
+)
+
+type PgsqlInstanceConfig struct {
+	Name                    string `json:"name" yaml:"name"`
+	Host                    string `json:"host" yaml:"host"`
+	Port                    int    `json:"port,omitempty" yaml:"port,omitempty"`
+	Database                string `json:"database" yaml:"database"`
+	Username                string `json:"username" yaml:"username"`
+	Password                string `json:"password,omitempty" yaml:"password,omitempty"`
+	SSLMode                 string `json:"sslmode,omitempty" yaml:"sslmode,omitempty"`
+	CACert                  string `json:"ca_cert,omitempty" yaml:"ca_cert,omitempty"`
+	StatementTimeoutSeconds int    `json:"statement_timeout_seconds,omitempty" yaml:"statement_timeout_seconds,omitempty"`
+	MaxRows                 int    `json:"max_rows,omitempty" yaml:"max_rows,omitempty"`
+	Enabled                 *bool  `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+}
+
+func (p *PgsqlConfig) Normalize() {
+	p.DefaultInstance = strings.TrimSpace(p.DefaultInstance)
+	for i := range p.Instances {
+		in := &p.Instances[i]
+		in.Name = strings.TrimSpace(in.Name)
+		in.Host = strings.TrimSpace(in.Host)
+		in.Database = strings.TrimSpace(in.Database)
+		in.Username = strings.TrimSpace(in.Username)
+		in.SSLMode = strings.ToLower(strings.TrimSpace(in.SSLMode))
+	}
+}
+
+func (in PgsqlInstanceConfig) IsEnabled() bool { return in.Enabled == nil || *in.Enabled }
+
+func (in PgsqlInstanceConfig) EffectivePort() int {
+	if in.Port > 0 {
+		return in.Port
+	}
+	return DefaultPgsqlPort
+}
+
+func (in PgsqlInstanceConfig) EffectiveSSLMode() string {
+	if in.SSLMode != "" {
+		return in.SSLMode
+	}
+	return DefaultPgsqlSSLMode
+}
+
+func (in PgsqlInstanceConfig) EffectiveStatementTimeoutSeconds() int {
+	if in.StatementTimeoutSeconds > 0 {
+		return in.StatementTimeoutSeconds
+	}
+	return DefaultPgsqlStatementTimeoutSeconds
+}
+
+func (in PgsqlInstanceConfig) EffectiveMaxRows() int {
+	if in.MaxRows > 0 {
+		return in.MaxRows
+	}
+	return DefaultPgsqlMaxRows
+}
+
+// EnabledInstances returns the connections that are not disabled and have a host.
+func (p PgsqlConfig) EnabledInstances() []PgsqlInstanceConfig {
+	out := make([]PgsqlInstanceConfig, 0, len(p.Instances))
+	for _, in := range p.Instances {
+		if in.IsEnabled() && in.Host != "" {
+			out = append(out, in)
+		}
+	}
+	return out
 }
 
 type BrowserConfig struct {
@@ -45,11 +136,147 @@ type BrowserBookmarkSource struct {
 	URL         string `json:"url" yaml:"url"`
 }
 
+// AWS authorization providers accepted in AWSConfig.Provider. The env
+// equivalent derived from the json tag is EFP_AWS_PROVIDER.
+const (
+	AWSProviderADFSAssume = "adfs-assume" // enterprise adfs-assume binary (default)
+	AWSProviderSAML2AWS   = "saml2aws"    // github.com/Versent/saml2aws ADFS flow
+	AWSProviderAssumeRole = "assume-role" // role chaining from an already-authenticated source profile
+)
+
+// DefaultAWSSessionDurationSeconds is the SAML session length requested when
+// aws.session_duration_seconds is unset.
+const DefaultAWSSessionDurationSeconds = 3600
+
+// DefaultAWSKubeconfigPath is where `aws-auth eks kubeconfig` writes cluster
+// contexts when neither --kubeconfig, KUBECONFIG, nor aws.kubeconfig_path is set.
+// It deliberately lives outside the agent workspace, like EFP_CONFIG.
+const DefaultAWSKubeconfigPath = "~/.efp/kube/config"
+
+// AWSConfig is the `aws` node of the shared EFP config. Domain/username/password
+// are the enterprise directory credentials the ADFS providers exchange for AWS
+// credentials; Accounts is the account matrix agents may log in to. Every
+// scalar has an EFP_AWS_<FIELD> env equivalent and accounts are addressed as
+// EFP_AWS_ACCOUNTS_<i>_<FIELD> (regions as EFP_AWS_ACCOUNTS_<i>_REGIONS_<j>).
 type AWSConfig struct {
-	Enabled  *bool  `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	Domain   string `json:"domain,omitempty" yaml:"domain,omitempty"`
-	Username string `json:"username,omitempty" yaml:"username,omitempty"`
-	Password string `json:"password,omitempty" yaml:"password,omitempty"`
+	Enabled                *bool              `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Provider               string             `json:"provider,omitempty" yaml:"provider,omitempty"`
+	Domain                 string             `json:"domain,omitempty" yaml:"domain,omitempty"`
+	Username               string             `json:"username,omitempty" yaml:"username,omitempty"`
+	Password               string             `json:"password,omitempty" yaml:"password,omitempty"`
+	IdpURL                 string             `json:"idp_url,omitempty" yaml:"idp_url,omitempty"`
+	SourceProfile          string             `json:"source_profile,omitempty" yaml:"source_profile,omitempty"`
+	DefaultAccount         string             `json:"default_account,omitempty" yaml:"default_account,omitempty"`
+	DefaultRegion          string             `json:"default_region,omitempty" yaml:"default_region,omitempty"`
+	SessionDurationSeconds int                `json:"session_duration_seconds,omitempty" yaml:"session_duration_seconds,omitempty"`
+	KubeconfigPath         string             `json:"kubeconfig_path,omitempty" yaml:"kubeconfig_path,omitempty"`
+	Accounts               []AWSAccountConfig `json:"accounts,omitempty" yaml:"accounts,omitempty"`
+}
+
+// AWSAccountConfig is one entry of the account matrix. Profile defaults to Name
+// so every account owns its own AWS CLI profile and agents can query several
+// accounts without re-authenticating in between.
+type AWSAccountConfig struct {
+	Name      string   `json:"name" yaml:"name"`
+	AccountID string   `json:"account_id" yaml:"account_id"`
+	Role      string   `json:"role,omitempty" yaml:"role,omitempty"`
+	RoleARN   string   `json:"role_arn,omitempty" yaml:"role_arn,omitempty"`
+	Regions   []string `json:"regions,omitempty" yaml:"regions,omitempty"`
+	Profile   string   `json:"profile,omitempty" yaml:"profile,omitempty"`
+	Enabled   *bool    `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+}
+
+// Normalize trims whitespace and drops empty regions. Defaults (provider,
+// session duration, kubeconfig path, per-account profile) are resolved by the
+// Effective* accessors instead of being materialized here, so a saved config
+// file never gains keys the user did not write.
+func (a *AWSConfig) Normalize() {
+	a.Provider = strings.ToLower(strings.TrimSpace(a.Provider))
+	a.Domain = strings.TrimSpace(a.Domain)
+	a.Username = strings.TrimSpace(a.Username)
+	a.IdpURL = strings.TrimSpace(a.IdpURL)
+	a.SourceProfile = strings.TrimSpace(a.SourceProfile)
+	a.DefaultAccount = strings.TrimSpace(a.DefaultAccount)
+	a.DefaultRegion = strings.TrimSpace(a.DefaultRegion)
+	a.KubeconfigPath = strings.TrimSpace(a.KubeconfigPath)
+	for i := range a.Accounts {
+		acct := &a.Accounts[i]
+		acct.Name = strings.TrimSpace(acct.Name)
+		acct.AccountID = strings.TrimSpace(acct.AccountID)
+		acct.Role = strings.TrimSpace(acct.Role)
+		acct.RoleARN = strings.TrimSpace(acct.RoleARN)
+		acct.Profile = strings.TrimSpace(acct.Profile)
+		regions := make([]string, 0, len(acct.Regions))
+		seen := map[string]bool{}
+		for _, region := range acct.Regions {
+			region = strings.TrimSpace(region)
+			if region == "" || seen[region] {
+				continue
+			}
+			seen[region] = true
+			regions = append(regions, region)
+		}
+		if len(regions) == 0 {
+			acct.Regions = nil
+		} else {
+			acct.Regions = regions
+		}
+	}
+}
+
+// EffectiveProvider returns the configured provider or the adfs-assume default.
+func (a AWSConfig) EffectiveProvider() string {
+	if p := strings.ToLower(strings.TrimSpace(a.Provider)); p != "" {
+		return p
+	}
+	return AWSProviderADFSAssume
+}
+
+// EffectiveSessionDurationSeconds returns the configured SAML session length or
+// the default.
+func (a AWSConfig) EffectiveSessionDurationSeconds() int {
+	if a.SessionDurationSeconds > 0 {
+		return a.SessionDurationSeconds
+	}
+	return DefaultAWSSessionDurationSeconds
+}
+
+// EffectiveKubeconfigPath returns aws.kubeconfig_path or the default location.
+func (a AWSConfig) EffectiveKubeconfigPath() string {
+	if p := strings.TrimSpace(a.KubeconfigPath); p != "" {
+		return p
+	}
+	return DefaultAWSKubeconfigPath
+}
+
+// EnabledAccounts returns the account matrix entries that are not disabled and
+// carry a name or account id.
+func (a AWSConfig) EnabledAccounts() []AWSAccountConfig {
+	out := make([]AWSAccountConfig, 0, len(a.Accounts))
+	for _, acct := range a.Accounts {
+		if !acct.IsEnabled() || (acct.Name == "" && acct.AccountID == "") {
+			continue
+		}
+		out = append(out, acct)
+	}
+	return out
+}
+
+// IsEnabled reports whether the account entry may be used (enabled is opt-out).
+func (acct AWSAccountConfig) IsEnabled() bool {
+	return acct.Enabled == nil || *acct.Enabled
+}
+
+// EffectiveProfile returns the AWS CLI profile the account's credentials are
+// written to: the explicit profile, else the account name, else the account id.
+func (acct AWSAccountConfig) EffectiveProfile() string {
+	if p := strings.TrimSpace(acct.Profile); p != "" {
+		return p
+	}
+	if n := strings.TrimSpace(acct.Name); n != "" {
+		return n
+	}
+	return strings.TrimSpace(acct.AccountID)
 }
 
 type MobileConfig struct {
@@ -131,6 +358,14 @@ type InstanceConfig struct {
 	CACert         string       `json:"ca_cert,omitempty" yaml:"ca_cert,omitempty"`
 	CrumbMode      string       `json:"crumb_mode,omitempty" yaml:"crumb_mode,omitempty"`
 	Zephyr         ZephyrConfig `json:"zephyr,omitempty" yaml:"zephyr,omitempty"`
+	// AppDynamics: the controller account name that OAuth API clients and
+	// basic logins are scoped to (client_id=<name>@<account>, user@account).
+	Account string `json:"account,omitempty" yaml:"account,omitempty"`
+	// Splunk: default index and earliest-time modifier for searches that do
+	// not name them, and the hard cap on results one search may return.
+	DefaultIndex    string `json:"default_index,omitempty" yaml:"default_index,omitempty"`
+	DefaultEarliest string `json:"default_earliest,omitempty" yaml:"default_earliest,omitempty"`
+	MaxResults      int    `json:"max_results,omitempty" yaml:"max_results,omitempty"`
 }
 
 type AuthConfig struct {
@@ -159,6 +394,11 @@ func (c *RootConfig) Normalize() {
 	norm(&c.Jira)
 	norm(&c.Confluence)
 	norm(&c.Jenkins)
+	norm(&c.Nexus)
+	norm(&c.Splunk)
+	norm(&c.AppD)
+	c.Pgsql.Normalize()
+	c.AWS.Normalize()
 	c.Browser.Normalize()
 	c.Mobile.Normalize()
 }
@@ -248,7 +488,7 @@ func (m *MobileConfig) Normalize() {
 
 func (a *AuthConfig) NormalizeType() {
 	a.Type = NormalizeAuthType(*a)
-	if a.Type == "basic_api_key" && a.APIKey == "" && a.Token != "" {
+	if (a.Type == "basic_api_key" || a.Type == "api_client") && a.APIKey == "" && a.Token != "" {
 		a.APIKey = a.Token
 		if a.Username != "" {
 			a.Token = ""
@@ -256,6 +496,10 @@ func (a *AuthConfig) NormalizeType() {
 	}
 }
 
+// NormalizeAuthType canonicalizes the auth type. api_client is the OAuth
+// client-credentials grant used by AppDynamics API Clients: username is the
+// client name and api_key the client secret; it never becomes a header by
+// itself, the appd client exchanges it for a bearer token first.
 func NormalizeAuthType(a AuthConfig) string {
 	t := strings.TrimSpace(strings.ToLower(a.Type))
 	switch t {
@@ -263,7 +507,9 @@ func NormalizeAuthType(a AuthConfig) string {
 		return "bearer_token"
 	case "basic_token", "api_key":
 		return "basic_api_key"
-	case "basic_password", "basic_api_key", "bearer_token":
+	case "oauth_client", "client_credentials":
+		return "api_client"
+	case "basic_password", "basic_api_key", "bearer_token", "api_client":
 		return t
 	case "":
 	default:

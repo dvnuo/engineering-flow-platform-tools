@@ -58,6 +58,9 @@ Configuration uses the shared EFP config from environment variables injected by 
 			`jenkins job build app/main --json`,
 			`jenkins build status app/main lastBuild --json`,
 			`jenkins build log app/main 42 --json`,
+			`jenkins job search --pattern "*deploy*" --json`,
+			`jenkins build list deploy/payments-api --param VERSION=1.4.2 --since 7d --json`,
+			`jenkins build params deploy/payments-api 42 --json`,
 			`jenkins artifact download app/main 42 target/app.jar --output app.jar --json`,
 			`jenkins schema job.build-with-params --json`,
 			`jenkins help llm --json`,
@@ -452,6 +455,7 @@ func jobCmd(o *Opts) *cobra.Command {
 	get.Flags().Int("depth", 0, "Jenkins API depth.")
 	get.Flags().String("tree", "", "Jenkins tree selector.")
 	c.AddCommand(get)
+	c.AddCommand(jobSearchCmd(o))
 	configCmd := &cobra.Command{Use: "config"}
 	configCmd.AddCommand(&cobra.Command{Use: "get <job>", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		return getText(o, cmd, jenkins.JobPath(args[0])+"/config.xml", "config_xml")
@@ -558,6 +562,7 @@ func queueCmd(o *Opts) *cobra.Command {
 
 func buildCmd(o *Opts) *cobra.Command {
 	c := &cobra.Command{Use: "build"}
+	c.AddCommand(buildListCmd(o))
 	get := &cobra.Command{Use: "get <job> <build>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
 		q := map[string]string{}
 		if tree := mustS(cmd, "tree"); tree != "" {
@@ -574,6 +579,7 @@ func buildCmd(o *Opts) *cobra.Command {
 	c.AddCommand(&cobra.Command{Use: "status <job> <build>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
 		return buildStatus(o, cmd, args[0], args[1])
 	}})
+	c.AddCommand(buildParamsCmd(o))
 	logCmd := &cobra.Command{Use: "log <job> <build>", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
 		start := mustI(cmd, "start")
 		if start >= 0 {
@@ -830,6 +836,7 @@ func helpLLMCmd() *cobra.Command {
 			"Jenkins jobs inside folders are written as slash paths, for example folder/app/main.",
 			"Use job build or job build-with-params to trigger builds, then inspect queue get for the executable build number.",
 			"Use build status for compact build state and build log or build log-follow for console output.",
+			"To find which build deployed something: job search --pattern to locate the job across folders, build list <job> --param NAME=VALUE (plus --since, --result, --building) to find the build, then build params <job> <build> for its parameters, causes, and SCM changes.",
 			"Use artifact download with --output so binary data is written to a file rather than stdout.",
 			"Use pipeline commands only when the Pipeline REST API plugin is installed.",
 			"Use --dry-run before write operations and --yes only after confirming destructive or service-affecting actions.",

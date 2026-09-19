@@ -2,8 +2,11 @@
 
 ## Layers
 
-- `cmd/jira`, `cmd/confluence`, `cmd/jenkins`, `cmd/browser`, `cmd/mobile-auto`, and `cmd/inspect-image`: thin binary entrypoints that call the real command roots.
+- `cmd/jira`, `cmd/confluence`, `cmd/jenkins`, `cmd/aws-auth`, `cmd/nexus`, `cmd/splunk`, `cmd/appd`, `cmd/pgsql`, `cmd/browser`, `cmd/mobile-auto`, and `cmd/inspect-image`: thin binary entrypoints that call the real command roots.
 - `internal/jira/commands`, `internal/confluence/commands`, and `internal/jenkins/commands`: Cobra command trees, global flags, argument validation, dry-run output, and REST command mapping.
+- `internal/awsauth/commands`: Cobra command tree for `aws-auth`: account matrix resolution, login providers (`adfs-assume`, `saml2aws`, `assume-role`) behind an injectable command runner, credentials-file expiry parsing, STS verification, and `aws eks update-kubeconfig` orchestration.
+- `internal/nexus/commands`, `internal/splunk/commands`, `internal/appd/commands`, and `internal/pgsql/commands`: read-only troubleshooting CLIs (Nexus Repository 3 search, Splunk search jobs, AppDynamics Controller REST, PostgreSQL read-only queries); each owns one config node and one `internal/catalog/catalog_<product>.go` metadata table.
+- `internal/pgsql`: the read-only PostgreSQL core behind `pgsql`: the statement guard (`guard.go`), the `Executor` interface with its pgx implementation (READ ONLY transaction, SET LOCAL timeouts, cursor-bounded fetch, error classification) and `FakeExecutor` for tests, result shaping and file output (`executor.go`), and the preset statements behind `schema`, `stat`, and `db` (`presets.go`).
 - `internal/config`: config path resolution, load/save, auth canonicalization, and redaction.
 - `internal/auth`: Authorization header construction.
 - `internal/instance`: explicit, default, and URL-based instance resolution.

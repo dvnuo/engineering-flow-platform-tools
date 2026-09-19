@@ -73,6 +73,38 @@ jenkins build artifacts folder/app-main 42 --json
 jenkins artifact download folder/app-main 42 target/app.jar --output app.jar --json
 ```
 
+## Find a deployment
+
+To answer "which build deployed version X to prod?" or "what did the last prod deployment run with?", chain three read commands instead of scraping console logs:
+
+1. Locate the job when only its rough name is known. `job search` flattens nested folders and multibranch projects into slash paths and matches a case-insensitive glob against the full path and the job name (`*` also spans folder separators):
+
+   ```bash
+   jenkins job search --pattern "*deploy*" --json
+   jenkins job search --pattern "deploy/*payments*" --max-depth 4 --json
+   ```
+
+   Each entry carries `path`, `url`, `class`, `buildable`, and `folder`. `unexpanded_folders` counts folders at `--max-depth` whose contents were not fetched; raise `--max-depth` (max 6) when it is non-zero and the job is still missing.
+
+2. List the job's newest builds and filter by what a deployment ran with. Every `--param NAME=VALUE` must match a build parameter exactly; `--since` takes a look-back (`30m`, `24h`, `7d`) or an RFC3339 timestamp; `--result` and `--building` narrow further:
+
+   ```bash
+   jenkins build list deploy/payments-api --param VERSION=1.4.2 --param ENV=prod --since 30d --json
+   jenkins build list deploy/payments-api --result SUCCESS --limit 5 --json
+   jenkins build list deploy/payments-api --building --json
+   ```
+
+   Builds come newest-first with `number`, `url`, `result`, `building`, `timestamp_iso`, `duration_ms`, `parameters`, and `causes`. Only the newest `limit*4` builds (max 800) are scanned: `count_returned` <= `filtered_from` (builds in the scanned window that matched every filter) <= `scanned`. When `truncated` is true, older matching builds may exist beyond the window or the limit; raise `--limit`, add `--since`, or tighten the filters before concluding that nothing older matches. `oldest_scanned_timestamp_iso` shows how far back the window reached.
+
+3. Inspect the candidate build for its parameters, why it ran, and which commits it carried:
+
+   ```bash
+   jenkins build params deploy/payments-api 42 --json
+   jenkins build params deploy/payments-api 42 --max-changes 0 --json
+   ```
+
+   `causes[]` entries expose `description`, `user_id`, `user_name`, `upstream_project`, and `upstream_build`; `changes[]` entries expose `commit`, `message`, `author`, `timestamp_iso`, and `files_count`, with `changes_count_total` and `changes_truncated` describing the `--max-changes` cut. Both Pipeline (`changeSets`) and freestyle (`changeSet`) jobs are handled. Parameter values whose names look like secrets (password, token, secret, api key) are returned as `***REDACTED***`.
+
 Pipeline REST API, when the Jenkins plugin is installed:
 
 ```bash

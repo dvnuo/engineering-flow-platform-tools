@@ -2,7 +2,7 @@
 
 - For agents, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `mobile-auto`, and `inspect-image` command and subcommand to `--json` so output handling always uses the stable `ok/data/error` envelope.
 - Only omit `--json` when intentionally reading human-oriented `--help` text or when a documented interactive human prompt requires text output.
-- Use `aws-auth login --account <account-id> --role <role-name> --json` for AWS authorization; it invokes `adfs-assume` with `--profile saml` by default.
+- Use `aws-auth account list --json` then `aws-auth login --account <name> --json` for AWS authorization; each configured account gets its own AWS CLI profile (the account name), so pass `--profile <name>` to `aws` afterwards.
 - Use --instance when multiple instances are configured.
 - Full Jira/Confluence URLs can auto-select the instance.
 - Use --dry-run before write operations.
@@ -32,15 +32,20 @@
 
 ## AWS Auth
 
-- Use `aws-auth` to store ADFS AWS auth config and run the `adfs-assume` authorization flow.
-- Configure it with `printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`.
+- Use `aws-auth` to authorize AWS credentials for the accounts configured under the `aws` node and to write kubectl contexts for EKS clusters in those accounts.
+- Run `aws-auth account list --json` first: `data.accounts[]` carries `name`, `account_id`, `role`, `regions`, `profile`, and `default`.
+- Run `aws-auth login --account <name> --json` to authorize one configured account. Its credentials land in the AWS CLI profile named after the account, so use `aws --profile <name> ...` (or `AWS_PROFILE=<name>`) afterwards. Without `--account` the default account, or the only configured account, is used; with several accounts and no default the CLI returns `account_required` with `data.candidates`.
+- Run `aws-auth login --all --json` to authorize every enabled account; `partial=true` means some failed and `data.results[]` says which.
+- `aws-auth login --account <account-id> --role <role-name> --json` still works for an account outside the matrix; it writes the `saml` profile.
+- `login` verifies the credentials with `aws sts get-caller-identity` and returns `data.verified` and `data.identity`; pass `--verify=false` to skip.
+- Run `aws-auth status --json` to see which profiles hold credentials and whether the session expired (`expires_at`, `expired`, `seconds_remaining`); add `--verify` to call STS for each. When `aws` reports `ExpiredToken`, log in to that account again.
+- Run `aws-auth eks list --account <name> --json` to discover clusters, then `aws-auth eks kubeconfig --account <name> --cluster <cluster> --json`; use `kubectl --context <name>/<cluster> ...` afterwards and keep kubectl read-only (get, describe, logs --tail, events, top, explain).
+- Providers: `adfs-assume` (default, password via `AD_PASS`), `saml2aws` (needs `aws.idp_url`, password via `SAML2AWS_PASSWORD`), `assume-role` (writes `role_arn`/`source_profile` profiles, no password).
+- Configure directory credentials with `printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json`; the account matrix already stored under `aws` is preserved.
 - Do not pass passwords as command-line flags. Use `--password-stdin`.
 - Run `aws-auth auth status --json` to inspect configured state with the password redacted.
 - `aws-auth` ignores `ATLASSIAN_CONFIG`; use `--config` or `EFP_CONFIG` for an explicit AWS auth config path.
-- Run `aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json` to authorize AWS credentials for a specific account and role.
-- `--profile` defaults to `saml`.
-- Human interactive `aws-auth login` may omit `--json` so the CLI can prompt for a missing account or role.
-- If login fails with `execution_failed`, check that `adfs-assume` is installed and on `PATH`.
+- If login fails with `provider_missing`, the provider binary (`adfs-assume` or `saml2aws`) is not installed or not on `PATH`.
 
 ## Jenkins Automation
 

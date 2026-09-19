@@ -170,3 +170,59 @@ func TestLoadFromEnvBrowserServe(t *testing.T) {
 		t.Fatalf("port default after env load = %d", cfg.Browser.Serve.Port)
 	}
 }
+
+func TestLoadFromEnvAWSAccountMatrix(t *testing.T) {
+	cfg, managed := LoadFromEnv(mapLookup(map[string]string{
+		"EFP_AWS_ENABLED":                  "true",
+		"EFP_AWS_PROVIDER":                 "saml2aws",
+		"EFP_AWS_DEFAULT_ACCOUNT":          "cps-dev",
+		"EFP_AWS_DEFAULT_REGION":           "eu-west-1",
+		"EFP_AWS_SESSION_DURATION_SECONDS": "7200",
+		"EFP_AWS_ACCOUNTS_0_NAME":          "cps-dev",
+		"EFP_AWS_ACCOUNTS_0_ACCOUNT_ID":    "111111111111",
+		"EFP_AWS_ACCOUNTS_0_ROLE":          "ADFS-ReadOnly",
+		"EFP_AWS_ACCOUNTS_0_REGIONS_0":     "ap-east-1",
+		"EFP_AWS_ACCOUNTS_0_REGIONS_1":     "eu-west-1",
+		"EFP_AWS_ACCOUNTS_1_NAME":          "dcc-dev",
+		"EFP_AWS_ACCOUNTS_1_ACCOUNT_ID":    "222222222222",
+		"EFP_AWS_ACCOUNTS_1_ROLE":          "ADFS-ReadOnly",
+		"EFP_AWS_ACCOUNTS_1_ENABLED":       "false",
+	}))
+	if !managed {
+		t.Fatal("expected managed=true")
+	}
+	if cfg.AWS.EffectiveProvider() != "saml2aws" || cfg.AWS.DefaultAccount != "cps-dev" || cfg.AWS.DefaultRegion != "eu-west-1" || cfg.AWS.EffectiveSessionDurationSeconds() != 7200 {
+		t.Fatalf("aws scalars: %#v", cfg.AWS)
+	}
+	if len(cfg.AWS.Accounts) != 2 {
+		t.Fatalf("want 2 accounts, got %#v", cfg.AWS.Accounts)
+	}
+	first := cfg.AWS.Accounts[0]
+	if first.Name != "cps-dev" || first.AccountID != "111111111111" || first.Role != "ADFS-ReadOnly" || first.EffectiveProfile() != "cps-dev" {
+		t.Fatalf("account0: %#v", first)
+	}
+	if len(first.Regions) != 2 || first.Regions[0] != "ap-east-1" || first.Regions[1] != "eu-west-1" {
+		t.Fatalf("account0 regions: %#v", first.Regions)
+	}
+	if cfg.AWS.Accounts[1].IsEnabled() {
+		t.Fatalf("account1 must be disabled: %#v", cfg.AWS.Accounts[1])
+	}
+	if enabled := cfg.AWS.EnabledAccounts(); len(enabled) != 1 || enabled[0].Name != "cps-dev" {
+		t.Fatalf("enabled accounts: %#v", enabled)
+	}
+}
+
+func TestAWSConfigNormalizeTrimsAndDedupesRegions(t *testing.T) {
+	cfg := RootConfig{AWS: AWSConfig{Provider: " SAML2AWS ", Accounts: []AWSAccountConfig{{Name: " cps-dev ", AccountID: " 111111111111 ", Regions: []string{" ap-east-1", "", "ap-east-1", "eu-west-1 "}}}}}
+	cfg.Normalize()
+	acct := cfg.AWS.Accounts[0]
+	if cfg.AWS.Provider != "saml2aws" || acct.Name != "cps-dev" || acct.AccountID != "111111111111" {
+		t.Fatalf("not trimmed: %#v", cfg.AWS)
+	}
+	if len(acct.Regions) != 2 || acct.Regions[0] != "ap-east-1" || acct.Regions[1] != "eu-west-1" {
+		t.Fatalf("regions not deduped: %#v", acct.Regions)
+	}
+	if (AWSConfig{}).EffectiveProvider() != AWSProviderADFSAssume || (AWSConfig{}).EffectiveKubeconfigPath() != DefaultAWSKubeconfigPath {
+		t.Fatal("defaults must come from the Effective accessors")
+	}
+}

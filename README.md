@@ -40,7 +40,7 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 
 ### AWS Auth
 
-`aws-auth` stores ADFS AWS auth settings under the `aws` YAML node and runs `adfs-assume` to authorize AWS credentials. Use `aws-auth auth login --password-stdin --json` to save domain, username, and password without putting the password in shell history. Use `aws-auth login --account <account-id> --role <role-name> --json` to run the authorization flow for a specific account and role.
+`aws-auth` stores ADFS AWS auth settings and an account matrix (name, account id, role, regions) under the `aws` YAML node and authorizes AWS credentials through a provider: `adfs-assume` (default), `saml2aws`, or `assume-role`. Use `aws-auth auth login --password-stdin --json` to save domain, username, and password without putting the password in shell history. Use `aws-auth account list --json` to see the accounts, `aws-auth login --account <name> --json` (or `--all`) to authorize them into per-account AWS CLI profiles, `aws-auth status --json` to check session expiry, and `aws-auth eks kubeconfig --account <name> --cluster <cluster> --json` to write a `<account>/<cluster>` kubectl context. `aws-auth login --account <account-id> --role <role-name> --json` still authorizes an account outside the matrix into the `saml` profile.
 
 ### Browser
 
@@ -182,9 +182,17 @@ jenkins:
 
 aws:
   enabled: true
+  provider: adfs-assume
   domain: HBEU
   username: user@example.test
   password: redacted
+  default_account: cps-dev
+  default_region: ap-east-1
+  accounts:
+    - name: cps-dev
+      account_id: "818354133892"
+      role: ADFS-ReadOnly
+      regions: [ap-east-1, eu-west-1]
 
 copilot:
   provider: github_copilot_plugin
@@ -252,7 +260,7 @@ Config node ownership:
 - `copilot`: GitHub/Copilot authentication shared by commands that use Copilot-backed APIs.
 - `inspect_image`: inspect-image API defaults, model defaults, image limits, and privacy settings.
 - `ai_platform`: AI Platform endpoints, authentication, and token-file settings.
-- `aws`: AWS authorization settings used by `aws-auth login`.
+- `aws`: AWS directory credentials, provider, and account matrix used by `aws-auth login`, `status`, and `eks kubeconfig`.
 - `mobile-auto`: mobile provider, BrowserStack, proxy, and local tunnel settings.
 
 ## Environment Variable References
@@ -274,21 +282,28 @@ aws:
 ```powershell
 $env:AWS_AUTH_USERNAME = "GB-SVC-XXX-XXX"
 $env:AWS_AUTH_PASSWORD = "your-password"
-aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json
+aws-auth login --account cps-dev --json
 ```
 
 ## AWS Auth Examples
 
 ```bash
 printf '%s\n' "$AWS_AD_PASSWORD" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json
+aws-auth account list --json
+aws-auth login --account cps-dev --json
+aws-auth login --all --json
 aws-auth login --account 123456 --role ADFS-ReadOnly --profile saml --json
-aws-auth --config ~/.efp/config.yaml login --account 123456 --role ADFS-ReadOnly --profile saml --json
+aws-auth status --verify --json
+aws-auth eks list --account cps-dev --region ap-east-1 --json
+aws-auth eks kubeconfig --account cps-dev --cluster cps-dev-eks --json
+aws --profile cps-dev sts get-caller-identity --output json
+kubectl --context cps-dev/cps-dev-eks get pods -n payments
 aws-auth commands --json
 aws-auth schema login --json
 aws-auth help llm --json
 ```
 
-`aws-auth login` invokes `adfs-assume` with `--profile saml` by default and passes the configured password through `AD_PASS` instead of command arguments.
+`aws-auth login` writes each configured account's credentials to the AWS CLI profile named after the account (`saml` for an ad-hoc account id). With the default `adfs-assume` provider it runs `adfs-assume --domain ... --username ... --role ... --account ... --profile <account> --no-warning --display-token --jenkins` and passes the configured password through `AD_PASS` instead of command arguments; with `saml2aws` it runs `saml2aws login --idp-provider ADFS ...` with the password in `SAML2AWS_PASSWORD`; with `assume-role` it only writes `role_arn`/`source_profile` profiles into the AWS config file. Every login is verified with `aws sts get-caller-identity` unless `--verify=false` is passed.
 
 ## Jenkins Examples
 

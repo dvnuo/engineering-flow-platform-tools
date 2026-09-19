@@ -35,3 +35,11 @@
 - It does not store raw images or raw responses.
 - Shared config is stored in `~/.efp/config.yaml`; short-lived Copilot tokens are stored in `~/.efp/tmp/copilot_token`, and short-lived AI Platform tokens are stored in `~/.efp/tmp/ai_platform_token`. Files are written with `0600` permissions where supported.
 - `github_access_token`, `copilot_token`, AI Platform passwords, iB2B `issued_token` values, trust-token headers, Authorization headers, and base64 image data must never appear in stdout, stderr, verbose output, dry-run output, or test snapshots.
+
+## AWS Auth
+
+- The directory password reaches the provider process through a single environment variable (`AD_PASS` for `adfs-assume`, `SAML2AWS_PASSWORD` for `saml2aws`), never through argv; `aws-auth` strips those variables from every other child process, including `aws` and `kubectl`.
+- Provider stdout/stderr is redacted against the configured password before it is echoed in `auth_failed` messages.
+- `status` reads `~/.aws/credentials` (or `AWS_SHARED_CREDENTIALS_FILE`) only for section names, expiry keys, and `x_principal_arn`; access key ids and secrets are never echoed.
+- `assume-role` rewrites the AWS config file (or `AWS_CONFIG_FILE`) with `0600` permissions; comments in that file are not preserved.
+- `eks kubeconfig` writes outside the agent workspace by default (`~/.efp/kube/config`) and only checks `kubectl auth can-i list pods`; it never reads Secrets.

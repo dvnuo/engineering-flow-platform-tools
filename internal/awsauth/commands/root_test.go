@@ -106,8 +106,8 @@ aws:
 	if obj["ok"] != true {
 		t.Fatalf("expected ok: %#v", obj)
 	}
-	if len(runner.calls) != 1 {
-		t.Fatalf("expected one provider call, got %d", len(runner.calls))
+	if len(runner.calls) < 1 || runner.calls[0].command == "aws" {
+		t.Fatalf("expected the provider call first, got %#v", runner.calls)
 	}
 	call := runner.calls[0]
 	if call.command != "adfs-assume" {
@@ -154,8 +154,8 @@ aws:
 	if obj["ok"] != true {
 		t.Fatalf("expected ok: %#v", obj)
 	}
-	if len(runner.calls) != 1 {
-		t.Fatalf("expected one provider call, got %d", len(runner.calls))
+	if len(runner.calls) < 1 || runner.calls[0].command == "aws" {
+		t.Fatalf("expected the provider call first, got %#v", runner.calls)
 	}
 	call := runner.calls[0]
 	if !strings.Contains(strings.Join(call.args, " "), "--username environment-user") {
@@ -237,8 +237,8 @@ aws:
 	if obj["ok"] != true {
 		t.Fatalf("expected ok: %#v", obj)
 	}
-	if len(runner.calls) != 1 {
-		t.Fatalf("expected one provider call, got %d", len(runner.calls))
+	if len(runner.calls) < 1 || runner.calls[0].command == "aws" {
+		t.Fatalf("expected the provider call first, got %#v", runner.calls)
 	}
 	args := strings.Join(runner.calls[0].args, " ")
 	if !strings.Contains(args, "--profile sandbox") {
@@ -485,8 +485,8 @@ aws:
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("execute failed: %v\n%s", err, out.String())
 	}
-	if len(runner.calls) != 1 {
-		t.Fatalf("expected one provider call, got %d", len(runner.calls))
+	if len(runner.calls) < 1 || runner.calls[0].command == "aws" {
+		t.Fatalf("expected the provider call first, got %#v", runner.calls)
 	}
 	args := strings.Join(runner.calls[0].args, " ")
 	for _, token := range []string{"--account 123456", "--role ADFS-ReadOnly"} {

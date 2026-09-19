@@ -2,8 +2,9 @@
 
 ## Layers
 
-- `cmd/jira`, `cmd/confluence`, `cmd/jenkins`, `cmd/browser`, `cmd/mobile-auto`, and `cmd/inspect-image`: thin binary entrypoints that call the real command roots.
+- `cmd/jira`, `cmd/confluence`, `cmd/jenkins`, `cmd/aws-auth`, `cmd/browser`, `cmd/mobile-auto`, and `cmd/inspect-image`: thin binary entrypoints that call the real command roots.
 - `internal/jira/commands`, `internal/confluence/commands`, and `internal/jenkins/commands`: Cobra command trees, global flags, argument validation, dry-run output, and REST command mapping.
+- `internal/awsauth/commands`: Cobra command tree for `aws-auth`: account matrix resolution, login providers (`adfs-assume`, `saml2aws`, `assume-role`) behind an injectable command runner, credentials-file expiry parsing, STS verification, and `aws eks update-kubeconfig` orchestration.
 - `internal/config`: config path resolution, load/save, auth canonicalization, and redaction.
 - `internal/auth`: Authorization header construction.
 - `internal/instance`: explicit, default, and URL-based instance resolution.

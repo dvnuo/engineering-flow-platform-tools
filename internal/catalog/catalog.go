@@ -204,6 +204,8 @@ func Commands(product string) []llm.CommandMeta {
 		src = confluenceCommands
 	case "jenkins":
 		src = jenkinsCommands
+	case "aws-auth":
+		src = awsAuthCommands
 	case "browser":
 		src = browserCommands
 	case "inspect-image":
@@ -717,11 +719,26 @@ func meta(product, usage string) llm.CommandMeta {
 	}
 }
 
+var awsAuthCommands = []string{
+	"aws-auth login", "aws-auth account list", "aws-auth status", "aws-auth eks list", "aws-auth eks kubeconfig",
+	"aws-auth auth login", "aws-auth auth status", "aws-auth commands", "aws-auth schema <command>", "aws-auth help llm", "aws-auth version",
+}
+
 func awsAuthExplicit(name string) (explicitMeta, bool) {
 	common := []string{"config", "json", "format", "verbose"}
 	items := map[string]explicitMeta{
-		"login": {Description: "Authorize AWS credentials with adfs-assume using saved EFP AWS auth settings.",
-			Flags: append([]string{"account", "role", "profile", "dry-run"}, common...), Required: []string{"saved-auth-config", "account", "role"}, Risk: "external_auth", Example: "aws-auth login --account 123456 --role ADFS-ReadOnly --profile default --json"},
+		"login": {Description: "Authorize AWS credentials for a configured account (or an explicit account id and role) through the configured provider, writing the account's own AWS CLI profile.",
+			Flags: append([]string{"account", "role", "profile", "region", "verify", "all", "dry-run"}, common...), Required: []string{"saved-auth-config"}, Risk: "external_auth", Example: "aws-auth login --account cps-dev --json",
+			WhenToUse: "Before any aws or kubectl call for an account, and again when aws reports ExpiredToken.", WhenNotToUse: "To store directory credentials; that is aws-auth auth login."},
+		"account.list": {Description: "List the configured AWS account matrix: name, account id, role, regions, profile, and which entry is the default.",
+			Flags: common, Risk: "read", Example: "aws-auth account list --json"},
+		"status": {Description: "Report which AWS CLI profiles hold credentials, when their SAML session expires, and optionally verify them with STS.",
+			Flags: append([]string{"account", "verify"}, common...), Risk: "read", Example: "aws-auth status --verify --json"},
+		"eks.list": {Description: "List the EKS clusters visible to an account's credentials in one region.",
+			Flags: append([]string{"account", "region", "dry-run"}, common...), Risk: "read", Example: "aws-auth eks list --account cps-dev --region ap-east-1 --json"},
+		"eks.kubeconfig": {Description: "Write a kubectl context named <account>/<cluster> that authenticates through the account's AWS profile, then check that pods can be listed.",
+			Flags: append([]string{"account", "cluster", "region", "alias", "kubeconfig", "dry-run"}, common...), Required: []string{"cluster"}, Risk: "write", Example: "aws-auth eks kubeconfig --account cps-dev --cluster cps-dev-eks --json",
+			WhenToUse: "Once per account and cluster before kubectl --context <account>/<cluster> commands."},
 		"auth.login": {Description: "Store AWS ADFS domain, username, and password in the shared EFP config.",
 			Flags: append([]string{"domain", "username", "password-stdin"}, common...), Required: []string{"domain", "username", "password-stdin"}, Risk: "write", Example: "printf '%s\\n' \"$AWS_AD_PASSWORD\" | aws-auth auth login --domain HBEU --username GB-SVC-XXX-XXX --password-stdin --json"},
 		"auth.status": {Description: "Read the configured AWS auth settings with secrets redacted.",

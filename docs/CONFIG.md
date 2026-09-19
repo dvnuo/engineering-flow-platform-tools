@@ -70,6 +70,29 @@ jenkins:
   default_instance: ci
   instances: []
 
+aws:
+  enabled: true
+  provider: adfs-assume          # adfs-assume | saml2aws | assume-role
+  domain: HBEU
+  username: "${AWS_AUTH_USERNAME}"
+  password: "%AWS_AUTH_PASSWORD%"
+  idp_url: ""                    # saml2aws only: ADFS IdP-initiated sign-on URL
+  source_profile: ""             # assume-role only: profile that already resolves credentials (default: default)
+  default_account: cps-dev
+  default_region: ap-east-1
+  session_duration_seconds: 3600
+  kubeconfig_path: ~/.efp/kube/config
+  accounts:
+    - name: cps-dev
+      account_id: "818354133892"
+      role: ADFS-ReadOnly
+      regions: [ap-east-1, eu-west-1]
+    - name: dcc-dev
+      account_id: "334430002784"
+      role: ADFS-ReadOnly
+      regions: [ap-east-1]
+      enabled: true
+
 browser:
   bookmarks:
     sources:
@@ -326,3 +349,28 @@ printf '%s\n' "$BROWSERSTACK_ACCESS_KEY" | mobile-auto auth login --username "$B
 `mobile-auto.browserstack.http_proxy` controls the Go HTTP clients used for BrowserStack REST and Appium hub requests. When it is unset, the CLI can still use standard non-empty `HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY`, and `NO_PROXY` environment variables unless `disable_proxy_discovery` is true. `proxy_user_env` and `proxy_pass_env` name environment variables read at startup; do not store proxy credentials directly in `config.yaml`.
 
 For enterprise networks, `mobile-auto.browserstack.local.proxy_user_env` and `proxy_pass_env` name environment variables read at tunnel startup; do not store proxy credentials directly in `config.yaml`. The Local flags are passed only for fields explicitly configured.
+
+## AWS Auth Fields
+
+`aws` is owned by `aws-auth`. Every scalar has an `EFP_AWS_<FIELD>` env
+equivalent in managed runtimes; accounts are indexed as
+`EFP_AWS_ACCOUNTS_<i>_<FIELD>` and regions as `EFP_AWS_ACCOUNTS_<i>_REGIONS_<j>`.
+
+| Field | Meaning |
+|---|---|
+| `enabled` | Opt-out switch for the whole node. |
+| `provider` | `adfs-assume` (default), `saml2aws`, or `assume-role`. |
+| `domain`, `username`, `password` | Directory credentials used by the ADFS providers; not needed for `assume-role`. |
+| `idp_url` | ADFS IdP-initiated sign-on URL; required by `saml2aws`. |
+| `source_profile` | `assume-role` only: profile whose credentials assume each account role (default `default`). |
+| `default_account` | Account used when `--account` is omitted. |
+| `default_region` | Region used when an account lists none. |
+| `session_duration_seconds` | SAML session length requested by `saml2aws` (default 3600). |
+| `kubeconfig_path` | Where `eks kubeconfig` writes contexts when `KUBECONFIG` is unset (default `~/.efp/kube/config`). |
+| `accounts[].name` | Account label; also the default AWS CLI profile name and the `<account>/<cluster>` context prefix. |
+| `accounts[].account_id` | 12-digit AWS account id. |
+| `accounts[].role` | IAM role name to assume, for example `ADFS-ReadOnly`. |
+| `accounts[].role_arn` | Optional explicit role ARN; derived from `account_id` and `role` otherwise. |
+| `accounts[].regions` | Regions in preference order; the first is the default for verification and EKS commands. |
+| `accounts[].profile` | Optional AWS CLI profile override. |
+| `accounts[].enabled` | Opt-out switch for one account. |

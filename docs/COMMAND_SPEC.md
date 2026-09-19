@@ -3,7 +3,7 @@
 ## Common Conventions
 
 - For agent workflows, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, and `inspect-image` command and subcommand to `--json`.
-- `aws-auth login` invokes `adfs-assume` with `--profile saml` by default.
+- `aws-auth login` writes each configured account's credentials to the AWS CLI profile named after the account (`saml` for an ad-hoc account id) through the configured provider (`adfs-assume` by default, `saml2aws`, or `assume-role`).
 - `--json` returns the stable `ok/data/error` envelope.
 - Command parsing failures return `ok=false` with `error.code=invalid_args` when `--json` is present.
 - `--format table|json|yaml` selects output rendering where supported.
@@ -434,6 +434,23 @@ confluence page get --url <page-url>
 - jenkins api post <path>
 - jenkins api put <path>
 - jenkins api delete <path>
+
+## AWS Auth
+
+### Basic
+- aws-auth login
+- aws-auth account list
+- aws-auth status
+- aws-auth auth login
+- aws-auth auth status
+- aws-auth commands
+- aws-auth schema <command>
+- aws-auth help llm
+- aws-auth version
+
+### EKS
+- aws-auth eks list
+- aws-auth eks kubeconfig
 
 ## Browser
 

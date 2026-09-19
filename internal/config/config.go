@@ -45,11 +45,147 @@ type BrowserBookmarkSource struct {
 	URL         string `json:"url" yaml:"url"`
 }
 
+// AWS authorization providers accepted in AWSConfig.Provider. The env
+// equivalent derived from the json tag is EFP_AWS_PROVIDER.
+const (
+	AWSProviderADFSAssume = "adfs-assume" // enterprise adfs-assume binary (default)
+	AWSProviderSAML2AWS   = "saml2aws"    // github.com/Versent/saml2aws ADFS flow
+	AWSProviderAssumeRole = "assume-role" // role chaining from an already-authenticated source profile
+)
+
+// DefaultAWSSessionDurationSeconds is the SAML session length requested when
+// aws.session_duration_seconds is unset.
+const DefaultAWSSessionDurationSeconds = 3600
+
+// DefaultAWSKubeconfigPath is where `aws-auth eks kubeconfig` writes cluster
+// contexts when neither --kubeconfig, KUBECONFIG, nor aws.kubeconfig_path is set.
+// It deliberately lives outside the agent workspace, like EFP_CONFIG.
+const DefaultAWSKubeconfigPath = "~/.efp/kube/config"
+
+// AWSConfig is the `aws` node of the shared EFP config. Domain/username/password
+// are the enterprise directory credentials the ADFS providers exchange for AWS
+// credentials; Accounts is the account matrix agents may log in to. Every
+// scalar has an EFP_AWS_<FIELD> env equivalent and accounts are addressed as
+// EFP_AWS_ACCOUNTS_<i>_<FIELD> (regions as EFP_AWS_ACCOUNTS_<i>_REGIONS_<j>).
 type AWSConfig struct {
-	Enabled  *bool  `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	Domain   string `json:"domain,omitempty" yaml:"domain,omitempty"`
-	Username string `json:"username,omitempty" yaml:"username,omitempty"`
-	Password string `json:"password,omitempty" yaml:"password,omitempty"`
+	Enabled                *bool              `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Provider               string             `json:"provider,omitempty" yaml:"provider,omitempty"`
+	Domain                 string             `json:"domain,omitempty" yaml:"domain,omitempty"`
+	Username               string             `json:"username,omitempty" yaml:"username,omitempty"`
+	Password               string             `json:"password,omitempty" yaml:"password,omitempty"`
+	IdpURL                 string             `json:"idp_url,omitempty" yaml:"idp_url,omitempty"`
+	SourceProfile          string             `json:"source_profile,omitempty" yaml:"source_profile,omitempty"`
+	DefaultAccount         string             `json:"default_account,omitempty" yaml:"default_account,omitempty"`
+	DefaultRegion          string             `json:"default_region,omitempty" yaml:"default_region,omitempty"`
+	SessionDurationSeconds int                `json:"session_duration_seconds,omitempty" yaml:"session_duration_seconds,omitempty"`
+	KubeconfigPath         string             `json:"kubeconfig_path,omitempty" yaml:"kubeconfig_path,omitempty"`
+	Accounts               []AWSAccountConfig `json:"accounts,omitempty" yaml:"accounts,omitempty"`
+}
+
+// AWSAccountConfig is one entry of the account matrix. Profile defaults to Name
+// so every account owns its own AWS CLI profile and agents can query several
+// accounts without re-authenticating in between.
+type AWSAccountConfig struct {
+	Name      string   `json:"name" yaml:"name"`
+	AccountID string   `json:"account_id" yaml:"account_id"`
+	Role      string   `json:"role,omitempty" yaml:"role,omitempty"`
+	RoleARN   string   `json:"role_arn,omitempty" yaml:"role_arn,omitempty"`
+	Regions   []string `json:"regions,omitempty" yaml:"regions,omitempty"`
+	Profile   string   `json:"profile,omitempty" yaml:"profile,omitempty"`
+	Enabled   *bool    `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+}
+
+// Normalize trims whitespace and drops empty regions. Defaults (provider,
+// session duration, kubeconfig path, per-account profile) are resolved by the
+// Effective* accessors instead of being materialized here, so a saved config
+// file never gains keys the user did not write.
+func (a *AWSConfig) Normalize() {
+	a.Provider = strings.ToLower(strings.TrimSpace(a.Provider))
+	a.Domain = strings.TrimSpace(a.Domain)
+	a.Username = strings.TrimSpace(a.Username)
+	a.IdpURL = strings.TrimSpace(a.IdpURL)
+	a.SourceProfile = strings.TrimSpace(a.SourceProfile)
+	a.DefaultAccount = strings.TrimSpace(a.DefaultAccount)
+	a.DefaultRegion = strings.TrimSpace(a.DefaultRegion)
+	a.KubeconfigPath = strings.TrimSpace(a.KubeconfigPath)
+	for i := range a.Accounts {
+		acct := &a.Accounts[i]
+		acct.Name = strings.TrimSpace(acct.Name)
+		acct.AccountID = strings.TrimSpace(acct.AccountID)
+		acct.Role = strings.TrimSpace(acct.Role)
+		acct.RoleARN = strings.TrimSpace(acct.RoleARN)
+		acct.Profile = strings.TrimSpace(acct.Profile)
+		regions := make([]string, 0, len(acct.Regions))
+		seen := map[string]bool{}
+		for _, region := range acct.Regions {
+			region = strings.TrimSpace(region)
+			if region == "" || seen[region] {
+				continue
+			}
+			seen[region] = true
+			regions = append(regions, region)
+		}
+		if len(regions) == 0 {
+			acct.Regions = nil
+		} else {
+			acct.Regions = regions
+		}
+	}
+}
+
+// EffectiveProvider returns the configured provider or the adfs-assume default.
+func (a AWSConfig) EffectiveProvider() string {
+	if p := strings.ToLower(strings.TrimSpace(a.Provider)); p != "" {
+		return p
+	}
+	return AWSProviderADFSAssume
+}
+
+// EffectiveSessionDurationSeconds returns the configured SAML session length or
+// the default.
+func (a AWSConfig) EffectiveSessionDurationSeconds() int {
+	if a.SessionDurationSeconds > 0 {
+		return a.SessionDurationSeconds
+	}
+	return DefaultAWSSessionDurationSeconds
+}
+
+// EffectiveKubeconfigPath returns aws.kubeconfig_path or the default location.
+func (a AWSConfig) EffectiveKubeconfigPath() string {
+	if p := strings.TrimSpace(a.KubeconfigPath); p != "" {
+		return p
+	}
+	return DefaultAWSKubeconfigPath
+}
+
+// EnabledAccounts returns the account matrix entries that are not disabled and
+// carry a name or account id.
+func (a AWSConfig) EnabledAccounts() []AWSAccountConfig {
+	out := make([]AWSAccountConfig, 0, len(a.Accounts))
+	for _, acct := range a.Accounts {
+		if !acct.IsEnabled() || (acct.Name == "" && acct.AccountID == "") {
+			continue
+		}
+		out = append(out, acct)
+	}
+	return out
+}
+
+// IsEnabled reports whether the account entry may be used (enabled is opt-out).
+func (acct AWSAccountConfig) IsEnabled() bool {
+	return acct.Enabled == nil || *acct.Enabled
+}
+
+// EffectiveProfile returns the AWS CLI profile the account's credentials are
+// written to: the explicit profile, else the account name, else the account id.
+func (acct AWSAccountConfig) EffectiveProfile() string {
+	if p := strings.TrimSpace(acct.Profile); p != "" {
+		return p
+	}
+	if n := strings.TrimSpace(acct.Name); n != "" {
+		return n
+	}
+	return strings.TrimSpace(acct.AccountID)
 }
 
 type MobileConfig struct {
@@ -159,6 +295,7 @@ func (c *RootConfig) Normalize() {
 	norm(&c.Jira)
 	norm(&c.Confluence)
 	norm(&c.Jenkins)
+	c.AWS.Normalize()
 	c.Browser.Normalize()
 	c.Mobile.Normalize()
 }

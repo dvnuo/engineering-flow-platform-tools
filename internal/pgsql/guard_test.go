@@ -106,7 +106,7 @@ func TestGuardTable(t *testing.T) {
 		{"comment before paren", "SELECT pg_sleep/* c */(5)", CodeReadOnlyViolation, "pg_sleep"},
 		{"newline before paren", "SELECT pg_sleep\n(5)", CodeReadOnlyViolation, "pg_sleep"},
 		{"quoted function name", `SELECT "pg_sleep"(1)`, CodeReadOnlyViolation, "pg_sleep"},
-		{"unicode quoted function name", `SELECT U&"pg_sleep"(1)`, CodeReadOnlyViolation, "pg_sleep"},
+		{"unicode quoted function name", `SELECT U&"pg_sleep"(1)`, CodeReadOnlyViolation, "unicode-escaped"},
 		{"read file", "SELECT pg_read_file('/etc/passwd')", CodeReadOnlyViolation, "pg_read_file"},
 		{"read binary file mixed case", "SELECT PG_Read_Binary_File('x')", CodeReadOnlyViolation, "pg_read_binary_file"},
 		{"ls dir", "SELECT * FROM pg_ls_dir('.')", CodeReadOnlyViolation, "pg_ls_dir"},
@@ -152,6 +152,17 @@ func TestGuardTable(t *testing.T) {
 		{"unterminated dollar quote", "SELECT $$unterminated", CodeInvalidArgs, "unterminated dollar"},
 		{"unterminated quoted identifier", `SELECT "unterminated`, CodeInvalidArgs, "unterminated quoted identifier"},
 		{"starts with number", "1 + 1", CodeReadOnlyViolation, "must start with"},
+		// PostgreSQL ends a -- comment at CR as well as LF, so text after a bare
+		// CR is live SQL even though it looks like part of the comment.
+		{"bare CR ends a line comment", "SELECT --x\rpg_terminate_backend(pid) FROM pg_stat_activity", CodeReadOnlyViolation, "pg_terminate_backend"},
+		{"bare CR hides a second statement", "SELECT 1 --x\r; SELECT pg_sleep(30)", CodeReadOnlyViolation, "multiple statements"},
+		{"bare CR inside EXPLAIN ANALYZE", "EXPLAIN ANALYZE SELECT --x\r1, pg_terminate_backend(pid) FROM pg_stat_activity", CodeReadOnlyViolation, "pg_terminate_backend"},
+		{"CRLF still ends the comment", "SELECT 1 --x\r\n", "", ""},
+		// Row locks pass a READ ONLY transaction, so the clause is matched itself.
+		{"for share", "SELECT * FROM t FOR SHARE", CodeReadOnlyViolation, "row locking"},
+		{"for key share", "SELECT * FROM t FOR KEY SHARE", CodeReadOnlyViolation, "row locking"},
+		{"for no key update", "SELECT * FROM t FOR NO KEY UPDATE", CodeReadOnlyViolation, ""},
+		{"for as a column alias stays allowed", "SELECT 1 AS for_total FROM t", "", ""},
 		{"starts with string", "'abc'", CodeReadOnlyViolation, "must start with"},
 	}
 	for _, tc := range cases {

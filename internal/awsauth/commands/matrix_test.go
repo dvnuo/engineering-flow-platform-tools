@@ -640,3 +640,31 @@ func TestParseExpiryAcceptsCommonLayouts(t *testing.T) {
 		t.Fatal("garbage must not parse")
 	}
 }
+
+func TestStripSecretEnvRemovesInjectedProductCredentials(t *testing.T) {
+	// A managed runtime injects every configured credential as an EFP_* variable
+	// and the bash child inherits them. Neither the login provider nor the AWS
+	// CLI has any use for them, and a child that dumps its environment on
+	// failure would put them all in the transcript.
+	env := []string{
+		"PATH=/usr/bin",
+		"AD_PASS=domain-secret",
+		"EFP_AWS_PASSWORD=domain-secret",
+		"EFP_PGSQL_INSTANCES_0_PASSWORD=pg-secret",
+		"EFP_SPLUNK_INSTANCES_0_AUTH_TOKEN=splunk-secret",
+		"EFP_APPD_INSTANCES_0_AUTH_API_KEY=appd-secret",
+		"EFP_JIRA_INSTANCES_0_BASE_URL=https://jira.example.test",
+		"AWS_REGION=eu-west-1",
+	}
+	got := strings.Join(stripSecretEnv(env), "\n")
+	for _, secret := range []string{"domain-secret", "pg-secret", "splunk-secret", "appd-secret"} {
+		if strings.Contains(got, secret) {
+			t.Fatalf("stripSecretEnv kept %q:\n%s", secret, got)
+		}
+	}
+	for _, keep := range []string{"PATH=/usr/bin", "AWS_REGION=eu-west-1", "EFP_JIRA_INSTANCES_0_BASE_URL=https://jira.example.test"} {
+		if !strings.Contains(got, keep) {
+			t.Fatalf("stripSecretEnv dropped %q:\n%s", keep, got)
+		}
+	}
+}

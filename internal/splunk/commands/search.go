@@ -105,7 +105,13 @@ func validateResultOpts(so searchOpts, capacity int) *output.Envelope {
 }
 
 func splBlocked(command string, extra map[string]any) output.Envelope {
-	env := output.Failure("spl_blocked", "the SPL command "+command+" writes data, triggers actions, or runs code", "Searches must be read-only: remove "+command+" (blocked: "+strings.Join(splunk.BlockedCommands(), ", ")+").", 400)
+	message := "the SPL command " + command + " writes data, triggers actions, or runs code"
+	hint := "Searches must be read-only: remove " + command + " (blocked: " + strings.Join(splunk.BlockedCommands(), ", ") + ")."
+	if command == splunk.MacroToken {
+		message = "the search uses a macro, whose expansion cannot be checked for read-only SPL"
+		hint = "Write the search without macros so every command is visible, or ask a Splunk admin what the macro expands to."
+	}
+	env := output.Failure("spl_blocked", message, hint, 400)
 	data := map[string]any{"blocked_command": command}
 	for k, v := range extra {
 		data[k] = v

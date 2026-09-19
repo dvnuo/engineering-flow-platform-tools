@@ -80,6 +80,9 @@ var forbiddenFunctions = map[string]bool{
 	"pg_logical_emit_message": true, "pg_wal_replay_pause": true, "pg_wal_replay_resume": true,
 	"pg_log_backend_memory_contexts": true, "pg_import_system_collations": true,
 	"nextval": true, "setval": true,
+	// State changes and directory listings only: lo_get and pg_current_logfile
+	// read data and a path name, which a read-only role already governs.
+	"pg_stat_statements_reset": true, "pg_logdir_ls": true, "pg_export_snapshot": true,
 }
 
 var forbiddenFunctionPrefixes = []string{
@@ -214,6 +217,12 @@ func checkBody(toks []token) error {
 			if forbiddenKeywords[upper] {
 				return violation(fmt.Sprintf("keyword %s is not allowed in a read-only statement", upper), "Data-modifying CTEs, SELECT INTO, DDL, locking, and COPY are rejected; quote the word if it is really a column name.")
 			}
+			if upper == "FOR" && isLockingClause(toks[i+1:]) {
+				// FOR UPDATE is caught by the UPDATE keyword, but FOR SHARE and
+				// FOR KEY SHARE take real row locks and a READ ONLY transaction
+				// permits them, so match the locking clause itself.
+				return violation("row locking (FOR UPDATE/NO KEY UPDATE/SHARE/KEY SHARE) is not allowed in a read-only statement", "Drop the locking clause; a read-only query does not need it.")
+			}
 			if i+1 < len(toks) && toks[i+1].isSymbol('(') && isForbiddenFunction(t.text) {
 				return violation(fmt.Sprintf("function %s is not allowed", strings.ToLower(t.text)), "Functions that terminate sessions, read server files, sleep, reconfigure, lock, notify, or reach other databases are rejected.")
 			}
@@ -224,6 +233,26 @@ func checkBody(toks []token) error {
 		}
 	}
 	return nil
+}
+
+// isLockingClause reports whether the words after FOR spell a row-level
+// locking clause: UPDATE, NO KEY UPDATE, SHARE, or KEY SHARE.
+func isLockingClause(rest []token) bool {
+	word := func(k int) string {
+		if k < len(rest) && rest[k].kind == tokWord {
+			return strings.ToUpper(rest[k].text)
+		}
+		return ""
+	}
+	switch word(0) {
+	case "UPDATE", "SHARE":
+		return true
+	case "KEY":
+		return word(1) == "SHARE"
+	case "NO":
+		return word(1) == "KEY" && word(2) == "UPDATE"
+	}
+	return false
 }
 
 func skipOpenParens(toks []token, i int) int {
@@ -284,7 +313,11 @@ func tokenize(sql string) ([]token, error) {
 		case isSpace(c):
 			i++
 		case c == '-' && i+1 < n && sql[i+1] == '-':
-			for i < n && sql[i] != '\n' {
+			// PostgreSQL ends a line comment at either newline character
+			// (scan.l: non_newline is [^\\n\\r]). Stopping only at \\n would let a
+			// bare CR hide live SQL -- a second statement, or a call to
+			// pg_terminate_backend -- behind what the guard reads as a comment.
+			for i < n && sql[i] != '\n' && sql[i] != '\r' {
 				i++
 			}
 		case c == '/' && i+1 < n && sql[i+1] == '*':
@@ -335,12 +368,16 @@ func tokenize(sql string) ([]token, error) {
 			toks = append(toks, token{kind: tokString, pos: i})
 			i = end
 		case (c == 'u' || c == 'U') && i+2 < n && sql[i+1] == '&' && sql[i+2] == '"':
-			text, end, ok := scanQuotedIdent(sql, i+3)
-			if !ok {
+			// A unicode-escaped identifier decodes on the server but not here,
+			// so U&"pg_sl\0065\0065p" would walk past the function blacklist.
+			// A read-only CLI has no use for them, so refuse rather than decode.
+			if _, _, ok := scanQuotedIdent(sql, i+3); !ok {
 				return nil, invalidArgs("unterminated quoted identifier", "")
 			}
-			toks = append(toks, token{kind: tokIdent, text: text, pos: i})
-			i = end
+			return nil, violation(
+				"unicode-escaped identifiers (U&\"...\") are not accepted",
+				"Write the identifier literally so the read-only check can see the name.",
+			)
 		case c == '"':
 			text, end, ok := scanQuotedIdent(sql, i+1)
 			if !ok {

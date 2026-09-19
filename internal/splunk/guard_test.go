@@ -19,6 +19,18 @@ func TestBlockedCommand(t *testing.T) {
 		{"rest allowed", "| rest /services/server/info", ""},
 		{"map with safe search", `index=main | map search="search index=other host=$host$ | head 1"`, ""},
 		{"empty", "", ""},
+		// Splunk strips ```...``` before running the search, so a comment where
+		// the command word belongs must not become the command word.
+		{"comment hides delete", "index=main | ```c``` delete", "delete"},
+		{"comment hides collect", "search index=x | ```note``` collect index=y", "collect"},
+		{"comment hides outputlookup, no spaces", "index=x |```x```outputlookup z.csv", "outputlookup"},
+		{"comment inside map search", "index=x | map search=\"search index=x | ```c``` collect index=y\"", "collect"},
+		{"comment between safe commands stays allowed", "index=main | ```why``` head 10", ""},
+		// A macro is expanded by Splunk, not here, so its body is unknowable.
+		{"macro", "index=x | `my_macro`", MacroToken},
+		{"macro with arguments", "index=x | `m(1)` | head 5", MacroToken},
+		{"unterminated comment run trips the macro check", "index=x | ``` delete", MacroToken},
+		{"dump", "index=main | dump basefilename=x", "dump"},
 		{"delete", "index=main | delete", "delete"},
 		{"delete no spaces", "index=main|delete", "delete"},
 		{"delete extra spaces", "index=main |   delete", "delete"},

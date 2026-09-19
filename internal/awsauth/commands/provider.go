@@ -73,7 +73,9 @@ func runExecProvider(ctx context.Context, runner commandRunner, command string, 
 		}
 		failure := output.Failure(
 			"auth_failed",
-			redactWithSecrets(message, password),
+			// Bounded like every other child-process message: a provider that
+			// prints an HTML error page would otherwise fill the envelope.
+			truncateText(redactWithSecrets(message, password), 1000),
 			"Verify the configured AWS domain, username, password, and the supplied account and role.",
 			401,
 		)

@@ -6,7 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -336,6 +338,28 @@ func promptLine(cmd *cobra.Command, reader *bufio.Reader, label string) (string,
 	return value, nil
 }
 
+// secretEnvSubstrings catch the credentials a managed runtime injects, which
+// carry a product prefix rather than a bare name: EFP_AWS_PASSWORD,
+// EFP_PGSQL_INSTANCES_0_PASSWORD, EFP_SPLUNK_INSTANCES_0_AUTH_TOKEN. The
+// provider and the AWS CLI have no use for any of them, and a child that
+// prints its environment on failure would otherwise leak every one.
+var secretEnvSubstrings = []string{"PASSWORD", "PASSWD", "SECRET", "TOKEN", "API_KEY", "APIKEY", "CREDENTIAL", "PASSPHRASE"}
+
+func isSecretEnvKey(key string) bool {
+	for _, candidate := range secretEnvKeys {
+		if key == candidate {
+			return true
+		}
+	}
+	upper := strings.ToUpper(key)
+	for _, candidate := range secretEnvSubstrings {
+		if strings.Contains(upper, candidate) {
+			return true
+		}
+	}
+	return false
+}
+
 // stripSecretEnv removes every secret-carrying variable so child processes
 // only ever see the one the caller adds back through withSecretEnv.
 func stripSecretEnv(env []string) []string {
@@ -345,14 +369,7 @@ func stripSecretEnv(env []string) []string {
 		if !ok {
 			continue
 		}
-		secret := false
-		for _, candidate := range secretEnvKeys {
-			if key == candidate {
-				secret = true
-				break
-			}
-		}
-		if secret {
+		if isSecretEnvKey(key) {
 			continue
 		}
 		out = append(out, item)
@@ -408,8 +425,18 @@ func formatCommand(command string, args []string) string {
 func redactWithSecrets(value string, secrets ...string) string {
 	text := value
 	for _, secret := range secrets {
-		if secret != "" {
-			text = strings.ReplaceAll(text, secret, output.Redacted)
+		if secret == "" {
+			continue
+		}
+		text = strings.ReplaceAll(text, secret, output.Redacted)
+		// A SAML provider echoes the password back inside a POST body or an
+		// HTML error page, where it is percent- or entity-encoded and a
+		// literal match would miss it.
+		if encoded := url.QueryEscape(secret); encoded != secret {
+			text = strings.ReplaceAll(text, encoded, output.Redacted)
+		}
+		if escaped := html.EscapeString(secret); escaped != secret {
+			text = strings.ReplaceAll(text, escaped, output.Redacted)
 		}
 	}
 	return output.RedactString(text)

@@ -76,7 +76,7 @@ Rules that keep searches cheap and safe:
 
 ## Safety
 
-The CLI is read-only. SPL containing `delete`, `outputlookup`, `outputcsv`, `outputtext`, `collect`, `mcollect`, `meventcollect`, `sendemail`, `sendalert`, `script`, `runshellscript`, `tscollect`, or `summaryindex` is refused with `spl_blocked` before any job is created; saved searches are checked the same way and dispatched with `trigger_actions=0`. `api get` only accepts paths under `/services/` or `/servicesNS/`. Use `--yes` only after explicit confirmation for `search job cancel`, `instance remove`, and `auth logout`.
+The CLI is read-only. SPL containing `delete`, `outputlookup`, `outputcsv`, `outputtext`, `collect`, `mcollect`, `meventcollect`, `sendemail`, `sendalert`, `script`, `runshellscript`, `tscollect`, `summaryindex`, `dump` is refused with `spl_blocked` before any job is created; saved searches are checked the same way and dispatched with `trigger_actions=0`. `api get` only accepts paths under `/services/` or `/servicesNS/`. Use `--yes` only after explicit confirmation for `search job cancel`, `instance remove`, and `auth logout`.
 
 Do not print or paste credentials. Prefer stdin credential flags; the session key obtained for `basic_password` instances stays in memory and is never printed:
 

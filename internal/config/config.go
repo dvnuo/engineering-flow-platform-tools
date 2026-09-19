@@ -11,11 +11,102 @@ type RootConfig struct {
 	Jira       ProductConfig `json:"jira" yaml:"jira"`
 	Confluence ProductConfig `json:"confluence" yaml:"confluence"`
 	Jenkins    ProductConfig `json:"jenkins" yaml:"jenkins"`
-	AWS        AWSConfig     `json:"aws" yaml:"aws"`
-	Browser    BrowserConfig `json:"browser" yaml:"browser"`
-	Mobile     MobileConfig  `json:"mobile-auto" yaml:"mobile-auto"`
+	// Troubleshooting integrations. nexus/splunk/appd reuse the multi-instance
+	// product shape (EFP_NEXUS_INSTANCES_0_BASE_URL, ...); pgsql has its own
+	// connection fields (EFP_PGSQL_INSTANCES_0_HOST, ...).
+	Nexus   ProductConfig `json:"nexus" yaml:"nexus"`
+	Splunk  ProductConfig `json:"splunk" yaml:"splunk"`
+	AppD    ProductConfig `json:"appd" yaml:"appd"`
+	Pgsql   PgsqlConfig   `json:"pgsql" yaml:"pgsql"`
+	AWS     AWSConfig     `json:"aws" yaml:"aws"`
+	Browser BrowserConfig `json:"browser" yaml:"browser"`
+	Mobile  MobileConfig  `json:"mobile-auto" yaml:"mobile-auto"`
 
 	envSnapshot *configenv.Snapshot
+}
+
+// PgsqlConfig is the `pgsql` node: named PostgreSQL connections the read-only
+// pgsql CLI may query. It mirrors the default_instance/instances shape so the
+// Portal's instance UI and the runtime projection can treat it like a product,
+// but an entry carries connection fields instead of a base URL.
+type PgsqlConfig struct {
+	DefaultInstance string                `json:"default_instance" yaml:"default_instance"`
+	Instances       []PgsqlInstanceConfig `json:"instances" yaml:"instances"`
+}
+
+// Defaults resolved by the Effective* accessors so saved files stay minimal.
+const (
+	DefaultPgsqlPort                    = 5432
+	DefaultPgsqlSSLMode                 = "require"
+	DefaultPgsqlStatementTimeoutSeconds = 30
+	DefaultPgsqlMaxRows                 = 5000
+)
+
+type PgsqlInstanceConfig struct {
+	Name                    string `json:"name" yaml:"name"`
+	Host                    string `json:"host" yaml:"host"`
+	Port                    int    `json:"port,omitempty" yaml:"port,omitempty"`
+	Database                string `json:"database" yaml:"database"`
+	Username                string `json:"username" yaml:"username"`
+	Password                string `json:"password,omitempty" yaml:"password,omitempty"`
+	SSLMode                 string `json:"sslmode,omitempty" yaml:"sslmode,omitempty"`
+	CACert                  string `json:"ca_cert,omitempty" yaml:"ca_cert,omitempty"`
+	StatementTimeoutSeconds int    `json:"statement_timeout_seconds,omitempty" yaml:"statement_timeout_seconds,omitempty"`
+	MaxRows                 int    `json:"max_rows,omitempty" yaml:"max_rows,omitempty"`
+	Enabled                 *bool  `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+}
+
+func (p *PgsqlConfig) Normalize() {
+	p.DefaultInstance = strings.TrimSpace(p.DefaultInstance)
+	for i := range p.Instances {
+		in := &p.Instances[i]
+		in.Name = strings.TrimSpace(in.Name)
+		in.Host = strings.TrimSpace(in.Host)
+		in.Database = strings.TrimSpace(in.Database)
+		in.Username = strings.TrimSpace(in.Username)
+		in.SSLMode = strings.ToLower(strings.TrimSpace(in.SSLMode))
+	}
+}
+
+func (in PgsqlInstanceConfig) IsEnabled() bool { return in.Enabled == nil || *in.Enabled }
+
+func (in PgsqlInstanceConfig) EffectivePort() int {
+	if in.Port > 0 {
+		return in.Port
+	}
+	return DefaultPgsqlPort
+}
+
+func (in PgsqlInstanceConfig) EffectiveSSLMode() string {
+	if in.SSLMode != "" {
+		return in.SSLMode
+	}
+	return DefaultPgsqlSSLMode
+}
+
+func (in PgsqlInstanceConfig) EffectiveStatementTimeoutSeconds() int {
+	if in.StatementTimeoutSeconds > 0 {
+		return in.StatementTimeoutSeconds
+	}
+	return DefaultPgsqlStatementTimeoutSeconds
+}
+
+func (in PgsqlInstanceConfig) EffectiveMaxRows() int {
+	if in.MaxRows > 0 {
+		return in.MaxRows
+	}
+	return DefaultPgsqlMaxRows
+}
+
+// EnabledInstances returns the connections that are not disabled and have a host.
+func (p PgsqlConfig) EnabledInstances() []PgsqlInstanceConfig {
+	out := make([]PgsqlInstanceConfig, 0, len(p.Instances))
+	for _, in := range p.Instances {
+		if in.IsEnabled() && in.Host != "" {
+			out = append(out, in)
+		}
+	}
+	return out
 }
 
 type BrowserConfig struct {
@@ -267,6 +358,14 @@ type InstanceConfig struct {
 	CACert         string       `json:"ca_cert,omitempty" yaml:"ca_cert,omitempty"`
 	CrumbMode      string       `json:"crumb_mode,omitempty" yaml:"crumb_mode,omitempty"`
 	Zephyr         ZephyrConfig `json:"zephyr,omitempty" yaml:"zephyr,omitempty"`
+	// AppDynamics: the controller account name that OAuth API clients and
+	// basic logins are scoped to (client_id=<name>@<account>, user@account).
+	Account string `json:"account,omitempty" yaml:"account,omitempty"`
+	// Splunk: default index and earliest-time modifier for searches that do
+	// not name them, and the hard cap on results one search may return.
+	DefaultIndex    string `json:"default_index,omitempty" yaml:"default_index,omitempty"`
+	DefaultEarliest string `json:"default_earliest,omitempty" yaml:"default_earliest,omitempty"`
+	MaxResults      int    `json:"max_results,omitempty" yaml:"max_results,omitempty"`
 }
 
 type AuthConfig struct {
@@ -295,6 +394,10 @@ func (c *RootConfig) Normalize() {
 	norm(&c.Jira)
 	norm(&c.Confluence)
 	norm(&c.Jenkins)
+	norm(&c.Nexus)
+	norm(&c.Splunk)
+	norm(&c.AppD)
+	c.Pgsql.Normalize()
 	c.AWS.Normalize()
 	c.Browser.Normalize()
 	c.Mobile.Normalize()
@@ -385,7 +488,7 @@ func (m *MobileConfig) Normalize() {
 
 func (a *AuthConfig) NormalizeType() {
 	a.Type = NormalizeAuthType(*a)
-	if a.Type == "basic_api_key" && a.APIKey == "" && a.Token != "" {
+	if (a.Type == "basic_api_key" || a.Type == "api_client") && a.APIKey == "" && a.Token != "" {
 		a.APIKey = a.Token
 		if a.Username != "" {
 			a.Token = ""
@@ -393,6 +496,10 @@ func (a *AuthConfig) NormalizeType() {
 	}
 }
 
+// NormalizeAuthType canonicalizes the auth type. api_client is the OAuth
+// client-credentials grant used by AppDynamics API Clients: username is the
+// client name and api_key the client secret; it never becomes a header by
+// itself, the appd client exchanges it for a bearer token first.
 func NormalizeAuthType(a AuthConfig) string {
 	t := strings.TrimSpace(strings.ToLower(a.Type))
 	switch t {
@@ -400,7 +507,9 @@ func NormalizeAuthType(a AuthConfig) string {
 		return "bearer_token"
 	case "basic_token", "api_key":
 		return "basic_api_key"
-	case "basic_password", "basic_api_key", "bearer_token":
+	case "oauth_client", "client_credentials":
+		return "api_client"
+	case "basic_password", "basic_api_key", "bearer_token", "api_client":
 		return t
 	case "":
 	default:

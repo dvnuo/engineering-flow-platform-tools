@@ -206,6 +206,14 @@ func Commands(product string) []llm.CommandMeta {
 		src = jenkinsCommands
 	case "aws-auth":
 		src = awsAuthCommands
+	case "nexus":
+		src = nexusCommands
+	case "splunk":
+		src = splunkCommands
+	case "appd":
+		src = appdCommands
+	case "pgsql":
+		src = pgsqlCommands
 	case "browser":
 		src = browserCommands
 	case "inspect-image":
@@ -639,6 +647,12 @@ func meta(product, usage string) llm.CommandMeta {
 	}
 	if product == "aws-auth" {
 		if local, ok := awsAuthExplicit(name); ok {
+			ex = local
+			explicitFound = true
+		}
+	}
+	if lookup, ok := troubleshootingExplicit[product]; ok {
+		if local, ok := lookup(name); ok {
 			ex = local
 			explicitFound = true
 		}

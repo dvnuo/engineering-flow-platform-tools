@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	appdcmd "engineering-flow-platform-tools/internal/appd/commands"
 	acmd "engineering-flow-platform-tools/internal/awsauth/commands"
 	bcmd "engineering-flow-platform-tools/internal/browser/commands"
 	"engineering-flow-platform-tools/internal/clihelp"
@@ -13,6 +14,9 @@ import (
 	icmd "engineering-flow-platform-tools/internal/inspectimage/commands"
 	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
+	nexuscmd "engineering-flow-platform-tools/internal/nexus/commands"
+	pgsqlcmd "engineering-flow-platform-tools/internal/pgsql/commands"
+	splunkcmd "engineering-flow-platform-tools/internal/splunk/commands"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +28,10 @@ func TestExecuteFallbackJSONForAllBinaries(t *testing.T) {
 		"inspect-image": icmd.NewRoot(),
 		"jenkins":       kcmd.NewRoot(),
 		"jira":          jcmd.NewRoot(),
+		"nexus":         nexuscmd.NewRoot(),
+		"splunk":        splunkcmd.NewRoot(),
+		"appd":          appdcmd.NewRoot(),
+		"pgsql":         pgsqlcmd.NewRoot(),
 	} {
 		t.Run(name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
@@ -51,6 +59,10 @@ func TestExecuteBadFormatFallbackForAllBinaries(t *testing.T) {
 		"inspect-image": icmd.NewRoot(),
 		"jenkins":       kcmd.NewRoot(),
 		"jira":          jcmd.NewRoot(),
+		"nexus":         nexuscmd.NewRoot(),
+		"splunk":        splunkcmd.NewRoot(),
+		"appd":          appdcmd.NewRoot(),
+		"pgsql":         pgsqlcmd.NewRoot(),
 	} {
 		t.Run(name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer

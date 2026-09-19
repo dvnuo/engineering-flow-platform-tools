@@ -2,7 +2,7 @@
 
 ## Common Conventions
 
-- For agent workflows, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, and `inspect-image` command and subcommand to `--json`.
+- For agent workflows, default every `jira`, `confluence`, `jenkins`, `aws-auth`, `nexus`, `splunk`, `appd`, `pgsql`, `browser`, and `inspect-image` command and subcommand to `--json`.
 - `aws-auth login` writes each configured account's credentials to the AWS CLI profile named after the account (`saml` for an ad-hoc account id) through the configured provider (`adfs-assume` by default, `saml2aws`, or `assume-role`).
 - `--json` returns the stable `ok/data/error` envelope.
 - Command parsing failures return `ok=false` with `error.code=invalid_args` when `--json` is present.
@@ -635,6 +635,38 @@ browser session attach --name user-demo --debug-port 9222 --json
 - `--timeout <seconds>`: maximum seconds for page commands.
 - `--download-dir <dir>`: dedicated download directory when `browser open` creates a managed session, or when the lower-level `browser session start` command is used for lifecycle/configuration.
 - `--json`: return the stable JSON envelope.
+
+## Nexus
+
+### Basic
+- nexus commands
+- nexus schema <command>
+- nexus help llm
+- nexus version
+
+## Splunk
+
+### Basic
+- splunk commands
+- splunk schema <command>
+- splunk help llm
+- splunk version
+
+## AppDynamics
+
+### Basic
+- appd commands
+- appd schema <command>
+- appd help llm
+- appd version
+
+## PostgreSQL
+
+### Basic
+- pgsql commands
+- pgsql schema <command>
+- pgsql help llm
+- pgsql version
 
 ## Mobile Auto
 

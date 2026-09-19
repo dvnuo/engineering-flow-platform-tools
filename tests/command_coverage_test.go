@@ -7,11 +7,15 @@ import (
 	"strings"
 	"testing"
 
+	appdcmd "engineering-flow-platform-tools/internal/appd/commands"
 	bcmd "engineering-flow-platform-tools/internal/browser/commands"
 	"engineering-flow-platform-tools/internal/catalog"
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
 	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
+	nexuscmd "engineering-flow-platform-tools/internal/nexus/commands"
+	pgsqlcmd "engineering-flow-platform-tools/internal/pgsql/commands"
+	splunkcmd "engineering-flow-platform-tools/internal/splunk/commands"
 	"github.com/spf13/cobra"
 )
 
@@ -39,6 +43,18 @@ func readSpecCommands(t *testing.T, prefix string) []string {
 			continue
 		case "## Browser":
 			sec = "browser"
+			continue
+		case "## Nexus":
+			sec = "nexus"
+			continue
+		case "## Splunk":
+			sec = "splunk"
+			continue
+		case "## AppDynamics":
+			sec = "appd"
+			continue
+		case "## PostgreSQL":
+			sec = "pgsql"
 			continue
 		}
 		if strings.HasPrefix(l, "## ") {
@@ -117,15 +133,27 @@ func TestCommandCoverage(t *testing.T) {
 	confSpec := readSpecCommands(t, "confluence")
 	jenkinsSpec := readSpecCommands(t, "jenkins")
 	browserSpec := readSpecCommands(t, "browser")
+	nexusSpec := readSpecCommands(t, "nexus")
+	splunkSpec := readSpecCommands(t, "splunk")
+	appdSpec := readSpecCommands(t, "appd")
+	pgsqlSpec := readSpecCommands(t, "pgsql")
 	assertSame(t, "jira cobra/docs", WalkCobraCommands(jcmd.NewRoot()), jiraSpec)
 	assertSame(t, "confluence cobra/docs", WalkCobraCommands(ccmd.NewRoot()), confSpec)
 	assertSame(t, "jenkins cobra/docs", WalkCobraCommands(kcmd.NewRoot()), jenkinsSpec)
 	assertSame(t, "browser cobra/docs", WalkCobraCommands(bcmd.NewRoot()), browserSpec)
+	assertSame(t, "nexus cobra/docs", WalkCobraCommands(nexuscmd.NewRoot()), nexusSpec)
+	assertSame(t, "splunk cobra/docs", WalkCobraCommands(splunkcmd.NewRoot()), splunkSpec)
+	assertSame(t, "appd cobra/docs", WalkCobraCommands(appdcmd.NewRoot()), appdSpec)
+	assertSame(t, "pgsql cobra/docs", WalkCobraCommands(pgsqlcmd.NewRoot()), pgsqlSpec)
 	assertSame(t, "jira catalog/docs", catalog.SortedUsages("jira"), jiraSpec)
 	assertSame(t, "confluence catalog/docs", catalog.SortedUsages("confluence"), confSpec)
 	assertSame(t, "jenkins catalog/docs", catalog.SortedUsages("jenkins"), jenkinsSpec)
 	assertSame(t, "browser catalog/docs", catalog.SortedUsages("browser"), browserSpec)
-	for _, product := range []string{"jira", "confluence", "jenkins", "browser"} {
+	assertSame(t, "nexus catalog/docs", catalog.SortedUsages("nexus"), nexusSpec)
+	assertSame(t, "splunk catalog/docs", catalog.SortedUsages("splunk"), splunkSpec)
+	assertSame(t, "appd catalog/docs", catalog.SortedUsages("appd"), appdSpec)
+	assertSame(t, "pgsql catalog/docs", catalog.SortedUsages("pgsql"), pgsqlSpec)
+	for _, product := range []string{"jira", "confluence", "jenkins", "browser", "nexus", "splunk", "appd", "pgsql"} {
 		for _, item := range catalog.Commands(product) {
 			if item.Risk != "read" && item.Risk != "write" && item.Risk != "write_requires_confirmation" && item.Risk != "delete" && item.Risk != "admin" {
 				t.Fatalf("%s has invalid risk %q", item.Usage, item.Risk)

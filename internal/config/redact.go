@@ -10,6 +10,18 @@ func RedactRoot(c RootConfig) RootConfig {
 	for i := range c.Jenkins.Instances {
 		c.Jenkins.Instances[i].Auth = RedactAuth(c.Jenkins.Instances[i].Auth)
 	}
+	for i := range c.Nexus.Instances {
+		c.Nexus.Instances[i].Auth = RedactAuth(c.Nexus.Instances[i].Auth)
+	}
+	for i := range c.Splunk.Instances {
+		c.Splunk.Instances[i].Auth = RedactAuth(c.Splunk.Instances[i].Auth)
+	}
+	for i := range c.AppD.Instances {
+		c.AppD.Instances[i].Auth = RedactAuth(c.AppD.Instances[i].Auth)
+	}
+	for i := range c.Pgsql.Instances {
+		c.Pgsql.Instances[i].Password = redact(c.Pgsql.Instances[i].Password)
+	}
 	c.AWS = RedactAWS(c.AWS)
 	c.Mobile.BrowserStack.Username = redact(c.Mobile.BrowserStack.Username)
 	c.Mobile.BrowserStack.AccessKey = redact(c.Mobile.BrowserStack.AccessKey)

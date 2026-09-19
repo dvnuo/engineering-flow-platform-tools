@@ -160,6 +160,14 @@ go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\mobile-auto!EXE_VALUE!" ./cmd/mobile-
 if errorlevel 1 exit /b 1
 go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\inspect-image!EXE_VALUE!" ./cmd/inspect-image
 if errorlevel 1 exit /b 1
+go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\nexus!EXE_VALUE!" ./cmd/nexus
+if errorlevel 1 exit /b 1
+go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\splunk!EXE_VALUE!" ./cmd/splunk
+if errorlevel 1 exit /b 1
+go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\appd!EXE_VALUE!" ./cmd/appd
+if errorlevel 1 exit /b 1
+go build -ldflags "!LDFLAGS!" -o "!OUTDIR!\pgsql!EXE_VALUE!" ./cmd/pgsql
+if errorlevel 1 exit /b 1
 exit /b 0
 
 :usage

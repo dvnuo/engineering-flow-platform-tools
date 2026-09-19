@@ -5,14 +5,29 @@ import (
 	"encoding/json"
 	"testing"
 
+	appdcmd "engineering-flow-platform-tools/internal/appd/commands"
 	acmd "engineering-flow-platform-tools/internal/awsauth/commands"
 	ccmd "engineering-flow-platform-tools/internal/confluence/commands"
 	kcmd "engineering-flow-platform-tools/internal/jenkins/commands"
 	jcmd "engineering-flow-platform-tools/internal/jira/commands"
+	nexuscmd "engineering-flow-platform-tools/internal/nexus/commands"
+	pgsqlcmd "engineering-flow-platform-tools/internal/pgsql/commands"
+	splunkcmd "engineering-flow-platform-tools/internal/splunk/commands"
 	"engineering-flow-platform-tools/internal/testutil"
+	"github.com/spf13/cobra"
 )
 
 func TestJSONContractSmoke(t *testing.T) {
+	roots := map[string]func() *cobra.Command{
+		"jira":       jcmd.NewRoot,
+		"confluence": ccmd.NewRoot,
+		"jenkins":    kcmd.NewRoot,
+		"aws-auth":   acmd.NewRoot,
+		"nexus":      nexuscmd.NewRoot,
+		"splunk":     splunkcmd.NewRoot,
+		"appd":       appdcmd.NewRoot,
+		"pgsql":      pgsqlcmd.NewRoot,
+	}
 	checks := []struct {
 		root string
 		args []string
@@ -29,34 +44,26 @@ func TestJSONContractSmoke(t *testing.T) {
 		{"aws-auth", []string{"commands", "--json"}},
 		{"aws-auth", []string{"help", "llm", "--json"}},
 		{"aws-auth", []string{"schema", "login", "--json"}},
+		{"nexus", []string{"commands", "--json"}},
+		{"nexus", []string{"help", "llm", "--json"}},
+		{"nexus", []string{"schema", "version", "--json"}},
+		{"splunk", []string{"commands", "--json"}},
+		{"splunk", []string{"help", "llm", "--json"}},
+		{"splunk", []string{"schema", "version", "--json"}},
+		{"appd", []string{"commands", "--json"}},
+		{"appd", []string{"help", "llm", "--json"}},
+		{"appd", []string{"schema", "version", "--json"}},
+		{"pgsql", []string{"commands", "--json"}},
+		{"pgsql", []string{"help", "llm", "--json"}},
+		{"pgsql", []string{"schema", "version", "--json"}},
 	}
 	for _, c := range checks {
 		var b bytes.Buffer
-		if c.root == "jira" {
-			cmd := jcmd.NewRoot()
-			cmd.SetOut(&b)
-			cmd.SetErr(&b)
-			cmd.SetArgs(c.args)
-			_ = cmd.Execute()
-		} else if c.root == "confluence" {
-			cmd := ccmd.NewRoot()
-			cmd.SetOut(&b)
-			cmd.SetErr(&b)
-			cmd.SetArgs(c.args)
-			_ = cmd.Execute()
-		} else if c.root == "jenkins" {
-			cmd := kcmd.NewRoot()
-			cmd.SetOut(&b)
-			cmd.SetErr(&b)
-			cmd.SetArgs(c.args)
-			_ = cmd.Execute()
-		} else {
-			cmd := acmd.NewRoot()
-			cmd.SetOut(&b)
-			cmd.SetErr(&b)
-			cmd.SetArgs(c.args)
-			_ = cmd.Execute()
-		}
+		cmd := roots[c.root]()
+		cmd.SetOut(&b)
+		cmd.SetErr(&b)
+		cmd.SetArgs(c.args)
+		_ = cmd.Execute()
 		obj := testutil.AssertJSONEnvelope(t, b.Bytes())
 		if _, ok := obj["ok"]; !ok {
 			t.Fatal("missing ok")

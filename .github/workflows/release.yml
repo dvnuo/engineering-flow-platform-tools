@@ -55,6 +55,10 @@ jobs:
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/browser${{ matrix.ext }}" ./cmd/browser
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/mobile-auto${{ matrix.ext }}" ./cmd/mobile-auto
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/inspect-image${{ matrix.ext }}" ./cmd/inspect-image
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/nexus${{ matrix.ext }}" ./cmd/nexus
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/splunk${{ matrix.ext }}" ./cmd/splunk
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/appd${{ matrix.ext }}" ./cmd/appd
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "$ldflags" -o "dist/${{ matrix.goos }}-${{ matrix.goarch }}/pgsql${{ matrix.ext }}" ./cmd/pgsql
           cp README.md docs/*.md "dist/${{ matrix.goos }}-${{ matrix.goarch }}/"
           name="engineering-flow-platform-tools_${version}_${{ matrix.goos }}_${{ matrix.goarch }}"
           if [[ "${{ matrix.archive }}" == "zip" ]]; then

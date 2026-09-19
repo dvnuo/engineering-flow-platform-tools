@@ -75,6 +75,10 @@ build_one() {
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/browser$exe" ./cmd/browser
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/mobile-auto$exe" ./cmd/mobile-auto
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/inspect-image$exe" ./cmd/inspect-image
+  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/nexus$exe" ./cmd/nexus
+  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/splunk$exe" ./cmd/splunk
+  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/appd$exe" ./cmd/appd
+  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "$LDFLAGS" -o "$outdir/pgsql$exe" ./cmd/pgsql
 }
 
 TARGETS=(

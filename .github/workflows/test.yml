@@ -26,6 +26,10 @@ jobs:
       - run: go build ./cmd/browser
       - run: go build ./cmd/mobile-auto
       - run: go build ./cmd/inspect-image
+      - run: go build ./cmd/nexus
+      - run: go build ./cmd/splunk
+      - run: go build ./cmd/appd
+      - run: go build ./cmd/pgsql
       - name: smoke unix
         if: runner.os != 'Windows'
         run: bash scripts/smoke.sh

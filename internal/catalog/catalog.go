@@ -339,7 +339,10 @@ func cobraBindings(product string, root *cobra.Command) []cobraBinding {
 			if visibleChildren == 0 || child.RunE != nil || child.Run != nil {
 				out = append(out, cobraBinding{Command: child, Usage: usage, Name: dotted(usage)})
 			}
-			walk(child, parts)
+			// Children are addressed through the parent's name only: a parent
+			// such as `schema <command>` that also owns subcommands must not
+			// leak its argument placeholder into `schema describe <table>`.
+			walk(child, append(append([]string{}, parent...), child.Name()))
 		}
 	}
 	walk(root, []string{product})

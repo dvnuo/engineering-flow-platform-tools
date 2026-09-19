@@ -192,6 +192,18 @@
 - Use `appd metric preset --app <app> --preset bt-response-time|bt-calls|bt-errors --tier <tier> --bt <bt>`, `--preset tier-cpu --tier <tier>`, or `--preset node-heap --tier <tier> --node <node>` for the common metrics; discover other paths with `appd metric browse --app <app> --path "<folder>"` and fetch them with `appd metric get --app <app> --path "<metric-path>"`. Add `--rollup` for one aggregated value instead of one value per minute.
 - `appd api get <path>` accepts only `/controller/rest/...` paths and adds `output=JSON`.
 
+## PostgreSQL
+
+- Use `pgsql` for read-only PostgreSQL access: bounded queries, schema description, and activity/lock/statistics views. It cannot write: every statement runs inside a `READ ONLY` transaction with a statement timeout behind a statement guard, and the instance role should itself be read-only.
+- Instances are configured under `pgsql.instances` in `~/.efp/config.yaml` or through `EFP_PGSQL_DEFAULT_INSTANCE` and `EFP_PGSQL_INSTANCES_0_HOST/_DATABASE/_USERNAME/_PASSWORD/_SSLMODE`. Run `pgsql auth test --json` first; `read_only` must be `true`.
+- Start with `pgsql schema tables --json` and `pgsql schema describe <table> --json`; never guess table or column names.
+- Always pass `--limit` to `pgsql query`; aggregate (`count`, `sum`, `GROUP BY`) and filter with `WHERE` instead of `SELECT *`. `rows_truncated:true` means more rows matched; `--output result.csv` writes a full extract to disk instead of the envelope.
+- Parameters (`--param`) are sent as text: cast them in SQL (`$1::int`). `--dry-run` shows the guarded statement and connection target without connecting.
+- Results may contain PII: summarize them, do not paste raw rows into reports or other systems.
+- For incidents use `pgsql stat activity --state active --min-duration-sec 5 --json` (follow `blocked_by` to the root blocker), `pgsql stat locks --blocked-only --json`, `pgsql stat slow --json` (`has_report:false` when `pg_stat_statements` is missing), `pgsql stat tables --sort n_dead_tup --json`, `pgsql stat replication --json`, and `pgsql db size --json`.
+- `read_only_violation` means the guard or server refused a write, a second statement, or a side-effecting function (`pg_terminate_backend`, `pg_sleep`, `pg_read_file`, `dblink`, ...): rewrite as a SELECT. `query_timeout` means narrow the query. `permission_denied` means the role lacks SELECT on that relation.
+- For VS Code GitHub Copilot, copy `cmd/pgsql/pgsql-cli.instructions.md` into `~/.copilot/instructions/`.
+
 ## How to recover from CLI errors
 
 | error.code | Next action |

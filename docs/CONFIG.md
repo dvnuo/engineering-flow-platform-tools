@@ -99,6 +99,23 @@ appd:
       verify_ssl: true
       ca_cert: ""
 
+pgsql:
+  default_instance: analytics
+  instances:
+    - name: analytics
+      host: db.example.test
+      port: 5432
+      database: analytics
+      username: readonly
+      password: "${PGSQL_ANALYTICS_PASSWORD}"
+      sslmode: verify-full
+      ca_cert: |
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE-----
+      statement_timeout_seconds: 30
+      max_rows: 5000
+
 aws:
   enabled: true
   provider: adfs-assume          # adfs-assume | saml2aws | assume-role
@@ -290,6 +307,44 @@ Managed runtimes inject the same fields as `EFP_NEXUS_DEFAULT_INSTANCE`, `EFP_NE
 - `ca_cert`
 
 `api_client` is the OAuth client-credentials grant of AppDynamics API Clients: `appd` posts `client_id=<username>@<account>` and the secret to `/controller/api/oauth/access_token`, keeps the returned bearer token in memory for the lifetime of the process, and never writes it to disk or output. Store credentials without shell history with `appd auth login --auth-type api_client --username <api-client-name> --api-key-stdin` or `--auth-type basic_password --username <user> --password-stdin`.
+
+## PostgreSQL Instance Fields
+
+The `pgsql` node holds named PostgreSQL connections for the read-only `pgsql` CLI. It mirrors the `default_instance`/`instances` shape of the other products, but an entry carries connection fields instead of a base URL:
+
+```yaml
+pgsql:
+  default_instance: analytics
+  instances:
+    - name: analytics
+      host: db.example.test
+      port: 5432
+      database: analytics
+      username: readonly
+      password: "${PGSQL_ANALYTICS_PASSWORD}"
+      sslmode: verify-full
+      ca_cert: |
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE-----
+      statement_timeout_seconds: 30
+      max_rows: 5000
+      enabled: true
+```
+
+- `name`: instance name used by `--instance`
+- `host`: host name or address (required)
+- `port`: `5432` when omitted
+- `database`: database name (required)
+- `username`: database role; give the CLI a read-only role (required)
+- `password`: role password; write it with `pgsql instance add --password-stdin` or `pgsql auth login --password-stdin`, or reference an environment variable. When empty, libpq conventions (`PGPASSWORD`, `~/.pgpass`) still apply.
+- `sslmode`: `disable | allow | prefer | require | verify-ca | verify-full`; `require` when omitted
+- `ca_cert`: PEM CA bundle stored inline (`pgsql instance add --ca-cert-file ./ca.pem`); it is written to a `0600` temp file and passed as `sslrootcert` for the duration of each connection
+- `statement_timeout_seconds`: server-side `statement_timeout` applied to every statement; `30` when omitted. `pgsql query --timeout-sec` can only lower it.
+- `max_rows`: upper bound for `--limit`; `5000` when omitted
+- `enabled`: `false` hides the instance from resolution (`instance_disabled`)
+
+Managed runtimes inject the same node as `EFP_PGSQL_DEFAULT_INSTANCE`, `EFP_PGSQL_INSTANCES_0_NAME`, `EFP_PGSQL_INSTANCES_0_HOST`, `EFP_PGSQL_INSTANCES_0_PORT`, `EFP_PGSQL_INSTANCES_0_DATABASE`, `EFP_PGSQL_INSTANCES_0_USERNAME`, `EFP_PGSQL_INSTANCES_0_PASSWORD`, `EFP_PGSQL_INSTANCES_0_SSLMODE`, `EFP_PGSQL_INSTANCES_0_CA_CERT`, `EFP_PGSQL_INSTANCES_0_STATEMENT_TIMEOUT_SECONDS`, and `EFP_PGSQL_INSTANCES_0_MAX_ROWS`.
 
 ## Browser Bookmarks
 

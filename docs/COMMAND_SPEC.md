@@ -770,6 +770,50 @@ Only paths under `/controller/rest/` are accepted (relative, or absolute on the 
 
 ## PostgreSQL
 
+`pgsql` is the read-only PostgreSQL CLI. Every database command runs one guarded statement inside `BEGIN READ ONLY` with `SET LOCAL statement_timeout`, `idle_in_transaction_session_timeout`, and `default_transaction_read_only = on`, then rolls back. The statement guard accepts a single `SELECT`, `WITH`, `EXPLAIN`, `SHOW`, `TABLE`, or `VALUES` statement, rejects a second statement, data-modifying CTEs, `SELECT INTO`, DDL, `COPY`, `LOCK`, and calls to side-effecting functions (`pg_terminate_backend`, `pg_cancel_backend`, `pg_read_file`, `pg_ls_dir`, `lo_import`, `dblink*`, `pg_sleep*`, `pg_reload_conf`, `set_config`, `pg_advisory_*`, `pg_notify`, `pg_switch_wal`, `pg_promote`, ...). The real guarantee is the read-only database role configured for the instance. `SELECT`-style statements are fetched through a `NO SCROLL` cursor so only `limit + 1` rows leave the server.
+
+### Instance and Auth
+- pgsql instance list
+- pgsql instance get <name>
+- pgsql instance add <name>
+- pgsql instance update <name>
+- pgsql instance remove <name>
+- pgsql instance default [name]
+- pgsql auth login
+- pgsql auth logout
+- pgsql auth test
+
+Instances live under the `pgsql` config node (`host`, `port`, `database`, `username`, `password`, `sslmode`, `ca_cert`, `statement_timeout_seconds`, `max_rows`, `enabled`). `add` requires `--host`, `--database`, and `--username`; the password comes only from `--password-stdin`. A PEM file passed as `--ca-cert-file` is stored inline and written to a `0600` temp file for `sslrootcert` during each connection. `remove` and `auth logout` require `--yes`. `auth test` returns `{authenticated, user, database, server_version, read_only, in_recovery}`.
+
+### Query
+- pgsql query
+- pgsql explain
+
+`query --sql "<statement>" | --sql-file <path> [--param v ...] [--limit 200] [--timeout-sec 30] [--output <file>] [--max-cell-chars 2000]` returns `{columns[{name,type}], rows[{column: value}], row_count, rows_truncated, cells_truncated, elapsed_ms, notices, limit, limit_capped, statement_timeout_seconds}`. `--limit` is capped by the instance `max_rows`, `--timeout-sec` by the instance `statement_timeout_seconds`, `--param` values are sent as text and coerced by the server. `bytea` cells become `{"bytes": n}`, times are RFC3339, `numeric` stays exact. `--output` writes the full result (CSV when the name ends in `.csv`, JSON otherwise) and returns only `{path, bytes, format, row_count, rows_truncated}`. `--dry-run` returns the guarded statement and the connection target without connecting. `explain [--analyze] [--plan-format text|json]` explains a guarded statement; `--analyze` executes it inside the READ ONLY transaction and rolls back.
+
+Error codes: `read_only_violation` (guard or server SQLSTATE 25006), `permission_denied` (42501), `query_timeout` (57014 or client deadline, status 408), `auth_failed` (28P01/28000), `network_error` (connection failures), `invalid_args` (undefined relation/column, syntax, bad parameter, with the server message), `not_supported` (0A000), `server_error` otherwise.
+
+### Schema
+- pgsql schema tables
+- pgsql schema describe <table>
+- pgsql schema indexes <table>
+
+`schema tables [--schema public | --all-schemas]` lists relations with kind, owner, estimated rows, and size. `schema describe <table>` returns `{table, columns[{position,name,type,nullable,default,primary_key,comment}], primary_key, indexes, constraints}`; `schema indexes <table>` returns the index list. Names may be schema-qualified and quoted (`public."MyTable"`); an unknown relation returns `not_found`.
+
+### Statistics
+- pgsql stat activity
+- pgsql stat locks
+- pgsql stat slow
+- pgsql stat replication
+- pgsql stat tables
+
+`stat activity [--state active] [--min-duration-sec 5]` lists sessions with `pid`, `user`, `db`, `state`, `wait_event`, `query_start`, `duration_sec`, `blocked_by` (from `pg_blocking_pids`), and a truncated `query`. `stat locks [--blocked-only]` joins `pg_locks` with sessions. `stat slow [--limit 20] [--sort total|mean|max|calls|rows]` reads `pg_stat_statements` and returns `has_report=false` when the extension is missing. `stat replication` returns recovery state, WAL positions, and `pg_stat_replication` rows with lag. `stat tables [--schema] [--sort n_dead_tup|seq_scan|...]` reads `pg_stat_user_tables`.
+
+### Database
+- pgsql db size
+
+`db size [--top 10]` returns `pg_database_size`, connection usage, server version, uptime, recovery state, and the largest relations.
+
 ### Basic
 - pgsql commands
 - pgsql schema <command>

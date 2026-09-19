@@ -90,7 +90,10 @@ func WalkCobraCommands(root *cobra.Command) []string {
 			if child.RunE != nil || child.Run != nil {
 				out = append(out, strings.Join(parts, " "))
 			}
-			walk(child, parts)
+			// Descend through the parent's name only so a parent with an
+			// argument placeholder (pgsql `schema <command>`) does not leak
+			// it into its subcommands' usage.
+			walk(child, append(append([]string{}, parent...), child.Name()))
 		}
 	}
 	walk(root, []string{root.Use})

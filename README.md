@@ -123,6 +123,12 @@ For agents, `--json` is the default way to use `inspect-image`; human-facing int
 
 For VS Code GitHub Copilot, copy `cmd/inspect-image/inspect-image-cli.instructions.md` to `~/.copilot/instructions/inspect-image-cli.instructions.md` so Copilot has durable guidance for when and how to invoke this CLI.
 
+### PostgreSQL
+
+`pgsql` is a read-only PostgreSQL CLI for agents: bounded `query`/`explain` inside a `READ ONLY` transaction with a statement timeout, `schema tables/describe/indexes`, `stat activity/locks/slow/replication/tables`, and `db size`. A statement guard accepts a single `SELECT`-style statement and rejects writes, data-modifying CTEs, `SELECT INTO`, and side-effecting functions (`pg_terminate_backend`, `pg_sleep`, `pg_read_file`, `dblink`, ...); rows are capped by `--limit` and the instance `max_rows`, cells by `--max-cell-chars`, and `--output file.csv` writes a full extract to disk. Instances live under the `pgsql` YAML node (`host`, `port`, `database`, `username`, `password`, `sslmode`, `ca_cert`, `statement_timeout_seconds`, `max_rows`) or `EFP_PGSQL_*` environment variables; give the CLI a read-only database role, which is the real guarantee.
+
+For VS Code GitHub Copilot, copy `cmd/pgsql/pgsql-cli.instructions.md` to `~/.copilot/instructions/pgsql-cli.instructions.md`.
+
 ## Quick Install
 
 Download a release artifact for your platform, place `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `mobile-auto`, and `inspect-image` on your `PATH`, then run:
@@ -324,6 +330,7 @@ Config node ownership:
 - `ai_platform`: AI Platform endpoints, authentication, and token-file settings.
 - `aws`: AWS directory credentials, provider, and account matrix used by `aws-auth login`, `status`, and `eks kubeconfig`.
 - `mobile-auto`: mobile provider, BrowserStack, proxy, and local tunnel settings.
+- `pgsql`: read-only PostgreSQL instances (host, port, database, read-only role and password, sslmode, CA bundle, statement timeout, row cap) used by `pgsql`.
 
 ## Environment Variable References
 
@@ -446,6 +453,24 @@ appd violation list --app ecommerce --duration-mins 120 --json
 appd event list --app ecommerce --event-types APPLICATION_DEPLOYMENT,APPLICATION_ERROR --duration-mins 1440 --json
 appd api get /controller/rest/applications/ecommerce/tiers --json
 appd version --json
+
+## PostgreSQL Examples
+
+```bash
+printf '%s\n' "$PGPASSWORD" | pgsql instance add analytics --host db.example.test --database analytics --username readonly --password-stdin --sslmode verify-full --default --json
+pgsql auth test --json
+pgsql schema tables --json
+pgsql schema describe public.orders --json
+pgsql query --sql "SELECT status, count(*) AS n FROM orders WHERE created_at > now() - interval '1 day' GROUP BY status" --limit 50 --json
+pgsql query --sql "SELECT id, status FROM orders WHERE customer_id = \$1" --param 42 --limit 20 --json
+pgsql query --sql-file ./report.sql --limit 1000 --output ./report.csv --json
+pgsql explain --sql "SELECT * FROM orders WHERE customer_id = \$1" --param 42 --analyze --json
+pgsql stat activity --state active --min-duration-sec 5 --json
+pgsql stat locks --blocked-only --json
+pgsql stat slow --limit 20 --json
+pgsql stat tables --sort n_dead_tup --json
+pgsql db size --json
+pgsql help llm --json
 ```
 
 ## Jira Examples

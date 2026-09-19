@@ -28,6 +28,14 @@
 - Artifact downloads write binary content to local files and must not print artifact bytes into JSON envelopes.
 - Raw `jenkins api` calls use the same off-instance URL guard as other instance-backed tools.
 
+## Nexus
+
+- Nexus credentials live under the `nexus` node in `~/.efp/config.yaml` (basic auth with a password or user token passcode, or a bearer token) and must be redacted in instance, verbose, and error output. An instance without an `auth` block sends no Authorization header; a partially filled `auth` block is a `config_error`, never a silent anonymous fallback.
+- The CLI is read-only against the repository manager: it only issues GET requests and has no upload, delete, or admin commands. The only writes are local config edits, and `instance remove` and `auth logout` require `--yes`.
+- Asset downloads follow the `downloadUrl` from the asset metadata only when it belongs to the instance `base_url` (`instance_url_mismatch` otherwise), stream the bytes to the local file, and return metadata (path, bytes, sha1, content type) rather than content.
+- Raw `nexus api get` calls use the same off-instance URL guard as other instance-backed tools.
+- Continuation tokens are opaque paging cursors, not credentials; they are returned as `continuation_token` so agents can page through results.
+
 ## Inspect Image
 
 - `inspect-image` sends local image bytes to the configured provider endpoint: GitHub Copilot `/responses` or AI Platform `/chat/completions`.

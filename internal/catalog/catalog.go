@@ -1366,6 +1366,8 @@ func argumentDescription(name string) string {
 		return "Jira project role id or role name."
 	case "name":
 		return "Instance or resource name."
+	case "id":
+		return "Opaque resource id as returned by list or search results, for example a Nexus component or asset id."
 	case "key":
 		return "Property key."
 	case "url":
@@ -1491,9 +1493,9 @@ func flagTypeFor(command, name string) string {
 
 func flagType(name string) string {
 	switch name {
-	case "json", "verbose", "dry-run", "yes", "body-stdin", "body", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error", "allow-human", "max-allowed-result", "ui", "active", "enabled":
+	case "json", "verbose", "dry-run", "yes", "body-stdin", "body", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error", "allow-human", "max-allowed-result", "ui", "active", "enabled", "all":
 		return "bool"
-	case "sample-rows", "max-create", "wait", "timeout", "max-network-events", "limit", "limit-resources", "duration-ms", "network-idle-ms", "dom-stable-ms", "equals", "min", "max", "index", "status", "limit-rows", "limit-cells", "limit-items", "debug-port", "nth", "max-scrolls", "scroll-step", "interval-ms", "max-body-bytes":
+	case "sample-rows", "max-create", "wait", "timeout", "max-network-events", "limit", "limit-resources", "duration-ms", "network-idle-ms", "dom-stable-ms", "equals", "min", "max", "index", "status", "limit-rows", "limit-cells", "limit-items", "debug-port", "nth", "max-scrolls", "scroll-step", "interval-ms", "max-body-bytes", "max-pages":
 		return "int"
 	case "min-confidence", "threshold":
 		return "float"

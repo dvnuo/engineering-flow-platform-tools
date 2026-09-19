@@ -638,11 +638,40 @@ browser session attach --name user-demo --debug-port 9222 --json
 
 ## Nexus
 
+`nexus` is read-only against Sonatype Nexus Repository 3: every REST-backed command issues GET requests only. `instance` and `auth` commands edit the local EFP config; `instance remove` and `auth logout` require `--yes`. An instance without an `auth` block is queried anonymously, and `rest_path` defaults to `/service/rest/v1`. Search and list results are paged by continuation token (`--continuation`, `--limit`, `--all`, `--max-pages`).
+
 ### Basic
+- nexus instance list
+- nexus instance get <name>
+- nexus instance add <name>
+- nexus instance update <name>
+- nexus instance remove <name>
+- nexus instance default [name]
+- nexus auth login
+- nexus auth logout
+- nexus auth test
 - nexus commands
 - nexus schema <command>
 - nexus help llm
 - nexus version
+
+### Repository
+- nexus repo list
+- nexus repo get <name>
+
+### Component
+- nexus component search
+- nexus component list
+- nexus component get <id>
+
+### Asset
+- nexus asset search
+- nexus asset list
+- nexus asset get <id>
+- nexus asset download <id>
+
+### Raw API
+- nexus api get <path>
 
 ## Splunk
 

@@ -5,6 +5,7 @@ This repository hosts cross-platform Go-based CLI tools for agent, runtime, shel
 - `jira`
 - `confluence`
 - `jenkins`
+- `nexus`
 - `aws-auth`
 - `browser`
 - `mobile-auto`
@@ -37,6 +38,12 @@ Jira also includes `jira zephyr ...` commands for Zephyr Essential / Zephyr Squa
 ### Jenkins
 
 `jenkins` provides Jenkins controller automation for jobs, builds, queues, console logs, artifacts, Pipeline REST API resources, views, nodes, plugins, selected controller actions, and raw Jenkins API calls. It supports multiple Jenkins instances under the `jenkins` YAML node and handles Jenkins crumbs for state-changing requests.
+
+### Nexus
+
+`nexus` provides read-only access to Sonatype Nexus Repository 3: repository discovery, component and asset search (including Maven coordinate and Docker image name/tag filters), component and asset metadata, raw read-only REST calls, and asset downloads that return metadata instead of file bytes. It supports multiple instances under the `nexus` YAML node, anonymous reads for instances without an `auth` block, and continuation-token paging through `--continuation` or `--all`. It never uploads, deletes, or administers anything on the repository manager.
+
+For VS Code GitHub Copilot, copy `cmd/nexus/nexus-cli.instructions.md` to `~/.copilot/instructions/nexus-cli.instructions.md`.
 
 ### AWS Auth
 
@@ -180,6 +187,19 @@ jenkins:
       verify_ssl: true
       ca_cert: ""
 
+nexus:
+  default_instance: repo
+  instances:
+    - name: repo
+      base_url: https://nexus.example.test
+      rest_path: ""
+      auth:
+        type: basic_password
+        username: ci-reader
+        password: redacted
+      verify_ssl: true
+      ca_cert: ""
+
 aws:
   enabled: true
   provider: adfs-assume
@@ -256,6 +276,7 @@ Config node ownership:
 - `jira`: Jira instances, defaults, auth, TLS, and Zephyr settings.
 - `confluence`: Confluence instances, defaults, auth, and TLS settings.
 - `jenkins`: Jenkins instances, defaults, auth, TLS, and crumb behavior.
+- `nexus`: Nexus Repository 3 instances, defaults, auth (or anonymous reads when `auth` is omitted), REST path, and TLS settings.
 - `browser`: browser bookmark sources and related browser configuration.
 - `copilot`: GitHub/Copilot authentication shared by commands that use Copilot-backed APIs.
 - `inspect_image`: inspect-image API defaults, model defaults, image limits, and privacy settings.
@@ -323,6 +344,24 @@ jenkins pipeline runs folder/app-main --json
 jenkins api get /api/json --query depth=1 --json
 jenkins version --json
 ```
+
+## Nexus Examples
+
+```bash
+nexus auth test --instance repo --json
+nexus repo list --json
+nexus repo get maven-releases --json
+nexus component search --repository maven-releases --maven-group-id com.example --maven-artifact-id app --version 1.4.2 --json
+nexus component search --repo-format npm --group @example --name ui-kit --all --max-pages 3 --json
+nexus asset search --repository docker-hosted --docker-image-name payments/api --docker-image-tag 2.3.0 --json
+nexus component list --repository maven-releases --limit 50 --json
+nexus component get bWF2ZW4tcmVsZWFzZXM6ZDQ4MTE3NTQxZGNiODllYzYxM2IyMzk3MzIwMWQ3YmE --json
+nexus asset download bWF2ZW4tcmVsZWFzZXM6MTVkYWJmZDA1MTIzYWM1MTIzNGY1NjEyMzQ1Njc4OTA --output app-1.4.2.jar --json
+nexus api get /service/rest/v1/search --query repository=maven-releases --query name=app --json
+nexus version --json
+```
+
+Search and list results are paged: when `data.truncated` is true, pass `data.continuation_token` back with `--continuation`, or use `--all --max-pages <n>`. `nexus asset download` writes the file and returns `path`, `bytes`, `sha1`, `content_type`, and `name` only.
 
 ## Jira Examples
 

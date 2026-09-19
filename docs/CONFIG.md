@@ -15,7 +15,7 @@ String values in the unified YAML config can reference an environment variable
 by using an exact `${NAME}` or `%NAME%` placeholder. The `${NAME}` form is
 portable; the quoted `%NAME%` form is also supported for Windows-authored
 configuration. This applies consistently to every tool-owned node, including
-`jira`, `confluence`, `jenkins`, `aws`, `browser`, `mobile-auto`,
+`jira`, `confluence`, `jenkins`, `nexus`, `aws`, `browser`, `mobile-auto`,
 `copilot`, `inspect_image`, and `ai_platform`.
 
 References are resolved only in memory. Config loaders retain a resolved
@@ -68,6 +68,10 @@ confluence:
 
 jenkins:
   default_instance: ci
+  instances: []
+
+nexus:
+  default_instance: repo
   instances: []
 
 aws:
@@ -194,6 +198,40 @@ ai_platform:
 - `ca_cert`
 
 `crumb_mode=auto` fetches `/crumbIssuer/api/json` for state-changing requests and tolerates a missing crumb issuer. Use `always` when the controller requires crumbs and you want crumb failures to be explicit. Use `never` only for controllers where CSRF crumbs are disabled or handled outside this CLI.
+
+## Nexus Instance Fields
+
+`nexus` is owned by the read-only `nexus` CLI (Sonatype Nexus Repository 3).
+
+```yaml
+nexus:
+  default_instance: repo
+  instances:
+    - name: repo
+      base_url: https://nexus.example.test
+      rest_path: ""
+      auth:
+        type: basic_password
+        username: ci-reader
+        password: "${NEXUS_PASSWORD}"
+      verify_ssl: true
+      ca_cert: ""
+    - name: public
+      base_url: https://public-nexus.example.test
+```
+
+- `name`
+- `base_url`: the Nexus Repository 3 root, for example `https://nexus.example.test`
+- `rest_path`: normally empty, which means `/service/rest/v1`
+- `auth.type`: `basic_password | basic_api_key | bearer_token`; omit the whole `auth` block for anonymous read access (no Authorization header is sent)
+- `auth.username`: the Nexus user name, or the user token name code
+- `auth.password`: the Nexus password
+- `auth.api_key`: the user token passcode, sent as HTTP basic auth together with `auth.username`
+- `auth.token`: a bearer token
+- `verify_ssl`
+- `ca_cert`
+
+Managed runtimes inject the same fields as `EFP_NEXUS_DEFAULT_INSTANCE`, `EFP_NEXUS_INSTANCES_0_NAME`, `EFP_NEXUS_INSTANCES_0_BASE_URL`, `EFP_NEXUS_INSTANCES_0_REST_PATH`, `EFP_NEXUS_INSTANCES_0_AUTH_TYPE`, `EFP_NEXUS_INSTANCES_0_AUTH_USERNAME`, `EFP_NEXUS_INSTANCES_0_AUTH_PASSWORD`, `EFP_NEXUS_INSTANCES_0_AUTH_API_KEY`, `EFP_NEXUS_INSTANCES_0_AUTH_TOKEN`, `EFP_NEXUS_INSTANCES_0_VERIFY_SSL`, and `EFP_NEXUS_INSTANCES_0_CA_CERT`. When they are set, `nexus instance` and `nexus auth` writes require an explicit `--config <path>`.
 
 ## Browser Bookmarks
 

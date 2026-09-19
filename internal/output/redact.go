@@ -192,7 +192,9 @@ func allowListedNonSecretKey(norm string) bool {
 	switch norm {
 	case "tokenstate", "maxoutputtokens", "messageid", "requestid", "traceid", "spanid",
 		"copilottokenvalid", "copilottokenrefreshable", "tokenvalid", "tokenrefreshable",
-		"tokenstdin", "apikeystdin", "passwordstdin":
+		"tokenstdin", "apikeystdin", "passwordstdin",
+		// Opaque paging cursors (Nexus continuationToken) are not credentials.
+		"continuationtoken":
 		return true
 	default:
 		return false

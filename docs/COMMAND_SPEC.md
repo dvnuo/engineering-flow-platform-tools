@@ -709,11 +709,64 @@ browser session attach --name user-demo --debug-port 9222 --json
 
 ## AppDynamics
 
+`appd` is read-only against the AppDynamics Controller REST API. Credentials are an API Client (`auth.type: api_client`, exchanged for a short-lived bearer token kept in memory) or a `user@account` basic login; `account` on the instance qualifies bare names. Every request adds `output=JSON`; `--dry-run` previews the request without contacting the Controller.
+
 ### Basic
+- appd instance list
+- appd instance get <name>
+- appd instance add <name>
+- appd instance update <name>
+- appd instance remove <name>
+- appd instance default [name]
+- appd auth login
+- appd auth logout
+- appd auth test
 - appd commands
 - appd schema <command>
 - appd help llm
 - appd version
+
+### Application model
+- appd app list
+- appd app get <app>
+- appd tier list
+- appd tier get <tier>
+- appd node list
+- appd node get <node>
+- appd bt list
+- appd backend list
+
+`--app <name-or-id>` selects the application for every command below `app`; `tier get` and `node get` take the tier or node name or id as the positional argument; `node list --tier` reads `/tiers/{tier}/nodes`; `bt list --tier` filters client-side by `tierName` or `tierId`.
+
+### Metrics
+- appd metric browse
+- appd metric get
+- appd metric preset
+
+`metric browse --path` walks the hierarchy one level at a time. `metric get --path` calls `metric-data-v2` (or `metric-data` with `--api v1`) with `--rollup` off by default. `metric preset --preset bt-response-time|bt-calls|bt-errors --tier <tier> --bt <bt>`, `tier-cpu --tier <tier>`, and `node-heap --tier <tier> --node <node>` expand to the documented metric paths.
+
+### Snapshots, violations, events
+- appd snapshot list
+- appd snapshot get
+- appd violation list
+- appd event list
+
+`snapshot list` filters with `--bt-ids`, `--tier-ids`, `--node-ids`, `--user-experience NORMAL,SLOW,VERY_SLOW,STALL,ERROR`, `--errors-only`, `--first-in-chain`, `--need-exit-calls`, `--need-props`, and `--max-results` (default 50); output keeps only `requestGUID`, `summary`, `userExperience`, `timeTakenInMilliSecs`, `businessTransactionId`, `applicationComponentId`, `applicationComponentNodeId`, `serverStartTime`, `exitCalls`, `errorDetails`, `URL`, and `snapshotExitSequence` and reports `count_returned` and `truncated`. `snapshot get --guid` returns the full snapshot with exit calls and properties (the call graph is not in the public REST API). `event list` requires `--event-types` and defaults `--severities` to `ERROR,WARN,INFO`.
+
+### Time-range flags
+Shared by `metric get`, `metric preset`, `snapshot list`, `snapshot get`, `violation list`, and `event list`; the resolved window is echoed as `data.time_range`:
+
+- `--duration-mins N` alone: `BEFORE_NOW` (default 60; `snapshot get` defaults to 20160)
+- `--start-time <t> --end-time <t>`: `BETWEEN_TIMES`
+- `--before-time <t> --duration-mins N`: `BEFORE_TIME`
+- `--after-time <t> --duration-mins N`: `AFTER_TIME`
+
+Timestamps are epoch milliseconds or RFC3339; epoch seconds are scaled to milliseconds.
+
+### Raw API
+- appd api get <path>
+
+Only paths under `/controller/rest/` are accepted (relative, or absolute on the selected instance); `--query key=value` adds parameters.
 
 ## PostgreSQL
 

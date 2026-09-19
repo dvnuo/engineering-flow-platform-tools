@@ -44,6 +44,14 @@
 - Result caps: `--count` is bounded by the instance `max_results` (default 1000), jobs are created with `max_count` equal to that cap and a 600 second TTL, jobs that outlive `--timeout-sec` are cancelled, and printed field values are truncated at `--max-field-chars` (default 2000). `--output` writes the untruncated results to a `0600` file instead of stdout.
 - Error messages include Splunk's own message text with credentials and session keys redacted. Search results may contain PII from indexed events, so treat `--output` files like log data.
 
+## AppDynamics
+
+- `appd` is read-only: every Controller call is a GET under `/controller/rest/`, plus the OAuth token exchange that API Client credentials require; `appd api get` rejects any other path prefix and any absolute URL outside the selected instance.
+- AppDynamics credentials live under the `appd` node in `~/.efp/config.yaml`: the API client secret is stored as `auth.api_key` and the basic password as `auth.password`; both are redacted in instance, dry-run, verbose, and error output.
+- The OAuth access token obtained from `/controller/api/oauth/access_token` is kept in process memory only, is never written to config, disk, or output, and error snippets from the Controller are scrubbed of the secret and token before they reach an envelope.
+- Snapshot properties, HTTP parameters, and event details returned by the Controller may contain sensitive request data; the shared output redaction applies to every envelope, and `snapshot list` returns summary fields only.
+- Use `--api-key-stdin` or `--password-stdin` for `appd instance add` and `appd auth login`; never pass secrets as command-line values.
+
 ## Inspect Image
 
 - `inspect-image` sends local image bytes to the configured provider endpoint: GitHub Copilot `/responses` or AI Platform `/chat/completions`.

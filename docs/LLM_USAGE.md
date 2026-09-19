@@ -11,7 +11,7 @@
 - Command parsing failures across `jira`, `confluence`, `jenkins`, `aws-auth`, `browser`, `mobile-auto`, and `inspect-image` return a JSON `invalid_args` envelope when `--json` is present.
 - On Windows `cmd`, use double quotes and cmd-native commands such as `where`, `dir`, `cd`, and `type`; avoid Bash-only quoting and commands.
 - If PATH lookup is unstable, run `where <binary>` and invoke the exact `.exe` path with double quotes.
-- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/mobile-auto/mobile-auto-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, `cmd/aws-auth/aws-auth-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
+- For VS Code GitHub Copilot, copy the CLI instruction files from `cmd/browser/browser-cli.instructions.md`, `cmd/mobile-auto/mobile-auto-cli.instructions.md`, `cmd/jira/jira-cli.instructions.md`, `cmd/confluence/confluence-cli.instructions.md`, `cmd/jenkins/jenkins-cli.instructions.md`, `cmd/aws-auth/aws-auth-cli.instructions.md`, `cmd/appd/appd-cli.instructions.md`, and `cmd/inspect-image/inspect-image-cli.instructions.md` into `~/.copilot/instructions/`.
 
 ## Mobile Auto Device Cloud
 
@@ -180,6 +180,17 @@
 - Zephyr delete commands and raw `jira zephyr api delete` require `--yes`; do not add it until the user has confirmed the destructive action.
 - Do not browser-scrape Jira Test pages unless the API is unavailable and the user explicitly asks for UI investigation.
 - For Jira Test page URLs, prefer `jira zephyr resolve-url`, `jira zephyr summary`, `jira zephyr cycle list`, and `jira zephyr execution list` instead of browser scraping.
+
+## AppDynamics
+
+- Use `appd` for read-only AppDynamics Controller queries: applications, tiers, nodes, business transactions, backends, metrics, transaction snapshots, health-rule violations, and events. Every command is read-only; `--dry-run` previews the request without contacting the Controller.
+- Controllers are configured under `appd.instances` in `~/.efp/config.yaml` (or `EFP_APPD_*` variables in managed runtimes) with `base_url`, `account`, and either an API Client (`auth.type: api_client`, `username` = client name, `api_key` = client secret) or a `user@account` basic login. Run `appd auth test --json` first when access is uncertain; `auth_failed` usually means a wrong client secret, a disabled API client, or a missing `account`.
+- Start with `appd app list --json`; every other command takes `--app <name-or-id>`.
+- Triage order: `appd bt list --app <app> --json`, then `appd snapshot list --app <app> --errors-only --duration-mins 60 --json` (or `--user-experience VERY_SLOW,STALL`), then `appd violation list --app <app> --duration-mins 120 --json`, then `appd event list --app <app> --event-types APPLICATION_DEPLOYMENT,APPLICATION_ERROR --duration-mins 1440 --json` to align the incident with deployments (compare `eventTime` with the Jenkins build timestamps).
+- Every time-ranged command takes an explicit window: `--duration-mins N` (default 60, before now), `--start-time`/`--end-time` (epoch milliseconds or RFC3339), or `--before-time`/`--after-time` plus `--duration-mins`. The resolved window is echoed as `data.time_range`; state it in the report.
+- `snapshot list` output is trimmed to summary fields and capped by `--max-results` (`truncated=true` when the cap was hit); fetch one snapshot with `appd snapshot get --app <app> --guid <requestGUID> --json`. The call graph is not available through the public REST API, so point the user to the Controller UI for drill-down.
+- Use `appd metric preset --app <app> --preset bt-response-time|bt-calls|bt-errors --tier <tier> --bt <bt>`, `--preset tier-cpu --tier <tier>`, or `--preset node-heap --tier <tier> --node <node>` for the common metrics; discover other paths with `appd metric browse --app <app> --path "<folder>"` and fetch them with `appd metric get --app <app> --path "<metric-path>"`. Add `--rollup` for one aggregated value instead of one value per minute.
+- `appd api get <path>` accepts only `/controller/rest/...` paths and adds `output=JSON`.
 
 ## How to recover from CLI errors
 

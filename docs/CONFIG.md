@@ -85,6 +85,17 @@ splunk:
       default_index: main              # prepended as index=main when a query names no index
       default_earliest: -1h            # earliest_time when --earliest is omitted
       max_results: 1000                # hard cap on results per search
+
+appd:
+  default_instance: prod
+  instances:
+    - name: prod
+      base_url: https://appd.example.test:8090   # with or without /controller
+      account: customer1                        # Controller account; qualifies bare names as name@account
+      auth:
+        type: api_client                        # api_client | basic_password | bearer_token
+        username: efp-reader                    # API client name (api_client) or user (basic_password)
+        api_key: "${APPD_CLIENT_SECRET}"        # API client secret
       verify_ssl: true
       ca_cert: ""
 
@@ -261,6 +272,24 @@ Managed runtimes inject the same fields as `EFP_NEXUS_DEFAULT_INSTANCE`, `EFP_NE
 - `ca_cert`
 
 `rest_path` is not used by `splunk`; every command addresses absolute `/services/...` paths under `base_url`. Managed runtimes inject the same fields as `EFP_SPLUNK_DEFAULT_INSTANCE`, `EFP_SPLUNK_INSTANCES_0_NAME`, `EFP_SPLUNK_INSTANCES_0_BASE_URL`, `EFP_SPLUNK_INSTANCES_0_AUTH_TYPE`, `EFP_SPLUNK_INSTANCES_0_AUTH_TOKEN` (or `_AUTH_USERNAME` / `_AUTH_PASSWORD`), `EFP_SPLUNK_INSTANCES_0_DEFAULT_INDEX`, `EFP_SPLUNK_INSTANCES_0_DEFAULT_EARLIEST`, and `EFP_SPLUNK_INSTANCES_0_MAX_RESULTS`.
+
+## AppDynamics Instance Fields
+
+`appd` is owned by the `appd` CLI. In managed runtimes the equivalent indexed environment settings are `EFP_APPD_DEFAULT_INSTANCE`, `EFP_APPD_INSTANCES_0_NAME`, `EFP_APPD_INSTANCES_0_BASE_URL`, `EFP_APPD_INSTANCES_0_ACCOUNT`, `EFP_APPD_INSTANCES_0_AUTH_TYPE`, `EFP_APPD_INSTANCES_0_AUTH_USERNAME`, `EFP_APPD_INSTANCES_0_AUTH_API_KEY`, and `EFP_APPD_INSTANCES_0_AUTH_PASSWORD`.
+
+- `name`
+- `base_url`: Controller URL such as `https://appd.example.test:8090`; a trailing `/controller` is accepted and stripped because the CLI builds `/controller/rest/...` paths itself
+- `account`: Controller account name; a bare `auth.username` is qualified as `username@account` for both auth types
+- `rest_path`: reserved, normally empty
+- `auth.type`: `api_client | basic_password | bearer_token`
+- `auth.username`: API client name (`api_client`) or user name (`basic_password`); may already be written as `name@account`
+- `auth.api_key`: API client secret (`api_client`); an `auth.token` value is moved into `api_key` for this type
+- `auth.password`: password for `basic_password`
+- `auth.token`: pre-issued Controller access token for `bearer_token` (config or env only; not set by `appd auth login`)
+- `verify_ssl`
+- `ca_cert`
+
+`api_client` is the OAuth client-credentials grant of AppDynamics API Clients: `appd` posts `client_id=<username>@<account>` and the secret to `/controller/api/oauth/access_token`, keeps the returned bearer token in memory for the lifetime of the process, and never writes it to disk or output. Store credentials without shell history with `appd auth login --auth-type api_client --username <api-client-name> --api-key-stdin` or `--auth-type basic_password --username <user> --password-stdin`.
 
 ## Browser Bookmarks
 

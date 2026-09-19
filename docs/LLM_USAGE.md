@@ -56,6 +56,8 @@
 - Trigger parameterized builds with `jenkins job build-with-params <job> --param NAME=value --json`.
 - After triggering, inspect `data.queue_id` and run `jenkins queue get <queue-id> --json` to find the executable build number.
 - Use `jenkins build status <job> <build> --json` for current state and result.
+- To find which build deployed a version (or what a deployment ran with): `jenkins job search --pattern "*deploy*" --json` locates jobs across nested folders by glob (`*` also spans folder separators; add `--max-depth` for deep trees), `jenkins build list <job> --param VERSION=1.4.2 --since 7d --json` lists the newest builds that carry exactly those parameters (`--result`, `--building`, and repeated `--param` narrow further), and `jenkins build params <job> <build> --json` returns that build's parameters, causes (user or upstream trigger), and SCM changes.
+- `build list` scans only `limit*4` (max 800) newest builds; when `truncated` is true, raise `--limit`, add `--since`, or tighten the filters instead of assuming no older build matches. Parameter values whose names look like secrets are returned as `***REDACTED***`.
 - Use `jenkins build log <job> <build> --json` for full console text, or `jenkins build log-follow <job> <build> --json` for progressive text.
 - Use `jenkins build artifacts <job> <build> --json` to list artifacts, then `jenkins artifact download <job> <build> <path> --output <file> --json` to download binary content.
 - Use Pipeline commands only when the Jenkins Pipeline REST API plugin is installed.

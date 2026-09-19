@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type TestingT interface {
@@ -20,13 +21,17 @@ type MockJenkins struct {
 	CrumbHits    int
 	LastMethod   string
 	LastPath     string
+	LastQuery    string
 	LastBody     string
 	LastParamRef string
+	// BuildBase anchors the build-history fixture timestamps (see
+	// mock_jenkins_fixtures.go) so --since tests can compute expectations.
+	BuildBase time.Time
 }
 
 func NewMockJenkins(t TestingT) *MockJenkins {
 	t.Helper()
-	m := &MockJenkins{}
+	m := &MockJenkins{BuildBase: time.Now().Truncate(time.Second)}
 	m.Server = httptest.NewServer(http.HandlerFunc(m.handle))
 	t.Cleanup(m.Server.Close)
 	return m
@@ -36,8 +41,10 @@ func (m *MockJenkins) handle(w http.ResponseWriter, r *http.Request) {
 	m.Hits++
 	m.LastMethod = r.Method
 	m.LastPath = r.URL.Path
+	m.LastQuery = r.URL.RawQuery
 	body, _ := io.ReadAll(r.Body)
 	m.LastBody = string(body)
+	tree := r.URL.Query().Get("tree")
 	w.Header().Set("Content-Type", "application/json")
 	if r.URL.Path == "/crumbIssuer/api/json" {
 		m.CrumbHits++
@@ -57,8 +64,13 @@ func (m *MockJenkins) handle(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/whoAmI/api/json":
 		_, _ = w.Write([]byte(`{"authenticated":true,"name":"agent"}`))
+	case r.URL.Path == "/api/json" && isJobsSearchTree(tree):
+		_, _ = w.Write(m.folderTreeJSON(strings.Count(tree, "jobs[")))
 	case r.URL.Path == "/api/json":
 		_, _ = w.Write([]byte(`{"mode":"NORMAL","jobs":[{"name":"app-main","url":"` + m.Server.URL + `/job/app-main/"}],"views":[{"name":"All"}]}`))
+	case strings.Contains(r.URL.Path, "/job/missing/"):
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"message":"Not Found"}`))
 	case strings.HasSuffix(r.URL.Path, "/testReport/api/json"):
 		if strings.Contains(r.URL.Path, "/job/no-report/") {
 			w.WriteHeader(http.StatusNotFound)
@@ -72,6 +84,25 @@ func (m *MockJenkins) handle(w http.ResponseWriter, r *http.Request) {
 			`]}]}`))
 	case strings.Contains(r.URL.Path, "/job/still-building/") && strings.HasSuffix(r.URL.Path, "/api/json"):
 		_, _ = w.Write([]byte(`{"name":"still-building","fullName":"folder/still-building","number":7,"building":true,"result":null}`))
+	case strings.Contains(r.URL.Path, "/job/") && strings.HasSuffix(r.URL.Path, "/api/json") && buildsTreePattern.MatchString(tree):
+		out, _ := m.buildsListJSON(tree)
+		_, _ = w.Write(out)
+	case strings.Contains(r.URL.Path, "/job/payments-api/") && buildNumberPath.MatchString(r.URL.Path):
+		k, ok := mockBuildNumber(r.URL.Path)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"message":"Not Found"}`))
+			return
+		}
+		_, _ = w.Write(m.pipelineBuildJSON(k))
+	case strings.Contains(r.URL.Path, "/job/legacy-freestyle/") && buildNumberPath.MatchString(r.URL.Path):
+		k, ok := mockBuildNumber(r.URL.Path)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"message":"Not Found"}`))
+			return
+		}
+		_, _ = w.Write(m.freestyleBuildJSON(k))
 	case strings.HasSuffix(r.URL.Path, "/build") || strings.HasSuffix(r.URL.Path, "/buildWithParameters"):
 		values, _ := url.ParseQuery(m.LastBody)
 		m.LastParamRef = values.Get("BRANCH")

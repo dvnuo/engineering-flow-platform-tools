@@ -377,6 +377,7 @@ confluence page get --url <page-url>
 ### Job
 - jenkins job list
 - jenkins job get <job>
+- jenkins job search
 - jenkins job config get <job>
 - jenkins job config update <job>
 - jenkins job create <job>
@@ -393,8 +394,10 @@ confluence page get --url <page-url>
 - jenkins queue cancel <queue-id>
 
 ### Build
+- jenkins build list <job>
 - jenkins build get <job> <build>
 - jenkins build status <job> <build>
+- jenkins build params <job> <build>
 - jenkins build log <job> <build>
 - jenkins build log-follow <job> <build>
 - jenkins build stop <job> <build>

@@ -380,6 +380,9 @@ aws-auth help llm --json
 jenkins auth test --instance ci --json
 jenkins job list --depth 2 --json
 jenkins job get folder/app-main --json
+jenkins job search --pattern "*deploy*" --max-depth 4 --json
+jenkins build list deploy/payments-api --param VERSION=1.4.2 --since 7d --json
+jenkins build params deploy/payments-api 42 --json
 jenkins job build folder/app-main --json
 jenkins job build-with-params folder/app-main --param BRANCH=main --json
 jenkins queue get 123 --json

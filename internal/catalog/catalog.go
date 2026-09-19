@@ -80,9 +80,9 @@ var confluenceCommands = []string{
 var jenkinsCommands = []string{
 	"jenkins instance list", "jenkins instance get <name>", "jenkins instance add <name>", "jenkins instance update <name>", "jenkins instance remove <name>", "jenkins instance default [name]",
 	"jenkins auth login", "jenkins auth logout", "jenkins auth test", "jenkins whoami", "jenkins server-info", "jenkins crumb get", "jenkins commands", "jenkins schema <command>", "jenkins help llm", "jenkins version",
-	"jenkins job list", "jenkins job get <job>", "jenkins job config get <job>", "jenkins job config update <job>", "jenkins job create <job>", "jenkins job copy <source> <target>", "jenkins job delete <job>", "jenkins job enable <job>", "jenkins job disable <job>", "jenkins job build <job>", "jenkins job build-with-params <job>",
+	"jenkins job list", "jenkins job get <job>", "jenkins job search", "jenkins job config get <job>", "jenkins job config update <job>", "jenkins job create <job>", "jenkins job copy <source> <target>", "jenkins job delete <job>", "jenkins job enable <job>", "jenkins job disable <job>", "jenkins job build <job>", "jenkins job build-with-params <job>",
 	"jenkins queue list", "jenkins queue get <queue-id>", "jenkins queue cancel <queue-id>",
-	"jenkins build get <job> <build>", "jenkins build status <job> <build>", "jenkins build log <job> <build>", "jenkins build log-follow <job> <build>", "jenkins build stop <job> <build>", "jenkins build artifacts <job> <build>", "jenkins build test-report <job> <build>", "jenkins build wait <job> <build>",
+	"jenkins build list <job>", "jenkins build get <job> <build>", "jenkins build status <job> <build>", "jenkins build params <job> <build>", "jenkins build log <job> <build>", "jenkins build log-follow <job> <build>", "jenkins build stop <job> <build>", "jenkins build artifacts <job> <build>", "jenkins build test-report <job> <build>", "jenkins build wait <job> <build>",
 	"jenkins artifact download <job> <build> <path>",
 	"jenkins pipeline runs <job>", "jenkins pipeline run <job> <run-id>", "jenkins pipeline stages <job> <run-id>", "jenkins pipeline node-log <job> <run-id> <node-id>", "jenkins pipeline artifacts <job> <run-id>",
 	"jenkins view list", "jenkins view get <view>", "jenkins view create <view>", "jenkins view delete <view>", "jenkins view config get <view>", "jenkins view config update <view>",
@@ -1031,8 +1031,10 @@ func jenkinsExplicit(name string) (explicitMeta, bool) {
 		"help.llm":         {Description: "Show Jenkins CLI usage guidance for LLM agents.", Flags: []string{"json", "format", "verbose"}, Risk: "read", Example: "jenkins help llm --json"},
 		"version":          {Description: "Print Jenkins CLI version, commit, and build date.", Flags: common, Risk: "read", Example: "jenkins version --json"},
 
-		"job.list":              {Description: "List Jenkins jobs from the controller root.", Flags: []string{"depth", "tree", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jenkins job list --depth 2 --json"},
-		"job.get":               {Description: "Fetch Jenkins job metadata by slash folder path.", Flags: []string{"depth", "tree", "instance", "config", "json", "format", "verbose"}, Required: []string{"job"}, Risk: "read", Example: "jenkins job get folder/app-main --json"},
+		"job.list": {Description: "List Jenkins jobs from the controller root.", Flags: []string{"depth", "tree", "instance", "config", "json", "format", "verbose"}, Risk: "read", Example: "jenkins job list --depth 2 --json"},
+		"job.get":  {Description: "Fetch Jenkins job metadata by slash folder path.", Flags: []string{"depth", "tree", "instance", "config", "json", "format", "verbose"}, Required: []string{"job"}, Risk: "read", Example: "jenkins job get folder/app-main --json"},
+		"job.search": {Description: "Find Jenkins jobs across nested folders and multibranch projects by a case-insensitive glob on the slash path or job name, returning flattened folder/sub/job paths without needing to know the folder layout.",
+			Flags: append([]string{"pattern", "max-depth", "limit"}, common...), Required: []string{"pattern"}, Risk: "read", Example: "jenkins job search --pattern \"*deploy*\" --max-depth 4 --json"},
 		"job.config.get":        {Description: "Fetch Jenkins job config.xml.", Flags: common, Required: []string{"job"}, Risk: "admin", Example: "jenkins job config get folder/app-main --json"},
 		"job.config.update":     {Description: "Update Jenkins job config.xml.", Flags: bodyWrite, Required: []string{"job", "body|body-file|body-stdin"}, Risk: "write", Example: "jenkins job config update folder/app-main --body-file config.xml --dry-run --json"},
 		"job.create":            {Description: "Create a Jenkins job from config.xml.", Flags: append([]string{"folder"}, bodyWrite...), Required: []string{"job", "body|body-file|body-stdin"}, Risk: "write", Example: "jenkins job create app-main --folder folder --body-file config.xml --dry-run --json"},
@@ -1047,8 +1049,12 @@ func jenkinsExplicit(name string) (explicitMeta, bool) {
 		"queue.get":    {Description: "Fetch one Jenkins queue item by id.", Flags: common, Required: []string{"queue-id"}, Risk: "read", Example: "jenkins queue get 123 --json"},
 		"queue.cancel": {Description: "Cancel a Jenkins queue item after confirmation.", Flags: delDry, Required: []string{"queue-id", "yes"}, Risk: "delete", Example: "jenkins queue cancel 123 --yes --dry-run --json"},
 
-		"build.get":        {Description: "Fetch Jenkins build metadata.", Flags: []string{"tree", "depth", "instance", "config", "json", "format", "verbose"}, Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build get folder/app-main 42 --json"},
-		"build.status":     {Description: "Fetch compact Jenkins build status and result.", Flags: common, Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build status folder/app-main lastBuild --json"},
+		"build.list": {Description: "List a Jenkins job's newest builds with parameters and causes, filtered client-side by result, start time, exact parameter values, or in-progress state; scans up to limit*4 (max 800) builds and reports scanned/filtered_from/truncated so a partial answer is visible.",
+			Flags: append([]string{"limit", "result", "since", "param", "building"}, common...), Required: []string{"job"}, Risk: "read", Example: "jenkins build list deploy/payments-api --param ENV=prod --limit 10 --json"},
+		"build.get":    {Description: "Fetch Jenkins build metadata.", Flags: []string{"tree", "depth", "instance", "config", "json", "format", "verbose"}, Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build get folder/app-main 42 --json"},
+		"build.status": {Description: "Fetch compact Jenkins build status and result.", Flags: common, Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build status folder/app-main lastBuild --json"},
+		"build.params": {Description: "Fetch one Jenkins build's parameters, causes (user or upstream trigger), and SCM changes in a normalized shape for deployment forensics; handles both Pipeline changeSets and freestyle changeSet.",
+			Flags: append([]string{"max-changes"}, common...), Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build params deploy/payments-api 42 --json"},
 		"build.log":        {Description: "Read Jenkins build console log or one progressive log chunk.", Flags: []string{"start", "instance", "config", "json", "format", "verbose"}, Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build log folder/app-main 42 --json"},
 		"build.log-follow": {Description: "Poll Jenkins progressive build log and return accumulated text.", Flags: []string{"start", "max-rounds", "wait-ms", "instance", "config", "json", "format", "verbose"}, Required: []string{"job", "build"}, Risk: "read", Example: "jenkins build log-follow folder/app-main 42 --max-rounds 3 --json"},
 		"build.stop":       {Description: "Stop a Jenkins build after confirmation.", Flags: delDry, Required: []string{"job", "build", "yes"}, Risk: "write_requires_confirmation", Example: "jenkins build stop folder/app-main 42 --yes --dry-run --json"},
@@ -1496,9 +1502,9 @@ func flagTypeFor(command, name string) string {
 
 func flagType(name string) string {
 	switch name {
-	case "json", "verbose", "dry-run", "yes", "body-stdin", "body", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error", "allow-human", "max-allowed-result", "ui", "active", "enabled", "all":
+	case "json", "verbose", "dry-run", "yes", "body-stdin", "body", "minor-edit", "legacy", "enable-probe", "include-template-defaults", "fail-fast", "confirm-mapping", "apply-post-create-updates", "require-selector", "clean-profile", "headless", "ignore-cert-errors", "save-html", "save-screenshot", "full-page", "not", "clear", "continue-on-error", "allow-human", "max-allowed-result", "ui", "active", "enabled", "all", "building":
 		return "bool"
-	case "sample-rows", "max-create", "wait", "timeout", "max-network-events", "limit", "limit-resources", "duration-ms", "network-idle-ms", "dom-stable-ms", "equals", "min", "max", "index", "status", "limit-rows", "limit-cells", "limit-items", "debug-port", "nth", "max-scrolls", "scroll-step", "interval-ms", "max-body-bytes", "max-pages":
+	case "sample-rows", "max-create", "wait", "timeout", "max-network-events", "limit", "limit-resources", "duration-ms", "network-idle-ms", "dom-stable-ms", "equals", "min", "max", "index", "status", "limit-rows", "limit-cells", "limit-items", "debug-port", "nth", "max-scrolls", "scroll-step", "interval-ms", "max-body-bytes", "max-pages", "max-depth", "max-changes", "max-failures":
 		return "int"
 	case "min-confidence", "threshold":
 		return "float"
